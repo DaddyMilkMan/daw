@@ -20,7 +20,7 @@
 #include "../ai/SampleHunterAgent.h"
 #include "../network/GrokDAWController.h"
 #include "../../commands/CommandAPI.h"
-#include "../widgets/MarkdownComponent.h"
+#include "../controls/MarkdownComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 namespace zenith {

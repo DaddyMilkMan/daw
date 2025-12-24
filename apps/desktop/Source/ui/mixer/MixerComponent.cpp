@@ -4,13 +4,13 @@
  */
 
 #include "MixerComponent.h"
-#include "GlassmorphicPanel.h"
-#include "ZenithDesignSystem.h"
+#include "../design-system/ZenithDesignSystem.h"
+#include "../engine/Track.h"
+#include "../framework/GlassmorphicPanel.h"
 #include "Engine.h"
 #include "MixerChannelComponent.h"
-#include "../engine/Track.h"
-#include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 
 #include <core/SkCanvas.h>
 #include <core/SkPaint.h>
@@ -127,12 +127,12 @@ void MixerComponent::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
   SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
 
-  // 1. Draw Background with Gradient
-  GlassmorphicPanel::fillBackground(canvas, skBounds);
+  // 1. Draw Background with Glassmorphism
+  GlassmorphicPanel::draw(canvas, skBounds, GlassmorphicPanel::Style::Subtle);
 
-  // 2. Draw Top Border/Glow
+  // 2. Draw Top Border/Glow (Enhanced)
   SkPaint borderPaint;
-  borderPaint.setColor(SkColorSetARGB(100, 255, 255, 255));
+  borderPaint.setColor(design::colors::BORDER_SUBTLE);
   borderPaint.setStrokeWidth(1.0f);
   borderPaint.setStyle(SkPaint::kStroke_Style);
   borderPaint.setAntiAlias(true);

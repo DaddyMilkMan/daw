@@ -11,22 +11,22 @@
 */
 
 #include "CommandAPI.h"
-#include "Engine.h"
-#include "ProjectState.h"
-#include "TempoMap.h"
 #include "../engine/AuxBus.h"
 #include "../engine/Clip.h"
 #include "../engine/PluginHost.h"
 #include "../engine/Track.h"
 #include "../instruments/InstrumentRegistry.h"
-#include "SkiaComponent.h"
 #include "ClipCommands.h"
 #include "CommandUtils.h"
+#include "Engine.h"
+#include "ProjectState.h"
 #include "SessionGraph.h"
+#include "SkiaComponent.h"
+#include "TempoMap.h"
 #include "TrackCommands.h"
 #include "TransportCommands.h"
 
-#include "../ai/AIMasteringAgent.h"
+// #include "../ai/AIMasteringAgent.h"
 #include "../ai/PresetGeneticistAgent.h"
 #include "../ai/UXDirectorAgent.h"
 #include "../dsp/ONNXStemSeparator.h"
@@ -264,9 +264,8 @@ void CommandAPI::initializeCommandMap() {
                   [this](const juce::var &p) { return startEvolution(p); });
   registerCommand("stop_evolution",
                   [this](const juce::var &p) { return stopEvolution(p); });
-  registerCommand("get_evolution_stats", [this](const juce::var &p) {
-    return getEvolutionStats(p);
-  });
+  registerCommand("get_evolution_stats",
+                  [this](const juce::var &p) { return getEvolutionStats(p); });
   registerCommand("set_note_velocity",
                   [this](const juce::var &p) { return setNoteVelocity(p); });
   registerCommand("set_note_length",
@@ -337,7 +336,8 @@ juce::var CommandAPI::executeCommand(const juce::var &request) {
     return commandHandlers[commandStr](params);
   }
 
-  return createErrorResponse("Unknown command or handler not registered: " + commandStr);
+  return createErrorResponse("Unknown command or handler not registered: " +
+                             commandStr);
 }
 
 juce::String CommandAPI::executeCommandString(const juce::String &jsonRequest) {
@@ -551,31 +551,55 @@ juce::var CommandAPI::undo(const juce::var &params) {
   return createSuccessResponse(juce::var(resultObj));
 }
 
+juce::var CommandAPI::getUIHealth(const juce::var &params) {
+  juce::ignoreUnused(params);
+
+  if (uxDirector_) {
+    auto *resultObj = new juce::DynamicObject();
+    resultObj->setProperty("healthScore", uxDirector_->getUIHealthScore());
+    resultObj->setProperty("summary", uxDirector_->getIssueSummary());
+
+    // Add breakdown
+    auto breakdown = uxDirector_->getHealthBreakdown();
+    auto *breakdownObj = new juce::DynamicObject();
+    breakdownObj->setProperty("styleConsistency", breakdown.styleConsistency);
+    breakdownObj->setProperty("dataBindingHealth", breakdown.dataBindingHealth);
+    breakdownObj->setProperty("layoutHealth", breakdown.layoutHealth);
+    breakdownObj->setProperty("dataFreshness", breakdown.dataFreshness);
+    resultObj->setProperty("breakdown", juce::var(breakdownObj));
+
+    return createSuccessResponse(juce::var(resultObj));
+  }
+
+  return createErrorResponse("UXDirectorAgent not available");
+}
+
 juce::var CommandAPI::getUIState(const juce::var &params) {
   juce::ignoreUnused(params);
-  
+
   auto *resultObj = new juce::DynamicObject();
-  
+
   if (uxDirector_) {
     resultObj->setProperty("healthScore", uxDirector_->getUIHealthScore());
     resultObj->setProperty("summary", uxDirector_->getIssueSummary());
-    
+
     juce::var issuesArray;
     for (const auto &issue : uxDirector_->getIssues()) {
-        if (!issue.isFixed) {
-            auto *issueObj = new juce::DynamicObject();
-            issueObj->setProperty("type", (int)issue.type);
-            issueObj->setProperty("severity", (int)issue.severity);
-            issueObj->setProperty("description", issue.description);
-            issueObj->setProperty("componentName", issue.componentName);
-            issueObj->setProperty("componentType", issue.componentType);
-            issueObj->setProperty("suggestedFix", issue.suggestedFix);
-            issuesArray.append(juce::var(issueObj));
-        }
+      if (!issue.isFixed) {
+        auto *issueObj = new juce::DynamicObject();
+        issueObj->setProperty("type", (int)issue.type);
+        issueObj->setProperty("severity", (int)issue.severity);
+        issueObj->setProperty("description", issue.description);
+        issueObj->setProperty("componentName", issue.componentName);
+        issueObj->setProperty("componentType", issue.componentType);
+        issueObj->setProperty("suggestedFix", issue.suggestedFix);
+        issuesArray.append(juce::var(issueObj));
+      }
     }
     resultObj->setProperty("unresolvedIssues", issuesArray);
-    resultObj->setProperty("issueCount", uxDirector_->getUnresolvedIssueCount());
-    
+    resultObj->setProperty("issueCount",
+                           uxDirector_->getUnresolvedIssueCount());
+
     // Add health breakdown
     auto breakdown = uxDirector_->getHealthBreakdown();
     auto *breakdownObj = new juce::DynamicObject();
@@ -709,11 +733,11 @@ juce::var CommandAPI::searchPlugins(const juce::var &params) {
 
   for (int i = 0; i < knownPlugins.getNumTypes(); ++i) {
     auto desc = knownPlugins.getTypes()[i];
-    
+
     bool match = desc.name.toLowerCase().contains(query) ||
                  desc.manufacturerName.toLowerCase().contains(query) ||
                  desc.category.toLowerCase().contains(query);
-                 
+
     if (match) {
       auto *pluginObj = new juce::DynamicObject();
       pluginObj->setProperty("id", juce::var(desc.createIdentifierString()));
@@ -2152,3 +2176,4 @@ juce::var CommandAPI::getUIHealth(const juce::var& params) {
 }
 
 } // namespace zenith
+//==============================================================================

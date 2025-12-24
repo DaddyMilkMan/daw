@@ -86,6 +86,30 @@ ArrangerComponent::ArrangerComponent(Engine& eng, ProjectState& ps)
         return view ? view->trackId : juce::String();
     };
 
+    // Setup Freeze Progress Callback
+    macroToolbar->onFreezeProgress = [this](float progress,
+                                            const juce::String &status) {
+      if (!freezeOverlay)
+        return;
+
+      if (!freezeOverlay->isVisible())
+        freezeOverlay->setVisible(true);
+
+      freezeOverlay->setProgress(progress);
+      freezeOverlay->setStatus(status);
+
+      // Hide when done
+      if (progress >= 1.0f) {
+        freezeOverlay->setVisible(false);
+      }
+    };
+
+    // Initialize Freeze Overlay
+    freezeOverlay = std::make_unique<FreezeProgressOverlay>();
+    addAndMakeVisible(freezeOverlay.get());
+    freezeOverlay->setVisible(false);
+    freezeOverlay->onCancel = [this]() { engine_.cancelFreeze(); };
+
     // Initialize Section Track
     sectionTrack = std::make_unique<ArrangerTrackComponent>(projectState);
     addChildComponent(sectionTrack.get());
@@ -156,6 +180,10 @@ void ArrangerComponent::resized() {
         float y = RULER_HEIGHT + 20.0f;
         macroToolbar->setBounds(static_cast<int>(x), static_cast<int>(y), 
                                 static_cast<int>(w), static_cast<int>(h));
+    }
+
+    if (freezeOverlay) {
+        freezeOverlay->setBounds(getLocalBounds());
     }
 
     // Layout Tracks

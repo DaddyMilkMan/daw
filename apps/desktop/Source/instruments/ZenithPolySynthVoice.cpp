@@ -612,9 +612,14 @@ void ZenithPolySynthVoice::setQualityPreset(QualityPreset quality) {
       oversampler_ = nullptr;
     }
 
-    // Call updateSampleRate to propagate the new rate (Bug Fix)
-    updateSampleRate();
+    } else {
+      oversampler_ = nullptr;
+    }
   }
+
+  // Call updateSampleRate to propagate the new rate (Bug Fix)
+  updateSampleRate();
+}
 }
 
 void ZenithPolySynthVoice::setAmpEnvelope(float attack, float decay,

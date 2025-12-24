@@ -11,13 +11,14 @@
  */
 #pragma once
 
-#include "SkiaComponent.h"
 #include "Engine.h"
-#include "ProjectState.h"
 #include "MiniMapComponent.h"
+#include "ProjectState.h"
+#include "SkiaComponent.h"
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+
 
 #include <core/SkCanvas.h>
 #include <map>
@@ -25,7 +26,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include "../controls/FreezeProgressOverlay.h"
 #include "MacroToolbar.h"
+
 
 // Forward declaration for browser drag
 namespace zenith {
@@ -217,6 +220,7 @@ private:
     
     MiniMapComponent miniMap;
     std::unique_ptr<MacroToolbar> macroToolbar;
+    std::unique_ptr<FreezeProgressOverlay> freezeOverlay;
     std::unique_ptr<ArrangerTrackComponent> sectionTrack;
     std::vector<std::unique_ptr<ArrangerTrackComponent>> trackComponents;
 

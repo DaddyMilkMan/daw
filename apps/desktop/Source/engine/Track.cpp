@@ -243,25 +243,15 @@ void Track::applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples) {
 }
 
 // Bug 44: This is intentionally a no-op for the base Track class.
-
 // Only ClipTrack subclasses (AudioTrack, MIDITrack) support clip management.
-
 // Calling addClip on other track types is a programming error - we log it.
-
 void Track::addClip(std::unique_ptr<Clip> clip) {
-
   juce::ignoreUnused(clip);
-
   // This track type does not support clips. The passed clip will be destroyed
-
   // on scope exit.
-
   DBG("Track::addClip called on track type that doesn't support clips: " +
-
       getTypeString());
-
   jassertfalse; // Bug 44: Alert developer about incorrect usage
-
 }
 }
 

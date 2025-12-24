@@ -71,7 +71,8 @@ juce::ThreadPoolJob::JobStatus StemSeparationJob::runJob() {
   }
 
   // Initialize with default model path
-  if (!separator.initialize(ONNXStemSeparator::findDefaultModel())) {
+  juce::File modelFile = ONNXStemSeparator::findDefaultModel();
+  if (!modelFile.existsAsFile() || !separator.initialize(modelFile)) {
       result.error = "Failed to load AI model (demucs.onnx)";
       if (callback_) {
           juce::MessageManager::callAsync([cb = callback_, res = result]() { cb(res); });

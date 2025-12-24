@@ -43,10 +43,7 @@ enum class FilterType { Lowpass = 0, Bandpass, Highpass, NumTypes };
 /**
     Filter model types
 */
-enum class FilterModelType {
-    SVF = 0,
-    Ladder
-};
+enum class FilterModelType { SVF = 0, Ladder };
 
 /**
     Quality preset for CPU optimization
@@ -89,8 +86,8 @@ enum class LFOTarget {
 */
 enum class FilterKeyTrack {
   Off = 0,
-  Half,    // 50% tracking
-  Full,    // 100% tracking
+  Half, // 50% tracking
+  Full, // 100% tracking
   NumModes
 };
 
@@ -127,7 +124,7 @@ enum class ModulationSource {
   Velocity,   // Note-on velocity (0 to 1)
   ModWheel,   // MIDI mod wheel CC#1 (0 to 1)
   Aftertouch, // MIDI channel pressure (0 to 1)
-  Timbre,     // MPE,
+  Timbre,     // MPE Y-axis (CC#74) (0 to 1)
   NumSources
 };
 

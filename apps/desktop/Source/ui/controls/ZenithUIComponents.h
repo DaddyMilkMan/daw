@@ -17,22 +17,22 @@
 #pragma once
 
 // Base control class
-#include "widgets/ZenithControl.h"
+#include "controls/ZenithControl.h"
 
 // Core controls
-#include "widgets/ZenithButton.h"
-#include "widgets/ZenithKnob.h"
-#include "widgets/ZenithSlider.h"
+#include "controls/ZenithButton.h"
+#include "controls/ZenithKnob.h"
+#include "controls/ZenithSlider.h"
 
 // Form controls
-#include "widgets/ZenithDropdown.h"
-#include "widgets/ZenithTextInput.h"
-#include "widgets/ZenithToggle.h"
+#include "controls/ZenithDropdown.h"
+#include "controls/ZenithTextInput.h"
+#include "controls/ZenithToggle.h"
 
 // Specialized widgets
-#include "widgets/ZenithModMatrix.h"
-#include "widgets/ZenithTooltipOverlay.h"
-#include "widgets/ZenithVisualizer.h"
+#include "controls/ZenithModMatrix.h"
+#include "controls/ZenithTooltipOverlay.h"
+#include "controls/ZenithVisualizer.h"
 
 // Legacy aliases for compatibility
 namespace zenith {

@@ -403,7 +403,7 @@ public:
   ai::SessionDebuggerAgent *getSessionDebugger() {
     return sessionDebugger_.get();
   }
-  const ai::SessionDebuggerAgent *getSessionDebugger() const {
+  ai::SessionDebuggerAgent *getSessionDebugger() const {
     return sessionDebugger_.get();
   }
 

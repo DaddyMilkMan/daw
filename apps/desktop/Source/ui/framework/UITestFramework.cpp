@@ -12,9 +12,9 @@
 
 #include "UITestFramework.h"
 #include "ZenithDesignSystem.h"
-#include "widgets/SkiaButton.h"
-#include "widgets/SkiaLabel.h"
-#include "widgets/SkiaTextEditor.h"
+#include "controls/SkiaButton.h"
+#include "controls/SkiaLabel.h"
+#include "controls/SkiaTextEditor.h"
 #include <algorithm>
 #include <cmath>
 

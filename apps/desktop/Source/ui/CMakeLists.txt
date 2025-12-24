@@ -116,6 +116,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/common/AudioFeedback.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/PluginEditorWindow.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/PianoKeyboardViewSkia.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/AIAssistantPanel.cpp
 )
 
 # -----------------------------------------------------------------------------
@@ -135,39 +136,39 @@ target_sources(ZenithDAW PRIVATE
 )
 
 # -----------------------------------------------------------------------------
-# Widgets (Reusable controls)
+# Controls (Widgets)
 # -----------------------------------------------------------------------------
 target_sources(ZenithDAW PRIVATE
     # Core Skia widgets
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaButton.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaKnob.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaSlider.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaSpectrumComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/DebugConsoleComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/DeviceChainComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SpectraAnalyzerComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/MarkdownComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaButton.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaKnob.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaSlider.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaSpectrumComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/DebugConsoleComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/DeviceChainComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SpectraAnalyzerComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/MarkdownComponent.cpp
     
     # Zenith widget system
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithControl.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithKnob.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithSlider.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithButton.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithDropdown.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithToggle.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithTextInput.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithModMatrix.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithTooltipOverlay.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithVisualizer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ZenithControl.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ZenithKnob.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ZenithSlider.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ZenithButton.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ZenithDropdown.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ZenithToggle.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ZenithTextInput.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ZenithModMatrix.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ZenithTooltipOverlay.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ZenithVisualizer.cpp
     
     # Dialog components
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaAlertWindow.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaComboBox.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaFileChooser.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaLabel.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaListBox.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaPopupMenu.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaTextEditor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaAlertWindow.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaComboBox.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaFileChooser.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaLabel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaListBox.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaPopupMenu.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaTextEditor.cpp
 )
 
 # -----------------------------------------------------------------------------

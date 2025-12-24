@@ -83,10 +83,9 @@ void AudioRenderer::renderAudioGraph(
     juce::AudioBuffer<float> &outputBuffer, int numSamples,
     juce::int64 playheadPosition, std::span<Track *const> tracks,
     std::span<AuxBus *const> auxBuses, const RoutingGraph &routingGraph,
-    MasterLimiter &masterLimiter,
-    std::vector<std::unique_ptr<juce::AudioPluginInstance>> &masterPlugins,
-    const TempoMap *tempoMap, const juce::MidiBuffer *incomingMidi,
-    const float *const *inputChannelData, int numInputChannels) noexcept {
+    MasterLimiter &masterLimiter, const TempoMap *tempoMap,
+    const juce::MidiBuffer *incomingMidi, const float *const *inputChannelData,
+    int numInputChannels) noexcept {
 
   // RT-Safety: Disable denormals to prevent CPU spikes with near-zero floats
   juce::ScopedNoDenormals noDenormals;

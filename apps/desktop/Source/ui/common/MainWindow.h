@@ -10,22 +10,22 @@
 #pragma once
 
 #include "../Source/engine/RecentProjectManager.h"
-#include "SessionViewComponent.h"
-#include "BottomBar.h"
-#include "BrowserPanel.h"
-#include "RightSidePanel.h"
-#include "SkiaButton.h"
-#include "SkiaMainWindowIntegration.h"
-#include "TransportBar.h"
-#include "PianoKeyboardViewSkia.h"
-#include "ArrangementComponent.h"
-#include "ClipSynchronizer.h"
-#include "Engine.h"
-#include "ProjectState.h"
-#include "TrackAutomationSynchronizer.h"
-#include "TrackStateSynchronizer.h"
 #include "../arranger/ArrangerComponent.h"
 #include "../mixer/MixerComponent.h"
+#include "ArrangementComponent.h"
+#include "BottomBar.h"
+#include "BrowserPanel.h"
+#include "ClipSynchronizer.h"
+#include "Engine.h"
+#include "PianoKeyboardViewSkia.h"
+#include "ProjectState.h"
+#include "RightSidePanel.h"
+#include "SessionViewComponent.h"
+#include "SkiaButton.h"
+#include "SkiaMainWindowIntegration.h"
+#include "TrackAutomationSynchronizer.h"
+#include "TrackStateSynchronizer.h"
+#include "TransportBar.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -33,6 +33,9 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
+#include <juce_events/juce_events.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <memory>
 
 namespace zenith {
 class InstrumentBrowserPanel;
@@ -41,7 +44,10 @@ class MainLayoutComponent;
 class WingmanPanel;
 class ZenithMenuBar;
 class ZenithHubComponent;
-namespace ai { class UXDirectorAgent; class PresetGeneticistAgent; }
+namespace ai {
+class UXDirectorAgent;
+class PresetGeneticistAgent;
+} // namespace ai
 } // namespace zenith
 
 //==============================================================================
@@ -266,6 +272,7 @@ public:
   // AI Agents (Brain integration)
   std::unique_ptr<zenith::ai::UXDirectorAgent> uxDirector;
   std::unique_ptr<zenith::ai::PresetGeneticistAgent> presetGeneticist;
+  std::unique_ptr<zenith::mcp::MCPServer> mcpServer;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };

@@ -4,6 +4,13 @@
 
 namespace zenith {
 
+/**
+ * @brief InstrumentTrack - A track that hosts a virtual instrument and responds
+ * to MIDI input.
+ *
+ * Inherits from ClipTrack to support MIDI clips. The instrument generates audio
+ * based on incoming MIDI data from clips or real-time input.
+ */
 class InstrumentTrack : public ClipTrack {
 public:
   InstrumentTrack(const juce::String &name);

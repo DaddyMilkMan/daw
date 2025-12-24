@@ -11,7 +11,7 @@
 #include "RightSidePanel.h"
 #include "../engine/ZenithLogger.h"
 #include "../design-system/ZenithLayout.h"
-#include "../widgets/SpectraAnalyzerComponent.h"
+#include "../controls/SpectraAnalyzerComponent.h"
 
 #ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
