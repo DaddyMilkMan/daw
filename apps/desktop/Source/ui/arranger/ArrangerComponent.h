@@ -1,4 +1,3 @@
-```
 /**
  * @file ArrangerComponent.h
  * @brief Timeline/Arranger view component for Zenith DAW
@@ -19,6 +18,7 @@
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <memory>
 
 #include <core/SkCanvas.h>
 #include <map>
@@ -29,9 +29,9 @@
 #include "../controls/FreezeProgressOverlay.h"
 #include "MacroToolbar.h"
 
-    // Forward declaration for browser drag
-    namespace zenith {
-  class BrowserDragData;
+// Forward declaration for browser drag
+namespace zenith {
+class BrowserDragData;
 }
 
 namespace zenith {

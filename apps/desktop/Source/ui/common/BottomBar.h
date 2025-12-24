@@ -12,6 +12,9 @@
 
 #pragma once
 
+#include <memory>
+#include <vector>y>
+
 #include "../../engine/EngineConstants.h"
 #include "MixerComponent.h"
 #include "PianoKeyboardViewSkia.h"

@@ -13,18 +13,10 @@
 
 #pragma once
 
-<<<<<<< HEAD
 #include "SkiaComponent.h"
 #include "SkiaButton.h"
 #include "ZenithUIComponents.h"
 #include "../../commands/CommandAPI.h"
-=======
-#include "../../commands/CommandAPI.h"
-#include "../framework/SkiaComponent.h"
-#include "../widgets/SkiaButton.h"
-#include "../widgets/ZenithUIComponents.h"
-
->>>>>>> origin/refactor/header-consolidation
 
 namespace zenith {
 
