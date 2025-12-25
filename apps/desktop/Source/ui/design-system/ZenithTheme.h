@@ -45,10 +45,12 @@ public:
 
     // Primary accent (professional blue instead of garish cyan)
     static const juce::Colour accent_primary; // #3b82f6 - Primary brand color
+    static const juce::Colour accent_secondary; // #8b5cf6 - Secondary accent (purple/magenta)
     static const juce::Colour accent_hover;   // #60a5fa - Hover state
     static const juce::Colour accent_pressed; // #2563eb - Pressed/active state
     static const juce::Colour
         accent_subtle; // Accent with 10% opacity - Backgrounds
+    static const juce::Colour hover_overlay; // White 8% - Hover overlay for surfaces
 
     // Semantic colors (status indicators)
     static const juce::Colour success; // #10b981 - Success states

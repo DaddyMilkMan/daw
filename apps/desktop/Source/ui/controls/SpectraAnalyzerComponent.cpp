@@ -11,6 +11,7 @@
 #include "SpectraAnalyzerComponent.h"
 #include "Engine.h"
 #include "ZenithDesignSystem.h"
+#include "../design-system/ZenithTheme.h"
 
 #ifdef ZENITH_USE_SKIA
 #include <core/SkMaskFilter.h>
@@ -46,10 +47,10 @@ SpectraAnalyzerComponent::SpectraAnalyzerComponent(Engine &engine)
   // Basic styling
   auto styleBtn = [](juce::TextButton &btn) {
     btn.setColour(juce::TextButton::buttonColourId,
-                  juce::Colours::black.withAlpha(0.5f));
+                  ZenithTheme::Colors::bg_04);
     btn.setColour(juce::TextButton::textColourOffId,
-                  juce::Colours::white.withAlpha(0.7f));
-    btn.setColour(juce::TextButton::textColourOnId, juce::Colours::cyan);
+                  ZenithTheme::Colors::text_secondary);
+    btn.setColour(juce::TextButton::textColourOnId, ZenithTheme::Colors::accent_primary);
   };
   styleBtn(spectrumBtn);
   styleBtn(scopeBtn);
@@ -172,7 +173,8 @@ void SpectraAnalyzerComponent::drawSkia(SkCanvas *canvas) {
 
   // Draw Background
   SkPaint bgPaint;
-  bgPaint.setColor(SkColorSetARGB(250, 10, 10, 14)); // Deep background
+  juce::Colour bg = ZenithTheme::Colors::bg_00;
+  bgPaint.setColor(SkColorSetARGB(255, bg.getRed(), bg.getGreen(), bg.getBlue())); // Deep background
   canvas->drawRect(skBounds, bgPaint);
 
   // Render Mode
@@ -226,10 +228,13 @@ void SpectraAnalyzerComponent::renderSpectrum(SkCanvas *canvas,
   // Gradient
   SkPoint pts[2] = {{bounds.fLeft, bounds.fBottom},
                     {bounds.fLeft, bounds.fTop}};
+  juce::Colour col1 = ZenithTheme::Colors::accent_primary;
+  juce::Colour col2 = ZenithTheme::Colors::accent_secondary;
+  juce::Colour col3 = ZenithTheme::Colors::error; // Keeping vibrant for spectrum
   SkColor colors[3] = {
-      SkColorSetRGB(0, 100, 255), // Blue/Cyan
-      SkColorSetRGB(180, 0, 255), // Purple
-      SkColorSetRGB(255, 0, 100)  // Pink
+      SkColorSetRGB(col1.getRed(), col1.getGreen(), col1.getBlue()), // Blue/Cyan
+      SkColorSetRGB(col2.getRed(), col2.getGreen(), col2.getBlue()), // Purple
+      SkColorSetRGB(col3.getRed(), col3.getGreen(), col3.getBlue())  // Pink
   };
 
   SkPaint paint;
@@ -242,7 +247,8 @@ void SpectraAnalyzerComponent::renderSpectrum(SkCanvas *canvas,
 
   // Stroke
   paint.setShader(nullptr);
-  paint.setColor(SkColorSetARGB(200, 200, 200, 255));
+  juce::Colour str = ZenithTheme::Colors::border_subtle;
+  paint.setColor(SkColorSetARGB(200, str.getRed(), str.getGreen(), str.getBlue()));
   paint.setStyle(SkPaint::kStroke_Style);
   paint.setStrokeWidth(1.5f);
   canvas->drawPath(path, paint);
@@ -285,8 +291,11 @@ void SpectraAnalyzerComponent::renderScope(SkCanvas *canvas,
     canvas->drawPath(path, paint);
   };
 
-  drawChannel(scopeDataL, SkColorSetRGB(0, 255, 255), -20.0f);
-  drawChannel(scopeDataR, SkColorSetRGB(255, 0, 150), 20.0f);
+  juce::Colour chL = ZenithTheme::Colors::info;
+  juce::Colour chR = ZenithTheme::Colors::accent_secondary;
+
+  drawChannel(scopeDataL, SkColorSetRGB(chL.getRed(), chL.getGreen(), chL.getBlue()), -20.0f);
+  drawChannel(scopeDataR, SkColorSetRGB(chR.getRed(), chR.getGreen(), chR.getBlue()), 20.0f);
 }
 
 void SpectraAnalyzerComponent::renderStereoField(SkCanvas *canvas,
@@ -323,7 +332,8 @@ void SpectraAnalyzerComponent::renderStereoField(SkCanvas *canvas,
   }
 
   SkPaint paint;
-  paint.setColor(SkColorSetARGB(180, 0, 255, 128)); // Spring green
+  juce::Colour sField = ZenithTheme::Colors::success;
+  paint.setColor(SkColorSetARGB(180, sField.getRed(), sField.getGreen(), sField.getBlue())); // Spring green
   paint.setStyle(SkPaint::kStroke_Style);
   paint.setStrokeWidth(1.0f);
   paint.setAntiAlias(true);
@@ -331,7 +341,7 @@ void SpectraAnalyzerComponent::renderStereoField(SkCanvas *canvas,
   // Glow
   SkPaint glow = paint;
   glow.setStrokeWidth(2.5f);
-  glow.setColor(SkColorSetARGB(80, 0, 255, 128));
+  glow.setColor(SkColorSetARGB(80, sField.getRed(), sField.getGreen(), sField.getBlue()));
   glow.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 2.0f));
   canvas->drawPath(path, glow);
 

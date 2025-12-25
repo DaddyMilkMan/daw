@@ -9,9 +9,10 @@
 */
 
 #include "ExportDialog.h"
-#include "../commands/CommandAPI.h"
+#include "../controls/ExportProgressBar.h"
 #include "../design-system/ZenithDesignSystem.h"
-
+#include "../commands/CommandAPI.h"
+#include "../design-system/ZenithTheme.h"
 namespace zenith {
 
 ExportDialog::ExportDialog(CommandAPI &commandAPI) : commandAPI_(commandAPI) {
@@ -39,6 +40,14 @@ ExportDialog::ExportDialog(CommandAPI &commandAPI) : commandAPI_(commandAPI) {
     updateButtonStates();
   };
   addAndMakeVisible(btnOgg_.get());
+
+  btnAiff_ = std::make_unique<SkiaButton>("AIFF");
+  btnAiff_->setToggleable(true);
+  btnAiff_->onClick = [this]() {
+    selectedFormat_ = "aiff";
+    updateButtonStates();
+  };
+  addAndMakeVisible(btnAiff_.get());
 
   // Bit Depth Buttons
   btn8Bit_ = std::make_unique<SkiaButton>("8-bit");
@@ -88,6 +97,10 @@ ExportDialog::ExportDialog(CommandAPI &commandAPI) : commandAPI_(commandAPI) {
   toggleAIEnhance_->setStyle(SkiaButton::Style::Success); // Highlight AI
   addAndMakeVisible(toggleAIEnhance_.get());
 
+  toggleStemExport_ = std::make_unique<SkiaButton>("Export Stems");
+  toggleStemExport_->setToggleable(true);
+  addAndMakeVisible(toggleStemExport_.get());
+
   // Actions
   btnExport_ = std::make_unique<SkiaButton>("EXPORT");
   btnExport_->setStyle(SkiaButton::Style::Primary);
@@ -99,8 +112,13 @@ ExportDialog::ExportDialog(CommandAPI &commandAPI) : commandAPI_(commandAPI) {
   btnCancel_->onClick = [this]() { setVisible(false); }; // Just hide for now
   addAndMakeVisible(btnCancel_.get());
 
+  // Progress Bar
+  progressBar_ = std::make_unique<ExportProgressBar>();
+  progressBar_->setVisible(false); // Hidden by default
+  addAndMakeVisible(progressBar_.get());
+
   updateButtonStates();
-  setSize(500, 450);
+  setSize(550, 520); // Increased size for new controls
 }
 
 ExportDialog::~ExportDialog() {}
@@ -109,6 +127,7 @@ void ExportDialog::updateButtonStates() {
   btnWav_->setToggleState(selectedFormat_ == "wav");
   btnFlac_->setToggleState(selectedFormat_ == "flac");
   btnOgg_->setToggleState(selectedFormat_ == "ogg");
+  btnAiff_->setToggleState(selectedFormat_ == "aiff");
 
   btn8Bit_->setToggleState(selectedBitDepth_ == 8);
   btn16Bit_->setToggleState(selectedBitDepth_ == 16);
@@ -124,15 +143,17 @@ void ExportDialog::resized() {
   // Title area (handled in drawSkia)
   area.removeFromTop(40);
 
-  // Format
+  // Format (4 buttons now)
   area.removeFromTop(20); // Label space
   auto formatRow = area.removeFromTop(buttonHeight);
-  int w = (formatRow.getWidth() - 2 * gap) / 3;
+  int w = (formatRow.getWidth() - 3 * gap) / 4;
   btnWav_->setBounds(formatRow.removeFromLeft(w));
   formatRow.removeFromLeft(gap);
   btnFlac_->setBounds(formatRow.removeFromLeft(w));
   formatRow.removeFromLeft(gap);
-  btnOgg_->setBounds(formatRow);
+  btnOgg_->setBounds(formatRow.removeFromLeft(w));
+  formatRow.removeFromLeft(gap);
+  btnAiff_->setBounds(formatRow);
 
   area.removeFromTop(gap * 2);
 
@@ -157,11 +178,19 @@ void ExportDialog::resized() {
   toggleNormalize_->setBounds(area.removeFromTop(buttonHeight));
   area.removeFromTop(gap);
   toggleAIEnhance_->setBounds(area.removeFromTop(buttonHeight));
+  area.removeFromTop(gap);
+  toggleStemExport_->setBounds(area.removeFromTop(buttonHeight));
 
   // Actions (Bottom)
   auto actionRow = getLocalBounds().reduced(30).removeFromBottom(40);
   btnCancel_->setBounds(actionRow.removeFromLeft(100));
   btnExport_->setBounds(actionRow.removeFromRight(120));
+
+  // Progress Bar (Overlay or Bottom)
+  if (progressBar_) {
+      auto bounds = getLocalBounds().toFloat();
+      progressBar_->setBounds(30, bounds.getHeight() - 80, bounds.getWidth() - 60, 30);
+  }
 }
 
 void ExportDialog::drawSkia(SkCanvas *canvas) {
@@ -174,26 +203,30 @@ void ExportDialog::drawSkia(SkCanvas *canvas) {
   paint.setAntiAlias(true);
 
   // Dark Glass
-  paint.setColor(SkColorSetARGB(245, 15, 15, 20));
+  juce::Colour bg = ZenithTheme::Colors::bg_02;
+  paint.setColor(SkColorSetARGB(245, bg.getRed(), bg.getGreen(), bg.getBlue()));
   canvas->drawRRect(rrect, paint);
 
   // Border
   paint.setStyle(SkPaint::kStroke_Style);
   paint.setStrokeWidth(1.0f);
-  paint.setColor(SkColorSetARGB(50, 255, 255, 255));
+  juce::Colour border = ZenithTheme::Colors::border_default;
+  paint.setColor(SkColorSetARGB(border.getAlpha(), border.getRed(), border.getGreen(), border.getBlue()));
   canvas->drawRRect(rrect, paint);
 
   // Title
-  SkFont font = design::getDisplayFont(24.0f);
+  SkFont font = zenith::design::getSkFont(24.0f, zenith::design::FontWeight::Bold);
   paint.setStyle(SkPaint::kFill_Style);
-  paint.setColor(SK_ColorWHITE);
+  juce::Colour text = ZenithTheme::Colors::text_primary;
+  paint.setColor(SkColorSetARGB(255, text.getRed(), text.getGreen(), text.getBlue()));
 
   const char *title = "Export Project";
   canvas->drawString(title, 30.0f, 45.0f, font, paint);
 
   // Section Labels
-  font = design::getSkFont(14.0f, design::FontWeight::Medium);
-  paint.setColor(SkColorSetARGB(150, 255, 255, 255));
+  font = zenith::design::getSkFont(zenith::design::typography::FONT_MD, zenith::design::FontWeight::Medium);
+  juce::Colour label = ZenithTheme::Colors::text_secondary;
+  paint.setColor(SkColorSetARGB(label.getAlpha(), label.getRed(), label.getGreen(), label.getBlue()));
 
   // Manually positioned to match resized()
   canvas->drawString("Format", 30.0f, 85.0f, font, paint);
@@ -222,6 +255,8 @@ void ExportDialog::triggerExport() {
   params->setProperty("dither", toggleDither_->getToggleState());
   params->setProperty("normalize", toggleNormalize_->getToggleState());
   params->setProperty("aiEnhance", toggleAIEnhance_->getToggleState());
+  params->setProperty("stemExport", toggleStemExport_->getToggleState());
+  params->setProperty("normalizeDb", normalizeLevelDb_);
   params->setProperty("durationSeconds", 0.0); // Full project
 
   juce::var args(params);

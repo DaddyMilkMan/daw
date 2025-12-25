@@ -13,7 +13,8 @@
   ==============================================================================
 */
 
-#include "BrowserPanel.h"
+#include "../browser/BrowserPanel.h"
+#include "../design-system/ZenithDesignSystem.h"
 #include "../framework/GlassmorphicPanel.h"
 #include "../framework/NeonGlow.h"
 #include "ZenithDesignSystem.h"
@@ -22,6 +23,8 @@
 #include <core/SkMaskFilter.h>
 
 #ifdef ZENITH_USE_SKIA
+
+#include "../design-system/ZenithTheme.h"
 
 namespace zenith {
 
@@ -316,9 +319,10 @@ void BrowserPanel::drawSkia(SkCanvas *canvas) {
 
   // 2. Subtle side accent glow
   SkPaint accentGlow;
+  juce::Colour accent = ZenithTheme::Colors::accent_primary;
   SkPoint glowPoints[2] = {{0, 0}, {40, 0}};
-  SkColor glowColors[2] = {SkColorSetARGB(25, 0, 200, 255),
-                           SkColorSetARGB(0, 0, 200, 255)};
+  SkColor glowColors[2] = {SkColorSetARGB(25, accent.getRed(), accent.getGreen(), accent.getBlue()),
+                           SkColorSetARGB(0, accent.getRed(), accent.getGreen(), accent.getBlue())};
   accentGlow.setShader(SkGradientShader::MakeLinear(
       glowPoints, glowColors, nullptr, 2, SkTileMode::kClamp));
   canvas->drawRect(SkRect::MakeWH(40, bounds.getHeight()), accentGlow);
@@ -335,8 +339,10 @@ void BrowserPanel::drawHeader(SkCanvas *canvas) {
   // Premium header with gradient and subtle border
   SkPoint headerGradPoints[2] = {{0, 0},
                                  {0, static_cast<float>(headerHeight_)}};
-  SkColor headerGradColors[2] = {SkColorSetRGB(38, 38, 45),
-                                 SkColorSetRGB(28, 28, 32)};
+  juce::Colour bgToo = ZenithTheme::Colors::bg_02;
+  juce::Colour bgThree = ZenithTheme::Colors::bg_03;
+  SkColor headerGradColors[2] = {SkColorSetRGB(bgThree.getRed(), bgThree.getGreen(), bgThree.getBlue()),
+                                 SkColorSetRGB(bgToo.getRed(), bgToo.getGreen(), bgToo.getBlue())};
   auto headerGradient = SkGradientShader::MakeLinear(
       headerGradPoints, headerGradColors, nullptr, 2, SkTileMode::kClamp);
 
@@ -610,10 +616,12 @@ void BrowserPanel::drawBrowserItem(SkCanvas *canvas, int index,
     // Neon Accent Bar
     SkRect barRect = SkRect::MakeXYWH(x, y + 2, 3, h - 4);
     SkPaint barPaint;
-    barPaint.setColor(design::colors::CYAN);
+    juce::Colour accent = ZenithTheme::Colors::accent_primary;
+    SkColor skAccent = SkColorSetRGB(accent.getRed(), accent.getGreen(), accent.getBlue());
+    barPaint.setColor(skAccent);
     barPaint.setAntiAlias(true);
     canvas->drawRect(barRect, barPaint);
-    NeonGlow::drawGlow(canvas, barRect, design::colors::CYAN,
+    NeonGlow::drawGlow(canvas, barRect, skAccent,
                        NeonGlow::Intensity::Medium);
 
   } else if (index == hoverIndex_) {
@@ -665,12 +673,11 @@ void BrowserPanel::drawBrowserItem(SkCanvas *canvas, int index,
   drawIcon(canvas, item->type, x + 18, bounds.getCentreY(), 14);
 
   // Text
-  SkFont font = design::getSkFont(13.0f, design::FontWeight::Regular);
+  SkFont font = zenith::design::getSkFont(zenith::design::typography::FONT_MD);
   SkPaint textPaint;
-  if (index == selectedIndex_)
-    textPaint.setColor(SkColorSetRGB(150, 235, 255));
-  else
-    textPaint.setColor(SkColorSetRGB(220, 220, 225));
+  juce::Colour textCol = (index == selectedIndex_) ? ZenithTheme::Colors::text_primary : ZenithTheme::Colors::text_secondary;
+  textPaint.setColor(SkColorSetRGB(textCol.getRed(), textCol.getGreen(), textCol.getBlue()));
+
   textPaint.setAntiAlias(true);
 
   // Shadow for text to pop over waveform
@@ -734,7 +741,8 @@ void BrowserPanel::drawBrowserItem(SkCanvas *canvas, int index,
 void BrowserPanel::drawPreviewArea(SkCanvas *canvas) {
   // Background
   SkPaint bgPaint;
-  bgPaint.setColor(SkColorSetRGB(30, 30, 35));
+  juce::Colour bg = ZenithTheme::Colors::bg_02;
+  bgPaint.setColor(SkColorSetRGB(bg.getRed(), bg.getGreen(), bg.getBlue()));
   canvas->drawRect(SkRect::MakeXYWH(previewAreaBounds_.getX(),
                                     previewAreaBounds_.getY(),
                                     previewAreaBounds_.getWidth(),
@@ -827,7 +835,8 @@ void BrowserPanel::drawWaveform(SkCanvas *canvas, const SkRect &bounds) {
 
   if (waveformData_.empty()) {
     // No waveform - show placeholder with icon
-    SkFont font = design::getSkFont(12.0f, design::FontWeight::Regular);
+    // No waveform - show placeholder with icon
+    SkFont font = zenith::design::getSkFont(zenith::design::typography::FONT_SM);
     SkPaint textPaint;
     textPaint.setColor(SkColorSetARGB(60, 255, 255, 255));
     textPaint.setAntiAlias(true);
@@ -876,12 +885,13 @@ void BrowserPanel::drawWaveform(SkCanvas *canvas, const SkRect &bounds) {
   }
   waveformPath.close();
 
-  // Main waveform gradient fill (no outer glow - clean look)
+  // Main waveform gradient fill
+  juce::Colour waveBase = ZenithTheme::Colors::waveform_audio;
   SkPoint gradientPoints[2] = {{0, bounds.fTop}, {0, bounds.fBottom}};
   SkColor gradientColors[3] = {
-      SkColorSetARGB(200, 0, 220, 255), // Top - bright cyan
-      SkColorSetARGB(150, 0, 180, 220), // Middle
-      SkColorSetARGB(100, 0, 100, 180)  // Bottom - deeper blue
+      SkColorSetARGB(200, waveBase.getRed(), waveBase.getGreen(), waveBase.getBlue()),
+      SkColorSetARGB(150, waveBase.getRed(), waveBase.getGreen(), waveBase.getBlue()),
+      SkColorSetARGB(100, waveBase.darker(0.2f).getRed(), waveBase.darker(0.2f).getGreen(), waveBase.darker(0.2f).getBlue())
   };
   float positions[3] = {0.0f, 0.5f, 1.0f};
   auto gradient = SkGradientShader::MakeLinear(
@@ -913,23 +923,24 @@ void BrowserPanel::drawWaveform(SkCanvas *canvas, const SkRect &bounds) {
 
     // Main line
     SkPaint posPaint;
-    posPaint.setColor(SkColorSetRGB(255, 255, 255)); // White for visibility
+    juce::Colour playhead = ZenithTheme::Colors::playhead;
+    posPaint.setColor(SkColorSetRGB(playhead.getRed(), playhead.getGreen(), playhead.getBlue())); // Playhead color
     posPaint.setStrokeWidth(1.5f);
     posPaint.setAntiAlias(true);
     canvas->drawLine(posX, bounds.y() + 4, posX,
                      bounds.y() + bounds.height() - 4, posPaint);
 
     // Playhead triangle (subtle)
-    SkPath playhead;
-    playhead.moveTo(posX - 3, bounds.y() + 1);
-    playhead.lineTo(posX + 3, bounds.y() + 1);
-    playhead.lineTo(posX, bounds.y() + 5);
-    playhead.close();
+    SkPath playheadPath;
+    playheadPath.moveTo(posX - 3, bounds.y() + 1);
+    playheadPath.lineTo(posX + 3, bounds.y() + 1);
+    playheadPath.lineTo(posX, bounds.y() + 5);
+    playheadPath.close();
 
     SkPaint playheadPaint;
     playheadPaint.setColor(SkColorSetRGB(255, 255, 255));
     playheadPaint.setAntiAlias(true);
-    canvas->drawPath(playhead, playheadPaint);
+    canvas->drawPath(playheadPath, playheadPaint);
   }
 }
 
@@ -1351,8 +1362,8 @@ void BrowserPanel::drawFilterBar(SkCanvas *canvas) {
   // Premium gradient background (not flat color)
   SkPoint bgGradPoints[2] = {{0, y}, {0, y + h}};
   SkColor bgGradColors[2] = {
-      design::colors::BG_DARK,   // Top
-      design::colors::BG_DARKEST // Bottom
+      SkColorSetRGB(ZenithTheme::Colors::bg_02.getRed(), ZenithTheme::Colors::bg_02.getGreen(), ZenithTheme::Colors::bg_02.getBlue()),
+      SkColorSetRGB(ZenithTheme::Colors::bg_00.getRed(), ZenithTheme::Colors::bg_00.getGreen(), ZenithTheme::Colors::bg_00.getBlue())
   };
   auto bgGradient = SkGradientShader::MakeLinear(
       bgGradPoints, bgGradColors, nullptr, 2, SkTileMode::kClamp);
@@ -1587,11 +1598,11 @@ BrowserPanel::createDragImage(const std::shared_ptr<BrowserItem> &item) {
   juce::Graphics g(image);
 
   // Background with transparency
-  g.setColour(juce::Colour::fromFloatRGBA(0.1f, 0.1f, 0.12f, 0.85f));
+  g.setColour(ZenithTheme::Colors::bg_02.withAlpha(0.85f));
   g.fillRoundedRectangle(0, 0, (float)w, (float)h, 6.0f);
 
   // Border
-  g.setColour(juce::Colour::fromFloatRGBA(0.0f, 0.8f, 1.0f, 0.5f));
+  g.setColour(ZenithTheme::Colors::accent_primary.withAlpha(0.5f));
   g.drawRoundedRectangle(0.5f, 0.5f, w - 1.0f, h - 1.0f, 6.0f, 1.0f);
 
   // Waveform (Ghost)
@@ -1624,7 +1635,7 @@ BrowserPanel::createDragImage(const std::shared_ptr<BrowserItem> &item) {
 
   // Text
   g.setColour(juce::Colours::white);
-  g.setFont(juce::Font(14.0f, juce::Font::bold));
+  g.setFont(juce::FontOptions(14.0f, juce::Font::bold));
   g.drawText(item->name, 40, 0, w - 45, h, juce::Justification::centredLeft,
              true);
 

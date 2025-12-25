@@ -8,6 +8,7 @@
 #include "ArrangerClipManager.h"
 #include "ArrangerGridUtils.h"
 #include "ProjectState.h"
+#include "../../utils/StemSeparationJob.h"
 
 #include <juce_events/juce_events.h>
 #include <cmath>
@@ -52,6 +53,26 @@ void ArrangerInputHandler::mouseDown(const juce::MouseEvent& e) {
     auto* clip = clipManager_.findClipAtPoint(e.position);
 
     if (clip != nullptr) {
+        if (e.mods.isRightButtonDown()) {
+            // Context Menu
+            juce::PopupMenu menu;
+            menu.addItem(1, "Rip Audio to Stems (Neural)");
+            menu.addItem(2, "Duplicate Clip", true, false);
+            menu.addItem(3, "Delete Clip", true, false);
+
+            juce::String clipId = clip->clipId;
+            menu.showMenuAsync(juce::PopupMenu::Options(), [this, clipId](int result) {
+                if (result == 1) {
+                    ripAudioToStems(clipId);
+                } else if (result == 2) {
+                    clipManager_.duplicateSelectedClips();
+                } else if (result == 3) {
+                    clipManager_.deleteSelectedClips();
+                }
+            });
+            return;
+        }
+
         // Check for resize zones
         if (clip->isInLeftResizeZone(e.position)) {
             currentDragMode_ = DragMode::ResizeClipLeft;
@@ -114,6 +135,11 @@ void ArrangerInputHandler::mouseDown(const juce::MouseEvent& e) {
         }
     } else {
         // Clicked empty area
+        if (e.mods.isRightButtonDown()) {
+             // Empty area context menu?
+             return;
+        }
+        
         if (e.position.x < HEADER_WIDTH && e.position.y > RULER_HEIGHT) {
             // Track Header Interaction
             int trackIndex = gridUtils_.yToTrackIndex(e.position.y);
@@ -130,6 +156,89 @@ void ArrangerInputHandler::mouseDown(const juce::MouseEvent& e) {
         }
     }
 }
+
+void ArrangerInputHandler::ripAudioToStems(const juce::String& clipId) {
+    auto [foundTrack, clipNode] = projectState_.findClip(clipId);
+    if (!clipNode.isValid()) return;
+
+    juce::String audioPath = clipNode[ProjectState::PROP_AUDIO_FILE].toString();
+    if (audioPath.isEmpty()) {
+        juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+            "Stem Separation", "This feature only works on audio clips with a valid file.");
+        return;
+    }
+
+    juce::File audioFile(audioPath);
+    if (!audioFile.existsAsFile()) return;
+
+    // Create output directory
+    juce::File outputDir = audioFile.getParentDirectory().getChildFile(audioFile.getFileNameWithoutExtension() + "_Stems");
+    outputDir.createDirectory();
+
+    // Trigger separation job
+    auto callback = [this, clipId, outputDir](const utils::StemSeparationJob::StemFiles& results) {
+        if (!results.success) {
+            juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+                "Stem Separation Failed", results.error);
+            return;
+        }
+
+        // Create new tracks and clips
+        projectState_.getUndoManager().beginNewTransaction("Rip Audio to Stems");
+
+        auto [origTrack, origClip] = projectState_.findClip(clipId);
+        double startBeats = origClip[ProjectState::PROP_START_BEATS];
+        juce::String origName = origClip[ProjectState::PROP_NAME].toString();
+
+        struct ResultMapping {
+            juce::String suffix;
+            juce::File file;
+        };
+
+        ResultMapping mappings[] = {
+            {"Vocals", results.vocals},
+            {"Drums", results.drums},
+            {"Bass", results.bass},
+            {"Other", results.other}
+        };
+
+        for (const auto& m : mappings) {
+            juce::String newTrackId = projectState_.addTrack(origName + " (" + m.suffix + ")", "audio");
+            juce::String newClipId = projectState_.createEmptyClip(newTrackId, startBeats, 4.0, false, m.suffix, "Stem creation");
+            
+            auto [t, c] = projectState_.findClip(newClipId);
+            if (c.isValid()) {
+                c.setProperty(ProjectState::PROP_AUDIO_FILE, m.file.getFullPathName(), &projectState_.getUndoManager());
+                
+                // Update length from reader
+                juce::AudioFormatManager fmt;
+                fmt.registerBasicFormats();
+                if (auto reader = std::unique_ptr<juce::AudioFormatReader>(fmt.createReaderFor(m.file))) {
+                    double lengthBeats = gridUtils_.samplesToBeats(reader->lengthInSamples);
+                    projectState_.setClipRange(newClipId, startBeats, lengthBeats, "Update length");
+                }
+            }
+        }
+        
+        owner_.repaint();
+
+        juce::String msg = results.usedNeuralEngine ? 
+            "Neural Stem Separation Complete!" : 
+            "Stem Separation Complete (DSP Fallback)";
+        
+        juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::InfoIcon,
+            "Stem Separation", msg);
+    };
+
+
+    auto* job = new utils::StemSeparationJob(audioFile, outputDir, callback);
+    owner_.engine_.getThreadPool().addJob(job, true);
+    
+    juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::InfoIcon,
+        "Stem Separation", "Neural processing started in background...");
+}
+
+
 
 void ArrangerInputHandler::handleTrackHeaderClick(const juce::MouseEvent& e, int trackIndex) {
     auto tracksNode = projectState_.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);

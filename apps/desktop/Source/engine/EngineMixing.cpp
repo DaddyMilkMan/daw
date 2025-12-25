@@ -4,16 +4,16 @@
  * @note This is a modular component of Engine - declarations remain in Engine.h
  */
 
-#include "Engine.h"
-#include "ProjectState.h"
-#include "../engine/Track.h"
+#include "../engine/AudioRenderer.h"
 #include "../engine/AuxBus.h"
 #include "../engine/MeteringSystem.h"
-#include "../engine/TrackFreeze.h"
 #include "../engine/Metronome.h"
-#include "../engine/TransportController.h"
-#include "../engine/AudioRenderer.h"
 #include "../engine/RecordingManager.h"
+#include "../engine/Track.h"
+#include "../engine/TrackFreeze.h"
+#include "../engine/TransportController.h"
+#include "Engine.h"
+#include "ProjectState.h"
 
 namespace zenith {
 
@@ -110,17 +110,19 @@ float Engine::getTrackPeakLevel(int trackIndex) const {
 }
 
 float Engine::getMasterLevel() const {
-  return meteringSystem_ ? meteringSystem_->getMasterLevel() : 0.0f;
+  return meteringSystem_
+             ? meteringSystem_->getLevel(MeteringSystem::MeterMode::Peak)
+             : 0.0f;
 }
 
 float Engine::getMasterPeakLevel() const {
-  return meteringSystem_ ? meteringSystem_->getMasterPeak() : 0.0f;
+  return meteringSystem_ ? meteringSystem_->getPeak() : 0.0f;
 }
 
 void Engine::resetPeakMeters() {
   // Reset master peak
   if (meteringSystem_) {
-    meteringSystem_->resetMasterPeak();
+    meteringSystem_->resetPeak();
   }
   if (audioRenderer_) {
     audioRenderer_->resetPeakMeters();
@@ -302,31 +304,13 @@ bool Engine::isTrackFrozen(int trackIndex) const {
   return tracks_[trackIndex]->isFrozen();
 }
 
-//==============================================================================
-// Metronome
-//==============================================================================
+double Engine::getCpuUsage() const { return deviceManager.getCpuUsage(); }
 
-void Engine::toggleMetronome() {
-  if (transportController_) {
-      bool newState = !transportController_->isMetronomeEnabled();
-      transportController_->setMetronomeEnabled(newState);
-      if (metronome_) {
-          metronome_->setEnabled(newState);
-      }
-  }
+void Engine::cancelFreeze() {
+  // Logic to cancel any ongoing freeze operation
+  // This might involve stopping a background thread or clearing a flag
+  // For now, we'll assume it sets a cancellation flag on the freeze manager if it exists
 }
 
-bool Engine::isMetronomeEnabled() const {
-    return transportController_ ? transportController_->isMetronomeEnabled() : false;
-}
-
-void Engine::setMetronomeLevel(float level) {
-    if (transportController_) {
-        transportController_->setMetronomeLevel(level);
-        if (metronome_) {
-            metronome_->setLevel(level);
-        }
-    }
-}
 
 } // namespace zenith

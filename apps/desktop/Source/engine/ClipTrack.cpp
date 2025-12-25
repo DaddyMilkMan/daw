@@ -1,4 +1,5 @@
 #include "ClipTrack.h"
+#include "RealTimeGarbageCollector.h"
 
 namespace zenith {
 
@@ -48,13 +49,9 @@ void ClipTrack::updateClipSnapshot() {
     
     // Keep reference alive
     if (currentClipSnapshot_)
-        clipSnapshotTrash_.push_back(currentClipSnapshot_);
+        RealTimeGarbageCollector::getInstance().deferDelete(currentClipSnapshot_);
         
     currentClipSnapshot_ = newSnapshot;
-    
-    // Cleanup trash (limit size or clean based on some heuristic)
-    if (clipSnapshotTrash_.size() > 5)
-        clipSnapshotTrash_.erase(clipSnapshotTrash_.begin());
 }
 
 } // namespace zenith

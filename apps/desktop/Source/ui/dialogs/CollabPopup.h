@@ -3,6 +3,7 @@
 #pragma once
 #include "../network/CollaborationManager.h"
 #include <JuceHeader.h>
+#include "../design-system/ZenithTheme.h"
 
 class CollabPopup : public juce::Component, public juce::ChangeListener {
 public:
@@ -42,7 +43,7 @@ public:
     joinGroup.setText("Join Session");
 
     addAndMakeVisible(codeEntry);
-    codeEntry.setTextToShowWhenEmpty("Enter 4-digit code", juce::Colours::grey);
+    codeEntry.setTextToShowWhenEmpty("Enter 4-digit code", ZenithTheme::Colors::text_secondary);
     codeEntry.setJustification(juce::Justification::centred);
     codeEntry.setInputRestrictions(4, "0123456789");
 
@@ -69,31 +70,31 @@ public:
 
     if (state == CollaborationManager::ConnectionState::Connected) {
       statusLabel.setText("Connected!", juce::dontSendNotification);
-      statusLabel.setColour(juce::Label::textColourId, juce::Colours::green);
+      statusLabel.setColour(juce::Label::textColourId, ZenithTheme::Colors::success);
     } else if (state == CollaborationManager::ConnectionState::Connecting) {
       statusLabel.setText("Connecting...", juce::dontSendNotification);
-      statusLabel.setColour(juce::Label::textColourId, juce::Colours::orange);
+      statusLabel.setColour(juce::Label::textColourId, ZenithTheme::Colors::warning);
     } else if (state == CollaborationManager::ConnectionState::Error) {
       statusLabel.setText("Connection / Server Error",
                           juce::dontSendNotification);
-      statusLabel.setColour(juce::Label::textColourId, juce::Colours::red);
+      statusLabel.setColour(juce::Label::textColourId, ZenithTheme::Colors::error);
     } else if (state == CollaborationManager::ConnectionState::Hosting) {
       statusLabel.setText("Hosting Active", juce::dontSendNotification);
-      statusLabel.setColour(juce::Label::textColourId, juce::Colours::cyan);
+      statusLabel.setColour(juce::Label::textColourId, ZenithTheme::Colors::info);
       codeDisplay.setText(mgr.getCurrentCode(), juce::dontSendNotification);
       copyBtn.setVisible(true);
     } else if (state == CollaborationManager::ConnectionState::Registering) {
       statusLabel.setText("Signaling Server...", juce::dontSendNotification);
-      statusLabel.setColour(juce::Label::textColourId, juce::Colours::yellow);
+      statusLabel.setColour(juce::Label::textColourId, ZenithTheme::Colors::warning);
     } else if (state == CollaborationManager::ConnectionState::Punching) {
       statusLabel.setText("Punching Firewall...", juce::dontSendNotification);
-      statusLabel.setColour(juce::Label::textColourId, juce::Colours::pink);
+      statusLabel.setColour(juce::Label::textColourId, ZenithTheme::Colors::accent_hover);
     }
   }
 
   void paint(juce::Graphics &g) override {
-    g.fillAll(juce::Colours::darkgrey.darker(0.2f));
-    g.setColour(juce::Colours::white.withAlpha(0.1f));
+    g.fillAll(ZenithTheme::Colors::bg_02);
+    g.setColour(ZenithTheme::Colors::border_default);
     g.drawRect(getLocalBounds(), 1);
   }
 

@@ -13,6 +13,7 @@
 #pragma once
 
 #include "WingmanPanel.h" // Include full header to use unique_ptr
+#include "UndoHistoryPanel.h"
 #include "../controls/SpectraAnalyzerComponent.h"
 #include "SkiaComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -27,15 +28,15 @@
 namespace zenith {
 
 // Forward declarations
-// Forward declarations
 class CommandAPI;
 class Engine;
+class ProjectState;
 
 #ifdef ZENITH_USE_SKIA
 
 class RightSidePanel : public SkiaComponent {
 public:
-  RightSidePanel(CommandAPI &api, Engine &engine);
+  RightSidePanel(CommandAPI &api, Engine &engine, ProjectState &projectState);
   ~RightSidePanel() override;
 
   void drawSkia(SkCanvas *canvas) override;
@@ -46,6 +47,7 @@ private:
   // Child components
   std::unique_ptr<WingmanPanel> wingmanPanel_;
   std::unique_ptr<SpectraAnalyzerComponent> spectraAnalyzer_;
+  std::unique_ptr<UndoHistoryPanel> undoHistoryPanel_;
 
   // Cached resources for 60FPS rendering
   ::SkPaint bgPaint_;

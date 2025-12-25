@@ -6,8 +6,10 @@
 */
 
 #pragma once
+#include <functional>
 #include <juce_core/juce_core.h>
 #include <juce_events/juce_events.h>
+#include <memory>
 
 namespace zenith {
 namespace ai {
@@ -113,21 +115,21 @@ private:
     // System message
     juce::DynamicObject::Ptr sysMsg = new juce::DynamicObject();
     sysMsg->setProperty("role", "system");
-    sysMsg->setProperty("content", systemMessage);
-    messages.add(juce::var(sysMsg.get()));
+    sysMsg->setProperty("content", juce::var(systemMessage));
+    messages.add(juce::var(sysMsg));
 
     // User message
     juce::DynamicObject::Ptr userMsg = new juce::DynamicObject();
     userMsg->setProperty("role", "user");
-    userMsg->setProperty("content", prompt);
-    messages.add(juce::var(userMsg.get()));
+    userMsg->setProperty("content", juce::var(prompt));
+    messages.add(juce::var(userMsg));
 
     request->setProperty("messages", juce::var(messages));
 
     // Enable streaming for better responsiveness (optional)
     request->setProperty("stream", false);
 
-    return juce::JSON::toString(request.get());
+    return juce::JSON::toString(juce::var(request));
   }
 
   juce::String makeHttpRequest(const juce::String &requestBody) {
@@ -136,18 +138,16 @@ private:
     url = url.withPOSTData(requestBody);
 
     // Set up headers for the request
-    juce::StringPairArray headers;
-    headers.set("Content-Type", "application/json");
-    headers.set("Authorization", "Bearer " + apiKey_);
+    // Set up headers
+    juce::String headerString = "Content-Type: application/json\r\n"
+                                "Authorization: Bearer " +
+                                apiKey_;
 
-    // Create input stream options
-    // Create input stream options
-    // Use ignoreAllParameters because we're sending raw JSON body via
-    // withPOSTData()
-    juce::URL::InputStreamOptions options(
-        juce::URL::ParameterHandling::ignoreAllParameters);
-    options = options.withExtraHeaders(headers.getHeadersAsString());
-    options = options.withConnectionTimeoutMs(30000); // 30 second timeout
+    // Chain options
+    auto options =
+        juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
+            .withExtraHeaders(headerString)
+            .withConnectionTimeoutMs(30000);
 
     // Make the HTTP POST request
     std::unique_ptr<juce::InputStream> stream = url.createInputStream(options);

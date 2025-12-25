@@ -26,6 +26,8 @@
 #include <core/SkPaint.h>
 #endif
 
+namespace zenith {
+
 /**
  * @class TimelineRuler
  * @brief Displays a horizontal timeline with beat markers
@@ -36,7 +38,7 @@
  * animations.
  */
 #ifdef ZENITH_USE_SKIA
-class TimelineRuler : public zenith::SkiaComponent
+class TimelineRuler : public SkiaComponent
 #else
 class TimelineRuler : public juce::Component,
                       public juce::Timer
@@ -114,3 +116,5 @@ private:
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TimelineRuler)
 };
+
+} // namespace zenith

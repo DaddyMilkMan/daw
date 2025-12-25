@@ -593,5 +593,56 @@ void AIMasteringAgent::normalizeLoudness(juce::AudioBuffer<float> &buffer,
       "dB");
 }
 
+//==============================================================================
+// MasteringEQ Implementation
+//==============================================================================
+
+void MasteringEQ::prepare(const juce::dsp::ProcessSpec &spec) {
+  highPass_.prepare(spec);
+  highPass_.setType(juce::dsp::StateVariableTPTFilterType::highpass);
+  highPass_.setCutoffFrequency(20.0f);
+
+  lowShelf_.prepare(spec);
+  midCut_.prepare(spec);
+  presence_.prepare(spec);
+  airBand_.prepare(spec);
+
+  reset();
+}
+
+void MasteringEQ::reset() {
+  highPass_.reset();
+  lowShelf_.reset();
+  midCut_.reset();
+  presence_.reset();
+  airBand_.reset();
+}
+
+//==============================================================================
+// MasteringLimiter Implementation
+//==============================================================================
+
+void MasteringLimiter::prepare(const juce::dsp::ProcessSpec &spec) {
+  sampleRate_ = spec.sampleRate;
+  lookaheadSamples_ = static_cast<int>(0.005 * sampleRate_); // 5ms lookahead
+  lookaheadBuffer_.setSize(static_cast<int>(spec.numChannels),
+                           lookaheadSamples_ + 1);
+  lookaheadBuffer_.clear();
+  lookaheadPos_ = 0;
+
+  attackCoeff_ = static_cast<float>(std::exp(-1.0 / (0.001 * sampleRate_)));
+  releaseCoeff_ = static_cast<float>(std::exp(-1.0 / (0.05 * sampleRate_)));
+}
+
+void MasteringLimiter::reset() {
+  envelope_ = 1.0f;
+  lookaheadBuffer_.clear();
+  lookaheadPos_ = 0;
+}
+
+void MasteringLimiter::setCeiling(float ceilingDb) {
+  ceiling_ = juce::Decibels::decibelsToGain(ceilingDb);
+}
+
 } // namespace ai
 } // namespace zenith

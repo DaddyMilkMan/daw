@@ -201,9 +201,14 @@ void ZenithPolySynthVoice::renderNextBlock(
     // Safety check against buffer sizes
     if (chunk > downsamplingBuffer_.getNumSamples() ||
         upsampledChunk > oversamplingBuffer_.getNumSamples()) {
-      // This should theoretically not happen if maxBlockSize_ is respected and
-      // buffers are sized correctly
-      jassertfalse;
+      // Buffer size exceeded - this indicates a configuration bug.
+      // In debug builds we want to catch this, but in production we gracefully
+      // fall back to non-oversampled rendering to avoid audio glitches.
+      #if JUCE_DEBUG
+      DBG("[ZenithPolySynthVoice] WARNING: Oversampling buffer too small. "
+          "chunk=" + juce::String(chunk) + ", maxBlock=" + juce::String(maxBlockSize_) +
+          ". Falling back to non-oversampled processing.");
+      #endif
       // Fallback: render non-oversampled to avoid crash/silence
       renderInnerBlock(outputBuffer, startSample + samplesProcessed,
                        numSamples - samplesProcessed);

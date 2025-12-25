@@ -13,7 +13,7 @@
 namespace zenith {
 
 juce::File PlatformPathUtils::getDefaultConfigurationFile() {
-    juce::String xdgConfigHome = juce::Process::getEnvironmentVariable("XDG_CONFIG_HOME");
+juce::String xdgConfigHome = juce::SystemStats::getEnvironmentVariable("XDG_CONFIG_HOME", juce::String());
     if (xdgConfigHome.isNotEmpty()) {
         return juce::File(xdgConfigHome).getChildFile("ZenithDAW").getChildFile("config.json");
     }

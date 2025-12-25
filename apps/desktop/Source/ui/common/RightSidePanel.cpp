@@ -9,6 +9,7 @@
 */
 
 #include "RightSidePanel.h"
+#include "UndoHistoryPanel.h"
 #include "../engine/ZenithLogger.h"
 #include "../design-system/ZenithLayout.h"
 #include "../controls/SpectraAnalyzerComponent.h"
@@ -26,7 +27,7 @@ namespace zenith {
 
 #ifdef ZENITH_USE_SKIA
 
-RightSidePanel::RightSidePanel(CommandAPI &api, Engine &engine) {
+RightSidePanel::RightSidePanel(CommandAPI &api, Engine &engine, ProjectState &projectState) {
   ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: Constructor started");
   setSize(300, 600);
 
@@ -40,6 +41,11 @@ RightSidePanel::RightSidePanel(CommandAPI &api, Engine &engine) {
   spectraAnalyzer_ = std::make_unique<SpectraAnalyzerComponent>(engine);
   addChildComponent(spectraAnalyzer_.get());
   spectraAnalyzer_->setVisible(true);
+
+  // Initialize UndoHistoryPanel
+  undoHistoryPanel_ = std::make_unique<UndoHistoryPanel>(projectState);
+  addChildComponent(undoHistoryPanel_.get());
+  undoHistoryPanel_->setVisible(true);
 
   ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: Starting timer...");
   startTimerHz(60); // Animation timer
@@ -73,6 +79,8 @@ void RightSidePanel::drawSkia(SkCanvas *canvas) {
 }
 
 void RightSidePanel::updateCachedPaints(const SkRect &bounds) {
+  juce::ignoreUnused(bounds);
+  
   // 1. Background Paint
   bgPaint_.setAntiAlias(true);
   bgPaint_.setColor(SkColorSetARGB(240, 20, 20, 20)); // Almost opaque dark grey
@@ -125,6 +133,7 @@ void RightSidePanel::resized() {
       .withBounds(bounds)
       .withGap(5.0f)
       .addFixedItem(spectraAnalyzer_.get(), (float)bounds.getWidth(), 150.0f)
+      .addFixedItem(undoHistoryPanel_.get(), (float)bounds.getWidth(), 180.0f)
       .addItem(wingmanPanel_.get())
       .applyColumn();
 }

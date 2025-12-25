@@ -10,10 +10,11 @@
 
 #include "BottomBar.h"
 #include "../../ai/SessionDebuggerAgent.h"
+#include "../controls/DebugConsoleComponent.h"
+#include "../controls/DeviceChainComponent.h"
 #include "../transport/AutoSaveIndicator.h"
-#include "DebugConsoleComponent.h"
 #include "MixerComponent.h"
-
+#include <memory>
 
 #define ZENITH_USE_SKIA 1 // FORCE DEFINITION FOR DEBUGGING
 
@@ -27,9 +28,8 @@
 
 #endif
 
-#include "DeviceChainComponent.h"
+#include "../controls/DeviceChainComponent.h"
 #include "Engine.h"
-
 
 namespace zenith {
 

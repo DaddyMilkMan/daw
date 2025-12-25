@@ -83,7 +83,7 @@ ZenithHubComponent::ZenithHubComponent(
   auroraBackground_ = std::make_unique<AuroraBackground>();
 
   alpha_.setTarget(0.0f, 0);
-  alpha_.setTarget(1.0f, 600, AnimatedValue::EasingCurve::EaseOut);
+  alpha_.setTarget(1.0f, 600, ::zenith::animation::Easing::EaseOut);
 
   startTimerHz(60);
 }
@@ -208,32 +208,37 @@ void ZenithHubComponent::updateLayout() {
     auto s = mainColumns[1];
     juce::Rectangle<float> sidebarRect = s;
 
-    // 2. Layout Sidebar (Account, Button, Templates)
+    // 2. Layout Sidebar: New Project Button -> Collaborations -> Templates
+    // Proper spacing to prevent overlap
     auto sidebarRows = ZenithLayout::begin()
                            .withFloatBounds(sidebarRect)
-                           .withGap(padding)
-                           .addFlexItem(juce::FlexItem().withHeight(100.0f))
-                           .addFlexItem(juce::FlexItem().withHeight(60.0f))
-                           .addFlexItem(juce::FlexItem().withFlex(1.0f))
+                           .withGap(24.0f)  // Reduced gap for better spacing
+                           .addFlexItem(juce::FlexItem().withHeight(60.0f))   // New Project button
+                           .addFlexItem(juce::FlexItem().withHeight(120.0f))  // Collaborations/Profile area
+                           .addFlexItem(juce::FlexItem().withFlex(1.0f))      // Templates
                            .layout(juce::FlexBox::Direction::column);
 
     if (sidebarRows.size() >= 3) {
-      auto a = sidebarRows[0];
-      accountArea_ =
-          SkRect::MakeXYWH(a.getX(), a.getY(), a.getWidth(), a.getHeight());
-
-      auto b = sidebarRows[1];
+      // Row 0: New Project Button (at top of sidebar)
+      auto b = sidebarRows[0];
       newProjectButtonBounds_ =
           SkRect::MakeXYWH(b.getX(), b.getY(), b.getWidth(), b.getHeight());
 
+      // Row 1: Collaborations/Account area
+      auto a = sidebarRows[1];
+      accountArea_ =
+          SkRect::MakeXYWH(a.getX(), a.getY(), a.getWidth(), a.getHeight());
+
+      // Profile card positioned within accountArea_ (below the header)
+      // Header takes ~30px, so profile starts 35px down
+      profileBounds_ =
+          SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop + 35.0f,
+                           accountArea_.width(), 80.0f);
+
+      // Row 2: Templates/Quick Start area  
       auto t = sidebarRows[2];
       templatesArea_ =
           SkRect::MakeXYWH(t.getX(), t.getY(), t.getWidth(), t.getHeight());
-
-      // Profile Button - SAFE calculation inside valid sidebar check
-      profileBounds_ =
-          SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop + 50.0f,
-                           accountArea_.width(), 90.0f);
     } else {
       accountArea_.setEmpty();
       newProjectButtonBounds_.setEmpty();
@@ -268,12 +273,14 @@ void ZenithHubComponent::updateLayout() {
   }
 
   // Update Template Cards (Larger with icons)
+  // Header is now inside templatesArea_ (takes ~28px), so start cards 40px down
   if (!templatesArea_.isEmpty()) {
-    float tCardH = 90.0f;
-    float cardGap = 16.0f;
+    float tCardH = 80.0f;  // Slightly smaller for better fit
+    float cardGap = 12.0f;
+    float headerOffset = 40.0f;  // Space for "Quick Start" header
     for (size_t i = 0; i < templates_.size(); ++i) {
       float tx = templatesArea_.fLeft;
-      float ty = templatesArea_.fTop + 50.0f + (i * (tCardH + cardGap));
+      float ty = templatesArea_.fTop + headerOffset + (i * (tCardH + cardGap));
       templates_[i].bounds =
           SkRect::MakeXYWH(tx, ty, templatesArea_.width(), tCardH);
     }
@@ -293,17 +300,17 @@ void ZenithHubComponent::timerCallback() {
 
 void ZenithHubComponent::show() {
   setVisible(true);
-  alpha_.setTarget(1.0f, 600, AnimatedValue::EasingCurve::EaseOut);
+  alpha_.setTarget(1.0f, 600, ::zenith::animation::Easing::EaseOut);
 }
 
 void ZenithHubComponent::dismiss() {
-  alpha_.setTarget(0.0f, 400, AnimatedValue::EasingCurve::EaseIn);
+  alpha_.setTarget(0.0f, 400, ::zenith::animation::Easing::EaseIn);
   if (onDismiss_)
     onDismiss_();
 }
 
 void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
-  float opacity = alpha_.getCurrentValue();
+  float opacity = alpha_.get();
   if (opacity <= 0.001f)
     return;
 
@@ -467,9 +474,10 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
 }
 
 void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
+  // Draw "Quick Start" header at top of templates area (not above it)
   drawText(
       canvas, "Quick Start",
-      SkRect::MakeXYWH(templatesArea_.fLeft, templatesArea_.fTop - 40, 200, 30),
+      SkRect::MakeXYWH(templatesArea_.fLeft, templatesArea_.fTop, 200, 28),
       headerFont_, textPaint_, false);
 
   for (size_t i = 0; i < templates_.size(); ++i) {
@@ -529,9 +537,10 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
 }
 
 void ZenithHubComponent::drawAccount(SkCanvas *canvas) {
+  // Draw "Collaborations" header at top of account area (not above it)
   drawText(
       canvas, "Collaborations",
-      SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop - 40, 200, 30),
+      SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop, 200, 28),
       headerFont_, textPaint_, false);
 
   SkRRect rrect = SkRRect::MakeRectXY(profileBounds_, 12.0f, 12.0f);
@@ -541,26 +550,26 @@ void ZenithHubComponent::drawAccount(SkCanvas *canvas) {
   bgPaint.setAntiAlias(true);
   canvas->drawRRect(rrect, bgPaint);
 
-  float avatarSize = 48.0f;
+  float avatarSize = 44.0f;
   SkPaint avatarPaint;
   avatarPaint.setColor(colors::AMBER);
   avatarPaint.setAntiAlias(true);
-  float centerY = profileBounds_.fTop + profileBounds_.height() * 0.5f;
-  canvas->drawCircle(profileBounds_.fLeft + 30 + avatarSize * 0.5f, centerY,
-                     avatarSize * 0.5f, avatarPaint);
+  float avatarCenterY = profileBounds_.centerY();
+  float avatarCenterX = profileBounds_.fLeft + 16 + avatarSize * 0.5f;
+  canvas->drawCircle(avatarCenterX, avatarCenterY, avatarSize * 0.5f, avatarPaint);
 
+  // Username text - positioned to the right of avatar with proper spacing
+  float textX = avatarCenterX + avatarSize * 0.5f + 14;
   drawText(canvas, "SoundDesigner99",
-           SkRect::MakeXYWH(profileBounds_.fLeft + 90, centerY - 18, 200, 24),
+           SkRect::MakeXYWH(textX, avatarCenterY - 16, 
+                            profileBounds_.width() - (textX - profileBounds_.fLeft) - 10, 24),
            profileFont_, textPaint_, false);
 
   SkPaint onlineStatusPaint;
   onlineStatusPaint.setColor(SkColorSetARGB(255, 16, 185, 129));
   onlineStatusPaint.setAntiAlias(true);
-  drawText(canvas, "● Online",
-           SkRect::MakeXYWH(
-               profileBounds_.fLeft + 90,
-               (profileBounds_.fTop + profileBounds_.height() * 0.5f) + 4, 100,
-               20),
+  drawText(canvas, "* Online",
+           SkRect::MakeXYWH(textX, avatarCenterY + 6, 100, 20),
            statusFont_, onlineStatusPaint, false);
 }
 
@@ -698,7 +707,7 @@ void ZenithHubComponent::showGreetingEditor() {
   greetingEditor_.setText(greetingText_);
   greetingEditor_.setSelectAllWhenFocused(true);
   greetingEditor_.setJustification(juce::Justification::left);
-  greetingEditor_.setFont(juce::Font(18.0f));
+  greetingEditor_.setFont(juce::Font(18.0f, juce::Font::plain));
 
   // Named constants for TextEditor sizing
   constexpr int kEditorWidthPadding = 60;
@@ -832,10 +841,34 @@ void ZenithHubComponent::triggerSelection() {
 }
 
 // Text Rendering Helper - Fixed vertical alignment per code review
+// Text Rendering Helper - Fixed vertical alignment and added truncation
 void ZenithHubComponent::drawText(SkCanvas *canvas, const juce::String &text,
                                   const SkRect &bounds, const SkFont &font,
                                   const SkPaint &paint, bool centerVertical) {
   SkString skText(text.toRawUTF8());
+  SkScalar width = font.measureText(skText.c_str(), skText.size(), SkTextEncoding::kUTF8);
+  
+  // Truncate if text is wider than bounds
+  if (width > bounds.width()) {
+    SkString ellipsis("...");
+    SkScalar ellipsisWidth = font.measureText(ellipsis.c_str(), ellipsis.size(), SkTextEncoding::kUTF8);
+    
+    // If even ellipsis doesn't fit, just draw nothing or ellipsis
+    if (ellipsisWidth > bounds.width()) {
+      skText = ellipsis; 
+    } else {
+      // Linear reduction - simple and effective for short titles
+      juce::String jStr = text;
+      
+      while (jStr.length() > 0 && width + ellipsisWidth > bounds.width()) {
+        jStr = jStr.substring(0, jStr.length() - 1);
+        skText = SkString(jStr.toRawUTF8());
+        width = font.measureText(skText.c_str(), skText.size(), SkTextEncoding::kUTF8);
+      }
+      skText.append("...");
+    }
+  }
+
   SkRect textBounds;
   font.measureText(skText.c_str(), skText.size(), SkTextEncoding::kUTF8,
                    &textBounds);

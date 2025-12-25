@@ -16,10 +16,10 @@
 
 #pragma once
 
-#include "Engine.h"
 #include "../ai/SampleHunterAgent.h"
 #include "../network/GrokDAWController.h"
-#include "../network/AIBridgeClient.h"
+#include "Engine.h"
+// #include "../network/AIBridgeClient.h" // File missing - disabled temporarily
 #include "../../commands/CommandAPI.h"
 #include "../controls/MarkdownComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -81,7 +81,7 @@ private:
   //==========================================================================
   // UI Components
 
-// ...
+  // ...
   std::unique_ptr<juce::TextEditor> inputField;
   std::unique_ptr<widgets::MarkdownComponent> conversationDisplay;
   std::unique_ptr<juce::TextButton> sendButton;

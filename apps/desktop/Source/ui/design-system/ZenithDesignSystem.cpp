@@ -31,12 +31,12 @@ void ThemeManager::saveTheme(const juce::String &name) {
   auto *obj = new juce::DynamicObject();
 
   // Save current colors
-  obj->setProperty("CYAN", (int64_t)colors::CYAN);
-  obj->setProperty("MAGENTA", (int64_t)colors::MAGENTA);
-  obj->setProperty("NEON_GREEN", (int64_t)colors::NEON_GREEN);
-  obj->setProperty("BG_DARKEST", (int64_t)colors::BG_DARKEST);
-  obj->setProperty("BG_DARKER", (int64_t)colors::BG_DARKER);
-  obj->setProperty("BG_DARK", (int64_t)colors::BG_DARK);
+  obj->setProperty("CYAN", (juce::int64)colors::CYAN);
+  obj->setProperty("MAGENTA", (juce::int64)colors::MAGENTA);
+  obj->setProperty("NEON_GREEN", (juce::int64)colors::NEON_GREEN);
+  obj->setProperty("BG_DARKEST", (juce::int64)colors::BG_DARKEST);
+  obj->setProperty("BG_DARKER", (juce::int64)colors::BG_DARKER);
+  obj->setProperty("BG_DARK", (juce::int64)colors::BG_DARK);
 
   juce::File file = getThemeDir().getChildFile(name + ".json");
   file.replaceWithText(juce::JSON::toString(juce::var(obj)));
@@ -53,22 +53,17 @@ void ThemeManager::loadTheme(const juce::String &name) {
     theme.name = name;
 
     if (obj->hasProperty("CYAN"))
-      colors::CYAN = (uint32_t)static_cast<int64_t>(obj->getProperty("CYAN"));
+      colors::CYAN = (uint32_t)(int)obj->getProperty("CYAN");
     if (obj->hasProperty("MAGENTA"))
-      colors::MAGENTA =
-          (uint32_t)static_cast<int64_t>(obj->getProperty("MAGENTA"));
+      colors::MAGENTA = (uint32_t)(int)obj->getProperty("MAGENTA");
     if (obj->hasProperty("NEON_GREEN"))
-      colors::NEON_GREEN =
-          (uint32_t)static_cast<int64_t>(obj->getProperty("NEON_GREEN"));
+      colors::NEON_GREEN = (uint32_t)(int)obj->getProperty("NEON_GREEN");
     if (obj->hasProperty("BG_DARKEST"))
-      colors::BG_DARKEST =
-          (uint32_t)static_cast<int64_t>(obj->getProperty("BG_DARKEST"));
+      colors::BG_DARKEST = (uint32_t)(int)obj->getProperty("BG_DARKEST");
     if (obj->hasProperty("BG_DARKER"))
-      colors::BG_DARKER =
-          (uint32_t)static_cast<int64_t>(obj->getProperty("BG_DARKER"));
+      colors::BG_DARKER = (uint32_t)(int)obj->getProperty("BG_DARKER");
     if (obj->hasProperty("BG_DARK"))
-      colors::BG_DARK =
-          (uint32_t)static_cast<int64_t>(obj->getProperty("BG_DARK"));
+      colors::BG_DARK = (uint32_t)(int)obj->getProperty("BG_DARK");
 
     // Trigger repaint globally (would need a listener, but for now relies on
     // repaint calls)

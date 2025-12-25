@@ -250,7 +250,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
         SkRRect tooltipRect = SkRRect::MakeRectXY(
             SkRect::MakeXYWH(tooltipX, tooltipY, tooltipWidth, tooltipHeight),
             4.0f, 4.0f);
-        canvas->drawRRect(tooltipRect, tooltipBg);
+        canvas.drawRRect(tooltipRect, tooltipBg);
 
         // Tooltip border
         SkPaint tooltipBorder;
@@ -258,14 +258,14 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
         tooltipBorder.setStyle(SkPaint::kStroke_Style);
         tooltipBorder.setStrokeWidth(1.0f);
         tooltipBorder.setAntiAlias(true);
-        canvas->drawRRect(tooltipRect, tooltipBorder);
+        canvas.drawRRect(tooltipRect, tooltipBorder);
 
         // Tooltip text
         SkPaint textPaint;
         textPaint.setColor(colors::TEXT_PRIMARY);
         textPaint.setAntiAlias(true);
         auto blob = SkTextBlob::MakeFromString(textStr.c_str(), font);
-        canvas->drawTextBlob(blob, tooltipX + 6.0f, tooltipY + 14.0f, textPaint);
+        canvas.drawTextBlob(blob, tooltipX + 6.0f, tooltipY + 14.0f, textPaint);
       }
 
       // Draw parameter name
@@ -277,7 +277,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 
       auto nameStr = paramInfo.displayName.toStdString();
       auto nameBlob = SkTextBlob::MakeFromString(nameStr.c_str(), nameFont);
-      canvas->drawTextBlob(nameBlob, 8.0f, 18.0f, namePaint);
+      canvas.drawTextBlob(nameBlob, 8.0f, 18.0f, namePaint);
     }
   }
 

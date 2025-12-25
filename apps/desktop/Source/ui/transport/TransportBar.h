@@ -47,6 +47,7 @@ public:
   void mouseExit(const juce::MouseEvent &e) override;
 
   void timerCallback() override;
+  void visibilityChanged() override;
 
   std::unique_ptr<juce::AccessibilityHandler>
   createAccessibilityHandler() override;

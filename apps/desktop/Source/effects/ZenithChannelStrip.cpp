@@ -164,14 +164,17 @@ void ZenithChannelStrip::updateEqCoefficientsIfNeeded(double sr) {
   cachedHighFreq = highF;
   cachedHighGain = highG;
 
-  *eq.get<0>().state =
+  *eq.get<0>().coefficients =
       *juce::dsp::IIR::Coefficients<float>::makeHighPass(sr, hpf);
-  *eq.get<1>().state = *juce::dsp::IIR::Coefficients<float>::makeLowShelf(
-      sr, lowF, 0.707f, juce::Decibels::decibelsToGain(lowG));
-  *eq.get<2>().state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter(
-      sr, midF, midQ, juce::Decibels::decibelsToGain(midG));
-  *eq.get<3>().state = *juce::dsp::IIR::Coefficients<float>::makeHighShelf(
-      sr, highF, 0.707f, juce::Decibels::decibelsToGain(highG));
+  *eq.get<1>().coefficients =
+      *juce::dsp::IIR::Coefficients<float>::makeLowShelf(
+          sr, lowF, 0.707f, juce::Decibels::decibelsToGain(lowG));
+  *eq.get<2>().coefficients =
+      *juce::dsp::IIR::Coefficients<float>::makePeakFilter(
+          sr, midF, midQ, juce::Decibels::decibelsToGain(midG));
+  *eq.get<3>().coefficients =
+      *juce::dsp::IIR::Coefficients<float>::makeHighShelf(
+          sr, highF, 0.707f, juce::Decibels::decibelsToGain(highG));
 }
 
 void ZenithChannelStrip::processBlock(juce::AudioBuffer<float> &buffer,

@@ -18,8 +18,8 @@
 #include <core/SkPaint.h>
 #include <core/SkPath.h>
 #include <core/SkRRect.h>
-#include <effects/SkBlurImageFilter.h>
 #include <effects/SkGradientShader.h>
+#include <effects/SkImageFilters.h>
 
 #endif
 
@@ -127,7 +127,7 @@ void FreezeProgressOverlay::drawSkia(SkCanvas *canvas) {
   SkPaint trackPaint;
   trackPaint.setStyle(SkPaint::kStroke_Style);
   trackPaint.setStrokeWidth(strokeWidth);
-  trackPaint.setColor(SkColorSetA(colors::bg::PANEL_LIGHT, 50));
+  trackPaint.setColor(SkColorSetA(colors::BG_DARKER, 50));
   trackPaint.setStrokeCap(SkPaint::kRound_Cap);
   canvas->drawArc(circleRect, 0, 360, false, trackPaint);
 
@@ -139,7 +139,7 @@ void FreezeProgressOverlay::drawSkia(SkCanvas *canvas) {
   progressPaint.setStrokeCap(SkPaint::kRound_Cap);
 
   // Add glow
-  progressPaint.setImageFilter(SkBlurImageFilter::Make(2.0f, 2.0f, nullptr));
+  progressPaint.setImageFilter(SkImageFilters::Blur(2.0f, 2.0f, nullptr));
 
   // Swing animation or simple progress
   float sweepAngle = progress_ * 360.0f;

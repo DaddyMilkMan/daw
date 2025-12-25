@@ -28,7 +28,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "../Source/engine/RoutingGraph.h"
+#include "RoutingGraph.h"
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_graphics/juce_graphics.h>
@@ -75,12 +75,9 @@ public:
   juce::UndoManager undoManager;
 
   // Helper to add a track via state manipulation (as requested in Step 1)
-  void addTrack(const juce::String &trackName) {
-    juce::ValueTree t(Zenith::IDs::TRACK);
-    t.setProperty(Zenith::IDs::name, trackName, nullptr);
-    t.setProperty(Zenith::IDs::volume, 0.75f, nullptr);
-    state.getOrCreateChildWithName(Zenith::IDs::TRACKS, nullptr)
-        .addChild(t, -1, &undoManager);
+  // Helper to add a track via state manipulation (delegates to main impl)
+  juce::String addTrack(const juce::String &trackName) {
+      return addTrack(trackName, ID_TRACK.toString());
   }
 
   static const juce::Identifier ID_PROJECT;
@@ -101,7 +98,9 @@ public:
   static const juce::Identifier ID_MARKER;      // Individual marker
   static const juce::Identifier ID_SECTIONS; // Container for arranger sections
   static const juce::Identifier ID_SECTION;  // Individual arranger section
-
+  static const juce::Identifier ID_TAKE_FOLDER; // Take folder container
+  static const juce::Identifier ID_COMP_REGIONS; // Container for comp regions
+  static const juce::Identifier ID_COMP_REGION; // Individual comp region
   static const juce::Identifier PROP_NAME;
   static const juce::Identifier PROP_TEMPO;
   static const juce::Identifier PROP_TIME_SIG_NUM;
@@ -116,6 +115,8 @@ public:
   static const juce::Identifier PROP_SOLO;
   static const juce::Identifier PROP_ARMED;
   static const juce::Identifier PROP_INPUT_MONITOR;
+  static const juce::Identifier PROP_ACTIVE_TAKE; // Index of auditioning take
+  static const juce::Identifier PROP_EXPANDED;    // Whether lanes are visible
 
   static const juce::Identifier PROP_START;
   static const juce::Identifier PROP_LENGTH;
@@ -133,6 +134,13 @@ public:
   static const juce::Identifier PROP_VALUE;
   static const juce::Identifier PROP_CURVE_TYPE;
   static const juce::Identifier PROP_TENSION;
+  static const juce::Identifier PROP_TAKE_INDEX; // Which take for a comp region
+  
+  // Plugin Automation Properties
+  static const juce::Identifier PROP_PLUGIN_INDEX;
+  static const juce::Identifier PROP_PARAM_INDEX;
+  static const juce::Identifier PROP_PARAM_NAME;
+
 
   // MIDI Note properties
   static const juce::Identifier PROP_START_BEATS;  // Note start time in beats
@@ -228,6 +236,7 @@ public:
   int getNumTracks() const;
   juce::ValueTree getTrack(const juce::String &trackId) const;
   juce::ValueTree getTrackByIndex(int trackIndex);
+  juce::ValueTree findTrack(const juce::String &trackId) const;
 
   //===================================================================
   // Track Mixer API
@@ -327,6 +336,24 @@ public:
                   double newLengthBeats);
   juce::ValueTree findClip(const juce::String &trackId,
                            const juce::String &clipId) const;
+
+  //==========================================================================
+  // Take Folder Management
+  //==========================================================================
+
+  juce::String createTakeFolder(const juce::String &trackId, double startBeats,
+                                double lengthBeats,
+                                const juce::String &actionName = "Create Take Folder");
+                                
+  void addTakeToFolder(const juce::String &folderId, const juce::String &clipId);
+  void removeTakeFromFolder(const juce::String &folderId, const juce::String &clipId);
+  
+  void setCompRegion(const juce::String &folderId, double startBeats, 
+                     double lengthBeats, int takeIndex,
+                     const juce::String &actionName = "Set Comp Region");
+
+  void setTakeFolderExpanded(const juce::String &folderId, bool expanded);
+  void setActiveTake(const juce::String &folderId, int takeIndex);
 
   //==========================================================================
   // Automation Management
@@ -541,7 +568,6 @@ private:
   juce::ValueTree findNote(const juce::String &trackId,
                            const juce::String &clipId,
                            const juce::String &noteId);
-  juce::ValueTree findTrack(const juce::String &trackId) const;
   juce::ValueTree findAutomationPoint(const juce::ValueTree &envelope,
                                       const juce::String &pointId) const;
   void rebuildIdCounter();

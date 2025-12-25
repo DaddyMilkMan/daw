@@ -4,7 +4,8 @@
  */
 
 #include "MenuBar.h"
-#include "CollabPanel.h"
+#include "../controls/CollabPanel.h"
+#include "../design-system/ZenithTheme.h"
 #include <core/SkFontMgr.h>
 
 namespace zenith {
@@ -21,7 +22,7 @@ ZenithMenuBar::ZenithMenuBar() {
   addAndMakeVisible(collabButton);
   collabButton.setButtonText("Collab");
   collabButton.setColour(juce::TextButton::buttonColourId,
-                         juce::Colours::purple);
+                         ZenithTheme::Colors::accent_primary);
   collabButton.onClick = [this] {
     auto *content = new CollabPanel();
     collabCallout.reset(new juce::CallOutBox(
@@ -37,11 +38,13 @@ void ZenithMenuBar::paint(juce::Graphics &g) {
 
 void ZenithMenuBar::drawSkia(SkCanvas *canvas) {
   // Background
-  canvas->clear(SkColorSetRGB(30, 30, 35)); // Slightly lighter than main bg
+  juce::Colour bg = ZenithTheme::Colors::bg_02;
+  canvas->clear(SkColorSetRGB(bg.getRed(), bg.getGreen(), bg.getBlue()));
 
   // Draw Items
   SkPaint textPaint;
-  textPaint.setColor(SK_ColorWHITE);
+  juce::Colour text = ZenithTheme::Colors::text_primary;
+  textPaint.setColor(SkColorSetARGB(255, text.getRed(), text.getGreen(), text.getBlue()));
   textPaint.setAntiAlias(true);
 
   // Use SkFontMgr for font creation
@@ -56,7 +59,8 @@ void ZenithMenuBar::drawSkia(SkCanvas *canvas) {
   SkFont font(typeface, 14.0f);
 
   SkPaint hoverPaint;
-  hoverPaint.setColor(SkColorSetARGB(40, 255, 255, 255));
+  juce::Colour hover = ZenithTheme::Colors::accent_subtle;
+  hoverPaint.setColor(SkColorSetARGB(hover.getAlpha(), hover.getRed(), hover.getGreen(), hover.getBlue()));
 
   for (size_t i = 0; i < items.size(); ++i) {
     auto &item = items[i];
@@ -79,7 +83,8 @@ void ZenithMenuBar::drawSkia(SkCanvas *canvas) {
 
   // Bottom Border
   SkPaint borderPaint;
-  borderPaint.setColor(SkColorSetRGB(60, 60, 60));
+  juce::Colour border = ZenithTheme::Colors::border_default;
+  borderPaint.setColor(SkColorSetARGB(border.getAlpha(), border.getRed(), border.getGreen(), border.getBlue()));
   borderPaint.setStrokeWidth(1.0f);
   canvas->drawLine(0, getHeight(), getWidth(), getHeight(), borderPaint);
 }

@@ -5,6 +5,13 @@
 
 #include "ProjectFileIO.h"
 #include "ProjectState.h"
+#include "TempoMap.h"
+
+#include <algorithm>
+#include <cstddef>
+#include <functional>
+#include <memory>
+#include <string>
 
 namespace zenith {
 
@@ -37,7 +44,7 @@ void ProjectFileIO::newProject() {
 
   projectState_.getUndoManager().clearUndoHistory();
   projectState_.createDefaultState();
-  
+
   currentProjectFile_ = juce::File();
   lastError_ = FileIOError::Success;
   lastAutoSaveTime_ = 0;
@@ -107,57 +114,60 @@ FileIOError ProjectFileIO::loadFromFile(const juce::File &file) {
   return lastError_;
 }
 
-void ProjectFileIO::loadFromFileAsync(const juce::File& file, std::function<void(bool success, juce::String error)> callback)
-{
-    juce::Thread::launch([this, file, callback]() {
-        DBG("ProjectFileIO: Starting async load...");
-        
-        if (!file.existsAsFile()) {
-            juce::MessageManager::callAsync([callback] { callback(false, "File does not exist"); });
-            return;
-        }
+void ProjectFileIO::loadFromFileAsync(
+    const juce::File &file,
+    std::function<void(bool success, juce::String error)> callback) {
+  juce::Thread::launch([this, file, callback]() {
+    DBG("ProjectFileIO: Starting async load...");
 
-        juce::ValueTree newState;
-        
-        // Try XML first
-        auto xml = juce::parseXML(file);
-        if (xml != nullptr) {
-            newState = juce::ValueTree::fromXml(*xml);
-        } else {
-            // Try binary
-            juce::MemoryBlock mb;
-            if (file.loadFileAsData(mb)) {
-                juce::MemoryInputStream mi(mb, false);
-                newState = juce::ValueTree::readFromStream(mi);
-            }
-        }
+    if (!file.existsAsFile()) {
+      juce::MessageManager::callAsync(
+          [callback] { callback(false, "File does not exist"); });
+      return;
+    }
 
-        if (!newState.isValid()) {
-            juce::MessageManager::callAsync([callback] { callback(false, "Invalid project file format"); });
-            return;
-        }
+    juce::ValueTree newState;
 
-        juce::MessageManager::callAsync([this, file, newState, callback] {
-            // Re-check type safely on message thread
-            if (newState.getType() != ProjectState::ID_PROJECT) {
-                callback(false, "File is not a Zenith project");
-                return;
-            }
+    // Try XML first
+    auto xml = juce::parseXML(file);
+    if (xml != nullptr) {
+      newState = juce::ValueTree::fromXml(*xml);
+    } else {
+      // Try binary
+      juce::MemoryBlock mb;
+      if (file.loadFileAsData(mb)) {
+        juce::MemoryInputStream mi(mb, false);
+        newState = juce::ValueTree::readFromStream(mi);
+      }
+    }
 
-            auto& state = projectState_.getState();
-            state.removeListener(&projectState_);
-            state = newState;
-            state.addListener(&projectState_);
+    if (!newState.isValid()) {
+      juce::MessageManager::callAsync(
+          [callback] { callback(false, "Invalid project file format"); });
+      return;
+    }
 
-            projectState_.rebuildIdCounter();
-            projectState_.rebuildTrackMap();
-            projectState_.getUndoManager().clearUndoHistory();
-            projectState_.setProjectFile(file);
-            projectState_.isDirty.store(false);
+    juce::MessageManager::callAsync([this, file, newState, callback] {
+      // Re-check type safely on message thread
+      if (newState.getType() != ProjectState::ID_PROJECT) {
+        callback(false, "File is not a Zenith project");
+        return;
+      }
 
-            callback(true, "");
-        });
+      auto &state = projectState_.getState();
+      state.removeListener(&projectState_);
+      state = newState;
+      state.addListener(&projectState_);
+
+      projectState_.rebuildIdCounter();
+      projectState_.rebuildTrackMap();
+      projectState_.getUndoManager().clearUndoHistory();
+      projectState_.setProjectFile(file);
+      projectState_.isDirty.store(false);
+
+      callback(true, "");
     });
+  });
 }
 
 FileIOError ProjectFileIO::saveToFile(const juce::File &file) {
@@ -200,65 +210,68 @@ FileIOError ProjectFileIO::saveToFile(const juce::File &file) {
   return lastError_;
 }
 
-void ProjectFileIO::saveToFileAsync(const juce::File& file, IOSettings settings, std::function<void(bool success, juce::String error)> callback)
-{
-    // Capture necessary state safely
-    auto stateSnapshot = projectState_.getState().createCopy();
-    
-    juce::Thread::launch([this, file, settings, stateSnapshot, callback]() mutable {
-        DBG("ProjectFileIO: Starting async save...");
-        
-        std::unique_ptr<juce::XmlElement> xml;
-        juce::MemoryBlock msgPackData;
-        bool prepareSuccess = false;
+void ProjectFileIO::saveToFileAsync(
+    const juce::File &file, IOSettings settings,
+    std::function<void(bool success, juce::String error)> callback) {
+  // Capture necessary state safely
+  auto stateSnapshot = projectState_.getState().createCopy();
 
-        if (settings.format == SerializationFormat::Xml)
-        {
-            xml = stateSnapshot.createXml();
-            if (xml != nullptr)
-            {
-                // Add metadata to snapshot
-                ProjectMetadata meta = createMetadata();
-                addMetadataToXml(*xml, meta);
-                prepareSuccess = true;
-            }
-        }
-        else
-        {
-            // MessagePack placeholder
-            juce::MemoryOutputStream mo(msgPackData, false);
-            stateSnapshot.writeToStream(mo);
-            prepareSuccess = true;
-        }
+  juce::Thread::launch([this, file, settings, stateSnapshot,
+                        callback]() mutable {
+    DBG("ProjectFileIO: Starting async save...");
 
-        if (!prepareSuccess) {
-            juce::MessageManager::callAsync([callback] { callback(false, "Failed to prepare data"); });
-            return;
-        }
+    std::unique_ptr<juce::XmlElement> xml;
+    juce::MemoryBlock msgPackData;
+    bool prepareSuccess = false;
 
-        juce::File tempFile = file.getSiblingFile(file.getFileName() + ".savetmp");
-        bool writeSuccess = false;
-        
-        if (settings.format == SerializationFormat::Xml)
-            writeSuccess = xml->writeTo(tempFile);
-        else
-            writeSuccess = tempFile.replaceWithData(msgPackData.getData(), msgPackData.getSize());
+    if (settings.format == SerializationFormat::Xml) {
+      xml = stateSnapshot.createXml();
+      if (xml != nullptr) {
+        // Add metadata to snapshot
+        ProjectMetadata meta = createMetadata();
+        addMetadataToXml(*xml, meta);
+        prepareSuccess = true;
+      }
+    } else {
+      // MessagePack placeholder
+      juce::MemoryOutputStream mo(msgPackData, false);
+      stateSnapshot.writeToStream(mo);
+      prepareSuccess = true;
+    }
 
-        if (writeSuccess) {
-            if (tempFile.moveFileTo(file)) {
-                juce::MessageManager::callAsync([this, file, callback] {
-                    projectState_.setProjectFile(file);
-                    projectState_.isDirty.store(false);
-                    callback(true, "");
-                });
-            } else {
-                tempFile.deleteFile();
-                juce::MessageManager::callAsync([callback] { callback(false, "Failed to move file to destination"); });
-            }
-        } else {
-            juce::MessageManager::callAsync([callback] { callback(false, "Failed to write data to disk"); });
-        }
-    });
+    if (!prepareSuccess) {
+      juce::MessageManager::callAsync(
+          [callback] { callback(false, "Failed to prepare data"); });
+      return;
+    }
+
+    juce::File tempFile = file.getSiblingFile(file.getFileName() + ".savetmp");
+    bool writeSuccess = false;
+
+    if (settings.format == SerializationFormat::Xml)
+      writeSuccess = xml->writeTo(tempFile);
+    else
+      writeSuccess = tempFile.replaceWithData(msgPackData.getData(),
+                                              msgPackData.getSize());
+
+    if (writeSuccess) {
+      if (tempFile.moveFileTo(file)) {
+        juce::MessageManager::callAsync([this, file, callback] {
+          projectState_.setProjectFile(file);
+          projectState_.isDirty.store(false);
+          callback(true, "");
+        });
+      } else {
+        tempFile.deleteFile();
+        juce::MessageManager::callAsync([callback] {
+          callback(false, "Failed to move file to destination");
+        });
+      }
+    } else {
+      juce::MessageManager::callAsync(
+          [callback] { callback(false, "Failed to write data to disk"); });
+    }
+  });
 }
 
 FileIOError ProjectFileIO::saveToFileAs(const juce::File &newFile) {
@@ -269,25 +282,24 @@ FileIOError ProjectFileIO::saveToFileAs(const juce::File &newFile) {
   return result;
 }
 
-juce::File ProjectFileIO::saveCrashDump()
-{
-    auto documentsDir =
-        juce::File::getSpecialLocation(juce::File::userDocumentsDirectory);
-    auto crashDir =
-        documentsDir.getChildFile("ZenithDAW").getChildFile("CrashDumps");
+juce::File ProjectFileIO::saveCrashDump() {
+  auto documentsDir =
+      juce::File::getSpecialLocation(juce::File::userDocumentsDirectory);
+  auto crashDir =
+      documentsDir.getChildFile("ZenithDAW").getChildFile("CrashDumps");
 
-    if (!crashDir.exists())
-        crashDir.createDirectory();
+  if (!crashDir.exists())
+    crashDir.createDirectory();
 
-    auto timestamp = juce::Time::getCurrentTime().formatted("%Y%m%d_%H%M%S");
-    auto dumpFile = crashDir.getChildFile("crash_recovery_" + timestamp + ".zth");
+  auto timestamp = juce::Time::getCurrentTime().formatted("%Y%m%d_%H%M%S");
+  auto dumpFile = crashDir.getChildFile("crash_recovery_" + timestamp + ".zth");
 
-    DBG("ProjectFileIO: Saving crash dump to " + dumpFile.getFullPathName());
+  DBG("ProjectFileIO: Saving crash dump to " + dumpFile.getFullPathName());
 
-    if (saveToFile(dumpFile) == FileIOError::Success)
-        return dumpFile;
+  if (saveToFile(dumpFile) == FileIOError::Success)
+    return dumpFile;
 
-    return juce::File();
+  return juce::File();
 }
 
 // ============================================================================
@@ -526,7 +538,33 @@ ProjectMetadata ProjectFileIO::createMetadata() const {
   meta.savedTimestamp = juce::Time::currentTimeMillis();
   meta.sampleRate = projectState_.getSampleRate();
   meta.trackCount = projectState_.getNumTracks();
-  meta.durationSeconds = 0.0; // TODO: calculate from clips
+
+  // Calculate project duration from clips
+  double maxBeats = 0.0;
+  auto tracksNode =
+      projectState_.getState().getChildWithName(ProjectState::ID_TRACKS);
+
+  if (tracksNode.isValid()) {
+    for (int i = 0; i < tracksNode.getNumChildren(); ++i) {
+      auto track = tracksNode.getChild(i);
+      auto clipsNode = track.getChildWithName(ProjectState::ID_CLIPS);
+
+      if (clipsNode.isValid()) {
+        for (int j = 0; j < clipsNode.getNumChildren(); ++j) {
+          auto clip = clipsNode.getChild(j);
+          double start = clip.getProperty(ProjectState::PROP_START_BEATS, 0.0);
+          double length =
+              clip.getProperty(ProjectState::PROP_LENGTH_BEATS, 0.0);
+          maxBeats = std::max(maxBeats, start + length);
+        }
+      }
+    }
+  }
+
+  TempoMap tempoMap;
+  tempoMap.updateFromValueTree(projectState_.getTempoMap());
+  meta.durationSeconds = tempoMap.beatsToSeconds(maxBeats, meta.sampleRate);
+
   meta.createdBy = juce::SystemStats::getComputerName();
   return meta;
 }

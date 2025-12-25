@@ -261,6 +261,11 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
       } else {
         DBG("Collab: Security blocked remote edit command.");
       }
+    } else if (type == PacketType::CRDTUpdate) {
+      if (crdtBridge && payloadSize > 0) {
+        juce::MemoryBlock updates(payloadPtr, (size_t)payloadSize);
+        crdtBridge->applyRemoteUpdates(updates);
+      }
     }
   }
 }
@@ -286,6 +291,24 @@ void CollaborationManager::updateLocalCursor(float x, float y) {
 void CollaborationManager::broadcastEdit(const juce::String &commandData) {
   sendPacket(PacketType::EditCommand, commandData.toRawUTF8(),
              commandData.length());
+}
+
+void CollaborationManager::initializeCRDT(juce::ValueTree& projectTree) {
+  crdtDoc = std::make_unique<Zenith::LoroDoc>();
+  crdtBridge = std::make_unique<Zenith::ValueTreeCRDTBridge>(projectTree, *crdtDoc);
+  
+  crdtBridge->onLocalChange = [this]() {
+    syncCRDT();
+  };
+  
+  DBG("Collab: CRDT System Initialized");
+}
+
+void CollaborationManager::syncCRDT() {
+  if (crdtDoc && currentState == ConnectionState::Connected) {
+    auto updates = crdtDoc->exportUpdates();
+    sendPacket(PacketType::CRDTUpdate, updates.getData(), updates.getSize());
+  }
 }
 
 // --- Helpers ---

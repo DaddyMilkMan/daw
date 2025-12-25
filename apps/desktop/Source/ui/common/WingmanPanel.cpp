@@ -77,8 +77,8 @@ WingmanPanel::WingmanPanel(CommandAPI &api, Engine &engine)
   addAndMakeVisible(modeLabel.get());
 
   modeSelector = std::make_unique<juce::ComboBox>("Mode");
-  modeSelector->addItem("⚡ Fast (Quick responses)", 1);
-  modeSelector->addItem("🧠 Thinking (Deep analysis)", 2);
+  modeSelector->addItem(juce::CharPointer_UTF8("\xe2\x9a\xa1 Fast (Quick responses)"), 1);
+  modeSelector->addItem(juce::CharPointer_UTF8("\xf0\x9f\xa7\xa0 Thinking (Deep analysis)"), 2);
   modeSelector->setSelectedId(1); // Default to Fast
   modeSelector->setColour(juce::ComboBox::backgroundColourId,
                           ZenithTheme::Colors::bg_02);
@@ -93,7 +93,7 @@ WingmanPanel::WingmanPanel(CommandAPI &api, Engine &engine)
   // Status Label
   statusLabel = std::make_unique<juce::Label>("Status", "Ready");
   statusLabel->setColour(juce::Label::textColourId,
-                         juce::Colours::green); // Keep green for status
+                         ZenithTheme::Colors::success); // Keep green for status
   statusLabel->setFont(ZenithTheme::Typography::getSmallFont());
   statusLabel->setJustificationType(juce::Justification::centredLeft);
   addAndMakeVisible(statusLabel.get());
@@ -112,7 +112,7 @@ WingmanPanel::WingmanPanel(CommandAPI &api, Engine &engine)
   //==========================================================================
   // Settings Button
   settingsButton = std::make_unique<juce::TextButton>("Settings");
-  settingsButton->setButtonText("⚙");
+  settingsButton->setButtonText(juce::CharPointer_UTF8("\xe2\x9a\x99"));
   settingsButton->setColour(juce::TextButton::buttonColourId,
                             ZenithTheme::Colors::bg_02);
   settingsButton->setColour(juce::TextButton::textColourOffId,
@@ -183,9 +183,9 @@ bool WingmanPanel::initializeGrok(const juce::String &apiKey) {
   bool success = grokController->initialize(apiKey);
 
   if (success) {
-    setStatus("Grok Ready", juce::Colour(0xff00ff00));
+    setStatus("Grok Ready", ZenithTheme::Colors::success);
   } else {
-    setStatus("Grok initialization failed", juce::Colour(0xffff0000));
+    setStatus("Grok initialization failed", ZenithTheme::Colors::error);
   }
 
   return success;
@@ -224,7 +224,7 @@ void WingmanPanel::sendCommand() {
 
   if (!isGrokReady()) {
     appendToConversation("System",
-                         "Grok API key not configured. Click ⚙ to set it up.");
+                         "Grok API key not configured. Click Settings to set it up.");
     return;
   }
 
@@ -236,7 +236,7 @@ void WingmanPanel::sendCommand() {
 
   // Set processing state
   isProcessing = true;
-  setStatus("Processing...", juce::Colour(0xffffff00));
+  setStatus("Processing...", ZenithTheme::Colors::warning);
   sendButton->setEnabled(false);
 
   // Send to Grok
@@ -246,7 +246,7 @@ void WingmanPanel::sendCommand() {
         // Success
         juce::MessageManager::callAsync([this, response]() {
           appendToConversation("Wingman", response);
-          setStatus("Ready", juce::Colour(0xff00ff00));
+          setStatus("Ready", ZenithTheme::Colors::success);
           isProcessing = false;
           sendButton->setEnabled(true);
         });
@@ -254,8 +254,29 @@ void WingmanPanel::sendCommand() {
       [this](juce::String error) {
         // Error
         juce::MessageManager::callAsync([this, error]() {
-          appendToConversation("Error", error);
-          setStatus("Error", juce::Colour(0xffff0000));
+          juce::String friendlyError = error;
+          juce::String suggestedAction = "";
+          
+          if (error.contains("401")) {
+            friendlyError = "Authentication failed.";
+            suggestedAction = "Please check your API key in Settings";
+          } else if (error.contains("429")) {
+            friendlyError = "Rate limit exceeded.";
+            suggestedAction = "Please wait a moment before trying again.";
+          } else if (error.contains("timed out") || error.contains("connection")) {
+            friendlyError = "Connection issue.";
+            suggestedAction = "Please check your internet connection.";
+          } else if (error.contains("quota")) {
+             friendlyError = "API Quota Exceeded.";
+             suggestedAction = "Please check your usage limits at console.x.ai";
+          }
+
+          appendToConversation("Error", friendlyError);
+          if (suggestedAction.isNotEmpty()) {
+             appendToConversation("Wingman", "**" + suggestedAction + "**");
+          }
+          
+          setStatus("Error", ZenithTheme::Colors::error);
           isProcessing = false;
           sendButton->setEnabled(true);
         });
@@ -263,7 +284,7 @@ void WingmanPanel::sendCommand() {
       [this](juce::String status) {
         // Progress
         juce::MessageManager::callAsync(
-            [this, status]() { setStatus(status, juce::Colour(0xffffff00)); });
+            [this, status]() { setStatus(status, ZenithTheme::Colors::warning); });
       });
 }
 
@@ -282,7 +303,7 @@ void WingmanPanel::updateModeFromSelector() {
   currentMode = (selectedId == 2) ? GrokMode::Thinking : GrokMode::Fast;
 
   juce::String modeName = (currentMode == GrokMode::Fast) ? "Fast" : "Thinking";
-  setStatus("Mode: " + modeName, juce::Colour(0xff00aaff));
+  setStatus("Mode: " + modeName, ZenithTheme::Colors::info);
 }
 
 void WingmanPanel::showSettings() {
@@ -326,7 +347,7 @@ void WingmanPanel::sampleImported(const juce::File &file) {
 void WingmanPanel::huntingProgressChanged(float progress,
                                           const juce::String &status) {
   juce::MessageManager::callAsync([this, progress, status]() {
-    setStatus(status, juce::Colour(0xff00aaff));
+    setStatus(status, ZenithTheme::Colors::info);
   });
 }
 
@@ -337,11 +358,11 @@ void WingmanPanel::huntingComplete(const zenith::ai::HuntingStats &stats,
       appendToConversation("Wingman", "Sample hunting complete! Found " +
                                           juce::String(stats.samplesFound) +
                                           " samples.");
-      setStatus("Ready", juce::Colour(0xff00ff00));
+      setStatus("Ready", ZenithTheme::Colors::success);
     } else {
       appendToConversation("Wingman",
                            "Sample hunting failed or was cancelled.");
-      setStatus("Failed", juce::Colour(0xffff0000));
+      setStatus("Failed", ZenithTheme::Colors::error);
     }
   });
 }

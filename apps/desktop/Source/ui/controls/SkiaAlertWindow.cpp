@@ -134,11 +134,16 @@ void SkiaAlertWindow::showMessageBoxAsync(IconType iconType,
                                           const juce::String &title,
                                           const juce::String &message,
                                           const juce::String &buttonText) {
-  auto *alert = new SkiaAlertWindow(title, message, iconType);
+  // Bug 23: Use shared_ptr to prevent double delete or leaks if callback never fires
+  auto alert = std::shared_ptr<SkiaAlertWindow>(new SkiaAlertWindow(title, message, iconType));
+  std::weak_ptr<SkiaAlertWindow> weakAlert = alert;
+
   alert->addButton(buttonText, Result::Button1);
-  alert->showAsync([alert](Result result) {
+  
+  // Pass shared_ptr to keep it alive until callback finishes
+  alert->showAsync([weakAlert, alert](Result result) {
     juce::ignoreUnused(result);
-    delete alert;
+    // Alert will be destroyed when shared_ptr goes out of scope
   });
 }
 

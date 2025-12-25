@@ -39,11 +39,12 @@
 #include <set>
 #include <vector>
 
-
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
 #include <core/SkPaint.h>
 #include <core/SkRect.h>
+
+namespace zenith {
 
 //==============================================================================
 /**
@@ -118,7 +119,6 @@ public:
 
   // Skia Rendering
   void drawSkia(SkCanvas *canvas) override;
-  void drawModernToolbar(SkCanvas *canvas);
 
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseDrag(const juce::MouseEvent &e) override;
@@ -143,9 +143,26 @@ public:
   // Public API - Advanced Features
   //==========================================================================
 
+  //==========================================================================
+  // Quantization Options
+  //==========================================================================
+  
+  /** Options for quantization */
+  struct QuantizeOptions {
+    double gridSize = 0.25;       // Grid size in beats (0 = use current)
+    float strength = 1.0f;        // 0.0-1.0 quantize strength
+    float swingAmount = 0.0f;     // 0.0-1.0 swing amount
+    bool useTriplets = false;     // Use triplet grid
+    bool quantizeStart = true;    // Quantize note start positions
+    bool quantizeEnd = false;     // Quantize note end positions
+  };
+
   /** Quantize selected notes with strength and swing */
   void quantizeSelected(double gridSize, float strength = 1.0f,
                         float swing = 0.0f);
+  
+  /** Quantize selected notes with full options */
+  void quantizeSelected(const QuantizeOptions& options);
 
   /** Humanize velocities of selected notes */
   void humanizeVelocity(float amount = 0.3f);
@@ -1298,3 +1315,5 @@ public:
 private:
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoRollWindow)
 };
+
+} // namespace zenith

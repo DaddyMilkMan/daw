@@ -8,7 +8,12 @@
 */
 
 #include "../../../ui/framework/PlatformWindowUtils.h"
-#include <include/gpu/gl/GrGLAssembleInterface.h>
+#include <include/gpu/ganesh/gl/GrGLInterface.h>
+#include <include/core/SkRefCnt.h>
+#include <include/gpu/ganesh/gl/GrGLInterface.h>
+#include <include/gpu/ganesh/gl/GrGLAssembleInterface.h>
+#include <juce_opengl/juce_opengl.h>
+#include "../../../engine/ZenithLogger.h"
 
 #ifdef __linux__
 namespace zenith {
@@ -17,11 +22,13 @@ sk_sp<const GrGLInterface> PlatformWindowUtils::createNativeGLInterface(juce::Op
     auto interface = GrGLMakeNativeInterface();
     
     if (interface == nullptr) {
-        // Fallback for Linux GL drivers
+        ZENITH_LOG_INFO("PlatformWindowUtils: GrGLMakeNativeInterface failed, using assembled fallback");
         interface = GrGLMakeAssembledInterface(
-            &context, [](void* ctx, const char* name) -> GrGLFuncPtr {
-                return (GrGLFuncPtr) static_cast<juce::OpenGLContext*>(ctx)->getOpenGLProcAddress(name);
+            &context, [](void* /*ctx*/, const char* name) -> GrGLFuncPtr {
+                return (GrGLFuncPtr) juce::OpenGLHelpers::getExtensionFunction(name);
             });
+    } else {
+        ZENITH_LOG_INFO("PlatformWindowUtils: GrGLMakeNativeInterface succeeded");
     }
     
     return interface;

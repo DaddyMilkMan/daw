@@ -12,6 +12,8 @@
 
 #include "AudioRecorder.h"
 #include "Track.h"
+#include <juce_audio_formats/juce_audio_formats.h>
+#include "RealTimeGarbageCollector.h"
 
 namespace zenith {
 
@@ -327,14 +329,10 @@ std::vector<RecordingResult> AudioRecorder::stopRecording() {
 }
 
 void AudioRecorder::updateSessionSnapshot() {
-  auto newSnapshot = std::make_shared<SessionSnapshot>(sessions_);
+  std::shared_ptr<SessionSnapshot> newSnapshot = std::make_shared<SessionSnapshot>(sessions_);
   activeSessionSnapshot_.store(newSnapshot.get(), std::memory_order_release);
-  sessionSnapshotTrash_.push_back(currentSessionSnapshot_);
+  RealTimeGarbageCollector::getInstance().deferDelete(currentSessionSnapshot_);
   currentSessionSnapshot_ = newSnapshot;
-
-  while (sessionSnapshotTrash_.size() > 5) {
-    sessionSnapshotTrash_.erase(sessionSnapshotTrash_.begin());
-  }
 }
 
 void AudioRecorder::write(const float *const *inputChannelData,

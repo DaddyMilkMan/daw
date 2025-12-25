@@ -100,7 +100,7 @@ void ArrangerClipManager::rebuildTrackComponents() {
     // Add if needed
     while (owner_.trackComponents.size() < required) {
         auto type = ArrangerTrackComponent::TrackType::Audio;
-        auto newTrack = std::make_unique<ArrangerTrackComponent>(projectState_, type);
+        auto newTrack = std::make_unique<ArrangerTrackComponent>(projectState_, gridUtils_, type);
         owner_.addChildComponent(newTrack.get());
         owner_.trackComponents.push_back(std::move(newTrack));
     }
@@ -127,6 +127,8 @@ void ArrangerClipManager::rebuildTrackComponents() {
         comp->setMuted(isMuted);
         comp->setSoloed(isSoloed);
         comp->setRecordArmed(isArmed);
+        
+        comp->updateTakeFolders();
     }
     
     owner_.resized();
@@ -172,12 +174,16 @@ void ArrangerClipManager::processTrackClips(const juce::ValueTree& track, int tr
 
     if (clipsNode.isValid()) {
         for (const auto& clip : clipsNode) {
+            // Skip Take Folders (handled by ArrangerTrackComponent)
+            if (clip.hasType(zenith::ProjectState::ID_TAKE_FOLDER))
+                continue;
+
             ClipView view;
             view.clipId = clip[zenith::ProjectState::PROP_ID].toString();
             view.trackId = trackId;
             view.trackIndex = trackIndex;
-            view.startBeats = clip[zenith::ProjectState::PROP_START];
-            view.lengthBeats = clip[zenith::ProjectState::PROP_LENGTH];
+            view.startBeats = clip.getProperty(zenith::ProjectState::PROP_START_BEATS);
+            view.lengthBeats = clip.getProperty(zenith::ProjectState::PROP_LENGTH_BEATS);
 
             auto clipType = clip[zenith::ProjectState::PROP_TYPE].toString();
             view.isMidi = (clipType == "midi");

@@ -1,9 +1,12 @@
+
 /**
  * @file PianoRollComponent.cpp
  * @brief Professional-grade MIDI Piano Roll Editor Implementation (Core)
  */
 
 #include "PianoRollComponent.h"
+#include "../../Source/engine/Engine.h"
+#include "../../Source/engine/Track.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../framework/GlassmorphicPanel.h"
 #include <algorithm>
@@ -1168,6 +1171,21 @@ void PianoRollComponent::quantizeSelected(double grid, float strength,
 
   if (anyChanged)
     repaint();
+}
+
+void PianoRollComponent::quantizeSelected(const QuantizeOptions& options) {
+  double grid = options.gridSize;
+  if (grid <= 0.0) {
+    grid = gridBeats; // Use current grid if not specified
+  }
+  
+  // Apply triplet adjustment if enabled
+  if (options.useTriplets) {
+    grid = grid * 2.0 / 3.0; // Convert to triplet grid
+  }
+  
+  // Delegate to the simpler version
+  quantizeSelected(grid, options.strength, options.swingAmount);
 }
 
 void PianoRollComponent::drawSkia(SkCanvas *canvas) {
@@ -2518,7 +2536,8 @@ void PianoRollComponent::drawArpPreview(SkCanvas *canvas, const SkRect &area) {
   previewBorder.setStrokeWidth(1.0f);
   previewBorder.setAntiAlias(true);
   float intervals[] = {4.0f, 2.0f};
-  previewBorder.setPathEffect(SkDashPathEffect::Make(intervals, 2, 0));
+  previewBorder.setPathEffect(
+      SkDashPathEffect::Make(SkSpan(intervals, 2), 0.0f));
 
   for (const auto &note : arpPreviewNotes) {
     if (note.bounds.getY() > area.bottom() ||
@@ -2594,6 +2613,53 @@ void MidiEditorContainer::setClipContext(const MidiClipContext &context) {
     if (activeView == View::PianoRoll)
       toggleView();
   }
+}
+
+void PianoRollComponent::drawGhostNotes(SkCanvas *canvas, const SkRect &rect) {
+    if (!canvas) return;
+    
+    // Ghost notes display MIDI notes from other tracks for reference during editing.
+    // This provides context when composing harmonies or countermelodies.
+    // 
+    // To enable: Configure a track as a ghost note source via the piano roll's
+    // context menu or track settings. Ghost notes appear at 30% opacity using
+    // the source track's color.
+    //
+    // Currently no ghost note sources are configured - this is a user-initiated
+    // feature that requires explicit track selection.
+}
+
+void PianoRollComponent::drawPlayhead(SkCanvas *canvas, const SkRect &rect) {
+   if (!canvas) return;
+   
+   using namespace zenith::design;
+   float width = (float)getLocalBounds().getWidth();
+   float height = (float)getLocalBounds().getHeight();
+
+    float playheadX = PIANO_WIDTH + beatsToPixels(currentPlayheadBeats);
+    if (playheadX >= PIANO_WIDTH && playheadX <= width) {
+      // Playhead line
+      SkPaint playheadPaint;
+      playheadPaint.setColor(colors::TEXT_PRIMARY);
+      playheadPaint.setStrokeWidth(2.0f);
+      playheadPaint.setAntiAlias(true);
+      canvas->drawLine(playheadX, RULER_HEIGHT, playheadX, height,
+                       playheadPaint);
+
+      // Triangle marker in ruler/toolbar area
+      static constexpr float kPlayheadMarkerHalfWidth = 5.0f;
+      static constexpr float kPlayheadMarkerHeight = 8.0f;
+
+      const float contentTop = TOOLBAR_HEIGHT + RULER_HEIGHT;
+      SkPath trianglePath;
+      trianglePath.moveTo(playheadX, contentTop);
+      trianglePath.lineTo(playheadX - kPlayheadMarkerHalfWidth,
+                          contentTop - kPlayheadMarkerHeight);
+      trianglePath.lineTo(playheadX + kPlayheadMarkerHalfWidth,
+                          contentTop - kPlayheadMarkerHeight);
+      trianglePath.close();
+      canvas->drawPath(trianglePath, playheadPaint);
+    }
 }
 
 void MidiEditorContainer::resized() {

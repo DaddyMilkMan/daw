@@ -6,15 +6,146 @@
 
 #include "Engine.h"
 #include "ProjectState.h"
-#include "../engine/Track.h"
-#include "../engine/AuxBus.h"
-#include "../engine/AudioRenderer.h"
+#include "Track.h"
+#include "Clip.h"
+#include "AuxBus.h"
+#include "AudioRenderer.h"
+#include "TempoMap.h"
+#include "RealTimeGarbageCollector.h"
 
 namespace zenith {
 
 //==============================================================================
 // Track Management
 //==============================================================================
+
+void Engine::syncWithProjectState() {
+  DBG("Engine: Syncing with project state");
+
+  if (projectState_ == nullptr) {
+    DBG("Engine: No project state, clearing tracks");
+    tracks_.clear();
+    return;
+  }
+
+  // Clear existing tracks
+  tracks_.clear();
+
+  // Get tracks from project state
+  auto &state = projectState_->getState();
+  auto tracksNode = state.getChildWithName(ProjectState::ID_TRACKS);
+
+  if (!tracksNode.isValid()) {
+    DBG("Engine: No tracks in project state");
+    return;
+  }
+
+  const double sampleRate = currentSampleRate.load();
+  const int bufferSize = currentBufferSize.load();
+
+  // Helper: convert beats to samples using TempoMap
+  auto beatsToSamples = [this, sampleRate](double beats) -> juce::int64 {
+    if (tempoMap_) {
+      return tempoMap_->beatsToSamples(beats, sampleRate);
+    }
+    // Fallback if no tempo map
+    const double tempo = projectState_ ? projectState_->getTempo() : 120.0;
+    const double secondsPerBeat = 60.0 / tempo;
+    const double seconds = beats * secondsPerBeat;
+    return static_cast<juce::int64>(seconds * sampleRate);
+  };
+
+  // Create engine tracks from project state
+  for (auto trackNode : tracksNode) {
+    juce::String trackName = trackNode[ProjectState::PROP_NAME].toString();
+    juce::String trackType = trackNode[ProjectState::PROP_TYPE].toString();
+
+    // Create track via Factory
+    zenith::Track::Type actualType = zenith::Track::Type::Audio;
+    if (trackType == "midi")
+      actualType = zenith::Track::Type::MIDI;
+    else if (trackType == "instrument")
+      actualType = zenith::Track::Type::Instrument;
+    else if (trackType == "bus")
+      actualType = zenith::Track::Type::Bus;
+
+    auto track = zenith::Track::create(trackName, actualType);
+
+    // Set track ID
+    track->setTrackId(trackNode[ProjectState::PROP_ID].toString());
+
+    // Set mixer properties
+    track->setVolume(trackNode[ProjectState::PROP_VOLUME]);
+    track->setPan(trackNode[ProjectState::PROP_PAN]);
+    track->setMuted(trackNode[ProjectState::PROP_MUTE]);
+    track->setSolo(trackNode[ProjectState::PROP_SOLO]);
+
+    // Prepare track for playback
+    if (sampleRate > 0) {
+      track->prepareToPlay(bufferSize, sampleRate);
+    }
+
+    // Load clips
+    auto clipsNode = trackNode.getChildWithName(ProjectState::ID_CLIPS);
+    if (clipsNode.isValid()) {
+      for (auto clipNode : clipsNode) {
+        // Create clip
+        auto clip = std::make_unique<zenith::Clip>();
+
+        // Set basic properties
+        double startBeats = clipNode[ProjectState::PROP_START];
+        double lengthBeats = clipNode[ProjectState::PROP_LENGTH];
+
+        clip->setStartPosition(beatsToSamples(startBeats));
+        clip->setLength(beatsToSamples(lengthBeats));
+
+        // Load audio file if present
+        juce::String audioFilePath =
+            clipNode[ProjectState::PROP_AUDIO_FILE].toString();
+        if (audioFilePath.isNotEmpty()) {
+          juce::File audioFile(audioFilePath);
+          if (audioFile.existsAsFile()) {
+            clip->setAudioFile(audioFile);
+            clip->setType(zenith::Clip::Type::Audio);
+            DBG("Engine: Loaded audio file: " + audioFile.getFileName());
+          } else {
+            DBG("Engine: Warning - audio file not found: " + audioFilePath);
+          }
+        }
+
+        // Prepare clip
+        if (sampleRate > 0) {
+          clip->prepareToPlay(bufferSize, sampleRate);
+        }
+
+        // Set clip as playing (so it's active during playback)
+        clip->setPlaying(true);
+
+        // Add clip to track
+        track->addClip(std::move(clip));
+      }
+    }
+
+    // Add track to engine
+    track->setTrackIndex((int)tracks_.size());
+    tracks_.push_back(std::move(track));
+
+    // Register with RoutingGraph and connect to master bus
+    RoutingGraph::Node node;
+    node.id = tracks_.back()->getTrackId();
+    node.name = tracks_.back()->getName();
+    node.type = RoutingGraph::NodeType::Track;
+    routingGraph_.addNode(node);
+
+    // Automatically route track to master bus
+    routingGraph_.connect(tracks_.back()->getTrackId(), "master", 1.0f);
+  }
+
+  DBG("Engine: Synced " + juce::String(tracks_.size()) + " tracks");
+
+  // Update snapshot for audio thread
+  updateTrackSnapshot();
+}
 
 int Engine::getNumTracks() const noexcept {
   return static_cast<int>(tracks_.size());
@@ -183,14 +314,14 @@ void Engine::updateTrackSnapshot() {
 
   // [DSP Optimization] Update routing graph snapshot with direct pointers for fast lookup
   {
-      std::unordered_map<juce::String, Track*> trackMap;
+      std::unordered_map<juce::String, std::shared_ptr<Track>> trackMap;
       for (const auto& track : tracks_) {
-          if (track) trackMap[track->getTrackId()] = track.get();
+          if (track) trackMap[track->getTrackId()] = track;
       }
       
-      std::unordered_map<juce::String, AuxBus*> auxBusMap;
+      std::unordered_map<juce::String, std::shared_ptr<AuxBus>> auxBusMap;
       for (const auto& bus : auxBuses_) {
-          if (bus) auxBusMap[bus->getId()] = bus.get();
+          if (bus) auxBusMap[bus->getId()] = bus;
       }
       
       routingGraph_.updateSnapshotWithPointers(trackMap, auxBusMap);
@@ -201,18 +332,11 @@ void Engine::updateTrackSnapshot() {
   activeSnapshot_.store(newSnapshot.get());
 
   // Manage lifetime of old snapshots
-  // We keep the previous snapshot alive in snapshotTrash_
-  // because the audio thread might still be reading it.
-  snapshotTrash_.push_back(currentSnapshotHolder_);
+  // We defer deletion using RealTimeGarbageCollector to ensure audio thread safety
+  RealTimeGarbageCollector::getInstance().deferDelete(currentSnapshotHolder_);
 
   // Update current holder to the new snapshot
   currentSnapshotHolder_ = newSnapshot;
-
-  // Garbage collection: Keep last 5 snapshots
-  // At 60Hz updates, this gives plenty of margin for the audio thread to finish
-  if (snapshotTrash_.size() > 5) {
-    snapshotTrash_.erase(snapshotTrash_.begin());
-  }
 }
 
 void Engine::prepareTracks(int samplesPerBlockExpected, double sampleRate) {

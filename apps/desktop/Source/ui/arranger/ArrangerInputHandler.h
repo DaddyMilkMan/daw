@@ -140,6 +140,13 @@ public:
      */
     juce::String getTooltip();
 
+    /**
+     * @brief Trigger AI stem separation for a clip
+     * @param clipId ID of the clip to separate
+     */
+    void ripAudioToStems(const juce::String& clipId);
+
+
     //==========================================================================
     // State Accessors
     //==========================================================================

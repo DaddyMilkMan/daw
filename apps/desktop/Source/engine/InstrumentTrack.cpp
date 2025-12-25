@@ -6,7 +6,7 @@ void InstrumentTrack::getNextAudioBlock(
     const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
     const juce::MidiBuffer *incomingMidi,
     const std::vector<juce::AudioBuffer<float> *> &auxBuffers,
-    const TempoMap *tempoMap) {
+    const TempoMap *tempoMap, const juce::AudioBuffer<float> *sidechainBuffer) {
   juce::ignoreUnused(auxBuffers, tempoMap);
   auto numSamples = bufferToFill.numSamples;
 
@@ -37,7 +37,7 @@ void InstrumentTrack::getNextAudioBlock(
       bufferToFill.buffer->getNumChannels(), bufferToFill.startSample,
       numSamples);
 
-  processPluginChain(proxyBuffer, midiBuffer, numSamples);
+  processPluginChain(proxyBuffer, midiBuffer, numSamples, sidechainBuffer);
 
   // 5. Apply Mixer (gain/pan)
   applyGainAndPan(proxyBuffer, numSamples);

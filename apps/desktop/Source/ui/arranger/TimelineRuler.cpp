@@ -16,6 +16,8 @@
 #include <core/SkPaint.h>
 #endif
 
+namespace zenith {
+
 TimelineRuler::TimelineRuler() {
   setSize(800, 30);
 
@@ -379,3 +381,5 @@ void TimelineRuler::resized() {
   if (viewLengthBeats > 0)
     pixelsPerBeat = getWidth() / viewLengthBeats;
 }
+
+} // namespace zenith

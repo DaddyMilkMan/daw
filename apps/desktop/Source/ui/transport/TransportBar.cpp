@@ -31,7 +31,16 @@ namespace zenith {
 
 TransportBar::TransportBar() {
   setSize(800, 60);
-  startTimerHz(60); // Animation loop
+}
+
+void TransportBar::visibilityChanged() {
+  // Only start timer when:
+  // 1. Component is visible
+  // 2. Component has a peer (is on desktop) - prevents blocking during construction
+  // 3. Timer isn't already running
+  if (isVisible() && getPeer() != nullptr && !isTimerRunning()) {
+    startTimerHz(60); // Start animation loop when visible and on desktop
+  }
 }
 
 void TransportBar::resized() {
@@ -150,7 +159,7 @@ void TransportBar::updateCachedPaints(const SkRect &bounds) {
   // 3. Fonts
   // Use Mono font for Tempo/BPM display to avoid jitter
   font_ = design::getMonoFont(18.0f, design::FontWeight::Medium);
-
+  
   // Use UI font for labels
   smallFont_ = design::getSkFont(14.0f, design::FontWeight::Regular);
 }

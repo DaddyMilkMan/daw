@@ -9,6 +9,7 @@
 #include "../../Source/engine/Track.h"
 
 using namespace zenith;
+#include "../design-system/ZenithTheme.h"
 
 //==============================================================================
 MixerView::MixerView(Engine& engine)
@@ -36,12 +37,12 @@ MixerView::~MixerView()
 void MixerView::paint(juce::Graphics& g)
 {
     // Background
-    g.fillAll(juce::Colour(0xff1e1e1e));
+    g.fillAll(ZenithTheme::Colors::bg_00);
 
     // If no tracks, show helpful message
     if (channels_.empty())
     {
-        g.setColour(juce::Colours::grey);
+        g.setColour(ZenithTheme::Colors::text_tertiary);
         g.setFont(juce::FontOptions(16.0f));
         g.drawText("No tracks in mixer",
                    getLocalBounds(),

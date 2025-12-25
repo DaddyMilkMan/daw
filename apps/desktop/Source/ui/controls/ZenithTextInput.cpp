@@ -11,6 +11,7 @@
 */
 
 #include "ZenithTextInput.h"
+#include "../design-system/ZenithTheme.h"
 
 #ifdef ZENITH_USE_SKIA
 #include <core/SkBlurTypes.h>
@@ -149,9 +150,9 @@ void ZenithTextInput::startEditing() {
   // Style the editor
   editor_->setColour(juce::TextEditor::backgroundColourId,
                      juce::Colours::transparentBlack);
-  editor_->setColour(juce::TextEditor::textColourId, juce::Colours::white);
+  editor_->setColour(juce::TextEditor::textColourId, ZenithTheme::Colors::text_primary);
   editor_->setColour(juce::TextEditor::highlightColourId,
-                     juce::Colour(0, 255, 255).withAlpha(0.3f));
+                     ZenithTheme::Colors::accent_primary.withAlpha(0.3f));
   editor_->setColour(juce::TextEditor::outlineColourId,
                      juce::Colours::transparentBlack);
   editor_->setColour(juce::TextEditor::focusedOutlineColourId,
@@ -252,15 +253,16 @@ void ZenithTextInput::drawSkia(SkCanvas *canvas) {
 void ZenithTextInput::drawBackground(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
   SkRect rect = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
-  SkRRect rrect = SkRRect::MakeRectXY(rect, 4.0f, 4.0f);
+  SkRRect rrect = SkRRect::MakeRectXY(rect, ZenithTheme::Radius::sm, ZenithTheme::Radius::sm);
 
   SkPaint paint;
   paint.setAntiAlias(true);
 
   // Background
   paint.setStyle(SkPaint::kFill_Style);
+  juce::Colour bg = ZenithTheme::Colors::bg_03;
   paint.setColor(
-      SkColorSetARGB(isEditing_ ? 180 : (hovered_ ? 140 : 120), 30, 30, 40));
+      SkColorSetARGB(isEditing_ ? 180 : (hovered_ ? 140 : 120), bg.getRed(), bg.getGreen(), bg.getBlue()));
   canvas->drawRRect(rrect, paint);
 
   // Border/focus ring
@@ -268,13 +270,15 @@ void ZenithTextInput::drawBackground(SkCanvas *canvas) {
   paint.setStrokeWidth(1.0f);
 
   if (isEditing_) {
-    paint.setColor(accentColor_);
+    juce::Colour accent = ZenithTheme::Colors::accent_primary;
+    paint.setColor(SkColorSetRGB(accent.getRed(), accent.getGreen(), accent.getBlue()));
     paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f));
     canvas->drawRRect(rrect, paint);
     paint.setMaskFilter(nullptr);
   }
 
-  paint.setColor(SkColorSetARGB(hovered_ ? 100 : 60, 255, 255, 255));
+  juce::Colour border = ZenithTheme::Colors::border_default;
+  paint.setColor(SkColorSetARGB(hovered_ ? 100 : 60, border.getRed(), border.getGreen(), border.getBlue()));
   canvas->drawRRect(rrect, paint);
 }
 
@@ -287,8 +291,10 @@ void ZenithTextInput::drawText(SkCanvas *canvas) {
 
   SkPaint paint;
   paint.setAntiAlias(true);
-  paint.setColor(text_.isEmpty() ? SkColorSetARGB(100, 200, 200, 220)
-                                 : SkColorSetARGB(220, 255, 255, 255));
+  juce::Colour txtMain = ZenithTheme::Colors::text_primary;
+  juce::Colour txtPlace = ZenithTheme::Colors::text_tertiary;
+  paint.setColor(text_.isEmpty() ? SkColorSetARGB(100, txtPlace.getRed(), txtPlace.getGreen(), txtPlace.getBlue())
+                                 : SkColorSetARGB(220, txtMain.getRed(), txtMain.getGreen(), txtMain.getBlue()));
 
   juce::String displayText = text_.isEmpty() ? "0" : text_;
   if (prefix_.isNotEmpty()) {

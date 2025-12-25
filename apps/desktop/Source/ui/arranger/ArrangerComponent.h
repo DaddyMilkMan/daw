@@ -15,6 +15,7 @@
 #include "MiniMapComponent.h"
 #include "ProjectState.h"
 #include "SkiaComponent.h"
+#include "TimelineRuler.h"
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -222,6 +223,7 @@ private:
   //==========================================================================
 
   MiniMapComponent miniMap;
+  TimelineRuler timelineRuler;
   std::unique_ptr<MacroToolbar> macroToolbar;
   std::unique_ptr<FreezeProgressOverlay> freezeOverlay;
   std::unique_ptr<ArrangerTrackComponent> sectionTrack;

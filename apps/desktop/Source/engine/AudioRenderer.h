@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <array>
 #include <atomic>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -97,7 +98,7 @@ public:
       juce::int64 playheadPosition, std::span<Track *const> tracks,
       std::span<AuxBus *const> auxBuses, const RoutingGraph &routingGraph,
       MasterLimiter &masterLimiter,
-      std::vector<std::unique_ptr<juce::AudioPluginInstance>> &masterPlugins,
+      std::span<const std::shared_ptr<juce::AudioPluginInstance>> masterPlugins,
       const TempoMap *tempoMap, const juce::MidiBuffer *incomingMidi = nullptr,
       const float *const *inputChannelData = nullptr,
       int numInputChannels = 0) noexcept;
@@ -171,8 +172,7 @@ public:
    * @param limiterLatency Latency of the master limiter
    */
   void updateMasterLatency(
-      const std::vector<std::unique_ptr<juce::AudioPluginInstance>>
-          &masterPlugins,
+      std::span<const std::shared_ptr<juce::AudioPluginInstance>> masterPlugins,
       int limiterLatency);
 
   static constexpr int kMaxAuxBuses = 32;
@@ -193,7 +193,7 @@ private:
    */
   void processMasterPlugins(
       juce::AudioBuffer<float> &buffer,
-      std::vector<std::unique_ptr<juce::AudioPluginInstance>> &plugins);
+      std::span<const std::shared_ptr<juce::AudioPluginInstance>> plugins);
 
   /**
    * @brief Update output metering
@@ -226,7 +226,8 @@ private:
                        const TempoMap *tempoMap);
 
   void renderAuxBus(const RoutingGraph::Snapshot *snapshot,
-                    const std::string &nodeId, std::span<AuxBus *const> auxBuses,
+                    const std::string &nodeId,
+                    std::span<AuxBus *const> auxBuses,
                     juce::AudioBuffer<float> &outputBuffer, int numSamples);
 
   // Aux bus buffers

@@ -151,7 +151,12 @@ namespace {
         auto v = juce::var::readFromStream (input);
 
         if (auto* obj = v.getDynamicObject())
-            return std::unique_ptr<juce::DynamicObject> (obj->clone().getDynamicObject()); // clone to ensure ownership
+        {
+            auto cloned = std::make_unique<juce::DynamicObject>();
+            for (const auto& prop : obj->getProperties())
+                cloned->setProperty(prop.name, prop.value);
+            return cloned;
+        }
             
         // If failed or not an object, return empty
         return std::make_unique<juce::DynamicObject>();
@@ -163,7 +168,8 @@ namespace {
 
         // Serialize to binary
         juce::MemoryOutputStream mos;
-        juce::var (props).writeToStream (mos);
+        juce::var propsVar(props->clone().release());
+        propsVar.writeToStream (mos);
 
         auto encrypted = performCrypto (mos.getData(), mos.getDataSize(), true);
 

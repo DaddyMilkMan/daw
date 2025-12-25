@@ -75,6 +75,12 @@ ArrangerComponent::ArrangerComponent(Engine& eng, ProjectState& ps)
     addAndMakeVisible(&miniMap);
     miniMap.setAlwaysOnTop(true);
 
+    // Initialize Timeline Ruler
+    addAndMakeVisible(timelineRuler);
+    timelineRuler.onSeek = [this](double beat) {
+        engine_.setPlayheadSamples(gridUtils_->beatsToSamples(beat));
+    };
+
     macroToolbar->getSelectedClipIds = [this]() { 
         return clipManager_->getSelectedClipIds(); 
     };
@@ -111,7 +117,8 @@ ArrangerComponent::ArrangerComponent(Engine& eng, ProjectState& ps)
     freezeOverlay->onCancel = [this]() { engine_.cancelFreeze(); };
 
     // Initialize Section Track
-    sectionTrack = std::make_unique<ArrangerTrackComponent>(projectState);
+    sectionTrack.reset(new ArrangerTrackComponent(projectState, *gridUtils_,
+                                                  ArrangerTrackComponent::TrackType::Section));
     addChildComponent(sectionTrack.get());
 
     DBG("ArrangerComponent: Created");
@@ -171,6 +178,11 @@ void ArrangerComponent::resized() {
     if (sectionTrack) {
         sectionTrack->setBounds(HEADER_WIDTH, 0, getWidth() - HEADER_WIDTH,
                                 static_cast<int>(SECTION_HEIGHT));
+    }
+
+    timelineRuler.setBounds(HEADER_WIDTH, SECTION_HEIGHT, getWidth() - HEADER_WIDTH, RULER_HEIGHT);
+    if (getWidth() > HEADER_WIDTH) {
+        timelineRuler.setVisibleRange(viewStartBeats, (getWidth() - HEADER_WIDTH) / pixelsPerBeat);
     }
 
     if (macroToolbar) {
@@ -300,6 +312,8 @@ void ArrangerComponent::updatePlayheadFromEngine() {
                 clipManager_->recomputeClipBounds();
             }
         }
+        
+        timelineRuler.setVisibleRange(viewStartBeats, (getWidth() - HEADER_WIDTH) / pixelsPerBeat);
 
         repaint();
     } else if (wasLoopEnabled != loopEnabled_) {

@@ -3,6 +3,7 @@
 #include "../ai/AIStatusManager.h"
 #include "../ai/AudioFitnessEvaluator.h"
 #include "../network/GrokUtils.h"
+#include "../utils/StemSeparationJob.h"
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 
@@ -175,6 +176,50 @@ public:
       bus.unsubscribe(subId);
       expectEquals(bus.getSubscriberCount(ai::AIEventType::SamplesFound), 0);
     }
+
+    beginTest("StemSeparationJob Lifecycle");
+    {
+      // Create a dummy audio file for testing
+      juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory);
+      juce::File testFile = tempDir.getChildFile("zenith_test_audio.wav");
+      
+      juce::AudioBuffer<float> buffer(2, 44100);
+      buffer.clear();
+      // Add some noise
+      juce::Random rng;
+      for (int ch = 0; ch < 2; ++ch)
+          for (int i = 0; i < 44100; ++i)
+              buffer.setSample(ch, i, rng.nextFloat() * 0.1f);
+
+      juce::WavAudioFormat wavFormat;
+      std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(
+          new juce::FileOutputStream(testFile), 44100.0, 2, 16, {}, 0));
+      if (writer) {
+          writer->writeFromAudioSampleBuffer(buffer, 0, buffer.getNumSamples());
+          writer.reset();
+      }
+
+      juce::File outputDir = tempDir.getChildFile("zenith_test_stems");
+      bool completed = false;
+      utils::StemSeparationJob::StemFiles results;
+
+      auto job = new utils::StemSeparationJob(testFile, outputDir, [&](const utils::StemSeparationJob::StemFiles& res) {
+          results = res;
+          completed = true;
+      });
+
+      // Run job synchronously for test
+      job->runJob();
+      delete job;
+
+      // Even if results.success is false (due to missing model), the job should have finished
+      expect(completed);
+      
+      // Cleanup
+      testFile.deleteFile();
+      outputDir.deleteRecursively();
+    }
+
   }
 };
 

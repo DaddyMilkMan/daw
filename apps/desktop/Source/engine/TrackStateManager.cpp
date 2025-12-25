@@ -74,15 +74,17 @@ juce::String TrackStateManager::addTrack(const juce::String &name,
   track.setProperty(ProjectState::PROP_COLOR, autoColor.toString(), nullptr);
   track.setProperty(ProjectState::PROP_MANUALLY_COLORED, false, nullptr);
 
-  // Create empty clips container
+  // Create empty clips container with ID for CRDT sync
   juce::ValueTree clipsNode(ProjectState::ID_CLIPS);
+  clipsNode.setProperty(ProjectState::PROP_ID, trackId + "_clips", nullptr);
   track.addChild(clipsNode, -1, nullptr);
 
-  // Create empty automation container
+  // Create empty automation container with ID for CRDT sync
   juce::ValueTree automationNode(ProjectState::ID_AUTOMATION);
+  automationNode.setProperty(ProjectState::PROP_ID, trackId + "_automation", nullptr);
   track.addChild(automationNode, -1, nullptr);
 
-  // Add with undo - PASS ADDRESS
+  // Add with undo
   tracksNode.addChild(track, -1, &projectState_.getUndoManager());
 
   DBG("TrackStateManager: Added track '" + name + "' (ID: " + trackId + ")");

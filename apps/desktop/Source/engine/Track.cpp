@@ -8,6 +8,7 @@
 #include "PluginHost.h"
 #include "ProjectState.h"
 #include "TempoMap.h"
+#include "RealTimeGarbageCollector.h"
 #include <algorithm>
 
 namespace zenith {
@@ -39,7 +40,7 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
   // Validate input parameters
   jassert(samplesPerBlockExpected > 0 && samplesPerBlockExpected <= 8192);
   jassert(sampleRate > 0.0 && sampleRate <= 192000.0);
-  
+
   currentSampleRate = sampleRate;
   currentBlockSize = samplesPerBlockExpected;
 
@@ -47,13 +48,20 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
   // Buffer may be resized when audio device settings change.
   // Only resize if needed to avoid unnecessary allocations.
   const int currentBufferSize = pluginBuffer.getNumSamples();
-  if (currentBufferSize != samplesPerBlockExpected || pluginBuffer.getNumChannels() != 2) {
+  if (currentBufferSize != samplesPerBlockExpected ||
+      pluginBuffer.getNumChannels() != 2) {
     pluginBuffer.setSize(2, samplesPerBlockExpected);
-    DBG("Track::prepareToPlay - Resized pluginBuffer from " 
-        + juce::String(currentBufferSize) + " to " 
-        + juce::String(samplesPerBlockExpected) + " samples");
+    DBG("Track::prepareToPlay - Resized pluginBuffer from " +
+        juce::String(currentBufferSize) + " to " +
+        juce::String(samplesPerBlockExpected) + " samples");
   }
   pluginBuffer.clear();
+
+  if (sidechainBuffer.getNumSamples() != samplesPerBlockExpected ||
+      sidechainBuffer.getNumChannels() != 2) {
+    sidechainBuffer.setSize(2, samplesPerBlockExpected);
+  }
+  sidechainBuffer.clear();
 
   pluginChain.prepareToPlay(sampleRate, samplesPerBlockExpected);
   mixerChannel.prepareToPlay(samplesPerBlockExpected, sampleRate);
@@ -138,16 +146,12 @@ void Track::setFreezeFile(const juce::File &file) {
       }
     }
   }
-  
+
   // FIX: RCU atomic update for lock-free audio thread access
-  
-  // 1. Keep old buffer alive in trash (simple garbage collection)
+
+  // 1. Keep old buffer alive until safe (Garbage Collection)
   if (freezeBufferOwner_)
-      freezeTrash_.push_back(freezeBufferOwner_);
-  
-  // Limit trash size (keep last 4 updates alive to ensure audio thread safety)
-  if (freezeTrash_.size() > 4)
-      freezeTrash_.erase(freezeTrash_.begin());
+    RealTimeGarbageCollector::getInstance().deferDelete(freezeBufferOwner_);
 
   // 2. Take ownership of new buffer
   freezeBufferOwner_ = newBuffer;
@@ -245,16 +249,17 @@ void Track::loadPluginStates(const juce::ValueTree &state,
 }
 
 void Track::injectLiveMidiMessage(const juce::MidiMessage &message) {
-  liveMidiFifo_.push(message);
+  noteFifo_.push(message);
 }
 
 //==============================================================================
 void Track::processPluginChain(juce::AudioBuffer<float> &buffer,
-                               juce::MidiBuffer &midi, int numSamples) {
+                               juce::MidiBuffer &midi, int numSamples,
+                               const juce::AudioBuffer<float> *sidechain) {
   // Inject live MIDI messages
-  liveMidiFifo_.drainTo(midi, numSamples);
+  noteFifo_.drainTo(midi, numSamples);
 
-  pluginChain.process(buffer, midi);
+  pluginChain.process(buffer, midi, sidechain);
 }
 
 void Track::applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples) {
@@ -273,7 +278,6 @@ void Track::addClip(std::unique_ptr<Clip> clip) {
   DBG("Track::addClip called on track type that doesn't support clips: " +
       getTypeString());
   jassertfalse; // Bug 44: Alert developer about incorrect usage
-}
 }
 
 void Track::updateLevelMeters(const juce::AudioBuffer<float> &buffer,
