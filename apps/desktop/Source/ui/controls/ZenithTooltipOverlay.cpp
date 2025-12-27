@@ -13,9 +13,7 @@
 #include "ZenithTooltipOverlay.h"
 
 #ifdef ZENITH_USE_SKIA
-#include <core/SkBlurTypes.h>
-#include <core/SkFont.h>
-#include <core/SkRRect.h>
+#include "ZenithSkia.h"
 #endif
 
 namespace zenith {
@@ -62,7 +60,7 @@ void ZenithTooltipOverlay::drawSkia(SkCanvas *canvas) {
   paint.setStyle(SkPaint::kStroke_Style);
   paint.setStrokeWidth(2.0f);
   paint.setColor(SkColorSetRGB(0, 255, 255));
-  paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 8.0f));
+  paint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 8.0f));
   canvas->drawRect(targetRect, paint);
 
   // Sharp border

@@ -17,7 +17,7 @@
 #include "ZenithControl.h"
 
 #ifdef ZENITH_USE_SKIA
-#include <core/SkCanvas.h>
+#include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
 #include <core/SkPath.h>
 #endif

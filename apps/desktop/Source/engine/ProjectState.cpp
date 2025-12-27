@@ -61,6 +61,14 @@ const juce::Identifier ProjectState::ID_TAKE_FOLDER("TAKE_FOLDER");
 const juce::Identifier ProjectState::ID_COMP_REGIONS("COMP_REGIONS");
 const juce::Identifier ProjectState::ID_COMP_REGION("COMP_REGION");
 
+// Take Folder identifiers
+const juce::Identifier ProjectState::ID_TAKE_FOLDERS("TAKE_FOLDERS");
+const juce::Identifier ProjectState::ID_TAKE_FOLDER("TAKE_FOLDER");
+const juce::Identifier ProjectState::ID_TAKES("TAKES");
+const juce::Identifier ProjectState::ID_TAKE("TAKE");
+const juce::Identifier ProjectState::ID_COMP_REGIONS("COMP_REGIONS");
+const juce::Identifier ProjectState::ID_COMP_REGION("COMP_REGION");
+
 const juce::Identifier ProjectState::PROP_NAME("name");
 const juce::Identifier ProjectState::PROP_TEMPO("tempo");
 const juce::Identifier
@@ -127,6 +135,11 @@ const juce::Identifier ProjectState::PROP_MANUALLY_COLORED("manuallyColored");
 const juce::Identifier ProjectState::PROP_IS_QUARANTINE("isQuarantine");
 
 const juce::Identifier ProjectState::PROP_SELECTED_TRACK_ID("selectedTrackId");
+
+// Take Folder properties
+const juce::Identifier ProjectState::PROP_TAKE_INDEX("takeIndex");
+const juce::Identifier ProjectState::PROP_ACTIVE_TAKE("activeTake");
+const juce::Identifier ProjectState::PROP_EXPANDED("expanded");
 
 //==============================================================================
 ProjectState::ProjectState() : state(Zenith::IDs::PROJECT) {

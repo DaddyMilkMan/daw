@@ -11,8 +11,12 @@
 
 #pragma once
 
+#include "FontManager.h"
+
+#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
 #include <include/core/SkFontMgr.h>
 #include <include/core/SkRefCnt.h>
+#endif
 
 namespace zenith {
 namespace design {

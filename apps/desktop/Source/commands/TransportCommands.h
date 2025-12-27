@@ -6,10 +6,12 @@ namespace zenith {
 // Forward declarations
 class Engine;
 class ProjectState;
+class CommandAPI;
 
 class TransportCommands {
 public:
-  TransportCommands(Engine &engine, ProjectState &projectState);
+  TransportCommands(Engine &engine, ProjectState &projectState,
+                    CommandAPI &api);
 
   juce::var play(const juce::var &params);
   juce::var stop(const juce::var &params);
@@ -24,6 +26,7 @@ public:
 private:
   Engine &engine;
   ProjectState &projectState;
+  CommandAPI &api;
 };
 
 } // namespace zenith

@@ -9,6 +9,7 @@
 */
 
 #include "ResizablePanelContainer.h"
+#include "../../engine/ZenithLogger.h"
 #include "GlassmorphicPanel.h"
 #include <effects/SkGradientShader.h>
 
@@ -930,6 +931,23 @@ void ResizablePanelContainer::recalculateLayout() {
       currentPos += PanelDivider::dividerSize;
       ++dividerIdx;
     }
+  }
+
+  // Debug Log Layout (limited to first 3 calls to avoid lag)
+  static int layoutLogLimit = 0;
+  if (layoutLogLimit < 3) {
+    ZENITH_LOG_INFO(
+        juce::String("ResizablePanelContainer::recalculateLayout (") +
+        (isHorizontal ? "Horizontal" : "Vertical") + ")");
+    ZENITH_LOG_INFO("  Bounds: " + bounds.toString());
+    for (size_t i = 0; i < panels_.size(); ++i) {
+      auto &slot = panels_[i];
+      ZENITH_LOG_INFO("  Panel " + juce::String(i) + " (" +
+                      slot.wrapper->getPanelId() +
+                      "): " + slot.wrapper->getBounds().toString() +
+                      (slot.wrapper->isVisible() ? " [Visible]" : " [Hidden]"));
+    }
+    layoutLogLimit++;
   }
 }
 

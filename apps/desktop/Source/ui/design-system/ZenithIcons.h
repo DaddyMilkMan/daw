@@ -16,11 +16,8 @@
 
 #pragma once
 
-#include <core/SkBlurTypes.h>
-#include <core/SkCanvas.h>
-#include <core/SkColor.h>
+#include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
-#include <core/SkPaint.h>
 #include <core/SkPath.h>
 
 namespace zenith {
@@ -948,7 +945,7 @@ inline void drawIcon(SkCanvas *canvas, const SkPath &icon, float x, float y,
                                     : SkPaint::kStroke_Style);
     glowPaint.setStrokeWidth(style.strokeWidth);
     glowPaint.setMaskFilter(
-        SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, style.glowRadius));
+        SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, style.glowRadius));
     canvas->drawPath(icon, glowPaint);
   }
 

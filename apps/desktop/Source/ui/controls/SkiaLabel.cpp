@@ -21,7 +21,8 @@ SkiaLabel::SkiaLabel(const juce::String &componentName,
   text_ = labelText;
 
   // Set default appearance
-  font_.setSize(design::typography::FONT_MD);
+  font_ = zenith::design::getSkFont(design::typography::FONT_MD,
+                                    design::FontWeight::Regular);
   textColour_ = design::colors::TEXT_PRIMARY;
   backgroundColour_ = SkColorSetARGB(0, 0, 0, 0); // Transparent by default
   borderColour_ = design::colors::BORDER_DEFAULT;

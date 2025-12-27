@@ -10,13 +10,10 @@
 #include "SkiaComponent.h"
 #include "ZenithDesignSystem.h"
 #include <JuceHeader.h>
-#include <core/SkCanvas.h>
-#include <core/SkFont.h>
+#include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
-#include <core/SkPaint.h>
 #include <core/SkPath.h>
 #include <core/SkPoint.h>
-#include <core/SkRect.h>
 #include <map>
 #include <string>
 
@@ -168,7 +165,7 @@ public:
       // Shadow
       paint.setColor(SkColorSetARGB(100, 0, 0, 0));
       paint.setMaskFilter(
-          ::SkMaskFilter::MakeBlur(::kNormal_SkBlurStyle, 3.0f));
+          ::SkMaskFilter::MakeBlur(::SkBlurStyle::kNormal, 3.0f));
       canvas->drawPath(cursorPath, paint);
       paint.setMaskFilter(nullptr);
 
@@ -199,7 +196,7 @@ public:
       paint.setStyle(::SkPaint::kFill_Style);
       paint.setColor(SkColorSetARGB(80, 0, 0, 0));
       paint.setMaskFilter(
-          ::SkMaskFilter::MakeBlur(::kNormal_SkBlurStyle, 4.0f));
+          ::SkMaskFilter::MakeBlur(::SkBlurStyle::kNormal, 4.0f));
       canvas->drawRoundRect(bubbleRect, 12.0f, 12.0f, paint);
       paint.setMaskFilter(nullptr);
 

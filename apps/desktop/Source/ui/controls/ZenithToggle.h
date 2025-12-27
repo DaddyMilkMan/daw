@@ -20,7 +20,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #ifdef ZENITH_USE_SKIA
-#include <core/SkCanvas.h>
+#include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
 #endif
 

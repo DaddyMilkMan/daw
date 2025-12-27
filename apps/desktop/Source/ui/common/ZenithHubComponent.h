@@ -19,12 +19,14 @@
 #include <JuceHeader.h>
 
 #include "../../engine/RecentProjectManager.h"
+#include "../utils/PhysicsSpring.h"
 #include "AuroraBackground.h"
 #include "GlassmorphicPanel.h"
 #include "SkiaComponent.h"
 #include "ZenithDesignSystem.h"
 #include <functional>
 #include <memory>
+#include <vector>
 
 namespace zenith {
 
@@ -81,6 +83,8 @@ public:
   void dismiss();
   void refreshProjects();
 
+  float getAlpha() const { return alpha_.getCurrentValue(); }
+
   /**
    * @brief Refresh the recent projects list from the manager
    */
@@ -96,22 +100,13 @@ private:
   float animationTime_ = 0.0f;
 
   // Parallax / 3D Tilt
-  struct Spring {
-    float current = 0.0f;
-    float target = 0.0f;
-    float velocity = 0.0f;
-    float stiffness = 0.1f;
-    float damping = 0.82f;
+  zenith::PhysicsSpring tiltX_;
+  zenith::PhysicsSpring tiltY_;
 
-    void update() {
-      float force = (target - current) * stiffness;
-      velocity += force;
-      velocity *= damping;
-      current += velocity;
-    }
-  };
-  Spring tiltX_;
-  Spring tiltY_;
+  // Curtain Lift Animation
+  zenith::PhysicsSpring curtainY_;
+  zenith::PhysicsSpring curtainAlpha_{1.0f};
+  std::unique_ptr<juce::VBlankAttachment> vBlankAttachment_;
 
   // Cached Fonts & Paints - Optimization for A+ Grade
   SkFont titleFont_;
@@ -152,7 +147,7 @@ private:
     SkRect bounds;
     bool isHovered = false;
     std::vector<float> waveform;
-    Spring scaleSpring{1.0f, 1.0f}; // Start at 1.0
+    zenith::PhysicsSpring scaleSpring{1.0f}; // Start at 1.0
   };
   std::vector<RecentProject> recentProjects_;
 
@@ -162,7 +157,7 @@ private:
     SkColor color;
     SkRect bounds;
     bool isHovered = false;
-    Spring scaleSpring{1.0f, 1.0f};
+    zenith::PhysicsSpring scaleSpring{1.0f};
   };
   std::vector<TemplateItem> templates_;
 
@@ -206,7 +201,7 @@ private:
                 const SkRect &bounds, const SkFont &font, const SkPaint &paint,
                 bool centerVertical = true);
   void drawBackground(SkCanvas *canvas);
-  void drawRecentProjects(SkCanvas *canvas);
+  void drawProjectList(SkCanvas *canvas);
   void drawTemplates(SkCanvas *canvas);
   void drawAccount(SkCanvas *canvas);
   void drawNewProjectButton(SkCanvas *canvas);
