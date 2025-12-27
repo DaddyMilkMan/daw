@@ -18,7 +18,7 @@
 
 namespace zenith {
 
-class AutoSaveIndicator : public SkiaComponent, public juce::Timer {
+class AutoSaveIndicator : public SkiaComponent {
 public:
   AutoSaveIndicator(ProjectState &state) : projectState(state) {
     startTimer(500); // Check state every 500ms
@@ -61,7 +61,7 @@ public:
       // Unsaved: Amber pulse
       float alpha = 0.6f + 0.4f * std::sin(pulsePhase);
       paint.setColor(
-          SkColorSetA(design::colors::ACCENT_WARNING, (int)(alpha * 255)));
+          SkColorSetA(design::colors::AMBER, (int)(alpha * 255)));
       canvas->drawCircle(cx, cy, radius, paint);
 
       // Text: "Unsaved"
@@ -70,7 +70,7 @@ public:
       canvas->drawString("Unsaved", cx + 10, cy + 3, font, paint);
     } else {
       // Saved: Green static
-      paint.setColor(design::colors::ACCENT_SUCCESS);
+      paint.setColor(design::colors::NEON_GREEN);
       canvas->drawCircle(cx, cy, radius, paint);
 
       // Text: "Saved"

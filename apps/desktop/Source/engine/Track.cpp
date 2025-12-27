@@ -214,7 +214,7 @@ void Track::updateLevelMeters(const juce::AudioBuffer<float> &buffer,
   mixerChannel.updateMeters(buffer, false); // false = output meters
 }
 
-void Track::updateClipPositions(juce::int64 playheadPosition) {
+void Track::updateClipPositions(juce::int64 playheadPosition) noexcept {
   for (int i = 0; i < getNumClips(); ++i) {
     if (auto *clip = getClip(i)) {
       clip->setTransportPosition(playheadPosition);

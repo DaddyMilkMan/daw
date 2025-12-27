@@ -136,17 +136,15 @@ private:
     url = url.withPOSTData(requestBody);
 
     // Set up headers for the request
-    juce::StringPairArray headers;
-    headers.set("Content-Type", "application/json");
-    headers.set("Authorization", "Bearer " + apiKey_);
+    juce::String extraHeaders = "Content-Type: application/json\n"
+                                "Authorization: Bearer " + apiKey_;
 
     // Create input stream options
-    // Use ignoreAllParameters because we're sending raw JSON body via
-    // withPOSTData()
-    juce::URL::InputStreamOptions options(
-        juce::URL::ParameterHandling::ignoreAllParameters);
-    options = options.withExtraHeaders(headers.getHeadersAsString());
-    options = options.withConnectionTimeoutMs(30000); // 30 second timeout
+    // Use inAddress as default since we provide body via withPOSTData
+    auto options = juce::URL::InputStreamOptions(
+                       juce::URL::ParameterHandling::inAddress)
+                       .withExtraHeaders(extraHeaders)
+                       .withConnectionTimeoutMs(30000); // 30 second timeout
 
     // Make the HTTP POST request
     std::unique_ptr<juce::InputStream> stream = url.createInputStream(options);

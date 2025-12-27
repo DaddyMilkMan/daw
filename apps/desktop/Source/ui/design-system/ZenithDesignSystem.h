@@ -322,7 +322,7 @@ constexpr float RADIUS_FULL = 9999.0f; // Pills/Circles
 // EFFECTS - "The Glow System"
 // ============================================================================
 
-namespace effects {
+namespace glow_effects {
 // Glow/Blur Radii
 constexpr float GLOW_SUBTLE = 2.0f;  // Hover
 constexpr float GLOW_MEDIUM = 4.0f;  // Active
@@ -340,7 +340,7 @@ constexpr float OPACITY_INTENSE = 0.8f;
 constexpr float SHADOW_OFFSET_SM = 2.0f;
 constexpr float SHADOW_OFFSET_MD = 4.0f;
 constexpr float SHADOW_OFFSET_LG = 8.0f;
-} // namespace effects
+} // namespace glow_effects
 
 // ============================================================================
 // ANIMATION - "Smooth & Buttery"

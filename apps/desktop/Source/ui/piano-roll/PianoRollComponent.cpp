@@ -2207,7 +2207,7 @@ void PianoRollComponent::drawStepSequencer(SkCanvas *canvas,
       bool active = getStep(p, s);
 
       if (active) {
-        stepPaint.setColor(colors::ACCENT_PRIMARY);
+        stepPaint.setColor(colors::CYAN);
         stepPaint.setStyle(SkPaint::kFill_Style);
         canvas->drawRoundRect(cell, 2.0f, 2.0f, stepPaint);
 
@@ -2499,17 +2499,17 @@ void PianoRollComponent::drawArpPreview(SkCanvas *canvas, const SkRect &area) {
   canvas->clipRect(area);
 
   SkPaint previewPaint;
-  previewPaint.setColor(withAlpha(colors::ACCENT_PRIMARY, 0.5f));
+  previewPaint.setColor(withAlpha(colors::CYAN, 0.5f));
   previewPaint.setStyle(SkPaint::kFill_Style);
   previewPaint.setAntiAlias(true);
 
   SkPaint previewBorder;
-  previewBorder.setColor(withAlpha(colors::ACCENT_PRIMARY, 0.8f));
+  previewBorder.setColor(withAlpha(colors::CYAN, 0.8f));
   previewBorder.setStyle(SkPaint::kStroke_Style);
   previewBorder.setStrokeWidth(1.0f);
   previewBorder.setAntiAlias(true);
   float intervals[] = {4.0f, 2.0f};
-  previewBorder.setPathEffect(SkDashPathEffect::Make(intervals, 2, 0));
+  previewBorder.setPathEffect(SkDashPathEffect::Make(intervals, 2));
 
   for (const auto &note : arpPreviewNotes) {
     if (note.bounds.getY() > area.bottom() ||
@@ -2536,6 +2536,7 @@ void PianoRollComponent::drawArpPreview(SkCanvas *canvas, const SkRect &area) {
 // MidiEditorContainer Implementation
 //==============================================================================
 
+#include "../../engine/Engine.h"
 #include "../../engine/Track.h"
 
 MidiEditorContainer::MidiEditorContainer(zenith::ProjectState &state,
@@ -2625,3 +2626,68 @@ void MidiEditorContainer::injectMidiMessage(const juce::MidiMessage &msg) {
     }
   }
 }
+
+//==============================================================================
+// Ghost Notes Implementation
+//==============================================================================
+
+void PianoRollComponent::refreshGhostNotes() {
+  ghostNotes.clear();
+  if (!ghostNotesEnabled)
+    return;
+
+  for (const auto &clipId : ghostClipIds) {
+    auto [track, clip] = projectState.findClip(clipId);
+    if (!clip.isValid())
+      continue;
+
+    // Get notes
+    auto notes = zenith::ProjectState::getNotes(clip);
+    for (const auto &note : notes) {
+      GhostNote gn;
+      gn.pitch = note.pitch;
+      gn.startBeats = note.startBeats;
+      gn.lengthBeats = note.lengthBeats;
+      
+      // Calculate bounds
+      float x = beatsToPixels(gn.startBeats);
+      float y = pitchToPixels(gn.pitch);
+      float w = beatsToPixels(gn.lengthBeats);
+      float h = pixelsPerPitch;
+      gn.bounds = juce::Rectangle<float>(x, y, w, h);
+      
+      ghostNotes.push_back(gn);
+    }
+  }
+  repaint();
+}
+
+void PianoRollComponent::drawGhostNotes(SkCanvas *canvas, const SkRect &area) {
+  if (!ghostNotesEnabled || ghostNotes.empty())
+    return;
+    
+  using namespace zenith::design;
+  
+  SkPaint paint;
+  paint.setColor(withAlpha(colors::TEXT_SECONDARY, ghostNoteOpacity));
+  paint.setAntiAlias(true);
+  
+  for (const auto &gn : ghostNotes) {
+    SkRect r = SkRect::MakeXYWH(gn.bounds.getX(), gn.bounds.getY(), 
+                                gn.bounds.getWidth(), gn.bounds.getHeight());
+    
+    // Only draw if within area
+    if (r.intersects(area)) {
+       canvas->drawRoundRect(r, 2.0f, 2.0f, paint);
+    }
+  }
+}
+
+int PianoRollComponent::getCollisionCount() const {
+    int count = 0;
+    for (const auto& note : noteRects) {
+        if (note.hasCollision) count++;
+    }
+    return count;
+}
+

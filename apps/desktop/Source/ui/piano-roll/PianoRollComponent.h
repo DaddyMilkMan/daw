@@ -46,6 +46,8 @@
 #include <core/SkRect.h>
 
 //==============================================================================
+namespace zenith {
+
 /**
  * @struct MidiClipContext
  * @brief Identifies which MIDI clip is being edited
@@ -1295,3 +1297,5 @@ public:
 private:
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoRollWindow)
 };
+
+} // namespace zenith

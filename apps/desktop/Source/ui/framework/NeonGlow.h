@@ -208,7 +208,7 @@ public:
         
         // Pulse between Subtle and Strong
         float pulseIntensity = 0.3f + 0.7f * animProgress;
-        float blurRadius = effects::GLOW_MEDIUM * pulseIntensity * globalGlow;
+        float blurRadius = glow_effects::GLOW_MEDIUM * pulseIntensity * globalGlow;
         float alpha = 0.2f + 0.4f * pulseIntensity * globalGlow;
         
         SkPaint glowPaint;
@@ -266,7 +266,7 @@ public:
                                             8.0f, bounds.height());
             }
             
-            float blurRadius = effects::GLOW_MEDIUM * globalGlow;
+            float blurRadius = design::glow_effects::GLOW_MEDIUM * globalGlow;
             SkPaint glowPaint;
             glowPaint.setAntiAlias(true);
             glowPaint.setColor(withAlpha(peakColor, 0.6f * globalGlow));
@@ -291,7 +291,7 @@ public:
             glowPaint.setStrokeWidth(4.0f);
             glowPaint.setColor(withAlpha(color, 0.3f * globalGlow));
             glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 
-                                                           effects::GLOW_MEDIUM * globalGlow));
+                                                           ::zenith::design::glow_effects::GLOW_MEDIUM * globalGlow));
             canvas->drawLine(x, top, x, bottom, glowPaint);
         }
         
@@ -314,23 +314,23 @@ private:
     static float getBlurRadius(Intensity intensity) {
         using namespace design;
         switch (intensity) {
-            case Intensity::Subtle:  return effects::GLOW_SUBTLE;
-            case Intensity::Medium:  return effects::GLOW_MEDIUM;
-            case Intensity::Strong:  return effects::GLOW_STRONG;
-            case Intensity::Intense: return effects::GLOW_INTENSE;
+            case Intensity::Subtle:  return ::zenith::design::glow_effects::GLOW_SUBTLE;
+            case Intensity::Medium:  return ::zenith::design::glow_effects::GLOW_MEDIUM;
+            case Intensity::Strong:  return ::zenith::design::glow_effects::GLOW_STRONG;
+            case Intensity::Intense: return ::zenith::design::glow_effects::GLOW_INTENSE;
         }
-        return effects::GLOW_MEDIUM;
+        return ::zenith::design::glow_effects::GLOW_MEDIUM;
     }
     
     static float getAlpha(Intensity intensity) {
         using namespace design;
         switch (intensity) {
-            case Intensity::Subtle:  return effects::OPACITY_SUBTLE;
-            case Intensity::Medium:  return effects::OPACITY_MEDIUM;
-            case Intensity::Strong:  return effects::OPACITY_STRONG;
-            case Intensity::Intense: return effects::OPACITY_INTENSE;
+            case Intensity::Subtle:  return ::zenith::design::glow_effects::OPACITY_SUBTLE;
+            case Intensity::Medium:  return ::zenith::design::glow_effects::OPACITY_MEDIUM;
+            case Intensity::Strong:  return ::zenith::design::glow_effects::OPACITY_STRONG;
+            case Intensity::Intense: return ::zenith::design::glow_effects::OPACITY_INTENSE;
         }
-        return effects::OPACITY_MEDIUM;
+        return ::zenith::design::glow_effects::OPACITY_MEDIUM;
     }
     
     NeonGlow() = delete;  // Static-only class

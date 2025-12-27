@@ -12,6 +12,7 @@
 #include <juce_dsp/juce_dsp.h>
 #include "Engine.h"
 #include "../engine/Track.h"
+#include "GrokAPIClient.h"
 
 namespace zenith {
 namespace ai {
@@ -113,33 +114,29 @@ private:
 */
 class MasteringEQ {
 public:
+    struct Settings {
+        float lowShelfGain = 0.0f;
+        float midCutGain = 0.0f;
+        float presenceGain = 0.0f;
+        float airGain = 0.0f;
+        bool enabled = true;
+    };
+
     MasteringEQ() = default;
     
     void prepare(const juce::dsp::ProcessSpec& spec) {
+        spec_ = spec;
         // High-pass filter (30Hz) to remove rumble
         highPass_.prepare(spec);
         highPass_.setType(juce::dsp::StateVariableTPTFilterType::highpass);
         highPass_.setCutoffFrequency(30.0f);
         
-        // Low shelf for warmth (100Hz, +1dB)
         lowShelf_.prepare(spec);
-        *lowShelf_.state = *juce::dsp::IIR::Coefficients<float>::makeLowShelf(
-            spec.sampleRate, 100.0f, 0.7f, juce::Decibels::decibelsToGain(1.0f));
-        
-        // Mid cut for clarity (300Hz, -1dB)
         midCut_.prepare(spec);
-        *midCut_.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter(
-            spec.sampleRate, 300.0f, 1.0f, juce::Decibels::decibelsToGain(-1.0f));
-        
-        // Presence boost (3kHz, +1.5dB)
         presence_.prepare(spec);
-        *presence_.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter(
-            spec.sampleRate, 3000.0f, 1.0f, juce::Decibels::decibelsToGain(1.5f));
-        
-        // Air band (10kHz, +2dB high shelf)
         airBand_.prepare(spec);
-        *airBand_.state = *juce::dsp::IIR::Coefficients<float>::makeHighShelf(
-            spec.sampleRate, 10000.0f, 0.7f, juce::Decibels::decibelsToGain(2.0f));
+        
+        updateFilters();
     }
     
     void reset() {
@@ -150,8 +147,15 @@ public:
         airBand_.reset();
     }
     
+    void setSettings(const Settings& settings) {
+        settings_ = settings;
+        updateFilters();
+    }
+
     template<typename ProcessContext>
     void process(const ProcessContext& context) {
+        if (!settings_.enabled) return;
+
         highPass_.process(context);
         lowShelf_.process(context);
         midCut_.process(context);
@@ -160,6 +164,25 @@ public:
     }
     
 private:
+    void updateFilters() {
+        if (spec_.sampleRate <= 0) return;
+
+        *lowShelf_.state = *juce::dsp::IIR::Coefficients<float>::makeLowShelf(
+            spec_.sampleRate, 100.0f, 0.7f, juce::Decibels::decibelsToGain(settings_.lowShelfGain));
+        
+        *midCut_.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter(
+            spec_.sampleRate, 300.0f, 1.0f, juce::Decibels::decibelsToGain(settings_.midCutGain));
+        
+        *presence_.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter(
+            spec_.sampleRate, 3000.0f, 1.0f, juce::Decibels::decibelsToGain(settings_.presenceGain));
+        
+        *airBand_.state = *juce::dsp::IIR::Coefficients<float>::makeHighShelf(
+            spec_.sampleRate, 10000.0f, 0.7f, juce::Decibels::decibelsToGain(settings_.airGain));
+    }
+
+    juce::dsp::ProcessSpec spec_;
+    Settings settings_;
+
     juce::dsp::StateVariableTPTFilter<float> highPass_;
     juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>, 
                                    juce::dsp::IIR::Coefficients<float>> lowShelf_;
@@ -175,237 +198,183 @@ private:
 /**
     Glue Compressor for master bus
 */
-class GlueCompressor {
+class MasteringCompressor {
 public:
-    GlueCompressor() = default;
+    struct Settings {
+        float threshold = -12.0f;
+        float ratio = 2.0f;
+        float attack = 30.0f;
+        float release = 200.0f;
+        bool enabled = true;
+    };
+
+    MasteringCompressor() = default;
     
     void prepare(const juce::dsp::ProcessSpec& spec) {
         compressor_.prepare(spec);
-        
-        // Gentle glue compression settings
-        compressor_.setThreshold(-12.0f);  // -12dB threshold
-        compressor_.setRatio(2.0f);        // 2:1 ratio (gentle)
-        compressor_.setAttack(30.0f);      // 30ms attack (slow, lets transients through)
-        compressor_.setRelease(200.0f);    // 200ms release (musical)
+        updateCompressor();
     }
     
     void reset() {
         compressor_.reset();
     }
     
+    void setSettings(const Settings& settings) {
+        settings_ = settings;
+        updateCompressor();
+    }
+    
     void setAmount(float amount) {
         // amount 0-1 controls mix and threshold
-        compressor_.setThreshold(-6.0f - (amount * 12.0f)); // -6dB to -18dB
-        compressor_.setRatio(1.5f + (amount * 2.5f));       // 1.5:1 to 4:1
+        settings_.threshold = -6.0f - (amount * 12.0f); // -6dB to -18dB
+        settings_.ratio = 1.5f + (amount * 2.5f);       // 1.5:1 to 4:1
+        updateCompressor();
     }
     
     template<typename ProcessContext>
     void process(const ProcessContext& context) {
+        if (!settings_.enabled) return;
         compressor_.process(context);
     }
     
 private:
+    void updateCompressor() {
+        compressor_.setThreshold(settings_.threshold);
+        compressor_.setRatio(settings_.ratio);
+        compressor_.setAttack(settings_.attack);
+        compressor_.setRelease(settings_.release);
+    }
+
+    Settings settings_;
     juce::dsp::Compressor<float> compressor_;
 };
 
 //==============================================================================
 /**
-    Main AI Mastering Agent - performs actual DSP processing
+    Extracts audio features for AI analysis
+*/
+class AudioFeatureExtractor {
+public:
+    struct Features {
+        float peakDb = -100.0f;
+        float rmsDb = -100.0f;
+        float crestFactor = 0.0f;
+        
+        float subBass = 0.0f;
+        float bass = 0.0f;
+        float lowMid = 0.0f;
+        float mid = 0.0f;
+        float highMid = 0.0f;
+        float presence = 0.0f;
+        float brilliance = 0.0f;
+        
+        float stereoWidth = 0.0f;
+        bool valid = false;
+    };
+
+    Features extract(const juce::AudioBuffer<float>& buffer, double sampleRate);
+    static juce::String toJSON(const Features& features);
+
+private:
+    void analyzeFrequencyBands(const juce::AudioBuffer<float>& buffer, double sampleRate, Features& features);
+    void analyzeStereo(const juce::AudioBuffer<float>& buffer, Features& features);
+};
+
+//==============================================================================
+/**
+    Grok AI Integration for Mastering Decisions
+*/
+class GrokMasteringAI {
+public:
+    struct EQSettings {
+        float lowShelfGain = 0.0f;
+        float midCutGain = 0.0f;
+        float presenceGain = 0.0f;
+        float airGain = 0.0f;
+    };
+
+    struct CompressionSettings {
+        float threshold = 0.0f;
+        float ratio = 1.0f;
+        float attack = 10.0f;
+        float release = 100.0f;
+    };
+
+    struct MasteringDecision {
+        EQSettings eq;
+        CompressionSettings compression;
+        float limiterCeiling = -0.1f;
+        juce::String reasoning;
+        bool valid = false;
+    };
+
+    GrokMasteringAI();
+    
+    MasteringDecision getMasteringDecision(const AudioFeatureExtractor::Features& features, 
+                                          const juce::String& userIntent, 
+                                          float targetLoudness);
+
+private:
+    std::unique_ptr<GrokAPIClient> grokClient_;
+    juce::String buildPrompt(const AudioFeatureExtractor::Features& features, 
+                           const juce::String& userIntent, 
+                           float targetLoudness);
+    MasteringDecision parseGrokResponse(const juce::String& response);
+};
+
+//==============================================================================
+/**
+    Main AI Mastering Agent - performs actual DSP processing and AI coordination
 */
 class AIMasteringAgent
 {
 public:
-    struct MasteringOptions
+    struct Options
     {
-        bool autoLevelMix = true;     // Balance track volumes
-        bool applyEq = true;          // Apply mastering EQ
-        bool applyCompression = true; // Apply glue compression
-        bool applyLimiter = true;     // Brickwall limit
-        bool target8Bit = false;      // Optimize for 8-bit export
-        float targetLufs = -14.0f;    // Target loudness (streaming standard)
-        float compressionAmount = 0.5f; // 0-1
+        bool autoBalance = true;     
+        bool useAI = true;     
+        juce::String userIntent = "Balanced and punchy";
+        float targetLoudness = -14.0f;
     };
 
-    explicit AIMasteringAgent(Engine& engine) : engine_(engine) {}
+    explicit AIMasteringAgent(Engine& engine);
+    ~AIMasteringAgent();
     
-    /**
-     * @brief Prepare DSP processors
-     */
-    void prepare(double sampleRate, int samplesPerBlock, int numChannels) {
-        juce::dsp::ProcessSpec spec;
-        spec.sampleRate = sampleRate;
-        spec.maximumBlockSize = static_cast<juce::uint32>(samplesPerBlock);
-        spec.numChannels = static_cast<juce::uint32>(numChannels);
-        
-        eq_.prepare(spec);
-        compressor_.prepare(spec);
-        limiter_.prepare(spec);
-        
-        isPrepared_ = true;
-        DBG("AIMasteringAgent: DSP chain prepared");
-    }
-    
-    /**
-     * @brief Run the AI Mastering process on project tracks
-     */
-    void runMasteringPass(const MasteringOptions& options) {
-        DBG("AIMasteringAgent: Starting mastering pass...");
+    void prepare(double sampleRate, int samplesPerBlock, int numChannels);
+    void reset();
 
-        if (options.autoLevelMix) {
-            performAutoMixing();
-        }
-        
-        // Store options for real-time processing
-        currentOptions_ = options;
-        
-        // Configure processors
-        if (options.applyCompression) {
-            compressor_.setAmount(options.compressionAmount);
-        }
-        
-        if (options.applyLimiter) {
-            // Set ceiling based on target
-            float ceiling = options.target8Bit ? -0.5f : -0.1f;
-            limiter_.setCeiling(ceiling);
-        }
-        
-        masteredSuccessfully_ = true;
-        DBG("AIMasteringAgent: Mastering pass complete");
-    }
-    
-    /**
-     * @brief Process audio buffer through mastering chain
-     * 
-     * Call this from the audio callback to apply real-time mastering.
-     */
-    void processBlock(juce::AudioBuffer<float>& buffer) {
-        if (!isPrepared_ || !masteredSuccessfully_) return;
-        
-        juce::dsp::AudioBlock<float> block(buffer);
-        juce::dsp::ProcessContextReplacing<float> context(block);
-        
-        // Apply EQ
-        if (currentOptions_.applyEq) {
-            eq_.process(context);
-        }
-        
-        // Apply compression
-        if (currentOptions_.applyCompression) {
-            compressor_.process(context);
-        }
-        
-        // Apply limiting
-        if (currentOptions_.applyLimiter) {
-            limiter_.process(context);
-        }
-    }
-    
-    /**
-     * @brief Process audio buffer and return mastered version
-     * 
-     * For offline/export processing.
-     */
-    juce::AudioBuffer<float> masterOffline(const juce::AudioBuffer<float>& input,
-                                            double sampleRate,
-                                            const MasteringOptions& options) {
-        juce::AudioBuffer<float> output(input);
-        
-        // Prepare if needed
-        if (!isPrepared_) {
-            prepare(sampleRate, input.getNumSamples(), input.getNumChannels());
-        }
-        
-        // Configure for this pass
-        runMasteringPass(options);
-        
-        // Process
-        processBlock(output);
-        
-        // Apply loudness normalization
-        if (options.targetLufs != 0.0f) {
-            normalizeLoudness(output, options.targetLufs);
-        }
-        
-        return output;
-    }
-    
-    void reset() {
-        eq_.reset();
-        compressor_.reset();
-        limiter_.reset();
-    }
+    // Process real-time audio
+    void processBlock(juce::AudioBuffer<float>& buffer);
+
+    // Analysis and Configuration
+    void analyzeAndConfigure(const juce::AudioBuffer<float>& analysisBuffer, const Options& options);
 
 private:
     Engine& engine_;
     
     // DSP processors
     MasteringEQ eq_;
-    GlueCompressor compressor_;
+    MasteringCompressor compressor_;
     MasteringLimiter limiter_;
     
-    bool isPrepared_ = false;
-    bool masteredSuccessfully_ = false;
-    MasteringOptions currentOptions_;
-
-    void performAutoMixing() {
-        // Analyze tracks and balance levels
-        DBG("AIMasteringAgent: Analyzing track levels...");
-        
-        auto& tracks = engine_.tracks();
-        if (tracks.empty()) return;
-        
-        // Phase 1: Set all tracks to -6dB as baseline
-        for (int i = 0; i < static_cast<int>(tracks.size()); ++i) {
-            auto track = tracks[i];
-            if (!track) continue;
-            
-            // Get current peak from meter (if available)
-            float currentLevel = engine_.getTrackLevel(i);
-            
-            // Target: -18dBFS peak with headroom
-            // If track is too hot, reduce it
-            if (currentLevel > 0.5f) {
-                engine_.setTrackVolume(i, 0.5f);  // -6dB
-                DBG("AIMasteringAgent: Reduced track " + juce::String(i) + " to -6dB");
-            }
-            // If track is too quiet, bring it up
-            else if (currentLevel < 0.1f && currentLevel > 0.0f) {
-                engine_.setTrackVolume(i, 0.7f);  // Boost
-                DBG("AIMasteringAgent: Boosted track " + juce::String(i));
-            }
-        }
-        
-        DBG("AIMasteringAgent: Auto-mix complete");
-    }
+    // AI Components
+    AudioFeatureExtractor featureExtractor_;
+    GrokMasteringAI grokAI_;
     
-    void normalizeLoudness(juce::AudioBuffer<float>& buffer, float targetLufs) {
-        // Simple RMS-based loudness estimation
-        float rms = 0.0f;
-        int numSamples = buffer.getNumSamples();
-        int numChannels = buffer.getNumChannels();
-        
-        for (int ch = 0; ch < numChannels; ++ch) {
-            const float* data = buffer.getReadPointer(ch);
-            for (int i = 0; i < numSamples; ++i) {
-                rms += data[i] * data[i];
-            }
-        }
-        rms = std::sqrt(rms / (numSamples * numChannels));
-        
-        // Convert RMS to approximate LUFS (rough estimation)
-        float currentLufs = 20.0f * std::log10(rms) - 10.0f;
-        float gainDb = targetLufs - currentLufs;
-        
-        // Clamp gain adjustment to reasonable range
-        gainDb = juce::jlimit(-12.0f, 12.0f, gainDb);
-        
-        float gainLinear = juce::Decibels::decibelsToGain(gainDb);
-        
-        // Apply gain
-        buffer.applyGain(gainLinear);
-        
-        DBG("AIMasteringAgent: Normalized loudness by " + juce::String(gainDb, 1) + "dB");
-    }
+    // State
+    std::atomic<bool> isPrepared_ { false };
+    std::atomic<bool> isConfigured_ { false };
+    std::atomic<bool> bypassed_ { false };
+    double sampleRate_ = 44100.0;
+    
+    juce::CriticalSection decisionLock_;
+    GrokMasteringAI::MasteringDecision lastDecision_;
+
+    // Helpers
+    void applyAIDecision(const GrokMasteringAI::MasteringDecision& decision);
+    void balanceTracks(const Options& options);
+    
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AIMasteringAgent)
 };
 
 } // namespace ai

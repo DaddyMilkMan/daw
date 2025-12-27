@@ -105,7 +105,7 @@ public:
    * @brief Update clip scheduling/positions based on playhead
    * @param playheadPosition Current playhead position in samples
    */
-  virtual void updateClipPositions(juce::int64 playheadPosition);
+  virtual void updateClipPositions(juce::int64 playheadPosition) noexcept;
 
   //==============================================================================
   // Track properties
@@ -146,6 +146,9 @@ public:
 
   void setEnabled(bool shouldBeEnabled);
   bool isEnabled() const { return enabled.load(); }
+
+  void setInputMonitorEnabled(bool enabled) { inputMonitor_.store(enabled); }
+  bool isInputMonitorEnabled() const { return inputMonitor_.load(); }
 
   void setInputChannel(int channel) { inputChannelIndex.store(channel); }
   int getInputChannel() const { return inputChannelIndex.load(); }
@@ -214,10 +217,7 @@ public:
    * @param playheadPosition Current playhead position in samples
    * @note Audio thread safe - implementations should be lock-free
    */
-  virtual void updateClipPositions(juce::int64 playheadPosition) noexcept {
-    juce::ignoreUnused(playheadPosition);
-    // Default implementation does nothing - subclasses with clips override
-  }
+
 
   // MIDI Scheduling (moved to MIDITrack)
 
@@ -281,6 +281,7 @@ protected:
   // Note: armed and enabled are track-specific, not channel-strip specific
   std::atomic<bool> armed{false};
   std::atomic<bool> enabled{true};
+  std::atomic<bool> inputMonitor_{false};
   std::atomic<bool> frozen{false}; // Track freeze state for CPU optimization
 
   // Freeze file storage (for CPU optimization)

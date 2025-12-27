@@ -205,8 +205,10 @@ void TransportBar::drawTransportButton(SkCanvas *canvas,
   style.strokeWidth = icons::STROKE_REGULAR;
 
   if (showGlow) {
-    style.glowRadius =
-        isActive ? design::effects::GLOW_STRONG : design::effects::GLOW_SUBTLE;
+   bool isRecording = isRecording_;
+  float glowRadius = isRecording ? design::glow_effects::GLOW_STRONG
+                                 : design::glow_effects::GLOW_SUBTLE;
+    style.glowRadius = glowRadius; // Assign the calculated glowRadius
     if (!isActive) {
       style.glowRadius *= state.hoverAmount; // Fade in glow
     }

@@ -10,6 +10,7 @@
 #ifdef ZENITH_USE_SKIA
 #include "../framework/GlassmorphicPanel.h"
 #include "../framework/NeonGlow.h"
+#include "../framework/ConfigurationManager.h"
 #include <core/SkBlurTypes.h> // For SkBlurStyle enum
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
@@ -268,13 +269,13 @@ void ArrangerComponent::rebuildClipViews() {
   // Update MiniMap
   miniMap.setArrangementData(maxBeat + 8.0 /* padding */, maxTrack, mapClips);
 
-  // Also update visible range immediately
+  // also update visible range immediately
   double visibleBeats = (getWidth() - HEADER_WIDTH) / pixelsPerBeat;
   int visibleTracks = (int)(getHeight() - RULER_HEIGHT) / (int)TRACK_HEIGHT;
-  config.setFloat(config::keys::ARRANGER_SCROLL_X, (float)viewStartBeats);
-  config.setInt(config::keys::ARRANGER_SCROLL_Y, firstVisibleTrackIndex);
-  config.setBool(config::keys::ARRANGER_FOLLOW_PLAYHEAD, followPlayhead_);
-
+    auto &configMgr = zenith::config::ConfigurationManager::getInstance();
+    configMgr.setFloat(zenith::config::keys::ARRANGER_SCROLL_X, (float)viewStartBeats);
+    configMgr.setInt(zenith::config::keys::ARRANGER_SCROLL_Y, firstVisibleTrackIndex);
+  configMgr.setBool(zenith::config::keys::ARRANGER_FOLLOW_PLAYHEAD, followPlayhead_);
   miniMap.setVisibleRange(viewStartBeats, visibleBeats, firstVisibleTrackIndex,
                           visibleTracks);
 
@@ -584,8 +585,6 @@ void ArrangerComponent::resized() {
     // Center horizontally, float near top (offset by Ruler + padding)
     float w = 420.0f;
     float h = 60.0f;
-    float x = (getWidth() - w) * 0.5f;
-    float y = RULER_HEIGHT + 20.0f;
     float x = (getWidth() - w) * 0.5f;
     float y = RULER_HEIGHT + 20.0f;
     macroToolbar->setBounds((int)x, (int)y, (int)w, (int)h);
@@ -2470,32 +2469,4 @@ void ArrangerComponent::drawClipWaveform(SkCanvas *canvas, const ClipView &clip,
 
 } // namespace zenith
 
-bool ArrangerComponent::keyPressed(const juce::KeyPress &key) {
-  // Playhead Lock (Toggle Follow)
-  if (key.getKeyCode() == 'f' || key.getTextCharacter() == 'f' ||
-      key.getTextCharacter() == 'F') {
-    followPlayhead_ = !followPlayhead_;
-    auto &config = config::ConfigurationManager::getInstance();
-    config.setBool(config::keys::ARRANGER_FOLLOW_PLAYHEAD, followPlayhead_);
-    DBG("ArrangerComponent: Playhead Lock "
-        << (followPlayhead_ ? "Enabled" : "Disabled"));
-    return true;
-  }
 
-  // Delete Clips
-  if (key.getKeyCode() == juce::KeyPress::deleteKey ||
-      key.getKeyCode() == juce::KeyPress::backspaceKey) {
-    deleteSelectedClips();
-    return true;
-  }
-
-  // Duplicate Clips (Ctrl+D)
-  if ((key.getKeyCode() == 'd' || key.getTextCharacter() == 'd' ||
-       key.getTextCharacter() == 'D') &&
-      key.getModifiers().isCommandDown()) {
-    duplicateSelectedClips();
-    return true;
-  }
-
-  return false;
-}

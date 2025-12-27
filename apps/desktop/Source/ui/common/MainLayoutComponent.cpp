@@ -8,7 +8,11 @@
   ==============================================================================
 */
 
+#include "ZenithHubComponent.h"
+
+
 #include "MainLayoutComponent.h"
+#include "../piano-roll/PianoRollComponent.h"
 #include "../../browser/BrowserModel.h"
 #include "../../engine/Engine.h"
 #include "../../engine/PluginHost.h"

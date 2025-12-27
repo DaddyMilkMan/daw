@@ -108,6 +108,7 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/engine/MIDITrack.cpp
     # Instruments
     apps/desktop/Source/instruments/Instrument.cpp
+    apps/desktop/Source/instruments/InstrumentTrack.cpp
     apps/desktop/Source/instruments/InstrumentRegistry.cpp
     apps/desktop/Source/instruments/RegisterBuiltInInstruments.cpp
     apps/desktop/Source/instruments/PresetGenerator.cpp

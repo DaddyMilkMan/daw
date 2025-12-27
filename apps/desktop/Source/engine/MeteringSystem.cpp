@@ -18,11 +18,11 @@ void MeteringSystem::prepare(const juce::dsp::ProcessSpec &spec) {
   // Shelf: +4dB at 1.5kHz approx
   // Coefficients usually hardcoded for 48kHz, but we use JUCE helpers
   // approximation
-  *filter1.state = *juce::dsp::IIR::Coefficients<float>::makeHighShelf(
+  filter1.coefficients = juce::dsp::IIR::Coefficients<float>::makeHighShelf(
       sampleRate_, 1500.0f, 1.0f, juce::Decibels::decibelsToGain(4.0f));
 
   filter2.prepare(spec);
-  *filter2.state = *juce::dsp::IIR::Coefficients<float>::makeHighPass(
+  filter2.coefficients = juce::dsp::IIR::Coefficients<float>::makeHighPass(
       sampleRate_, 100.0f); // ~100Hz HPF
 
   reset();

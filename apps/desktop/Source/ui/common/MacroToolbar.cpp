@@ -304,17 +304,15 @@ void MacroToolbar::instantFreeze() {
 
   if (trackIndex >= 0) {
     DBG("MacroToolbar: Freezing track " << trackIndex);
-    if (trackIndex >= 0) {
-      DBG("MacroToolbar: Freezing track " << trackIndex);
-      engine_.freezeTrack(trackIndex,
-                          [this](float progress, const juce::String &status) {
-                            if (onFreezeProgress)
-                              onFreezeProgress(progress, status);
-                          });
-    }
+    engine_.freezeTrack(trackIndex,
+                        [this](float progress, const juce::String &status) {
+                          if (onFreezeProgress)
+                            onFreezeProgress(progress, status);
+                        });
   }
+}
 
-  void MacroToolbar::colorByTrack() {
+void MacroToolbar::colorByTrack() {
     if (!getSelectedClipIds)
       return;
     auto clipIds = getSelectedClipIds();

@@ -433,8 +433,9 @@ void SkiaButton::drawGlow(SkCanvas* canvas, const SkRRect& bounds) {
         glowIntensity += audioLevel_ * 0.5f;
     }
     
-    float radius = design::effects::GLOW_MEDIUM * glowIntensity;
-    paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, radius));
+    float blur =
+        design::glow_effects::GLOW_MEDIUM * (isEnabled() ? 0.3f : 0.0f);
+    paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, blur));
     
     canvas->drawRRect(bounds, paint);
 }

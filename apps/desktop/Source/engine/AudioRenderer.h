@@ -95,7 +95,10 @@ public:
                         std::span<Track *const> tracks,
                         std::span<AuxBus *const> auxBuses,
                         const RoutingGraph &routingGraph,
-                        MasterLimiter &masterLimiter, const TempoMap *tempoMap,
+                        MasterLimiter &masterLimiter,
+                        std::vector<std::unique_ptr<juce::AudioPluginInstance>>
+                            &masterPlugins,
+                        const TempoMap *tempoMap,
                         const juce::MidiBuffer *incomingMidi = nullptr,
                         const float *const *inputChannelData = nullptr,
                         int numInputChannels = 0) noexcept;
