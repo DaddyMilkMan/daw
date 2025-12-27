@@ -126,16 +126,21 @@ private:
         spec.numChannels = 2;
         dsp.prepare(spec);
         
-        // Create stereo test signal (sine wave)
+        // Create stereo test signal with multiple frequencies
+        // 100Hz for bass, 440Hz for vocals/mid, 3000Hz for other/drums
         juce::AudioBuffer<float> input(2, 4410);
         juce::AudioBuffer<float> output(2, 4410);
         
         for (int ch = 0; ch < 2; ++ch) {
             for (int i = 0; i < 4410; ++i) {
-                // 440Hz sine wave with some stereo offset
-                float sample = std::sin(2.0f * juce::MathConstants<float>::pi * 440.0f * i / 44100.0f);
+                float t = static_cast<float>(i) / 44100.0f;
+                // Mix of frequencies to ensure all stems get signal
+                float bass = std::sin(2.0f * juce::MathConstants<float>::pi * 100.0f * t) * 0.4f;
+                float mid = std::sin(2.0f * juce::MathConstants<float>::pi * 440.0f * t) * 0.3f;
+                float treble = std::sin(2.0f * juce::MathConstants<float>::pi * 3000.0f * t) * 0.2f;
+                float sample = bass + mid + treble;
                 if (ch == 1) sample *= 0.8f; // Slight stereo difference
-                input.setSample(ch, i, sample * 0.5f);
+                input.setSample(ch, i, sample);
             }
         }
         
@@ -148,13 +153,39 @@ private:
                               DSPStemSeparator::StemType::Bass,
                               DSPStemSeparator::StemType::Other}) {
             output.clear();
-            dsp.process(inputBlock, outputBlock, stemType);
+            dsp.reset(); // Reset filter states between tests
+            
+            // Create fresh audio blocks each iteration
+            juce::dsp::AudioBlock<const float> inBlock(input);
+            juce::dsp::AudioBlock<float> outBlock(output);
+            
+            dsp.process(inBlock, outBlock, stemType);
             
             // Verify output is not all zeros (separation produced something)
             float maxVal = output.getMagnitude(0, output.getNumSamples());
             expect(maxVal > 0.0f, "DSP stem separation should produce non-zero output");
-            
-            // Verify no NaN or Inf values
+
+            // Verify stereo behavior
+            if (stemType == DSPStemSeparator::StemType::Drums || 
+                stemType == DSPStemSeparator::StemType::Other) {
+                // These stems should preserve/generate stereo width
+                // Calculate difference between L and R
+                float maxDiff = 0.0f;
+                for (int i = 0; i < output.getNumSamples(); ++i) {
+                    float diff = std::abs(output.getSample(0, i) - output.getSample(1, i));
+                    if (diff > maxDiff) maxDiff = diff;
+                }
+                expect(maxDiff > 0.001f, "Stem should be stereo (L != R)");
+            } else {
+                // Bass and Vocals are centered mono in this implementation
+                // Ensure L == R
+                float maxDiff = 0.0f;
+                for (int i = 0; i < output.getNumSamples(); ++i) {
+                    float diff = std::abs(output.getSample(0, i) - output.getSample(1, i));
+                    if (diff > maxDiff) maxDiff = diff;
+                }
+                expect(maxDiff < 0.001f, "Stem should be mono (L == R)");
+            }
             bool hasInvalid = false;
             for (int ch = 0; ch < 2; ++ch) {
                 for (int i = 0; i < output.getNumSamples(); ++i) {
@@ -203,6 +234,12 @@ private:
         
         // Verify result
         expect(result.success, "Separation should succeed (ONNX or DSP fallback)");
+        
+        // STRICT MODE: If we have a model file, we MUST use ONNX. 
+        // No silent fallback to DSP allowed in this test if model is present.
+        if (modelFile.existsAsFile()) {
+            expect(result.usedONNX, "Separation MUST use ONNX Runtime when model is available (Strict Mode)");
+        }
         
         // Check that all 4 stems have correct buffer sizes
         expectEquals(result.vocals.getNumSamples(), 44100);

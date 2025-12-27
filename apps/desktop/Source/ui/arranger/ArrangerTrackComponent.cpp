@@ -1,7 +1,13 @@
-// UI Polish applied: Synced Mute/Solo with ProjectState
 #include "ArrangerTrackComponent.h"
 #include "TakeFolderComponent.h"
-#include "ZenithDesignSystem.h"
+#include "../design-system/ColorBridge.h"
+#include "../design-system/ZenithDesignSystem.h"
+#include "../design-system/ZenithIcons.h"
+// #include "../design-system/ZenithTheme.h" // Deprecated access
+#include "../controls/SkiaButton.h"
+#include "../controls/SkiaAlertWindow.h"
+#include "../controls/SkiaPopupMenu.h"
+#include "../controls/ContextMenuManager.h"
 #include <core/SkBlurTypes.h>
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
@@ -12,12 +18,7 @@
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
 
-
-#include "ZenithDesignSystem.h"
-#include "../design-system/ZenithTheme.h"
-#include <core/SkBlurTypes.h>
-
-static constexpr float HEADER_WIDTH = 260.0f;
+static constexpr float HEADER_WIDTH = 240.0f; // Aligned with design::spacing::trackHeaderWidth
 
 namespace zenith {
 
@@ -98,12 +99,10 @@ void ArrangerTrackComponent::drawTrackHeader(SkCanvas *canvas,
   // A. Track Header Background - PREMIUM GLASSMORPHIC GRADIENT (Distinct Cyan Tint)
   {
     SkPoint hdrGradPts[2] = {{0, y}, {0, y + trackHeight}};
-    juce::Colour bg00 = ZenithTheme::Colors::bg_00;
-    juce::Colour bg01 = ZenithTheme::Colors::bg_01;
     SkColor hdrGradColors[3] = {
-        SkColorSetRGB(bg01.getRed(), bg01.getGreen(), bg01.getBlue()), // Top
-        SkColorSetRGB(25, 25, 30), // Middle
-        SkColorSetRGB(bg00.getRed(), bg00.getGreen(), bg00.getBlue())  // Bottom
+        design::colors::BG_01, // Top
+        design::withAlpha(design::colors::BG_DARKER, 0.8f), // Middle
+        design::colors::BG_00  // Bottom
     };
     float hdrPositions[3] = {0.0f, 0.3f, 1.0f};
     trackBgPaint.setShader(SkGradientShader::MakeLinear(
@@ -113,8 +112,7 @@ void ArrangerTrackComponent::drawTrackHeader(SkCanvas *canvas,
 
   // Top edge highlight
   SkPaint topHighlight;
-  juce::Colour border = ZenithTheme::Colors::border_subtle;
-  topHighlight.setColor(SkColorSetARGB(border.getAlpha(), border.getRed(), border.getGreen(), border.getBlue()));
+  topHighlight.setColor(design::colors::BORDER_SUBTLE);
   topHighlight.setStrokeWidth(1.0f);
   canvas->drawLine(0, 0.5f, HEADER_WIDTH, 0.5f, topHighlight);
 
@@ -128,15 +126,13 @@ void ArrangerTrackComponent::drawTrackHeader(SkCanvas *canvas,
   {
     SkPaint badgePaint;
     badgePaint.setAntiAlias(true);
-    juce::Colour badgeBg = ZenithTheme::Colors::bg_03;
-    badgePaint.setColor(SkColorSetARGB(badgeBg.getAlpha(), badgeBg.getRed(), badgeBg.getGreen(), badgeBg.getBlue()));
-    SkRect badgeRect = SkRect::MakeXYWH(spacing::SM, 8, 24, 18);
-    canvas->drawRRect(SkRRect::MakeRectXY(badgeRect, 4, 4), badgePaint);
+    badgePaint.setColor(design::colors::BG_03);
+    SkRect badgeRect = SkRect::MakeXYWH(spacing::SM, spacing::SM, spacing::LG, 18);
+    canvas->drawRRect(SkRRect::MakeRectXY(badgeRect, dimensions::RADIUS_SM, dimensions::RADIUS_SM), badgePaint);
 
     SkPaint numPaint;
     numPaint.setAntiAlias(true);
-    juce::Colour numCol = ZenithTheme::Colors::text_secondary;
-    numPaint.setColor(SkColorSetARGB(numCol.getAlpha(), numCol.getRed(), numCol.getGreen(), numCol.getBlue()));
+    numPaint.setColor(design::colors::TEXT_SECONDARY);
     canvas->drawString(juce::String(trackIndex_ + 1).toStdString().c_str(),
                        spacing::SM + 6, 21, smallFont, numPaint);
   }
@@ -145,38 +141,37 @@ void ArrangerTrackComponent::drawTrackHeader(SkCanvas *canvas,
   {
     SkPaint shadowPaint;
     shadowPaint.setAntiAlias(true);
-    shadowPaint.setColor(SkColorSetARGB(80, 0, 0, 0));
+    shadowPaint.setColor(design::withAlpha(design::colors::BG_DARKEST, 0.3f));
     canvas->drawString(trackName_.toStdString().c_str(), spacing::MD + 24 + 1,
-                       23.0f + 1, nameFont, shadowPaint);
+                       bounds.centerY() + 7.0f, nameFont, shadowPaint);
 
     SkPaint textPaint;
     textPaint.setAntiAlias(true);
-    juce::Colour textCol = ZenithTheme::Colors::text_primary;
-    textPaint.setColor(SkColorSetARGB(textCol.getAlpha(), textCol.getRed(), textCol.getGreen(), textCol.getBlue()));
+    textPaint.setColor(design::colors::TEXT_PRIMARY);
     canvas->drawString(trackName_.toStdString().c_str(), spacing::MD + 24,
-                       23.0f, nameFont, textPaint);
+                       bounds.centerY() + 6.0f, nameFont, textPaint);
   }
 
-  // Controls (Mute/Solo/Rec)
-  drawControls(canvas, spacing::MD, 42.0f);
+  // Controls (Mute/Solo/Rec) - centered vertically
+  drawControls(canvas, spacing::MD, bounds.centerY() - 11.0f);
 
   // E. Right Border for Header
   {
     SkPaint dividerPaint;
     SkPoint divPts[2] = {{HEADER_WIDTH - 1, 0},
                          {HEADER_WIDTH - 1, trackHeight}};
-    juce::Colour divColor = ZenithTheme::Colors::border_subtle;
-    SkColor divColors[3] = {SkColorSetARGB(60, divColor.getRed(), divColor.getGreen(), divColor.getBlue()),
-                            SkColorSetARGB(30, divColor.getRed(), divColor.getGreen(), divColor.getBlue()),
-                            SkColorSetARGB(10, divColor.getRed(), divColor.getGreen(), divColor.getBlue())};
+    SkColor divBase = design::colors::BORDER_SUBTLE;
+    SkColor divColors[3] = {design::withAlpha(divBase, 0.25f),
+                            design::withAlpha(divBase, 0.12f),
+                            design::withAlpha(divBase, 0.04f)};
     float divPos[3] = {0.0f, 0.2f, 1.0f};
     dividerPaint.setShader(SkGradientShader::MakeLinear(
         divPts, divColors, divPos, 3, SkTileMode::kClamp));
     canvas->drawLine(HEADER_WIDTH - 0.5f, 0, HEADER_WIDTH - 0.5f, trackHeight,
                      dividerPaint);
-
+ 
     SkPaint shadowLine;
-    shadowLine.setColor(SkColorSetARGB(40, 0, 0, 0));
+    shadowLine.setColor(design::withAlpha(design::colors::BG_DARKEST, 0.15f));
     canvas->drawLine(HEADER_WIDTH + 0.5f, 0, HEADER_WIDTH + 0.5f, trackHeight,
                      shadowLine);
   }
@@ -189,8 +184,7 @@ void ArrangerTrackComponent::drawTrackBackground(SkCanvas *canvas,
   // Alternating row tint
   if (trackIndex_ % 2 == 1) {
     SkPaint altRowPaint;
-    juce::Colour alt = ZenithTheme::Colors::bg_04; // Using bg_04 as very subtle highlight
-    altRowPaint.setColor(SkColorSetARGB(8, alt.getRed(), alt.getGreen(), alt.getBlue()));
+    altRowPaint.setColor(design::withAlpha(design::colors::BG_04, 0.03f));
     canvas->drawRect(SkRect::MakeXYWH(HEADER_WIDTH, 0,
                                       bounds.width() - HEADER_WIDTH,
                                       bounds.height()),
@@ -216,14 +210,12 @@ void ArrangerTrackComponent::drawControls(SkCanvas *canvas, float startX,
 
   float btnSize = 22.0f;
   float btnGap = 28.0f;
-  SkFont smallFont =
-      typography::getSkFont(typography::FONT_XS, FontWeight::Bold);
 
-  auto drawBtn = [&](int index, const char *label, bool active,
+  auto drawBtn = [&](int index, const SkPath &icon, bool active,
                      SkColor activeColor) {
     float bx = startX + (index * btnGap);
     SkRect btnRect = SkRect::MakeXYWH(bx, btnY, btnSize, btnSize);
-    SkRRect btnRRect = SkRRect::MakeRectXY(btnRect, 6.0f, 6.0f);
+    SkRRect btnRRect = SkRRect::MakeRectXY(btnRect, dimensions::RADIUS_SM, dimensions::RADIUS_SM);
 
     bool isHovered = (hoveredButtonIndex_ == index);
 
@@ -235,7 +227,7 @@ void ArrangerTrackComponent::drawControls(SkCanvas *canvas, float startX,
         SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 2.0f));
     SkRect shadowRect = btnRect;
     shadowRect.offset(0, 1);
-    canvas->drawRRect(SkRRect::MakeRectXY(shadowRect, 6.0f, 6.0f), shadowPaint);
+    canvas->drawRRect(SkRRect::MakeRectXY(shadowRect, dimensions::RADIUS_SM, dimensions::RADIUS_SM), shadowPaint);
 
     if (active) {
       // Active state
@@ -264,20 +256,24 @@ void ArrangerTrackComponent::drawControls(SkCanvas *canvas, float startX,
       canvas->drawRRect(btnRRect, border);
     }
 
-    // Label
-    SkPaint textPaint;
-    textPaint.setAntiAlias(true);
-    textPaint.setColor(active ? SK_ColorWHITE : colors::TEXT_SECONDARY);
-    float textW =
-        smallFont.measureText(label, strlen(label), SkTextEncoding::kUTF8);
-    canvas->drawString(label, bx + (btnSize - textW) * 0.5f, btnY + 15,
-                       smallFont, textPaint);
+    // Draw icon centered
+    icons::IconStyle style;
+    style.color = active ? SK_ColorWHITE : colors::TEXT_SECONDARY;
+    style.filled = active; 
+    style.strokeWidth = icons::STROKE_REGULAR;
+    
+    // Brighten on hover
+    if (!active && isHovered) {
+        style.color = SK_ColorWHITE;
+    }
+
+    icons::drawIconCentered(canvas, icon, btnRect, btnSize * 0.6f, style);
   };
 
-  drawBtn(0, "M", isMuted_, SkColorSetRGB(ZenithTheme::Colors::warning.getRed(), ZenithTheme::Colors::warning.getGreen(), ZenithTheme::Colors::warning.getBlue()));
-  drawBtn(1, "S", isSoloed_, SkColorSetRGB(ZenithTheme::Colors::info.getRed(), ZenithTheme::Colors::info.getGreen(), ZenithTheme::Colors::info.getBlue()));
-  drawBtn(2, "R", isRecordArmed_, SkColorSetRGB(ZenithTheme::Colors::error.getRed(), ZenithTheme::Colors::error.getGreen(), ZenithTheme::Colors::error.getBlue()));
-  drawBtn(3, "I", isInputMonitoring_, SkColorSetRGB(ZenithTheme::Colors::success.getRed(), ZenithTheme::Colors::success.getGreen(), ZenithTheme::Colors::success.getBlue())); // Input Monitor
+  drawBtn(0, icons::Mute(), isMuted_, design::colors::WARNING);
+  drawBtn(1, icons::Solo(), isSoloed_, design::colors::INFO);
+  drawBtn(2, icons::Arm(), isRecordArmed_, design::colors::DANGER);
+  drawBtn(3, icons::Eye(), isInputMonitoring_, design::colors::SUCCESS); // Input Monitor (Eye)
 }
 
 void ArrangerTrackComponent::drawSections(SkCanvas *canvas,
@@ -287,10 +283,8 @@ void ArrangerTrackComponent::drawSections(SkCanvas *canvas,
   // Background
   {
     SkPoint bgPts[2] = {{0, 0}, {0, (float)bounds.height()}};
-    juce::Colour bg01 = ZenithTheme::Colors::bg_01;
-    juce::Colour bg02 = ZenithTheme::Colors::bg_02;
-    SkColor bgColors[2] = {SkColorSetRGB(bg01.getRed(), bg01.getGreen(), bg01.getBlue()),
-                           SkColorSetRGB(bg02.getRed(), bg02.getGreen(), bg02.getBlue())};
+    SkColor bgColors[2] = {design::colors::BG_01,
+                           design::colors::BG_02};
     SkPaint bgPaint;
     bgPaint.setShader(SkGradientShader::MakeLinear(bgPts, bgColors, nullptr, 2,
                                                    SkTileMode::kClamp));
@@ -362,7 +356,163 @@ void ArrangerTrackComponent::mouseDown(const juce::MouseEvent &e) {
       }
     }
   } else {
-    // Generic Track Headers
+    // Right-click context menu for track header
+    if (e.mods.isRightButtonDown() && e.position.x < HEADER_WIDTH) {
+      auto menu = ContextMenuManager::createMenu();
+      juce::String currentTrackId = trackId_;
+      juce::String currentTrackName = trackName_;
+      
+      // Track operations section
+      menu->addSectionHeader("Track");
+      
+      menu->addItem(1, "Rename...", true, false,
+          [this, currentTrackId, currentTrackName]() {
+              auto* dialog = new SkiaAlertWindow(
+                  "Rename Track",
+                  "Enter a new name for the track:",
+                  SkiaAlertWindow::IconType::NoIcon);
+
+              dialog->addTextEditor("name", currentTrackName, "Track Name");
+              dialog->addButton("Rename", SkiaAlertWindow::Result::Button1, SkiaButton::Style::Primary);
+              dialog->addButton("Cancel", SkiaAlertWindow::Result::Cancelled, SkiaButton::Style::Secondary);
+
+              // Find parent to add to
+              auto* parent = getParentComponent();
+              while (parent != nullptr && parent->getParentComponent() != nullptr) {
+                  parent = parent->getParentComponent();
+              }
+
+              if (parent != nullptr) {
+                  int w = 400;
+                  int h = 200;
+                  dialog->setBounds((parent->getWidth() - w) / 2, (parent->getHeight() - h) / 2, w, h);
+                  parent->addAndMakeVisible(dialog);
+                  
+                  dialog->showAsync([this, currentTrackId, dialog](SkiaAlertWindow::Result result) {
+                      if (result == SkiaAlertWindow::Result::Button1) {
+                          juce::String newName = dialog->getTextEditorContents("name");
+                          if (newName.isNotEmpty()) {
+                              projectState.renameTrack(currentTrackId, newName, "Rename Track");
+                          }
+                      }
+                      delete dialog;
+                  });
+              } else {
+                  delete dialog;
+              }
+          });
+      
+      menu->addItemWithShortcut(2, "Duplicate Track", "Ctrl+Shift+D", true,
+          [this, currentTrackId]() {
+              projectState.duplicateTrack(currentTrackId, "Duplicate Track");
+          });
+      
+      menu->addItem(3, "Insert Track Above", true, false,
+          [this, currentTrackId]() {
+              projectState.insertTrackAbove(currentTrackId, "Audio", "Insert Track Above");
+          });
+      
+      menu->addItem(4, "Insert Track Below", true, false,
+          [this, currentTrackId]() {
+              projectState.insertTrackBelow(currentTrackId, "Audio", "Insert Track Below");
+          });
+      
+      menu->addSeparator();
+      
+      // Processing section
+      menu->addSectionHeader("Processing");
+      
+      bool isFrozen = projectState.findTrack(currentTrackId).getProperty("frozen", false);
+
+      menu->addItem(10, "Freeze Track", !isFrozen, false,
+          [this, currentTrackId]() {
+              if (onFreeze) onFreeze(currentTrackId);
+          });
+      
+      menu->addItem(11, "Unfreeze Track", isFrozen, false,
+          [this, currentTrackId]() {
+              if (onUnfreeze) onUnfreeze(currentTrackId);
+          });
+      
+      if (type_ == TrackType::Audio) {
+          menu->addItem(12, "Separate Stems (AI)", !isFrozen, false,
+              [this, currentTrackId]() {
+                  if (onSeparateStems) onSeparateStems(currentTrackId);
+              });
+      }
+      
+      menu->addSeparator();
+      
+      // Automation section
+      menu->addSectionHeader("Automation");
+      
+      auto automationMenu = ContextMenuManager::createMenu();
+      automationMenu->addItem(100, "Volume", true, false, [this, currentTrackId]() {
+          if (onAutomationLaneRequested) onAutomationLaneRequested(currentTrackId, "volume");
+      });
+      automationMenu->addItem(101, "Pan", true, false, [this, currentTrackId]() {
+          if (onAutomationLaneRequested) onAutomationLaneRequested(currentTrackId, "pan");
+      });
+      automationMenu->addItem(102, "Mute", true, false, [this, currentTrackId]() {
+          if (onAutomationLaneRequested) onAutomationLaneRequested(currentTrackId, "mute");
+      });
+      menu->addSubMenu("Add Automation Lane", std::move(automationMenu));
+      
+      menu->addItem(20, "Hide All Automation", true, false,
+          [this, currentTrackId]() {
+              if (onHideAllAutomation) onHideAllAutomation(currentTrackId);
+          });
+      
+      menu->addSeparator();
+      
+      // Appearance section
+      menu->addSectionHeader("Appearance");
+      
+      // Color submenu
+      auto colorMenu = ContextMenuManager::createMenu();
+      colorMenu->addItem(200, "Red", true, false, [this, currentTrackId]() {
+          projectState.setTrackColor(currentTrackId, juce::Colour(0xFFFF4444), "Set Track Color");
+      });
+      colorMenu->addItem(201, "Orange", true, false, [this, currentTrackId]() {
+          projectState.setTrackColor(currentTrackId, juce::Colour(0xFFFF8844), "Set Track Color");
+      });
+      colorMenu->addItem(202, "Yellow", true, false, [this, currentTrackId]() {
+          projectState.setTrackColor(currentTrackId, juce::Colour(0xFFFFDD44), "Set Track Color");
+      });
+      colorMenu->addItem(203, "Green", true, false, [this, currentTrackId]() {
+          projectState.setTrackColor(currentTrackId, juce::Colour(0xFF44FF88), "Set Track Color");
+      });
+      colorMenu->addItem(204, "Cyan", true, false, [this, currentTrackId]() {
+          projectState.setTrackColor(currentTrackId, juce::Colour(0xFF44DDFF), "Set Track Color");
+      });
+      colorMenu->addItem(205, "Blue", true, false, [this, currentTrackId]() {
+          projectState.setTrackColor(currentTrackId, juce::Colour(0xFF4488FF), "Set Track Color");
+      });
+      colorMenu->addItem(206, "Purple", true, false, [this, currentTrackId]() {
+          projectState.setTrackColor(currentTrackId, juce::Colour(0xFF8844FF), "Set Track Color");
+      });
+      colorMenu->addItem(207, "Pink", true, false, [this, currentTrackId]() {
+          projectState.setTrackColor(currentTrackId, juce::Colour(0xFFFF44AA), "Set Track Color");
+      });
+      menu->addSubMenu("Set Color", std::move(colorMenu));
+      
+      menu->addSeparator();
+      
+      // Danger zone
+      menu->addItemComplete(99, "Delete Track", SkPath(), "", true, false, true,
+          [this, currentTrackId]() {
+              projectState.removeTrack(currentTrackId);
+          });
+      
+      // Show menu
+      ContextMenuManager::getInstance().showMenuAt(
+          std::move(menu), this,
+          static_cast<int>(e.position.x),
+          static_cast<int>(e.position.y));
+      return;
+    }
+    
+    // Left-click on buttons (existing logic)
     if (e.position.x < HEADER_WIDTH && hoveredButtonIndex_ >= 0) {
       // Button clicked
       if (hoveredButtonIndex_ == 0) {
@@ -418,7 +568,7 @@ void ArrangerTrackComponent::mouseMove(const juce::MouseEvent &e) {
   if (type_ != TrackType::Section && e.position.x < HEADER_WIDTH) {
     using namespace design;
     float startX = spacing::MD;
-    float btnY = 42.0f;
+    float btnY = e.eventComponent->getLocalBounds().getCentreY() - 11.0f;
     float btnSize = 22.0f;
     float btnGap = 28.0f;
 

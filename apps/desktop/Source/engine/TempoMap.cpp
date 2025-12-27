@@ -43,7 +43,7 @@ void TempoMapSnapshot::prepare()
         if (i + 1 < points.size())
         {
             double beatDelta = points[i + 1].timeBeats - point.timeBeats;
-            double secondsPerBeat = 60.0 / point.bpm;
+            double secondsPerBeat = 60.0 / std::max(0.1, point.bpm);
             double timeDelta = beatDelta * secondsPerBeat;
             cumulativeSeconds += timeDelta;
         }
@@ -74,9 +74,12 @@ void TempoMap::updateFromValueTree(const juce::ValueTree& tempoMapTree)
 
     auto newSnapshot = std::make_shared<TempoMapSnapshot>();
     
-    // Get time signature from properties
-    newSnapshot->timeSigNumerator = tempoMapTree.getProperty("timeSigNum", 4);
-    newSnapshot->timeSigDenominator = tempoMapTree.getProperty("timeSigDen", 4);
+    // Get time signature from properties (match ProjectState names)
+    newSnapshot->timeSigNumerator = tempoMapTree.getProperty("timeSignatureNumerator", 4);
+    newSnapshot->timeSigDenominator = tempoMapTree.getProperty("timeSignatureDenominator", 4);
+
+    // Safeguard numerator
+    if (newSnapshot->timeSigNumerator <= 0) newSnapshot->timeSigNumerator = 4;
 
     if (!tempoMapTree.isValid())
     {
@@ -170,7 +173,7 @@ double TempoMap::beatsToSeconds(double beats, double /* sampleRate */) const
     // Calculate time from the found point
     const auto& point = cached[index];
     double beatDelta = beats - point.timeBeats;
-    double secondsPerBeat = 60.0 / point.bpm;
+    double secondsPerBeat = 60.0 / std::max(0.1, point.bpm);
     double timeDelta = beatDelta * secondsPerBeat;
 
     return point.cumulativeSeconds + timeDelta;
@@ -197,7 +200,7 @@ double TempoMap::secondsToBeats(double seconds, double /* sampleRate */) const
     // Calculate beats from the found point
     const auto& point = cached[index];
     double timeDelta = seconds - point.cumulativeSeconds;
-    double secondsPerBeat = 60.0 / point.bpm;
+    double secondsPerBeat = 60.0 / std::max(0.1, point.bpm);
     double beatDelta = timeDelta / secondsPerBeat;
 
     return point.timeBeats + beatDelta;

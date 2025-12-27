@@ -44,8 +44,9 @@ namespace zenith {
  */
 class RealTimeGarbageCollector : private juce::Timer {
 public:
-  // Singleton instance for global access (optional but convenient)
+  // Singleton instance for global access
   static RealTimeGarbageCollector& getInstance();
+  static void deleteInstance();
 
   RealTimeGarbageCollector();
   ~RealTimeGarbageCollector() override;
@@ -61,6 +62,19 @@ public:
     // Type erasure using std::function/lambda to hold the shared_ptr
     deferDelete([object]() mutable { 
         // Object will be destroyed when this lambda is destroyed
+        (void)object; 
+    });
+  }
+
+  /**
+   * @brief Defer deletion of a JUCE ReferenceCountedObjectPtr
+   * @param object The object to hold alive
+   */
+  template <typename T>
+  void deferDelete(juce::ReferenceCountedObjectPtr<T> object) {
+    if (!object) return;
+    
+    deferDelete([object]() mutable { 
         (void)object; 
     });
   }

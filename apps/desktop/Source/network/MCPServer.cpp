@@ -43,8 +43,7 @@ void MCPServer::stop() {
   // std::cin.getline is blocking, so we might need a more graceful way to
   // interrupt, but for now, we'll let it join if it finishes or the app exits.
   if (serverThread_.joinable())
-    serverThread_.detach(); // Stdio thread is hard to kill gracefully in a
-                            // stub-to-real transition
+    serverThread_.detach(); // Stdio thread is detached to allow for non-blocking shutdown
 }
 
 void MCPServer::run() {

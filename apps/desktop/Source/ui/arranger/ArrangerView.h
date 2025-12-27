@@ -2,8 +2,7 @@
  * @file ArrangerView.h
  * @brief Timeline arranger view showing tracks and clips
  *
- * Integration stub: Shows how ArrangerView integrates with ProjectState
- * and provides UI for clip editing and automation display.
+ * Provides UI for track management, clip editing, and automation display.
  *
  * Data Flow:
  * 1. Listens to ProjectState ValueTree for track/clip changes

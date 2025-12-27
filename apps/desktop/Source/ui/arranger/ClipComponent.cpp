@@ -32,7 +32,7 @@ using namespace zenith;
 
 ClipComponent::ClipComponent(juce::ValueTree clipNode) : clip(clipNode) {
   setMouseCursor(juce::MouseCursor::PointingHandCursor);
-  startTimerHz(60); // 60 Hz for smooth animations
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60); // 60 Hz for smooth animations
 }
 
 ClipComponent::~ClipComponent() { stopTimer(); }

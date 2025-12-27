@@ -1,6 +1,6 @@
 /**
  * @file TrackPluginState.cpp
- * @brief Plugin state persistence implementation (was stub at Track.cpp:523)
+ * @brief Plugin state persistence implementation
  */
 
 #include "Track.h"

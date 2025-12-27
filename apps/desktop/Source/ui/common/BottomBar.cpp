@@ -13,7 +13,7 @@
 #include "../controls/DebugConsoleComponent.h"
 #include "../controls/DeviceChainComponent.h"
 #include "../transport/AutoSaveIndicator.h"
-#include "MixerComponent.h"
+#include "../mixer/MixerComponent.h"
 #include <memory>
 
 #define ZENITH_USE_SKIA 1 // FORCE DEFINITION FOR DEBUGGING

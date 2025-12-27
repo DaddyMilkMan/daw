@@ -25,6 +25,10 @@ void MeteringSystem::prepare(const juce::dsp::ProcessSpec &spec) {
   filter2.coefficients = juce::dsp::IIR::Coefficients<float>::makeHighPass(
       sampleRate_, 100.0f); // ~100Hz HPF
 
+  // Pre-allocate scratch buffer to avoid allocations in process()
+  // Use spec.numChannels to support surround formats if needed
+  scratchBuffer_.setSize(spec.numChannels, spec.maximumBlockSize);
+
   reset();
 }
 
@@ -42,6 +46,24 @@ void MeteringSystem::reset() {
 }
 
 void MeteringSystem::process(const juce::AudioBuffer<float> &buffer) {
+  // Guard: ensure we have a valid buffer and have been prepared
+  if (buffer.getNumChannels() == 0 || buffer.getNumSamples() == 0)
+    return;
+  
+  // Guard: if scratch buffer is not allocated, we haven't been prepared
+  if (scratchBuffer_.getNumChannels() == 0 || scratchBuffer_.getNumSamples() == 0) {
+    // Just do basic peak/RMS metering without K-weighting
+    float magnitude = buffer.getMagnitude(0, buffer.getNumSamples());
+    float rms = buffer.getRMSLevel(0, 0, buffer.getNumSamples());
+    
+    float currentPeak = masterPeak.load();
+    if (magnitude > currentPeak) {
+      masterPeak.store(magnitude);
+    }
+    rmsLevel.store(rms);
+    return;
+  }
+
   // 1. Peak & RMS
   float magnitude = buffer.getMagnitude(0, buffer.getNumSamples());
   float rms = buffer.getRMSLevel(0, 0, buffer.getNumSamples());
@@ -60,16 +82,17 @@ void MeteringSystem::process(const juce::AudioBuffer<float> &buffer) {
   float targetPPM = magnitude;
 
   // VU Ballistics (300ms integration)
+  float safeSampleRate = std::max(1.0f, static_cast<float>(sampleRate_));
   float vuCoeff =
-      std::exp(-1.0f / (sampleRate_ * VU_RISE_TIME / buffer.getNumSamples()));
+      std::exp(-1.0f / (safeSampleRate * VU_RISE_TIME / buffer.getNumSamples()));
   vuEnvelope_ = targetVU * (1.0f - vuCoeff) + vuEnvelope_ * vuCoeff;
   vuLevel.store(vuEnvelope_);
 
-  // PPM Ballistics (Fast attack, slow release)
+  // PPM Ballistics (10ms attack, 2.8s release)
   float ppmAttack =
-      std::exp(-1.0f / (sampleRate_ * PPM_RISE_TIME / buffer.getNumSamples()));
+      std::exp(-1.0f / (safeSampleRate * PPM_RISE_TIME / buffer.getNumSamples()));
   float ppmRelease =
-      std::exp(-1.0f / (sampleRate_ * PPM_FALL_TIME / buffer.getNumSamples()));
+      std::exp(-1.0f / (safeSampleRate * PPM_FALL_TIME / buffer.getNumSamples()));
 
   if (targetPPM > ppmEnvelope_) {
     ppmEnvelope_ = targetPPM * (1.0f - ppmAttack) + ppmEnvelope_ * ppmAttack;
@@ -79,15 +102,24 @@ void MeteringSystem::process(const juce::AudioBuffer<float> &buffer) {
   ppmLevel.store(ppmEnvelope_);
 
   // 3. LUFS Momentary (K-Weighted)
-  // We need a scratch buffer for filtering to not affect output
-  juce::AudioBuffer<float> scratch(buffer);
-  juce::dsp::AudioBlock<float> block(scratch);
-  juce::dsp::ProcessContextReplacing<float> context(block);
+  // Use pre-allocated scratch buffer to avoid allocation
+  // Copy input to scratch buffer
+  for (int ch = 0; ch < juce::jmin(buffer.getNumChannels(), scratchBuffer_.getNumChannels()); ++ch) {
+    scratchBuffer_.copyFrom(ch, 0, buffer, ch, 0, buffer.getNumSamples());
+  }
+
+  // Use AudioBlock on the scratch buffer (only the valid part)
+  juce::dsp::AudioBlock<float> block(scratchBuffer_);
+  juce::dsp::AudioBlock<float> subBlock = block.getSubBlock(0, buffer.getNumSamples());
+  juce::dsp::ProcessContextReplacing<float> context(subBlock);
   kWeightingFilter_.process(context);
 
-  // Mean Square of K-weighted signal (400ms window usually, here block-wise for
-  // momentary)
-  float kRms = scratch.getRMSLevel(0, 0, scratch.getNumSamples());
+  // Mean Square of K-weighted signal
+  float kRms = 0.0f;
+  if (scratchBuffer_.getNumChannels() > 0) {
+      kRms = scratchBuffer_.getRMSLevel(0, 0, buffer.getNumSamples());
+  }
+  
   // Gating not strictly implemented for simple momentary
   float lufs = (kRms > 0.000001f) ? (20.0f * std::log10(kRms) - 0.691f)
                                   : -100.0f; // -0.691 offset? Standard says

@@ -123,6 +123,8 @@ public:
   static const juce::Identifier PROP_OFFSET;
   static const juce::Identifier PROP_AUDIO_FILE;
   static const juce::Identifier PROP_LOOP_LENGTH;
+  static const juce::Identifier PROP_FADE_IN;
+  static const juce::Identifier PROP_FADE_OUT;
   static const juce::Identifier PROP_LANE_INDEX;
   static const juce::Identifier PROP_MANUALLY_COLORED;
   static const juce::Identifier PROP_IS_QUARANTINE;
@@ -153,6 +155,7 @@ public:
   static const juce::Identifier PROP_RECURRENCE; // Loop recurrence (e.g. "1:4")
   static const juce::Identifier
       PROP_ARTICULATION_ID; // Articulation/Keyswitch ID
+  static const juce::Identifier PROP_NOTE_TENSION; // Note tension (0.0=linear, +/- for curve)
 
   // Tempo/Marker properties
   static const juce::Identifier PROP_BPM;   // Tempo in BPM
@@ -177,6 +180,7 @@ public:
   bool loadFromFile(const juce::File &file);
   bool saveToFile(const juce::File &file);
   juce::File saveCrashDump();
+  juce::File getAssetDirectory(const juce::String& subfolder) const;
   juce::File getProjectFile() const { return projectFile; }
   void setProjectFile(const juce::File &file) { projectFile = file; }
   bool hasUnsavedChanges() const { return isDirty.load(); }
@@ -232,8 +236,13 @@ public:
   //==========================================================================
 
   juce::String addTrack(const juce::String &name, const juce::String &type);
-  void removeTrack(const juce::String &trackId);
+  void removeTrack(const juce::String &trackId,
+                   const juce::String &actionName = "Delete Track");
+  juce::String duplicateTrack(const juce::String &trackId, const juce::String &actionName = "Duplicate Track");
+  juce::String insertTrackAbove(const juce::String &trackId, const juce::String &type, const juce::String &actionName = "Insert Track Above");
+  juce::String insertTrackBelow(const juce::String &trackId, const juce::String &type, const juce::String &actionName = "Insert Track Below");
   int getNumTracks() const;
+  void moveTrack(const juce::String& trackId, int newIndex, const juce::String& actionName = "Move Track");
   juce::ValueTree getTrack(const juce::String &trackId) const;
   juce::ValueTree getTrackByIndex(int trackIndex);
   juce::ValueTree findTrack(const juce::String &trackId) const;
@@ -281,6 +290,21 @@ public:
 
   juce::String createEmptyClip(const juce::String &trackId, double startBeats,
                                double lengthBeats, bool isMidi,
+                               const juce::String &name,
+                               const juce::String &actionName);
+
+  /**
+   * @brief Create an audio clip with a reference to an audio file
+   * @param trackId Track to add clip to
+   * @param startBeats Start position in beats
+   * @param lengthBeats Clip length in beats
+   * @param audioFilePath Path to the audio file
+   * @param name Clip name
+   * @param actionName Undo action name
+   * @return New clip ID
+   */
+  juce::String createAudioClip(const juce::String &trackId, double startBeats,
+                               double lengthBeats, const juce::String &audioFilePath,
                                const juce::String &name,
                                const juce::String &actionName);
 
@@ -334,6 +358,10 @@ public:
                 double newStartBeats);
   bool resizeClip(const juce::String &trackId, const juce::String &clipId,
                   double newLengthBeats);
+  juce::String getClipName(const juce::String &clipId) const;
+  void renameClip(const juce::String &clipId, const juce::String &newName);
+  void setClipFade(const juce::String &clipId, double fadeInBeats, double fadeOutBeats, const juce::String &actionName);
+  void setClipColor(const juce::String &clipId, const juce::Colour &color);
   juce::ValueTree findClip(const juce::String &trackId,
                            const juce::String &clipId) const;
 
@@ -418,17 +446,18 @@ public:
     juce::String condition;   // e.g., "fill", "not-fill", "pre"
     juce::String recurrence;  // e.g., "1:4"
     int articulationId = 0;   // 0 = Default
+    float tension = 0.0f;     // -1.0 to 1.0
 
     MidiNoteSpec()
         : pitch(60), startBeats(0.0), lengthBeats(1.0), velocity(100),
-          muted(false), probability(1.0f) {}
+          muted(false), probability(1.0f), tension(0.0f) {}
 
     MidiNoteSpec(const juce::String &id, int pitch, double startBeats,
                  double lengthBeats, int velocity, bool muted,
-                 float probability = 1.0f)
+                 float probability = 1.0f, float tension = 0.0f)
         : id(id), pitch(pitch), startBeats(startBeats),
           lengthBeats(lengthBeats), velocity(velocity), muted(muted),
-          probability(probability) {}
+          probability(probability), tension(tension) {}
   };
 
   void addNotes(const juce::String &clipId,
@@ -474,12 +503,27 @@ public:
                               const juce::String &noteId, float probability,
                               const juce::String &actionName);
 
+  void setMidiNoteTension(const juce::String &clipId,
+                            const juce::String &noteId, float tension,
+                            const juce::String &actionName);
+
+  //==========================================================================
+  // MIDI Processing (Humanize, Legato)
+  //==========================================================================
+  
+  void humanizeClip(const juce::String& clipId, double velocityRange, double timeRangeBeats, const juce::String& actionName = "Humanize");
+  void legatoClip(const juce::String& clipId, bool adjustOverlap = true, const juce::String& actionName = "Legato");
+
   //==========================================================================
   // Tempo Map & Markers
   //==========================================================================
 
   juce::String addTempoChange(double beatPosition, double bpm,
                               const juce::String &actionName);
+  bool deleteTempoChange(const juce::String &pointId,
+                         const juce::String &actionName);
+  void moveTempoChange(const juce::String &pointId, double newBeats,
+                       double newBpm, const juce::String &actionName);
   juce::ValueTree getTempoMap() const;
 
   juce::String addMarker(double beatPosition, const juce::String &name,
@@ -542,6 +586,7 @@ public:
 
   juce::ValueTree &getState() { return state; }
   const juce::ValueTree &getState() const { return state; }
+  juce::File getAssetDirectory(const juce::String& name);
 
   //==========================================================================
   // Routing Graph
@@ -592,6 +637,11 @@ private:
   std::unique_ptr<ClipStateManager> clipStateManager;
   std::unique_ptr<AutomationStateManager> automationStateManager;
   std::unique_ptr<ProjectFileIO> projectFileIO;
+
+  std::pair<juce::String, juce::String> splitBeatBasedClip(const juce::String &trackId, juce::ValueTree originalClip, juce::int64 splitSamples);
+  std::pair<juce::String, juce::String> splitSampleBasedClip(const juce::String &trackId, juce::ValueTree originalClip, juce::int64 splitSamples);
+  void migrateProperties(const juce::ValueTree& source, juce::ValueTree& dest);
+  std::pair<juce::int64, juce::int64> inferSamplePropertiesFromBeats(const juce::ValueTree& clip);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ProjectState)
 };

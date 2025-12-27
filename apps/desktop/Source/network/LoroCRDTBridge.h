@@ -39,7 +39,7 @@ public:
     }
 
 private:
-    juce::ValueTree& targetTree;
+    juce::ValueTree targetTree;
     LoroDoc& crdtDoc;
     bool isApplyingRemote = false;
 
@@ -97,8 +97,20 @@ private:
         juce::String parentId = parent.getProperty("id").toString();
         juce::String childId = child.getProperty("id").toString();
         if (parentId.isNotEmpty() && childId.isNotEmpty()) {
-            // Mark as tombstone (need to find the ID of the block, simplified)
-            // For now, we don't fully support list deletion in this bridge prototype
+            // Find the ID of the block containing this childId in the parent's list
+            juce::String listName = parentId.toStdString() + "_children";
+            auto& list = crdtDoc.getList(listName.toStdString());
+            
+            for (const auto& block : list.blocks) {
+                if (!block.isTombstone && 
+                    block.value.type == LoroValue::Type::String && 
+                    block.value.sVal == childId) {
+                    
+                    // Mark as tombstone (CRDT deletion)
+                    list.remove(block.id);
+                    break; 
+                }
+            }
         }
         if (onLocalChange) onLocalChange();
     }

@@ -52,7 +52,7 @@ struct ModulationSourceNode {
   };
 
   Type type = Type::LFO;
-  SkColor color = 0xFF00F0FF;
+  SkColor color = design::colors::CYAN;
   juce::Point<float> position;
   float radius = 24.0f;
 
@@ -84,7 +84,7 @@ struct ModulationDestNode {
   };
 
   Type type = Type::FilterCutoff;
-  SkColor color = 0xFFFF9944;
+  SkColor color = design::colors::ORANGE;
   juce::Point<float> position;
   float radius = 24.0f;
 
@@ -132,15 +132,11 @@ struct ModulationConnection {
   // Color interpolation based on amount
   SkColor getColor() const {
     if (amount > 0) {
-      // Positive: Orange/warm
-      uint8_t intensity = static_cast<uint8_t>(std::abs(amount) * 255);
-      return SkColorSetARGB(255, 255, 150 + (intensity / 3),
-                            100 - intensity / 4);
+      // Positive: Use Accent/Warm scale
+      return design::interpolateColor(design::colors::ORANGE, design::colors::TEXT_PRIMARY, 1.0f - std::abs(amount));
     } else {
-      // Negative: Blue/cool
-      uint8_t intensity = static_cast<uint8_t>(std::abs(amount) * 255);
-      return SkColorSetARGB(255, 100 - intensity / 4, 150 + (intensity / 3),
-                            255);
+      // Negative: Use Blue/Cool scale
+      return design::interpolateColor(design::colors::CYAN, design::colors::TEXT_PRIMARY, 1.0f - std::abs(amount));
     }
   }
 
@@ -220,7 +216,7 @@ private:
 
   // Grid configuration
   juce::Rectangle<float> gridBounds_;
-  SkColor gridColor_ = 0x10FFFFFF;
+  SkColor gridColor_ = design::withAlpha(design::colors::TEXT_PRIMARY, 0.08f);
   float gridSpacing_ = 40.0f;
 
   // Animation

@@ -10,7 +10,7 @@
 
 ## ⚠️ Project Status
 
-This is an **early prototype** in active development. Core features are still being implemented and stabilized. Expect bugs, incomplete features, and breaking changes.
+This is an **early prototype** in active development. Core features are being implemented and stabilized. Expect bugs, incomplete features, and breaking changes.
 
 **What works:**
 - Basic audio playback engine
@@ -18,12 +18,14 @@ This is an **early prototype** in active development. Core features are still be
 - VST3 plugin loading
 - Simple synth and sampler instruments
 - Project save/load (Stable with Crash Recovery)
+- Offline Audio Export (Beta)
+- Plugin Automation (Work In Progress)
 
 **What doesn't work yet:**
 - Reliable multi-track recording
-- Plugin automation
-- Export/rendering pipeline
-- Most "AI features" (mocked/unstable)
+- Advanced cross-track routing
+- Complex time-stretching/pitch-shifting
+- Most "AI features" (infrastructure exists, but features are experimental)
 
 ---
 
@@ -68,9 +70,11 @@ zenith-daw/
 ├── apps/desktop/
 │   ├── Source/
 │   │   ├── engine/        # Audio engine (tracks, clips, mixer)
-│   │   ├── ui/            # UI components
+│   │   ├── ui/            # UI components (JUCE + Skia)
 │   │   ├── instruments/   # Built-in synth/sampler
-│   │   └── network/       # Experimental AI integration
+│   │   ├── dsp/           # Signal processing & ONNX integration
+│   │   ├── ai/            # Neural agents & Grok API client
+│   │   └── network/       # Collaboration & remote services
 │   └── Resources/         # Audio samples and assets
 ├── docs/                  # Technical documentation
 ├── planning/              # Design docs and roadmaps
@@ -81,23 +85,21 @@ zenith-daw/
 
 ## 🎯 Current Development Focus
 
-**Phase 1: Core Stability** (Current)
-- Fix build system reliability
-- Stabilize audio engine threading
-- Implement proper error handling
-- Clean up debug logging
+**Phase 1: Core Stability** (Completed)
+- Build system reliability
+- Audio engine threading
+- Basic UI framework
 
-**Phase 2: Essential Features** (Next)
+**Phase 2: Essential Features** (Current)
 - Project save/load (Completed)
-- Multi-track recording
-- Audio export
+- Offline Export (Beta)
+- Automation (In Progress)
 - Plugin state management
 
-**Phase 3: Polish** (Future)
-- UI refinements
+**Phase 3: Polish & AI** (Upcoming)
+- Advanced UI refinements (Glassmorphism)
+- Neural feature integration (Stem Separation, AI Mastering)
 - Performance optimization
-- Documentation
-- Test coverage
 
 See `planning/roadmaps/` for detailed plans.
 
@@ -106,7 +108,7 @@ See `planning/roadmaps/` for detailed plans.
 ## 🛠️ Development
 
 ### Code Style
-- **C++ Standard:** C++17
+- **C++ Standard:** C++20
 - **Naming:** PascalCase (classes), camelCase (functions), camelCase_ (members)
 - **Formatting:** 2-space indents, 100-char lines
 
@@ -114,6 +116,7 @@ See `planning/roadmaps/` for detailed plans.
 - **JUCE 8.0.0** - Audio framework
 - **Skia** - Hardware-accelerated rendering
 - **vcpkg** - Package management
+- **ONNX Runtime** - AI/Neural inference
 
 ### Debugging
 ```bash
@@ -136,11 +139,12 @@ tail -f debug_log.txt
 
 ## 🤖 AI Integration (Experimental)
 
-Some experimental AI features are in development:
-- Voice command interface (via Grok API)
-- Preset suggestion system
+The project includes infrastructure for AI-driven features located in `apps/desktop/Source/ai`:
+- **Grok API Client:** For natural language command processing.
+- **Neural Agents:** (Wingman, SampleHunter) for workflow assistance.
+- **ONNX Integration:** For local neural audio processing (Source Separation).
 
-**Note:** These features are unstable and require API keys. Not recommended for testing yet.
+**Note:** These features are experimental and may require API keys or specific model files.
 
 ---
 

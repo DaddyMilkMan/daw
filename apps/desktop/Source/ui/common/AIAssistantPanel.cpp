@@ -29,7 +29,7 @@ AIAssistantPanel::AIAssistantPanel() {
   ai::AIStatusManager::getInstance().addListener(this);
 
   // Start animation timer
-  startTimer(50); // 20 FPS for pulse animation
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(50); // 20 FPS for pulse animation
 }
 
 AIAssistantPanel::~AIAssistantPanel() {

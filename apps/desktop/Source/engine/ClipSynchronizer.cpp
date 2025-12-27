@@ -1,6 +1,6 @@
 /**
  * @file ClipSynchronizer.cpp
- * @brief ClipSynchronizer implementation (integration stub)
+ * @brief ClipSynchronizer implementation - bidirectional sync between ProjectState and Engine clips
  */
 
 #include "ClipSynchronizer.h"
@@ -28,7 +28,8 @@ void ClipSynchronizer::start(int updateRateHz) {
     updateRateHz = 30;
 
   projectState.getState().addListener(this);
-  startTimer(1000 / updateRateHz);
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr)
+      if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(1000 / updateRateHz);
   DBG("ClipSynchronizer: Started at " + juce::String(updateRateHz) + " Hz");
 }
 

@@ -13,7 +13,7 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
-#include "../network/GrokAPIClient.h" // For GrokFunction definition
+#include "GrokDAWClient.h" // Authoritative source for GrokFunction
 
 namespace zenith {
 

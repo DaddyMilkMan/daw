@@ -35,7 +35,7 @@ public:
 
   //==========================================================================
   CommandAPI &commandAPI;
-  GrokAPIClient grokClient;
+  GrokDAWClient grokClient;
   AudioAnalysisService analysisService;
 
   // Thread Pool for safe async operations
@@ -104,16 +104,90 @@ public:
       // Task: Verify model path validity before attempting command
       juce::File defaultModel = ONNXStemSeparator::findDefaultModel();
       if (!defaultModel.existsAsFile()) {
-          juce::String errorMsg = "AI Model not found. Please install 'htdemucs.onnx' or 'demucs.onnx' in one of the following locations:\n";
+        if (onProgress)
+          executeOnMessageThread([onProgress]() {
+            onProgress("Downloading AI Model (htdemucs.onnx)... This may take 1-2 minutes.");
+          });
+
+        // Use ThreadPool for network operation
+        threadPool.addJob([this, call, onComplete, onError, onProgress]() {
+          // Define target path (User local share on Linux/Mac, or AppData on Windows)
+          juce::File targetDir = juce::File::getSpecialLocation(juce::File::userHomeDirectory)
 #if JUCE_LINUX
-          errorMsg += "- ~/.local/share/zenith/models/\n";
-          errorMsg += "- /usr/share/zenith/models/\n";
+                                     .getChildFile(".local/share/zenith/models");
+#elif JUCE_MAC
+                                     .getChildFile("Library/Application Support/ZenithDAW/models");
 #else
-          errorMsg += "- Application Directory\n";
-          errorMsg += "- Resources/models/\n";
+                                     .getChildFile("AppData/Roaming/ZenithDAW/models");
 #endif
-          executeOnMessageThread([onError, errorMsg]() { onError(errorMsg); });
-          return;
+
+          if (!targetDir.createDirectory()) {
+             executeOnMessageThread([onError]() { onError("Failed to create model directory."); });
+             return;
+          }
+
+          juce::File targetFile = targetDir.getChildFile("htdemucs.onnx");
+          juce::URL url("https://huggingface.co/canary-audio/htdemucs-onnx/resolve/main/htdemucs.onnx");
+          
+          // Helper to execute command after success
+          auto runCommand = [this, call, onComplete, onError]() {
+              juce::var result = commandAPI.executeCommand(
+                  CommandAPI::CommandID::SeparateTrack, call.arguments);
+
+              if (result.getProperty("success", false)) {
+                juce::String msg = "Stems separated successfully. Created tracks: ";
+                auto createdTracks = result.getProperty("createdTracks", juce::var());
+                if (createdTracks.isArray())
+                  msg += juce::String(createdTracks.size());
+                onComplete(msg);
+              } else {
+                onError("Separation failed: " +
+                        result.getProperty("error", "Unknown error").toString());
+              }
+          };
+
+          // REAL-TIME PROGRESS: Use streaming instead of simple downloadToFile
+          bool downloadSuccess = false;
+          auto options = juce::URL::InputStreamOptions (juce::URL::ParameterHandling::inPostData);
+          if (std::unique_ptr<juce::InputStream> stream = url.createInputStream (options)) {
+              auto totalLength = stream->getTotalLength();
+              auto targetStream = targetFile.createOutputStream();
+              
+              if (targetStream != nullptr) {
+                  const int bufferSize = 65536; // 64KB
+                  juce::HeapBlock<char> buffer (bufferSize);
+                  int64_t bytesReadTotal = 0;
+                  
+                  while (!stream->isExhausted()) {
+                      int bytesRead = stream->read(buffer, bufferSize);
+                      if (bytesRead <= 0) break;
+                      
+                      targetStream->write(buffer, (size_t)bytesRead);
+                      bytesReadTotal += bytesRead;
+                      
+                      // Report progress if length is known
+                      if (totalLength > 0 && onProgress) {
+                          int progress = (int)((bytesReadTotal * 100) / totalLength);
+                          executeOnMessageThread([onProgress, progress]() {
+                              onProgress("Downloading AI Model... " + juce::String(progress) + "%");
+                          });
+                      }
+                  }
+                  targetStream.reset();
+                  downloadSuccess = bytesReadTotal >= totalLength || totalLength <= 0;
+              }
+          }
+
+          if (downloadSuccess) {
+             executeOnMessageThread([runCommand, onProgress]() {
+                 if (onProgress) onProgress("Model downloaded. Starting separation...");
+                 runCommand();
+             });
+          } else {
+             executeOnMessageThread([onError]() { onError("Failed to download AI model from HuggingFace."); });
+          }
+        });
+        return; 
       }
 
       if (onProgress)
@@ -122,7 +196,6 @@ public:
         });
 
       executeOnMessageThread([this, call, onComplete, onError]() {
-        // Typed Command Execution
         juce::var result = commandAPI.executeCommand(
             CommandAPI::CommandID::SeparateTrack, call.arguments);
 

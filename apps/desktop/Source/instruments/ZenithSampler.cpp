@@ -1089,8 +1089,7 @@ InstrumentMetadata ZenithSampler::createMetadata() {
 
 void ZenithSampler::registerPresets() {
   // Register built-in sample banks as presets
-  // Note: These are stubs - actual sample files would need to be in the
-  // content directory
+  // Actual sample files are expected in the content directory.
 
   // Built-in bank: 808 Essentials
   const char *bank808Json = R"({

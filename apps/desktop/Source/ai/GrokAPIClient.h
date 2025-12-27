@@ -43,11 +43,28 @@ public:
    */
   void setAPIKey(const juce::String &apiKey) { apiKey_ = apiKey; }
 
+  struct GrokFunction {
+    juce::String name;
+    juce::String description;
+    juce::var parameters;
+
+    GrokFunction() = default;
+    GrokFunction(const juce::String& n, const juce::String& d, const juce::var& p)
+        : name(n), description(d), parameters(p) {}
+  };
+
+  enum class ModelType {
+    Reasoning,     // grok-4.1 (High intelligence, "thinking")
+    Fast,          // grok-4.1-fast (Low latency, tool use, non-reasoning)
+    FastReasoning  // grok-4.1-fast-reasoning (Fast but with thinking)
+  };
+
   /**
-   * Call Grok 4.1 reasoning model synchronously
+   * Call Grok 4.1 model synchronously
    */
   juce::String callGrok(const juce::String &prompt,
-                        const juce::String &systemMessage) {
+                        const juce::String &systemMessage,
+                        ModelType modelType = ModelType::Reasoning) {
     if (!hasAPIKey()) {
       DBG("ERROR: No API key configured. Set GROK_API_KEY environment "
           "variable.");
@@ -55,11 +72,11 @@ public:
     }
 
     DBG("======================================");
-    DBG("Calling Grok 4.1 API...");
+    DBG("Calling Grok 4.1 API (" + getModelId(modelType) + ")...");
     DBG("======================================");
 
     // Build request JSON
-    juce::String requestBody = buildRequestJSON(prompt, systemMessage);
+    juce::String requestBody = buildRequestJSON(prompt, systemMessage, modelType);
 
     DBG("Request size: " + juce::String(requestBody.length()) + " bytes");
 
@@ -85,10 +102,11 @@ public:
    */
   void callGrokAsync(const juce::String &prompt,
                      const juce::String &systemMessage,
-                     std::function<void(juce::String)> callback) {
+                     std::function<void(juce::String)> callback,
+                     ModelType modelType = ModelType::Reasoning) {
     // Launch on background thread
-    juce::Thread::launch([this, prompt, systemMessage, callback]() {
-      auto response = callGrok(prompt, systemMessage);
+    juce::Thread::launch([this, prompt, systemMessage, callback, modelType]() {
+      auto response = callGrok(prompt, systemMessage, modelType);
 
       // Invoke callback on message thread
       juce::MessageManager::callAsync(
@@ -100,14 +118,23 @@ private:
   juce::String apiKey_;
   const juce::String apiEndpoint_ = "https://api.x.ai/v1/chat/completions";
 
+  juce::String getModelId(ModelType type) const {
+      switch (type) {
+          case ModelType::Fast:          return "grok-4.1-fast";
+          case ModelType::FastReasoning: return "grok-4.1-fast-reasoning";
+          case ModelType::Reasoning: default: return "grok-4.1";
+      }
+  }
+
   juce::String buildRequestJSON(const juce::String &prompt,
-                                const juce::String &systemMessage) {
+                                const juce::String &systemMessage,
+                                ModelType modelType) {
     juce::DynamicObject::Ptr request = new juce::DynamicObject();
 
-    // Use grok-2-1212 (Grok 4.1 reasoning model)
-    request->setProperty("model", "grok-2-1212");
+    // Use selected Grok 4.1 model
+    request->setProperty("model", getModelId(modelType));
     request->setProperty("temperature", 0.7);
-    request->setProperty("max_tokens", 2000);
+    request->setProperty("max_tokens", 2000); // 4.1 has huge context, but we limit output 
 
     // Build messages array
     juce::Array<juce::var> messages;

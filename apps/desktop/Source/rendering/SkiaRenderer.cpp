@@ -133,11 +133,13 @@ void SkiaRenderer::render(std::function<void(SkCanvas *)> drawCallback) {
   updateStats();
 
   if (vsyncEnabled_) {
-    auto frameTime = juce::Time::getCurrentTime() - startTime;
-    auto targetFrameTime =
-        juce::RelativeTime::milliseconds((juce::int64)(1000.0 / targetFPS_));
-    if (frameTime < targetFrameTime)
-      juce::Thread::sleep((int)(targetFrameTime - frameTime).inMilliseconds());
+    // VSync should be handled by the backend (swap buffers), not by sleeping on the message thread.
+    // Sleeping here causes UI freezes.
+    // auto frameTime = juce::Time::getCurrentTime() - startTime;
+    // auto targetFrameTime =
+    //    juce::RelativeTime::milliseconds((juce::int64)(1000.0 / targetFPS_));
+    // if (frameTime < targetFrameTime)
+    //   juce::Thread::sleep((int)(targetFrameTime - frameTime).inMilliseconds());
   }
 }
 
@@ -152,7 +154,8 @@ void SkiaRenderer::resize(int width, int height) {
 
 SkiaRenderer::Backend SkiaRenderer::detectBestBackend() const {
 #if JUCE_WINDOWS
-  return Backend::OpenGL; // Fallback to OpenGL until D3D header issues resolved
+  // Default to OpenGL for maximum compatibility on Windows
+  return Backend::OpenGL; 
 #elif JUCE_MAC
   return Backend::OpenGL;
 #elif JUCE_LINUX
@@ -346,8 +349,8 @@ bool SkiaRenderer::createVulkanContext() {
 
 #if JUCE_WINDOWS
 bool SkiaRenderer::createD3DContext() {
-  DBG("SkiaRenderer: D3D12 context creation disabled due to valid header "
-      "issues.");
+  // D3D12 backend requires valid headers and linkage.
+  // Returning false triggers automatic fallback to OpenGL/Software.
   return false;
 }
 #endif

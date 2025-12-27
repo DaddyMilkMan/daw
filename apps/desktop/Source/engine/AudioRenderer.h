@@ -40,6 +40,82 @@ class TempoMap;
 
 //==============================================================================
 /**
+ * @struct AudioRenderContext
+ * @brief Holds all mutable buffers and state required for a single render pass.
+ *
+ * This allows AudioRenderer to be stateless and re-entrant (different contexts
+ * for Live Engine vs Offline Export).
+ */
+struct AudioRenderContext {
+  // Buffers
+  std::vector<juce::AudioBuffer<float>> trackBuffers;
+  std::vector<juce::AudioBuffer<float>> auxBusBuffers;
+
+  // PDC State
+  std::vector<juce::AudioBuffer<float>> pdcDelayBuffers;
+  std::vector<int> pdcDelayWritePos;
+  std::vector<int> trackLatencies;
+  int maxTrackLatency = 0;
+
+  // Optimizations
+  // Pre-allocated vector for aux buffers to avoid RT allocations
+  std::vector<juce::AudioBuffer<float> *> auxBufferPtrsVector;
+
+  // Configuration
+  double sampleRate = constants::kDefaultSampleRate;
+  int blockSize = constants::kDefaultBufferSize;
+
+  // Helper to resize all buffers
+  void prepare(double newSampleRate, int newBlockSize, size_t numTracks,
+               size_t numAuxBuses) {
+    sampleRate = newSampleRate;
+    blockSize = newBlockSize;
+
+    // Resize track buffers
+    if (trackBuffers.size() != numTracks) {
+      trackBuffers.resize(numTracks);
+    }
+    for (auto &buffer : trackBuffers) {
+      buffer.setSize(2, blockSize);
+      buffer.clear();
+    }
+
+    // Resize aux buffers
+    if (auxBusBuffers.size() != numAuxBuses) {
+      auxBusBuffers.resize(numAuxBuses);
+    }
+    for (auto &buffer : auxBusBuffers) {
+      buffer.setSize(2, blockSize);
+      buffer.clear();
+    }
+
+    // Resize PDC buffers
+    if (pdcDelayBuffers.size() != numTracks) {
+      pdcDelayBuffers.resize(numTracks);
+      pdcDelayWritePos.resize(numTracks, 0);
+      trackLatencies.resize(numTracks, 0);
+    }
+    for (auto &buffer : pdcDelayBuffers) {
+      buffer.setSize(2, constants::kMaxPDCLatencySamples);
+      // Don't necessarily clear delay buffers, they hold state across blocks!
+      // But if resizing/initializing, we might want to.
+    }
+
+    auxBufferPtrsVector.reserve(numAuxBuses + 8); 
+  }
+
+  void reset() {
+    for (auto &buffer : trackBuffers) buffer.clear();
+    for (auto &buffer : auxBusBuffers) buffer.clear();
+    for (auto &buffer : pdcDelayBuffers) buffer.clear();
+    std::fill(pdcDelayWritePos.begin(), pdcDelayWritePos.end(), 0);
+    std::fill(trackLatencies.begin(), trackLatencies.end(), 0);
+    maxTrackLatency = 0;
+  }
+};
+
+//==============================================================================
+/**
     Audio graph renderer for the engine.
 
     Handles the core audio rendering pipeline:
@@ -47,6 +123,8 @@ class TempoMap;
     - Aux bus processing and mixing
     - Master bus processing with limiter
     - PDC (plugin delay compensation)
+    
+    Now STATELESS: Requires an AudioRenderContext to operate.
 */
 class AudioRenderer {
 public:
@@ -55,30 +133,12 @@ public:
   ~AudioRenderer() = default;
 
   //==========================================================================
-  // Configuration
-  //==========================================================================
-
-  /**
-   * @brief Prepare renderer for playback
-   * @param sampleRate Current sample rate
-   * @param blockSize Maximum block size
-   * @param numTracks Number of tracks to prepare buffers for
-   * @param numAuxBuses Number of aux buses
-   */
-  void prepare(double sampleRate, int blockSize, size_t numTracks,
-               size_t numAuxBuses);
-
-  /**
-   * @brief Reset renderer state
-   */
-  void reset();
-
-  //==========================================================================
   // Rendering
   //==========================================================================
 
   /**
    * @brief Render the audio graph to output buffer
+   * @param context The render context (buffers, PDC state) to use
    * @param outputBuffer Output buffer to fill
    * @param numSamples Number of samples to render
    * @param playheadPosition Current playhead position in samples
@@ -94,6 +154,7 @@ public:
    * @note AUDIO THREAD ONLY
    */
   void renderAudioGraph(
+      AudioRenderContext& context,
       juce::AudioBuffer<float> &outputBuffer, int numSamples,
       juce::int64 playheadPosition, std::span<Track *const> tracks,
       std::span<AuxBus *const> auxBuses, const RoutingGraph &routingGraph,
@@ -116,22 +177,18 @@ public:
   //==========================================================================
 
   /**
-   * @brief Calculate and update PDC for all tracks
+   * @brief Calculate and update PDC for all tracks in the context
+   * @param context Render context
    * @param tracks Vector of tracks
    * @return Maximum latency in samples
    */
-  int calculatePDC(std::span<Track *const> tracks);
+  int calculatePDC(AudioRenderContext& context, std::span<Track *const> tracks);
 
   /**
    * @brief Enable/disable PDC
    */
   void setPDCEnabled(bool enabled) { pdcEnabled_.store(enabled); }
   bool isPDCEnabled() const { return pdcEnabled_.load(); }
-
-  /**
-   * @brief Get maximum track latency
-   */
-  int getMaxTrackLatency() const { return maxTrackLatency_.load(); }
 
   //==========================================================================
   // Metering
@@ -157,11 +214,6 @@ public:
   //==========================================================================
 
   /**
-   * @brief Get latency for a specific track in samples
-   */
-  int getTrackLatency(int trackIndex) const;
-
-  /**
    * @brief Get master bus latency in samples
    */
   int getMasterLatency() const;
@@ -185,7 +237,7 @@ private:
   /**
    * @brief Apply PDC delay to a buffer
    */
-  void applyPDCDelay(juce::AudioBuffer<float> &buffer, int trackIndex,
+  void applyPDCDelay(AudioRenderContext& context, juce::AudioBuffer<float> &buffer, int trackIndex,
                      int numSamples);
 
   /**
@@ -204,44 +256,8 @@ private:
   // State
   //==========================================================================
 
-  double sampleRate_ = constants::kDefaultSampleRate;
-  int blockSize_ = constants::kDefaultBufferSize;
-
-  // Per-track buffers (pre-allocated)
-  std::vector<juce::AudioBuffer<float>> trackBuffers_;
-
-  // Private helpers for renderAudioGraph breakdown (Bug 61)
-  void renderFrozenTrack(int trackIdx, Track *track,
-                         juce::AudioBuffer<float> &outputBuffer, int numSamples,
-                         juce::int64 playheadPosition,
-                         const RoutingGraph::Snapshot *snapshot,
-                         const std::string &nodeId);
-
-  void renderLiveTrack(int trackIdx, Track *track,
-                       juce::AudioBuffer<float> &outputBuffer, int numSamples,
-                       juce::int64 playheadPosition,
-                       const RoutingGraph::Snapshot *snapshot,
-                       const std::string &nodeId,
-                       const juce::MidiBuffer *incomingMidi,
-                       const TempoMap *tempoMap);
-
-  void renderAuxBus(const RoutingGraph::Snapshot *snapshot,
-                    const std::string &nodeId,
-                    std::span<AuxBus *const> auxBuses,
-                    juce::AudioBuffer<float> &outputBuffer, int numSamples);
-
-  // Aux bus buffers
-  std::vector<juce::AudioBuffer<float>> auxBusBuffers_;
-
-  // PDC state
-  // Note: PDC is disabled by default to avoid unexpected latency when adding
-  // plugins. Enable explicitly via setPDCEnabled(true) when latency
-  // compensation is needed.
+  // PDC enabled state (global setting)
   std::atomic<bool> pdcEnabled_{false};
-  std::atomic<int> maxTrackLatency_{0};
-  std::vector<int> trackLatencies_;
-  std::vector<juce::AudioBuffer<float>> pdcDelayBuffers_;
-  std::vector<int> pdcDelayWritePos_;
 
   // Metering (atomic for lock-free GUI access)
   std::atomic<float> masterLevel_{0.0f};
@@ -250,11 +266,6 @@ private:
 
   // Dither
   zenith::dsp::Dither dither_;
-
-  // [DSP Optimization] Pre-allocated vector for aux buffers to avoid RT
-  // allocations (Bug 69)
-  // Reserved in prepare()
-  std::vector<juce::AudioBuffer<float> *> auxBufferPtrsVector_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioRenderer)
 };

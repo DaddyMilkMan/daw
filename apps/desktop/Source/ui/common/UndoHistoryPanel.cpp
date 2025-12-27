@@ -27,7 +27,7 @@ UndoHistoryPanel::UndoHistoryPanel(ProjectState& projectState)
     
     setSize(280, 200);
     updateCachedPaints();
-    startTimerHz(10);  // Slower update rate - history doesn't change that often
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(10);  // Slower update rate - history doesn't change that often
 }
 
 UndoHistoryPanel::~UndoHistoryPanel() {

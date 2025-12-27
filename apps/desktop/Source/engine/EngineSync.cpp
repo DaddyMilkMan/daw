@@ -29,46 +29,11 @@ const zenith::TempoMap &Engine::getTempoMap() const noexcept {
 
 //==============================================================================
 // Plugin Delay Compensation (PDC)
+// NOTE: Latency data is stored in liveContext_, not AudioRenderer members.
 //==============================================================================
 
-int Engine::getTrackLatency(int trackIndex) const {
-  if (audioRenderer_) {
-    return audioRenderer_->getTrackLatency(trackIndex);
-  }
-  return 0;
-}
-
-int Engine::getMasterLatency() const {
-  if (audioRenderer_) {
-    return audioRenderer_->getMasterLatency();
-  }
-  return 0;
-}
-
-void Engine::setPDCEnabled(bool enabled) {
-  if (audioRenderer_) {
-    audioRenderer_->setPDCEnabled(enabled);
-  }
-}
-
-bool Engine::isPDCEnabled() const {
-  return audioRenderer_ ? audioRenderer_->isPDCEnabled() : false;
-}
-
-int Engine::getMaxTrackLatency() const {
-  return audioRenderer_ ? audioRenderer_->getMaxTrackLatency() : 0;
-}
-
-void Engine::recalculatePDC() {
-  if (audioRenderer_) {
-    // Build raw pointer vector for AudioRenderer
-    std::vector<Track *> trackPtrs;
-    trackPtrs.reserve(tracks_.size());
-    for (const auto &t : tracks_)
-      trackPtrs.push_back(t.get());
-
-    audioRenderer_->calculatePDC(trackPtrs);
-  }
-}
+// These are now defined in EngineMixing.cpp to avoid ODR violations.
+// setPDCEnabled, isPDCEnabled also moved to EngineMixing.cpp
 
 } // namespace zenith
+

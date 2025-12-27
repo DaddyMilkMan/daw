@@ -9,6 +9,11 @@
 #include "ArrangerGridUtils.h"
 #include "ProjectState.h"
 #include "../../utils/StemSeparationJob.h"
+#include "../controls/SkiaPopupMenu.h"
+#include "../controls/ContextMenuManager.h"
+#include "../controls/SkiaAlertWindow.h"
+#include "../design-system/ZenithDesignSystem.h"
+#include "../design-system/ColorBridge.h"
 
 #include <juce_events/juce_events.h>
 #include <cmath>
@@ -52,24 +57,140 @@ void ArrangerInputHandler::mouseDown(const juce::MouseEvent& e) {
 
     auto* clip = clipManager_.findClipAtPoint(e.position);
 
-    if (clip != nullptr) {
-        if (e.mods.isRightButtonDown()) {
-            // Context Menu
-            juce::PopupMenu menu;
-            menu.addItem(1, "Rip Audio to Stems (Neural)");
-            menu.addItem(2, "Duplicate Clip", true, false);
-            menu.addItem(3, "Delete Clip", true, false);
 
+
+    // Split Tool Behavior
+    if (owner_.getTool() == ArrangerTool::Split) {
+        if (clip != nullptr) {
+            double splitBeats = gridUtils_.xToBeats(e.position.x);
+            if (!e.mods.isShiftDown()) {
+                splitBeats = gridUtils_.snapToGrid(splitBeats);
+            }
+            
+            juce::int64 splitSamples = gridUtils_.beatsToSamples(splitBeats);
+            projectState_.getUndoManager().beginNewTransaction("Split Clip");
+            projectState_.splitClip(clip->trackId, clip->clipId, splitSamples, "Split Clip");
+            
+            owner_.repaint();
+        }
+        return; 
+    }
+
+    if (clip != nullptr) {
+        // Check Fade Handles (Priority over move)
+        float ppb = owner_.pixelsPerBeat;
+        float fadeInX = clip->bounds.getX() + (float)(clip->fadeInBeats * ppb);
+        float fadeOutX = clip->bounds.getRight() - (float)(clip->fadeOutBeats * ppb);
+        float handleY = clip->bounds.getY(); // Top edge
+        
+        // Hit test radius
+        if (e.position.getDistanceFrom({fadeInX, handleY}) < 10.0f) {
+            currentDragMode_ = DragMode::ResizeFadeIn;
+            resizingClipId_ = clip->clipId;
+            return;
+        }
+        if (e.position.getDistanceFrom({fadeOutX, handleY}) < 10.0f) {
+            currentDragMode_ = DragMode::ResizeFadeOut;
+            resizingClipId_ = clip->clipId;
+            return;
+        }
+
+        if (e.mods.isRightButtonDown()) {
+            // Enhanced Skia Context Menu for clips
+            auto menu = ContextMenuManager::createMenu();
+            
             juce::String clipId = clip->clipId;
-            menu.showMenuAsync(juce::PopupMenu::Options(), [this, clipId](int result) {
-                if (result == 1) {
-                    ripAudioToStems(clipId);
-                } else if (result == 2) {
-                    clipManager_.duplicateSelectedClips();
-                } else if (result == 3) {
-                    clipManager_.deleteSelectedClips();
-                }
-            });
+            bool isAudioClip = !clip->isMidi;
+            
+            // Editing section
+            menu->addSectionHeader("Edit");
+            
+            menu->addItemWithShortcut(1, "Duplicate", "Ctrl+D", true, 
+                [this]() { clipManager_.duplicateSelectedClips(); });
+            
+            menu->addItemWithShortcut(2, "Split at Playhead", "Cmd+E", true,
+                [this, clipId]() { 
+                    clipManager_.splitSelectedClipsAtPlayhead();
+                });
+            
+            menu->addItem(3, "Consolidate Selected", true, false,
+                [this]() { 
+                    juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::InfoIcon,
+                        "Consolidate", "Consolidation feature coming soon!");
+                });
+            
+            menu->addSeparator();
+            
+            // Audio-specific options
+            if (isAudioClip) {
+                menu->addSectionHeader("Audio");
+                
+                menu->addItem(10, "Split to Stems", true, false,
+                    [this, clipId]() { ripAudioToStems(clipId); });
+                
+                menu->addItem(11, "Render to Audio", true, false,
+                    [this, clipId]() { 
+                         juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::InfoIcon,
+                            "Render", "Render to audio feature coming soon!");
+                    });
+                
+                menu->addItem(12, "Detect Tempo", true, false,
+                    [this, clipId]() {
+                        juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::InfoIcon,
+                            "Tempo Detection", "Tempo detection coming soon!");
+                    });
+                
+                menu->addSeparator();
+            }
+            
+            // Appearance section
+            menu->addSectionHeader("Appearance");
+            
+            // Color submenu
+            auto colorMenu = ContextMenuManager::createMenu();
+            int colorId = 100;
+            for (int i = 0; i < 8; ++i) {
+                auto c = design::unified::getTrackColor(i);
+                colorMenu->addItem(colorId++, "", true, false, [this, clipId, c]() {
+                     projectState_.setClipColor(clipId, design::toJuceColour(c));
+                     owner_.repaint();
+                });
+            }
+            menu->addSubMenu("Set Color", std::move(colorMenu));
+            
+            menu->addItem(20, "Rename...", true, false,
+                [this, clipId, clip]() {
+                    auto* alert = new SkiaAlertWindow("Rename Clip", "Enter a new name for the clip:", SkiaAlertWindow::IconType::QuestionIcon);
+                    alert->addTextEditor("name", projectState_.getClipName(clipId), "Clip Name:");
+                    alert->addButton("Rename", SkiaAlertWindow::Result::Button1);
+                    alert->addButton("Cancel", SkiaAlertWindow::Result::Cancelled, SkiaButton::Style::Secondary);
+                    
+                    alert->showAsync([this, clipId, alert](SkiaAlertWindow::Result result) {
+                        if (result == SkiaAlertWindow::Result::Button1) {
+                            juce::String newName = alert->getTextEditorContents("name");
+                            if (newName.isNotEmpty()) {
+                                projectState_.renameClip(clipId, newName);
+                                owner_.repaint();
+                            }
+                        }
+                        delete alert;
+                    });
+                    
+                    owner_.addAndMakeVisible(alert);
+                    alert->setCentreRelative(0.5f, 0.45f);
+                });
+            
+            menu->addSeparator();
+            
+            // Danger zone
+            menu->addItemComplete(99, "Delete", SkPath(), "Del", true, false, true,
+                [this]() { clipManager_.deleteSelectedClips(); });
+            
+            // Show menu at click position
+            ContextMenuManager::getInstance().showMenuAt(
+                std::move(menu), &owner_, 
+                static_cast<int>(e.position.x), 
+                static_cast<int>(e.position.y));
             return;
         }
 
@@ -282,7 +403,23 @@ void ArrangerInputHandler::mouseDrag(const juce::MouseEvent& e) {
         return;
     }
 
-    if (currentDragMode_ == DragMode::MoveClips) {
+    if (currentDragMode_ == DragMode::ResizeFadeIn) {
+        if (auto* view = clipManager_.findClipView(resizingClipId_)) {
+             double clipStartX = gridUtils_.beatsToX(view->startBeats);
+             double newFadeIn = gridUtils_.xToBeats(e.position.x - clipStartX);
+             newFadeIn = std::max(0.0, std::min(newFadeIn, view->lengthBeats));
+             projectState_.setClipFade(resizingClipId_, newFadeIn, view->fadeOutBeats, "Resize Fade In");
+             owner_.repaint();
+        }
+    } else if (currentDragMode_ == DragMode::ResizeFadeOut) {
+         if (auto* view = clipManager_.findClipView(resizingClipId_)) {
+            double clipEndX = gridUtils_.beatsToX(view->startBeats + view->lengthBeats);
+            double newFadeOut = gridUtils_.xToBeats(clipEndX - e.position.x);
+            newFadeOut = std::max(0.0, std::min(newFadeOut, view->lengthBeats));
+            projectState_.setClipFade(resizingClipId_, view->fadeInBeats, newFadeOut, "Resize Fade Out");
+            owner_.repaint();
+        }
+    } else if (currentDragMode_ == DragMode::MoveClips) {
         handleClipMoveDrag(e);
     } else if (currentDragMode_ == DragMode::ResizeClipLeft) {
         handleClipResizeDrag(e, true);
@@ -478,11 +615,29 @@ void ArrangerInputHandler::commitClipResize() {
 void ArrangerInputHandler::mouseMove(const juce::MouseEvent& e) {
     auto* clip = clipManager_.findClipAtPoint(e.position);
 
+    // Split Tool Cursor
+    if (owner_.getTool() == ArrangerTool::Split) {
+        owner_.setMouseCursor(juce::MouseCursor::IBeamCursor);
+        return;
+    }
+
     if (owner_.macroToolbar) {
         owner_.macroToolbar->checkProximity(e.position);
     }
 
     if (clip != nullptr) {
+        // Check Fade Handles
+        float ppb = owner_.pixelsPerBeat;
+        float fadeInX = clip->bounds.getX() + (float)(clip->fadeInBeats * ppb);
+        float fadeOutX = clip->bounds.getRight() - (float)(clip->fadeOutBeats * ppb);
+        float handleY = clip->bounds.getY();
+        
+        if (e.position.getDistanceFrom({fadeInX, handleY}) < 10.0f ||
+            e.position.getDistanceFrom({fadeOutX, handleY}) < 10.0f) {
+            owner_.setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
+            return;
+        }
+
         if (clip->isInLeftResizeZone(e.position) || clip->isInRightResizeZone(e.position))
             owner_.setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
         else
@@ -616,6 +771,12 @@ bool ArrangerInputHandler::keyPressed(const juce::KeyPress& key) {
     // Ctrl/Cmd+D - Duplicate
     if (key.getModifiers().isCommandDown() && key.getKeyCode() == 'D') {
         clipManager_.duplicateSelectedClips();
+        return true;
+    }
+
+    // Cmd+E - Split at Playhead
+    if (key.getModifiers().isCommandDown() && key.getKeyCode() == 'E') {
+        clipManager_.splitSelectedClipsAtPlayhead();
         return true;
     }
 

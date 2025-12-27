@@ -27,7 +27,7 @@ target_sources(ZenithDAW PRIVATE
     UXDirectorAgent.h
     UXDirectorAgent.cpp
     SampleHunterAgent.h
-    SampleHunterAgent.h
+
     SampleHunterAgent.cpp
     PresetGeneticistAgent.h
     PresetGeneticistAgent.cpp

@@ -29,6 +29,7 @@
 #include <memory>
 #include <vector>
 
+namespace zenith {
 
 class ProjectState;
 class Engine;
@@ -236,3 +237,5 @@ private:
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArrangementComponent)
 };
+
+} // namespace zenith

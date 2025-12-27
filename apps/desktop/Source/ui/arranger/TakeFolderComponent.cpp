@@ -26,6 +26,11 @@ TakeFolderComponent::TakeFolderComponent(ProjectState &projectState,
       folderNode_(folderNode) {
   setMouseCursor(juce::MouseCursor::NormalCursor);
   folderNode_.addListener(this);
+
+  // Initialize cached fonts
+  cachedFont_ = design::getSkFont(12.0f, design::FontWeight::Medium);
+  cachedFontSmall_ = design::getSkFont(10.0f, design::FontWeight::Bold);
+  
   updateState();
 }
 
@@ -64,10 +69,9 @@ void TakeFolderComponent::setHeightPerLane(int height) {
 //==============================================================================
 
 void TakeFolderComponent::paint(juce::Graphics &g) {
-  // Fallback if Skia not waiting
+  // Pure Skia component - minimal JUCE fallback
   g.fillAll(ZenithTheme::Colors::bg_04);
-  g.setColour(ZenithTheme::Colors::text_secondary);
-  g.drawText("Take Folder (Skia Error)", getLocalBounds(), juce::Justification::centred);
+  DBG("TakeFolderComponent::paint - Skia rendering unavailable");
 }
 
 void TakeFolderComponent::drawSkia(SkCanvas *canvas) {
@@ -116,8 +120,7 @@ void TakeFolderComponent::drawCollapsed(SkCanvas *canvas) {
     juce::Colour txt = ZenithTheme::Colors::text_secondary;
     textPaint.setColor(SkColorSetARGB(txt.getAlpha(), txt.getRed(), txt.getGreen(), txt.getBlue()));
     textPaint.setAntiAlias(true);
-    SkFont font = typography::getSkFont(12.0f, FontWeight::Medium);
-    canvas->drawString("Comp (Empty)", 10, (float)getHeight() / 2 + 4, font, textPaint);
+    canvas->drawString("Comp (Empty)", 10, (float)getHeight() / 2 + 4, cachedFont_, textPaint);
     return;
   }
   
@@ -166,8 +169,7 @@ void TakeFolderComponent::drawCollapsed(SkCanvas *canvas) {
   juce::Colour success = ZenithTheme::Colors::success;
   textPaint.setColor(SkColorSetARGB(255, success.getRed(), success.getGreen(), success.getBlue()));
   textPaint.setAntiAlias(true);
-  SkFont font = typography::getSkFont(10.0f, FontWeight::Bold);
-  canvas->drawString("COMP", 4, 13, font, textPaint);
+  canvas->drawString("COMP", 4, 13, cachedFontSmall_, textPaint);
 }
 
 void TakeFolderComponent::drawExpanded(SkCanvas *canvas) {

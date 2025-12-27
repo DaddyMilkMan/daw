@@ -42,7 +42,10 @@ void BrowserPreviewEngine::releaseResources()
 
 void BrowserPreviewEngine::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
 {
-    if (!isPlaying_.load() || readerSource_ == nullptr)
+    // Use lock to prevent race with loadFile's swap
+    const juce::ScopedLock sl(lock_);
+
+    if (!isPlaying_.load())
     {
         bufferToFill.clearActiveBufferRegion();
         return;
@@ -80,41 +83,40 @@ void BrowserPreviewEngine::getNextAudioBlock(const juce::AudioSourceChannelInfo&
 
 void BrowserPreviewEngine::loadFile(const juce::File& file, bool autoPlay)
 {
-    const juce::ScopedLock sl(lock_);
-    
-    // Stop current playback
-    stop();
-    
-    if (!file.existsAsFile())
-    {
-        DBG("BrowserPreview: File does not exist: " + file.getFullPathName());
-        return;
-    }
-    
-    // Create reader
-    auto* reader = formatManager_.createReaderFor(file);
-    
-    if (reader == nullptr)
-    {
-        DBG("BrowserPreview: Could not create reader for: " + file.getFileName());
-        return;
-    }
-    
-    // Create new reader source
-    readerSource_ = std::make_unique<juce::AudioFormatReaderSource>(reader, true);
-    
-    // Connect to transport
-    transportSource_.setSource(readerSource_.get(), 0, nullptr, reader->sampleRate);
-    
-    currentFile_ = file;
-    
-    DBG("BrowserPreview: Loaded " + file.getFileName() + 
-        " (" + juce::String(getDuration(), 1) + "s)");
-    
-    if (autoPlay && autoPlayEnabled_.load())
-    {
-        play();
-    }
+    // Async load to prevent UI blocking
+    juce::Thread::launch([this, file, autoPlay]() {
+        if (!file.existsAsFile()) return;
+        
+        // Blocking I/O on background thread
+        auto* reader = formatManager_.createReaderFor(file);
+        
+        if (reader) {
+            // Update state on message thread
+            juce::MessageManager::callAsync([this, reader, file, autoPlay]() {
+                const juce::ScopedLock sl(lock_);
+                
+                stop();
+                
+                // readerSource_ is unique_ptr, replacing it deletes the old one
+                // AudioTransportSource must be updated first or safely
+                // setSource(nullptr) stops it from using the old reader
+                transportSource_.setSource(nullptr);
+                
+                readerSource_ = std::make_unique<juce::AudioFormatReaderSource>(reader, true);
+                
+                transportSource_.setSource(readerSource_.get(), 0, nullptr, reader->sampleRate);
+                currentFile_ = file;
+                
+                DBG("BrowserPreview: Loaded " + file.getFileName() + 
+                    " (" + juce::String(getDuration(), 1) + "s)");
+                
+                if (autoPlay && autoPlayEnabled_.load())
+                {
+                    play();
+                }
+            });
+        }
+    });
 }
 
 void BrowserPreviewEngine::loadItem(std::shared_ptr<BrowserItem> item, bool autoPlay)

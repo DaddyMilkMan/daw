@@ -22,6 +22,7 @@
 
 // Zenith Includes
 #include "../browser/BrowserDragSource.h"
+#include "GridResolutionDropdown.h"
 #include "ZenithDesignSystem.h"
 
 // JUCE Includes
@@ -65,11 +66,19 @@ ArrangerComponent::ArrangerComponent(Engine& eng, ProjectState& ps)
     clipManager_->rebuildClipViews();
 
     // Start timer for playhead position updates (60Hz for smooth visual feedback)
-    startTimerHz(60);
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60);
 
     // Initialize Macro Toolbar
     macroToolbar = std::make_unique<MacroToolbar>(engine_, projectState);
     addChildComponent(macroToolbar.get());
+
+    // Initialize Grid Dropdown
+    gridDropdown = std::make_unique<GridResolutionDropdown>();
+    addAndMakeVisible(gridDropdown.get());
+    gridDropdown->setResolution(gridResolution_);
+    gridDropdown->onResolutionChanged = [this](GridResolution res) {
+        setGridResolution(res);
+    };
 
     // Initialize MiniMap
     addAndMakeVisible(&miniMap);
@@ -79,6 +88,15 @@ ArrangerComponent::ArrangerComponent(Engine& eng, ProjectState& ps)
     addAndMakeVisible(timelineRuler);
     timelineRuler.onSeek = [this](double beat) {
         engine_.setPlayheadSamples(gridUtils_->beatsToSamples(beat));
+    };
+    
+    timelineRuler.onLoopChanged = [this](double start, double end) {
+        if (end <= start) end = start + 0.25;
+        juce::int64 startSamples = gridUtils_->beatsToSamples(start);
+        juce::int64 endSamples = gridUtils_->beatsToSamples(end);
+        
+        engine_.setLoopRegion(startSamples, endSamples);
+        if (!engine_.isLooping()) engine_.setLooping(true);
     };
 
     macroToolbar->getSelectedClipIds = [this]() { 
@@ -178,6 +196,10 @@ void ArrangerComponent::resized() {
     if (sectionTrack) {
         sectionTrack->setBounds(HEADER_WIDTH, 0, getWidth() - HEADER_WIDTH,
                                 static_cast<int>(SECTION_HEIGHT));
+    }
+    
+    if (gridDropdown) {
+        gridDropdown->setBounds(HEADER_WIDTH - 80, SECTION_HEIGHT + 3, 70, RULER_HEIGHT - 6);
     }
 
     timelineRuler.setBounds(HEADER_WIDTH, SECTION_HEIGHT, getWidth() - HEADER_WIDTH, RULER_HEIGHT);
@@ -316,9 +338,14 @@ void ArrangerComponent::updatePlayheadFromEngine() {
         timelineRuler.setVisibleRange(viewStartBeats, (getWidth() - HEADER_WIDTH) / pixelsPerBeat);
 
         repaint();
-    } else if (wasLoopEnabled != loopEnabled_) {
+    }
+
+    if (wasLoopEnabled != loopEnabled_) {
         repaint();
     }
+    
+    // Sync loop state to ruler
+    timelineRuler.setLoopRange(loopStartBeats_, loopEndBeats_, loopEnabled_);
 }
 
 //==============================================================================

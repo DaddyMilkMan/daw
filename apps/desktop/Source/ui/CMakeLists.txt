@@ -39,6 +39,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerInputHandler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerClipManager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerGridUtils.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/GridResolutionDropdown.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerTrackComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ClipComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/TakeFolderComponent.cpp
@@ -56,6 +57,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/mixer/MixerComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/mixer/MixerChannelComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/mixer/MixerView.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/mixer/PluginBrowser.cpp
 )
 
 # -----------------------------------------------------------------------------
@@ -87,6 +89,13 @@ target_sources(ZenithDAW PRIVATE
 # -----------------------------------------------------------------------------
 target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/browser/BrowserPanel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/browser/BrowserWaveformLoader.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/browser/BrowserFilterBar.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/browser/BrowserSearchBar.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/browser/BrowserListView.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/browser/BrowserPreviewPanel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/browser/BrowserHoverPreview.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/browser/BrowserRecentSidebar.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/browser/PluginBrowserComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/browser/PresetBrowserComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/browser/InstrumentBrowserPanel.cpp
@@ -119,6 +128,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/common/PluginEditorWindow.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/PianoKeyboardViewSkia.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/AIAssistantPanel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/HelpViewPanel.cpp
 )
 
 # -----------------------------------------------------------------------------
@@ -142,9 +152,6 @@ target_sources(ZenithDAW PRIVATE
 # -----------------------------------------------------------------------------
 target_sources(ZenithDAW PRIVATE
     # Core Skia widgets
-    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaButton.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaKnob.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaSlider.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaSpectrumComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/controls/DebugConsoleComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/controls/DeviceChainComponent.cpp
@@ -171,6 +178,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaLabel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaListBox.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaPopupMenu.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ContextMenuManager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaTextEditor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/controls/CollabPanel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/controls/FreezeProgressOverlay.cpp
