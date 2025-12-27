@@ -151,6 +151,14 @@ private:
     void drawPlayhead(SkCanvas* canvas, float width, float height);
     
     /**
+     * @brief Draw loop region with bracket markers and highlight
+     * @param canvas Skia canvas
+     * @param width Component width
+     * @param height Component height
+     */
+    void drawLoopRegion(SkCanvas* canvas, float width, float height);
+    
+    /**
      * @brief Draw insertion guide for Ripple/Insert edit modes
      * @param canvas Skia canvas
      * @param height Component height

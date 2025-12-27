@@ -9,6 +9,7 @@
 */
 
 #include "PluginChain.h"
+#include "RealTimeGarbageCollector.h"
 #include <algorithm>
 
 namespace zenith {
@@ -79,6 +80,7 @@ void PluginChain::process(juce::AudioBuffer<float> &buffer,
     return;
 
   const int numSamples = buffer.getNumSamples();
+  const int numMainChannels = buffer.getNumChannels();
 
   // Process parameter automation
   for (const auto& binding : snapshot->bindings) {
@@ -88,28 +90,39 @@ void PluginChain::process(juce::AudioBuffer<float> &buffer,
   for (const auto &plugin : snapshot->plugins) {
     if (plugin && !plugin->isSuspended()) {
       // Check if plugin has sidechain inputs and sidechain data is available
-      const int numInputChannels = plugin->getTotalNumInputChannels();
-      const int numMainInputs = 2; // Assuming stereo main
-
-      if (sidechain != nullptr && numInputChannels > numMainInputs) {
-        if (sidechainProxyBuffer_.getNumChannels() < numInputChannels || 
+      const int numTotalInputChannels = plugin->getTotalNumInputChannels();
+      
+      // If the plugin has more inputs than our main bus, assume the rest are sidechain/aux
+      if (sidechain != nullptr && numTotalInputChannels > numMainChannels) {
+        // Ensure proxy buffer is big enough
+        if (sidechainProxyBuffer_.getNumChannels() < numTotalInputChannels || 
             sidechainProxyBuffer_.getNumSamples() < numSamples) {
-            sidechainProxyBuffer_.setSize(numInputChannels, numSamples, false, true, true);
+            sidechainProxyBuffer_.setSize(numTotalInputChannels, numSamples, false, true, true);
         }
 
-        for (int i = 0;
-             i < juce::jmin(buffer.getNumChannels(), numInputChannels); ++i)
+        // Copy main channels
+        for (int i = 0; i < numMainChannels; ++i)
           sidechainProxyBuffer_.copyFrom(i, 0, buffer, i, 0, numSamples);
-
-        for (int i = 0; i < juce::jmin(sidechain->getNumChannels(),
-                                       numInputChannels - numMainInputs);
-             ++i)
-          sidechainProxyBuffer_.copyFrom(numMainInputs + i, 0, *sidechain, i, 0,
+          
+        // Silence any gaps between main channels and sidechain start if any?
+        // Assuming sidechain inputs start immediately after main inputs.
+        
+        // Copy sidechain channels
+        const int numSidechainChansToCopy = juce::jmin(sidechain->getNumChannels(),
+                                                       numTotalInputChannels - numMainChannels);
+        
+        for (int i = 0; i < numSidechainChansToCopy; ++i)
+          sidechainProxyBuffer_.copyFrom(numMainChannels + i, 0, *sidechain, i, 0,
                                      numSamples);
+                                     
+        // Clear any remaining unconnected channels
+        for (int i = numMainChannels + numSidechainChansToCopy; i < numTotalInputChannels; ++i)
+           sidechainProxyBuffer_.clear(i, 0, numSamples);
 
         plugin->processBlock(sidechainProxyBuffer_, midi);
 
-        for (int i = 0; i < buffer.getNumChannels(); ++i)
+        // Copy back main channels
+        for (int i = 0; i < numMainChannels; ++i)
           buffer.copyFrom(i, 0, sidechainProxyBuffer_, i, 0, numSamples);
       } else {
         plugin->processBlock(buffer, midi);
@@ -122,7 +135,8 @@ void PluginChain::prepareToPlay(double sampleRate, int blockSize) {
   currentSampleRate_ = sampleRate;
   currentBlockSize_ = blockSize;
 
-  int maxChannels = 2;
+  // Initial maxChannels based on current configuration if known, or start small and grow
+  int maxChannels = 2; // Default minimum
   for (auto &p : pluginsOwned_) {
     p->prepareToPlay(sampleRate, blockSize);
     p->setNonRealtime(false);
@@ -146,11 +160,8 @@ void PluginChain::updateSnapshot() {
   auto newSnapshot = std::make_shared<PluginSnapshot>(pluginsOwned_, bindingsOwned_);
   activeSnapshot_.store(newSnapshot.get(), std::memory_order_release);
   
-  snapshotTrash_.push_back(currentSnapshot_);
+  RealTimeGarbageCollector::getInstance().deferDelete(currentSnapshot_);
   currentSnapshot_ = newSnapshot;
-  
-  if (snapshotTrash_.size() > 10)
-      snapshotTrash_.erase(snapshotTrash_.begin());
 }
 
 std::shared_ptr<PluginAutomationBinding> PluginChain::findBinding(int pluginIndex, int paramIndex) {
@@ -233,11 +244,10 @@ PluginChain::getAutomatableParameters(int pluginIndex) const {
       info.label = param->getLabel();
       info.defaultValue = param->getDefaultValue();
 
-      if (auto* ranged = dynamic_cast<juce::RangedAudioParameter*>(param)) {
-        auto range = ranged->getNormalisableRange();
-        info.minValue = range.start;
-        info.maxValue = range.end;
-      }
+      // Without RTTI (-fno-rtti), we cannot use dynamic_cast.
+      // Assume normalized 0-1 range for all parameters.
+      info.minValue = 0.0f;
+      info.maxValue = 1.0f;
 
       result.push_back(info);
     }

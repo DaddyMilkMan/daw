@@ -92,9 +92,10 @@ public:
   juce::ValueTree toValueTree() const;
   void fromValueTree(const juce::ValueTree &state);
 
-private:
   //==============================================================================
   // Snapshot for lock-free read access
+  // Made public so Engine and AudioExporter can access it
+public:
   struct Topology {
     std::vector<Connection> connections;
     std::vector<juce::String> processingOrder;
@@ -115,6 +116,8 @@ private:
         : nodes(n), topology(t) {}
   };
 
+private:
+
   // Owning data (message thread only, protected by lock)
   std::unordered_map<std::string, Node> nodes_;
   std::vector<Connection> connections_;
@@ -131,6 +134,7 @@ private:
   // Helper to update snapshot after modification
   void updateSnapshot();
 
+public:
   // Get current snapshot (lock-free)
   const Snapshot *getSnapshot() const {
     return activeSnapshot_.load(std::memory_order_acquire);

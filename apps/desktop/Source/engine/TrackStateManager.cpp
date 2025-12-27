@@ -50,6 +50,41 @@ TrackStateManager::TrackStateManager(ProjectState &projectState)
 
 juce::String TrackStateManager::addTrack(const juce::String &name,
                                          const juce::String &type) {
+  return insertTrackAt(-1, name, type, "Add Track");
+}
+
+juce::String TrackStateManager::insertTrackAbove(const juce::String &targetTrackId,
+                                                 const juce::String &type,
+                                                 const juce::String &actionName) {
+  auto tracksNode = getTracksContainer();
+  if (!tracksNode.isValid())
+    return {};
+
+  auto target = findTrack(targetTrackId);
+  int index = tracksNode.indexOf(target);
+  if (index < 0) index = 0;
+
+  return insertTrackAt(index, "New " + type + " Track", type, actionName);
+}
+
+juce::String TrackStateManager::insertTrackBelow(const juce::String &targetTrackId,
+                                                 const juce::String &type,
+                                                 const juce::String &actionName) {
+  auto tracksNode = getTracksContainer();
+  if (!tracksNode.isValid())
+    return {};
+
+  auto target = findTrack(targetTrackId);
+  int index = tracksNode.indexOf(target);
+  if (index < 0) index = -1;
+  else index++;
+
+  return insertTrackAt(index, "New " + type + " Track", type, actionName);
+}
+
+juce::String TrackStateManager::insertTrackAt(int index, const juce::String &name,
+                                              const juce::String &type,
+                                              const juce::String &actionName) {
   auto tracksNode = getTracksContainer();
   if (!tracksNode.isValid())
     return {};
@@ -85,9 +120,10 @@ juce::String TrackStateManager::addTrack(const juce::String &name,
   track.addChild(automationNode, -1, nullptr);
 
   // Add with undo
-  tracksNode.addChild(track, -1, &projectState_.getUndoManager());
+  projectState_.getUndoManager().beginNewTransaction(actionName);
+  tracksNode.addChild(track, index, &projectState_.getUndoManager());
 
-  DBG("TrackStateManager: Added track '" + name + "' (ID: " + trackId + ")");
+  DBG("TrackStateManager: Inserted track '" + name + "' at index " + juce::String(index) + " (ID: " + trackId + ")");
 
   return trackId;
 }

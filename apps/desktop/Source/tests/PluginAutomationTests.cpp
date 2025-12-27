@@ -26,14 +26,14 @@ namespace tests {
 class MockPluginWithParameters : public StubAudioPlugin {
 public:
   MockPluginWithParameters() {
-    addParameter(new juce::AudioParameterFloat("gain", "Gain", 0.0f, 1.0f, 0.5f));
-    addParameter(new juce::AudioParameterFloat("cutoff", "Cutoff", 20.0f, 20000.0f, 1000.0f));
+    addTestParameter(new juce::AudioParameterFloat(juce::ParameterID("gain", 1), "Gain", 0.0f, 1.0f, 0.5f));
+    addTestParameter(new juce::AudioParameterFloat(juce::ParameterID("cutoff", 1), "Cutoff", 20.0f, 20000.0f, 1000.0f));
   }
 };
 
 class PluginAutomationTests : public juce::UnitTest {
 public:
-  PluginAutomationTests() : juce::UnitTest("PluginAutomationTests") {}
+  PluginAutomationTests() : juce::UnitTest("PluginAutomationTests", "Automation") {}
 
   void runTest() override {
     beginTest("Binding Creation");

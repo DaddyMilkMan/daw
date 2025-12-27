@@ -18,6 +18,7 @@ target_sources(ZenithDAW PRIVATE
     AuxBusTrack.cpp
     ClipTrack.cpp
     InstrumentTrack.cpp
+    TrackProcessor.cpp
     MixerChannel.cpp
     MixerController.cpp
     AudioFilePool.cpp
@@ -38,6 +39,7 @@ target_sources(ZenithDAW PRIVATE
     AudioAsMidiBridge.cpp
     $<$<BOOL:${ZENITH_USE_ONNX_RUNTIME}>:ONNXStemSeparator.cpp>
     PropertyExchangeManager.cpp
+    RealTimeGarbageCollector.cpp
     
     # Modular Engine Components (2025-12-11 Refactor)
     AudioRenderer.cpp

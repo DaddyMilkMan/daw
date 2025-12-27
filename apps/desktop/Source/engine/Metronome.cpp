@@ -21,6 +21,7 @@ void Metronome::prepareToPlay(double sampleRate, int samplesPerBlock) {
   sampleRate_ = sampleRate;
   currentNoteSamplesRemaining_ = 0;
   currentPhase_ = 0.0f;
+  lastBeat_ = -1.0;
 }
 
 void Metronome::releaseResources() {}
@@ -46,8 +47,8 @@ int Metronome::getCountInBars() const { return countInBars_.load(); }
 void Metronome::triggerClick(float frequency) {
   currentFrequency_ = frequency;
   // Calculate phase increment: freq * 2pi / sampleRate
-  phaseIncrement_ = (frequency * juce::MathConstants<float>::twoPi) /
-                    static_cast<float>(sampleRate_);
+  float safeSampleRate = std::max(1.0f, static_cast<float>(sampleRate_));
+  phaseIncrement_ = (frequency * juce::MathConstants<float>::twoPi) / safeSampleRate;
 
   // Reset or smooth phase? Hard reset for click consistency
   currentPhase_ = 0.0f;
@@ -100,23 +101,21 @@ void Metronome::getNextAudioBlock(juce::AudioBuffer<float> &bufferToFill,
     // Optimization: Don't call `beatsToSamples` every sample.
     // But `tempoMap.samplesToBeats` is fast (linear map lookup).
 
-    static double lastBeat = -1.0;
-
-    // Initialize lastBeat on first run or discontinuity
-    if (i == 0) {
+    // Initialize lastBeat_ on first run or discontinuity
+    if (i == 0 && lastBeat_ < 0.0) {
       // Look back one sample to establish state
-      lastBeat = tempoMap.samplesToBeats(samplePos - 1, sampleRate_);
+      lastBeat_ = tempoMap.samplesToBeats(samplePos - 1, sampleRate_);
     }
 
     double thisSampleBeat = currentBeat;
 
     // Check for integer crossing
-    if (std::floor(thisSampleBeat) > std::floor(lastBeat)) {
+    if (std::floor(thisSampleBeat) > std::floor(lastBeat_)) {
       // Trigger!
       int beatIndex = static_cast<int>(std::floor(thisSampleBeat));
 
       // Get Time Signature from TempoMap properly
-      int numerator = tempoMap.getTimeSignatureNumerator();
+      int numerator = std::max(1, tempoMap.getTimeSignatureNumerator());
 
       if (beatIndex % numerator == 0)
         triggerClick(kHighClickFreq);
@@ -124,7 +123,7 @@ void Metronome::getNextAudioBlock(juce::AudioBuffer<float> &bufferToFill,
         triggerClick(kLowClickFreq);
     }
 
-    lastBeat = thisSampleBeat;
+    lastBeat_ = thisSampleBeat;
 
     // Synthesis
     float sampleValue = 0.0f;
@@ -133,8 +132,10 @@ void Metronome::getNextAudioBlock(juce::AudioBuffer<float> &bufferToFill,
       float sineWave = std::sin(currentPhase_);
 
       // Apply envelope (simple exponential decay)
+      float safeSampleRate = std::max(1.0f, static_cast<float>(sampleRate_));
       float envelope = static_cast<float>(currentNoteSamplesRemaining_) /
-                       (kClickDurationSec * sampleRate_);
+                       (kClickDurationSec * safeSampleRate);
+      envelope = juce::jlimit(0.0f, 1.0f, envelope);
       envelope = envelope * envelope; // Squared for faster decay
 
       sampleValue = sineWave * envelope * outputLevel;

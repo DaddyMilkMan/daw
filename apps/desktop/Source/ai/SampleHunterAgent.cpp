@@ -647,23 +647,26 @@ void SampleHunterAgent::refineGenreWithAI() {
                         "(one word each, comma separated) for finding samples.";
 
   std::atomic<bool> done{false};
-  grokClient_->sendChat(
-      prompt, GrokMode::Fast, {}, "You are a music style expert.",
-      [&](const juce::String &response) {
+  // Use callGrokAsync with Fast model
+  grokClient_->callGrokAsync(
+      prompt, "You are a music style expert.",
+      [&](juce::String response) {
         // Parse simple response "Subgenre: ... Keywords: ..."
-        if (response.isNotEmpty()) {
+        if (response.isNotEmpty() && response != "{}") {
           DBG("AI Genre Refinement: " + response);
         }
         done.store(true);
       },
-      [&](const GrokFunctionCall &) { done.store(true); },
-      [&](const juce::String &) { done.store(true); });
+      GrokAPIClient::ModelType::Fast);
 
+  // Wait with timeout (keep existing wait logic for thread safety)
   int w = 0;
   while (!done.load() && w < 20 && !threadShouldExit()) {
     wait(200);
     w++;
   }
+
+
 }
 
 void SampleHunterAgent::generateSearchQueries() {
@@ -686,20 +689,20 @@ void SampleHunterAgent::generateAiSearchQueries() {
       " samples. Format: Just the query strings, one per line.";
 
   std::atomic<bool> done{false};
-  grokClient_->sendChat(
-      prompt, GrokMode::Fast, {}, "You are a sample hunter.",
-      [&](const juce::String &response) {
+  // Use callGrokAsync with Fast model
+  grokClient_->callGrokAsync(
+      prompt, "You are a sample hunter.",
+      [&](juce::String response) {
         juce::StringArray lines;
         lines.addLines(response);
         for (auto &line : lines) {
           line = line.trim();
-          if (line.isNotEmpty())
+          if (line.isNotEmpty() && line != "{}")
             searchQueue_.add(line);
         }
         done.store(true);
       },
-      [&](const GrokFunctionCall &) { done.store(true); },
-      [&](const juce::String &) { done.store(true); });
+      GrokAPIClient::ModelType::Fast);
 
   int w = 0;
   while (!done.load() && w < 20 && !threadShouldExit()) {

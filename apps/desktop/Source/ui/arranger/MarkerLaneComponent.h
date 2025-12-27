@@ -20,6 +20,8 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include "ProjectState.h"
+#include "../framework/SkiaComponent.h"
+#include <core/SkCanvas.h>
 
 //==============================================================================
 namespace zenith {
@@ -35,7 +37,7 @@ namespace zenith {
  * - Double-click label to rename (via AlertWindow)
  * - Select marker + Delete/Backspace to remove
  */
-class MarkerLaneComponent : public juce::Component,
+class MarkerLaneComponent : public SkiaComponent,
                             private juce::ValueTree::Listener
 {
 public:
@@ -55,7 +57,7 @@ public:
     // Component interface
     //==========================================================================
 
-    void paint(juce::Graphics& g) override;
+    void drawSkia(SkCanvas* canvas) override;
     void resized() override;
 
     void mouseDown(const juce::MouseEvent& event) override;
@@ -98,13 +100,13 @@ private:
     /**
      * @brief Draw a marker
      */
-    void drawMarker(juce::Graphics& g, double timeBeats, const juce::String& name, 
+    void drawMarker(SkCanvas* canvas, double timeBeats, const juce::String& name, 
                    const juce::String& colorHex, bool selected) const;
 
     /**
      * @brief Draw all markers
      */
-    void drawMarkers(juce::Graphics& g) const;
+    void drawMarkers(SkCanvas* canvas) const;
 
     /**
      * @brief Track mouse movement for hover effects

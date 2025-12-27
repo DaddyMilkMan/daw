@@ -5,7 +5,7 @@
 #include "../network/GrokUtils.h"
 #include "../utils/StemSeparationJob.h"
 #include <juce_core/juce_core.h>
-#include <juce_data_structures/juce_data_structures.h>
+#include <juce_events/juce_events.h>
 
 
 namespace zenith {
@@ -20,6 +20,7 @@ public:
   AITests() : juce::UnitTest("AI Integration", "AI") {}
 
   void runTest() override {
+
     beginTest("Grok Malformed JSON Handling");
     {
       // 1. Clean JSON
@@ -119,6 +120,12 @@ public:
           buffer.setSample(ch, i, sample);
         }
       }
+      
+      // Configure evaluator to allow sine waves (Crest factor ~3dB)
+      // Default requirement is 6dB which causes sine waves to be marked as dead
+      ai::FitnessConfig config;
+      config.minDynamicRangeDb = 2.0f;
+      evaluator.setConfig(config);
 
       auto result = evaluator.evaluate(buffer, 44100.0);
       expect(!result.isDead);
@@ -147,27 +154,29 @@ public:
       auto &bus = ai::AIEventBus::getInstance();
       bus.resetStats();
 
-      bool eventReceived = false;
-      juce::String receivedPayload;
+      juce::WaitableEvent completionEvent;
+      auto eventReceived = std::make_shared<std::atomic<bool>>(false);
+      auto receivedPayload = std::make_shared<juce::String>();
 
       // Subscribe
       int subId = bus.subscribe(ai::AIEventType::SamplesFound, "TestSubscriber",
-                                [&](const ai::AIEvent &e) {
-                                  eventReceived = true;
-                                  receivedPayload = e.payload.toString();
+                                [eventReceived, receivedPayload, &completionEvent](const ai::AIEvent &e) {
+                                  *eventReceived = true;
+                                  *receivedPayload = e.payload.toString();
+                                  completionEvent.signal();
                                 });
 
       expect(subId > 0);
       expectEquals(bus.getSubscriberCount(ai::AIEventType::SamplesFound), 1);
 
-      // Publish (sync for test)
+      // Publish (async delivery)
       juce::var payload;
       payload = "test payload";
       bus.publish(ai::AIEventType::SamplesFound, "TestAgent", payload);
 
-      // Wait for async delivery
-      juce::Thread::sleep(100);
-
+      // Wait for async callback with explicit timeout (500ms)
+      bool signaled = completionEvent.wait(500);
+      
       // Verify
       auto stats = bus.getStats();
       expect(stats.totalPublished >= 1);
@@ -175,6 +184,10 @@ public:
       // Unsubscribe
       bus.unsubscribe(subId);
       expectEquals(bus.getSubscriberCount(ai::AIEventType::SamplesFound), 0);
+      
+      expect(signaled, "Async callback should have fired within timeout");
+      expect(eventReceived->load());
+      expectEquals(*receivedPayload, juce::String("test payload"));
     }
 
     beginTest("StemSeparationJob Lifecycle");
@@ -192,27 +205,38 @@ public:
               buffer.setSample(ch, i, rng.nextFloat() * 0.1f);
 
       juce::WavAudioFormat wavFormat;
+      auto options = juce::AudioFormatWriterOptions()
+                         .withSampleRate(44100.0)
+                         .withNumChannels(2)
+                         .withBitsPerSample(16);
+      std::unique_ptr<juce::OutputStream> fileStream(new juce::FileOutputStream(testFile));
       std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(
-          new juce::FileOutputStream(testFile), 44100.0, 2, 16, {}, 0));
+          fileStream, options));
       if (writer) {
           writer->writeFromAudioSampleBuffer(buffer, 0, buffer.getNumSamples());
           writer.reset();
       }
 
       juce::File outputDir = tempDir.getChildFile("zenith_test_stems");
+      juce::WaitableEvent completionEvent;
       bool completed = false;
       utils::StemSeparationJob::StemFiles results;
 
       auto job = new utils::StemSeparationJob(testFile, outputDir, [&](const utils::StemSeparationJob::StemFiles& res) {
           results = res;
           completed = true;
+          completionEvent.signal();
       });
 
       // Run job synchronously for test
       job->runJob();
       delete job;
 
+      // Wait for async callback with explicit timeout (2 seconds)
+      bool signaled = completionEvent.wait(2000);
+
       // Even if results.success is false (due to missing model), the job should have finished
+      expect(signaled || completed, "Job callback should have fired within timeout");
       expect(completed);
       
       // Cleanup

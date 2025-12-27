@@ -12,14 +12,23 @@
 
 namespace zenith {
 
+static RealTimeGarbageCollector* gInstance = nullptr;
+
 RealTimeGarbageCollector& RealTimeGarbageCollector::getInstance() {
-  static RealTimeGarbageCollector instance;
-  return instance;
+  if (gInstance == nullptr)
+      gInstance = new RealTimeGarbageCollector();
+  return *gInstance;
+}
+
+void RealTimeGarbageCollector::deleteInstance() {
+    delete gInstance;
+    gInstance = nullptr;
 }
 
 RealTimeGarbageCollector::RealTimeGarbageCollector() {
   // Run cleanup every 100ms
-  startTimer(100);
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr)
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(100);
 }
 
 RealTimeGarbageCollector::~RealTimeGarbageCollector() {

@@ -16,7 +16,7 @@
 #include <vector>
 
 #include "../../engine/EngineConstants.h"
-#include "MixerComponent.h"
+#include "../mixer/MixerComponent.h"
 #include "PianoKeyboardViewSkia.h"
 #include "SkiaComponent.h"
 

@@ -21,8 +21,9 @@ struct ONNXStemSeparator::Impl {
   juce::File modelPath;
 
 #ifdef ZENITH_USE_ONNX_RUNTIME
-  // ONNX Runtime session and environment
-  std::unique_ptr<Ort::Env> env;
+  // ONNX Runtime session and environment (Shared across instances)
+  static std::shared_ptr<Ort::Env> sharedEnv;
+  std::shared_ptr<Ort::Env> env;
   std::unique_ptr<Ort::Session> session;
   std::unique_ptr<Ort::SessionOptions> sessionOptions;
 
@@ -45,15 +46,24 @@ struct ONNXStemSeparator::Impl {
 #endif
 };
 
+#ifdef ZENITH_USE_ONNX_RUNTIME
+std::shared_ptr<Ort::Env> ONNXStemSeparator::Impl::sharedEnv = nullptr;
+#endif
+
 ONNXStemSeparator::ONNXStemSeparator() : pImpl(std::make_unique<Impl>()) {
 #ifdef ZENITH_USE_ONNX_RUNTIME
   try {
-    // Initialize ONNX Runtime environment
-    pImpl->env = std::make_unique<Ort::Env>(ORT_LOGGING_LEVEL_WARNING,
-                                            "ZenithStemSeparator");
-    pImpl->memoryInfo = std::make_unique<Ort::MemoryInfo>(
-        Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault));
-    DBG("ONNXStemSeparator: ONNX Runtime environment initialized [v" + juce::String(ORT_API_VERSION) + "]");
+    // Use shared ONNX Runtime environment
+    if (!Impl::sharedEnv) {
+        Impl::sharedEnv = std::make_shared<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "ZenithStemSeparator");
+    }
+    pImpl->env = Impl::sharedEnv;
+    
+    if (pImpl->env) {
+        pImpl->memoryInfo = std::make_unique<Ort::MemoryInfo>(
+            Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault));
+        DBG("ONNXStemSeparator: ONNX Runtime environment initialized [v" + juce::String(ORT_API_VERSION) + "]");
+    }
   } catch (const Ort::Exception &e) {
     DBG("ONNXStemSeparator: Failed to initialize ONNX Runtime - " +
         juce::String(e.what()));
@@ -435,6 +445,12 @@ juce::String ONNXStemSeparator::getModelInfo() const {
 
 juce::File ONNXStemSeparator::findDefaultModel() {
     return PlatformModelUtils::findDefaultModel();
+}
+
+void ONNXStemSeparator::shutdown() {
+#ifdef ZENITH_USE_ONNX_RUNTIME
+    Impl::sharedEnv.reset();
+#endif
 }
 
 } // namespace zenith

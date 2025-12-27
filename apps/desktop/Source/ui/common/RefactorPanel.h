@@ -309,7 +309,7 @@ public:
     animationPhase_ = 0.0f;
 
     // Start animation timer
-    startTimerHz(30);
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(30);
 
     // Run analysis
     agent_->analyze(

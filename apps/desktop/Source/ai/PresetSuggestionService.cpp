@@ -209,7 +209,7 @@ std::vector<PresetMetadata> PresetSuggestionService::performAISearch(const Sugge
             return {};
         }
 
-        jsonResponse = grokClient_->callGrok(prompt, systemMsg);
+        jsonResponse = grokClient_->callGrok(prompt, systemMsg, GrokAPIClient::ModelType::Fast);
         
         // Cache if valid
         if (jsonResponse.isNotEmpty() && jsonResponse != "{}") {

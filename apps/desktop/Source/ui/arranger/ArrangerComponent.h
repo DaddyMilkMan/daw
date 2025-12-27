@@ -29,6 +29,7 @@
 
 #include "../controls/FreezeProgressOverlay.h"
 #include "MacroToolbar.h"
+#include "ArrangerTypes.h"
 
 // Forward declaration for browser drag
 namespace zenith {
@@ -42,54 +43,16 @@ class ArrangerGridUtils;
 class ArrangerClipManager;
 class ArrangerInputHandler;
 class ArrangerTrackComponent;
+class GridResolutionDropdown;
 struct ClipView;
 
 #ifdef ZENITH_USE_SKIA
 class ArrangerRenderer;
 #endif
 
-//==============================================================================
-/**
- * @brief Grid resolution options for snapping
- */
-enum class GridResolution {
-  Bar_1 = 0, ///< 4 beats (in 4/4)
-  Beat_1,    ///< 1 beat (quarter note)
-  Beat_1_2,  ///< 1/2 beat (eighth note)
-  Beat_1_4,  ///< 1/4 beat (sixteenth note)
-  Beat_1_8,  ///< 1/8 beat (thirty-second)
-  Beat_1_3,  ///< 1/3 beat (triplet eighth)
-  Beat_1_6,  ///< 1/6 beat (triplet sixteenth)
-  Off        ///< No snap
-};
 
-/**
- * @brief Convert grid resolution to beat value
- * @param res Grid resolution enum value
- * @return Beat value (e.g., 4.0 for Bar_1, 1.0 for Beat_1)
- */
-inline double gridResolutionToBeats(GridResolution res) {
-  switch (res) {
-  case GridResolution::Bar_1:
-    return 4.0;
-  case GridResolution::Beat_1:
-    return 1.0;
-  case GridResolution::Beat_1_2:
-    return 0.5;
-  case GridResolution::Beat_1_4:
-    return 0.25;
-  case GridResolution::Beat_1_8:
-    return 0.125;
-  case GridResolution::Beat_1_3:
-    return 1.0 / 3.0;
-  case GridResolution::Beat_1_6:
-    return 1.0 / 6.0;
-  case GridResolution::Off:
-    return 0.0;
-  default:
-    return 1.0;
-  }
-}
+
+//==============================================================================
 
 //==============================================================================
 /**
@@ -185,6 +148,13 @@ public:
   void setGridResolution(GridResolution res);
   GridResolution getGridResolution() const { return gridResolution_; }
 
+  void setTool(ArrangerTool t) { currentTool_ = t; }
+  ArrangerTool getTool() const { return currentTool_; }
+
+  /** @brief Get access to the clip manager for collaboration features */
+  ArrangerClipManager* getClipManager() { return clipManager_.get(); }
+  const ArrangerClipManager* getClipManager() const { return clipManager_.get(); }
+
   //==========================================================================
   // Timer Interface
   //==========================================================================
@@ -204,8 +174,9 @@ private:
   // Core References
   //==========================================================================
 
+  std::unique_ptr<GridResolutionDropdown> gridDropdown;
   Engine &engine_;
-  zenith::ProjectState &projectState;
+  ProjectState &projectState;
 
   //==========================================================================
   // Helper Module Objects
@@ -239,6 +210,7 @@ private:
 
   double gridSnapBeats = 1.0;
   GridResolution gridResolution_ = GridResolution::Beat_1;
+  ArrangerTool currentTool_ = ArrangerTool::Select;
 
   //==========================================================================
   // Playhead State

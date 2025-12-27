@@ -22,6 +22,9 @@ namespace zenith {
 void Engine::syncWithProjectState() {
   DBG("Engine: Syncing with project state");
 
+  // Lock for exclusive access during sync
+  const juce::ScopedWriteLock lock(tracksLock_);
+
   if (projectState_ == nullptr) {
     DBG("Engine: No project state, clearing tracks");
     tracks_.clear();
@@ -126,6 +129,11 @@ void Engine::syncWithProjectState() {
       }
     }
 
+    // Prepare track for audio processing if engine is already running
+    if (sampleRate > 0) {
+      track->prepareToPlay(bufferSize, sampleRate);
+    }
+
     // Add track to engine
     track->setTrackIndex((int)tracks_.size());
     tracks_.push_back(std::move(track));
@@ -139,12 +147,22 @@ void Engine::syncWithProjectState() {
 
     // Automatically route track to master bus
     routingGraph_.connect(tracks_.back()->getTrackId(), "master", 1.0f);
+
+    // Register Engine as listener for PDC updates (plugin changes, etc.)
+    tracks_.back()->addChangeListener(this);
+  }
+
+  // Update snapshots
+  updateTrackSnapshot();
+
+  // Re-prepare AudioRenderer with new track/bus counts
+  if (audioRenderer_) {
+    // AudioRenderer is now stateless, so we prepare the context directly
+    liveContext_.prepare(currentSampleRate.load(), currentBufferSize.load(),
+                          tracks_.size(), auxBuses_.size());
   }
 
   DBG("Engine: Synced " + juce::String(tracks_.size()) + " tracks");
-
-  // Update snapshot for audio thread
-  updateTrackSnapshot();
 }
 
 int Engine::getNumTracks() const noexcept {
@@ -161,6 +179,8 @@ void Engine::addTestTracks(int count) {
     return;
 
   DBG("Engine: Adding " + juce::String(count) + " test tracks");
+
+  const juce::ScopedWriteLock lock(tracksLock_);
 
   // Reserve capacity to avoid reallocations
   tracks_.reserve(tracks_.size() + static_cast<size_t>(count));
@@ -235,7 +255,10 @@ juce::String Engine::createTrack(const juce::String &name,
 // Accept shared_ptr for RT-safe snapshot sharing across threads
 void Engine::addTrack(std::shared_ptr<zenith::Track> track) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   jassert(track != nullptr);
+
+  const juce::ScopedWriteLock lock(tracksLock_);
 
   // Prepare the track if audio is already running
   if (currentSampleRate.load() > 0) {
@@ -269,6 +292,9 @@ void Engine::addTrack(std::shared_ptr<zenith::Track> track) {
     routingGraph_.connect(id, "master", 1.0f);
   }
 
+  // Register Engine as listener for PDC updates
+  track->addChangeListener(this);
+
   DBG("Engine: Added track '" + name + "' (ID: " + id + ")");
 
   // Update Solo State (new track might need to be silenced if others are
@@ -284,12 +310,19 @@ void Engine::addTrack(std::shared_ptr<zenith::Track> track) {
 void Engine::removeTrack(int index) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  const juce::ScopedWriteLock lock(tracksLock_);
+
   if (index >= 0 && index < static_cast<int>(tracks_.size())) {
     juce::String name = tracks_[index]->getName();
     juce::String id = tracks_[index]->getTrackId();
 
     // Release resources
     tracks_[index]->releaseResources();
+    
+    // Unregister listener
+    tracks_[index]->removeChangeListener(this);
 
     // Remove from vector
     tracks_.erase(tracks_.begin() + index);
@@ -305,6 +338,18 @@ void Engine::removeTrack(int index) {
     // Update snapshot for audio thread
     updateTrackSnapshot();
   }
+}
+
+Track* Engine::getTrackById(const juce::String& trackId) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  
+  const juce::ScopedReadLock lock(tracksLock_);
+  for (const auto& track : tracks_) {
+    if (track && track->getTrackId() == trackId) {
+      return track.get();
+    }
+  }
+  return nullptr;
 }
 
 void Engine::updateTrackSnapshot() {
@@ -350,8 +395,8 @@ void Engine::prepareTracks(int samplesPerBlockExpected, double sampleRate) {
   }
 
   if (audioRenderer_) {
-    audioRenderer_->prepare(sampleRate, samplesPerBlockExpected, tracks_.size(),
-                            auxBuses_.size());
+    liveContext_.prepare(sampleRate, samplesPerBlockExpected, tracks_.size(),
+                          auxBuses_.size());
   }
 }
 

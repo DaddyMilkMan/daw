@@ -10,6 +10,9 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "TakeFolderComponent.h"
 #include <vector>
+#include "../controls/ZenithSlider.h"
+#include "../controls/ZenithKnob.h"
+#include "../controls/SkiaButton.h" 
 #include "../design-system/ZenithTheme.h"
 
 namespace zenith {
@@ -75,6 +78,12 @@ public:
   const ArrangementSection *getHoveredSection() const;
   const ArrangementSection *getDraggingSection() const;
 
+  std::function<void(const juce::String&)> onFreeze;
+  std::function<void(const juce::String&)> onUnfreeze;
+  std::function<void(const juce::String&)> onSeparateStems;
+  std::function<void(const juce::String&, const juce::String&)> onAutomationLaneRequested;
+  std::function<void(const juce::String&)> onHideAllAutomation;
+
 private:
   ProjectState &projectState;
   ArrangerGridUtils &gridUtils_;
@@ -94,6 +103,10 @@ private:
   // Interaction State
   bool isHovered_ = false;
   int hoveredButtonIndex_ = -1; // 0=Mute, 1=Solo, 2=Rec
+  
+  // Controls
+  std::unique_ptr<ZenithSlider> volSlider;
+  std::unique_ptr<ZenithKnob> panKnob;
 
   // Section Specific State
   std::vector<ArrangementSection> sections_; // Cache

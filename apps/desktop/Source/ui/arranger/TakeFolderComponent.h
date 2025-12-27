@@ -16,6 +16,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "SkiaComponent.h"
+#include <core/SkFont.h>
 #include "../../engine/ProjectState.h"
 #include "../../engine/TakeFolder.h"
 
@@ -105,6 +106,10 @@ private:
   void drawCollapsed(SkCanvas* canvas);
   void drawExpanded(SkCanvas* canvas);
   void drawTakeWaveform(SkCanvas* canvas, const juce::ValueTree& clipNode, SkRect bounds, SkColor color);
+
+  // Cached Resources
+  SkFont cachedFont_;
+  SkFont cachedFontSmall_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TakeFolderComponent)
 };

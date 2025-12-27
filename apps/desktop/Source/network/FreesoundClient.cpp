@@ -17,6 +17,7 @@
 */
 
 #include "FreesoundClient.h"
+#include <juce_events/juce_events.h>
 #include "SecureKeyStore.h"
 #include <juce_cryptography/juce_cryptography.h>
 
@@ -124,7 +125,7 @@ FreesoundClient::searchSounds(const juce::String &query, int page,
     sample.username = obj->getProperty("username").toString();
     sample.license = obj->getProperty("license").toString();
     sample.duration = static_cast<double>(obj->getProperty("duration"));
-    sample.fileSize = static_cast<int64_t>(obj->getProperty("filesize"));
+    sample.fileSize = static_cast<long long>(obj->getProperty("filesize"));
     sample.sampleRate = static_cast<int>(obj->getProperty("samplerate"));
     sample.bitDepth = static_cast<int>(obj->getProperty("bitdepth"));
     sample.type = obj->getProperty("type").toString();
@@ -328,6 +329,9 @@ FreesoundClient::executeRequest(const juce::URL &url) {
 }
 
 void FreesoundClient::enforceRateLimit() {
+  // Safety: This method sleeps, so it must NOT be run on the message thread
+  jassert(!juce::MessageManager::getInstance()->isThisTheMessageThread());
+
   int64_t now = juce::Time::getMillisecondCounter();
   int64_t elapsed = now - lastRequestTime_;
 

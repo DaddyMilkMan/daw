@@ -81,25 +81,28 @@ void ArrangerRenderer::drawSkia(SkCanvas* canvas) {
     // 2. Grid & Timeline
     drawGrid(canvas, width, height);
     
-    // 3. Section Highlight
+    // 3. Loop Region
+    drawLoopRegion(canvas, width, height);
+    
+    // 4. Section Highlight
     drawSectionHighlight(canvas, height);
     
-    // 4. Tracks (disabled - handled by TrackComponents)
+    // 5. Tracks (disabled - handled by TrackComponents)
     // drawTracks(canvas, width, height);
     
-    // 5. Clips
+    // 6. Clips
     drawClips(canvas, width, height);
     
-    // 6. Marquee Selection
+    // 7. Marquee Selection
     drawMarquee(canvas);
     
-    // 7. Section Track
+    // 8. Section Track
     drawSectionTrack(canvas);
     
-    // 8. Playhead
+    // 9. Playhead
     drawPlayhead(canvas, width, height);
     
-    // 9. Insertion Guide
+    // 10. Insertion Guide
     drawInsertionGuide(canvas, height);
 }
 
@@ -123,8 +126,14 @@ void ArrangerRenderer::drawGrid(SkCanvas* canvas, float width, float height) {
     double startBeat = std::floor(owner_.viewStartBeats);
     double endBeat = owner_.viewStartBeats + ((width - HEADER_WIDTH) / owner_.pixelsPerBeat);
     
-    // Optimization: Don't draw every beat if zoomed out too far
-    double beatStep = (owner_.pixelsPerBeat < 20.0) ? 4.0 : 1.0;
+    // Grid Step Calculation
+    double gridStep = owner_.gridSnapBeats;
+    if (gridStep <= 0.0) gridStep = 1.0;
+    
+    // Adaptive density: ensure lines aren't too close
+    while (gridStep * owner_.pixelsPerBeat < 8.0) {
+        gridStep *= 2.0;
+    }
     
     // Draw grid only within the timeline area
     canvas->save();
@@ -135,6 +144,8 @@ void ArrangerRenderer::drawGrid(SkCanvas* canvas, float width, float height) {
     SkPaint barHighlightPaint;
     barHighlightPaint.setStyle(SkPaint::kFill_Style);
     barHighlightPaint.setAntiAlias(false);
+    
+    double alignedStart = std::floor(startBeat / gridStep) * gridStep;
     
     int startBar = static_cast<int>(std::floor(startBeat / beatsPerBar));
     int endBar = static_cast<int>(std::ceil(endBeat / beatsPerBar));
@@ -160,10 +171,15 @@ void ArrangerRenderer::drawGrid(SkCanvas* canvas, float width, float height) {
     }
     
     // B. GRID LINES with hierarchy
-    for (double beat = startBeat; beat <= endBeat; beat += beatStep) {
+    for (double beat = alignedStart; beat <= endBeat + 0.001; beat += gridStep) {
         float x = gridUtils_.beatsToX(beat);
-        int beatNum = static_cast<int>(beat);
-        bool isBarLine = (beatNum % beatsPerBar == 0);
+        
+        // Skip if outside view
+        if (x < HEADER_WIDTH || x > width) continue;
+
+        // Determine hierarchy
+        bool isBarLine = (std::abs(std::fmod(beat, (double)beatsPerBar)) < 0.001);
+        bool isBeatLine = (std::abs(std::fmod(beat, 1.0)) < 0.001);
         
         SkPaint gridPaint;
         gridPaint.setAntiAlias(true);
@@ -171,13 +187,14 @@ void ArrangerRenderer::drawGrid(SkCanvas* canvas, float width, float height) {
         if (isBarLine) {
             gridPaint.setColor(SkColorSetARGB(kBarLineAlpha, 255, 255, 255));
             gridPaint.setStrokeWidth(kBarLineWidth);
-        } else {
+        } else if (isBeatLine) {
             gridPaint.setColor(SkColorSetARGB(kBeatLineAlpha, 255, 255, 255));
             gridPaint.setStrokeWidth(kBeatLineWidth);
-            static const SkScalar intervals[] = {2.0f, 4.0f};
-            static const auto dashEffect = 
-                SkDashPathEffect::Make(SkSpan<const SkScalar>(intervals, 2), 0.0f);
-            gridPaint.setPathEffect(dashEffect);
+        } else {
+            // Sub-beat (e.g. 1/4, 1/8)
+            gridPaint.setColor(SkColorSetARGB(kBeatLineAlpha / 2, 255, 255, 255));
+            gridPaint.setStrokeWidth(0.5f);
+             // Make them solid but faint for clean look
         }
         
         canvas->drawLine(x, SECTION_HEIGHT, x, height, gridPaint);
@@ -375,6 +392,78 @@ void ArrangerRenderer::drawSingleClip(SkCanvas* canvas, const ClipView& clipView
         canvas->restore();
     }
     
+    
+    // 7.5. FADE OVERLAY & HANDLES
+    {
+        float fadeInPx = static_cast<float>(clipView.fadeInBeats * owner_.pixelsPerBeat);
+        float fadeOutPx = static_cast<float>(clipView.fadeOutBeats * owner_.pixelsPerBeat);
+        
+        SkPaint fadeCurvePaint;
+        fadeCurvePaint.setAntiAlias(true);
+        fadeCurvePaint.setStyle(SkPaint::kStroke_Style);
+        fadeCurvePaint.setStrokeWidth(1.5f);
+        fadeCurvePaint.setColor(withAlpha(SK_ColorWHITE, 0.7f));
+        
+        SkPaint handlePaint;
+        handlePaint.setAntiAlias(true);
+        handlePaint.setColor(withAlpha(SK_ColorWHITE, 0.5f));
+        
+        if (fadeInPx > 0) {
+            // Draw Linear Fade In
+            canvas->drawLine(r.left(), r.bottom(), r.left() + fadeInPx, r.top(), fadeCurvePaint);
+            
+            // Draw Handle (Triangle)
+            SkPath handle;
+            float hx = r.left() + fadeInPx;
+            float hy = r.top();
+            handle.moveTo(hx, hy);
+            handle.lineTo(hx - 4, hy + 8);
+            handle.lineTo(hx + 4, hy + 8);
+            handle.close();
+            canvas->drawPath(handle, handlePaint);
+        } else {
+             // Draw Handle at start (Optional, hidden if 0 or always visible?)
+             // Usually visible at corners to allow dragging from 0.
+             // Corner handle:
+             SkPath handle;
+             float hx = r.left();
+             float hy = r.top();
+             handle.moveTo(hx, hy);
+             handle.lineTo(hx, hy + 8);
+             handle.lineTo(hx + 8, hy);
+             handle.close();
+             handlePaint.setColor(withAlpha(SK_ColorWHITE, 0.3f));
+             canvas->drawPath(handle, handlePaint);
+        }
+        
+        if (fadeOutPx > 0) {
+            // Draw Linear Fade Out
+            canvas->drawLine(r.right() - fadeOutPx, r.top(), r.right(), r.bottom(), fadeCurvePaint);
+            
+            // Draw Handle
+            SkPath handle;
+            float hx = r.right() - fadeOutPx;
+            float hy = r.top();
+            handle.moveTo(hx, hy);
+            handle.lineTo(hx - 4, hy + 8);
+            handle.lineTo(hx + 4, hy + 8);
+            handle.close();
+            handlePaint.setColor(withAlpha(SK_ColorWHITE, 0.5f));
+            canvas->drawPath(handle, handlePaint);
+        } else {
+             // Corner Handle
+             SkPath handle;
+             float hx = r.right();
+             float hy = r.top();
+             handle.moveTo(hx, hy);
+             handle.lineTo(hx, hy + 8);
+             handle.lineTo(hx - 8, hy);
+             handle.close();
+             handlePaint.setColor(withAlpha(SK_ColorWHITE, 0.3f));
+             canvas->drawPath(handle, handlePaint);
+        }
+    }
+
     // 8. CLIP LABEL
     {
         SkPaint pillPaint;
@@ -439,16 +528,22 @@ void ArrangerRenderer::drawClipWaveform(SkCanvas* canvas, const ClipView& clip, 
     const WaveformCache* cache = gridUtils_.getWaveformCache(clip.audioFilePath);
     
     if (!cache || !cache->isValid || cache->minPeaks.empty()) {
-        // Draw placeholder waveform
-        SkPaint placeholderPaint;
-        placeholderPaint.setColor(SkColorSetARGB(100, 255, 255, 255));
-        placeholderPaint.setAntiAlias(true);
+        // Draw "Loading..." indicator instead of fake waveform
+        SkPaint loadingPaint;
+        loadingPaint.setColor(design::withAlpha(design::colors::TEXT_TERTIARY, 0.6f));
+        loadingPaint.setAntiAlias(true);
         
-        float midY = clipRect.centerY();
-        for (float x = clipRect.left(); x < clipRect.right(); x += 8.0f) {
-            float h = (std::sin(x * 0.1f) * 0.3f + 0.5f) * clipRect.height() * 0.4f;
-            canvas->drawRect(SkRect::MakeXYWH(x, midY - h, 3.0f, h * 2.0f), placeholderPaint);
-        }
+        SkFont loadingFont = typography::getSkFont(typography::FONT_XS, FontWeight::Regular);
+        
+        // Draw loading text centered
+        const char* loadingText = "Loading waveform...";
+        canvas->drawString(loadingText, clipRect.centerX() - 40.0f, clipRect.centerY() + 4.0f, 
+                          loadingFont, loadingPaint);
+        
+        // Draw subtle horizontal line as placeholder
+        loadingPaint.setColor(design::withAlpha(design::colors::TEXT_TERTIARY, 0.2f));
+        canvas->drawLine(clipRect.left() + 4.0f, clipRect.centerY(), 
+                        clipRect.right() - 4.0f, clipRect.centerY(), loadingPaint);
         return;
     }
     
@@ -488,23 +583,22 @@ void ArrangerRenderer::drawClipMidiBlobs(SkCanvas* canvas, const ClipView& clip,
     using namespace zenith::design;
     
     if (clip.noteBlobs.empty() || clip.lengthBeats <= 0.001) {
-        // Draw placeholder pattern
-        juce::Random rng(clip.clipId.hashCode());
+        // Draw "Loading..." indicator instead of fake MIDI blobs
+        SkPaint loadingPaint;
+        loadingPaint.setColor(design::withAlpha(design::colors::TEXT_TERTIARY, 0.6f));
+        loadingPaint.setAntiAlias(true);
         
-        SkPaint placeholderPaint;
-        placeholderPaint.setColor(SkColorSetARGB(150, 255, 255, 255));
-        placeholderPaint.setAntiAlias(true);
+        SkFont loadingFont = typography::getSkFont(typography::FONT_XS, FontWeight::Regular);
         
-        int numNotes = static_cast<int>(clipRect.width() / 15.0f) + 1;
-        for (int i = 0; i < numNotes; ++i) {
-            float x = clipRect.left() + i * 15.0f + rng.nextFloat() * 5.0f;
-            float y = clipRect.top() + rng.nextFloat() * clipRect.height() * 0.8f;
-            float w = 8.0f + rng.nextFloat() * 15.0f;
-            float h = 3.0f + rng.nextFloat() * 2.0f;
-            
-            SkRect noteRect = SkRect::MakeXYWH(x, y, w, h);
-            canvas->drawRRect(SkRRect::MakeRectXY(noteRect, 1.5f, 1.5f), placeholderPaint);
-        }
+        // Draw loading text centered
+        const char* loadingText = "Loading MIDI...";
+        canvas->drawString(loadingText, clipRect.centerX() - 35.0f, clipRect.centerY() + 4.0f, 
+                          loadingFont, loadingPaint);
+        
+        // Draw subtle horizontal line as placeholder
+        loadingPaint.setColor(design::withAlpha(design::colors::TEXT_TERTIARY, 0.2f));
+        canvas->drawLine(clipRect.left() + 4.0f, clipRect.centerY(), 
+                        clipRect.right() - 4.0f, clipRect.centerY(), loadingPaint);
         return;
     }
     
@@ -638,6 +732,72 @@ void ArrangerRenderer::drawPlayhead(SkCanvas* canvas, float width, float height)
     capPaint.setStyle(SkPaint::kFill_Style);
     capPaint.setAntiAlias(true);
     canvas->drawPath(cap, capPaint);
+}
+
+//==============================================================================
+// Loop Region Drawing
+//==============================================================================
+
+//==============================================================================
+// Loop Region Drawing
+//==============================================================================
+
+void ArrangerRenderer::drawLoopRegion(SkCanvas* canvas, float width, float height) {
+    using namespace zenith::design;
+    
+    if (!owner_.loopEnabled_)
+        return;
+        
+    float loopStartX = gridUtils_.beatsToX(owner_.loopStartBeats_);
+    float loopEndX = gridUtils_.beatsToX(owner_.loopEndBeats_);
+    
+    // Don't draw if loop region is outside visible area
+    if (loopEndX < HEADER_WIDTH || loopStartX > width)
+        return;
+        
+    // Clamp to visible area
+    float drawStart = std::max(loopStartX, HEADER_WIDTH);
+    float drawEnd = std::min(loopEndX, width);
+    float drawWidth = drawEnd - drawStart;
+    
+    if (drawWidth <= 0)
+        return;
+    
+    // 1. LOOP REGION FILL (subtle green tint)
+    // Only draw below the ruler (in the track area)
+    {
+        SkPaint loopFillPaint;
+        loopFillPaint.setAntiAlias(true);
+        
+        // Vertical gradient for depth
+        SkPoint pts[2] = {{drawStart, TOP_MARGIN}, {drawStart, height}};
+        SkColor fillColors[2] = {
+            withAlpha(colors::NEON_GREEN, 0.08f),
+            withAlpha(colors::NEON_GREEN, 0.04f)
+        };
+        loopFillPaint.setShader(SkGradientShader::MakeLinear(
+            pts, fillColors, nullptr, 2, SkTileMode::kClamp));
+        
+        canvas->drawRect(SkRect::MakeXYWH(drawStart, TOP_MARGIN, 
+                                          drawWidth, height - TOP_MARGIN), 
+                        loopFillPaint);
+    }
+    
+    // 2. LOOP EDGE LINES (bright green)
+    {
+        SkPaint edgePaint;
+        edgePaint.setAntiAlias(true);
+        edgePaint.setColor(withAlpha(colors::NEON_GREEN, 0.5f));
+        edgePaint.setStrokeWidth(1.5f);
+        
+        // Left edge (if visible)
+        if (loopStartX >= HEADER_WIDTH)
+            canvas->drawLine(loopStartX, TOP_MARGIN, loopStartX, height, edgePaint);
+        
+        // Right edge (if visible)
+        if (loopEndX <= width)
+            canvas->drawLine(loopEndX, TOP_MARGIN, loopEndX, height, edgePaint);
+    }
 }
 
 //==============================================================================
