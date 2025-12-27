@@ -20,6 +20,7 @@
 #include "EngineEvent.h" // For MidiFifo
 #include "MixerChannel.h"
 #include "PluginChain.h"
+#include "TrackProcessor.h"
 #include <atomic>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
@@ -106,6 +107,7 @@ public:
     getNextAudioBlock(bufferToFill, 0, nullptr, {}, nullptr);
   }
 
+
   // Phase 1.3: Version that takes explicit playhead position and optional
   // incoming MIDI and aux buffers. Added optional TempoMap for automation.
   virtual void getNextAudioBlock(
@@ -127,6 +129,7 @@ public:
   void setName(const juce::String &newName);
 
   const juce::String &getTrackId() const { return trackId; }
+  const juce::String &getId() const { return trackId; } // Alias for UI
   void setTrackId(const juce::String &id) { trackId = id; }
 
   Type getType() const { return trackType; }
@@ -134,6 +137,14 @@ public:
 
   int getTrackIndex() const { return trackIndex; }
   void setTrackIndex(int index) { trackIndex = index; }
+
+  //==============================================================================
+  // Appearance & Routing
+  void setColor(juce::Colour newColor);
+  juce::Colour getColor() const { return trackColor; }
+
+  void setOutputId(const juce::String& newOutputId);
+  juce::String getOutputId() const { return outputId; }
 
   //==============================================================================
   // Mixer controls (thread-safe using atomics)
@@ -161,16 +172,18 @@ public:
   void setEnabled(bool shouldBeEnabled);
   bool isEnabled() const { return enabled.load(); }
 
-  void setInputMonitorEnabled(bool enabled) { inputMonitor_.store(enabled); }
-  bool isInputMonitorEnabled() const { return inputMonitor_.load(); }
-
   void setInputChannel(int channel) { inputChannelIndex.store(channel); }
   int getInputChannel() const { return inputChannelIndex.load(); }
+
 
   //==============================================================================
   // Freeze state (for CPU optimization)
   void setFrozen(bool shouldBeFrozen) { frozen.store(shouldBeFrozen); }
   bool isFrozen() const { return frozen.load(); }
+
+  // Active freeze rendering flag (audio thread safety)
+  void setBeingFrozen(bool shouldBeFrozen) { isBeingFrozen_.store(shouldBeFrozen); }
+  bool isBeingFrozen() const { return isBeingFrozen_.load(); }
 
   /**
    * @brief Set the freeze file for this track
@@ -194,12 +207,26 @@ public:
     return activeFreezeBuffer_.load(std::memory_order_acquire);
   }
 
-  juce::AudioBuffer<float> &getSidechainBuffer() { return sidechainBuffer; }
+  juce::AudioBuffer<float> &getSidechainBuffer() { return processor->getSidechainBuffer(); }
+  TrackProcessor* getProcessor() const { return processor.get(); }
 
   MixerChannel &getMixerChannel() { return mixerChannel; }
   const MixerChannel &getMixerChannel() const { return mixerChannel; }
 
   // Instrument management (moved to InstrumentTrack)
+
+  /**
+   * @brief Set the sidechain source for a specific plugin on this track
+   * @param pluginIndex Index of the plugin
+   * @param sourceTrack Pointer to the source track (can be nullptr to disable)
+   * @note Message thread only
+   */
+  void setPluginSidechainSource(int pluginIndex, Track* sourceTrack);
+  
+  /**
+   * @brief Get the sidechain source track (simplified: assumes one source per track for now)
+   */
+  Track* getSidechainSource() const { return sidechainSourceTrack_.load(); } 
 
   //==============================================================================
   // Live MIDI Injection (Thread-safe)
@@ -228,11 +255,14 @@ public:
   virtual Instrument *getInstrument() const { return nullptr; }
   virtual bool hasInstrument() const { return getInstrument() != nullptr; }
 
-  /**
-   * @brief Update clip playback positions for this track
-   * @param playheadPosition Current playhead position in samples
-   * @note Audio thread safe - implementations should be lock-free
-   */
+  // Send management
+  void setSendDestination(int sendIndex, int auxBusIndex);
+  int getSendDestination(int sendIndex) const;
+  void setSendLevel(int sendIndex, float level);
+  float getSendLevel(int sendIndex) const;
+  void setSendPreFader(int sendIndex, bool preFader);
+  bool isSendPreFader(int sendIndex) const;
+
   // Default implementation does nothing - subclasses with clips override
 
   // MIDI Scheduling (moved to MIDITrack)
@@ -332,10 +362,13 @@ public:
 protected:
   //==============================================================================
   // Track properties
+
   juce::String trackName;
   juce::String trackId;
   Type trackType;
   int trackIndex = -1;
+  juce::Colour trackColor = juce::Colours::grey;
+  juce::String outputId = "master";
 
 protected:
   //==============================================================================
@@ -350,6 +383,7 @@ protected:
   std::atomic<bool> enabled{true};
   std::atomic<bool> inputMonitor_{false};
   std::atomic<bool> frozen{false}; // Track freeze state for CPU optimization
+  std::atomic<bool> isBeingFrozen_{false}; // Active freeze rendering flag
 
   // Freeze file storage (for CPU optimization)
   juce::File freezeFile_;
@@ -364,36 +398,42 @@ protected:
 
   // Input routing
   std::atomic<int> inputChannelIndex{0};
+  
+  // Sidechaining
+  std::atomic<Track*> sidechainSourceTrack_{nullptr};
 
   //==============================================================================
   // Level monitoring (delegated to MixerChannel)
   // We keep wrappers for compatibility but they read from MixerChannel
 
   //==============================================================================
+  //==============================================================================
+  // Processor - MUST be declared before mixerChannel and pluginChain references
+  std::unique_ptr<TrackProcessor> processor;
+
+  //==============================================================================
   // Mixer Channel Strip (EQ, Comp, Sends, Volume, Pan)
-  MixerChannel mixerChannel;
+  // These are references to members within processor, so processor must be initialized first
+  MixerChannel& mixerChannel;
 
   //==============================================================================
   // Plugin chain and Automation management (delegated)
-  PluginChain pluginChain;
+  PluginChain& pluginChain;
   AutomationManager automationManager;
 
   // Thread-safe FIFO for live MIDI injection
   MidiFifo noteFifo_;
 
-  juce::AudioBuffer<float> pluginBuffer;
-  juce::AudioBuffer<float> sidechainBuffer;
-
   //==============================================================================
   // Helper methods
-  void processPluginChain(juce::AudioBuffer<float> &buffer,
-                          juce::MidiBuffer &midi, int numSamples,
-                          const juce::AudioBuffer<float> *sidechain = nullptr);
-  void applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples);
-  void updateLevelMeters(const juce::AudioBuffer<float> &buffer,
-                         int numSamples);
+  // Removed obsolete methods (processPluginChain, applyGainAndPan, updateLevelMeters)
+  // as they are now handled by TrackProcessor::processBlock
 
   std::atomic<bool> soloed_{false};
+
+  // Send destinations (indices into aux bus list)
+  static constexpr int numSends = 4; // Should match MixerChannel::numSends
+  std::atomic<int> sendDestinations[numSends];
 
   //==============================================================================
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Track)
