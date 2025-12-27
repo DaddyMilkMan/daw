@@ -19,67 +19,11 @@
 
 namespace zenith {
 
-//==============================================================================
-void AudioRenderer::prepare(double sampleRate, int blockSize, size_t numTracks,
-                            size_t numAuxBuses) {
-  sampleRate_ = sampleRate;
-  blockSize_ = blockSize;
-
-  // Allocate track buffers
-  trackBuffers_.clear();
-  trackBuffers_.resize(numTracks);
-  for (auto &buffer : trackBuffers_) {
-    buffer.setSize(2, blockSize);
-    buffer.clear();
-  }
-
-  // Allocate aux bus buffers
-  auxBusBuffers_.clear();
-  auxBusBuffers_.resize(numAuxBuses);
-  for (auto &buffer : auxBusBuffers_) {
-    buffer.setSize(2, blockSize);
-    buffer.clear();
-  }
-
-  // Allocate PDC buffers
-  trackLatencies_.resize(numTracks, 0);
-  pdcDelayBuffers_.resize(numTracks);
-  pdcDelayWritePos_.resize(numTracks, 0);
-
-  for (size_t i = 0; i < numTracks; ++i) {
-    pdcDelayBuffers_[i].setSize(2, constants::kMaxPDCLatencySamples);
-    pdcDelayBuffers_[i].clear();
-  }
-
-  // Prepare dither
-  dither_.prepare(2); // Stereo
-
-  DBG("AudioRenderer: Prepared with " + juce::String(numTracks) + " tracks, " +
-      juce::String(numAuxBuses) + " aux buses");
-
-  DBG("AudioRenderer: Prepared with " + juce::String(numTracks) + " tracks, " +
-      juce::String(numAuxBuses) + " aux buses");
-}
-
-//==============================================================================
-void AudioRenderer::reset() {
-  for (auto &buffer : trackBuffers_) {
-    buffer.clear();
-  }
-  for (auto &buffer : auxBusBuffers_) {
-    buffer.clear();
-  }
-  for (auto &buffer : pdcDelayBuffers_) {
-    buffer.clear();
-  }
-  std::fill(pdcDelayWritePos_.begin(), pdcDelayWritePos_.end(), 0);
-
-  masterLevel_.store(0.0f);
-  masterPeakLevel_.store(0.0f);
-}
+// NOTE: AudioRenderer is now stateless. Prepare/reset are on AudioRenderContext.
 
 //==============================================================================
 void AudioRenderer::renderAudioGraph(
+    AudioRenderContext& context,
     juce::AudioBuffer<float> &outputBuffer, int numSamples,
     juce::int64 playheadPosition,
     std::span<Track* const> tracks,
@@ -104,9 +48,9 @@ void AudioRenderer::renderAudioGraph(
   }
 
   // Pre-clear aux bus buffers
-  const size_t numBuses = juce::jmin(auxBuses.size(), auxBusBuffers_.size());
+  const size_t numBuses = juce::jmin(auxBuses.size(), context.auxBusBuffers.size());
   for (size_t i = 0; i < numBuses; ++i) {
-    auxBusBuffers_[i].clear();
+    context.auxBusBuffers[i].clear();
   }
 
   // Build aux buffer pointers for tracks (RT-safe stack allocation or fixed member)
@@ -115,19 +59,18 @@ void AudioRenderer::renderAudioGraph(
   std::array<juce::AudioBuffer<float> *, kMaxAuxBuses> auxBufferPtrs;
   size_t actualAuxCount = 0;
   for (size_t i = 0; i < numBuses && actualAuxCount < kMaxAuxBuses; ++i) {
-    auxBufferPtrs[actualAuxCount++] = &auxBusBuffers_[i];
+    auxBufferPtrs[actualAuxCount++] = &context.auxBusBuffers[i];
   }
   
   // Wrap in a vector-like view for getNextAudioBlock compatibility
   // Note: Track::getNextAudioBlock takes std::vector<juce::AudioBuffer<float> *>.
   // This is a violation of RT-safety if we create the vector here, but if we pass 
   // a pre-allocated one, it's fine. However, the signature expects std::vector.
-  // We'll have to use a member variable vector to avoid allocation.
-  auxBufferPtrsVector_.clear();
-  for(size_t i = 0; i < actualAuxCount; ++i) auxBufferPtrsVector_.push_back(auxBufferPtrs[i]);
+  // We'll have to use the context's vector to avoid allocation.
+  context.auxBufferPtrsVector.clear();
+  for(size_t i = 0; i < actualAuxCount; ++i) context.auxBufferPtrsVector.push_back(auxBufferPtrs[i]);
 
   // Process nodes in topological order using FAST LOOKUP
-  // FIXED: processingOrder is in topology
   for (const auto &nodeId : snapshot->topology->processingOrder) {
     // 1. Try to find a Track using fast lookup
     auto trackIt = snapshot->trackLookup.find(nodeId);
@@ -155,7 +98,11 @@ void AudioRenderer::renderAudioGraph(
              }
           }
 
-          track->applyGainAndPan(trackBuffer, numSamples);
+          if (auto* processor = track->getProcessor()) {
+              juce::MidiBuffer dummyMidi;
+              juce::AudioSourceChannelInfo trackInfo(&trackBuffer, 0, numSamples);
+              processor->processBlock(trackInfo, dummyMidi, {}, nullptr);
+          }
 
           // Mix frozen track using SIMD if possible
           // FIXED: connections is in topology
@@ -180,17 +127,31 @@ void AudioRenderer::renderAudioGraph(
 
       auto &trackBuffer = trackBuffers_[trackIdx];
       trackBuffer.clear();
+
+      // Skip processing if track is currently being frozen (prevent race condition)
+      if (track->isBeingFrozen()) {
+          continue;
+      }
+
       juce::AudioSourceChannelInfo trackInfo(&trackBuffer, 0, numSamples);
 
       const juce::MidiBuffer *trackMidiInput = (incomingMidi != nullptr && !incomingMidi->isEmpty() &&
                                               track->getType() == Track::Type::Instrument && track->isArmed()) 
                                               ? incomingMidi : nullptr;
 
+      const juce::AudioBuffer<float>* sidechainBuffer = nullptr;
+      if (auto* sourceTrack = track->getSidechainSource()) {
+          int sourceIdx = sourceTrack->getTrackIndex();
+          if (sourceIdx >= 0 && sourceIdx < (int)trackBuffers_.size()) {
+              sidechainBuffer = &trackBuffers_[sourceIdx];
+          }
+      }
+
       track->getNextAudioBlock(trackInfo, playheadPosition, trackMidiInput,
-                                auxBufferPtrsVector_, tempoMap);
+                                context.auxBufferPtrsVector, tempoMap, sidechainBuffer);
 
       if (pdcEnabled_.load()) {
-        applyPDCDelay(trackBuffer, static_cast<int>(trackIdx), numSamples);
+        applyPDCDelay(context, trackBuffer, static_cast<int>(trackIdx), numSamples);
       }
 
       // FIXED: connections is in topology
@@ -238,33 +199,28 @@ void AudioRenderer::renderAudioGraph(
             break;
           }
         }
+        }
       }
       continue;
     }
   }
-
   // Process master bus plugins
   processMasterPlugins(outputBuffer, masterPlugins);
-
   // Apply master limiter (final clipping protection)
   masterLimiter.process(outputBuffer);
 
-  // Apply TPDF Dither (always on for 24-bit/16-bit DACs, or internal float dither)
-  // Even if float, TPDF helps prevents truncation quantization noise if converted later.
-  // Standard practice for DAWs to dither the final monitoring output.
-  dither_.process(outputBuffer, 24); // Assume 24-bit DAC monitoring
-
-  // Update metering
+  // Apply TPDF Dither
+  dither_.process(outputBuffer, 24); 
 
   // Update metering
   updateMasterMeters(outputBuffer);
 }
 
 //==============================================================================
-int AudioRenderer::calculatePDC(std::span<Track *const> tracks) {
+int AudioRenderer::calculatePDC(AudioRenderContext& context, std::span<Track *const> tracks) {
   int maxLatency = 0;
 
-  for (size_t i = 0; i < tracks.size() && i < trackLatencies_.size(); ++i) {
+  for (size_t i = 0; i < tracks.size() && i < context.trackLatencies.size(); ++i) {
     if (tracks[i]) {
       int trackLatency = 0;
 
@@ -276,25 +232,25 @@ int AudioRenderer::calculatePDC(std::span<Track *const> tracks) {
         }
       }
 
-      trackLatencies_[i] = trackLatency;
+      context.trackLatencies[i] = trackLatency;
       maxLatency = juce::jmax(maxLatency, trackLatency);
     }
   }
 
-  maxTrackLatency_.store(maxLatency);
+  context.maxTrackLatency = maxLatency;
   return maxLatency;
 }
 
 //==============================================================================
-void AudioRenderer::applyPDCDelay(juce::AudioBuffer<float> &buffer,
+void AudioRenderer::applyPDCDelay(AudioRenderContext& context, juce::AudioBuffer<float> &buffer,
                                   int trackIndex, int numSamples) {
   if (trackIndex < 0 ||
-      trackIndex >= static_cast<int>(trackLatencies_.size())) {
+      trackIndex >= static_cast<int>(context.trackLatencies.size())) {
     return;
   }
 
-  const int trackLatency = trackLatencies_[trackIndex];
-  const int maxLatency = maxTrackLatency_.load();
+  const int trackLatency = context.trackLatencies[trackIndex];
+  const int maxLatency = context.maxTrackLatency;
   const int delayNeeded = maxLatency - trackLatency;
 
   // No delay needed if track already has max latency, or delay exceeds buffer
@@ -304,8 +260,12 @@ void AudioRenderer::applyPDCDelay(juce::AudioBuffer<float> &buffer,
     return;
   }
 
-  auto &delayBuffer = pdcDelayBuffers_[trackIndex];
-  int &writePos = pdcDelayWritePos_[trackIndex];
+  if (trackIndex < 0 || trackIndex >= (int)context.pdcDelayBuffers.size()) {
+    return;
+  }
+
+  auto &delayBuffer = context.pdcDelayBuffers[trackIndex];
+  int &writePos = context.pdcDelayWritePos[trackIndex];
 
   // Cache channel pointers and counts for real-time performance
   auto *const *channelData = buffer.getArrayOfWritePointers();
@@ -386,12 +346,7 @@ void AudioRenderer::updateMasterMeters(const juce::AudioBuffer<float> &buffer) {
 }
 
 
-int AudioRenderer::getTrackLatency(int trackIndex) const {
-  if (trackIndex >= 0 && trackIndex < static_cast<int>(trackLatencies_.size())) {
-    return trackLatencies_[trackIndex];
-  }
-  return 0;
-}
+
 
 int AudioRenderer::getMasterLatency() const {
   return masterLatency_.load();

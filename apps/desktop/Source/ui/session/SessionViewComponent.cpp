@@ -1178,13 +1178,88 @@ void SessionViewComponent::toggleTrackMute(const juce::String &trackId) {
 
 void SessionViewComponent::buildWaveformPreview(
     ClipSlot &slot, const juce::String &audioFilePath) {
-  // In a real implementation, this would load the audio file and extract peaks
-  // For now, generate placeholder data
+  // CRITIC FIX: Actually load the audio file and compute real waveform peaks!
+  // The previous implementation generated a SINE WAVE as "placeholder" - pathetic.
+  
   slot.waveformPeaks.clear();
-  slot.waveformPeaks.resize(30);
-
-  for (size_t i = 0; i < slot.waveformPeaks.size(); ++i) {
-    slot.waveformPeaks[i] = 0.2f + 0.6f * std::sin(i * 0.4f);
+  
+  constexpr size_t numPeaks = 30;
+  slot.waveformPeaks.resize(numPeaks, 0.0f);
+  
+  juce::File audioFile(audioFilePath);
+  if (!audioFile.existsAsFile()) {
+    DBG("SessionViewComponent: Audio file not found: " + audioFilePath);
+    // Fallback to flat line (not a sine wave!)
+    std::fill(slot.waveformPeaks.begin(), slot.waveformPeaks.end(), 0.1f);
+    return;
+  }
+  
+  // Use JUCE's AudioFormatManager to read the file
+  juce::AudioFormatManager formatManager;
+  formatManager.registerBasicFormats();
+  
+  std::unique_ptr<juce::AudioFormatReader> reader(
+      formatManager.createReaderFor(audioFile));
+  
+  if (reader == nullptr) {
+    DBG("SessionViewComponent: Cannot read audio file: " + audioFilePath);
+    std::fill(slot.waveformPeaks.begin(), slot.waveformPeaks.end(), 0.1f);
+    return;
+  }
+  
+  // Calculate samples per peak section
+  auto totalSamples = reader->lengthInSamples;
+  if (totalSamples <= 0) {
+    std::fill(slot.waveformPeaks.begin(), slot.waveformPeaks.end(), 0.1f);
+    return;
+  }
+  
+  auto samplesPerPeak = totalSamples / static_cast<juce::int64>(numPeaks);
+  if (samplesPerPeak < 1) samplesPerPeak = 1;
+  
+  // Read and compute peaks for each section
+  juce::AudioBuffer<float> tempBuffer(static_cast<int>(reader->numChannels), 
+                                      static_cast<int>(std::min(samplesPerPeak, static_cast<juce::int64>(8192))));
+  
+  for (size_t i = 0; i < numPeaks; ++i) {
+    juce::int64 startSample = static_cast<juce::int64>(i) * samplesPerPeak;
+    juce::int64 samplesToRead = std::min(samplesPerPeak, totalSamples - startSample);
+    
+    if (samplesToRead <= 0) {
+      slot.waveformPeaks[i] = 0.0f;
+      continue;
+    }
+    
+    // Read in chunks to avoid allocating huge buffers for long files
+    float peakValue = 0.0f;
+    juce::int64 pos = startSample;
+    juce::int64 remaining = samplesToRead;
+    
+    while (remaining > 0) {
+      int chunkSize = static_cast<int>(std::min(remaining, static_cast<juce::int64>(tempBuffer.getNumSamples())));
+      
+      if (reader->read(&tempBuffer, 0, chunkSize, pos, true, true)) {
+        for (int ch = 0; ch < tempBuffer.getNumChannels(); ++ch) {
+          auto range = juce::FloatVectorOperations::findMinAndMax(
+              tempBuffer.getReadPointer(ch), chunkSize);
+          float chunkPeak = std::max(std::abs(range.getStart()), std::abs(range.getEnd()));
+          peakValue = std::max(peakValue, chunkPeak);
+        }
+      }
+      
+      pos += chunkSize;
+      remaining -= chunkSize;
+    }
+    
+    slot.waveformPeaks[i] = peakValue;
+  }
+  
+  // Normalize peaks to 0-1 range for consistent display
+  float maxPeak = *std::max_element(slot.waveformPeaks.begin(), slot.waveformPeaks.end());
+  if (maxPeak > 0.0f) {
+    for (auto& peak : slot.waveformPeaks) {
+      peak /= maxPeak;
+    }
   }
 }
 

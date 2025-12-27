@@ -51,6 +51,7 @@
 #include "../Source/engine/EngineConstants.h"
 #include "../Source/engine/MacroControl.h"
 #include "../Source/engine/RoutingGraph.h"
+#include "AudioRenderer.h"
 #include "EngineEvent.h"
 
 // Forward declarations
@@ -113,7 +114,8 @@ class AIMasteringAgent;
  *       Use Engine& or Engine* for back-references.
  */
 class Engine : public juce::AudioIODeviceCallback,
-               public juce::MidiInputCallback {
+               public juce::MidiInputCallback,
+               public juce::ChangeListener {
 public:
   //==========================================================================
   Engine();
@@ -237,6 +239,18 @@ public:
   void panic();
 
   /**
+   * @brief Suspend audio processing (e.g. for offline export)
+   * @param shouldSuspend True to silence audio output/input
+   * @note Real-time safe (sets atomic flag)
+   */
+  void suspendProcessing(bool shouldSuspend) { isSuspended_.store(shouldSuspend); }
+
+  /**
+   * @brief Check if processing is suspended
+   */
+  bool isSuspended() const { return isSuspended_.load(); }
+
+  /**
    * @brief Set sidechain source for a specific plugin on a track
    * @param destTrackIndex Index of the track containing the plugin
    * @param pluginIndex Index of the plugin to receive sidechain
@@ -256,6 +270,13 @@ public:
    * @note Lock-free, safe to call from any thread
    */
   bool queueEvent(const zenith::EngineEvent &e);
+
+  //==========================================================================
+  // Render Context (Live)
+  //==========================================================================
+
+  // REMOVED: getLiveContext() - AudioRenderer now manages its own internal state
+  // The AudioRenderContext is owned by AudioRenderer, not Engine. 
 
   //==========================================================================
   // Transport Position & Looping
@@ -413,9 +434,7 @@ public:
   /**
    * @brief Get the AI Mastering Agent
    */
-  ai::AIMasteringAgent *getMasteringAgent() const {
-    return masteringAgent_.get();
-  }
+  ai::AIMasteringAgent *getMasteringAgent() const;
 
   //==========================================================================
   // Analysis (Visualizers)
@@ -448,6 +467,15 @@ public:
   const std::vector<std::shared_ptr<Track>> &tracks() const noexcept;
 
   /**
+   * @brief Get a thread-safe snapshot of tracks (copy of shared_ptrs)
+   * @note Safe to iterate on any thread while tracks are being added/removed
+   */
+  std::vector<std::shared_ptr<Track>> getTracksSnapshot() const {
+      const juce::ScopedReadLock lock(tracksLock_);
+      return tracks_; // Implicit copy of shared_ptrs
+  }
+
+  /**
    * @brief Debug helper to create test tracks (message thread only)
    * @param count Number of tracks to create
    * @note Does NOT attach tracks to audio graph; for compile/UI testing only
@@ -477,6 +505,14 @@ public:
    * @note Message thread only; used by TrackStateSynchronizer
    */
   void removeTrack(int index);
+
+  /**
+   * @brief Get a track by its unique ID
+   * @param trackId The unique track ID string
+   * @return Pointer to the track, or nullptr if not found
+   * @note Message thread only
+   */
+  Track* getTrackById(const juce::String& trackId);
 
   //==========================================================================
   // Aux Bus Management (MESSAGE THREAD ONLY)
@@ -623,7 +659,8 @@ public:
   /**
    * @brief Get the mixer controller
    */
-  MixerController& getMixerController() { return *mixerController_; }
+  MixerController& getMixerController();
+  TrackFreezeManager& getTrackFreezeManager() { return *freezeManager_; }
 
   //==========================================================================
   // Track Freeze (CPU optimization)
@@ -764,6 +801,15 @@ public:
                                  const juce::MidiMessage &message) override;
 
   //==========================================================================
+  // ChangeListener interface
+  //==========================================================================
+
+  /**
+   * @brief Handle callbacks from Track changes (e.g. plugin latency change)
+   */
+  void changeListenerCallback(juce::ChangeBroadcaster* source) override;
+
+  //==========================================================================
   // Project Export
   //==========================================================================
   
@@ -819,6 +865,8 @@ public:
    */
   bool exportProject(const ExportOptions &options);
 
+
+
   //==========================================================================
   // Metronome
   //==========================================================================
@@ -838,15 +886,12 @@ public:
 
   Midi2DiscoveryService* getMidi2DiscoveryService() const { return midi2DiscoveryService_.get(); }
 
+
 private:
   //==========================================================================
   // Audio Processing (AUDIO THREAD)
   //==========================================================================
 
-  /**
-   * @brief Process audio when playing
-   * @note AUDIO THREAD - real-time safe!
-   */
   /**
    * @brief Process audio when playing
    * @note AUDIO THREAD - real-time safe!
@@ -933,6 +978,7 @@ private:
 
   // Track container (message thread for modification)
   // Use shared_ptr instead of unique_ptr to enable RT-safe snapshot sharing
+  mutable juce::ReadWriteLock tracksLock_;
   std::vector<std::shared_ptr<zenith::Track>> tracks_;
 
   // Routing Graph (Source of Truth for connections and processing order)
@@ -1002,7 +1048,6 @@ private:
   std::unique_ptr<zenith::InstrumentRegistry> instrumentRegistry_;
 
   // Session Debugger Agent
-  // Session Debugger Agent
   std::unique_ptr<ai::SessionDebuggerAgent> sessionDebugger_;
   std::unique_ptr<ai::AIMasteringAgent> masteringAgent_;
   std::unique_ptr<Metronome> metronome_;
@@ -1026,6 +1071,8 @@ private:
   //==========================================================================
 
   std::unique_ptr<AudioRenderer> audioRenderer_;
+  // REMOVED: liveContext_ and renderContext_ - AudioRenderer now manages its own internal state
+  std::atomic<bool> isSuspended_{false}; // Suspend flag
   std::unique_ptr<RecordingManager> recordingManager_;
   std::unique_ptr<TransportController> transportController_;
   std::unique_ptr<MeteringSystem> meteringSystem_;

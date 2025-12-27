@@ -10,6 +10,7 @@
 #include "TempoMap.h"
 #include "RealTimeGarbageCollector.h"
 #include <algorithm>
+#include "ZenithLogger.h"
 
 namespace zenith {
 
@@ -24,14 +25,22 @@ std::unique_ptr<Track> Track::create(const juce::String &name, Type type) {
   case Type::Bus:
     return std::make_unique<AuxBusTrack>(name);
   default:
-    jassertfalse; // Bug 40: Unknown track type - should never reach here
-    return nullptr;
+    // Handle unknown track type gracefully - log error and return AudioTrack as fallback
+    ZENITH_LOG_ERROR("ERROR: Unknown track type " + juce::String(static_cast<int>(type)) + " requested. Returning AudioTrack as fallback.");
+    return std::make_unique<AudioTrack>(name);
   }
 }
 
 //==============================================================================
-Track::Track(const juce::String &name, Type type)
-    : trackName(name), trackType(type) {}
+  Track::Track(const juce::String &name, Type type)
+    : trackName(name), trackType(type),
+      processor(std::make_unique<TrackProcessor>()),
+      mixerChannel(processor->getMixerChannel()),
+      pluginChain(processor->getPluginChain()) {
+    for (int i = 0; i < numSends; ++i) {
+      sendDestinations[i].store(-1); // -1 means no destination
+    }
+  }
 
 Track::~Track() {}
 
@@ -44,32 +53,11 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
   currentSampleRate = sampleRate;
   currentBlockSize = samplesPerBlockExpected;
 
-  // Dynamic Buffer Handling (Roast Fix #5):
-  // Buffer may be resized when audio device settings change.
-  // Only resize if needed to avoid unnecessary allocations.
-  const int currentBufferSize = pluginBuffer.getNumSamples();
-  if (currentBufferSize != samplesPerBlockExpected ||
-      pluginBuffer.getNumChannels() != 2) {
-    pluginBuffer.setSize(2, samplesPerBlockExpected);
-    DBG("Track::prepareToPlay - Resized pluginBuffer from " +
-        juce::String(currentBufferSize) + " to " +
-        juce::String(samplesPerBlockExpected) + " samples");
-  }
-  pluginBuffer.clear();
-
-  if (sidechainBuffer.getNumSamples() != samplesPerBlockExpected ||
-      sidechainBuffer.getNumChannels() != 2) {
-    sidechainBuffer.setSize(2, samplesPerBlockExpected);
-  }
-  sidechainBuffer.clear();
-
-  pluginChain.prepareToPlay(sampleRate, samplesPerBlockExpected);
-  mixerChannel.prepareToPlay(samplesPerBlockExpected, sampleRate);
+  processor->prepareToPlay(sampleRate, samplesPerBlockExpected);
 }
 
 void Track::releaseResources() {
-  pluginChain.releaseResources();
-  mixerChannel.releaseResources();
+  processor->releaseResources();
 }
 
 //==============================================================================
@@ -123,6 +111,24 @@ void Track::setSoloed(bool shouldBeSoloed) {
 
 bool Track::isSoloed() const { return mixerChannel.isSolo(); }
 
+void Track::setColor(juce::Colour newColor) {
+  trackColor = newColor;
+  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+    sendChangeMessage();
+  } else {
+    juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
+  }
+}
+
+void Track::setOutputId(const juce::String &id) {
+  outputId = id;
+  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+    sendChangeMessage();
+  } else {
+    juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
+  }
+}
+
 //==============================================================================
 void Track::setFreezeFile(const juce::File &file) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
@@ -161,6 +167,13 @@ void Track::setFreezeFile(const juce::File &file) {
 }
 
 //==============================================================================
+//==============================================================================
+void Track::addClip(std::unique_ptr<Clip> clip) {
+  juce::ignoreUnused(clip);
+  // Base Track class does not manage clips directly.
+  // Subclasses (ClipTrack, AudioTrack, MIDITrack) should override this.
+}
+
 void Track::addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin) {
   pluginChain.addPlugin(std::move(plugin), currentSampleRate, currentBlockSize);
   if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
@@ -197,6 +210,45 @@ juce::AudioPluginInstance *Track::getPlugin(int index) const {
 // Automation delegated to automationManager in header
 
 //==============================================================================
+void Track::setSendDestination(int sendIndex, int auxBusIndex) {
+  if (juce::isPositiveAndBelow(sendIndex, numSends)) {
+    sendDestinations[sendIndex].store(auxBusIndex);
+    sendChangeMessage();
+    // Routing changes will be handled by the Engine observing this track
+  }
+}
+
+int Track::getSendDestination(int sendIndex) const {
+  if (juce::isPositiveAndBelow(sendIndex, numSends)) {
+    return sendDestinations[sendIndex].load();
+  }
+  return -1;
+}
+
+void Track::setSendLevel(int sendIndex, float level) {
+  mixerChannel.setSendLevel(sendIndex, level);
+}
+
+float Track::getSendLevel(int sendIndex) const {
+  return mixerChannel.getSendLevel(sendIndex);
+}
+
+void Track::setSendPreFader(int sendIndex, bool preFader) {
+  mixerChannel.setSendPreFader(sendIndex, preFader);
+}
+
+bool Track::isSendPreFader(int sendIndex) const {
+  return mixerChannel.isSendPreFader(sendIndex);
+}
+
+void Track::setPluginSidechainSource(int pluginIndex, Track* sourceTrack) {
+    sidechainSourceTrack_.store(sourceTrack); // Simple storage
+    if (processor) {
+        processor->setSidechainSource(pluginIndex, sourceTrack);
+    }
+}
+
+//==============================================================================
 juce::ValueTree Track::getState() const {
   juce::ValueTree state("Track");
   state.setProperty("name", trackName, nullptr);
@@ -208,6 +260,8 @@ juce::ValueTree Track::getState() const {
   state.setProperty("armed", armed.load(), nullptr);
   state.setProperty("inputMonitor", inputMonitor_.load(), nullptr);
   state.setProperty("enabled", enabled.load(), nullptr);
+  state.setProperty("color", trackColor.toString(), nullptr);
+  state.setProperty("outputId", outputId, nullptr);
 
   juce::ValueTree pluginsState("Plugins");
   for (int i = 0; i < pluginChain.getNumPlugins(); ++i) {
@@ -231,6 +285,8 @@ void Track::loadState(const juce::ValueTree &state) {
   armed.store(state.getProperty("armed", false));
   inputMonitor_.store(state.getProperty("inputMonitor", false));
   enabled.store(state.getProperty("enabled", true));
+  trackColor = juce::Colour::fromString(state.getProperty("color", "FF808080").toString());
+  outputId = state.getProperty("outputId", "master");
 
   // Plugin states are loaded via loadPluginStates() from Engine
   sendChangeMessage();
@@ -248,42 +304,9 @@ void Track::loadPluginStates(const juce::ValueTree &state,
   }
 }
 
+//==============================================================================
 void Track::injectLiveMidiMessage(const juce::MidiMessage &message) {
   noteFifo_.push(message);
-}
-
-//==============================================================================
-void Track::processPluginChain(juce::AudioBuffer<float> &buffer,
-                               juce::MidiBuffer &midi, int numSamples,
-                               const juce::AudioBuffer<float> *sidechain) {
-  // Inject live MIDI messages
-  noteFifo_.drainTo(midi, numSamples);
-
-  pluginChain.process(buffer, midi, sidechain);
-}
-
-void Track::applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples) {
-  // MixerChannel handles gain and pan internally during getNextAudioBlock
-  // This method is kept for API compatibility but is now a no-op
-  juce::ignoreUnused(buffer, numSamples);
-}
-
-// Bug 44: This is intentionally a no-op for the base Track class.
-// Only ClipTrack subclasses (AudioTrack, MIDITrack) support clip management.
-// Calling addClip on other track types is a programming error - we log it.
-void Track::addClip(std::unique_ptr<Clip> clip) {
-  juce::ignoreUnused(clip);
-  // This track type does not support clips. The passed clip will be destroyed
-  // on scope exit.
-  DBG("Track::addClip called on track type that doesn't support clips: " +
-      getTypeString());
-  jassertfalse; // Bug 44: Alert developer about incorrect usage
-}
-
-void Track::updateLevelMeters(const juce::AudioBuffer<float> &buffer,
-                              int numSamples) {
-  juce::ignoreUnused(numSamples);
-  mixerChannel.updateMeters(buffer, false); // false = output meters
 }
 
 void Track::updateClipPositions(juce::int64 playheadPosition) {
