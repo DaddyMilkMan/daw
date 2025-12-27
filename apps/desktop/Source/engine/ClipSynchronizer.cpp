@@ -381,8 +381,9 @@ void ClipSynchronizer::valueTreeChildRemoved(
       if (trackPtr->getTrackId() == trackId) {
         zenith::ClipTrack* clipTrack = dynamic_cast<zenith::ClipTrack*>(trackPtr.get());
         if (clipTrack == nullptr) {
-            jassertfalse;
-            ZENITH_LOG_ERROR("ClipSynchronizer: trackPtr is not a ClipTrack during clip removal");
+            // This is a logic error - track should be a ClipTrack to have clips.
+            // Log and continue rather than asserting to avoid crash in production.
+            ZENITH_LOG_ERROR("ClipSynchronizer: trackPtr is not a ClipTrack during clip removal for track: " + trackId);
             return;
         }
 

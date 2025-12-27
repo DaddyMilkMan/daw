@@ -42,6 +42,9 @@ inline SkColor NEON_YELLOW = 0xFFFFFF00; // Yellow
 inline SkColor NEON_PURPLE = 0xFFAA00FF; // Purple
 inline SkColor VIOLET = 0xFF7000FF;      // Deep Violet
 
+// Primary Accent Alias (for consistent naming)
+inline SkColor ACCENT_PRIMARY = CYAN;
+
 // Semantic/Status Colors
 inline SkColor AMBER = 0xFFFFAB00; // Warm Warning
 inline SkColor RED = 0xFFFF453A;   // Soft Red (Apple style)

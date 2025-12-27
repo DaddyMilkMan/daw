@@ -11,8 +11,13 @@
 
 #include "SampleHunterAgent.h"
 #include "../network/SecureKeyStore.h"
+#include <algorithm>
+#include <cmath>
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_cryptography/juce_cryptography.h>
+#include <memory>
+#include <queue>
+#include <vector>
 
 namespace zenith {
 namespace ai {
@@ -51,7 +56,7 @@ SampleHunterAgent::SampleHunterAgent(Engine &engine)
   // Load Freesound API key from secure storage (NEVER hardcode!)
   juce::String apiKey;
   if (SecureKeyStore::retrieveKey("freesound_api_key", apiKey)) {
-      freesoundConfig_.apiKey = apiKey;
+    freesoundConfig_.apiKey = apiKey;
   }
 
   if (freesoundConfig_.apiKey.isEmpty()) {
@@ -78,7 +83,8 @@ SampleHunterAgent::~SampleHunterAgent() { stopHunting(); }
 void SampleHunterAgent::startHunting(const HuntingConfig &config) {
   // Fail gracefully if no API key is available
   if (!apiKeyAvailable_) {
-    DBG("SampleHunterAgent: Cannot start hunting - no Freesound API key configured!");
+    DBG("SampleHunterAgent: Cannot start hunting - no Freesound API key "
+        "configured!");
     juce::MessageManager::callAsync([this]() {
       listeners_.call(&Listener::huntingComplete, stats_, false);
     });
@@ -94,11 +100,11 @@ void SampleHunterAgent::startHunting(const HuntingConfig &config) {
   stats_.startTime = juce::Time::getCurrentTime();
 
   {
-      juce::ScopedLock lock(samplesLock_);
-      foundSamples_.clear();
-      searchQueue_.clear();
-      downloadQueue_ = std::queue<size_t>();
-      downloadedHashes_.clear();
+    juce::ScopedLock lock(samplesLock_);
+    foundSamples_.clear();
+    searchQueue_.clear();
+    downloadQueue_ = std::queue<size_t>();
+    downloadedHashes_.clear();
   }
   progress_.store(0.0f);
   setStatus("Starting hunt...");
@@ -201,12 +207,12 @@ void SampleHunterAgent::run() {
       auto results = executeFreesoundSearch(query);
 
       {
-          juce::ScopedLock lock(samplesLock_);
-          for (const auto &sample : results) {
-            foundSamples_.push_back(sample);
-            downloadQueue_.push(foundSamples_.size() - 1);
-            stats_.samplesFound++;
-          }
+        juce::ScopedLock lock(samplesLock_);
+        for (const auto &sample : results) {
+          foundSamples_.push_back(sample);
+          downloadQueue_.push(foundSamples_.size() - 1);
+          stats_.samplesFound++;
+        }
       }
 
       // Rate limiting
@@ -247,8 +253,8 @@ void SampleHunterAgent::run() {
 
       FoundSample localSample;
       {
-          juce::ScopedLock lock(samplesLock_);
-          localSample = foundSamples_[index];
+        juce::ScopedLock lock(samplesLock_);
+        localSample = foundSamples_[index];
       }
 
       setStatus("Downloading: " + localSample.title);
@@ -272,11 +278,11 @@ void SampleHunterAgent::run() {
           stats_.samplesImported++;
           pendingImportNotifications.push_back(localSample.localFile);
         }
-        
+
         // Update shared state
         {
-            juce::ScopedLock lock(samplesLock_);
-            foundSamples_[index] = localSample;
+          juce::ScopedLock lock(samplesLock_);
+          foundSamples_[index] = localSample;
         }
 
         // Batch UI update: Notify every UI_BATCH_SIZE downloads
@@ -344,8 +350,9 @@ void SampleHunterAgent::run() {
   } catch (const std::exception &e) {
     DBG("SampleHunterAgent: Error - " + juce::String(e.what()));
     setStatus("Error: " + juce::String(e.what()));
-    juce::MessageManager::callAsync(
-        [this]() { listeners_.call(&Listener::huntingComplete, stats_, false); });
+    juce::MessageManager::callAsync([this]() {
+      listeners_.call(&Listener::huntingComplete, stats_, false);
+    });
   }
 
   isHunting_.store(false);
@@ -412,7 +419,7 @@ SampleHunterAgent::executeFreesoundSearch(const juce::String &query) {
     sample.license = obj->getProperty("license").toString();
     sample.type = obj->getProperty("type").toString();
     sample.duration = (double)obj->getProperty("duration");
-    sample.fileSize = (int64_t)obj->getProperty("filesize");
+    sample.fileSize = static_cast<juce::int64>(obj->getProperty("filesize"));
     sample.sampleRate = (int)obj->getProperty("samplerate");
     sample.bitDepth = (int)obj->getProperty("bitdepth");
 

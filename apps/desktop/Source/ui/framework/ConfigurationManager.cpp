@@ -11,6 +11,7 @@
 */
 
 #include "ConfigurationManager.h"
+#include "PlatformPathUtils.h"
 #include "ZenithDesignSystem.h"
 
 namespace zenith {
@@ -102,6 +103,10 @@ ConfigurationManager &ConfigurationManager::getInstance() {
   return instance;
 }
 
+juce::File ConfigurationManager::getDefaultConfigurationFile() {
+  return PlatformPathUtils::getDefaultConfigurationFile();
+}
+
 void ConfigurationManager::initialize(const juce::File &configFile) {
   juce::ScopedLock lock(lock_);
 
@@ -111,6 +116,11 @@ void ConfigurationManager::initialize(const juce::File &configFile) {
 
   configFile_ = configFile;
 
+  // Use default if file is invalid/empty
+  if (configFile_ == juce::File()) {
+    configFile_ = getDefaultConfigurationFile();
+  }
+
   // Create default configuration
   configData_ = new juce::DynamicObject();
   defaultData_ = new juce::DynamicObject();
@@ -118,11 +128,11 @@ void ConfigurationManager::initialize(const juce::File &configFile) {
   loadDefaults();
 
   // Load existing configuration if it exists
-  if (configFile.existsAsFile()) {
+  if (configFile_.existsAsFile()) {
     loadConfiguration();
   } else {
     // Create directory if it doesn't exist
-    configFile.getParentDirectory().createDirectory();
+    configFile_.getParentDirectory().createDirectory();
     saveConfiguration();
   }
 

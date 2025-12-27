@@ -44,6 +44,12 @@ public:
   }
   void setBpm(double bpm) { bpm_ = bpm; }
   void setDelaySync(bool sync, SyncRate rate) { delaySync_ = sync; delaySyncRate_ = rate; }
+  
+  // Roast Fix #5: Buffer size change notification
+  void setBlockSize(int blockSize) { 
+    juce::ignoreUnused(blockSize);  // Effects use sample rate for delay sizing, not block size
+    // Future: If we add block-based processing, use this here
+  }
 
   void process(float &left, float &right);
 

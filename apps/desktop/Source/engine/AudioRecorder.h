@@ -197,7 +197,7 @@ private:
 
   // Message thread ownership
   std::shared_ptr<SessionSnapshot> currentSessionSnapshot_;
-  std::vector<std::shared_ptr<SessionSnapshot>> sessionSnapshotTrash_;
+
   std::vector<std::shared_ptr<RecordingSession>> sessions_; // Shared ownership
 
   void updateSessionSnapshot();

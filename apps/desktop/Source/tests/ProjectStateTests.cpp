@@ -78,9 +78,11 @@ public:
       juce::UndoManager undoManager;
       juce::ValueTree tree("Test");
 
+      undoManager.beginNewTransaction();
       tree.setProperty("value", 10, &undoManager);
       expect((int)tree.getProperty("value") == 10);
 
+      undoManager.beginNewTransaction();
       tree.setProperty("value", 20, &undoManager);
       expect((int)tree.getProperty("value") == 20);
 
@@ -97,6 +99,7 @@ public:
       juce::ValueTree tree("Test");
 
       for (int i = 0; i < 5; ++i) {
+        undoManager.beginNewTransaction();
         tree.setProperty("counter", i, &undoManager);
       }
 

@@ -57,6 +57,9 @@ const juce::Identifier ProjectState::ID_MARKERS("MARKERS");
 const juce::Identifier ProjectState::ID_MARKER("MARKER");
 const juce::Identifier ProjectState::ID_SECTIONS("SECTIONS");
 const juce::Identifier ProjectState::ID_SECTION("SECTION");
+const juce::Identifier ProjectState::ID_TAKE_FOLDER("TAKE_FOLDER");
+const juce::Identifier ProjectState::ID_COMP_REGIONS("COMP_REGIONS");
+const juce::Identifier ProjectState::ID_COMP_REGION("COMP_REGION");
 
 const juce::Identifier ProjectState::PROP_NAME("name");
 const juce::Identifier ProjectState::PROP_TEMPO("tempo");
@@ -74,6 +77,8 @@ const juce::Identifier ProjectState::PROP_MUTE("mute");
 const juce::Identifier ProjectState::PROP_SOLO("solo");
 const juce::Identifier ProjectState::PROP_ARMED("armed");
 const juce::Identifier ProjectState::PROP_INPUT_MONITOR("inputMonitor");
+const juce::Identifier ProjectState::PROP_ACTIVE_TAKE("activeTake");
+const juce::Identifier ProjectState::PROP_EXPANDED("expanded");
 
 const juce::Identifier ProjectState::PROP_START("start");
 const juce::Identifier ProjectState::PROP_LENGTH("length");
@@ -102,6 +107,13 @@ const juce::Identifier ProjectState::PROP_TIME_BEATS("timeBeats");
 const juce::Identifier ProjectState::PROP_VALUE("value");
 const juce::Identifier ProjectState::PROP_CURVE_TYPE("curveType");
 const juce::Identifier ProjectState::PROP_TENSION("tension");
+const juce::Identifier ProjectState::PROP_TAKE_INDEX("takeIndex");
+
+// Plugin Automation Properties
+const juce::Identifier ProjectState::PROP_PLUGIN_INDEX("pluginIndex");
+const juce::Identifier ProjectState::PROP_PARAM_INDEX("paramIndex");
+const juce::Identifier ProjectState::PROP_PARAM_NAME("paramName");
+
 
 // Tempo/Marker properties
 const juce::Identifier ProjectState::PROP_BPM("bpm");
@@ -170,23 +182,26 @@ void ProjectState::newProject() {
 
 bool ProjectState::loadFromFile(const juce::File &file) {
   if (projectFileIO)
-    return projectFileIO->loadFromFile(file);
+    return projectFileIO->loadFromFile(file) == FileIOError::Success;
   return false;
 }
 
 bool ProjectState::saveToFile(const juce::File &file) {
   if (projectFileIO)
-    return projectFileIO->saveToFile(file);
+    return projectFileIO->saveToFile(file) == FileIOError::Success;
   return false;
 }
 
 juce::File ProjectState::saveCrashDump() {
-  if (projectFileIO)
-    return projectFileIO->saveCrashDump();
+  if (projectFileIO) {
+    projectFileIO->autoSave();
+    return projectFileIO->getRecoveryFile();
+  }
   return juce::File();
 }
 
 void ProjectState::timerCallback() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   if (isDirty && projectFile.existsAsFile()) {
     DBG("ProjectState: Autosaving...");
 
@@ -832,6 +847,7 @@ void ProjectState::createDefaultState() {
   state = juce::ValueTree(ID_PROJECT);
 
   // Set default properties
+  state.setProperty(PROP_ID, "project_root", nullptr);
   state.setProperty(PROP_NAME, "Untitled Project", nullptr);
   state.setProperty(PROP_TEMPO, 120.0, nullptr);
   state.setProperty(PROP_TIME_SIG_NUM, 4, nullptr);
@@ -839,12 +855,20 @@ void ProjectState::createDefaultState() {
   state.setProperty(PROP_SAMPLE_RATE, 44100.0, nullptr);
 
   // Create TRACKS node
-  state.appendChild(juce::ValueTree(ID_TRACKS), nullptr);
+  juce::ValueTree tracks(ID_TRACKS);
+  tracks.setProperty(PROP_ID, "tracks_list", nullptr);
+  state.appendChild(tracks, nullptr);
 
   // Create MIXER node
   juce::ValueTree mixer(ID_MIXER);
+  mixer.setProperty(PROP_ID, "mixer_node", nullptr);
   mixer.setProperty(PROP_VOLUME, 0.8, nullptr);
   state.appendChild(mixer, nullptr);
+
+  // Create TEMPO_MAP node
+  juce::ValueTree tempoMap(ID_TEMPO_MAP);
+  tempoMap.setProperty(PROP_ID, "tempo_map", nullptr);
+  state.appendChild(tempoMap, nullptr);
 
   DBG("ProjectState: Default state created");
 }
@@ -2020,6 +2044,158 @@ void ProjectState::moveSectionContent(const juce::String &sectionId,
         }
       }
     }
+  }
+}
+
+//==========================================================================
+// Take Folder Management
+//==========================================================================
+
+juce::String ProjectState::createTakeFolder(const juce::String &trackId,
+                                            double startBeats,
+                                            double lengthBeats,
+                                            const juce::String &actionName) {
+  auto track = findTrack(trackId);
+  if (!track.isValid())
+    return {};
+
+  auto clipsNode = track.getOrCreateChildWithName(ID_CLIPS, nullptr);
+
+  undoManager.beginNewTransaction(actionName);
+
+  juce::String folderId = generateUniqueId("folder");
+  juce::ValueTree folder(ID_TAKE_FOLDER);
+  folder.setProperty(PROP_ID, folderId, nullptr);
+  folder.setProperty(PROP_START_BEATS, startBeats, nullptr);
+  folder.setProperty(PROP_LENGTH_BEATS, lengthBeats, nullptr);
+  folder.setProperty(PROP_ACTIVE_TAKE, -1, nullptr); // -1 = comp mode
+  folder.setProperty(PROP_EXPANDED, true, nullptr);
+
+  clipsNode.addChild(folder, -1, &undoManager);
+
+  DBG("ProjectState: Created Take Folder " + folderId + " on track " + trackId);
+  return folderId;
+}
+
+void ProjectState::addTakeToFolder(const juce::String &folderId,
+                                   const juce::String &clipId) {
+  auto [oldTrack, clip] = findClip(clipId);
+  if (!clip.isValid())
+    return;
+
+  // Find folder
+  auto tracksNode = state.getChildWithName(ID_TRACKS);
+  juce::ValueTree folder;
+  for (auto t : tracksNode) {
+    auto clips = t.getChildWithName(ID_CLIPS);
+    folder = clips.getChildWithProperty(PROP_ID, folderId);
+    if (folder.isValid())
+      break;
+  }
+
+  if (!folder.isValid())
+    return;
+
+  undoManager.beginNewTransaction("Add take to folder");
+
+  // Move clip to folder
+  auto parent = clip.getParent();
+  parent.removeChild(clip, &undoManager);
+  folder.addChild(clip, -1, &undoManager);
+
+  DBG("ProjectState: Added clip " + clipId + " to folder " + folderId);
+}
+
+void ProjectState::removeTakeFromFolder(const juce::String &folderId,
+                                        const juce::String &clipId) {
+  auto tracksNode = state.getChildWithName(ID_TRACKS);
+  juce::ValueTree folder;
+  juce::ValueTree track;
+  for (auto t : tracksNode) {
+    auto clips = t.getChildWithName(ID_CLIPS);
+    folder = clips.getChildWithProperty(PROP_ID, folderId);
+    if (folder.isValid()) {
+      track = t;
+      break;
+    }
+  }
+
+  if (!folder.isValid())
+    return;
+
+  auto clip = folder.getChildWithProperty(PROP_ID, clipId);
+  if (!clip.isValid())
+    return;
+
+  undoManager.beginNewTransaction("Remove take from folder");
+
+  folder.removeChild(clip, &undoManager);
+  track.getOrCreateChildWithName(ID_CLIPS, nullptr)
+      .addChild(clip, -1, &undoManager);
+
+  DBG("ProjectState: Removed clip " + clipId + " from folder " + folderId);
+}
+
+void ProjectState::setCompRegion(const juce::String &folderId, double startBeats,
+                                 double lengthBeats, int takeIndex,
+                                 const juce::String &actionName) {
+  // Find folder
+  auto tracksNode = state.getChildWithName(ID_TRACKS);
+  juce::ValueTree folder;
+  for (auto t : tracksNode) {
+    auto clips = t.getChildWithName(ID_CLIPS);
+    folder = clips.getChildWithProperty(PROP_ID, folderId);
+    if (folder.isValid())
+      break;
+  }
+
+  if (!folder.isValid())
+    return;
+
+  undoManager.beginNewTransaction(actionName);
+
+  // Simple implementation: Add a new region.
+  // Real implementation in TakeFolder.cpp handles overlaps.
+  // Here we just update the model; the engine implementation is primary truth.
+  // But for UI/Persistence, we need something.
+
+  juce::ValueTree region(ID_COMP_REGION);
+  region.setProperty(PROP_ID, generateUniqueId("region"), nullptr);
+  region.setProperty(PROP_START_BEATS, startBeats, nullptr);
+  region.setProperty(PROP_LENGTH_BEATS, lengthBeats, nullptr);
+  region.setProperty(PROP_TAKE_INDEX, takeIndex, nullptr);
+
+  folder.addChild(region, -1, &undoManager);
+}
+
+void ProjectState::setTakeFolderExpanded(const juce::String &folderId,
+                                         bool expanded) {
+  auto tracksNode = state.getChildWithName(ID_TRACKS);
+  juce::ValueTree folder;
+  for (auto t : tracksNode) {
+    auto clips = t.getChildWithName(ID_CLIPS);
+    folder = clips.getChildWithProperty(PROP_ID, folderId);
+    if (folder.isValid())
+      break;
+  }
+
+  if (folder.isValid()) {
+    folder.setProperty(PROP_EXPANDED, expanded, &undoManager);
+  }
+}
+
+void ProjectState::setActiveTake(const juce::String &folderId, int takeIndex) {
+  auto tracksNode = state.getChildWithName(ID_TRACKS);
+  juce::ValueTree folder;
+  for (auto t : tracksNode) {
+    auto clips = t.getChildWithName(ID_CLIPS);
+    folder = clips.getChildWithProperty(PROP_ID, folderId);
+    if (folder.isValid())
+      break;
+  }
+
+  if (folder.isValid()) {
+    folder.setProperty(PROP_ACTIVE_TAKE, takeIndex, &undoManager);
   }
 }
 

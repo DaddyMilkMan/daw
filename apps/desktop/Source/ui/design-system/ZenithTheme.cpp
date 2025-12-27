@@ -42,11 +42,15 @@ const juce::Colour ZenithTheme::Colors::text_inverse =
 // Professional blue accent (not garish cyan)
 const juce::Colour ZenithTheme::Colors::accent_primary =
     juce::Colour(0xff3b82f6);
+const juce::Colour ZenithTheme::Colors::accent_secondary =
+    juce::Colour(0xff8b5cf6); // Purple/Violet secondary accent
 const juce::Colour ZenithTheme::Colors::accent_hover = juce::Colour(0xff60a5fa);
 const juce::Colour ZenithTheme::Colors::accent_pressed =
     juce::Colour(0xff2563eb);
 const juce::Colour ZenithTheme::Colors::accent_subtle =
     juce::Colour(0xff3b82f6).withAlpha(0.10f);
+const juce::Colour ZenithTheme::Colors::hover_overlay =
+    juce::Colour(0xffffffff).withAlpha(0.08f); // White 8% for hover states
 
 // Semantic colors
 const juce::Colour ZenithTheme::Colors::success = juce::Colour(0xff10b981);

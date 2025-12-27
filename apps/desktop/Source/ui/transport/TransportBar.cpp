@@ -31,7 +31,16 @@ namespace zenith {
 
 TransportBar::TransportBar() {
   setSize(800, 60);
-  startTimerHz(60); // Animation loop
+}
+
+void TransportBar::visibilityChanged() {
+  // Only start timer when:
+  // 1. Component is visible
+  // 2. Component has a peer (is on desktop) - prevents blocking during construction
+  // 3. Timer isn't already running
+  if (isVisible() && getPeer() != nullptr && !isTimerRunning()) {
+    startTimerHz(60); // Start animation loop when visible and on desktop
+  }
 }
 
 void TransportBar::resized() {
@@ -57,8 +66,12 @@ void TransportBar::resized() {
   // View Toggle Button (Right side)
   // View Toggle Button (Right side)
   auto rightSection =
-      area.removeFromRight(static_cast<int>(spacing::XXL * 2.5f));
+      area.removeFromRight(static_cast<int>(spacing::XXL * 3.5f));
   settingsButtonBounds_ =
+      rightSection
+          .removeFromRight(static_cast<int>(dimensions::TRANSPORT_BAR_HEIGHT))
+          .reduced(buttonPadding);
+  exportButtonBounds_ =
       rightSection
           .removeFromRight(static_cast<int>(dimensions::TRANSPORT_BAR_HEIGHT))
           .reduced(buttonPadding);
@@ -96,6 +109,10 @@ void TransportBar::drawSkia(SkCanvas *canvas) {
   // View Toggle - uses ViewToggle icon
   drawTransportButton(canvas, viewToggleButtonBounds_, icons::ViewToggle(),
                       false, design::colors::TEXT_PRIMARY, viewToggleState_);
+
+  // Export Button - uses Download/Save icon
+  drawTransportButton(canvas, exportButtonBounds_, icons::Download(), false,
+                      design::colors::TEXT_PRIMARY, exportState_);
 
   // Settings Button - uses Settings gear icon
   drawTransportButton(canvas, settingsButtonBounds_, icons::Settings(), false,
@@ -142,7 +159,7 @@ void TransportBar::updateCachedPaints(const SkRect &bounds) {
   // 3. Fonts
   // Use Mono font for Tempo/BPM display to avoid jitter
   font_ = design::getMonoFont(18.0f, design::FontWeight::Medium);
-
+  
   // Use UI font for labels
   smallFont_ = design::getSkFont(14.0f, design::FontWeight::Regular);
 }
@@ -279,6 +296,7 @@ void TransportBar::mouseDown(const juce::MouseEvent &e) {
   recordState_.isPressed = recordButtonBounds_.contains(e.getPosition());
   viewToggleState_.isPressed =
       viewToggleButtonBounds_.contains(e.getPosition());
+  exportState_.isPressed = exportButtonBounds_.contains(e.getPosition());
   settingsState_.isPressed = settingsButtonBounds_.contains(e.getPosition());
 
   if (playButtonBounds_.contains(e.getPosition())) {
@@ -293,6 +311,9 @@ void TransportBar::mouseDown(const juce::MouseEvent &e) {
   } else if (viewToggleButtonBounds_.contains(e.getPosition())) {
     if (onViewToggleClicked)
       onViewToggleClicked();
+  } else if (exportButtonBounds_.contains(e.getPosition())) {
+    if (onExportClicked)
+      onExportClicked();
   } else if (settingsButtonBounds_.contains(e.getPosition())) {
     if (onSettingsClicked)
       onSettingsClicked();
@@ -305,6 +326,7 @@ void TransportBar::mouseMove(const juce::MouseEvent &e) {
   recordState_.isHovered = recordButtonBounds_.contains(e.getPosition());
   viewToggleState_.isHovered =
       viewToggleButtonBounds_.contains(e.getPosition());
+  exportState_.isHovered = exportButtonBounds_.contains(e.getPosition());
   settingsState_.isHovered = settingsButtonBounds_.contains(e.getPosition());
 }
 
@@ -317,6 +339,7 @@ void TransportBar::mouseExit(const juce::MouseEvent &e) {
   stopState_.isHovered = false;
   recordState_.isHovered = false;
   viewToggleState_.isHovered = false;
+  exportState_.isHovered = false;
   settingsState_.isHovered = false;
 }
 
@@ -329,12 +352,13 @@ void TransportBar::timerCallback() {
   stopState_.update(dt);
   recordState_.update(dt);
   viewToggleState_.update(dt);
+  exportState_.update(dt);
   settingsState_.update(dt);
 
   // Check if any need repainting
   if (playState_.isAnimating() || stopState_.isAnimating() ||
       recordState_.isAnimating() || viewToggleState_.isAnimating() ||
-      settingsState_.isAnimating()) {
+      exportState_.isAnimating() || settingsState_.isAnimating()) {
     repaint();
   }
 }

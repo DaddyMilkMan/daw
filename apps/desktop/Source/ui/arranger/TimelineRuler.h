@@ -4,7 +4,7 @@
  */
 
 // POLISH: spacing normalized to 8px grid (labels at Typography.small)
-// POLISH: typography now uses SkiaTheme::Typography (small)
+// POLISH: typography now uses ZenithDesignSystem
 // POLISH: flattened background (bg2, no gradients)
 
 #pragma once
@@ -19,14 +19,14 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-
 #ifdef ZENITH_USE_SKIA
-#include "SkiaComponent.h"
-#include "SkiaTheme.h"
+#include "../framework/SkiaComponent.h"
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
 #endif
+
+namespace zenith {
 
 /**
  * @class TimelineRuler
@@ -38,7 +38,7 @@
  * animations.
  */
 #ifdef ZENITH_USE_SKIA
-class TimelineRuler : public zenith::SkiaComponent
+class TimelineRuler : public SkiaComponent
 #else
 class TimelineRuler : public juce::Component,
                       public juce::Timer
@@ -84,7 +84,7 @@ public:
   //==========================================================================
 
 #ifdef ZENITH_USE_SKIA
-  void drawSkia(SkCanvas* canvas) override;
+  void drawSkia(SkCanvas *canvas) override;
 #else
   void paint(juce::Graphics &g) override;
 #endif
@@ -116,3 +116,5 @@ private:
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TimelineRuler)
 };
+
+} // namespace zenith

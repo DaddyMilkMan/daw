@@ -22,9 +22,13 @@
 #include "../piano-roll/PianoRollComponent.h"
 #include "../sample-editor/SampleEditorComponent.h"
 #include "../session/SessionViewComponent.h"
-#include "RemoteCursorOverlay.h"
-#include "ResizablePanelContainer.h"
+#include "../ui/common/RemoteCursorOverlay.h"
+#include <memory>
+#include <utility>
+#include <vector>
 
+#include "../ui/piano-roll/PianoRollComponent.h"
+#include "ResizablePanelContainer.h"
 
 namespace zenith {
 

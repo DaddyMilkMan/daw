@@ -50,9 +50,9 @@ private:
   Mode mode = Mode::Clean;
   float drive = 0.0f;     // 0.0 to 1.0
   float character = 0.0f; // 0.0 to 1.0 (mix or intensity)
-  bool coefficientsDirty = true;
 
   float sampleRate = 44100.0f;
+  bool coefficientsDirty = true;
 
   // Filters for tonal shaping
   juce::dsp::IIR::Filter<float> lowPass;

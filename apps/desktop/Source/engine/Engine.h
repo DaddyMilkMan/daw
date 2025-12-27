@@ -72,6 +72,9 @@ class AudioRenderer;
 class RecordingManager;
 class TransportController;
 class MeteringSystem;
+class MixerController;
+class Midi2DiscoveryService;
+class PropertyExchangeManager;
 
 namespace ai {
 class SessionDebuggerAgent;
@@ -90,6 +93,24 @@ class AIMasteringAgent;
  * 4. MIDI input routing
  * 5. Audio input recording
  * 6. CPU usage monitoring
+ *
+ * ## Ownership Model (to prevent shared_ptr cycles):
+ *
+ * **Parent -> Child (shared_ptr/unique_ptr):**
+ * - Engine owns Tracks via std::vector<std::shared_ptr<Track>>
+ * - Engine owns AuxBuses via std::vector<std::shared_ptr<AuxBus>>
+ * - Engine owns subsystems via std::unique_ptr (AudioRenderer, RecordingManager, etc.)
+ *
+ * **Child -> Parent (raw pointer/reference):**
+ * - Subsystems hold Engine& references (TrackStateSynchronizer, RecordingManager, etc.)
+ * - No child component holds std::shared_ptr<Engine>
+ *
+ * **RT-safe snapshots:**
+ * - TrackSnapshot uses shared_ptr only for lifetime management (lifecycle vector)
+ * - Audio thread accesses raw pointers extracted from the snapshot
+ *
+ * @note To avoid memory leaks: NEVER store std::shared_ptr<Engine> in child components.
+ *       Use Engine& or Engine* for back-references.
  */
 class Engine : public juce::AudioIODeviceCallback,
                public juce::MidiInputCallback {
@@ -565,6 +586,18 @@ public:
   void setMasterLimiterEnabled(bool enabled);
 
   /**
+   * @brief Add a plugin to the master bus
+   * @param plugin Shared pointer to the plugin instance
+   */
+  void addMasterPlugin(std::shared_ptr<juce::AudioPluginInstance> plugin);
+
+  /**
+   * @brief Remove a plugin from the master bus
+   * @param index Index of the plugin to remove
+   */
+  void removeMasterPlugin(int index);
+
+  /**
    * @brief Check if master limiter is enabled
    */
   bool isMasterLimiterEnabled() const;
@@ -586,6 +619,11 @@ public:
    * @return Latency in samples (includes lookahead and oversampling)
    */
   int getMasterLimiterLatency() const;
+
+  /**
+   * @brief Get the mixer controller
+   */
+  MixerController& getMixerController() { return *mixerController_; }
 
   //==========================================================================
   // Track Freeze (CPU optimization)
@@ -728,6 +766,18 @@ public:
   //==========================================================================
   // Project Export
   //==========================================================================
+  
+  friend class AudioExporter;
+  friend class AudioRecorder;
+
+  /**
+   * @brief Render a specific block of audio for offline export
+   * @param buffer Buffer to fill (must be sized correctly)
+   * @param numSamples Number of samples to render
+   * @param position Sample position in the project
+   * @note Message thread only
+   */
+  void renderOfflineBlock(juce::AudioBuffer<float>& buffer, int numSamples, juce::int64 position);
 
   /**
    * @brief Export project to WAV file
@@ -740,7 +790,10 @@ public:
   bool exportProjectToWav(const juce::File &outputFile, double sampleRate,
                           int bitDepth, double durationInSeconds);
 
-  enum class ExportFormat { WAV, FLAC, OGG };
+  enum class ExportFormat { WAV, FLAC, OGG, AIFF };
+
+  /// Progress callback type for export operations
+  using ExportProgressCallback = std::function<void(float progress, const juce::String& status)>;
 
   struct ExportOptions {
     juce::File outputFile;
@@ -751,11 +804,18 @@ public:
     bool normalize = false;
     double normalizeDb = -0.1;
     double duration = 0.0;
+    
+    // Stem export options
+    bool exportStems = false;
+    std::vector<int> stemTrackIndices; // Empty = all tracks
+    
+    // Progress callback (optional)
+    ExportProgressCallback progressCallback = nullptr;
   };
 
   /**
    * @brief Advanced Project Export
-   * Supports WAV/FLAC/OGG, Dithering, Normalization, and 8-bit.
+   * Supports WAV/FLAC/OGG/AIFF, Dithering, Normalization, and 8-bit.
    */
   bool exportProject(const ExportOptions &options);
 
@@ -775,6 +835,8 @@ public:
    * @brief Get the shared thread pool for background tasks
    */
   juce::ThreadPool &getThreadPool();
+
+  Midi2DiscoveryService* getMidi2DiscoveryService() const { return midi2DiscoveryService_.get(); }
 
 private:
   //==========================================================================
@@ -912,13 +974,22 @@ private:
   // Main thread manages lifetime via currentSnapshotHolder_ and snapshotTrash_
   std::atomic<TrackSnapshot *> activeSnapshot_{nullptr};
   std::shared_ptr<TrackSnapshot> currentSnapshotHolder_;
-  std::vector<std::shared_ptr<TrackSnapshot>> snapshotTrash_;
 
   void updateTrackSnapshot();
 
   // RT-safe event applicator to deduplicate processEvents logic
   void applyEvent(const zenith::EngineEvent &e,
                   TrackSnapshot *snapshot) noexcept;
+
+  // Master Plugin RCU
+  struct MasterPluginSnapshot {
+    std::vector<std::shared_ptr<juce::AudioPluginInstance>> plugins;
+  };
+
+  std::atomic<MasterPluginSnapshot *> activeMasterPluginsSnapshot_{nullptr};
+  std::shared_ptr<MasterPluginSnapshot> currentMasterPluginsSnapshotHolder_;
+
+  void updateMasterPluginSnapshot();
 
   // Phase 1.2: Audio file pool
   std::unique_ptr<zenith::AudioFilePool> audioFilePool_;
@@ -935,6 +1006,7 @@ private:
   std::unique_ptr<ai::SessionDebuggerAgent> sessionDebugger_;
   std::unique_ptr<ai::AIMasteringAgent> masteringAgent_;
   std::unique_ptr<Metronome> metronome_;
+  std::unique_ptr<Midi2DiscoveryService> midi2DiscoveryService_;
 
   // Analysis FIFO (Stereo)
   std::unique_ptr<zenith::StereoAudioFifo> analysisFifo_;
@@ -957,6 +1029,7 @@ private:
   std::unique_ptr<RecordingManager> recordingManager_;
   std::unique_ptr<TransportController> transportController_;
   std::unique_ptr<MeteringSystem> meteringSystem_;
+  std::unique_ptr<MixerController> mixerController_;
   std::unique_ptr<zenith::TempoMap>
       tempoMap_; // Kept for now, shared with controllers
 
@@ -964,7 +1037,7 @@ private:
   std::vector<std::shared_ptr<zenith::AuxBus>> auxBuses_;
 
   // Master bus plugins (Managed by Engine, rendered by AudioRenderer)
-  std::vector<std::unique_ptr<juce::AudioPluginInstance>> masterPlugins_;
+  std::vector<std::shared_ptr<juce::AudioPluginInstance>> masterPlugins_;
   juce::CriticalSection masterPluginLock_;
 
   // Master Limiter (Used by AudioRenderer)

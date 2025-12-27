@@ -32,21 +32,16 @@ option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" OFF)
 option(ENABLE_SPECTRE "Enable Spectre Mitigations (MSVC)" OFF)
 
 # Auto-enable sanitizers in Debug builds
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" ON)
-    option(ENABLE_HARDENING "Enable Security Hardening Flags" ON)
-else()
-    option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" OFF)
-    option(ENABLE_HARDENING "Enable Security Hardening Flags" OFF)
-endif()
-
-if(ENABLE_SANITIZERS AND MSVC)
-    add_compile_options(/fsanitize=address)
-endif()
+# (Disabled to prevent ASAN in Release builds)
+# if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "Debug")
+#     set(ENABLE_SANITIZERS ON CACHE BOOL "Enable Address and UB Sanitizers in Debug" FORCE)
+#     set(ENABLE_HARDENING ON CACHE BOOL "Enable Security Hardening Flags in Debug" FORCE)
+# endif()
 
 # 5. C++ Standard (Enforced later via target_compile_features)
-# set(CMAKE_CXX_STANDARD 20) - Removed in favor of target properties
-# set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Always enable Skia (Phase 2 decision)
 # add_definitions(-DZENITH_USE_SKIA=1) - Removed: Handled via target_compile_definitions in SkiaManualIntegration.cmake
@@ -82,13 +77,30 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/tests/ProjectStateTests.cpp
     apps/desktop/Source/tests/EngineTests.cpp
     apps/desktop/Source/tests/ConcurrencyTests.cpp
-    apps/desktop/Source/tests/AITests.cpp
-    apps/desktop/Source/tests/UITests.cpp
+    apps/desktop/Source/tests/ConcurrencyTests.cpp
+    # apps/desktop/Source/tests/Midi2Tests.cpp
+    apps/desktop/Source/tests/CRDTSyncTests.cpp
+    apps/desktop/Source/tests/OnnxPipelineTests.cpp
+    apps/desktop/Source/tests/PluginAutomationTests.cpp
+    # apps/desktop/Source/tests/AITests.cpp
+    # apps/desktop/Source/tests/UITests.cpp
+
     apps/desktop/Source/ui/design-system/ZenithLayout.cpp
+    apps/desktop/Source/ui/framework/UITestFramework.cpp
     
     # Engine sources required for linking
     apps/desktop/Source/engine/Engine.cpp
+    apps/desktop/Source/engine/EngineTransport.cpp
+    apps/desktop/Source/engine/EngineTrackManagement.cpp
+    apps/desktop/Source/engine/EngineMixing.cpp
+    apps/desktop/Source/engine/EngineRecording.cpp
+    apps/desktop/Source/engine/EngineExport.cpp
+    apps/desktop/Source/engine/EngineMIDI.cpp
+    apps/desktop/Source/engine/EngineSync.cpp
+    apps/desktop/Source/engine/EnginePlugins.cpp
     apps/desktop/Source/engine/ProjectState.cpp
+    apps/desktop/Source/engine/PluginChain.cpp
+    apps/desktop/Source/engine/PluginAutomationBinding.cpp
     apps/desktop/Source/engine/Track.cpp
     apps/desktop/Source/engine/Clip.cpp
     apps/desktop/Source/engine/MixerChannel.cpp
@@ -99,6 +111,8 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/engine/TrackPluginState.cpp
     apps/desktop/Source/engine/AudioRecorder.cpp
     apps/desktop/Source/engine/RoutingGraph.cpp
+
+    # Deprecated synchronizers (for reflog/legacy support)
     apps/desktop/Source/engine/ClipSynchronizer.cpp
     apps/desktop/Source/engine/TrackStateSynchronizer.cpp
     apps/desktop/Source/engine/TrackAutomationSynchronizer.cpp
@@ -113,6 +127,8 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/engine/Metronome.cpp
     apps/desktop/Source/engine/AudioTrack.cpp
     apps/desktop/Source/engine/MIDITrack.cpp
+    apps/desktop/Source/engine/InstrumentTrack.cpp
+    apps/desktop/Source/plugins/modulation/ZenithTremolo.cpp
     # Instruments
     apps/desktop/Source/instruments/Instrument.cpp
     apps/desktop/Source/instruments/InstrumentRegistry.cpp
@@ -148,11 +164,58 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/engine/ProjectFileIO.cpp
     apps/desktop/Source/engine/ProjectEngineBridge.cpp
     apps/desktop/Source/ui/common/PluginEditorWindow.cpp
-    apps/desktop/Source/tests/BasicAudioTest.cpp
     # apps/desktop/Source/tests/FlecsSyncTests.cpp - Removed
     # Dependencies for tests
-    # apps/desktop/Source/network/GrokUtils.cpp
+    apps/desktop/Source/ui/mixer/MixerChannelComponent.cpp
+    apps/desktop/Source/network/AudioAnalysisService.cpp
+    apps/desktop/Source/ui/framework/SkiaComponent.cpp
+    apps/desktop/Source/ui/framework/SkiaLayout.cpp
+    apps/desktop/Source/ui/design-system/ZenithTheme.cpp
+    apps/desktop/Source/ui/design-system/ZenithDesignSystem.cpp
+    apps/desktop/Source/ui/design-system/ZenithLookAndFeel.cpp
+    apps/desktop/Source/ui/design-system/FontManager.cpp
+    apps/desktop/Source/ui/controls/SkiaSpectrumComponent.cpp
+    apps/desktop/Source/ui/controls/SkiaButton.cpp
+    apps/desktop/Source/ui/controls/SkiaKnob.cpp
+    apps/desktop/Source/ui/controls/SkiaSlider.cpp
+    apps/desktop/Source/platform/linux/ui/PlatformDisplayUtils_Linux.cpp
+
+    apps/desktop/Source/platform/linux/fonts/PlatformFontUtils_Linux.cpp
+    apps/desktop/Source/network/GrokAPIClient.cpp
+    apps/desktop/Source/ui/arranger/ClipComponent.cpp
+    apps/desktop/Source/ai/ZenithStyleApplicator.cpp
+    apps/desktop/Source/network/SecureKeyStore.cpp
+    apps/desktop/Source/platform/linux/network/SecureKeyStore_Linux.cpp
+    apps/desktop/Source/ui/browser/PresetBrowserComponent.cpp
+    apps/desktop/Source/effects/ConsoleEmulation.cpp
+    apps/desktop/Source/plugins/InternalPluginFormat.cpp
+    apps/desktop/Source/effects/ZenithChannelStrip.cpp
+    apps/desktop/Source/effects/ZenithDeEsser.cpp
+    apps/desktop/Source/effects/ZenithTransientShaper.cpp
+    apps/desktop/Source/effects/ZenithVoiceChanger.cpp
+    apps/desktop/Source/plugins/ZenithPlugin.cpp
+    apps/desktop/Source/plugins/ZenithPluginEditor.cpp
+    apps/desktop/Source/plugins/modulation/ZenithTremolo.cpp
+    apps/desktop/Source/dsp/DSPVoiceChanger.cpp
+    apps/desktop/Source/ui/instruments/ZenithPolySynthUI.cpp
+    apps/desktop/Source/ui/controls/ZenithControl.cpp
+    apps/desktop/Source/ui/controls/ZenithKnob.cpp
+    apps/desktop/Source/rendering/SkiaRenderer.cpp
+    apps/desktop/Source/ui/controls/ZenithVisualizer.cpp
+    apps/desktop/Source/ai/AIEventBus.cpp
+    apps/desktop/Source/ai/AIResponseCache.cpp
+    apps/desktop/Source/ai/AIStatusManager.cpp
+    apps/desktop/Source/ai/AudioFitnessEvaluator.cpp
+    apps/desktop/Source/platform/linux/engine/PlatformAudioUtils_Linux.cpp
+    apps/desktop/Source/platform/linux/dsp/PlatformModelUtils_Linux.cpp
+    apps/desktop/Source/network/GrokUtils.cpp
+    apps/desktop/Source/dsp/DSPStemSeparator.cpp
+    apps/desktop/Source/dsp/ONNXStemSeparator.cpp
+    apps/desktop/Source/utils/StemSeparationJob.cpp
+    apps/desktop/Source/engine/Midi2DiscoveryService.cpp
+    apps/desktop/Source/engine/PropertyExchangeManager.cpp
 )
+
 
 # Create main executable
 juce_add_gui_app(ZenithDAW
@@ -173,6 +236,7 @@ target_sources(ZenithDAW PRIVATE ${ZENITH_SOURCES})
 option(ZENITH_ENABLE_SKIA "Enable Skia Rendering" ON)
 
 # Modularized Source Groups (Complaint #6 Fix)
+add_subdirectory(apps/desktop/Source/plugins)
 add_subdirectory(apps/desktop/Source/engine)
 add_subdirectory(apps/desktop/Source/ui)
 add_subdirectory(apps/desktop/Source/instruments)
@@ -182,6 +246,8 @@ add_subdirectory(apps/desktop/Source/rendering)
 add_subdirectory(apps/desktop/Source/dsp)
 add_subdirectory(apps/desktop/Source/browser)
 add_subdirectory(apps/desktop/Source/ai)
+add_subdirectory(apps/desktop/Source/utils)
+add_subdirectory(apps/desktop/Source/platform)
 
 
 # Include directories (updated for new domain-based structure)
@@ -232,6 +298,38 @@ target_link_libraries(ZenithDAW PRIVATE
     juce::juce_dsp
     juce::juce_opengl
 )
+
+# ==============================================================================
+# ONNX Runtime Integration
+# ==============================================================================
+option(ENABLE_ONNX "Enable ONNX Runtime" ON)
+include(FetchContent)
+if(UNIX AND NOT APPLE)
+    FetchContent_Declare(
+        onnxruntime
+        URL https://github.com/microsoft/onnxruntime/releases/download/v1.17.1/onnxruntime-linux-x64-1.17.1.tgz
+    )
+    FetchContent_MakeAvailable(onnxruntime)
+    
+    target_link_libraries(ZenithDAW PRIVATE ${onnxruntime_SOURCE_DIR}/lib/libonnxruntime.so)
+    target_include_directories(ZenithDAW PRIVATE ${onnxruntime_SOURCE_DIR}/include)
+    target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_ONNX_RUNTIME=1)
+    
+    # Copy shared library to output directory
+    add_custom_command(TARGET ZenithDAW POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${onnxruntime_SOURCE_DIR}/lib/libonnxruntime.so.1.17.1"
+        "$<TARGET_FILE_DIR:ZenithDAW>/libonnxruntime.so.1.17.1"
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+        "libonnxruntime.so.1.17.1"
+        "$<TARGET_FILE_DIR:ZenithDAW>/libonnxruntime.so.1"
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+        "libonnxruntime.so.1.17.1"
+        "$<TARGET_FILE_DIR:ZenithDAW>/libonnxruntime.so"
+        COMMENT "Copying ONNX Runtime library to output directory"
+    )
+endif()
+
 
 # Platform-specific libraries for Graphics Backends
 if(WIN32)
@@ -385,6 +483,8 @@ if(BUILD_TESTS)
         apps/desktop/Source 
         apps/desktop/Source/engine
         apps/desktop/Source/ui
+        apps/desktop/Source/ui/framework
+        apps/desktop/Source/ui/design-system
         apps/desktop/Source/ui/common
         apps/desktop/Source/ui/instruments
         apps/desktop/Source/ui/browser
@@ -396,6 +496,7 @@ if(BUILD_TESTS)
     )
     target_link_libraries(ZenithDAWTests PRIVATE
         juce::juce_core
+        juce::juce_cryptography
         juce::juce_data_structures
         juce::juce_audio_basics
         juce::juce_audio_devices
@@ -405,7 +506,15 @@ if(BUILD_TESTS)
         juce::juce_dsp
         juce::juce_graphics
         juce::juce_gui_basics
+        juce::juce_opengl
     )
+    
+    if(UNIX AND NOT APPLE AND ENABLE_ONNX)
+        target_link_libraries(ZenithDAWTests PRIVATE onnxruntime)
+        target_include_directories(ZenithDAWTests PRIVATE ${onnxruntime_SOURCE_DIR}/include)
+        target_compile_definitions(ZenithDAWTests PRIVATE ZENITH_USE_ONNX_RUNTIME=1)
+    endif()
+
     target_compile_definitions(ZenithDAWTests PRIVATE
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0

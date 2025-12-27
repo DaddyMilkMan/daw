@@ -11,12 +11,13 @@
  */
 
 #include "MixerChannelComponent.h"
+#include "../../Source/effects/ConsoleEmulation.h"
 #include "../../Source/engine/EngineConstants.h"
 #include "../../Source/engine/Track.h"
 #include "GlassmorphicPanel.h"
 #include "NeonGlow.h"
-#include "SkiaTheme.h"
 #include "ZenithDesignSystem.h"
+#include "../design-system/ZenithTheme.h"
 #include <JuceHeader.h>
 
 #include <core/SkCanvas.h>
@@ -194,7 +195,8 @@ void MixerChannelComponent::drawSkia(SkCanvas *canvas) {
     // Selected channel: Use accent glow
     zenith::GlassmorphicPanel::drawWithAccent(
         canvas, skBounds,
-        isMaster_ ? design::colors::MAGENTA : design::colors::CYAN,
+        isMaster_ ? SkColorSetRGB(ZenithTheme::Colors::accent_secondary.getRed(), ZenithTheme::Colors::accent_secondary.getGreen(), ZenithTheme::Colors::accent_secondary.getBlue()) 
+                  : SkColorSetRGB(ZenithTheme::Colors::accent_primary.getRed(), ZenithTheme::Colors::accent_primary.getGreen(), ZenithTheme::Colors::accent_primary.getBlue()),
         GlassmorphicPanel::Style::ActiveGlow);
   } else {
     // Normal channel: Elevated glass panel
@@ -210,7 +212,8 @@ void MixerChannelComponent::drawSkia(SkCanvas *canvas) {
   // Draw insert slots section header
   float insertSectionY = bounds.getHeight() * 0.55f;
   SkPaint labelPaint;
-  labelPaint.setColor(design::colors::TEXT_TERTIARY);
+  juce::Colour txt = ZenithTheme::Colors::text_tertiary;
+  labelPaint.setColor(SkColorSetARGB(txt.getAlpha(), txt.getRed(), txt.getGreen(), txt.getBlue()));
   labelPaint.setAntiAlias(true);
   SkFont labelFont =
       design::typography::getSkFont(10.0f, design::FontWeight::Medium);
@@ -223,14 +226,15 @@ void MixerChannelComponent::drawSkia(SkCanvas *canvas) {
   // Master channel: Draw "MASTER" badge
   if (isMaster_) {
     SkPaint badgePaint;
-    badgePaint.setColor(design::withAlpha(design::colors::MAGENTA, 0.3f));
+    juce::Colour magenta = ZenithTheme::Colors::accent_secondary;
+    badgePaint.setColor(SkColorSetARGB((int)(255 * 0.3f), magenta.getRed(), magenta.getGreen(), magenta.getBlue()));
     badgePaint.setAntiAlias(true);
 
     SkRect badgeRect = SkRect::MakeXYWH(bounds.getWidth() / 2 - 30, 4, 60, 18);
-    canvas->drawRoundRect(badgeRect, 4, 4, badgePaint);
+    canvas->drawRoundRect(badgeRect, ZenithTheme::Radius::sm, ZenithTheme::Radius::sm, badgePaint);
 
     SkPaint badgeTextPaint;
-    badgeTextPaint.setColor(design::colors::MAGENTA);
+    badgeTextPaint.setColor(SkColorSetARGB(255, magenta.getRed(), magenta.getGreen(), magenta.getBlue()));
     badgeTextPaint.setAntiAlias(true);
     SkFont badgeFont =
         design::typography::getSkFont(10.0f, design::FontWeight::Bold);
@@ -243,6 +247,7 @@ void MixerChannelComponent::resized() {
   auto bounds = getLocalBounds();
 
   // Top section: Track name
+
   int topHeight = isMaster_ ? kTopHeightMaster : kTopHeightNormal;
   nameLabel_.setBounds(bounds.removeFromTop(topHeight));
   bounds.removeFromTop(4);
@@ -515,9 +520,10 @@ void MixerChannelComponent::LevelMeter::drawMeterBar(SkCanvas *canvas,
 
   // Draw background
   SkPaint bgPaint;
-  bgPaint.setColor(colors::BG_DARKEST);
+  juce::Colour bg = ZenithTheme::Colors::bg_04;
+  bgPaint.setColor(SkColorSetARGB(255, bg.getRed(), bg.getGreen(), bg.getBlue()));
   bgPaint.setAntiAlias(true);
-  canvas->drawRoundRect(bounds, 2.0f, 2.0f, bgPaint);
+  canvas->drawRoundRect(bounds, ZenithTheme::Radius::sm, ZenithTheme::Radius::sm, bgPaint);
 
   if (level < 0.001f && peak < 0.001f)
     return;
@@ -527,6 +533,11 @@ void MixerChannelComponent::LevelMeter::drawMeterBar(SkCanvas *canvas,
   float normalizedLevel = juce::jmap(levelDb, -60.0f, 0.0f, 0.0f, 1.0f);
   normalizedLevel = juce::jlimit(0.0f, 1.0f, normalizedLevel);
 
+  // Define colors at function scope for reuse
+  SkColor cGreen = SkColorSetRGB(ZenithTheme::Colors::success.getRed(), ZenithTheme::Colors::success.getGreen(), ZenithTheme::Colors::success.getBlue());
+  SkColor cAmber = SkColorSetRGB(ZenithTheme::Colors::warning.getRed(), ZenithTheme::Colors::warning.getGreen(), ZenithTheme::Colors::warning.getBlue());
+  SkColor cRed = SkColorSetRGB(ZenithTheme::Colors::error.getRed(), ZenithTheme::Colors::error.getGreen(), ZenithTheme::Colors::error.getBlue());
+
   if (normalizedLevel > 0.01f) {
     float barHeight = bounds.height() * normalizedLevel;
     SkRect meterRect =
@@ -534,18 +545,18 @@ void MixerChannelComponent::LevelMeter::drawMeterBar(SkCanvas *canvas,
                          bounds.width() - 4, barHeight);
 
     // Gradient: green -> yellow -> red based on level
-    SkColor topColor = colors::NEON_GREEN;
+    SkColor topColor = cGreen;
     if (normalizedLevel > 0.9f) {
-      topColor = colors::RED;
+      topColor = cRed;
     } else if (normalizedLevel > 0.7f) {
-      topColor = colors::AMBER;
+      topColor = cAmber;
     } else if (normalizedLevel > 0.5f) {
       topColor = SkColorSetRGB(180, 255, 0); // Yellow-green
     }
 
     SkPoint pts[2] = {{meterRect.centerX(), meterRect.bottom()},
                       {meterRect.centerX(), meterRect.top()}};
-    SkColor gradColors[3] = {colors::NEON_GREEN, SkColorSetRGB(200, 255, 0),
+    SkColor gradColors[3] = {cGreen, SkColorSetRGB(200, 255, 0),
                              topColor};
     SkScalar positions[3] = {0.0f, 0.6f, 1.0f};
 
@@ -558,7 +569,7 @@ void MixerChannelComponent::LevelMeter::drawMeterBar(SkCanvas *canvas,
     // Glow effect for high levels
     if (normalizedLevel > 0.7f) {
       SkPaint glowPaint;
-      glowPaint.setColor(withAlpha(topColor, 0.3f));
+      glowPaint.setColor(design::withAlpha(topColor, 0.3f));
       glowPaint.setMaskFilter(
           SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
       glowPaint.setAntiAlias(true);
@@ -574,7 +585,7 @@ void MixerChannelComponent::LevelMeter::drawMeterBar(SkCanvas *canvas,
 
     float peakY = bounds.bottom() - (bounds.height() * normalizedPeak) - 2;
     SkPaint peakPaint;
-    peakPaint.setColor(normalizedPeak > 0.95f ? colors::RED : SK_ColorWHITE);
+    peakPaint.setColor(normalizedPeak > 0.95f ? cRed : SK_ColorWHITE);
     peakPaint.setAntiAlias(true);
     canvas->drawRect(
         SkRect::MakeXYWH(bounds.x() + 2, peakY, bounds.width() - 4, 2.0f),
@@ -625,21 +636,24 @@ void MixerChannelComponent::InsertSlotIndicator::drawSkia(SkCanvas *canvas) {
 
   if (isOccupied_) {
     // Filled slot: subtle gradient
-    bgPaint.setColor(colors::BG_MEDIUM);
+    juce::Colour bg = ZenithTheme::Colors::bg_02;
+    bgPaint.setColor(SkColorSetARGB(255, bg.getRed(), bg.getGreen(), bg.getBlue()));
   } else {
     // Empty slot: very subtle
-    bgPaint.setColor(colors::BG_DARKER);
+    juce::Colour bg = ZenithTheme::Colors::bg_03;
+    bgPaint.setColor(SkColorSetARGB(255, bg.getRed(), bg.getGreen(), bg.getBlue()));
   }
 
-  canvas->drawRoundRect(skBounds, 2.0f, 2.0f, bgPaint);
+  canvas->drawRoundRect(skBounds, ZenithTheme::Radius::sm, ZenithTheme::Radius::sm, bgPaint);
 
   // Border
   SkPaint borderPaint;
   borderPaint.setStyle(SkPaint::kStroke_Style);
   borderPaint.setStrokeWidth(0.5f);
-  borderPaint.setColor(colors::BORDER_SUBTLE);
+  juce::Colour brd = ZenithTheme::Colors::border_subtle;
+  borderPaint.setColor(SkColorSetARGB(255, brd.getRed(), brd.getGreen(), brd.getBlue()));
   borderPaint.setAntiAlias(true);
-  canvas->drawRoundRect(skBounds, 2.0f, 2.0f, borderPaint);
+  canvas->drawRoundRect(skBounds, ZenithTheme::Radius::sm, ZenithTheme::Radius::sm, borderPaint);
 
   // Text
   SkPaint textPaint;
@@ -647,7 +661,8 @@ void MixerChannelComponent::InsertSlotIndicator::drawSkia(SkCanvas *canvas) {
   SkFont font = typography::getSkFont(9.0f, design::FontWeight::Regular);
 
   if (isOccupied_) {
-    textPaint.setColor(colors::TEXT_PRIMARY);
+    juce::Colour txt = ZenithTheme::Colors::text_primary;
+    textPaint.setColor(SkColorSetARGB(txt.getAlpha(), txt.getRed(), txt.getGreen(), txt.getBlue()));
     // Truncate plugin name if needed
     juce::String displayName = pluginName_.substring(0, kMaxPluginNameLength);
     if (pluginName_.length() > kMaxPluginNameLength)
@@ -655,7 +670,8 @@ void MixerChannelComponent::InsertSlotIndicator::drawSkia(SkCanvas *canvas) {
     canvas->drawString(displayName.toRawUTF8(), 4, skBounds.centerY() + 3, font,
                        textPaint);
   } else {
-    textPaint.setColor(colors::TEXT_TERTIARY);
+    juce::Colour txt = ZenithTheme::Colors::text_tertiary;
+    textPaint.setColor(SkColorSetARGB(txt.getAlpha(), txt.getRed(), txt.getGreen(), txt.getBlue()));
     canvas->drawString(("Slot " + juce::String(slotIndex_ + 1)).toRawUTF8(), 4,
                        skBounds.centerY() + 3, font, textPaint);
   }
@@ -663,7 +679,8 @@ void MixerChannelComponent::InsertSlotIndicator::drawSkia(SkCanvas *canvas) {
   // Occupied indicator dot
   if (isOccupied_) {
     SkPaint dotPaint;
-    dotPaint.setColor(colors::CYAN);
+    juce::Colour dot = ZenithTheme::Colors::accent_primary;
+    dotPaint.setColor(SkColorSetARGB(255, dot.getRed(), dot.getGreen(), dot.getBlue()));
     dotPaint.setAntiAlias(true);
     canvas->drawCircle(skBounds.right() - 6, skBounds.centerY(), 3, dotPaint);
   }
@@ -695,9 +712,10 @@ void MixerChannelComponent::SendIndicator::drawSkia(SkCanvas *canvas) {
 
   // Background
   SkPaint bgPaint;
-  bgPaint.setColor(colors::BG_DARKER);
+  juce::Colour bg = ZenithTheme::Colors::bg_03;
+  bgPaint.setColor(SkColorSetARGB(255, bg.getRed(), bg.getGreen(), bg.getBlue()));
   bgPaint.setAntiAlias(true);
-  canvas->drawRoundRect(skBounds, 2.0f, 2.0f, bgPaint);
+  canvas->drawRoundRect(skBounds, ZenithTheme::Radius::sm, ZenithTheme::Radius::sm, bgPaint);
 
   // Send level bar
   if (sendLevel_ > 0.01f) {
@@ -705,7 +723,8 @@ void MixerChannelComponent::SendIndicator::drawSkia(SkCanvas *canvas) {
     SkRect barRect = SkRect::MakeXYWH(2, skBounds.bottom() - 4, barWidth, 2);
 
     SkPaint barPaint;
-    barPaint.setColor(colors::VIOLET);
+    juce::Colour bar = ZenithTheme::Colors::accent_secondary;
+    barPaint.setColor(SkColorSetARGB(255, bar.getRed(), bar.getGreen(), bar.getBlue()));
     barPaint.setAntiAlias(true);
     canvas->drawRoundRect(barRect, 1.0f, 1.0f, barPaint);
   }
@@ -717,12 +736,14 @@ void MixerChannelComponent::SendIndicator::drawSkia(SkCanvas *canvas) {
 
   juce::String displayText;
   if (destinationName_.isNotEmpty()) {
-    textPaint.setColor(colors::TEXT_PRIMARY);
+    juce::Colour txt = ZenithTheme::Colors::text_primary;
+    textPaint.setColor(SkColorSetARGB(txt.getAlpha(), txt.getRed(), txt.getGreen(), txt.getBlue()));
     displayText = destinationName_.substring(0, 10);
     if (destinationName_.length() > 10)
       displayText += "...";
   } else {
-    textPaint.setColor(colors::TEXT_TERTIARY);
+    juce::Colour txt = ZenithTheme::Colors::text_tertiary;
+    textPaint.setColor(SkColorSetARGB(txt.getAlpha(), txt.getRed(), txt.getGreen(), txt.getBlue()));
     displayText = "Send " + juce::String(sendIndex_ + 1);
   }
 
@@ -736,7 +757,8 @@ void MixerChannelComponent::SendIndicator::drawSkia(SkCanvas *canvas) {
     SkFont smallFont =
         typography::getMonoFont(8.0f, design::FontWeight::Regular);
     SkPaint levelPaint;
-    levelPaint.setColor(colors::TEXT_SECONDARY);
+    juce::Colour lvl = ZenithTheme::Colors::text_secondary;
+    levelPaint.setColor(SkColorSetARGB(lvl.getAlpha(), lvl.getRed(), lvl.getGreen(), lvl.getBlue()));
     levelPaint.setAntiAlias(true);
     canvas->drawString(levelStr.toRawUTF8(), skBounds.right() - 24,
                        skBounds.centerY() + 2, smallFont, levelPaint);

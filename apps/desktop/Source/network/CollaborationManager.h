@@ -4,6 +4,8 @@
 #include <juce_graphics/juce_graphics.h>
 #include <functional>
 #include <vector>
+#include "ZenithCRDT.h"
+#include "LoroCRDTBridge.h"
 
 struct RemoteUser {
   juce::String id;
@@ -19,6 +21,7 @@ enum class PacketType {
   EditCommand = 2,
   Challenge = 3,
   ChallengeResponse = 4,
+  CRDTUpdate = 5,
   KeepAlive = 99
 };
 
@@ -66,6 +69,10 @@ public:
 
   std::function<void(const juce::String &)> onEditReceived;
 
+  // --- CRDT Integration ---
+  void initializeCRDT(juce::ValueTree& projectTree);
+  void syncCRDT();
+
 private:
   CollaborationManager();
   ~CollaborationManager();
@@ -110,4 +117,7 @@ private:
   // Hole Punching Logic
   void startHolePunching();
   void reportError(const juce::String& error);
+
+  std::unique_ptr<Zenith::LoroDoc> crdtDoc;
+  std::unique_ptr<Zenith::ValueTreeCRDTBridge> crdtBridge;
 };

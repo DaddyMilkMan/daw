@@ -8,6 +8,7 @@
 #include "PluginHost.h"
 #include "ProjectState.h"
 #include "TempoMap.h"
+#include "RealTimeGarbageCollector.h"
 #include <algorithm>
 
 namespace zenith {
@@ -23,6 +24,7 @@ std::unique_ptr<Track> Track::create(const juce::String &name, Type type) {
   case Type::Bus:
     return std::make_unique<AuxBusTrack>(name);
   default:
+    jassertfalse; // Bug 40: Unknown track type - should never reach here
     return nullptr;
   }
 }
@@ -35,10 +37,31 @@ Track::~Track() {}
 
 //==============================================================================
 void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
+  // Validate input parameters
+  jassert(samplesPerBlockExpected > 0 && samplesPerBlockExpected <= 8192);
+  jassert(sampleRate > 0.0 && sampleRate <= 192000.0);
+
   currentSampleRate = sampleRate;
   currentBlockSize = samplesPerBlockExpected;
 
-  pluginBuffer.setSize(2, samplesPerBlockExpected);
+  // Dynamic Buffer Handling (Roast Fix #5):
+  // Buffer may be resized when audio device settings change.
+  // Only resize if needed to avoid unnecessary allocations.
+  const int currentBufferSize = pluginBuffer.getNumSamples();
+  if (currentBufferSize != samplesPerBlockExpected ||
+      pluginBuffer.getNumChannels() != 2) {
+    pluginBuffer.setSize(2, samplesPerBlockExpected);
+    DBG("Track::prepareToPlay - Resized pluginBuffer from " +
+        juce::String(currentBufferSize) + " to " +
+        juce::String(samplesPerBlockExpected) + " samples");
+  }
+  pluginBuffer.clear();
+
+  if (sidechainBuffer.getNumSamples() != samplesPerBlockExpected ||
+      sidechainBuffer.getNumChannels() != 2) {
+    sidechainBuffer.setSize(2, samplesPerBlockExpected);
+  }
+  sidechainBuffer.clear();
 
   pluginChain.prepareToPlay(sampleRate, samplesPerBlockExpected);
   mixerChannel.prepareToPlay(samplesPerBlockExpected, sampleRate);
@@ -52,7 +75,12 @@ void Track::releaseResources() {
 //==============================================================================
 void Track::setName(const juce::String &newName) {
   trackName = newName;
-  sendChangeMessage();
+  // Ensure sendChangeMessage called from message thread (Bug 93)
+  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+    sendChangeMessage();
+  } else {
+    juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
+  }
 }
 
 juce::String Track::getTypeString() const {
@@ -72,13 +100,28 @@ juce::String Track::getTypeString() const {
 
 void Track::setArmed(bool shouldBeArmed) {
   armed.store(shouldBeArmed);
-  sendChangeMessage();
+  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+    sendChangeMessage();
+  } else {
+    juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
+  }
 }
 
 void Track::setEnabled(bool shouldBeEnabled) {
   enabled.store(shouldBeEnabled);
+  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+    sendChangeMessage();
+  } else {
+    juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
+  }
+}
+
+void Track::setSoloed(bool shouldBeSoloed) {
+  mixerChannel.setSolo(shouldBeSoloed);
   sendChangeMessage();
 }
+
+bool Track::isSoloed() const { return mixerChannel.isSolo(); }
 
 //==============================================================================
 void Track::setFreezeFile(const juce::File &file) {
@@ -103,24 +146,46 @@ void Track::setFreezeFile(const juce::File &file) {
       }
     }
   }
-  std::atomic_store_explicit(&freezeBuffer_, newBuffer,
-                             std::memory_order_release);
+
+  // FIX: RCU atomic update for lock-free audio thread access
+
+  // 1. Keep old buffer alive until safe (Garbage Collection)
+  if (freezeBufferOwner_)
+    RealTimeGarbageCollector::getInstance().deferDelete(freezeBufferOwner_);
+
+  // 2. Take ownership of new buffer
+  freezeBufferOwner_ = newBuffer;
+
+  // 3. Atomically publish pointer to audio thread
+  activeFreezeBuffer_.store(newBuffer.get(), std::memory_order_release);
 }
 
 //==============================================================================
 void Track::addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin) {
   pluginChain.addPlugin(std::move(plugin), currentSampleRate, currentBlockSize);
-  sendChangeMessage();
+  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+    sendChangeMessage();
+  } else {
+    juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
+  }
 }
 
 void Track::removePlugin(int pluginIndex) {
   pluginChain.removePlugin(pluginIndex);
-  sendChangeMessage();
+  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+    sendChangeMessage();
+  } else {
+    juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
+  }
 }
 
 void Track::clearPlugins() {
   pluginChain.clearPlugins();
-  sendChangeMessage();
+  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+    sendChangeMessage();
+  } else {
+    juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
+  }
 }
 
 int Track::getNumPlugins() const { return pluginChain.getNumPlugins(); }
@@ -184,16 +249,17 @@ void Track::loadPluginStates(const juce::ValueTree &state,
 }
 
 void Track::injectLiveMidiMessage(const juce::MidiMessage &message) {
-  liveMidiFifo_.push(message);
+  noteFifo_.push(message);
 }
 
 //==============================================================================
 void Track::processPluginChain(juce::AudioBuffer<float> &buffer,
-                               juce::MidiBuffer &midi, int numSamples) {
+                               juce::MidiBuffer &midi, int numSamples,
+                               const juce::AudioBuffer<float> *sidechain) {
   // Inject live MIDI messages
-  liveMidiFifo_.drainTo(midi, numSamples);
+  noteFifo_.drainTo(midi, numSamples);
 
-  pluginChain.process(buffer, midi);
+  pluginChain.process(buffer, midi, sidechain);
 }
 
 void Track::applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples) {
@@ -202,10 +268,16 @@ void Track::applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples) {
   juce::ignoreUnused(buffer, numSamples);
 }
 
-void Track::addClip(std::unique_ptr<Clip> /*clip*/) {
+// Bug 44: This is intentionally a no-op for the base Track class.
+// Only ClipTrack subclasses (AudioTrack, MIDITrack) support clip management.
+// Calling addClip on other track types is a programming error - we log it.
+void Track::addClip(std::unique_ptr<Clip> clip) {
+  juce::ignoreUnused(clip);
   // This track type does not support clips. The passed clip will be destroyed
   // on scope exit.
-  jassertfalse;
+  DBG("Track::addClip called on track type that doesn't support clips: " +
+      getTypeString());
+  jassertfalse; // Bug 44: Alert developer about incorrect usage
 }
 
 void Track::updateLevelMeters(const juce::AudioBuffer<float> &buffer,

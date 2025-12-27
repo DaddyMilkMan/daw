@@ -2,7 +2,6 @@
 #include "../instruments/Instrument.h"
 #include "ClipTrack.h"
 
-
 namespace zenith {
 
 /**
@@ -39,20 +38,8 @@ public:
       const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
       const juce::MidiBuffer *incomingMidi = nullptr,
       const std::vector<juce::AudioBuffer<float> *> &auxBuffers = {},
-      const TempoMap *tempoMap = nullptr) override {
-    if (instrument != nullptr && incomingMidi != nullptr &&
-        instrument->getAudioProcessor() != nullptr) {
-      // Create a local copy to preserve const-correctness
-      juce::MidiBuffer midiMessages;
-      if (incomingMidi != nullptr)
-        midiMessages = *incomingMidi;
-
-      instrument->getAudioProcessor()->processBlock(*bufferToFill.buffer,
-                                                    midiMessages);
-    }
-    ClipTrack::getNextAudioBlock(bufferToFill, playheadSamples, incomingMidi,
-                                 auxBuffers, tempoMap);
-  }
+      const TempoMap *tempoMap = nullptr,
+      const juce::AudioBuffer<float> *sidechainBuffer = nullptr) override;
 
   juce::ValueTree getState() const override {
     auto state = ClipTrack::getState();

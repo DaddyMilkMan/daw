@@ -135,16 +135,13 @@ void TempoMap::setSingleTempo(double bpm)
 void TempoMap::swapSnapshot(std::shared_ptr<const TempoMapSnapshot> newSnapshot)
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-
-    const juce::SpinLock::ScopedLockType sl(snapshotLock_);
-    snapshot_ = newSnapshot;
+    snapshot_.store(newSnapshot, std::memory_order_release);
 }
 
 std::shared_ptr<const TempoMapSnapshot> TempoMap::loadSnapshot() const
 {
-    // RT-safe: acquire spinlock to copy shared_ptr
-    const juce::SpinLock::ScopedLockType sl(snapshotLock_);
-    return snapshot_;
+    // RT-safe: atomic load of shared_ptr
+    return snapshot_.load(std::memory_order_acquire);
 }
 
 //==============================================================================

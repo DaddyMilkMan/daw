@@ -17,6 +17,8 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/framework/UITestFramework.cpp
 )
 
+# Platform-specific sources are handled via Source/platform/[os]/master
+
 # -----------------------------------------------------------------------------
 # Design System (Theming, fonts, icons)
 # -----------------------------------------------------------------------------
@@ -33,13 +35,15 @@ target_sources(ZenithDAW PRIVATE
 # -----------------------------------------------------------------------------
 target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerRenderer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerInputHandler.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerClipManager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerGridUtils.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerTrackComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/TrackHeaderComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ModernTrackHeader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ClipComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/TakeFolderComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/AutomationLaneComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/TimelineRuler.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ModernTimelineRuler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/MarkerLaneComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/TempoLaneComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/MiniMapComponent.cpp
@@ -60,6 +64,7 @@ target_sources(ZenithDAW PRIVATE
 target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/piano-roll/PianoRollComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/piano-roll/ModulationMatrixView.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/piano-roll/QuantizeSettingsComponent.cpp
 )
 
 # -----------------------------------------------------------------------------
@@ -102,12 +107,15 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/common/MainLayoutComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/BottomBar.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/RightSidePanel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/UndoHistoryPanel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/ResizablePanelContainer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/MenuBar.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/ZenithHubComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/WingmanPanel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/MacroToolbar.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/AudioFeedback.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/dialogs/SettingsComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/dialogs/HardwareControlPanel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/PluginEditorWindow.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/PianoKeyboardViewSkia.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/AIAssistantPanel.cpp
@@ -130,39 +138,42 @@ target_sources(ZenithDAW PRIVATE
 )
 
 # -----------------------------------------------------------------------------
-# Widgets (Reusable controls)
+# Controls (Widgets)
 # -----------------------------------------------------------------------------
 target_sources(ZenithDAW PRIVATE
     # Core Skia widgets
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaButton.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaKnob.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaSlider.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaSpectrumComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/DebugConsoleComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/DeviceChainComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SpectraAnalyzerComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/MarkdownComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaButton.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaKnob.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaSlider.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaSpectrumComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/DebugConsoleComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/DeviceChainComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SpectraAnalyzerComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/MarkdownComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ExportProgressBar.cpp
     
     # Zenith widget system
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithControl.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithKnob.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithSlider.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithButton.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithDropdown.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithToggle.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithTextInput.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithModMatrix.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithTooltipOverlay.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithVisualizer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ZenithControl.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ZenithKnob.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ZenithSlider.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ZenithButton.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ZenithDropdown.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ZenithToggle.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ZenithTextInput.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ZenithModMatrix.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ZenithTooltipOverlay.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/ZenithVisualizer.cpp
     
     # Dialog components
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaAlertWindow.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaComboBox.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaFileChooser.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaLabel.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaListBox.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaPopupMenu.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaTextEditor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaAlertWindow.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaComboBox.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaFileChooser.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaLabel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaListBox.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaPopupMenu.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaTextEditor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/CollabPanel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/controls/FreezeProgressOverlay.cpp
 )
 
 # -----------------------------------------------------------------------------

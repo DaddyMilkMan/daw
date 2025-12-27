@@ -18,8 +18,15 @@
 
 namespace zenith {
 
-class Settings {
+class Settings : public juce::ChangeBroadcaster {
 public:
+    enum class LinuxAudioBackend {
+        Auto,
+        JACK,
+        PipeWire,
+        ALSA
+    };
+
     static Settings& getInstance() {
         static Settings instance;
         return instance;
@@ -43,6 +50,7 @@ public:
             targetFPS_ = userSettings->getIntValue("targetFPS", 60);
             globalScale_ = (float)userSettings->getDoubleValue("globalScale", 1.0);
             glowIntensity_ = (float)userSettings->getDoubleValue("glowIntensity", 1.0);
+            linuxAudioBackend_ = (LinuxAudioBackend)userSettings->getIntValue("linuxAudioBackend", (int)LinuxAudioBackend::Auto);
         }
     }
 
@@ -61,6 +69,7 @@ public:
             userSettings->setValue("targetFPS", targetFPS_);
             userSettings->setValue("globalScale", globalScale_);
             userSettings->setValue("glowIntensity", glowIntensity_);
+            userSettings->setValue("linuxAudioBackend", (int)linuxAudioBackend_);
             userSettings->saveIfNeeded();
         }
     }
@@ -106,6 +115,18 @@ public:
     float getGlowIntensity() const { return glowIntensity_; }
 
     //==============================================================================
+    // Audio Settings
+    //==============================================================================
+    void setLinuxAudioBackend(LinuxAudioBackend backend) {
+        if (linuxAudioBackend_ != backend) {
+            linuxAudioBackend_ = backend;
+            save();
+            sendChangeMessage();
+        }
+    }
+    LinuxAudioBackend getLinuxAudioBackend() const { return linuxAudioBackend_; }
+
+    //==============================================================================
     // Plugin Settings
     //==============================================================================
     // ...
@@ -113,14 +134,12 @@ public:
     //==============================================================================
     // Listeners
     //==============================================================================
-    void addChangeListener(juce::ChangeListener* listener) { broadcaster_.addChangeListener(listener); }
-    void removeChangeListener(juce::ChangeListener* listener) { broadcaster_.removeChangeListener(listener); }
     
 private:
     Settings() = default;
     
     void sendChangeMessage() {
-        broadcaster_.sendChangeMessage();
+        juce::ChangeBroadcaster::sendChangeMessage();
     }
 
     // Data
@@ -128,8 +147,7 @@ private:
     int targetFPS_ = 60;
     float globalScale_ = 1.0f;
     float glowIntensity_ = 1.0f;
-
-    juce::ChangeBroadcaster broadcaster_;
+    LinuxAudioBackend linuxAudioBackend_ = LinuxAudioBackend::Auto;
 };
 
 } // namespace zenith

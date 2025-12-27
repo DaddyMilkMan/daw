@@ -15,10 +15,9 @@
 #include "../framework/SkiaComponent.h"
 #include <JuceHeader.h>
 
-
 namespace zenith {
 
-class AutoSaveIndicator : public SkiaComponent, public juce::Timer {
+class AutoSaveIndicator : public SkiaComponent {
 public:
   AutoSaveIndicator(ProjectState &state) : projectState(state) {
     startTimer(500); // Check state every 500ms
@@ -28,10 +27,15 @@ public:
   ~AutoSaveIndicator() override { stopTimer(); }
 
   void timerCallback() override {
+    SkiaComponent::timerCallback(); // Call base implementation first
+
     bool dirty = projectState.hasUnsavedChanges();
 
-    // TODO: detecting "Saving..." state would require an atomic flag in
-    // ProjectState For now, we just show dirty/clean
+    // DESIGN NOTE: We show dirty/clean indicated with pulse animation.
+    // A real-time "Saving..." state would require ProjectFileIO to expose
+    // an isSaving atomic flag. The current UX with pulse animation provides
+    // sufficient feedback for the "unsaved changes" state without the
+    // complexity of tracking save-in-progress across threads.
 
     if (dirty != wasDirty) {
       wasDirty = dirty;
@@ -61,7 +65,7 @@ public:
       // Unsaved: Amber pulse
       float alpha = 0.6f + 0.4f * std::sin(pulsePhase);
       paint.setColor(
-          SkColorSetA(design::colors::ACCENT_WARNING, (int)(alpha * 255)));
+          SkColorSetA(SkColorSetRGB(255, 191, 0), (int)(alpha * 255)));
       canvas->drawCircle(cx, cy, radius, paint);
 
       // Text: "Unsaved"
@@ -70,7 +74,7 @@ public:
       canvas->drawString("Unsaved", cx + 10, cy + 3, font, paint);
     } else {
       // Saved: Green static
-      paint.setColor(design::colors::ACCENT_SUCCESS);
+      paint.setColor(SkColorSetRGB(0, 255, 0));
       canvas->drawCircle(cx, cy, radius, paint);
 
       // Text: "Saved"

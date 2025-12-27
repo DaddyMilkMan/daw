@@ -20,6 +20,7 @@
 #include "EngineEvent.h" // For MidiFifo
 #include "MixerChannel.h"
 #include "PluginChain.h"
+#include <atomic>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -54,6 +55,17 @@ class PluginHost;
 
     This class is designed to be used from both the audio thread and the
     message thread, so all controls use atomic operations for lock-free access.
+
+    ## Ownership Model (to prevent shared_ptr cycles):
+
+    **Engine -> Track:** Engine holds std::shared_ptr<Track> (parent owns child)
+    **Track -> Engine:** No back-reference stored (engine passed by reference
+   when needed)
+    **ClipTrack -> Clip:** ClipTrack owns clips via std::unique_ptr (parent owns
+   child)
+    **Clip -> Track:** No back-reference stored
+
+    @note Track should NEVER hold std::shared_ptr<Engine> to avoid cycles.
 */
 class Track : public juce::AudioSource, public juce::ChangeBroadcaster {
 public:
@@ -79,7 +91,8 @@ public:
   static std::unique_ptr<Track> create(const juce::String &name, Type type);
 
   Track(const juce::String &name, Type type);
-  ~Track() override;
+  // Bug 25: Ensure destructor is virtual for proper cleanup of derived classes
+  virtual ~Track() override;
 
   //==============================================================================
   // AudioSource interface
@@ -99,7 +112,8 @@ public:
       const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
       const juce::MidiBuffer *incomingMidi = nullptr,
       const std::vector<juce::AudioBuffer<float> *> &auxBuffers = {},
-      const TempoMap *tempoMap = nullptr) = 0;
+      const TempoMap *tempoMap = nullptr,
+      const juce::AudioBuffer<float> *sidechainBuffer = nullptr) = 0;
 
   /**
    * @brief Update clip scheduling/positions based on playhead
@@ -147,6 +161,9 @@ public:
   void setEnabled(bool shouldBeEnabled);
   bool isEnabled() const { return enabled.load(); }
 
+  void setInputMonitorEnabled(bool enabled) { inputMonitor_.store(enabled); }
+  bool isInputMonitorEnabled() const { return inputMonitor_.load(); }
+
   void setInputChannel(int channel) { inputChannelIndex.store(channel); }
   int getInputChannel() const { return inputChannelIndex.load(); }
 
@@ -170,12 +187,14 @@ public:
 
   /**
    * @brief Get the freeze audio buffer
-   * @return Shared pointer to buffer, or nullptr if not frozen
-   * @note Audio thread safe - RCU pattern
+   * @return Pointer to buffer, or nullptr if not frozen
+   * @note Audio thread safe - Lock-free
    */
-  std::shared_ptr<juce::AudioBuffer<float>> getFreezeBuffer() const {
-    return std::atomic_load_explicit(&freezeBuffer_, std::memory_order_acquire);
+  juce::AudioBuffer<float> *getFreezeBuffer() const {
+    return activeFreezeBuffer_.load(std::memory_order_acquire);
   }
+
+  juce::AudioBuffer<float> &getSidechainBuffer() { return sidechainBuffer; }
 
   MixerChannel &getMixerChannel() { return mixerChannel; }
   const MixerChannel &getMixerChannel() const { return mixerChannel; }
@@ -214,10 +233,7 @@ public:
    * @param playheadPosition Current playhead position in samples
    * @note Audio thread safe - implementations should be lock-free
    */
-  virtual void updateClipPositions(juce::int64 playheadPosition) noexcept {
-    juce::ignoreUnused(playheadPosition);
-    // Default implementation does nothing - subclasses with clips override
-  }
+  // Default implementation does nothing - subclasses with clips override
 
   // MIDI Scheduling (moved to MIDITrack)
 
@@ -232,8 +248,8 @@ public:
 
   //==============================================================================
   // State management
-  juce::ValueTree getState() const;
-  void loadState(const juce::ValueTree &state);
+  virtual juce::ValueTree getState() const;
+  virtual void loadState(const juce::ValueTree &state);
 
   /**
    * @brief Load plugin states from ValueTree
@@ -262,6 +278,57 @@ public:
   }
   void clearAutomationLanes() { automationManager.clearLanes(); }
 
+  //==============================================================================
+  // Plugin Parameter Automation
+  //==============================================================================
+
+  /**
+   * @brief Get all automatable parameters for a plugin on this track
+   * @param pluginIndex Index of the plugin in the chain
+   * @return Vector of parameter info
+   */
+  std::vector<PluginChain::ParameterInfo> getPluginParameters(int pluginIndex) const {
+    return pluginChain.getAutomatableParameters(pluginIndex);
+  }
+
+  /**
+   * @brief Get all automatable parameters for all plugins on this track
+   * @return Vector of parameter info for all plugins
+   */
+  std::vector<PluginChain::ParameterInfo> getAllPluginParameters() const {
+    return pluginChain.getAllAutomatableParameters();
+  }
+
+  /**
+   * @brief Set a plugin parameter value (from automation)
+   * @param pluginIndex Index of the plugin in the chain
+   * @param paramIndex Index of the parameter
+   * @param normalizedValue Value in range [0.0, 1.0]
+   * @note Message thread only - will be applied RT-safely via setValueNotifyingHost
+   */
+  void setPluginParameterValue(int pluginIndex, int paramIndex, float normalizedValue) {
+    pluginChain.setParameterValue(pluginIndex, paramIndex, normalizedValue);
+  }
+
+  /**
+   * @brief Get the number of parameters for a plugin
+   * @param pluginIndex Index of the plugin
+   * @return Number of parameters
+   */
+  int getPluginNumParameters(int pluginIndex) const {
+    return pluginChain.getNumParameters(pluginIndex);
+  }
+
+  /**
+   * @brief Get a parameter name
+   * @param pluginIndex Index of the plugin
+   * @param paramIndex Index of the parameter
+   * @return Parameter name
+   */
+  juce::String getPluginParameterName(int pluginIndex, int paramIndex) const {
+    return pluginChain.getParameterName(pluginIndex, paramIndex);
+  }
+
 protected:
   //==============================================================================
   // Track properties
@@ -281,12 +348,18 @@ protected:
   // Note: armed and enabled are track-specific, not channel-strip specific
   std::atomic<bool> armed{false};
   std::atomic<bool> enabled{true};
+  std::atomic<bool> inputMonitor_{false};
   std::atomic<bool> frozen{false}; // Track freeze state for CPU optimization
 
   // Freeze file storage (for CPU optimization)
   juce::File freezeFile_;
-  // Freeze buffer storage (RT-safe access via shared_ptr atomic load)
-  std::shared_ptr<juce::AudioBuffer<float>> freezeBuffer_;
+
+  // Freeze buffer storage (Lock-free RCU pattern)
+  std::shared_ptr<juce::AudioBuffer<float>>
+      freezeBufferOwner_; // Message thread owner
+  std::atomic<juce::AudioBuffer<float> *> activeFreezeBuffer_{
+      nullptr}; // Audio thread view
+
   juce::AudioFormatManager freezeFormatManager_;
 
   // Input routing
@@ -306,14 +379,16 @@ protected:
   AutomationManager automationManager;
 
   // Thread-safe FIFO for live MIDI injection
-  MidiFifo liveMidiFifo_;
+  MidiFifo noteFifo_;
 
   juce::AudioBuffer<float> pluginBuffer;
+  juce::AudioBuffer<float> sidechainBuffer;
 
   //==============================================================================
   // Helper methods
   void processPluginChain(juce::AudioBuffer<float> &buffer,
-                          juce::MidiBuffer &midi, int numSamples);
+                          juce::MidiBuffer &midi, int numSamples,
+                          const juce::AudioBuffer<float> *sidechain = nullptr);
   void applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples);
   void updateLevelMeters(const juce::AudioBuffer<float> &buffer,
                          int numSamples);

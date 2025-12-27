@@ -6,12 +6,13 @@
 #include "SkiaRenderer.h"
 
 // Skia headers
-#define SK_DIRECT3D 1
+
 #include <core/SkCanvas.h>
 #include <core/SkColorSpace.h>
 #include <core/SkSurface.h>
 #include <gpu/GpuTypes.h>
-#include <gpu/ganesh/GrBackendSurface.h>
+// #include <gpu/ganesh/GrBackendSurface.h> // Triggers D3D headers on some
+// configs
 #include <gpu/ganesh/GrDirectContext.h>
 #include <gpu/ganesh/SkSurfaceGanesh.h>
 
@@ -23,8 +24,8 @@
 #include <gpu/ganesh/mtl/GrMtlTypes.h>
 #include <objc/message.h>
 #include <objc/runtime.h>
-#elif JUCE_LINUX
-#define SK_VULKAN 1
+#elif 0 // JUCE_LINUX
+// #define SK_VULKAN 1
 #include <gpu/ganesh/vk/GrVkBackendContext.h>
 #include <gpu/ganesh/vk/GrVkTypes.h>
 #include <vulkan/vulkan.h>
@@ -153,9 +154,9 @@ SkiaRenderer::Backend SkiaRenderer::detectBestBackend() const {
 #if JUCE_WINDOWS
   return Backend::OpenGL; // Fallback to OpenGL until D3D header issues resolved
 #elif JUCE_MAC
-  return Backend::Metal;
+  return Backend::OpenGL;
 #elif JUCE_LINUX
-  return Backend::Vulkan;
+  return Backend::OpenGL;
 #else
   return Backend::OpenGL;
 #endif
@@ -193,7 +194,7 @@ bool SkiaRenderer::createGpuContext() {
   case Backend::Metal:
     return createMetalContext();
 #endif
-#if JUCE_LINUX
+#if 0 // JUCE_LINUX
   case Backend::Vulkan:
     return createVulkanContext();
 #endif

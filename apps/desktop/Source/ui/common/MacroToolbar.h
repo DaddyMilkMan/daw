@@ -3,7 +3,7 @@
 #include "Engine.h"
 #include "ProjectState.h"
 #include "SkiaComponent.h"
-#include "widgets/ZenithButton.h"
+#include "controls/ZenithButton.h"
 #include <functional>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <vector>

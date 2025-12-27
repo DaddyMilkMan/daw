@@ -16,6 +16,7 @@ namespace effects {
 
 void ConsoleEmulation::prepare(juce::dsp::ProcessSpec &spec) {
   sampleRate = (float)spec.sampleRate;
+  lowPass.prepare(spec);
   coefficientsDirty = true;
   reset();
 }

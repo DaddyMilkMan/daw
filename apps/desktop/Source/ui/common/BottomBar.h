@@ -12,10 +12,14 @@
 
 #pragma once
 
+#include <memory>
+#include <vector>
+
 #include "../../engine/EngineConstants.h"
 #include "MixerComponent.h"
 #include "PianoKeyboardViewSkia.h"
 #include "SkiaComponent.h"
+
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>

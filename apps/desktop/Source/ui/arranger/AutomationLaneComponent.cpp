@@ -10,7 +10,6 @@
 
 #ifdef ZENITH_USE_SKIA
 #include "ZenithDesignSystem.h"
-#include "SkiaTheme.h"
 #include <include/core/SkFont.h>
 #include <include/core/SkImageInfo.h>
 #include <include/core/SkPaint.h>
@@ -108,10 +107,6 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 #ifdef ZENITH_USE_SKIA
   // Use Skia rendering for automation lanes
   using namespace zenith::design;
-  
-  // Get theme colors and typography
-  const auto& colors = zenith::SkiaTheme::getInstance().getColors();
-  const auto& typo = zenith::SkiaTheme::getInstance().getTypography();
 
   // Get Skia canvas by wrapping JUCE Graphics in a temporary surface
   juce::Image tempImage(juce::Image::ARGB, std::max(1, getWidth()),
@@ -166,9 +161,6 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
             // Vertical offset based on tension and width
             float cpY = midY - (p1.tension * width * 0.5f);
 
-            // Limit vertical excursion to keep it reasonable
-            // cpY = juce::jlimit(midY - width, midY + width, cpY);
-
             path.quadTo(midX, cpY, p2.screenPos.x, p2.screenPos.y);
           }
         }
@@ -179,7 +171,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 
         // Draw curve
         SkPaint curvePaint;
-        curvePaint.setColor(colors::VIOLET);
+        curvePaint.setColor(colors::CYAN);
         curvePaint.setStyle(SkPaint::kStroke_Style);
         curvePaint.setStrokeWidth(2.5f);
         curvePaint.setAntiAlias(true);
@@ -204,16 +196,14 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 
         // Control point fill
         SkPaint fillPaint;
-        fillPaint.setColor(isSelected  ? colors::VIOLET
-                           : isHovered ? colors::VIOLET
-                                       : colors::VIOLET);
+        fillPaint.setColor(colors::CYAN);
         fillPaint.setAntiAlias(true);
         canvas.drawCircle(handle.screenPos.x, handle.screenPos.y, handle.radius,
                           fillPaint);
 
         // Control point border
         SkPaint borderPaint;
-        borderPaint.setColor(isSelected ? selectionColor : colors::TEXT_PRIMARY);
+        borderPaint.setColor(colors::TEXT_PRIMARY);
         borderPaint.setStyle(SkPaint::kStroke_Style);
         borderPaint.setStrokeWidth(isSelected ? 2.5f : 1.5f);
         borderPaint.setAntiAlias(true);
@@ -236,7 +226,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
                                    " @ " + juce::String(hoveredPointTime, 2) +
                                    " beats";
 
-        SkFont font = zenith::design::typography::getMonoFont(typography::FONT_XS);
+        SkFont font = zenith::design::typography::getMonoFont(10.0f);
 
         auto textStr = tooltipText.toStdString();
         SkRect textBounds;
@@ -255,7 +245,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 
         // Tooltip background
         SkPaint tooltipBg;
-        tooltipBg.setColor(colors::BG_DARK);
+        tooltipBg.setColor(colors::BG_MEDIUM);
         tooltipBg.setAntiAlias(true);
         SkRRect tooltipRect = SkRRect::MakeRectXY(
             SkRect::MakeXYWH(tooltipX, tooltipY, tooltipWidth, tooltipHeight),
@@ -279,10 +269,10 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
       }
 
       // Draw parameter name
-      SkFont nameFont = zenith::design::typography::getSkFont(typography::FONT_MD);
+      SkFont nameFont = zenith::design::typography::getSkFont(14.0f);
 
       SkPaint namePaint;
-      namePaint.setColor(colors::TEXT_SECONDARY);
+      namePaint.setColor(colors::TEXT_TERTIARY);
       namePaint.setAntiAlias(true);
 
       auto nameStr = paramInfo.displayName.toStdString();

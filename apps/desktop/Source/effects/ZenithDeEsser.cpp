@@ -93,13 +93,13 @@ void ZenithDeEsser::processBlock(juce::AudioBuffer<float> &buffer,
   juce::dsp::ProcessContextReplacing<float> contextHigh(highBlock);
 
   // Split
-  crossoverLow.process(contextLow);   // buffer becomes Low Band
+  crossoverLow.process(contextLow); // buffer becomes Low Band
   crossoverHigh.process(contextHigh); // highBand becomes High Band
 
   // Compress High Band
   compressor.process(contextHigh);
 
-  // Sum
+  // Sum or Listen
   if (listen->load() > 0.5f) {
     // Output only compressed high band (real-time safe copy)
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {

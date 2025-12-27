@@ -128,7 +128,7 @@ void SampleGenerator::createWavFile(const juce::File &file, float freq,
     return;
 
   std::unique_ptr<juce::AudioFormatWriter> writer(
-      wavFormat.createWriterFor(outStream.get(), 44100.0, 1, 16, {}, 0));
+      wavFormat.createWriterFor(outStream.get(), 44100.0, 1, 16, juce::StringPairArray(), 0));
 
   if (writer) {
     outStream.release(); // Writer takes ownership

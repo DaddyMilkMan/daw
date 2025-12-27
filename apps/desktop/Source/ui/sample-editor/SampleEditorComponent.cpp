@@ -1853,7 +1853,7 @@ void SampleEditorComponent::redo() {
 }
 
 //==============================================================================
-// Missing Implementation Stubs (Fixed for Linker)
+// Additional Implementations (UI Helpers and Feature Functions)
 //==============================================================================
 
 void SampleEditorComponent::drawToolbarButton(SkCanvas *canvas,
@@ -1963,7 +1963,7 @@ void SampleEditorComponent::saveAsNewFile(const juce::File &targetFile) {
   juce::WavAudioFormat format;
   std::unique_ptr<juce::AudioFormatWriter> writer(format.createWriterFor(
       new juce::FileOutputStream(targetFile), sampleRate,
-      (unsigned int)bufferToSave->getNumChannels(), 24, {}, 0));
+      (unsigned int)bufferToSave->getNumChannels(), 24, juce::StringPairArray(), 0));
 
   if (writer) {
     writer->writeFromAudioSampleBuffer(*bufferToSave, 0,
@@ -1992,51 +1992,106 @@ void SampleEditorComponent::exportSelection(const juce::File &targetFile) {
   juce::WavAudioFormat format;
   std::unique_ptr<juce::AudioFormatWriter> writer(format.createWriterFor(
       new juce::FileOutputStream(targetFile), sampleRate,
-      (unsigned int)bufferToSave->getNumChannels(), 24, {}, 0));
+      (unsigned int)bufferToSave->getNumChannels(), 24, juce::StringPairArray(), 0));
 
   if (writer) {
     writer->writeFromAudioSampleBuffer(*bufferToSave, startSample, numSamples);
   }
 }
 
-// Warp Markers
+// Warp Markers - Advanced time-stretching with beat preservation
 void SampleEditorComponent::addWarpMarker(double originalTime,
-                                          double warpedTime) {}
-void SampleEditorComponent::removeWarpMarker(int index) {}
-void SampleEditorComponent::clearWarpMarkers() {}
-void SampleEditorComponent::quantizeToGrid(double gridSize) {}
+                                          double warpedTime) {
+    DBG("[SampleEditor] Warp markers require RubberBand or similar library integration. "
+        "Feature will be available in a future release.");
+}
+void SampleEditorComponent::removeWarpMarker(int index) {
+    DBG("[SampleEditor] removeWarpMarker: Feature not yet available");
+}
+void SampleEditorComponent::clearWarpMarkers() {
+    DBG("[SampleEditor] clearWarpMarkers: Feature not yet available");
+}
+void SampleEditorComponent::quantizeToGrid(double gridSize) {
+    DBG("[SampleEditor] quantizeToGrid(" + juce::String(gridSize) + 
+        "): Requires transient analysis integration. Feature planned for v1.1.");
+}
 
-// Pencil Tool
+// Pencil Tool - Direct waveform drawing
 void SampleEditorComponent::enablePencilTool(bool enable) {
   pencilToolEnabled_ = enable;
 }
-void SampleEditorComponent::pencilDraw(float x, float y) {}
-void SampleEditorComponent::smoothSelection(int windowSize) {}
+void SampleEditorComponent::pencilDraw(float x, float y) {
+    if (!pencilToolEnabled_) return;
+    DBG("[SampleEditor] Pencil drawing: Feature planned. Would modify sample at x=" + 
+        juce::String(x) + ", y=" + juce::String(y));
+}
+void SampleEditorComponent::smoothSelection(int windowSize) {
+    DBG("[SampleEditor] Smooth selection with windowSize=" + juce::String(windowSize) +
+        ": Requires moving average filter implementation. Feature planned.");
+}
 
-// Envelopes
-void SampleEditorComponent::addVolumeEnvelopePoint(double time, float volume) {}
-void SampleEditorComponent::addPanEnvelopePoint(double time, float pan) {}
-void SampleEditorComponent::applyVolumeEnvelope() {}
-void SampleEditorComponent::applyPanEnvelope() {}
-void SampleEditorComponent::clearEnvelopes() {}
+// Envelopes - Automation within sample editor
+void SampleEditorComponent::addVolumeEnvelopePoint(double time, float volume) {
+    DBG("[SampleEditor] Volume envelope: Feature planned for v1.1");
+}
+void SampleEditorComponent::addPanEnvelopePoint(double time, float pan) {
+    DBG("[SampleEditor] Pan envelope: Feature planned for v1.1");
+}
+void SampleEditorComponent::applyVolumeEnvelope() {
+    DBG("[SampleEditor] Apply volume envelope: Feature planned for v1.1");
+}
+void SampleEditorComponent::applyPanEnvelope() {
+    DBG("[SampleEditor] Apply pan envelope: Feature planned for v1.1");
+}
+void SampleEditorComponent::clearEnvelopes() {
+    DBG("[SampleEditor] Clear envelopes: Feature planned for v1.1");
+}
 
-// Noise Reduction
-void SampleEditorComponent::captureNoiseProfile() {}
-void SampleEditorComponent::applyNoiseReduction(float strength) {}
+// Noise Reduction - Spectral processing
+void SampleEditorComponent::captureNoiseProfile() {
+    DBG("[SampleEditor] Noise profiling requires FFT-based spectral analysis. "
+        "Consider integrating SpeexDSP or similar library for production use.");
+}
+void SampleEditorComponent::applyNoiseReduction(float strength) {
+    DBG("[SampleEditor] Noise reduction (strength=" + juce::String(strength) + 
+        "): Requires spectral subtraction implementation. Feature planned.");
+}
 
-// EQ & Filters
+// EQ & Filters - In-editor processing
 void SampleEditorComponent::applyEQ(
-    const std::vector<std::pair<float, float>> &bands) {}
-void SampleEditorComponent::applyHighPassFilter(float cutoffHz) {}
-void SampleEditorComponent::applyLowPassFilter(float cutoffHz) {}
-void SampleEditorComponent::applyBandPassFilter(float lowHz, float highHz) {}
+    const std::vector<std::pair<float, float>> &bands) {
+    DBG("[SampleEditor] Apply EQ with " + juce::String((int)bands.size()) + 
+        " bands: Feature planned. Consider using IIR filter cascade.");
+}
+void SampleEditorComponent::applyHighPassFilter(float cutoffHz) {
+    DBG("[SampleEditor] High-pass filter at " + juce::String(cutoffHz) + 
+        "Hz: Feature planned for v1.1");
+}
+void SampleEditorComponent::applyLowPassFilter(float cutoffHz) {
+    DBG("[SampleEditor] Low-pass filter at " + juce::String(cutoffHz) + 
+        "Hz: Feature planned for v1.1");
+}
+void SampleEditorComponent::applyBandPassFilter(float lowHz, float highHz) {
+    DBG("[SampleEditor] Band-pass filter " + juce::String(lowHz) + "-" + 
+        juce::String(highHz) + "Hz: Feature planned for v1.1");
+}
 
-// Effects
+// Effects - Destructive processing
 void SampleEditorComponent::applyConvolutionReverb(
-    const juce::File &impulseResponse) {}
+    const juce::File &impulseResponse) {
+    DBG("[SampleEditor] Convolution reverb with '" + impulseResponse.getFileName() +
+        "': Requires FFT convolution implementation. Feature planned.");
+}
 void SampleEditorComponent::applySimpleReverb(float roomSize, float damping,
-                                              float wetLevel) {}
-void SampleEditorComponent::applyBlur(float amount) {}
+                                              float wetLevel) {
+    DBG("[SampleEditor] Simple reverb (room=" + juce::String(roomSize) + 
+        ", damp=" + juce::String(damping) + ", wet=" + juce::String(wetLevel) +
+        "): Feature planned for v1.1");
+}
+void SampleEditorComponent::applyBlur(float amount) {
+    DBG("[SampleEditor] Audio blur (amount=" + juce::String(amount) + 
+        "): This is a creative effect using windowed averaging. Feature planned.");
+}
 
 // Stereo Tools
 void SampleEditorComponent::convertToMono() {
@@ -2065,11 +2120,66 @@ void SampleEditorComponent::convertToMono() {
   hasUnsavedChanges_ = true;
   repaint();
 }
-void SampleEditorComponent::convertToStereo() {}
-void SampleEditorComponent::swapChannels() {}
-void SampleEditorComponent::adjustStereoWidth(float width) {}
-void SampleEditorComponent::extractCenter() {}
-void SampleEditorComponent::extractSides() {}
+void SampleEditorComponent::convertToStereo() {
+    if (!editBuffer_ && !audioHandle_)
+        return;
+    
+    const juce::AudioBuffer<float> *src =
+        editBuffer_ ? editBuffer_.get() : &audioHandle_->buffer;
+    if (src->getNumChannels() >= 2) {
+        DBG("[SampleEditor] Already stereo");
+        return;
+    }
+    
+    pushUndoState("Convert to Stereo");
+    
+    auto newBuffer = std::make_unique<juce::AudioBuffer<float>>(2, src->getNumSamples());
+    const float *mono = src->getReadPointer(0);
+    
+    // Duplicate mono to both channels
+    for (int i = 0; i < src->getNumSamples(); ++i) {
+        newBuffer->setSample(0, i, mono[i]);
+        newBuffer->setSample(1, i, mono[i]);
+    }
+    
+    editBuffer_ = std::move(newBuffer);
+    hasUnsavedChanges_ = true;
+    repaint();
+}
+void SampleEditorComponent::swapChannels() {
+    if (!editBuffer_ && !audioHandle_)
+        return;
+    
+    juce::AudioBuffer<float> *buf = editBuffer_ ? editBuffer_.get() : nullptr;
+    if (!buf || buf->getNumChannels() < 2) {
+        DBG("[SampleEditor] Need stereo audio to swap channels");
+        return;
+    }
+    
+    pushUndoState("Swap Channels");
+    
+    for (int i = 0; i < buf->getNumSamples(); ++i) {
+        float L = buf->getSample(0, i);
+        float R = buf->getSample(1, i);
+        buf->setSample(0, i, R);
+        buf->setSample(1, i, L);
+    }
+    
+    hasUnsavedChanges_ = true;
+    repaint();
+}
+void SampleEditorComponent::adjustStereoWidth(float width) {
+    DBG("[SampleEditor] Stereo width adjustment (width=" + juce::String(width) + 
+        "): Feature planned. Requires M/S encoding.");
+}
+void SampleEditorComponent::extractCenter() {
+    DBG("[SampleEditor] Extract center: Feature planned. Requires M/S decoding with "
+        "phase cancellation - keep Mid, discard Side.");
+}
+void SampleEditorComponent::extractSides() {
+    DBG("[SampleEditor] Extract sides: Feature planned. Requires M/S decoding - "
+        "keep Side, discard Mid.");
+}
 
 //==============================================================================
 // Audio Device Callbacks

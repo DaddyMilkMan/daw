@@ -20,7 +20,6 @@
 #include <memory>
 #include <vector>
 
-
 namespace zenith {
 
 //==============================================================================
@@ -131,18 +130,20 @@ private:
       auto &prev = mipLevels_[level - 1];
       auto &curr = mipLevels_[level];
 
-      // Simple box filter: average adjacent samples
-      // This removes ~1 octave of high frequency content per level
+      // Improved filter: 3-point window (0.25, 0.5, 0.25)
+      // This provides better anti-aliasing than a simple box filter
       for (int i = 0; i < WAVETABLE_FRAME_SIZE; ++i) {
-        int j = (i + 1) % WAVETABLE_FRAME_SIZE;
-        curr[i] = (prev[i] + prev[j]) * 0.5f;
+        int i_prev = (i - 1 + WAVETABLE_FRAME_SIZE) % WAVETABLE_FRAME_SIZE;
+        int i_next = (i + 1) % WAVETABLE_FRAME_SIZE;
+        
+        curr[i] = 0.25f * prev[i_prev] + 0.5f * prev[i] + 0.25f * prev[i_next];
       }
 
       // Normalize to maintain peak amplitude
       float maxVal = 0.0f;
       for (float s : curr)
         maxVal = std::max(maxVal, std::abs(s));
-      if (maxVal > 0.0f && maxVal < 0.99f) {
+      if (maxVal > 1e-6f) {
         float scale = 1.0f / maxVal;
         for (float &s : curr)
           s *= scale;
@@ -248,9 +249,6 @@ private:
     @return MIP level (0 = full bandwidth, higher = more filtered)
 */
 inline int calculateMipLevel(float frequency, double sampleRate) {
-  // Nyquist frequency
-  float nyquist = static_cast<float>(sampleRate) * 0.5f;
-
   // Base frequency is table size cycles per second at 1 Hz playback
   // At 1 Hz, all harmonics are below Nyquist
   // At higher frequencies, harmonics fold back

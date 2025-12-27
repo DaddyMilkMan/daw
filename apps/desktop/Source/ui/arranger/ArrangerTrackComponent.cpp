@@ -1,9 +1,6 @@
-/**
- * @file ArrangerTrackComponent.cpp
- * @brief Implementation of Arranger Tracks (Generic and Section)
- */
-
+// UI Polish applied: Synced Mute/Solo with ProjectState
 #include "ArrangerTrackComponent.h"
+#include "TakeFolderComponent.h"
 #include "ZenithDesignSystem.h"
 #include <core/SkBlurTypes.h>
 #include <core/SkCanvas.h>
@@ -16,12 +13,18 @@
 #include <effects/SkGradientShader.h>
 
 
-namespace zenith {
+#include "ZenithDesignSystem.h"
+#include "../design-system/ZenithTheme.h"
+#include <core/SkBlurTypes.h>
 
 static constexpr float HEADER_WIDTH = 260.0f;
 
-ArrangerTrackComponent::ArrangerTrackComponent(ProjectState &ps, TrackType type)
-    : projectState(ps), type_(type) {
+namespace zenith {
+
+ArrangerTrackComponent::ArrangerTrackComponent(ProjectState &ps,
+                                               ArrangerGridUtils &gridUtils,
+                                               TrackType type)
+    : projectState(ps), gridUtils_(gridUtils), type_(type) {
 
   if (type_ == TrackType::Section) {
     rebuildSections();
@@ -92,13 +95,15 @@ void ArrangerTrackComponent::drawTrackHeader(SkCanvas *canvas,
   SkPaint trackBgPaint;
   trackBgPaint.setStyle(SkPaint::kFill_Style);
 
-  // A. Track Header Background - PREMIUM GLASSMORPHIC GRADIENT
+  // A. Track Header Background - PREMIUM GLASSMORPHIC GRADIENT (Distinct Cyan Tint)
   {
     SkPoint hdrGradPts[2] = {{0, y}, {0, y + trackHeight}};
+    juce::Colour bg00 = ZenithTheme::Colors::bg_00;
+    juce::Colour bg01 = ZenithTheme::Colors::bg_01;
     SkColor hdrGradColors[3] = {
-        SkColorSetRGB(35, 45, 55), // Top - Cyan tint
+        SkColorSetRGB(bg01.getRed(), bg01.getGreen(), bg01.getBlue()), // Top
         SkColorSetRGB(25, 25, 30), // Middle
-        SkColorSetRGB(18, 18, 22)  // Bottom - darkest
+        SkColorSetRGB(bg00.getRed(), bg00.getGreen(), bg00.getBlue())  // Bottom
     };
     float hdrPositions[3] = {0.0f, 0.3f, 1.0f};
     trackBgPaint.setShader(SkGradientShader::MakeLinear(
@@ -108,7 +113,8 @@ void ArrangerTrackComponent::drawTrackHeader(SkCanvas *canvas,
 
   // Top edge highlight
   SkPaint topHighlight;
-  topHighlight.setColor(SkColorSetARGB(20, 255, 255, 255));
+  juce::Colour border = ZenithTheme::Colors::border_subtle;
+  topHighlight.setColor(SkColorSetARGB(border.getAlpha(), border.getRed(), border.getGreen(), border.getBlue()));
   topHighlight.setStrokeWidth(1.0f);
   canvas->drawLine(0, 0.5f, HEADER_WIDTH, 0.5f, topHighlight);
 
@@ -122,13 +128,15 @@ void ArrangerTrackComponent::drawTrackHeader(SkCanvas *canvas,
   {
     SkPaint badgePaint;
     badgePaint.setAntiAlias(true);
-    badgePaint.setColor(SkColorSetARGB(40, 255, 255, 255));
+    juce::Colour badgeBg = ZenithTheme::Colors::bg_03;
+    badgePaint.setColor(SkColorSetARGB(badgeBg.getAlpha(), badgeBg.getRed(), badgeBg.getGreen(), badgeBg.getBlue()));
     SkRect badgeRect = SkRect::MakeXYWH(spacing::SM, 8, 24, 18);
     canvas->drawRRect(SkRRect::MakeRectXY(badgeRect, 4, 4), badgePaint);
 
     SkPaint numPaint;
     numPaint.setAntiAlias(true);
-    numPaint.setColor(colors::TEXT_SECONDARY);
+    juce::Colour numCol = ZenithTheme::Colors::text_secondary;
+    numPaint.setColor(SkColorSetARGB(numCol.getAlpha(), numCol.getRed(), numCol.getGreen(), numCol.getBlue()));
     canvas->drawString(juce::String(trackIndex_ + 1).toStdString().c_str(),
                        spacing::SM + 6, 21, smallFont, numPaint);
   }
@@ -143,7 +151,8 @@ void ArrangerTrackComponent::drawTrackHeader(SkCanvas *canvas,
 
     SkPaint textPaint;
     textPaint.setAntiAlias(true);
-    textPaint.setColor(colors::TEXT_PRIMARY);
+    juce::Colour textCol = ZenithTheme::Colors::text_primary;
+    textPaint.setColor(SkColorSetARGB(textCol.getAlpha(), textCol.getRed(), textCol.getGreen(), textCol.getBlue()));
     canvas->drawString(trackName_.toStdString().c_str(), spacing::MD + 24,
                        23.0f, nameFont, textPaint);
   }
@@ -156,9 +165,10 @@ void ArrangerTrackComponent::drawTrackHeader(SkCanvas *canvas,
     SkPaint dividerPaint;
     SkPoint divPts[2] = {{HEADER_WIDTH - 1, 0},
                          {HEADER_WIDTH - 1, trackHeight}};
-    SkColor divColors[3] = {SkColorSetARGB(60, 255, 255, 255),
-                            SkColorSetARGB(30, 255, 255, 255),
-                            SkColorSetARGB(10, 255, 255, 255)};
+    juce::Colour divColor = ZenithTheme::Colors::border_subtle;
+    SkColor divColors[3] = {SkColorSetARGB(60, divColor.getRed(), divColor.getGreen(), divColor.getBlue()),
+                            SkColorSetARGB(30, divColor.getRed(), divColor.getGreen(), divColor.getBlue()),
+                            SkColorSetARGB(10, divColor.getRed(), divColor.getGreen(), divColor.getBlue())};
     float divPos[3] = {0.0f, 0.2f, 1.0f};
     dividerPaint.setShader(SkGradientShader::MakeLinear(
         divPts, divColors, divPos, 3, SkTileMode::kClamp));
@@ -179,7 +189,8 @@ void ArrangerTrackComponent::drawTrackBackground(SkCanvas *canvas,
   // Alternating row tint
   if (trackIndex_ % 2 == 1) {
     SkPaint altRowPaint;
-    altRowPaint.setColor(SkColorSetARGB(8, 255, 255, 255));
+    juce::Colour alt = ZenithTheme::Colors::bg_04; // Using bg_04 as very subtle highlight
+    altRowPaint.setColor(SkColorSetARGB(8, alt.getRed(), alt.getGreen(), alt.getBlue()));
     canvas->drawRect(SkRect::MakeXYWH(HEADER_WIDTH, 0,
                                       bounds.width() - HEADER_WIDTH,
                                       bounds.height()),
@@ -263,10 +274,10 @@ void ArrangerTrackComponent::drawControls(SkCanvas *canvas, float startX,
                        smallFont, textPaint);
   };
 
-  drawBtn(0, "M", isMuted_, colors::AMBER);
-  drawBtn(1, "S", isSoloed_, colors::NEON_CYAN);
-  drawBtn(2, "R", isRecordArmed_, colors::NEON_RED);
-  drawBtn(3, "I", isInputMonitoring_, colors::NEON_GREEN); // Input Monitor
+  drawBtn(0, "M", isMuted_, SkColorSetRGB(ZenithTheme::Colors::warning.getRed(), ZenithTheme::Colors::warning.getGreen(), ZenithTheme::Colors::warning.getBlue()));
+  drawBtn(1, "S", isSoloed_, SkColorSetRGB(ZenithTheme::Colors::info.getRed(), ZenithTheme::Colors::info.getGreen(), ZenithTheme::Colors::info.getBlue()));
+  drawBtn(2, "R", isRecordArmed_, SkColorSetRGB(ZenithTheme::Colors::error.getRed(), ZenithTheme::Colors::error.getGreen(), ZenithTheme::Colors::error.getBlue()));
+  drawBtn(3, "I", isInputMonitoring_, SkColorSetRGB(ZenithTheme::Colors::success.getRed(), ZenithTheme::Colors::success.getGreen(), ZenithTheme::Colors::success.getBlue())); // Input Monitor
 }
 
 void ArrangerTrackComponent::drawSections(SkCanvas *canvas,
@@ -276,8 +287,10 @@ void ArrangerTrackComponent::drawSections(SkCanvas *canvas,
   // Background
   {
     SkPoint bgPts[2] = {{0, 0}, {0, (float)bounds.height()}};
-    SkColor bgColors[2] = {SkColorSetRGB(28, 28, 35),
-                           SkColorSetRGB(22, 22, 28)};
+    juce::Colour bg01 = ZenithTheme::Colors::bg_01;
+    juce::Colour bg02 = ZenithTheme::Colors::bg_02;
+    SkColor bgColors[2] = {SkColorSetRGB(bg01.getRed(), bg01.getGreen(), bg01.getBlue()),
+                           SkColorSetRGB(bg02.getRed(), bg02.getGreen(), bg02.getBlue())};
     SkPaint bgPaint;
     bgPaint.setShader(SkGradientShader::MakeLinear(bgPts, bgColors, nullptr, 2,
                                                    SkTileMode::kClamp));
@@ -353,10 +366,17 @@ void ArrangerTrackComponent::mouseDown(const juce::MouseEvent &e) {
     if (e.position.x < HEADER_WIDTH && hoveredButtonIndex_ >= 0) {
       // Button clicked
       if (hoveredButtonIndex_ == 0) {
-        setMuted(!isMuted_);
-        // TODO: Sync to ValueTree
+        bool newMute = !isMuted_;
+        setMuted(newMute);
+        if (trackId_.isNotEmpty()) {
+          projectState.setTrackMute(trackId_, newMute, "Toggle Mute");
+        }
       } else if (hoveredButtonIndex_ == 1) {
-        setSoloed(!isSoloed_);
+        bool newSolo = !isSoloed_;
+        setSoloed(newSolo);
+        if (trackId_.isNotEmpty()) {
+          projectState.setTrackSolo(trackId_, newSolo, "Toggle Solo");
+        }
       } else if (hoveredButtonIndex_ == 2) {
         bool newArmed = !isRecordArmed_;
         setRecordArmed(newArmed);
@@ -475,6 +495,92 @@ const ArrangementSection *ArrangerTrackComponent::getDraggingSection() const {
     return &sections_[draggingSectionIndex_];
   }
   return nullptr;
+}
+
+void ArrangerTrackComponent::updateTakeFolders() {
+  if (type_ == TrackType::Section) return;
+  
+  if (trackId_.isEmpty()) {
+      takeFolders_.clear();
+      return;
+  }
+  
+  auto trackNode = projectState.findTrack(trackId_);
+  if (!trackNode.isValid()) return;
+  
+  auto clipsNode = trackNode.getChildWithName(ProjectState::ID_CLIPS);
+  if (!clipsNode.isValid()) {
+      takeFolders_.clear();
+      return;
+  }
+  
+  // Reuse existing components if possible? 
+  // For simplicity, we'll clear and rebuild for now, optimization later if needed.
+  // Ideally we should sync: add new, remove stale, update existing.
+  
+  std::vector<juce::String> keptIds;
+  
+  // 1. Mark and Sweep / Sync approach
+  // Iterate current components, see if they still exist in ValueTree
+  for (auto it = takeFolders_.begin(); it != takeFolders_.end(); ) {
+      juce::String id = (*it)->getValueTree()[ProjectState::PROP_ID].toString();
+      auto folderNode = clipsNode.getChildWithProperty(ProjectState::PROP_ID, id);
+      
+      if (folderNode.isValid() && folderNode.hasType(ProjectState::ID_TAKE_FOLDER)) {
+           // Exists, keep it
+           (*it)->setZoomLevel(pixelsPerBeat_);
+           (*it)->updateBounds(pixelsPerBeat_, 0 /* y */, 0 /* height handled by drawExpanded */);
+           // Actually, TakeFolderComponent needs to know its track height context?
+           // Currently logic is self-contained.
+           keptIds.push_back(id);
+           ++it;
+      } else {
+           // Removed
+           removeChildComponent(it->get());
+           it = takeFolders_.erase(it);
+      }
+  }
+  
+  // 2. Add new folders
+  for (const auto& child : clipsNode) {
+      if (child.hasType(ProjectState::ID_TAKE_FOLDER)) {
+          juce::String id = child[ProjectState::PROP_ID].toString();
+          bool found = false;
+          for (const auto& existingId : keptIds) {
+              if (existingId == id) { found = true; break; }
+          }
+          
+          if (!found) {
+              auto tf = std::make_unique<TakeFolderComponent>(projectState, gridUtils_, child);
+              tf->setZoomLevel(pixelsPerBeat_);
+              addAndMakeVisible(tf.get());
+              takeFolders_.push_back(std::move(tf));
+          }
+      }
+  }
+  
+  // 3. Update Layout
+  // Arrange them vertically? No, they are timeline objects.
+  // Their x/w is determined by start/length.
+  // The Track Height might need to expand!
+  // This is a layout complexity. For now, we will layout them inside the track bounds.
+  // If track is not tall enough, they might clip.
+  
+  // For now, auto-collapse or something.
+  for (auto& tf : takeFolders_) {
+      double start = tf->getValueTree()[ProjectState::PROP_START];
+      double len = tf->getValueTree()[ProjectState::PROP_LENGTH];
+      
+      // Update bounds geometry
+      // We need to properly calculate x/w in pixels
+      // Using helper?
+      int x = static_cast<int>((start - viewStartBeats_) * pixelsPerBeat_) + (int)HEADER_WIDTH;
+      int w = static_cast<int>(len * pixelsPerBeat_);
+      int h = 80; // Default track height?
+                   // If expanded, it needs more height.
+                   
+      tf->setBounds(x, 0, w, h);
+  }
 }
 
 } // namespace zenith

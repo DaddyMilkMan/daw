@@ -337,7 +337,59 @@ void TrackAutomationSynchronizer::updateTrackAutomation(const juce::String& trac
             track->setMuted(value >= 0.5);  // Binary: 0 or 1
         }
     }
+
+    //==========================================================================
+    // Plugin Parameter Automation
+    //==========================================================================
+    
+    // Get automation node for this track
+    auto automationNode = trackNode.getChildWithName(zenith::ProjectState::ID_AUTOMATION);
+    if (!automationNode.isValid())
+        return;
+    
+    // Iterate through all automation envelopes
+    for (int i = 0; i < automationNode.getNumChildren(); ++i)
+    {
+        auto envelope = automationNode.getChild(i);
+        if (!envelope.hasType(zenith::ProjectState::ID_ENVELOPE))
+            continue;
+        
+        juce::String paramId = envelope.getProperty(zenith::ProjectState::PROP_PARAM_ID).toString();
+        
+        // Check if this is a plugin parameter automation (format: "plugin_X_Y")
+        if (paramId.startsWith("plugin_"))
+        {
+            // Parse plugin and parameter indices
+            auto remainder = paramId.substring(7); // After "plugin_"
+            auto underscorePos = remainder.indexOf("_");
+            if (underscorePos < 0)
+                continue;
+            
+            int pluginIndex = remainder.substring(0, underscorePos).getIntValue();
+            int paramIndex = remainder.substring(underscorePos + 1).getIntValue();
+            
+            if (pluginIndex < 0 || paramIndex < 0)
+                continue;
+            
+            // Validate plugin exists
+            if (pluginIndex >= track->getNumPlugins())
+                continue;
+            
+            // Sample the envelope
+            auto pointsNode = envelope.getChildWithName(zenith::ProjectState::ID_POINTS);
+            if (!pointsNode.isValid())
+                continue;
+            
+            double value = sampleEnvelope(pointsNode, playbackBeats);
+            if (value >= 0.0)
+            {
+                // Apply the automation value to the plugin parameter
+                track->setPluginParameterValue(pluginIndex, paramIndex, static_cast<float>(value));
+            }
+        }
+    }
 }
+
 
 void TrackAutomationSynchronizer::rebuildListeners()
 {

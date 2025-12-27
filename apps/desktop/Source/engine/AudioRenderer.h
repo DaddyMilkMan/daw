@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <array>
 #include <atomic>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -88,17 +89,19 @@ public:
    * @param masterPlugins Master bus plugin chain
    * @param tempoMap Tempo map for automation
    * @param incomingMidi Optional incoming MIDI buffer
+   * @param inputChannelData Optional input channel data
+   * @param numInputChannels Number of input channels
    * @note AUDIO THREAD ONLY
    */
-  void renderAudioGraph(juce::AudioBuffer<float> &outputBuffer, int numSamples,
-                        juce::int64 playheadPosition,
-                        std::span<Track *const> tracks,
-                        std::span<AuxBus *const> auxBuses,
-                        const RoutingGraph &routingGraph,
-                        MasterLimiter &masterLimiter, const TempoMap *tempoMap,
-                        const juce::MidiBuffer *incomingMidi = nullptr,
-                        const float *const *inputChannelData = nullptr,
-                        int numInputChannels = 0) noexcept;
+  void renderAudioGraph(
+      juce::AudioBuffer<float> &outputBuffer, int numSamples,
+      juce::int64 playheadPosition, std::span<Track *const> tracks,
+      std::span<AuxBus *const> auxBuses, const RoutingGraph &routingGraph,
+      MasterLimiter &masterLimiter,
+      std::span<const std::shared_ptr<juce::AudioPluginInstance>> masterPlugins,
+      const TempoMap *tempoMap, const juce::MidiBuffer *incomingMidi = nullptr,
+      const float *const *inputChannelData = nullptr,
+      int numInputChannels = 0) noexcept;
 
   /**
    * @brief Update playhead position for all clips in all tracks
@@ -169,8 +172,7 @@ public:
    * @param limiterLatency Latency of the master limiter
    */
   void updateMasterLatency(
-      const std::vector<std::unique_ptr<juce::AudioPluginInstance>>
-          &masterPlugins,
+      std::span<const std::shared_ptr<juce::AudioPluginInstance>> masterPlugins,
       int limiterLatency);
 
   static constexpr int kMaxAuxBuses = 32;
@@ -191,7 +193,7 @@ private:
    */
   void processMasterPlugins(
       juce::AudioBuffer<float> &buffer,
-      std::vector<std::unique_ptr<juce::AudioPluginInstance>> &plugins);
+      std::span<const std::shared_ptr<juce::AudioPluginInstance>> plugins);
 
   /**
    * @brief Update output metering
@@ -207,6 +209,26 @@ private:
 
   // Per-track buffers (pre-allocated)
   std::vector<juce::AudioBuffer<float>> trackBuffers_;
+
+  // Private helpers for renderAudioGraph breakdown (Bug 61)
+  void renderFrozenTrack(int trackIdx, Track *track,
+                         juce::AudioBuffer<float> &outputBuffer, int numSamples,
+                         juce::int64 playheadPosition,
+                         const RoutingGraph::Snapshot *snapshot,
+                         const std::string &nodeId);
+
+  void renderLiveTrack(int trackIdx, Track *track,
+                       juce::AudioBuffer<float> &outputBuffer, int numSamples,
+                       juce::int64 playheadPosition,
+                       const RoutingGraph::Snapshot *snapshot,
+                       const std::string &nodeId,
+                       const juce::MidiBuffer *incomingMidi,
+                       const TempoMap *tempoMap);
+
+  void renderAuxBus(const RoutingGraph::Snapshot *snapshot,
+                    const std::string &nodeId,
+                    std::span<AuxBus *const> auxBuses,
+                    juce::AudioBuffer<float> &outputBuffer, int numSamples);
 
   // Aux bus buffers
   std::vector<juce::AudioBuffer<float>> auxBusBuffers_;
@@ -230,7 +252,8 @@ private:
   zenith::dsp::Dither dither_;
 
   // [DSP Optimization] Pre-allocated vector for aux buffers to avoid RT
-  // allocations
+  // allocations (Bug 69)
+  // Reserved in prepare()
   std::vector<juce::AudioBuffer<float> *> auxBufferPtrsVector_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioRenderer)

@@ -155,7 +155,7 @@ void MixerChannel::recalculateCoefficients() {
   }
 
   // Atomically swap pointer
-  juce::ScopedLock sl(coeffLock_);
+  const juce::SpinLock::ScopedLockType sl(coeffLock_);
   activeCoeffs_ = newCoeffs;
 }
 
@@ -163,7 +163,7 @@ void MixerChannel::updateFiltersFromCoefficients() {
   // Safe atomic retrieval of current coefficients
   FilterCoefficients::Ptr localCoeffs;
   {
-    juce::ScopedLock sl(coeffLock_);
+    const juce::SpinLock::ScopedLockType sl(coeffLock_);
     localCoeffs = activeCoeffs_;
   }
 

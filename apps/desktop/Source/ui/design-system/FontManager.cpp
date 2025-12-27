@@ -16,9 +16,7 @@
 #include <include/core/SkStream.h>
 
 // Platform-specific font manager includes
-#ifdef _WIN32
-#include <include/ports/SkTypeface_win.h>
-#endif
+#include "PlatformFontUtils.h"
 
 namespace zenith {
 namespace design {
@@ -34,9 +32,13 @@ static int getWeightIndex(FontWeight weight) {
     return 2;
   case FontWeight::Bold:
     return 3;
+  default:
+    // Unknown weight - fallback to Regular. This handles future weight additions
+    // gracefully without crashing.
+    DBG("[FontManager] Unknown FontWeight value: " + juce::String(static_cast<int>(weight)) +
+        ", falling back to Regular");
+    return 0;
   }
-  jassertfalse;
-  return 0;
 }
 // ============================================================================
 // SINGLETON ACCESS
@@ -60,18 +62,8 @@ FontManager::FontManager() { initialize(); }
 void FontManager::initialize() {
   std::lock_guard<std::mutex> lock(mutex_);
 
-  // Get font manager - use DirectWrite on Windows for best results
-#ifdef _WIN32
-  fontMgr_ = SkFontMgr_New_DirectWrite();
-  if (!fontMgr_) {
-    // Fallback if DirectWrite fails
-    fontMgr_ = SkFontMgr::RefEmpty();
-    DBG("[FontManager] WARNING: DirectWrite font manager unavailable, using "
-        "empty manager");
-  }
-#else
-  fontMgr_ = SkFontMgr::RefEmpty();
-#endif
+  // Get font manager - use platform-specific implementations for best results
+  fontMgr_ = PlatformFontUtils::createDefaultFontManager();
 
   // Determine font resource directory
   // Determine font resource directory
@@ -132,15 +124,14 @@ void FontManager::initialize() {
   bool interBold = loadFont("Inter-Bold.ttf", FontFamily::UI, FontWeight::Bold);
 
   // Load JetBrains Mono fonts (Mono family)
-  bool monoRegular = loadFont("JetBrainsMono-Regular.ttf", FontFamily::Mono,
-                              FontWeight::Regular);
-  bool monoMedium = loadFont("JetBrainsMono-Medium.ttf", FontFamily::Mono,
-                             FontWeight::Medium);
+  bool monoRegular = false; // loadFont("JetBrainsMono-Regular.ttf", FontFamily::Mono, FontWeight::Regular);
+  bool monoMedium = false; // loadFont("JetBrainsMono-Medium.ttf", FontFamily::Mono, FontWeight::Medium);
   // Try SemiBold first, fallback to Medium if not present
-  bool monoSemiBold = loadFont("JetBrainsMono-SemiBold.ttf", FontFamily::Mono,
-                               FontWeight::SemiBold);
-  bool monoBold =
-      loadFont("JetBrainsMono-Bold.ttf", FontFamily::Mono, FontWeight::Bold);
+  bool monoSemiBold = false; 
+      // loadFont("JetBrainsMono-SemiBold.ttf", FontFamily::Mono, FontWeight::SemiBold); // Disabled due to hang
+  
+  bool monoBold = false; 
+      // loadFont("JetBrainsMono-Bold.ttf", FontFamily::Mono, FontWeight::Bold); // Disabled due to hang
 
   // Create synthetic weight fallbacks for missing fonts
   // This ensures getFont() always returns a usable typeface
@@ -261,7 +252,7 @@ void FontManager::configureFont(SkFont &font) const {
 SkFont FontManager::getFont(FontFamily family, FontWeight weight,
                             float size) const {
   std::lock_guard<std::mutex> lock(mutex_);
-
+  
   sk_sp<SkTypeface> typeface = getTypeface(family, weight);
 
   if (!typeface) {

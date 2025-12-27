@@ -1,4 +1,5 @@
 #include "AutomationManager.h"
+#include "RealTimeGarbageCollector.h"
 
 namespace zenith {
 
@@ -35,12 +36,8 @@ const std::shared_ptr<AutomationLane> AutomationManager::getLane(const juce::Str
 void AutomationManager::updateSnapshot() {
     auto newSnapshot = std::make_shared<AutomationSnapshot>(lanesOwned_);
     activeSnapshot_.store(newSnapshot.get(), std::memory_order_release);
-    snapshotTrash_.push_back(currentSnapshot_);
+    RealTimeGarbageCollector::getInstance().deferDelete(currentSnapshot_);
     currentSnapshot_ = newSnapshot;
-    
-    while (snapshotTrash_.size() > 10) {
-        snapshotTrash_.erase(snapshotTrash_.begin());
-    }
 }
 
 } // namespace zenith
