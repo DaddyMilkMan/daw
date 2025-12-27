@@ -11,6 +11,7 @@
 */
 
 #include "ConfigurationManager.h"
+#include "PlatformPathUtils.h"
 #include "ZenithDesignSystem.h"
 
 namespace zenith {
@@ -103,7 +104,7 @@ ConfigurationManager &ConfigurationManager::getInstance() {
 }
 
 juce::File ConfigurationManager::getDefaultConfigurationFile() {
-    return PlatformPathUtils::getDefaultConfigurationFile();
+  return PlatformPathUtils::getDefaultConfigurationFile();
 }
 
 void ConfigurationManager::initialize(const juce::File &configFile) {
@@ -363,7 +364,8 @@ bool ConfigurationManager::saveConfiguration() {
   }
 
   try {
-    juce::String json = juce::JSON::toString(juce::var(configData_.get()), true);
+    juce::String json =
+        juce::JSON::toString(juce::var(configData_.get()), true);
     return configFile_.replaceWithText(json);
   } catch (const std::exception &e) {
     DBG("Failed to save configuration: " << e.what());
@@ -379,7 +381,8 @@ bool ConfigurationManager::saveConfigurationAs(const juce::File &newFile) {
   }
 
   try {
-    juce::String json = juce::JSON::toString(juce::var(configData_.get()), true);
+    juce::String json =
+        juce::JSON::toString(juce::var(configData_.get()), true);
     bool success = newFile.replaceWithText(json);
 
     if (success) {
@@ -608,6 +611,12 @@ void ConfigurationManager::loadDefaults() {
   setDefaultValue(keys::WINDOW_WIDTH, ConfigValue(1400));
   setDefaultValue(keys::WINDOW_HEIGHT, ConfigValue(900));
   setDefaultValue(keys::WINDOW_MAXIMIZED, ConfigValue(false));
+
+  // Arranger defaults
+  setDefaultValue(keys::ARRANGER_ZOOM, ConfigValue(50.0f)); // pixelsPerBeat
+  setDefaultValue(keys::ARRANGER_SCROLL_X, ConfigValue(0.0f));
+  setDefaultValue(keys::ARRANGER_SCROLL_Y, ConfigValue(0.0f));
+  setDefaultValue(keys::ARRANGER_FOLLOW_PLAYHEAD, ConfigValue(true));
 
   // Theme defaults
   setDefaultValue(keys::THEME_NAME, ConfigValue("NeonNoir"));

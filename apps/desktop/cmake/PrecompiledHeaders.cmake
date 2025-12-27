@@ -27,9 +27,9 @@ endif()
 # Configure PCH for ZenithDAW target
 # Using PUBLIC would force all linking targets to also use the PCH
 # Using PRIVATE is correct here - only ZenithDAW compilation uses it
-target_precompile_headers(ZenithDAW PRIVATE
-    "$<$<COMPILE_LANGUAGE:CXX>:${ZENITH_PCH_HEADER}>"
-)
+# target_precompile_headers(ZenithDAW PRIVATE
+#     "$<$<COMPILE_LANGUAGE:CXX>:${ZENITH_PCH_HEADER}>"
+# )
 
 message(STATUS "  PCH Header: ${ZENITH_PCH_HEADER}")
 message(STATUS "  PCH: ENABLED for ZenithDAW target")

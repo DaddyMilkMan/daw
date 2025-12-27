@@ -9,10 +9,13 @@
 #include "../../Source/engine/Track.h"
 
 using namespace zenith;
+#include "../design-system/ZenithTheme.h"
+#include "../design-system/ColorBridge.h"
+#include "../design-system/ZenithTypography.h"
 
 //==============================================================================
-MixerView::MixerView(Engine& engine)
-    : engine_(engine)
+MixerView::MixerView(Engine& engine, ProjectState& state)
+    : engine_(engine), state_(state)
 {
     // Set up viewport for scrolling
     viewport_.setViewedComponent(&channelContainer_, false);
@@ -23,7 +26,7 @@ MixerView::MixerView(Engine& engine)
     rebuildChannels();
 
     // Start timer to check for track count changes (10 Hz)
-    startTimer(100);
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(100);
 }
 
 MixerView::~MixerView()
@@ -36,13 +39,13 @@ MixerView::~MixerView()
 void MixerView::paint(juce::Graphics& g)
 {
     // Background
-    g.fillAll(juce::Colour(0xff1e1e1e));
+    g.fillAll(design::toJuceColour(design::unified::bg_00()));
 
     // If no tracks, show helpful message
     if (channels_.empty())
     {
-        g.setColour(juce::Colours::grey);
-        g.setFont(juce::FontOptions(16.0f));
+        g.setColour(design::toJuceColour(design::unified::text_tertiary()));
+        g.setFont(ZenithTypography::getBodyFont().withHeight(16.0f));
         g.drawText("No tracks in mixer",
                    getLocalBounds(),
                    juce::Justification::centred,
@@ -108,7 +111,7 @@ void MixerView::rebuildChannels()
     {
         if (track != nullptr)
         {
-            auto channel = std::make_unique<MixerChannelComponent>(track.get());
+            auto channel = std::make_unique<MixerChannelComponent>(track.get(), state_, engine_);
             channelContainer_.addAndMakeVisible(channel.get());
             channels_.push_back(std::move(channel));
         }

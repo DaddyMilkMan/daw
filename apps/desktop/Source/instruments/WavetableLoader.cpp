@@ -254,10 +254,20 @@ WavetableLoader::generateBasicWavetable(int type, int numFrames) {
         break;
       }
 
-      case 4: // PWM (morph controls pulse width)
+      case 4: // PWM (morph controls pulse width) - Band-limited
       {
         float pw = 0.1f + morphAmount * 0.8f; // 10% to 90%
-        sample = (phase < pw) ? 1.0f : -1.0f;
+        // Additive synthesis for band-limited PWM
+        int maxHarmonic = 32;
+        for (int h = 1; h <= maxHarmonic; ++h) {
+          float harmPhase = h * phase * juce::MathConstants<float>::twoPi;
+          // Fourier series for pulse wave with variable width
+          float coeff = 2.0f / (h * juce::MathConstants<float>::pi);
+          sample +=
+              coeff * std::sin(h * pw * juce::MathConstants<float>::pi) *
+              std::cos(harmPhase - h * pw * juce::MathConstants<float>::pi);
+        }
+        sample *= 0.6f;
         break;
       }
 

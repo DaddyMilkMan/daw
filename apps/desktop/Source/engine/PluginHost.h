@@ -63,7 +63,7 @@ public:
      * - macOS: ~/Library/Audio/Plug-Ins/VST3, /Library/Audio/Plug-Ins/VST3
      * - Linux: ~/.vst3, /usr/lib/vst3, /usr/local/lib/vst3
      *
-     * @param async If true, scan asynchronously (not implemented in MVP)
+     * @param async If true, scan asynchronously (use scanAsync() for progress callbacks)
      * @return Number of plugins found
      */
     int scanDefaultLocations(bool async = false);
@@ -178,7 +178,12 @@ public:
 
 private:
     // Internal scanning logic
+    // Internal scanning logic
     int scanInternal(std::function<void(const juce::String&)> onProgress);
+    
+    // Out-of-process helper
+    // Returns true if plugin was successfully scanned and added
+    bool scanFileOutProcess(const juce::File& file, juce::PluginDescription& result);
 
     //==============================================================================
     // Member Variables

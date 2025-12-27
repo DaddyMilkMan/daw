@@ -30,8 +30,10 @@
 #include <effects/SkDashPathEffect.h>
 #include <effects/SkGradientShader.h>
 
+
 namespace zenith {
 
+// Bring in design namespace types for convenience
 using design::FontWeight;
 
 //==============================================================================
@@ -39,8 +41,12 @@ using design::FontWeight;
 //==============================================================================
 
 ModulationMatrixView::ModulationMatrixView() : rng_(std::random_device{}()) {
-  setOpaque(true);
-  startTimerHz(60); // 60 FPS for smooth animation
+  // NOTE: Do NOT use setOpaque(true) with Skia components!
+  // Skia rendering bypasses JUCE's paint() method, and setOpaque(true)
+  // tells JUCE the component will fill all pixels via paint(), which
+  // causes black screens when drawing is done via drawSkia() instead.
+  setOpaque(false);
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60); // 60 FPS for smooth animation
 }
 
 ModulationMatrixView::~ModulationMatrixView() { stopTimer(); }
@@ -690,18 +696,18 @@ void ModulationMatrixView::buildDestNodes() {
     SkColor color;
   } commonDests[] = {
       {"synth:filter:cutoff", "Filter Cutoff",
-       ModulationDestNode::Type::FilterCutoff, 0xFFFF6B35},
+       ModulationDestNode::Type::FilterCutoff, design::colors::ORANGE},
       {"synth:filter:resonance", "Filter Reso",
-       ModulationDestNode::Type::FilterResonance, 0xFFFF8C42},
+       ModulationDestNode::Type::FilterResonance, design::colors::AMBER},
       {"synth:osc:pitch", "Osc Pitch", ModulationDestNode::Type::OscPitch,
-       0xFF4ECDC4},
+       design::colors::CYAN},
       {"synth:osc:detune", "Osc Detune", ModulationDestNode::Type::OscDetune,
-       0xFF45B7D1},
+       design::colors::BLUE},
       {"synth:osc:mix", "Osc Mix", ModulationDestNode::Type::OscMix,
-       0xFF96CEB4},
+       design::colors::NEON_GREEN},
       {"synth:amp:gain", "Amp Gain", ModulationDestNode::Type::AmpGain,
-       0xFFFECEAB},
-      {"synth:pan", "Pan", ModulationDestNode::Type::Pan, 0xFFDDA0DD}};
+       design::colors::MAGENTA},
+      {"synth:pan", "Pan", ModulationDestNode::Type::Pan, design::colors::VIOLET}};
 
   for (const auto &dest : commonDests) {
     ModulationDestNode node;

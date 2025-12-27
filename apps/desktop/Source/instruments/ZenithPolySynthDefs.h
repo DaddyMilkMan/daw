@@ -31,7 +31,7 @@ enum class OscillatorWaveform {
   Triangle,
   Noise,
   Supersaw,
-  Wavetable, // Flagship Feature
+  Wavetable,
   NumWaveforms
 };
 
@@ -48,12 +48,7 @@ enum class FilterModelType { SVF = 0, Ladder };
 /**
     Quality preset for CPU optimization
 */
-enum class QualityPreset {
-  Low = 0, // Max 3 unison voices, optimized for CPU
-  Medium,  // Max 5 unison voices, balanced
-  High,    // Max 7 unison voices, full quality
-  NumPresets
-};
+enum class QualityPreset { Low = 0, Medium, High, NumPresets };
 
 /**
     LFO waveform shapes

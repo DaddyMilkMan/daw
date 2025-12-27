@@ -270,4 +270,57 @@ juce::String AutomationStateManager::generatePointId() const
     return "pt_" + juce::Uuid().toString().substring(0, 8);
 }
 
+//==============================================================================
+// Plugin Parameter Automation
+//==============================================================================
+
+juce::String AutomationStateManager::createPluginParameterAutomation(
+    const juce::String& trackId,
+    int pluginIndex,
+    int parameterIndex,
+    const juce::String& parameterName)
+{
+    auto track = projectState_.getTrack(trackId);
+    if (!track.isValid())
+        return {};
+
+    // Generate paramId using standard format: plugin_X_Y
+    juce::String paramId = "plugin_" + juce::String(pluginIndex) + "_" + 
+                           juce::String(parameterIndex);
+
+    // Get or create the automation envelope
+    auto envelope = getOrCreateAutomationEnvelope(trackId, paramId);
+    if (!envelope.isValid())
+        return {};
+
+    // Store plugin-specific metadata for display/serialization
+    envelope.setProperty(juce::Identifier("pluginIndex"), pluginIndex, nullptr);
+    envelope.setProperty(juce::Identifier("paramIndex"), parameterIndex, nullptr);
+    envelope.setProperty(juce::Identifier("paramName"), parameterName, nullptr);
+
+    DBG("AutomationStateManager: Created plugin automation for " + parameterName + 
+        " (" + paramId + ")");
+
+    return paramId;
+}
+
+bool AutomationStateManager::parsePluginParameterId(const juce::String& paramId,
+                                                     int& outPluginIndex,
+                                                     int& outParamIndex)
+{
+    if (!paramId.startsWith("plugin_"))
+        return false;
+
+    auto remainder = paramId.substring(7); // After "plugin_"
+    auto underscorePos = remainder.indexOf("_");
+    if (underscorePos < 0)
+        return false;
+
+    outPluginIndex = remainder.substring(0, underscorePos).getIntValue();
+    outParamIndex = remainder.substring(underscorePos + 1).getIntValue();
+
+    return outPluginIndex >= 0 && outParamIndex >= 0;
+}
+
 } // namespace zenith
+

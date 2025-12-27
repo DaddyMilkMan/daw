@@ -47,6 +47,7 @@ public:
   void mouseExit(const juce::MouseEvent &e) override;
 
   void timerCallback() override;
+  void visibilityChanged() override;
 
   std::unique_ptr<juce::AccessibilityHandler>
   createAccessibilityHandler() override;
@@ -88,8 +89,12 @@ public:
   std::function<void()> onPlayClicked;
   std::function<void()> onStopClicked;
   std::function<void()> onRecordClicked;
+  std::function<void()> onLoopToggled;
+  std::function<void()> onRewind;
   std::function<void()> onViewToggleClicked;
   std::function<void()> onSettingsClicked;
+  std::function<void()> onExportClicked;
+  std::function<void()> onClearAllSolos;
 
 private:
   bool isPlaying_ = false;
@@ -106,6 +111,11 @@ private:
   juce::Rectangle<int> recordButtonBounds_;
   juce::Rectangle<int> viewToggleButtonBounds_;
   juce::Rectangle<int> settingsButtonBounds_;
+  juce::Rectangle<int> exportButtonBounds_;
+
+  // Dynamic layout bounds
+  juce::Rectangle<int> centerInfoBounds_;
+  juce::Rectangle<int> cpuMeterBounds_;
 
   // Interaction states
   InteractionState playState_;
@@ -113,6 +123,7 @@ private:
   InteractionState recordState_;
   InteractionState viewToggleState_;
   InteractionState settingsState_;
+  InteractionState exportState_;
 
   void drawTransportButton(SkCanvas *canvas, const juce::Rectangle<int> &bounds,
                            const SkPath &iconPath, bool isActive,

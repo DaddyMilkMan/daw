@@ -28,6 +28,7 @@ public:
   enum class CommandID {
       ListTracks, CreateTrack, DeleteTrack, RenameTrack, SetTrackVolume, SetTrackPan,
       ExportAudio, ExportProjectAdvanced, SeparateTrack,
+      FreezeTrack, UnfreezeTrack,
       ListClips, CreateClip, DeleteClip, SplitClip, MoveClip, ResizeClip,
       Play, Stop, Record, Rewind, SetLoop, SetTempo, SetTimeSignature,
       GetSessionGraph, Undo, Redo, History,
@@ -161,9 +162,9 @@ private:
   ProjectState &projectState;
   Engine &engine;
 
-  std::unique_ptr<zenith::TrackCommands> trackCommands;
-  std::unique_ptr<zenith::ClipCommands> clipCommands;
-  std::unique_ptr<zenith::TransportCommands> transportCommands;
+  std::unique_ptr<TrackCommands> trackCommands;
+  std::unique_ptr<ClipCommands> clipCommands;
+  std::unique_ptr<TransportCommands> transportCommands;
 
   std::map<std::string, CommandID> commandMap;
   std::map<juce::String, CommandHandler> commandHandlers;

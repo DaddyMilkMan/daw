@@ -25,9 +25,9 @@
 
 #pragma once
 
+#include "../../engine/ProjectState.h"
 #include "../framework/SkiaComponent.h"
-#include "DrumPadComponent.h"
-#include "ProjectState.h"
+#include "../session/DrumPadComponent.h"
 #include <functional>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
@@ -43,6 +43,8 @@
 #include <core/SkColor.h>
 #include <core/SkPaint.h>
 #include <core/SkRect.h>
+
+namespace zenith {
 
 //==============================================================================
 /**
@@ -117,7 +119,6 @@ public:
 
   // Skia Rendering
   void drawSkia(SkCanvas *canvas) override;
-  void drawModernToolbar(SkCanvas *canvas);
 
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseDrag(const juce::MouseEvent &e) override;
@@ -142,12 +143,32 @@ public:
   // Public API - Advanced Features
   //==========================================================================
 
+  //==========================================================================
+  // Quantization Options
+  //==========================================================================
+  
+  /** Options for quantization */
+  struct QuantizeOptions {
+    double gridSize = 0.25;       // Grid size in beats (0 = use current)
+    float strength = 1.0f;        // 0.0-1.0 quantize strength
+    float swingAmount = 0.0f;     // 0.0-1.0 swing amount
+    bool useTriplets = false;     // Use triplet grid
+    bool quantizeStart = true;    // Quantize note start positions
+    bool quantizeEnd = false;     // Quantize note end positions
+  };
+
   /** Quantize selected notes with strength and swing */
   void quantizeSelected(double gridSize, float strength = 1.0f,
                         float swing = 0.0f);
+  
+  /** Quantize selected notes with full options */
+  void quantizeSelected(const QuantizeOptions& options);
 
   /** Humanize velocities of selected notes */
   void humanizeVelocity(float amount = 0.3f);
+
+  /** Randomize variation to note timing (nudge) */
+  void humanizeTiming(float amount = 0.02f);
 
   /** Apply velocity curve to selected notes */
   enum class VelocityCurve { RampUp, RampDown, Compress, Expand, Invert };
@@ -360,6 +381,9 @@ public:
 
   /** Set probability (0.0-1.0) for selected notes to play */
   void setNoteProbability(float probability);
+
+  /** Set tension (-1.0 to 1.0) for a specific note */
+  void setNoteTension(const juce::String& noteId, float tension);
 
   /** Get probability for a specific note */
   float getNoteProbability(const juce::String &noteId) const;
@@ -674,7 +698,9 @@ public:
   std::vector<NoteRect> &getNotesForScripting() { return noteRects; }
 
 private:
-  //==========================================================================
+  void broadcastSelection();
+
+private:
   // Internal Note Representation
   //==========================================================================
 
@@ -1220,58 +1246,17 @@ private:
  */
 class MidiEditorContainer : public juce::Component {
 public:
-  MidiEditorContainer(zenith::ProjectState &state, zenith::Engine &engine)
-      : projectState(state), engine_(engine) {
-    pianoRoll = std::make_unique<PianoRollComponent>(state);
-    addAndMakeVisible(pianoRoll.get());
+  MidiEditorContainer(zenith::ProjectState &state, zenith::Engine &engine);
+  ~MidiEditorContainer() override;
 
-    drumPad = std::make_unique<DrumPadComponent>(engine, state);
-    addChildComponent(drumPad.get()); // Hidden by default
+  void setClipContext(const MidiClipContext &context);
 
-    // Toggle Button
-    toggleButton.setButtonText("Switch to Drum View");
-    toggleButton.onClick = [this] { toggleView(); };
-    addAndMakeVisible(toggleButton);
-  }
+  void resized() override;
 
-  void setClipContext(const MidiClipContext &context) {
-    pianoRoll->setClipContext(context);
-    drumPad->setClipContext(context.clipId);
+  void toggleView();
 
-    // Auto-detect mode based on track name? For now manual.
-    if (context.trackId.containsIgnoreCase("drum")) {
-      if (activeView == View::PianoRoll)
-        toggleView();
-    }
-  }
-
-  void resized() override {
-    auto area = getLocalBounds();
-    auto topBar = area.removeFromTop(30);
-
-    toggleButton.setBounds(topBar.removeFromRight(150).reduced(2));
-
-    if (activeView == View::PianoRoll) {
-      pianoRoll->setBounds(area);
-    } else {
-      drumPad->setBounds(area);
-    }
-  }
-
-  void toggleView() {
-    if (activeView == View::PianoRoll) {
-      activeView = View::DrumPad;
-      pianoRoll->setVisible(false);
-      drumPad->setVisible(true);
-      toggleButton.setButtonText("Switch to Piano Roll");
-    } else {
-      activeView = View::PianoRoll;
-      pianoRoll->setVisible(true);
-      drumPad->setVisible(false);
-      toggleButton.setButtonText("Switch to Drum View");
-    }
-    resized();
-  }
+  // Helper for injection
+  void injectMidiMessage(const juce::MidiMessage &msg);
 
 private:
   zenith::ProjectState &projectState;
@@ -1279,6 +1264,8 @@ private:
   std::unique_ptr<PianoRollComponent> pianoRoll;
   std::unique_ptr<DrumPadComponent> drumPad;
   juce::TextButton toggleButton;
+
+  MidiClipContext currentContext;
 
   enum class View { PianoRoll, DrumPad };
   View activeView = View::PianoRoll;
@@ -1328,8 +1315,13 @@ public:
 
   ~PianoRollWindow() override = default;
 
-  void closeButtonPressed() override { delete this; }
+  void closeButtonPressed() override {
+    // Safe deletion - schedule for async destruction to avoid use-after-free
+    juce::MessageManager::callAsync([this]() { delete this; });
+  }
 
 private:
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoRollWindow)
 };
+
+} // namespace zenith

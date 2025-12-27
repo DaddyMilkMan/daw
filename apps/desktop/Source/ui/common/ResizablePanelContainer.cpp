@@ -269,7 +269,7 @@ void PanelWrapper::setCollapsed(bool collapsed, bool animate) {
   if (animate) {
     animationStartTime_ = juce::Time::getMillisecondCounter();
     animationProgress_ = 0.0f;
-    startTimer(16); // ~60fps animation
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(16); // ~60fps animation
   } else {
     currentSize_ = targetSize_;
     animationProgress_ = 1.0f;
@@ -417,11 +417,12 @@ void PanelDivider::setPositionConstraints(float minRatio, float maxRatio) {
 std::unique_ptr<juce::AccessibilityHandler>
 PanelDivider::createAccessibilityHandler() {
   // Role: Splitter (using unspecified since JUCE lacks splitter role)
-  setHelpText("Drag to resize");
+  setHelpText("Panel Divider", "Drag to resize");
   setDescription(isHorizontal_ ? "Horizontal splitter" : "Vertical splitter");
   return std::make_unique<juce::AccessibilityHandler>(
       *this, juce::AccessibilityRole::unspecified);
 }
+
 
 //==============================================================================
 // TabGroup Implementation

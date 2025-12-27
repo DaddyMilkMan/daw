@@ -47,54 +47,33 @@ namespace {
 
     // Encrypt/Decrypt helper
     // Returns empty block on failure
+    // Encrypt/Decrypt helper
+    // Returns empty block on failure
     juce::MemoryBlock performCrypto(const void* data, size_t size, bool encrypt)
     {
         if (data == nullptr || size == 0)
             return {};
 
         auto keyStr = getMachineKey();
-        // Hash the key to get a fixed length key for Blowfish (max 72 bytes usually, typically 56 or less is standard, but JUCE Blowfish handles up to 448 bits / 56 bytes)
-        // We'll use SHA-256 and truncate/use the first 56 bytes (or less).
-        // Actually SHA-256 is 32 bytes (256 bits). That fits perfectly in Blowfish key range (32-448 bits).
         
-        // However, juce::BlowFish doesn't seem to have a SHA helper built-in easily accessible without `juce_cryptography` module which might not include SHA.
-        // Wait, juce_cryptography has SHA256. Assuming it's available.
-        // If not, we can just use the raw bytes of the string, maybe hashed with a simple hash if we want to be fancy, but raw bytes are fine if long enough.
-        // The machine-id is usually 32 hex chars (32 bytes effectively if hex decoded, or 32 chars).
+        // Use SHA-256 hash of machine key to get stable 32-byte key
+        juce::SHA256 sha;
+        auto hash = sha.calc(keyStr.toRawUTF8(), keyStr.getNumBytesAsUTF8());
+        juce::MemoryBlock keyData(hash.getData(), 32); 
         
-        juce::MemoryBlock keyData (keyStr.toRawUTF8(), keyStr.getNumBytesAsUTF8());
-        
-        // Pad data to 8 bytes for Blowfish
+        // Prepare buffer
         juce::MemoryBlock processedData;
         processedData.append (data, size);
 
         if (encrypt)
         {
-            // PKCS7-like padding or just simple null padding if we store size separately?
-            // Simplest for now: ensure multiple of 8.
-            int paddingParams = 8 - (processedData.getSize() % 8);
-            if (paddingParams < 8) // If it's 8, it's already aligned, but standard PKCS7 adds a full block.
-            {
-                 // We will just pad with zeros for simplicity as we are serializing var which stops at valid end usually?
-                 // Actually `juce::var` binary format ... 
-                 // Let's rely on storing the actual data size or just trusting the var parser to stop.
-                 // Better: Store size as first 4 bytes? 
-                 // Even better: Use PKCS7 padding where the value of padding byte is the number of padding bytes.
-                 processedData.ensureSize (processedData.getSize() + paddingParams);
-                 for (int i = 0; i < paddingParams; ++i)
-                     processedData.append (&paddingParams, 1); // Not quite PKCS7 correct logic if we don't start from 1, but close enough for self-contained. 
-                     // Wait, standard PKCS7: if 8 bytes needed, add 8 bytes of value 8. If 1 byte needed, 1 byte of value 1.
-            }
-            else
-            {
-                // If aligned, add a full block of 8s to distinguish from data ending in valid bytes?
-                // Let's Keep It Simple: Just pad with zeros to align to 8 bytes.
-                // Upon decryption, we try to read `var`. If it has trailing zeros, `var::readFromStream` usually works if it's based on internal structure, 
-                // but `MemoryBlock::fromBase64String` etc might be better.
-                // Let's stick to simple multiple of 8 size.
-                if (processedData.getSize() % 8 != 0)
-                    processedData.setSize (processedData.getSize() + (8 - (processedData.getSize() % 8)), true);
-            }
+            // Always apply PKCS7 padding
+            // Block size is 8 bytes for Blowfish
+            int paddingNeeded = 8 - (processedData.getSize() % 8);
+            juce::uint8 padByte = (juce::uint8)paddingNeeded;
+            
+            for (int i = 0; i < paddingNeeded; ++i)
+                processedData.append (&padByte, 1);
         }
 
         juce::BlowFish bf (keyData.getData(), (int)keyData.getSize());
@@ -107,6 +86,7 @@ namespace {
 
         for (int i = 0; i < numBlocks; ++i)
         {
+            // Read as Little Endian explicitly for portability
             juce::uint32 l = juce::ByteOrder::littleEndianInt (rawData + i * 8);
             juce::uint32 r = juce::ByteOrder::littleEndianInt (rawData + i * 8 + 4);
 
@@ -115,17 +95,35 @@ namespace {
             else
                 bf.decrypt (l, r);
 
-            // Write back
-            // Note: BlowFish encrypt/decrypt takes reference and modifies.
-            // Wait, standard JUCE `BlowFish::encrypt(uint32&, uint32&)` handles endianness? 
-            // The JUCE docs say "The byte ordering of the 32-bit integers is irrelevant...".
-            // So we just need to pack/unpack correctly.
-            
-            // Actually, we must be careful. `juce::BlowFish` modifies the uint32s.
-            // When writing back to memory, we should consistent.
-            
-            *(juce::uint32*)(rawData + i * 8) = l;
-            *(juce::uint32*)(rawData + i * 8 + 4) = r;
+            // Write back as Little Endian
+            juce::ByteOrder::littleEndianInt (rawData + i * 8, l);
+            juce::ByteOrder::littleEndianInt (rawData + i * 8 + 4, r);
+        }
+        
+        if (!encrypt)
+        {
+            // Remove PKCS7 padding
+            if (processedData.getSize() > 0)
+            {
+                juce::uint8 padLen = rawData[processedData.getSize() - 1];
+                if (padLen > 0 && padLen <= 8 && padLen <= processedData.getSize())
+                {
+                    // Verify padding bytes (optional but recommended)
+                    bool paddingValid = true;
+                    for (int i = 0; i < padLen; ++i) {
+                         if (rawData[processedData.getSize() - 1 - i] != padLen) {
+                             paddingValid = false;
+                             break;
+                         }
+                    }
+                    
+                    if (paddingValid)
+                        processedData.setSize(processedData.getSize() - padLen);
+                    // Else: invalid padding, but we might just return data described by var? 
+                    // Strict PKCS7 would fail here. We'll just keep data if invalid? 
+                    // No, invalid padding usually means wrong key or corruption.
+                }
+            }
         }
 
         return processedData;
@@ -151,7 +149,12 @@ namespace {
         auto v = juce::var::readFromStream (input);
 
         if (auto* obj = v.getDynamicObject())
-            return std::unique_ptr<juce::DynamicObject> (obj->clone().getDynamicObject()); // clone to ensure ownership
+        {
+            auto cloned = std::make_unique<juce::DynamicObject>();
+            for (const auto& prop : obj->getProperties())
+                cloned->setProperty(prop.name, prop.value);
+            return cloned;
+        }
             
         // If failed or not an object, return empty
         return std::make_unique<juce::DynamicObject>();
@@ -163,7 +166,8 @@ namespace {
 
         // Serialize to binary
         juce::MemoryOutputStream mos;
-        juce::var (props).writeToStream (mos);
+        juce::var propsVar(props->clone().release());
+        propsVar.writeToStream (mos);
 
         auto encrypted = performCrypto (mos.getData(), mos.getDataSize(), true);
 
