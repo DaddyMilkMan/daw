@@ -281,50 +281,71 @@ void TakeFolder::getNextAudioBlock(juce::AudioBuffer<float> &buffer,
 // Flatten
 //==============================================================================
 
-std::unique_ptr<Clip> TakeFolder::flatten(double sampleRate) {
-
+std::unique_ptr<Clip> TakeFolder::flatten(double sampleRate, const juce::File& outputDirectory) {
   int64_t totalLength = length_.load();
   if (totalLength <= 0 || takes_.empty())
     return nullptr;
 
-  // Create buffer for entire folder length
-  juce::AudioBuffer<float> flattenedBuffer(2, static_cast<int>(totalLength));
-  flattenedBuffer.clear();
+  // 1. Prepare output file
+  outputDirectory.createDirectory();
+  juce::File outputFile = outputDirectory.getChildFile(name_ + "_flattened.wav")
+                                         .getNonexistentSibling();
+  
+  if (outputFile.exists()) outputFile.deleteFile(); // Should check above, but extra safety
 
-  // Render the entire comp
-  int64_t folderStart = startPosition_.load();
+  // 2. Setup format writer
+  juce::WavAudioFormat wavFormat;
+  std::unique_ptr<juce::FileOutputStream> fileStream(new juce::FileOutputStream(outputFile)); // Raw ptr for createWriterFor
 
-  // Process in chunks to avoid huge single allocations
-  constexpr int chunkSize = 65536;
-  int64_t position = folderStart;
-  int remaining = static_cast<int>(totalLength);
-
-  while (remaining > 0) {
-    int samplesToProcess = juce::jmin(remaining, chunkSize);
-    int bufferOffset = static_cast<int>(position - folderStart);
-
-    juce::AudioBuffer<float> chunkBuffer(2, samplesToProcess);
-    getNextAudioBlock(chunkBuffer, position, samplesToProcess, sampleRate);
-
-    // Copy chunk to flattened buffer
-    for (int ch = 0; ch < 2; ++ch) {
-      flattenedBuffer.copyFrom(ch, bufferOffset, chunkBuffer, ch, 0,
-                               samplesToProcess);
-    }
-
-    position += samplesToProcess;
-    remaining -= samplesToProcess;
+  if (fileStream->failedToOpen()) {
+    DBG("TakeFolder: Failed to open output file for flattening: " + outputFile.getFullPathName());
+    return nullptr;
   }
 
-  // Create new clip with flattened audio
+  // Writer takes ownership of stream
+  std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(
+      fileStream.release(), sampleRate, 2, 24, {}, 0));
+
+  if (!writer) {
+     DBG("TakeFolder: Failed to create WAV writer");
+     return nullptr;
+  }
+
+  // 3. Render and write in chunks
+  int64_t folderStart = startPosition_.load();
+  constexpr int chunkSize = 8192; // Manageable chunk size
+  int64_t position = 0; // Relative to folder start
+  int64_t remaining = totalLength;
+
+  juce::AudioBuffer<float> chunkBuffer(2, chunkSize);
+
+  while (remaining > 0) {
+    int samplesToProcess = static_cast<int>(juce::jmin((int64_t)chunkSize, remaining));
+    
+    // getNextAudioBlock expects absolute project time
+    getNextAudioBlock(chunkBuffer, folderStart + position, samplesToProcess, sampleRate);
+
+    if (writer->writeFromAudioSampleBuffer(chunkBuffer, 0, samplesToProcess)) {
+      position += samplesToProcess;
+      remaining -= samplesToProcess;
+    } else {
+      DBG("TakeFolder: Write failed");
+      return nullptr;
+    }
+  }
+
+  // Writer destructor finalizes file
+  writer.reset();
+
+  // 4. Create Clip referencing the new file
   auto flatClip = std::make_unique<Clip>();
   flatClip->setType(Clip::Type::Audio);
   flatClip->setName(name_ + " (Flattened)");
   flatClip->setStartPosition(folderStart);
   flatClip->setLength(totalLength);
-
-  // Set the audio buffer
-  flatClip->setAudioBuffer(flattenedBuffer);
+  
+  // Important: set the audio file so calls to prepareToPlay load it safely from pool
+  flatClip->setAudioFile(outputFile);
 
   return flatClip;
 }
