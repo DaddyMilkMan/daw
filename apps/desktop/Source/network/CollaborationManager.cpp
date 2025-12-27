@@ -292,36 +292,42 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
         int challenge = 0;
         memcpy(&challenge, payloadPtr, sizeof(int));
         
-        // CRITIC FIX: Use MD5 for cryptographic security
-        // (SHA256 requires juce_cryptography module)
+        // SECURITY NOTE: MD5 is cryptographically weak but juce_cryptography is not linked.
+        // For proper security, add juce_cryptography to CMakeLists.txt and switch to SHA256.
+        // This authentication is sufficient for casual collaboration but NOT for high-security use.
         juce::String salt = zenith::config::ConfigurationManager::getInstance()
                                .getString(zenith::config::keys::COLLAB_SALT, "ZENITH_SALT_2025");
-        juce::String secret = juce::String(challenge) + sessionCode + salt;
+        // Add session code AND current time to prevent replay attacks
+        juce::String secret = juce::String(challenge) + sessionCode + salt + 
+                              juce::String(juce::Time::currentTimeMillis() / 30000); // 30-second window
         
-        // Compute MD5 hash and use first 4 bytes as response
+        // Compute MD5 hash - use FULL 16-byte hash, not truncated
         juce::MD5 hasher((const juce::uint8*)secret.toRawUTF8(), (size_t)secret.length());
-        auto hash = hasher.getRawChecksumData();
-        int response = 0;
-        memcpy(&response, hash.getData(), sizeof(int));
+        auto hashBlock = hasher.getRawChecksumData();
         
-        sendPacket(PacketType::ChallengeResponse, &response, sizeof(int));
+        // Send full 16-byte hash as response
+        sendPacket(PacketType::ChallengeResponse, hashBlock.getData(), 16);
       }
     } else if (type == PacketType::ChallengeResponse) {
-      if (payloadSize == sizeof(int)) {
-        int receivedResponse = 0;
-        memcpy(&receivedResponse, payloadPtr, sizeof(int));
-        
-        // CRITIC FIX: Use MD5 for verification too
+      if (payloadSize >= 16) { // Expect full 16-byte hash now
+        // SECURITY NOTE: Same MD5 limitation applies here
         juce::String salt = zenith::config::ConfigurationManager::getInstance()
                                .getString(zenith::config::keys::COLLAB_SALT, "ZENITH_SALT_2025");
-        juce::String expectedSecret = juce::String(sentChallenge) + sessionCode + salt;
+        juce::String expectedSecret = juce::String(sentChallenge) + sessionCode + salt +
+                                      juce::String(juce::Time::currentTimeMillis() / 30000);
         
         juce::MD5 hasher((const juce::uint8*)expectedSecret.toRawUTF8(), (size_t)expectedSecret.length());
-        auto hash = hasher.getRawChecksumData();
-        int expectedResponse = 0;
-        memcpy(&expectedResponse, hash.getData(), sizeof(int));
+        auto expectedHash = hasher.getRawChecksumData();
 
-        if (receivedResponse == expectedResponse) {
+        // Compare full 16-byte hash using constant-time comparison to prevent timing attacks
+        bool match = true;
+        const juce::uint8* received = static_cast<const juce::uint8*>(static_cast<const void*>(payloadPtr));
+        const juce::uint8* expected = static_cast<const juce::uint8*>(expectedHash.getData());
+        for (int i = 0; i < 16; ++i) {
+          if (received[i] != expected[i]) match = false;
+        }
+
+        if (match) {
           DBG("Collab: Auth Successful for " + senderIP + "!");
           peer->authenticated = true;
           currentState.store(ConnectionState::Connected, std::memory_order_release);
@@ -334,7 +340,7 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
           m.append(localUserName.toRawUTF8(), localUserName.length());
           p2pSocket.write(senderIP, senderPort, m.getData(), (int)m.getSize());
         } else {
-          DBG("Collab: Auth Failed for " + senderIP + "! Response mismatch.");
+          DBG("Collab: Auth Failed for " + senderIP + "! Hash mismatch.");
         }
       }
     }

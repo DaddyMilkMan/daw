@@ -70,19 +70,7 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
 
   // Top: Transport Bar
   ZENITH_LOG_INFO("-> Creating TransportBar...");
-  
-  { // Direct file write debug output
-    FILE* f = fopen("/tmp/zenith_direct_debug.log", "a");
-    if (f) { fprintf(f, "[DIRECT 1] Before TransportBar constructor\n"); fflush(f); fclose(f); }
-  }
-  
   transportBar = std::make_unique<zenith::TransportBar>();
-  
-  { // Direct file write debug output
-    FILE* f = fopen("/tmp/zenith_direct_debug.log", "a");
-    if (f) { fprintf(f, "[DIRECT 2] After TransportBar constructor\n"); fflush(f); fclose(f); }
-  }
-  
   transportBar->setProjectName("Zenith DAW");
   transportBar->setTempo(120.0);
   transportBar->setTimeSignature(4, 4);
@@ -107,18 +95,8 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
     }
   };
 
-  std::cerr << "[TRACE 1] About to create TransportBar..." << std::endl;
-  std::cerr.flush();
-  
   addAndMakeVisible(transportBar.get());
-  
-  std::cerr << "[TRACE 2] TransportBar added, after addAndMakeVisible" << std::endl;
-  std::cerr.flush();
-  
   ZENITH_LOG_INFO("[OK] TransportBar created");
-  DBG("MainComponent: TransportBar created");
-  std::cerr << "[TRACE 3] TransportBar created, continuing to MainLayoutComponent..." << std::endl;
-  std::cerr.flush();
 
   // The "Perfect DAW" Tri-Pane Layout Manager
   ZENITH_LOG_INFO("-> Creating MainLayoutComponent...");
@@ -393,23 +371,15 @@ MainWindow::MainWindow(const juce::String &name)
       *engine, *commandAPI, *projectState, *recentProjectManager_,
       [this](const juce::File &file) { loadProject(file); },
       [this]() { newProject(); });
-  
-  std::cerr << "[DEBUG] MainComponent created successfully" << std::endl;
 
-  // TEMPORARILY DISABLED for debugging constructor completion:
-  // uxDirector = std::make_unique<ai::UXDirectorAgent>(*engine, *projectState,
-  //                                                    *mainComponent);
+  // AI Agents and MCP Server - RE-ENABLE these when constructor stabilizes
+  // uxDirector = std::make_unique<ai::UXDirectorAgent>(*engine, *projectState, *mainComponent);
   // commandAPI->setUXDirector(uxDirector.get());
   // uxDirector->startMonitoring(500);
-
   // presetGeneticist = std::make_unique<ai::PresetGeneticistAgent>();
   // commandAPI->setPresetGeneticist(presetGeneticist.get());
-
-  // mcpServer = std::make_unique<zenith::mcp::MCPServer>(
-  //     *commandAPI, *projectState, *engine, this);
+  // mcpServer = std::make_unique<zenith::mcp::MCPServer>(*commandAPI, *projectState, *engine, this);
   // mcpServer->start();
-
-  std::cerr << "[DEBUG] About to set up window" << std::endl;
 
   setUsingNativeTitleBar(true);
   
@@ -447,11 +417,10 @@ MainWindow::MainWindow(const juce::String &name)
   // Force OpenGL context attachment now that the window is visible
   // The MainComponent inherits from SkiaMainWindowIntegration which has OpenGL
   if (mainComponent && mainComponent->getPeer()) {
-    std::cerr << "[MainWindow] Manually triggering OpenGL context attachment, peer is valid" << std::endl;
-    ZENITH_LOG_INFO("MainWindow: Manually calling attachContextNow on MainComponent");
+    ZENITH_LOG_INFO("MainWindow: Attaching OpenGL context to MainComponent");
     mainComponent->attachContextNow();
   } else {
-    std::cerr << "[MainWindow] WARNING: MainComponent has no peer after setVisible!" << std::endl;
+    ZENITH_LOG_WARN("MainWindow: MainComponent has no peer after setVisible - OpenGL attachment deferred");
   }
   
   engine->initialize();

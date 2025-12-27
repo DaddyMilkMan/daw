@@ -301,36 +301,42 @@ void FreezeRenderThread::run() {
     }
     
     // Success - finalize freeze on message thread
-    // LIFETIME SAFETY FIX: Capture by value, not by reference to avoid dangling refs
-    // We capture trackId to look up the track later, rather than holding a reference
-    const juce::String trackId = track_.getTrackId();
-    const juce::String trackName = track_.getName();
-    auto progressCopy = progress_; // Copy the callback
+  // CRITIC FIX: NEVER capture references to member variables in async callbacks!
+  // The FreezeRenderThread could be destroyed before the callback executes.
+  // Instead, capture by VALUE and look up the track safely using Engine::getTrackById().
+  const juce::String trackId = track_.getTrackId();
+  const juce::String trackName = track_.getName();
+  auto progressCopy = progress_;
+  Engine* enginePtr = &engine_; // Raw pointer is safe - Engine outlives this callback
+  
+  juce::MessageManager::callAsync([trackId, trackName, progressCopy, enginePtr]() {
+    // SAFE: Look up the track by ID - if track was deleted, we get nullptr
+    Track* track = enginePtr->getTrackById(trackId);
+    if (track == nullptr) {
+      DBG("FreezeRenderThread: Track " + trackId + " no longer exists - skipping finalization");
+      return;
+    }
     
-    juce::MessageManager::callAsync([trackId, trackName, progressCopy, &track = track_]() {
-        // The track reference should still be valid as the Engine owns tracks
-        // and freeze operations are message-thread only
-        
-        // Disable all plugins on the track
-        for (int i = 0; i < track.getNumPlugins(); ++i) {
-            auto* plugin = track.getPlugin(i);
-            if (plugin != nullptr) {
-                plugin->suspendProcessing(true);
-            }
-        }
-        
-        // Mark track as frozen
-        track.setFrozen(true);
-        
-        // Disable arming
-        track.setArmed(false);
-        
-        DBG("FreezeRenderThread: Freeze complete for " + trackName);
-        
-        if (progressCopy) {
-            progressCopy(1.0f, "Freeze complete");
-        }
-    });
+    // Disable all plugins on the track
+    for (int i = 0; i < track->getNumPlugins(); ++i) {
+      auto* plugin = track->getPlugin(i);
+      if (plugin != nullptr) {
+        plugin->suspendProcessing(true);
+      }
+    }
+    
+    // Mark track as frozen
+    track->setFrozen(true);
+    
+    // Disable arming
+    track->setArmed(false);
+    
+    DBG("FreezeRenderThread: Freeze complete for " + trackName);
+    
+    if (progressCopy) {
+      progressCopy(1.0f, "Freeze complete");
+    }
+  });
 }
 
 } // namespace zenith
