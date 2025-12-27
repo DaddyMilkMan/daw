@@ -83,9 +83,12 @@ public:
   void resized() override;
 
 protected:
+  void mouseMove(const juce::MouseEvent &e) override;
   void mouseDown(const juce::MouseEvent &e) override;
+  void mouseUp(const juce::MouseEvent &e) override;
   void mouseEnter(const juce::MouseEvent &e) override;
   void mouseExit(const juce::MouseEvent &e) override;
+  void mouseDrag(const juce::MouseEvent &e) override;
   void mouseWheelMove(const juce::MouseEvent &e,
                       const juce::MouseWheelDetails &wheel) override;
   bool keyPressed(const juce::KeyPress &key) override;
@@ -121,6 +124,11 @@ private:
 
   bool hovered_ = false;
   bool isEditing_ = false;
+
+  // Drag state
+  juce::Point<float> dragStartPos_;
+  double dragStartValue_ = 0.0;
+  bool isDragging_ = false;
 
   std::unique_ptr<juce::TextEditor> editor_;
 

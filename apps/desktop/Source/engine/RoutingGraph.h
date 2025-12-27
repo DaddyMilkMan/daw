@@ -49,6 +49,7 @@ public:
   struct Connection {
     juce::String sourceId;
     juce::String destId;
+    bool isSidechain = false;
     float gain = 1.0f;
     int sourceChannelIndex = 0; // For multi-channel routing
     int destChannelIndex = 0;
@@ -64,7 +65,7 @@ public:
   void removeNode(const juce::String &nodeId);
 
   bool connect(const juce::String &sourceId, const juce::String &destId,
-               float gain = 1.0f);
+               float gain = 1.0f, bool isSidechain = false);
   bool disconnect(const juce::String &sourceId, const juce::String &destId);
 
   //==============================================================================
@@ -79,8 +80,9 @@ public:
   /**
    * @brief Update snapshot with direct pointers (MESSAGE THREAD ONLY)
    */
-  void updateSnapshotWithPointers(const std::vector<Track *> &tracks,
-                                  const std::vector<AuxBus *> &auxBuses);
+  void updateSnapshotWithPointers(
+      const std::unordered_map<juce::String, std::shared_ptr<Track>> &trackMap,
+      const std::unordered_map<juce::String, std::shared_ptr<AuxBus>> &auxBusMap);
 
   //==============================================================================
   // Serialization (MESSAGE THREAD ONLY)
@@ -90,9 +92,10 @@ public:
   juce::ValueTree toValueTree() const;
   void fromValueTree(const juce::ValueTree &state);
 
-private:
   //==============================================================================
   // Snapshot for lock-free read access
+  // Made public so Engine and AudioExporter can access it
+public:
   struct Topology {
     std::vector<Connection> connections;
     std::vector<juce::String> processingOrder;
@@ -103,27 +106,17 @@ private:
     std::unordered_map<std::string, Node> nodes;
     std::shared_ptr<Topology> topology;
 
-    enum class ProcessorType { Track, Bus };
-    struct ProcessorNode {
-      ProcessorType type;
-      Track *track = nullptr;
-      AuxBus *bus = nullptr;
-      float masterGain = 1.0f;
-      int trackIndex = -1; // Cached for fast buffer access
-      int busIndex = -1;
-    };
-
-    std::vector<ProcessorNode> processingSequence;
-
-    // Fast lookup maps (still used for message thread queries)
-    std::unordered_map<juce::String, Track *> trackLookup;
-    std::unordered_map<juce::String, AuxBus *> auxBusLookup;
+    // Fast lookup maps (populated by RoutingGraph::updateSnapshot)
+    std::unordered_map<juce::String, std::weak_ptr<Track>> trackLookup;
+    std::unordered_map<juce::String, std::weak_ptr<AuxBus>> auxBusLookup;
 
     Snapshot() : topology(std::make_shared<Topology>()) {}
     Snapshot(const std::unordered_map<std::string, Node> &n,
              std::shared_ptr<Topology> t)
         : nodes(n), topology(t) {}
   };
+
+private:
 
   // Owning data (message thread only, protected by lock)
   std::unordered_map<std::string, Node> nodes_;
@@ -135,17 +128,15 @@ private:
   mutable juce::CriticalSection writeLock_;
 
   // Lock-free snapshot for reads (any thread)
-  // Audio thread reads activeSnapshot_ (atomic raw pointer)
-  std::atomic<Snapshot*> activeSnapshot_{nullptr};
-
-  // Message thread owns currentSnapshot_
+  std::atomic<const Snapshot *> activeSnapshot_{nullptr};
   std::shared_ptr<Snapshot> currentSnapshot_;
 
   // Helper to update snapshot after modification
   void updateSnapshot();
 
+public:
   // Get current snapshot (lock-free)
-  const Snapshot* getSnapshot() const {
+  const Snapshot *getSnapshot() const {
     return activeSnapshot_.load(std::memory_order_acquire);
   }
 };

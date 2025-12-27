@@ -44,10 +44,9 @@ private:
 
   float sampleRate_ = 44100.0f;
 
-  // Pre-computed envelope coefficients (computed once in prepareToPlay)
+  // Pre-computed envelope coefficients
   float fastCoeff_ = 0.0f;
   float slowCoeff_ = 0.0f;
-
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithTransientShaper)
 };
 

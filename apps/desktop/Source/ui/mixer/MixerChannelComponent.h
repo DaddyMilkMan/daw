@@ -27,16 +27,17 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../visualization/SkiaSpectrumComponent.h"
-#include "SkiaComponent.h"
-#include "controls/SkiaButton.h"
-#include "controls/SkiaKnob.h"
-#include "controls/SkiaSlider.h"
-#include "design-system/ZenithDesignSystem.h"
-#include "visualization/SkiaSpectrumComponent.h"
+#include "../controls/SkiaButton.h"
+#include "../controls/SkiaKnob.h"
+#include "../controls/SkiaSlider.h"
+#include "../controls/SkiaSpectrumComponent.h"
+#include "../design-system/ZenithDesignSystem.h"
+#include "../framework/SkiaComponent.h"
 
 namespace zenith {
 class Track;
+class Engine;
+class ProjectState;
 
 /**
  * @class MixerChannelComponent
@@ -54,12 +55,10 @@ public:
   //==========================================================================
 
   /**
-   * @brief Create a channel strip for a track
-   * @param track Pointer to the Track to display (must not be null)
    * @param isMaster If true, this is the master channel strip (wider, different
    * styling)
    */
-  explicit MixerChannelComponent(Track *track, bool isMaster = false);
+  MixerChannelComponent(Track *track, ProjectState& state, Engine& engine, bool isMaster = false);
   ~MixerChannelComponent() override;
 
   //==========================================================================
@@ -79,6 +78,7 @@ public:
   // Accessors
   //==========================================================================
 
+  Engine& getEngine() { return engine_; }
   Track *getTrack() const { return track_; }
   bool isMasterChannel() const { return isMaster_; }
 
@@ -137,6 +137,7 @@ private:
     LevelMeter();
     ~LevelMeter() override;
     void drawSkia(SkCanvas *canvas) override;
+    void mouseDown(const juce::MouseEvent& e) override;
     void setLevel(float level);
     void timerCallback() override;
 
@@ -162,9 +163,6 @@ private:
     float peakLevel_{0.0f};
     float peakLevelL_{0.0f};
     float peakLevelR_{0.0f};
-    float velocity_{0.0f};
-    float velocityL_{0.0f};
-    float velocityR_{0.0f};
     int peakHoldCounter_{0};
     int peakHoldCounterL_{0};
     int peakHoldCounterR_{0};
@@ -177,12 +175,14 @@ private:
 
   class InsertSlotIndicator : public SkiaComponent {
   public:
-    InsertSlotIndicator(int slotIndex);
+    InsertSlotIndicator(MixerChannelComponent& owner, int slotIndex);
     void drawSkia(SkCanvas *canvas) override;
     void setOccupied(bool occupied, const juce::String &pluginName = "");
     bool isOccupied() const { return isOccupied_; }
+    void mouseDown(const juce::MouseEvent& e) override;
 
   private:
+    MixerChannelComponent& owner_;
     int slotIndex_;
     bool isOccupied_{false};
     juce::String pluginName_;
@@ -194,12 +194,14 @@ private:
 
   class SendIndicator : public SkiaComponent {
   public:
-    SendIndicator(int sendIndex);
+    SendIndicator(MixerChannelComponent& owner, int sendIndex);
     void drawSkia(SkCanvas *canvas) override;
     void setSendLevel(float level);
     void setDestination(const juce::String &destName);
+    void mouseDown(const juce::MouseEvent& e) override;
 
   private:
+    MixerChannelComponent& owner_;
     int sendIndex_;
     float sendLevel_{0.0f};
     juce::String destinationName_;
@@ -210,6 +212,8 @@ private:
   //==========================================================================
 
   Track *track_;
+  ProjectState& projectState_;
+  Engine& engine_;
   bool isMaster_{false};
   bool isSelected_{false};
 
@@ -234,6 +238,10 @@ private:
 
   // Send indicators (4 total)
   std::vector<std::unique_ptr<SendIndicator>> sendIndicators_;
+
+  // Layout bounds for headers
+  SkRect insertHeaderBounds_;
+  SkRect sendHeaderBounds_;
 
   // State
   bool updatingControls_{false};

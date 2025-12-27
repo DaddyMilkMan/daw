@@ -20,16 +20,13 @@
 #pragma once
 
 #include "../framework/SkiaComponent.h"
-#include "../utils/PhysicsSpring.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #ifdef ZENITH_USE_SKIA
-#include "ZenithSkia.h"
-#endif
-
-// Ensure includes are correct for Skia if definitions are usually
-// "core/SkCanvas.h" etc. But mostly we assume setup is correct.
-#ifdef ZENITH_USE_SKIA
+#include <core/SkCanvas.h>
+#include <core/SkImage.h>
+#include <core/SkPath.h>
+#include <core/SkTextBlob.h>
 #endif
 
 namespace zenith {
@@ -87,6 +84,8 @@ public:
 #ifdef ZENITH_USE_SKIA
   void setIcon(sk_sp<SkImage> icon);
   sk_sp<SkImage> getIcon() const { return icon_; }
+  void setIconPath(const SkPath& path);
+  SkPath getIconPath() const { return iconPath_; }
 #endif
   void setIconText(const juce::String &iconText); // Unicode icons/emojis
   void setIconPosition(IconPosition pos);
@@ -150,6 +149,7 @@ private:
   juce::String iconText_;
 #ifdef ZENITH_USE_SKIA
   sk_sp<SkImage> icon_;
+  SkPath iconPath_;
   sk_sp<SkTextBlob> textBlob_;
 #endif
 
@@ -170,9 +170,8 @@ private:
   float audioLevel_ = 0.0f;
 
   // Animation
-  zenith::PhysicsSpring scaleSpring_{1.0f};
-  zenith::PhysicsSpring glowSpring_{0.0f}; // 0.0 to 1.0 intensity
-  std::unique_ptr<juce::VBlankAttachment> vBlankAttachment_;
+  float hoverProgress_ = 0.0f;
+  float pressProgress_ = 0.0f;
 
   // Layout cache
   bool layoutDirty_ = true;
@@ -188,5 +187,8 @@ private:
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithButton)
 };
+
+// Legacy alias for backward compatibility
+using SkiaButton = ZenithButton;
 
 } // namespace zenith

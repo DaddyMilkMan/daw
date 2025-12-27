@@ -87,6 +87,14 @@ void MixerChannel::prepareToPlay(int samplesPerBlockExpected,
   compressor_.setRelease(compRelease.load());
   compressor_.setMakeup(compMakeup.load());
 
+  // Reset filters
+  hpfFilterL.reset();
+  hpfFilterR.reset();
+  for (int i = 0; i < numEQBands; ++i) {
+    eqFiltersL[i].reset();
+    eqFiltersR[i].reset();
+  }
+
   // Pre-calculate filter coefficients on message thread
   recalculateCoefficients();
   // Ensure filters are updated before playback
@@ -155,16 +163,20 @@ void MixerChannel::recalculateCoefficients() {
                         coeffs.coefficients[3], coeffs.coefficients[4]};
   }
 
-  // Atomically swap pointer
-  juce::SpinLock::ScopedLockType sl(coeffLock_);
-  activeCoeffs_ = newCoeffs;
+  // Atomically swap pointer - old coefficients will be released when 
+  // oldCoeffs goes out of scope and its refcount drops to zero.
+  // FilterCoefficients uses juce::ReferenceCountedObjectPtr for safe lifetime management.
+  {
+    const juce::SpinLock::ScopedLockType sl(coeffLock_);
+    activeCoeffs_ = newCoeffs;
+  }
 }
 
 void MixerChannel::updateFiltersFromCoefficients() {
   // Safe atomic retrieval of current coefficients
   FilterCoefficients::Ptr localCoeffs;
   {
-    juce::SpinLock::ScopedLockType sl(coeffLock_);
+    const juce::SpinLock::ScopedLockType sl(coeffLock_);
     localCoeffs = activeCoeffs_;
   }
 
@@ -185,12 +197,6 @@ void MixerChannel::updateFiltersFromCoefficients() {
                              localCoeffs->eq[i][4], localCoeffs->eq[i][5]);
     eqFiltersL[i].setCoefficients(eq);
     eqFiltersR[i].setCoefficients(eq);
-  }
-
-  // DEFERRED DELETION: Push the local reference to GC to ensure it's not
-  // deleted on the audio thread if it happens to be the last one.
-  if (localCoeffs->getReferenceCount() == 1) {
-    RealTimeGarbageCollector::getInstance().push(localCoeffs);
   }
 }
 
@@ -615,8 +621,9 @@ void MixerChannel::processInput(juce::AudioBuffer<float> &buffer) {
 }
 
 void MixerChannel::processHighPass(juce::AudioBuffer<float> &buffer) {
-  juce::dsp::AudioBlock<float> block(buffer);
-  juce::dsp::ProcessContextReplacing<float> context(block);
+  if (buffer.getNumChannels() == 0 || buffer.getNumSamples() == 0)
+    return;
+
   hpfFilterL.processSamples(buffer.getWritePointer(0), buffer.getNumSamples());
   if (buffer.getNumChannels() > 1)
     hpfFilterR.processSamples(buffer.getWritePointer(1),
@@ -640,11 +647,13 @@ void MixerChannel::processCompressor(juce::AudioBuffer<float> &buffer) {
 }
 
 void MixerChannel::processOutput(juce::AudioBuffer<float> &buffer) {
+  if (buffer.getNumChannels() == 0 || buffer.getNumSamples() == 0)
+    return;
+
   gain.setGainLinear(volume.load());
 
-  // Apply gain
-  juce::dsp::AudioBlock<float> block(buffer);
-  gain.process(juce::dsp::ProcessContextReplacing<float>(block));
+  // Apply gain using SIMD helper for safety (avoids AudioBlock assertions)
+  buffer.applyGain(volume.load());
 }
 
 void MixerChannel::updateMeters(const juce::AudioBuffer<float> &buffer,

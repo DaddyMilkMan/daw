@@ -1,15 +1,13 @@
 /*
   ==============================================================================
     AIMasteringAgent.cpp
-    Complete implementation with Grok 4.1 integration
   ==============================================================================
 */
 
 #include "AIMasteringAgent.h"
+#include "../network/SecureKeyStore.h"
 #include "../engine/Engine.h"
-#include <algorithm>
-#include <cmath>
-#include <memory>
+#include "../engine/Track.h"
 
 namespace zenith {
 namespace ai {
@@ -172,6 +170,18 @@ juce::String AudioFeatureExtractor::toJSON(const Features &features) {
 
 GrokMasteringAI::GrokMasteringAI() {
   grokClient_ = std::make_unique<GrokAPIClient>();
+
+  // Attempt to load API key from SecureKeyStore if not already set by env var
+  if (!grokClient_->hasAPIKey()) {
+    juce::String key;
+    if (SecureKeyStore::retrieveKey(SecureKeyStore::GrokAPIKey, key)) {
+      grokClient_->setAPIKey(key);
+      DBG("GrokMasteringAI: API key loaded from SecureKeyStore");
+    } else {
+      DBG("GrokMasteringAI: No API key found in SecureKeyStore or Env Var");
+    }
+  }
+
   DBG("GrokMasteringAI initialized with Grok 4.1 reasoning model");
 }
 
@@ -225,7 +235,6 @@ Target Loudness: )" +
 // -14 LUFS: Spotify, YouTube (default)
 // -16 LUFS: Apple Music
 // -23 LUFS: Broadcast (EBU R128)
-// This is configurable via Options::targetLoudness
 User Intent: ")" +
       userIntent + R"("
 
@@ -320,54 +329,68 @@ GrokMasteringAI::parseGrokResponse(const juce::String &response) {
       juce::jlimit(50.0f, 500.0f, decision.compression.release);
 
   // Limiter ceiling is negative because it represents dB below 0dBFS.
-  // Range -1.0 to -0.1 dB provides headroom for true peak limiting
-  // while maximizing loudness. -0.3 dB is typical for streaming.
+  // Range -1.0 to -0.1 dB provides headroom for true peak limiting.
   decision.limiterCeiling = juce::jlimit(-1.0f, -0.1f, decision.limiterCeiling);
 
   decision.valid = true;
 
-  DBG("+============================================================+");
-  DBG("|            GROK AI MASTERING DECISION                      |");
-  DBG("+============================================================+");
-  DBG("| EQ Settings:                                               |");
-  DBG("|   Low Shelf:  " + juce::String(decision.eq.lowShelfGain, 1) + " dB");
-  DBG("|   Mid Cut:    " + juce::String(decision.eq.midCutGain, 1) + " dB");
-  DBG("|   Presence:   " + juce::String(decision.eq.presenceGain, 1) + " dB");
-  DBG("|   Air:        " + juce::String(decision.eq.airGain, 1) + " dB");
-  DBG("|                                                            |");
-  DBG("| Compression:                                               |");
-  DBG("|   Threshold:  " + juce::String(decision.compression.threshold, 1) +
+  DBG("╔════════════════════════════════════════════════════════════╗");
+  DBG("║            GROK AI MASTERING DECISION                      ║");
+  DBG("╠════════════════════════════════════════════════════════════╣");
+  DBG("║ EQ Settings:                                               ║");
+  DBG("║   Low Shelf:  " + juce::String(decision.eq.lowShelfGain, 1) + " dB");
+  DBG("║   Mid Cut:    " + juce::String(decision.eq.midCutGain, 1) + " dB");
+  DBG("║   Presence:   " + juce::String(decision.eq.presenceGain, 1) + " dB");
+  DBG("║   Air:        " + juce::String(decision.eq.airGain, 1) + " dB");
+  DBG("║                                                            ║");
+  DBG("║ Compression:                                               ║");
+  DBG("║   Threshold:  " + juce::String(decision.compression.threshold, 1) +
       " dB");
-  DBG("|   Ratio:      " + juce::String(decision.compression.ratio, 1) + ":1");
-  DBG("|   Attack:     " + juce::String(decision.compression.attack, 0) +
+  DBG("║   Ratio:      " + juce::String(decision.compression.ratio, 1) + ":1");
+  DBG("║   Attack:     " + juce::String(decision.compression.attack, 0) +
       " ms");
-  DBG("|   Release:    " + juce::String(decision.compression.release, 0) +
+  DBG("║   Release:    " + juce::String(decision.compression.release, 0) +
       " ms");
-  DBG("|                                                            |");
-  DBG("| Limiter:      " + juce::String(decision.limiterCeiling, 2) +
+  DBG("║                                                            ║");
+  DBG("║ Limiter:      " + juce::String(decision.limiterCeiling, 2) +
       " dB ceiling");
-  DBG("+============================================================+");
-  DBG("| AI Reasoning:                                              |");
-  DBG("| " + decision.reasoning);
-  DBG("+============================================================+");
+  DBG("╠════════════════════════════════════════════════════════════╣");
+  DBG("║ AI Reasoning:                                              ║");
+  DBG("║ " + decision.reasoning);
+  DBG("╚════════════════════════════════════════════════════════════╝");
 
   return decision;
 }
 
-void GrokMasteringAI::getMasteringDecision(
+GrokMasteringAI::MasteringDecision GrokMasteringAI::getMasteringDecision(
     const AudioFeatureExtractor::Features &features,
-    const juce::String &userIntent, float targetLoudness, Callback callback) {
+    const juce::String &userIntent, float targetLoudness) {
+  if (!grokClient_) {
+    DBG("ERROR: Grok API client not initialized!");
+    return MasteringDecision();
+  }
 
-  juce::String systemMessage = "You are a Grammy-winning mastering engineer.";
+  // Build the prompt
   juce::String prompt = buildPrompt(features, userIntent, targetLoudness);
 
-  DBG("GrokMasteringAI: Sending asynchronous request to Grok 4.1...");
+  // System message for Grok
+  juce::String systemMsg =
+      R"(You are a professional mastering engineer with decades of experience at top studios. 
+You analyze audio characteristics and provide optimal mastering parameters in JSON format.
+Be precise, musical, and conservative in your decisions. Respond ONLY with valid JSON, no additional text or markdown.)";
 
-  grokClient_->callGrokAsync(
-      prompt, systemMessage, [this, callback](juce::String response) {
-        MasteringDecision decision = parseGrokResponse(response);
-        callback(decision);
-      });
+  // Call Grok API
+  DBG("Querying Grok 4.1 for mastering decision...");
+  juce::String response = grokClient_->callGrok(
+      prompt, systemMsg, GrokAPIClient::ModelType::Reasoning);
+
+  if (response.startsWith("Error:")) {
+      DBG("Grok API Error: " + response);
+      return MasteringDecision();
+  }
+
+  // Parse response
+  return parseGrokResponse(response);
 }
 
 //==============================================================================
@@ -380,12 +403,12 @@ AIMasteringAgent::AIMasteringAgent(Engine &engine) : engine_(engine) {
   DBG("═══════════════════════════════════════════════════════════════");
 }
 
-AIMasteringAgent::~AIMasteringAgent() {
-  // Bug 32 fix: Properly release DSP resources
-  eq_.reset();
-  compressor_.reset();
-  limiter_.reset();
-  DBG("AI Mastering Agent destroyed");
+AIMasteringAgent::~AIMasteringAgent() { 
+    // Bug 32 fix: Properly release DSP resources
+    eq_.reset();
+    compressor_.reset();
+    limiter_.reset();
+    DBG("AI Mastering Agent destroyed"); 
 }
 
 void AIMasteringAgent::prepare(double sampleRate, int samplesPerBlock,
@@ -412,9 +435,14 @@ void AIMasteringAgent::prepare(double sampleRate, int samplesPerBlock,
 void AIMasteringAgent::analyzeAndConfigure(
     const juce::AudioBuffer<float> &analysisBuffer, const Options &options) {
   DBG("");
-  DBG("+============================================================+");
-  DBG("|          AI MASTERING ANALYSIS STARTING...                 |");
-  DBG("+============================================================+");
+  DBG("╔════════════════════════════════════════════════════════════╗");
+  DBG("║          AI MASTERING ANALYSIS STARTING...                 ║");
+  DBG("╚════════════════════════════════════════════════════════════╝");
+
+  // Safety: This analysis allocates memory (feature extraction temp buffers),
+  // so it MUST run on the message thread or a background thread, NEVER the audio thread.
+  JUCE_ASSERT_MESSAGE_THREAD; 
+
 
   // Extract audio features
   auto features = featureExtractor_.extract(analysisBuffer, sampleRate_);
@@ -439,36 +467,25 @@ void AIMasteringAgent::analyzeAndConfigure(
 
   // Query Grok for mastering decision
   if (options.useAI) {
-    isAnalyzing_.store(true);
+    GrokMasteringAI::MasteringDecision decision = grokAI_.getMasteringDecision(
+        features, options.userIntent, options.targetLoudness);
 
-    // Use SafePointer/WeakReference equivalent or just capture this
-    // Since AIMasteringAgent is owned by Engine, we should be careful.
-    // But for this project's scope, we'll assume it lives.
-
-    grokAI_.getMasteringDecision(
-        features, options.userIntent, options.targetLoudness,
-        [this](const GrokMasteringAI::MasteringDecision &decision) {
-          isAnalyzing_.store(false);
-
-          if (decision.valid) {
-            const juce::ScopedLock lock(decisionLock_);
-            lastDecision_ = decision;
-            applyAIDecision(decision);
-            isConfigured_.store(true, std::memory_order_release);
-            DBG("[OK] AI mastering configuration applied successfully");
-          } else {
-            DBG("ERROR: AI decision invalid, mastering not configured");
-          }
-
-          DBG("+============================================================+");
-          DBG("|          AI MASTERING ANALYSIS COMPLETE                    |");
-          DBG("+============================================================+");
-        });
-  } else {
-    DBG("+============================================================+");
-    DBG("|          AI MASTERING ANALYSIS COMPLETE (NO AI)            |");
-    DBG("+============================================================+");
+    if (decision.valid) {
+      const juce::ScopedLock lock(decisionLock_);
+      lastDecision_ = decision;
+      applyAIDecision(decision);
+      // Bug fix: use memory order release for atomic state sync
+      isConfigured_.store(true, std::memory_order_release);
+      DBG("✓ AI mastering configuration applied successfully");
+    } else {
+      DBG("ERROR: AI decision invalid, mastering not configured");
+    }
   }
+
+  DBG("╔════════════════════════════════════════════════════════════╗");
+  DBG("║          AI MASTERING ANALYSIS COMPLETE                    ║");
+  DBG("╚════════════════════════════════════════════════════════════╝");
+  DBG("");
 }
 
 void AIMasteringAgent::applyAIDecision(
@@ -502,7 +519,7 @@ void AIMasteringAgent::applyAIDecision(
 
 void AIMasteringAgent::balanceTracks(const Options &options) {
   juce::ignoreUnused(options);
-  const auto &tracks = engine_.tracks();
+  auto &tracks = engine_.tracks();
   if (tracks.empty()) {
     DBG("AIMasteringAgent: No tracks to balance");
     return;
@@ -566,11 +583,77 @@ void AIMasteringAgent::reset() {
   isConfigured_.store(false);
 }
 
+void AIMasteringAgent::normalizeLoudness(juce::AudioBuffer<float> &buffer,
+                                         float targetLufs) {
+  float rms = 0.0f;
+  int numSamples = buffer.getNumSamples();
+  int numChannels = buffer.getNumChannels();
+  for (int ch = 0; ch < numChannels; ++ch) {
+    const float *data = buffer.getReadPointer(ch);
+    for (int i = 0; i < numSamples; ++i) {
+      rms += data[i] * data[i];
+    }
+  }
+  rms = std::sqrt(rms / (numSamples * numChannels));
+  float currentLufs = 20.0f * std::log10(rms + 1e-10f) - 10.0f;
+  float gainDb = targetLufs - currentLufs;
+  gainDb = juce::jlimit(-12.0f, 12.0f, gainDb);
+  float gainLinear = juce::Decibels::decibelsToGain(gainDb);
+  buffer.applyGain(gainLinear);
+  DBG("AIMasteringAgent: Normalized loudness by " + juce::String(gainDb, 1) +
+      "dB");
+}
+
 //==============================================================================
-// DSP Component Template Implementations
+// MasteringEQ Implementation
 //==============================================================================
 
-// Include template implementations here or in separate .inl file
+void MasteringEQ::prepare(const juce::dsp::ProcessSpec &spec) {
+  highPass_.prepare(spec);
+  highPass_.setType(juce::dsp::StateVariableTPTFilterType::highpass);
+  highPass_.setCutoffFrequency(20.0f);
+
+  lowShelf_.prepare(spec);
+  midCut_.prepare(spec);
+  presence_.prepare(spec);
+  airBand_.prepare(spec);
+
+  reset();
+}
+
+void MasteringEQ::reset() {
+  highPass_.reset();
+  lowShelf_.reset();
+  midCut_.reset();
+  presence_.reset();
+  airBand_.reset();
+}
+
+//==============================================================================
+// MasteringLimiter Implementation
+//==============================================================================
+
+void MasteringLimiter::prepare(const juce::dsp::ProcessSpec &spec) {
+  sampleRate_ = spec.sampleRate;
+  lookaheadSamples_ = static_cast<int>(0.005 * sampleRate_); // 5ms lookahead
+  lookaheadBuffer_.setSize(static_cast<int>(spec.numChannels),
+                           lookaheadSamples_ + 1);
+  lookaheadBuffer_.clear();
+  lookaheadPos_ = 0;
+
+  attackCoeff_ = static_cast<float>(std::exp(-1.0 / (0.001 * sampleRate_)));
+  releaseCoeff_ = static_cast<float>(std::exp(-1.0 / (0.05 * sampleRate_)));
+}
+
+void MasteringLimiter::reset() {
+  envelope_ = 1.0f;
+  lookaheadBuffer_.clear();
+  lookaheadPos_ = 0;
+}
+
+void MasteringLimiter::setCeiling(float ceilingDb) {
+  ceiling_ = juce::Decibels::decibelsToGain(ceilingDb);
+}
 
 } // namespace ai
 } // namespace zenith

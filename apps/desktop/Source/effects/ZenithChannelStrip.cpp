@@ -9,9 +9,6 @@
 */
 
 #include "ZenithChannelStrip.h"
-#include <algorithm>
-#include <cmath>
-#include <memory>
 
 namespace zenith {
 
@@ -133,10 +130,52 @@ void ZenithChannelStrip::prepareToPlay(double sampleRate, int samplesPerBlock) {
   compressor.prepare(spec);
   saturation.prepare(spec);
 
-  saturation.prepare(spec);
+  // Force initial EQ coefficient update
+  cachedHpfFreq = -1.0f; // Reset to force update
+  updateEqCoefficientsIfNeeded(sampleRate);
 }
 
 void ZenithChannelStrip::releaseResources() {}
+
+void ZenithChannelStrip::updateEqCoefficientsIfNeeded(double sr) {
+  float hpf = eqHpfFreq->load();
+  float lowF = eqLowFreq->load();
+  float lowG = eqLowGain->load();
+  float midF = eqMidFreq->load();
+  float midG = eqMidGain->load();
+  float midQ = eqMidQ->load();
+  float highF = eqHighFreq->load();
+  float highG = eqHighGain->load();
+
+  bool needsUpdate = (hpf != cachedHpfFreq) || (lowF != cachedLowFreq) ||
+                     (lowG != cachedLowGain) || (midF != cachedMidFreq) ||
+                     (midG != cachedMidGain) || (midQ != cachedMidQ) ||
+                     (highF != cachedHighFreq) || (highG != cachedHighGain);
+
+  if (!needsUpdate)
+    return;
+
+  cachedHpfFreq = hpf;
+  cachedLowFreq = lowF;
+  cachedLowGain = lowG;
+  cachedMidFreq = midF;
+  cachedMidGain = midG;
+  cachedMidQ = midQ;
+  cachedHighFreq = highF;
+  cachedHighGain = highG;
+
+  *eq.get<0>().coefficients =
+      *juce::dsp::IIR::Coefficients<float>::makeHighPass(sr, hpf);
+  *eq.get<1>().coefficients =
+      *juce::dsp::IIR::Coefficients<float>::makeLowShelf(
+          sr, lowF, 0.707f, juce::Decibels::decibelsToGain(lowG));
+  *eq.get<2>().coefficients =
+      *juce::dsp::IIR::Coefficients<float>::makePeakFilter(
+          sr, midF, midQ, juce::Decibels::decibelsToGain(midG));
+  *eq.get<3>().coefficients =
+      *juce::dsp::IIR::Coefficients<float>::makeHighShelf(
+          sr, highF, 0.707f, juce::Decibels::decibelsToGain(highG));
+}
 
 void ZenithChannelStrip::processBlock(juce::AudioBuffer<float> &buffer,
                                       juce::MidiBuffer &midiMessages) {
@@ -155,23 +194,8 @@ void ZenithChannelStrip::processBlock(juce::AudioBuffer<float> &buffer,
   if (sr <= 0)
     sr = 44100.0; // Safety
 
-  // Update coefficients (Parameters)
-  // JUCE 8: ProcessorDuplicator uses state property, not coefficients
-  // 1. HPF
-  *eq.get<0>().state =
-      *juce::dsp::IIR::Coefficients<float>::makeHighPass(sr, eqHpfFreq->load());
-  // 2. Low Shelf
-  *eq.get<1>().state = *juce::dsp::IIR::Coefficients<float>::makeLowShelf(
-      sr, eqLowFreq->load(), 0.707f,
-      juce::Decibels::decibelsToGain(eqLowGain->load()));
-  // 3. Mid Peak
-  *eq.get<2>().state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter(
-      sr, eqMidFreq->load(), eqMidQ->load(),
-      juce::Decibels::decibelsToGain(eqMidGain->load()));
-  // 4. High Shelf
-  *eq.get<3>().state = *juce::dsp::IIR::Coefficients<float>::makeHighShelf(
-      sr, eqHighFreq->load(), 0.707f,
-      juce::Decibels::decibelsToGain(eqHighGain->load()));
+  // Update EQ coefficients only when parameters change
+  updateEqCoefficientsIfNeeded(sr);
 
   // Compressor
   compressor.setThreshold(compThresh->load());
@@ -206,9 +230,6 @@ void ZenithChannelStrip::processBlock(juce::AudioBuffer<float> &buffer,
     // Boost into saturator
     buffer.applyGain(drv);
     saturation.process(context);
-    // Compensate gain? Usually console saturation roughly autocompensates or
-    // adds level. Let's leave it as "add level" for analog feel, user can trim
-    // output.
   }
 
   // 6. Output Trim

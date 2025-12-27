@@ -4,16 +4,16 @@
  * @note This is a modular component of Engine - declarations remain in Engine.h
  */
 
-#include "Engine.h"
-#include "ProjectState.h"
-#include "../engine/Track.h"
+#include "../engine/AudioRenderer.h"
 #include "../engine/AuxBus.h"
 #include "../engine/MeteringSystem.h"
-#include "../engine/TrackFreeze.h"
 #include "../engine/Metronome.h"
-#include "../engine/TransportController.h"
-#include "../engine/AudioRenderer.h"
 #include "../engine/RecordingManager.h"
+#include "../engine/Track.h"
+#include "../engine/TrackFreeze.h"
+#include "../engine/TransportController.h"
+#include "Engine.h"
+#include "ProjectState.h"
 
 namespace zenith {
 
@@ -110,17 +110,19 @@ float Engine::getTrackPeakLevel(int trackIndex) const {
 }
 
 float Engine::getMasterLevel() const {
-  return meteringSystem_ ? meteringSystem_->getMasterLevel() : 0.0f;
+  return meteringSystem_
+             ? meteringSystem_->getLevel(MeteringSystem::MeterMode::Peak)
+             : 0.0f;
 }
 
 float Engine::getMasterPeakLevel() const {
-  return meteringSystem_ ? meteringSystem_->getMasterPeak() : 0.0f;
+  return meteringSystem_ ? meteringSystem_->getPeak() : 0.0f;
 }
 
 void Engine::resetPeakMeters() {
   // Reset master peak
   if (meteringSystem_) {
-    meteringSystem_->resetMasterPeak();
+    meteringSystem_->resetPeak();
   }
   if (audioRenderer_) {
     audioRenderer_->resetPeakMeters();
@@ -165,8 +167,8 @@ int Engine::createAuxBus(const juce::String &name) {
   routingGraph_.addNode(node);
 
   if (audioRenderer_) {
-    audioRenderer_->prepare(currentSampleRate.load(), currentBufferSize.load(),
-                            tracks_.size(), auxBuses_.size());
+    liveContext_.prepare(currentSampleRate.load(), currentBufferSize.load(),
+                          tracks_.size(), auxBuses_.size());
   }
 
   updateTrackSnapshot();
@@ -244,6 +246,25 @@ int Engine::getMasterLimiterLatency() const {
   return masterLimiter_.getLatency();
 }
 
+void Engine::setSidechainSource(int destTrackIndex, int pluginIndex, int sourceTrackIndex) {
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    if (destTrackIndex < 0 || destTrackIndex >= static_cast<int>(tracks_.size())) {
+        DBG("Engine: Invalid sidechain destination track index: " + juce::String(destTrackIndex));
+        return;
+    }
+
+    Track* sourceTrack = nullptr;
+    if (sourceTrackIndex >= 0 && sourceTrackIndex < static_cast<int>(tracks_.size())) {
+        sourceTrack = tracks_[sourceTrackIndex].get();
+    } else if (sourceTrackIndex != -1) {
+        DBG("Engine: Invalid sidechain source track index: " + juce::String(sourceTrackIndex));
+        return;
+    }
+
+    tracks_[destTrackIndex]->setPluginSidechainSource(pluginIndex, sourceTrack);
+}
+
 //==============================================================================
 // Track Freeze API (CPU Optimization)
 //==============================================================================
@@ -302,31 +323,68 @@ bool Engine::isTrackFrozen(int trackIndex) const {
   return tracks_[trackIndex]->isFrozen();
 }
 
-//==============================================================================
-// Metronome
-//==============================================================================
+double Engine::getCpuUsage() const { return deviceManager.getCpuUsage(); }
 
-void Engine::toggleMetronome() {
-  if (transportController_) {
-      bool newState = !transportController_->isMetronomeEnabled();
-      transportController_->setMetronomeEnabled(newState);
-      if (metronome_) {
-          metronome_->setEnabled(newState);
-      }
+void Engine::cancelFreeze() {
+  if (freezeManager_) {
+    freezeManager_->cancelFreeze();
+    DBG("Engine: Cancelled active freeze operation");
   }
 }
 
-bool Engine::isMetronomeEnabled() const {
-    return transportController_ ? transportController_->isMetronomeEnabled() : false;
+
+
+//==============================================================================
+// Plugin Delay Compensation (PDC)
+//==============================================================================
+
+void Engine::recalculatePDC() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  
+  if (audioRenderer_) {
+      // Convert shared_ptr vector to raw pointer vector for calculatePDC
+      std::vector<zenith::Track*> trackPtrs;
+      trackPtrs.reserve(tracks_.size());
+      for (const auto& t : tracks_) {
+          trackPtrs.push_back(t.get());
+      }
+      
+      int maxLatency = audioRenderer_->calculatePDC(liveContext_, trackPtrs);
+      DBG("Engine: PDC Recalculated. Max latency: " + juce::String(maxLatency) + " samples");
+  }
 }
 
-void Engine::setMetronomeLevel(float level) {
-    if (transportController_) {
-        transportController_->setMetronomeLevel(level);
-        if (metronome_) {
-            metronome_->setLevel(level);
-        }
+int Engine::getTrackLatency(int trackIndex) const {
+  // Read from Live Context
+  if (trackIndex >= 0 && trackIndex < static_cast<int>(liveContext_.trackLatencies.size())) {
+      return liveContext_.trackLatencies[trackIndex];
+  }
+  return 0;
+}
+
+int Engine::getMasterLatency() const {
+    if (audioRenderer_) {
+        return audioRenderer_->getMasterLatency();
     }
+    return 0;
+}
+
+void Engine::setPDCEnabled(bool enabled) {
+    if (audioRenderer_) {
+        audioRenderer_->setPDCEnabled(enabled);
+        DBG("Engine: PDC " + juce::String(enabled ? "Enabled" : "Disabled"));
+    }
+}
+
+bool Engine::isPDCEnabled() const {
+    if (audioRenderer_) {
+        return audioRenderer_->isPDCEnabled();
+    }
+    return false;
+}
+
+int Engine::getMaxTrackLatency() const {
+    return liveContext_.maxTrackLatency;
 }
 
 } // namespace zenith

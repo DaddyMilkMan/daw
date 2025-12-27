@@ -4,12 +4,18 @@
 #include <juce_graphics/juce_graphics.h>
 #include <functional>
 #include <vector>
+#include <atomic>
+#include "ZenithCRDT.h"
+#include "LoroCRDTBridge.h"
+
+namespace zenith {
 
 struct RemoteUser {
   juce::String id;
   juce::String name;
   juce::Colour color;
   juce::Point<float> mousePosition;
+  juce::StringArray selectedIds;
   bool isOnline;
 };
 
@@ -19,6 +25,8 @@ enum class PacketType {
   EditCommand = 2,
   Challenge = 3,
   ChallengeResponse = 4,
+  CRDTUpdate = 5,
+  SelectionUpdate = 6,
   KeepAlive = 99
 };
 
@@ -45,7 +53,7 @@ public:
   void joinSession(const juce::String &code);
   void disconnect();
 
-  ConnectionState getState() const { return currentState; }
+  ConnectionState getState() const { return currentState.load(std::memory_order_acquire); }
   juce::String getCurrentCode() const { return sessionCode; }
 
   // --- Real-time Sync ---
@@ -55,6 +63,7 @@ public:
     return remoteUsers;
   }
   void broadcastEdit(const juce::String &commandData);
+  void broadcastSelection(const juce::StringArray& selectedIds);
 
   // --- User Identity ---
   void setLocalUserName(const juce::String &name) { localUserName = name; }
@@ -66,6 +75,12 @@ public:
 
   std::function<void(const juce::String &)> onEditReceived;
 
+  // --- CRDT Integration ---
+  void initializeCRDT(juce::ValueTree& projectTree);
+  void syncCRDT();
+  void shutdownCRDT(); // Release CRDT bridge (must be called before ProjectState is destroyed)
+  Zenith::ValueTreeCRDTBridge* getCRDTBridge() const { return crdtBridge.get(); }
+
 private:
   CollaborationManager();
   ~CollaborationManager();
@@ -73,7 +88,8 @@ private:
   // Loop
   void run() override;
 
-  ConnectionState currentState = ConnectionState::Disconnected;
+  // CRITIC FIX: currentState MUST be atomic - accessed from message thread and network thread
+  std::atomic<ConnectionState> currentState{ConnectionState::Disconnected};
   juce::String sessionCode;
   juce::String localUserName = "User";
   std::vector<RemoteUser> remoteUsers;
@@ -103,11 +119,26 @@ private:
   bool verifyCodeTCP(const juce::String &code);
 
   // UDP Packet Handling
-  void sendPacket(PacketType type, const void *data, size_t size);
+  void sendPacket(PacketType type, const void *data, size_t size, const juce::String& targetIP = {}, int targetPort = 0);
+  void broadcastPacket(PacketType type, const void *data, size_t size);
   void handleIncomingPacket(const void *data, int size,
                             const juce::String &senderIP, int senderPort);
 
   // Hole Punching Logic
   void startHolePunching();
   void reportError(const juce::String& error);
+
+  std::unique_ptr<Zenith::LoroDoc> crdtDoc;
+  std::unique_ptr<Zenith::ValueTreeCRDTBridge> crdtBridge;
+
+  struct PeerConnection {
+      juce::String ip;
+      int port;
+      bool authenticated = false;
+      juce::uint64 lastSeen = 0;
+  };
+  std::vector<PeerConnection> activePeers;
+  mutable juce::CriticalSection peersLock; // CRITIC FIX: Protect activePeers from race conditions
 };
+
+} // namespace zenith

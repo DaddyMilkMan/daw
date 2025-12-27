@@ -1,12 +1,12 @@
 #pragma once
 
 #include "MixerChannel.h"
-#include "PluginChain.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
 #include <memory>
 #include <vector>
+
 
 namespace zenith {
 
@@ -38,7 +38,7 @@ public:
   // Properties
   [[nodiscard]] const juce::String &getName() const { return name_; }
   void setName(const juce::String &newName) { name_ = newName; }
-
+  
   [[nodiscard]] const juce::String &getId() const { return id_; }
   void setId(const juce::String &newId) { id_ = newId; }
 
@@ -65,12 +65,8 @@ public:
 
   //==============================================================================
   // Metering
-  [[nodiscard]] float getCurrentLevel() const {
-    return mixerChannel.getOutputLevel();
-  }
-  [[nodiscard]] float getPeakLevel() const {
-    return mixerChannel.getOutputPeak();
-  }
+  [[nodiscard]] float getCurrentLevel() const { return mixerChannel.getOutputLevel(); }
+  [[nodiscard]] float getPeakLevel() const { return mixerChannel.getOutputPeak(); }
   void resetPeakMeters() { mixerChannel.resetPeaks(); }
 
   //==============================================================================
@@ -86,7 +82,10 @@ private:
   juce::AudioBuffer<float> inputBuffer_;
 
   // Plugin chain (effect processors)
-  PluginChain pluginChain;
+  std::vector<std::unique_ptr<juce::AudioPluginInstance>> plugins_;
+  // MESSAGE THREAD ONLY - Protects plugin chain modifications.
+  // Note: Modifying plugins during playback without a snapshot pattern is not RT-safe.
+  juce::CriticalSection pluginLock_;
 
   // Processing state
   double currentSampleRate_ = 44100.0;

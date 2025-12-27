@@ -1,10 +1,14 @@
 target_sources(ZenithDAW PRIVATE
     Engine.cpp
+    # Modular Engine split files
     EngineTransport.cpp
     EngineTrackManagement.cpp
     EngineMixing.cpp
     EngineRecording.cpp
     EngineExport.cpp
+    EngineMIDI.cpp
+    EngineSync.cpp
+    EnginePlugins.cpp
     ProjectState.cpp
     Track.cpp
     Clip.cpp
@@ -12,10 +16,11 @@ target_sources(ZenithDAW PRIVATE
     AudioTrack.cpp
     MIDITrack.cpp
     AuxBusTrack.cpp
-    InstrumentTrack.cpp
-
     ClipTrack.cpp
+    InstrumentTrack.cpp
+    TrackProcessor.cpp
     MixerChannel.cpp
+    MixerController.cpp
     AudioFilePool.cpp
     PluginHost.cpp
     AuxBus.cpp
@@ -28,10 +33,17 @@ target_sources(ZenithDAW PRIVATE
     Metronome.cpp
     MeteringSystem.cpp
     PluginChain.cpp
+    PluginAutomationBinding.cpp
     AutomationManager.cpp
+    Midi2DiscoveryService.cpp
+    AudioAsMidiBridge.cpp
+    $<$<BOOL:${ZENITH_USE_ONNX_RUNTIME}>:ONNXStemSeparator.cpp>
+    PropertyExchangeManager.cpp
+    RealTimeGarbageCollector.cpp
     
     # Modular Engine Components (2025-12-11 Refactor)
     AudioRenderer.cpp
+    AudioExporter.cpp
     RecordingManager.cpp
     TransportController.cpp
     ProjectEngineBridge.cpp
@@ -52,6 +64,5 @@ target_sources(ZenithDAW PRIVATE
     TrackStateSynchronizer.cpp
     TrackAutomationSynchronizer.cpp
     TempoMapSynchronizer.cpp
+    
 )# Touch for rebuild
-
-

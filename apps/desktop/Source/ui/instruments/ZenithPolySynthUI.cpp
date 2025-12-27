@@ -14,12 +14,9 @@
 #include "ZenithPolySynthUI.h"
 #include "../../instruments/ZenithFilter.h" // For FilterType
 #include "../../instruments/ZenithPolySynth.h"
-#include "../controls/ZenithButton.h"
-#include "../controls/ZenithKnob.h"
-#include "../controls/ZenithSlider.h"
+#include "../controls/ZenithUIComponents.h" // For ZenithVisualizer
 #include "ZenithDesignSystem.h"
 #include "ZenithLayout.h"
-#include "ZenithUIComponents.h" // For ZenithVisualizer
 #include "ZenithUtils.h"
 
 #include <algorithm> // For std::clamp
@@ -49,7 +46,7 @@ ZenithPolySynthUI::ZenithPolySynthUI(ZenithPolySynthProcessor &p)
   buildUI();
 
   // Start UI update timer
-  startTimerHz(60);
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60);
 
   // Initial sync
   syncProcessorToUI();
@@ -84,25 +81,61 @@ void ZenithPolySynthUI::resized() {
   layoutWidgets();
 }
 
+template <typename T>
+T *ZenithPolySynthUI::addWidget(const juce::String &name,
+                                const juce::String &paramId) {
+  auto widget = std::make_unique<T>(name);
+
+  // Find parameter in APVTS
+  auto *param = processor.getParameters().getParameter(paramId);
+  if (auto *rangedParam = dynamic_cast<juce::RangedAudioParameter *>(param)) {
+    widget->setParameter(rangedParam);
+  }
+
+  T *ptr = widget.get();
+  addAndMakeVisible(*widget);
+  widgets_.push_back(std::move(widget));
+  return ptr;
+}
+
 void ZenithPolySynthUI::buildUI() {
   widgets_.clear();
 
   // Oscillators
-  addWidget<ZenithKnob>("Osc 1 Wave", ZenithPolySynthProcessor::Osc1Wave);
-  addWidget<ZenithKnob>("Osc 1 Mix", ZenithPolySynthProcessor::Osc1Mix);
-  addWidget<ZenithKnob>("Osc 2 Wave", ZenithPolySynthProcessor::Osc2Wave);
-  addWidget<ZenithKnob>("Osc 2 Mix", ZenithPolySynthProcessor::Osc2Mix);
+  auto* osc1Wave = addWidget<ZenithKnob>("Osc 1 Wave", ZenithPolySynthProcessor::Osc1Wave);
+  osc1Wave->setHelpText("Oscillator 1 Waveform", "Selects the primary waveform. Pro Tip: Use the 'Wavetable' setting for complex timbres that cut through the mix.");
+  
+  auto* osc1Mix = addWidget<ZenithKnob>("Osc 1 Mix", ZenithPolySynthProcessor::Osc1Mix);
+  osc1Mix->setHelpText("Oscillator 1 Mix", "Adjusts the level of Osc 1. Tip: Reducing this while increasing Resonance can prevent harsh digital clipping.");
+  
+  auto* osc2Wave = addWidget<ZenithKnob>("Osc 2 Wave", ZenithPolySynthProcessor::Osc2Wave);
+  osc2Wave->setHelpText("Oscillator 2 Waveform", "Second oscillator waveform. Detune this slightly against Osc 1 for a thicker, 'unison' VA sound.");
+  
+  auto* osc2Mix = addWidget<ZenithKnob>("Osc 2 Mix", ZenithPolySynthProcessor::Osc2Mix);
+  osc2Mix->setHelpText("Oscillator 2 Mix", "Level of Osc 2. Use this to blend in a different harmonic structure compared to Osc 1.");
 
   // Filter
-  addWidget<ZenithKnob>("Cutoff", ZenithPolySynthProcessor::FilterCutoff);
-  addWidget<ZenithKnob>("Resonance", ZenithPolySynthProcessor::FilterResonance);
-  addWidget<ZenithKnob>("Env Amt", ZenithPolySynthProcessor::FilterEnvAmount);
+  auto* cutoff = addWidget<ZenithKnob>("Cutoff", ZenithPolySynthProcessor::FilterCutoff);
+  cutoff->setHelpText("Filter Cutoff", "Controls the brightness. Pro Tip: Automation of this parameter is the key to creating movement in your basslines.");
+  
+  auto* resonance = addWidget<ZenithKnob>("Resonance", ZenithPolySynthProcessor::FilterResonance);
+  resonance->setHelpText("Filter Resonance", "Adds a peak at the cutoff frequency. High values create the classic 'squelch' found in acid house.");
+  
+  auto* envAmt = addWidget<ZenithKnob>("Env Amt", ZenithPolySynthProcessor::FilterEnvAmount);
+  envAmt->setHelpText("Envelope Amount", "Determines how much the Mod Envelope (Env 2) affects the Cutoff. Perfect for creating 'plucky' or 'snappy' sounds.");
 
   // Amp Envelope
-  addWidget<ZenithKnob>("Attack", ZenithPolySynthProcessor::AmpAttack);
-  addWidget<ZenithKnob>("Decay", ZenithPolySynthProcessor::AmpDecay);
-  addWidget<ZenithKnob>("Sustain", ZenithPolySynthProcessor::AmpSustain);
-  addWidget<ZenithKnob>("Release", ZenithPolySynthProcessor::AmpRelease);
+  auto* attack = addWidget<ZenithKnob>("Attack", ZenithPolySynthProcessor::AmpAttack);
+  attack->setHelpText("Amp Attack", "Sets the time for the sound to reach full volume. Long attack is great for cinematic pads.");
+  
+  auto* decay = addWidget<ZenithKnob>("Decay", ZenithPolySynthProcessor::AmpDecay);
+  decay->setHelpText("Amp Decay", "The time taken to drop to the sustain level. Short decay creates percussive 'hits'.");
+  
+  auto* sustain = addWidget<ZenithKnob>("Sustain", ZenithPolySynthProcessor::AmpSustain);
+  sustain->setHelpText("Amp Sustain", "The volume level held while a key is depressed. Set to 0 for short stabs.");
+  
+  auto* release = addWidget<ZenithKnob>("Release", ZenithPolySynthProcessor::AmpRelease);
+  release->setHelpText("Amp Release", "How long the sound lingers after releasing the key. Add release for a more natural, acoustic feel.");
 
   layoutWidgets();
 }
@@ -139,10 +172,12 @@ void ZenithPolySynthUI::layoutWidgets() {
 //==============================================================================
 // Timer callback for UI updates
 void ZenithPolySynthUI::timerCallback() {
-  // Sync UI to processor parameters (for automation/external changes)
-  syncProcessorToUI();
-
-  // Trigger UI repaint
+  // Update visualizer data
+  if (visualizer_) {
+    visualizer_->updateAudioData();
+  }
+  
+  // Trigger UI repaint - visualizer handles data internally via timerCallback
   repaint();
 }
 
@@ -183,11 +218,8 @@ void ZenithPolySynthUI::drawSkiaContent(SkCanvas *canvas) {
 #endif
 
 void ZenithPolySynthUI::syncProcessorToUI() {
-  for (auto &widget : widgets_) {
-    if (auto *control = dynamic_cast<ZenithControl *>(widget.get())) {
-      control->updateFromParameter();
-    }
-  }
+  // Update UI elements based on processor state
+  // For example, set knob values
 }
 
 void ZenithPolySynthUI::changeListenerCallback(
@@ -201,7 +233,24 @@ void ZenithPolySynthUI::changeListenerCallback(
 // Event handlers for UI interaction (to update processor parameters)
 //==============================================================================
 
-// Mouse event handlers removed - let juce::Component children handle
-// themselves.
+void ZenithPolySynthUI::mouseDown(const juce::MouseEvent &e) {
+  juce::ignoreUnused(e);
+  // Handle mouse down events on custom components
+}
+
+void ZenithPolySynthUI::mouseDrag(const juce::MouseEvent &e) {
+  juce::ignoreUnused(e);
+  // Handle mouse drag events
+}
+
+void ZenithPolySynthUI::mouseUp(const juce::MouseEvent &e) {
+  juce::ignoreUnused(e);
+  // Handle mouse up events
+}
+
+void ZenithPolySynthUI::mouseMove(const juce::MouseEvent &e) {
+  juce::ignoreUnused(e);
+  // Handle mouse move events
+}
 
 } // namespace zenith

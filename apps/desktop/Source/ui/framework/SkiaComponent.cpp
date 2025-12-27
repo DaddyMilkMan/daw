@@ -9,21 +9,15 @@
 */
 
 #include "SkiaComponent.h"
+#include <core/SkBlurTypes.h> // Explicitly include
 
-#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
-#include "ZenithSkia.h" // Explicitly include
-#include <core/SkImageInfo.h>
-#include <core/SkPixmap.h>
-#include <core/SkSurface.h>
-#endif
-
-#include "../../engine/ZenithLogger.h"
 #include "PlatformDisplayUtils.h"
 
 namespace zenith {
 
 int SkiaComponent::systemRefreshRate_ = 60;
 int SkiaComponent::targetFPS_ = 60;
+std::function<void(const juce::String &, const juce::String &)> SkiaComponent::globalHelpCallback;
 
 SkiaComponent::SkiaComponent() {
   setOpaque(false);
@@ -34,12 +28,18 @@ SkiaComponent::SkiaComponent() {
   setWantsKeyboardFocus(true);
 
   // Initialize refresh rate if not already done
-  if (systemRefreshRate_ == 60) {
-    ZENITH_LOG_INFO("SkiaComponent: Initializing refresh rate...");
-    getSystemRefreshRate();
-    ZENITH_LOG_INFO("SkiaComponent: Refresh rate initialized: " +
-                    juce::String(systemRefreshRate_));
+  static bool refreshRateInitialized = false;
+  if (!refreshRateInitialized) {
+    systemRefreshRate_ = PlatformDisplayUtils::getSystemRefreshRate();
+    if (systemRefreshRate_ <= 0) systemRefreshRate_ = 60;
+    refreshRateInitialized = true;
   }
+
+  // Initialize with theme accent
+  glowColor_ = design::colors::ACCENT_PRIMARY;
+
+  // Property to identify SkiaComponent without RTTI
+  getProperties().set("zenith_is_skia", true);
 }
 
 SkiaComponent::~SkiaComponent() { stopAllAnimations(); }
@@ -49,87 +49,9 @@ SkiaComponent::~SkiaComponent() { stopAllAnimations(); }
 // ============================================================================
 
 void SkiaComponent::paint(juce::Graphics &g) {
-#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
-  // Check if we're in the main Skia-integrated window hierarchy
-  // If not (e.g., in a DialogWindow), we need to render via raster fallback
-
-  // Walk up the parent chain to find a SkiaMainWindowIntegration
-  juce::Component *parent = getParentComponent();
-  bool hasSkiaParent = false;
-  while (parent != nullptr) {
-    // Check if parent is a SkiaComponent that's part of the main rendering
-    // The main window (MainComponent) extends SkiaMainWindowIntegration
-    // which handles rendering all children via drawSkiaContent()
-    if (parent->getParentComponent() == nullptr) {
-      // Reached top-level component
-      // Check if it's opaque (MainComponent) - if so, assume Skia handles it
-      hasSkiaParent = parent->isOpaque();
-      break;
-    }
-    parent = parent->getParentComponent();
-  }
-
-  if (hasSkiaParent) {
-    // Part of main Skia hierarchy - rendering handled by drawSkia()
-    return;
-  }
-
-  // RASTER FALLBACK - Used when component is in a standalone window (e.g.,
-  // DialogWindow)
-  const int width = getWidth();
-  const int height = getHeight();
-
-  if (width <= 0 || height <= 0)
-    return;
-
-  // Create Raster Surface
-  SkImageInfo info = SkImageInfo::MakeN32Premul(width, height);
-  auto rasterSurface = SkSurfaces::Raster(info);
-
-  if (!rasterSurface) {
-    g.fillAll(juce::Colours::black);
-    g.setColour(juce::Colours::red);
-    g.drawText("Skia Raster Failed", getLocalBounds(),
-               juce::Justification::centred, true);
-    return;
-  }
-
-  SkCanvas *canvas = rasterSurface->getCanvas();
-  canvas->clear(SK_ColorTRANSPARENT);
-
-  // Call the virtual drawSkia method
-  drawSkia(canvas);
-
-  // Draw children
-  drawChildren(canvas);
-
-  // Convert to JUCE Image
-  sk_sp<SkImage> img(rasterSurface->makeImageSnapshot());
-  if (img) {
-    SkPixmap pixmap;
-    if (img->peekPixels(&pixmap)) {
-      juce::Image juceImage(juce::Image::ARGB, width, height, true);
-      juce::Image::BitmapData bd(juceImage, juce::Image::BitmapData::writeOnly);
-
-      if (pixmap.readPixels(SkImageInfo::Make(width, height,
-                                              kBGRA_8888_SkColorType,
-                                              kPremul_SkAlphaType),
-                            bd.data, bd.lineStride)) {
-        g.drawImageAt(juceImage, 0, 0);
-        needsRepaint_ = false;
-        return;
-      }
-    }
-  }
-
-  // Ultimate fallback
-  g.fillAll(juce::Colours::darkgrey);
-#else
-  g.fillAll(juce::Colours::darkgrey);
-  g.setColour(juce::Colours::white);
-  g.drawText("Skia Disabled", getLocalBounds(), juce::Justification::centred,
-             true);
-#endif
+  juce::ignoreUnused(g);
+  // Skia components are rendered via drawSkia() by the parent renderer.
+  // No JUCE painting or fallback.
 }
 
 SkCanvas *SkiaComponent::getSkiaCanvas(juce::Graphics &g) {
@@ -143,7 +65,6 @@ SkCanvas *SkiaComponent::getSkiaCanvas(juce::Graphics &g) {
 // paintFallback removed
 
 void SkiaComponent::applyGlow(SkPaint &paint, float intensity) {
-#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
   // Apply global glow intensity
   float globalIntensity = design::Settings::getGlowIntensity();
   float finalIntensity = intensity * globalIntensity;
@@ -164,14 +85,10 @@ void SkiaComponent::applyGlow(SkPaint &paint, float intensity) {
 
   paint.setStyle(SkPaint::kStroke_Style);
   paint.setStrokeWidth(2.0f + (clampedIntensity * 3.0f));
-#else
-  juce::ignoreUnused(paint, intensity);
-#endif
 }
 
 #ifdef DEBUG
 void SkiaComponent::drawDebug(SkCanvas *canvas) {
-#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
   auto bounds = getLocalBounds().toFloat();
 
   SkPaint debugPaint;
@@ -190,9 +107,6 @@ void SkiaComponent::drawDebug(SkCanvas *canvas) {
   float cy = bounds.getCentreY();
   canvas->drawLine(cx - 5, cy, cx + 5, cy, debugPaint);
   canvas->drawLine(cx, cy - 5, cx, cy + 5, debugPaint);
-#else
-  juce::ignoreUnused(canvas);
-#endif
 }
 #endif
 
@@ -208,6 +122,11 @@ void SkiaComponent::resized() {
 void SkiaComponent::mouseEnter(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
   isHovered_ = true;
+  
+  if (globalHelpCallback && helpTitle_.isNotEmpty()) {
+      globalHelpCallback(helpTitle_, helpDescription_);
+  }
+  
   onHoverEnter();
   markDirty();
 }
@@ -216,21 +135,6 @@ void SkiaComponent::mouseExit(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
   isHovered_ = false;
   onHoverExit();
-  markDirty();
-}
-
-void SkiaComponent::mouseDown(const juce::MouseEvent &e) {
-  onMouseDown(e);
-  markDirty();
-}
-
-void SkiaComponent::mouseDrag(const juce::MouseEvent &e) {
-  onMouseDrag(e);
-  markDirty();
-}
-
-void SkiaComponent::mouseUp(const juce::MouseEvent &e) {
-  onMouseUp(e);
   markDirty();
 }
 
@@ -253,54 +157,17 @@ void SkiaComponent::focusLost(juce::Component::FocusChangeType cause) {
 }
 
 void SkiaComponent::drawChildren(SkCanvas *canvas) {
-#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
   for (auto *child : getChildren()) {
     if (child->isVisible()) {
-      canvas->save();
-      canvas->translate((float)child->getX(), (float)child->getY());
-
-      if (auto *skiaChild = dynamic_cast<SkiaComponent *>(child)) {
-        // Native Skia component - draw directly
+      if (child->getProperties().contains("zenith_is_skia")) {
+        auto *skiaChild = static_cast<SkiaComponent *>(child);
+        canvas->save();
+        canvas->translate((float)child->getX(), (float)child->getY());
         skiaChild->drawSkia(canvas);
-      } else {
-        // Regular JUCE component - render via raster fallback
-        const int width = child->getWidth();
-        const int height = child->getHeight();
-
-        if (width > 0 && height > 0) {
-          // Create raster surface for JUCE component
-          SkImageInfo info = SkImageInfo::MakeN32Premul(width, height);
-          auto rasterSurface = SkSurfaces::Raster(info);
-
-          if (rasterSurface) {
-            // Create JUCE image and paint the component to it
-            juce::Image juceImage(juce::Image::ARGB, width, height, true);
-            juce::Graphics g(juceImage);
-            child->paintEntireComponent(g, false);
-
-            // Copy JUCE image data to Skia surface
-            juce::Image::BitmapData bd(juceImage,
-                                       juce::Image::BitmapData::readOnly);
-            SkPixmap srcPixmap(SkImageInfo::Make(width, height,
-                                                 kBGRA_8888_SkColorType,
-                                                 kPremul_SkAlphaType),
-                               bd.data, static_cast<size_t>(bd.lineStride));
-
-            // Draw the rasterized JUCE component onto our canvas
-            auto skImage = SkImages::RasterFromPixmapCopy(srcPixmap);
-            if (skImage) {
-              canvas->drawImage(skImage, 0, 0);
-            }
-          }
-        }
+        canvas->restore();
       }
-
-      canvas->restore();
     }
   }
-#else
-  juce::ignoreUnused(canvas);
-#endif
 }
 
 void SkiaComponent::animateColorChange() {
@@ -313,18 +180,15 @@ void SkiaComponent::animateColorChange() {
 // ============================================================================
 
 void SkiaComponent::animateTo(const juce::String &property, float target,
-                              int durationMs) {
+                               int durationMs) {
   auto it = animations_.find(property);
   if (it == animations_.end()) {
-    // Create new animation
     animations_[property] = std::make_unique<AnimatedValue>(0.0f);
     it = animations_.find(property);
   }
 
-  it->second->setTarget(target, durationMs);
-
-  // Start animation timer if not already running
-  startTimer(1000 / targetFPS_); // Use target FPS
+  it->second->setTarget(target, durationMs, ::zenith::animation::Easing::EaseOut);
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(1000 / targetFPS_);
 }
 
 void SkiaComponent::animateWithSpring(const juce::String &property,
@@ -336,27 +200,31 @@ void SkiaComponent::animateWithSpring(const juce::String &property,
     it = animations_.find(property);
   }
 
-  it->second->setSpring(target, stiffness, damping);
-  startTimer(1000 / targetFPS_);
+  ::zenith::animation::SpringConfig config;
+  config.stiffness = stiffness * 1000.0f; // Scale to match new engine range
+  config.damping = damping * 100.0f;     // Scale to match new engine range
+  
+  it->second->setTargetSpring(target, config);
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(1000 / targetFPS_);
 }
 
 void SkiaComponent::stopAnimation(const juce::String &property) {
   auto it = animations_.find(property);
   if (it != animations_.end()) {
-    it->second->stop();
+    it->second->cancel();
   }
 }
 
 void SkiaComponent::stopAllAnimations() {
   for (auto &pair : animations_) {
-    pair.second->stop();
+    pair.second->cancel();
   }
   stopTimer();
 }
 
 float SkiaComponent::getAnimatedValue(const juce::String &property) const {
   auto it = animations_.find(property);
-  return it != animations_.end() ? it->second->getCurrentValue() : 0.0f;
+  return it != animations_.end() ? it->second->get() : 0.0f;
 }
 
 bool SkiaComponent::isAnimating(const juce::String &property) const {
@@ -366,7 +234,7 @@ bool SkiaComponent::isAnimating(const juce::String &property) const {
 
 void SkiaComponent::timerCallback() {
   bool anyAnimating = false;
-  float deltaTimeMs = 1000.0f / targetFPS_;
+  float deltaTimeMs = 1000.0f / (float)targetFPS_;
 
   for (auto &pair : animations_) {
     if (pair.second->isAnimating()) {
@@ -462,96 +330,7 @@ bool SkiaComponent::keyPressed(const juce::KeyPress &key,
     return true;
   }
 
-  // Let parent handle tab navigation if needed, or implement custom tab logic
-  // here
   return false;
-}
-
-// ============================================================================
-// ANIMATED VALUE IMPLEMENTATION
-// ============================================================================
-
-AnimatedValue::AnimatedValue(float initial)
-    : currentValue_(initial), targetValue_(initial), startValue_(initial),
-      velocity_(0.0f), durationMs_(0), elapsedMs_(0),
-      curve_(EasingCurve::EaseOut), isAnimating_(false), springStiffness_(0.5f),
-      springDamping_(0.7f), useSpring_(false) {}
-
-void AnimatedValue::setTarget(float target, int durationMs, EasingCurve curve) {
-  targetValue_ = target;
-  startValue_ = currentValue_;
-  durationMs_ = durationMs;
-  elapsedMs_ = 0;
-  curve_ = curve;
-  isAnimating_ = true;
-  useSpring_ = false;
-}
-
-void AnimatedValue::setSpring(float target, float stiffness, float damping) {
-  targetValue_ = target;
-  springStiffness_ = stiffness;
-  springDamping_ = damping;
-  isAnimating_ = true;
-  useSpring_ = true;
-}
-
-void AnimatedValue::stop() {
-  isAnimating_ = false;
-  velocity_ = 0.0f;
-}
-
-void AnimatedValue::update(float deltaTimeMs) {
-  if (!isAnimating_)
-    return;
-
-  if (useSpring_) {
-    // Spring physics
-    float displacement = currentValue_ - targetValue_;
-    float springForce = -springStiffness_ * displacement;
-    float dampingForce = -springDamping_ * velocity_;
-
-    velocity_ += (springForce + dampingForce) * (deltaTimeMs / 1000.0f);
-    currentValue_ += velocity_ * (deltaTimeMs / 1000.0f);
-
-    // Stop if close enough and slow enough
-    if (std::abs(displacement) < 0.001f && std::abs(velocity_) < 0.001f) {
-      currentValue_ = targetValue_;
-      velocity_ = 0.0f;
-      isAnimating_ = false;
-    }
-  } else {
-    // Easing curve
-    elapsedMs_ += static_cast<int>(deltaTimeMs);
-
-    if (elapsedMs_ >= durationMs_) {
-      currentValue_ = targetValue_;
-      isAnimating_ = false;
-    } else {
-      float t =
-          static_cast<float>(elapsedMs_) / static_cast<float>(durationMs_);
-      float easedT = easeValue(t);
-      currentValue_ = startValue_ + (targetValue_ - startValue_) * easedT;
-    }
-  }
-}
-
-float AnimatedValue::easeValue(float t) const {
-  switch (curve_) {
-  case EasingCurve::Linear:
-    return t;
-
-  case EasingCurve::EaseIn:
-    return t * t;
-
-  case EasingCurve::EaseOut:
-    return t * (2.0f - t);
-
-  case EasingCurve::EaseInOut:
-    return t < 0.5f ? 2.0f * t * t : -1.0f + (4.0f - 2.0f * t) * t;
-
-  default:
-    return t;
-  }
 }
 
 } // namespace zenith

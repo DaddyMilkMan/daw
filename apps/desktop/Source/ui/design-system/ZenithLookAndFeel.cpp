@@ -9,80 +9,81 @@
 
 namespace zenith {
 
-// Type aliases for cleaner access to ZenithTheme nested types
-// Use ThemeColors to avoid conflict with ZenithLookAndFeel::Colors
-using ThemeColors = ZenithTheme::Colors;
-using Typography = ZenithTheme::Typography;
-using Spacing = ZenithTheme::Spacing;
+// Type aliases for cleaner access to ZenithDesignSystem/ZenithTheme
 using Radius = ZenithTheme::Radius;
 using Shadows = ZenithTheme::Shadows;
+using Spacing = ZenithTheme::Spacing;
+using Typography = ZenithTheme::Typography;
+using ThemeColors = ZenithTheme::Colors;
 
 // Static definitions for ZenithLookAndFeel::Colors (backwards compatibility)
-const juce::Colour &ZenithLookAndFeel::Colors::background = ThemeColors::bg_01;
+const juce::Colour &ZenithLookAndFeel::Colors::background = design::toJuceColour(design::colors::BG_01);
 const juce::Colour &ZenithLookAndFeel::Colors::backgroundPanel =
-    ThemeColors::bg_02;
-const juce::Colour &ZenithLookAndFeel::Colors::panel = ThemeColors::bg_03;
+    design::toJuceColour(design::colors::BG_02);
+const juce::Colour &ZenithLookAndFeel::Colors::panel = design::toJuceColour(design::colors::BG_03);
 const juce::Colour &ZenithLookAndFeel::Colors::textPrimary =
-    ThemeColors::text_primary;
+    design::toJuceColour(design::colors::TEXT_PRIMARY);
 const juce::Colour &ZenithLookAndFeel::Colors::textSecondary =
-    ThemeColors::text_secondary;
+    design::toJuceColour(design::colors::TEXT_SECONDARY);
 const juce::Colour &ZenithLookAndFeel::Colors::border =
-    ThemeColors::border_default;
+    design::toJuceColour(design::colors::BORDER_DEFAULT);
 const juce::Colour &ZenithLookAndFeel::Colors::accent =
-    ThemeColors::accent_primary;
+    design::toJuceColour(design::colors::ACCENT_PRIMARY);
 
 std::unique_ptr<ZenithLookAndFeel> ZenithLookAndFeel::instance_ = nullptr;
 
 ZenithLookAndFeel::ZenithLookAndFeel() {
+  auto getCol = [](SkColor c) { return design::toJuceColour(c); };
+
   // Window backgrounds
-  setColour(juce::ResizableWindow::backgroundColourId, ThemeColors::bg_01);
+  setColour(juce::ResizableWindow::backgroundColourId, getCol(design::colors::BG_01));
 
   // Text colors
-  setColour(juce::Label::textColourId, ThemeColors::text_primary);
-  setColour(juce::Label::textWhenEditingColourId, ThemeColors::text_primary);
+  setColour(juce::Label::textColourId, getCol(design::colors::TEXT_PRIMARY));
+  setColour(juce::Label::textWhenEditingColourId, getCol(design::colors::TEXT_PRIMARY));
 
   // Button colors
-  setColour(juce::TextButton::buttonColourId, ThemeColors::bg_03);
-  setColour(juce::TextButton::buttonOnColourId, ThemeColors::accent_primary);
-  setColour(juce::TextButton::textColourOffId, ThemeColors::text_primary);
-  setColour(juce::TextButton::textColourOnId, ThemeColors::text_inverse);
+  setColour(juce::TextButton::buttonColourId, getCol(design::colors::BG_03));
+  setColour(juce::TextButton::buttonOnColourId, getCol(design::colors::ACCENT_PRIMARY));
+  setColour(juce::TextButton::textColourOffId, getCol(design::colors::TEXT_PRIMARY));
+  setColour(juce::TextButton::textColourOnId, getCol(design::colors::BG_01)); // inverse approx
 
   // ComboBox colors
-  setColour(juce::ComboBox::backgroundColourId, ThemeColors::bg_02);
-  setColour(juce::ComboBox::outlineColourId, ThemeColors::border_default);
-  setColour(juce::ComboBox::textColourId, ThemeColors::text_primary);
-  setColour(juce::ComboBox::arrowColourId, ThemeColors::text_secondary);
-  setColour(juce::ComboBox::focusedOutlineColourId, ThemeColors::accent_primary);
+  setColour(juce::ComboBox::backgroundColourId, getCol(design::colors::BG_02));
+  setColour(juce::ComboBox::outlineColourId, getCol(design::colors::BORDER_DEFAULT));
+  setColour(juce::ComboBox::textColourId, getCol(design::colors::TEXT_PRIMARY));
+  setColour(juce::ComboBox::arrowColourId, getCol(design::colors::TEXT_SECONDARY));
+  setColour(juce::ComboBox::focusedOutlineColourId, getCol(design::colors::ACCENT_PRIMARY));
 
   // Slider colors
-  setColour(juce::Slider::thumbColourId, ThemeColors::text_primary);
-  setColour(juce::Slider::trackColourId, ThemeColors::accent_primary);
-  setColour(juce::Slider::backgroundColourId, ThemeColors::bg_02);
-  setColour(juce::Slider::rotarySliderFillColourId, ThemeColors::accent_primary);
-  setColour(juce::Slider::rotarySliderOutlineColourId, ThemeColors::border_default);
+  setColour(juce::Slider::thumbColourId, getCol(design::colors::TEXT_PRIMARY));
+  setColour(juce::Slider::trackColourId, getCol(design::colors::ACCENT_PRIMARY));
+  setColour(juce::Slider::backgroundColourId, getCol(design::colors::BG_02));
+  setColour(juce::Slider::rotarySliderFillColourId, getCol(design::colors::ACCENT_PRIMARY));
+  setColour(juce::Slider::rotarySliderOutlineColourId, getCol(design::colors::BORDER_DEFAULT));
 
   // TextEditor colors
-  setColour(juce::TextEditor::backgroundColourId, ThemeColors::bg_02);
-  setColour(juce::TextEditor::textColourId, ThemeColors::text_primary);
-  setColour(juce::TextEditor::outlineColourId, ThemeColors::border_default);
-  setColour(juce::TextEditor::focusedOutlineColourId, ThemeColors::accent_primary);
-  setColour(juce::TextEditor::highlightColourId, ThemeColors::accent_subtle);
+  setColour(juce::TextEditor::backgroundColourId, getCol(design::colors::BG_02));
+  setColour(juce::TextEditor::textColourId, getCol(design::colors::TEXT_PRIMARY));
+  setColour(juce::TextEditor::outlineColourId, getCol(design::colors::BORDER_DEFAULT));
+  setColour(juce::TextEditor::focusedOutlineColourId, getCol(design::colors::ACCENT_PRIMARY));
+  setColour(juce::TextEditor::highlightColourId, getCol(design::colors::ACCENT_PRIMARY).withAlpha(0.3f));
 
   // ScrollBar colors
-  setColour(juce::ScrollBar::thumbColourId, ThemeColors::text_tertiary);
-  setColour(juce::ScrollBar::backgroundColourId, ThemeColors::bg_01);
+  setColour(juce::ScrollBar::thumbColourId, getCol(design::colors::TEXT_TERTIARY));
+  setColour(juce::ScrollBar::backgroundColourId, getCol(design::colors::BG_01));
 
   // Tooltip colors
-  setColour(juce::TooltipWindow::backgroundColourId, ThemeColors::bg_04);
-  setColour(juce::TooltipWindow::textColourId, ThemeColors::text_primary);
-  setColour(juce::TooltipWindow::outlineColourId, ThemeColors::border_strong);
+  setColour(juce::TooltipWindow::backgroundColourId, getCol(design::colors::BG_04));
+  setColour(juce::TooltipWindow::textColourId, getCol(design::colors::TEXT_PRIMARY));
+  setColour(juce::TooltipWindow::outlineColourId, getCol(design::colors::BORDER_SUBTLE));
 
   // PopupMenu colors
-  setColour(juce::PopupMenu::backgroundColourId, ThemeColors::bg_03);
-  setColour(juce::PopupMenu::textColourId, ThemeColors::text_primary);
+  setColour(juce::PopupMenu::backgroundColourId, getCol(design::colors::BG_03));
+  setColour(juce::PopupMenu::textColourId, getCol(design::colors::TEXT_PRIMARY));
   setColour(juce::PopupMenu::highlightedBackgroundColourId,
-            ThemeColors::accent_subtle);
-  setColour(juce::PopupMenu::highlightedTextColourId, ThemeColors::accent_primary);
+            getCol(design::colors::ACCENT_PRIMARY).withAlpha(0.2f));
+  setColour(juce::PopupMenu::highlightedTextColourId, getCol(design::colors::ACCENT_PRIMARY));
 }
 
 ZenithLookAndFeel &ZenithLookAndFeel::getInstance() {
@@ -112,10 +113,10 @@ void ZenithLookAndFeel::drawButtonBackground(
 
   if (isDown) {
     buttonColor =
-        button.getToggleState() ? ThemeColors::accent_pressed : ThemeColors::bg_04;
+        button.getToggleState() ? ThemeColors::accent_secondary : ThemeColors::bg_04;
   } else if (isHighlighted) {
     buttonColor =
-        button.getToggleState() ? ThemeColors::accent_hover : ThemeColors::bg_04;
+        button.getToggleState() ? ThemeColors::accent_primary.brighter(0.1f) : ThemeColors::bg_04;
   }
 
   // Draw shadow for elevation (skip if pressed)
@@ -143,12 +144,12 @@ void ZenithLookAndFeel::drawButtonText(juce::Graphics &g,
                                        juce::TextButton &button,
                                        bool isHighlighted, bool isDown) {
 
-  auto font = Typography::getBodyFont(Typography::Weight::Medium);
+  juce::Font font = design::typography::getJuceFont(14.0f, design::FontWeight::Medium);
   g.setFont(font);
 
   // Text color based on button state
   juce::Colour textColor =
-      button.getToggleState() ? ThemeColors::text_inverse : ThemeColors::text_primary;
+      button.getToggleState() ? ThemeColors::bg_01 : ThemeColors::text_primary;
 
   if (!button.isEnabled()) {
     textColor = ThemeColors::text_tertiary;

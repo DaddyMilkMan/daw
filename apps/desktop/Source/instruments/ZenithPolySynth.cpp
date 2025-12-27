@@ -14,7 +14,7 @@
 */
 
 #include "ZenithPolySynth.h"
-#include "ZenithPolySynthUI.h"
+#include "../ui/instruments/ZenithPolySynthUI.h"
 #include "ContentPaths.h"
 #include "ZenithPolySynthVoice.h"
 #include <juce_core/juce_core.h>
@@ -180,7 +180,10 @@ ZenithPolySynthProcessor::ZenithPolySynthProcessor()
     // Bug 21: addVoice takes ownership of the voice object
     synthesiser_.addVoice(new ZenithPolySynthVoice());
   }
-  // MPESynthesiser doesn't use sounds like regular Synthesiser
+  // Enable MPE (disable legacy mode)
+  synthesiser_.enableLegacyMode(false);
+  // Default zone layout (all channels)
+  synthesiser_.setZoneLayout(juce::MPEZoneLayout());
 }
 
 ZenithPolySynthProcessor::~ZenithPolySynthProcessor() {}

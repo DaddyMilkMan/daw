@@ -17,14 +17,11 @@
 #include "../../instruments/ZenithPolySynth.h"
 #include "../../instruments/ZenithPresetManager.h"
 #include "../../rendering/SkiaRenderer.h"
+#include "../controls/ZenithUIComponents.h"
 #include "RenderTree.h"
 #include "SkiaMainWindowIntegration.h"
 #include "ZenithLookAndFeel.h"
-#include "ZenithUIComponents.h"
 #include <JuceHeader.h>
-#include <juce_gui_basics/juce_gui_basics.h>
-#include <memory>
-#include <vector>
 
 namespace zenith {
 
@@ -45,6 +42,12 @@ public:
   // Component overrides
   void paint(juce::Graphics &g) override;
   void resized() override;
+
+  // Mouse handling for SkiaWidgets
+  void mouseDown(const juce::MouseEvent &e) override;
+  void mouseDrag(const juce::MouseEvent &e) override;
+  void mouseUp(const juce::MouseEvent &e) override;
+  void mouseMove(const juce::MouseEvent &e) override;
 
   // Settings Listener
   void changeListenerCallback(juce::ChangeBroadcaster *) override;
@@ -92,17 +95,7 @@ private:
 
   // Widget Helpers
   template <typename T>
-  T *addWidget(const juce::String &name, const juce::String &paramId) {
-    auto widget = std::make_unique<T>(name);
-    auto *param = processor.getParameters().getParameter(paramId);
-    if (auto *rangedParam = dynamic_cast<juce::RangedAudioParameter *>(param)) {
-      widget->setParameter(rangedParam);
-    }
-    T *ptr = widget.get();
-    addAndMakeVisible(*widget);
-    widgets_.push_back(std::move(widget));
-    return ptr;
-  }
+  T *addWidget(const juce::String &name, const juce::String &paramId);
 
   void layoutWidgets();
   void toggleAdvancedMode();

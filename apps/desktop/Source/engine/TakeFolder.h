@@ -169,7 +169,11 @@ public:
   /**
    * @brief Get all comp regions (for UI display).
    */
-  const std::vector<CompRegion> &getCompRegions() const { return compRegions_; }
+  const std::vector<CompRegion>& getCompRegions() const {
+    if (currentCompSnapshot_) return currentCompSnapshot_->regions;
+    static const std::vector<CompRegion> empty;
+    return empty;
+  }
 
   /**
    * @brief Find which take index should play at a given position.
@@ -207,7 +211,7 @@ public:
    * @param sampleRate Sample rate for the rendered clip.
    * @return New clip containing the flattened audio.
    */
-  std::unique_ptr<Clip> flatten(double sampleRate);
+  std::unique_ptr<Clip> flatten(double sampleRate, const juce::File& outputDirectory);
 
   //==========================================================================
   // Expansion State (for UI)
@@ -233,17 +237,37 @@ private:
   std::vector<std::shared_ptr<Clip>> takes_;
   std::atomic<int> activeTakeIndex_{-1}; ///< -1 = comp mode
 
-  std::vector<CompRegion> compRegions_;
-  mutable juce::SpinLock compRegionLock_; ///< For region list access
-
   std::atomic<bool> expanded_{true};
   juce::Colour color_{juce::Colours::orange};
+
+  // RCU Snapshot for comp regions
+  struct CompSnapshot {
+    std::vector<CompRegion> regions;
+  };
+
+  std::atomic<const CompSnapshot*> activeCompSnapshot_{nullptr};
+  std::shared_ptr<CompSnapshot> currentCompSnapshot_;
+
+  // RCU Snapshot for takes (RT-safe access to clips)
+  struct TakesSnapshot {
+    std::vector<Clip*> takes;  // Raw pointers for RT access
+  };
+  std::atomic<const TakesSnapshot*> activeTakesSnapshot_{nullptr};
+  std::shared_ptr<TakesSnapshot> currentTakesSnapshot_;
+  std::atomic<uint64_t> takesSnapshotEpoch_{0};  // Grace period epoch
+
+  // Pre-allocated buffer for RT-safe rendering (sized for max expected block)
+  juce::AudioBuffer<float> regionBuffer_;
 
   // Helper: Recalculate length from takes
   void recalculateLength();
 
   // Helper: Normalize comp regions (merge overlaps, fill gaps)
   void normalizeCompRegions();
+
+  // Helper: Update RCU snapshots
+  void updateCompSnapshot();
+  void updateTakesSnapshot();
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TakeFolder)
 };

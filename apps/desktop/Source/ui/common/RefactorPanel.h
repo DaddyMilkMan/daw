@@ -92,7 +92,7 @@ public:
     // Summary
     if (plan_.isEmpty()) {
       textPaint.setColor(colors::NEON_GREEN);
-      canvas->drawSimpleText("V Project is clean - no refactoring needed!", 44,
+      canvas->drawSimpleText("[OK] Project is clean - no refactoring needed!", 46,
                              SkTextEncoding::kUTF8, 20.0f, y, bodyFont,
                              textPaint);
     } else {
@@ -309,7 +309,7 @@ public:
     animationPhase_ = 0.0f;
 
     // Start animation timer
-    startTimerHz(30);
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(30);
 
     // Run analysis
     agent_->analyze(

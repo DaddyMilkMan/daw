@@ -7,8 +7,7 @@
   ==============================================================================
 */
 
-#include "network/SecureKeyStore.h"
-#include "engine/ZenithLogger.h"
+#include "../../../network/SecureKeyStore.h"
 #include <juce_cryptography/juce_cryptography.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -26,7 +25,6 @@ namespace {
     // Helper to get the machine-specific key for encryption
     juce::String getMachineKey()
     {
-        // ZENITH_LOG_INFO("SecureKeyStore: getMachineKey called"); // Commented out to reduce noise if frequent
         // Try to read /etc/machine-id
         juce::File machineIdFile ("/etc/machine-id");
         if (machineIdFile.existsAsFile())
@@ -44,9 +42,7 @@ namespace {
     juce::File getKeystoreFile()
     {
         auto appDataDir = juce::File::getSpecialLocation (juce::File::userApplicationDataDirectory);
-        juce::File f = appDataDir.getChildFile ("ZenithDAW").getChildFile ("keystore.dat");
-        // ZENITH_LOG_INFO("SecureKeyStore: Keystore file: " + f.getFullPathName());
-        return f;
+        return appDataDir.getChildFile ("ZenithDAW").getChildFile ("keystore.dat");
     }
 
     // Encrypt/Decrypt helper
@@ -138,34 +134,31 @@ namespace {
     // Load entire keystore
     std::unique_ptr<juce::DynamicObject> loadKeystorePropSet()
     {
-        ZENITH_LOG_INFO("SecureKeyStore: loadKeystorePropSet start");
         auto file = getKeystoreFile();
-        if (!file.existsAsFile()) {
-            ZENITH_LOG_INFO("SecureKeyStore: File does not exist");
+        if (!file.existsAsFile())
             return std::make_unique<juce::DynamicObject>();
-        }
 
         juce::MemoryBlock encryptedData;
         file.loadFileAsData (encryptedData);
 
-        if (encryptedData.getSize() == 0) {
-             ZENITH_LOG_INFO("SecureKeyStore: File empty");
+        if (encryptedData.getSize() == 0)
              return std::make_unique<juce::DynamicObject>();
-        }
 
-        ZENITH_LOG_INFO("SecureKeyStore: Decrypting data...");
         auto decryptedData = performCrypto (encryptedData.getData(), encryptedData.getSize(), false);
-        ZENITH_LOG_INFO("SecureKeyStore: Decryption complete");
         
         // Try to read as var
         juce::MemoryInputStream input (decryptedData, false);
         auto v = juce::var::readFromStream (input);
 
         if (auto* obj = v.getDynamicObject())
-            return std::unique_ptr<juce::DynamicObject> (dynamic_cast<juce::DynamicObject*>(obj->clone().get())); // clone to ensure ownership
+        {
+            auto cloned = std::make_unique<juce::DynamicObject>();
+            for (const auto& prop : obj->getProperties())
+                cloned->setProperty(prop.name, prop.value);
+            return cloned;
+        }
             
         // If failed or not an object, return empty
-        ZENITH_LOG_INFO("SecureKeyStore: Failed to parse var");
         return std::make_unique<juce::DynamicObject>();
     }
 
@@ -175,7 +168,8 @@ namespace {
 
         // Serialize to binary
         juce::MemoryOutputStream mos;
-        juce::var (const_cast<juce::DynamicObject*> (props)).writeToStream (mos);
+        juce::var propsVar(props->clone().release());
+        propsVar.writeToStream (mos);
 
         auto encrypted = performCrypto (mos.getData(), mos.getDataSize(), true);
 
@@ -207,15 +201,12 @@ bool SecureKeyStore::storeKey(const juce::String& keyName, const juce::String& k
 
 bool SecureKeyStore::retrieveKey(const juce::String& keyName, juce::String& outKey)
 {
-    ZENITH_LOG_INFO("SecureKeyStore: retrieveKey called for " + keyName);
     auto props = loadKeystorePropSet();
     if (props->hasProperty (keyName))
     {
         outKey = props->getProperty (keyName).toString();
-        ZENITH_LOG_INFO("SecureKeyStore: Key found");
         return true;
     }
-    ZENITH_LOG_INFO("SecureKeyStore: Key NOT found");
     return false;
 }
 

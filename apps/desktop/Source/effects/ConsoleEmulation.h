@@ -38,7 +38,7 @@ public:
   void setMode(Mode newMode) {
     if (mode != newMode) {
       mode = newMode;
-      coefficientsDirty = true; // Mark for coefficient update
+      coefficientsDirty = true;
     }
   }
   void setDrive(float newDrive) { drive = juce::jlimit(0.0f, 1.0f, newDrive); }
@@ -48,21 +48,16 @@ public:
 
 private:
   Mode mode = Mode::Clean;
-  float drive = 0.0f;            // 0.0 to 1.0
-  float character = 0.0f;        // 0.0 to 1.0 (mix or intensity)
-  bool coefficientsDirty = true; // Track when coefficients need update
+  float drive = 0.0f;     // 0.0 to 1.0
+  float character = 0.0f; // 0.0 to 1.0 (mix or intensity)
 
   float sampleRate = 44100.0f;
+  bool coefficientsDirty = true;
 
-  // Lowpass filter for tonal shaping (Vintage mode roll-off)
-  using FilterType = juce::dsp::IIR::Filter<float>;
-  FilterType lowPass;
+  // Filters for tonal shaping
+  juce::dsp::IIR::Filter<float> lowPass;
 
-  // Pre-calculated coefficients to avoid RT allocation
-  juce::dsp::IIR::Coefficients<float>::Ptr vintageCoeffs;
-  juce::dsp::IIR::Coefficients<float>::Ptr modernCoeffs;
-
-  void updateFilterCoefficients();
+  void updateCoefficients();
   float applySaturation(float input, float driveAmount);
 };
 

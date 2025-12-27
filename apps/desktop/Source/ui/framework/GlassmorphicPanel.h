@@ -24,8 +24,11 @@
 #include "BackdropBlur.h"
 #include "ZenithDesignSystem.h"
 #include <core/SkBitmap.h>
-#include "ZenithSkia.h"
+#include <core/SkBlurTypes.h>
+#include <core/SkCanvas.h>
 #include <core/SkMaskFilter.h>
+#include <core/SkPaint.h>
+#include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
 #include <random>
 
@@ -280,16 +283,16 @@ private:
 
     switch (style) {
     case Style::Subtle:
-      blurAmount = glow::SHADOW_OFFSET_SM;
+      blurAmount = design::effects::SHADOW_OFFSET_SM;
       offset = 1.0f;
       break;
     case Style::Elevated:
-      blurAmount = glow::SHADOW_OFFSET_MD;
+      blurAmount = design::effects::SHADOW_OFFSET_MD;
       offset = 2.0f;
       break;
     case Style::Floating:
     case Style::ActiveGlow:
-      blurAmount = glow::SHADOW_OFFSET_LG;
+      blurAmount = design::effects::SHADOW_OFFSET_LG;
       offset = 4.0f;
       break;
     default:
@@ -298,7 +301,7 @@ private:
 
     if (blurAmount > 0) {
       shadowPaint.setMaskFilter(
-          SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, blurAmount));
+          SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle, blurAmount));
       SkRRect shadowRRect = rrect;
       shadowRRect.offset(0, offset);
       canvas->drawRRect(shadowRRect, shadowPaint);
@@ -486,7 +489,8 @@ private:
     if (opts.style == Style::ActiveGlow && opts.accentColor != 0x00000000) {
       borderPaint.setColor(withAlpha(opts.accentColor, 0.6f));
     } else {
-      // PREMIUM: Linear gradient border (Top-Left Highlight to Bottom-Right Subtle)
+      // PREMIUM: Linear gradient border (Top-Left Highlight to Bottom-Right
+      // Subtle)
       SkPoint pts[2] = {{bounds.left(), bounds.top()},
                         {bounds.right(), bounds.bottom()}};
       SkColor colors[2] = {
@@ -512,8 +516,9 @@ private:
     glowPaint.setStyle(SkPaint::kStroke_Style);
     glowPaint.setStrokeWidth(2.0f);
     glowPaint.setColor(withAlpha(accentColor, 0.4f * globalGlow));
-    glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(
-        SkBlurStyle::kNormal, glow::GLOW_MEDIUM * globalGlow));
+    glowPaint.setMaskFilter(
+        SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle,
+                               design::effects::GLOW_MEDIUM * globalGlow));
 
     canvas->drawRRect(rrect, glowPaint);
   }

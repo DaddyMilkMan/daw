@@ -1021,24 +1021,26 @@ void PresetGeneticistAgent::updateStats() {
       if (individual.fitness > best) {
         best = individual.fitness;
         bestName = individual.preset.name;
-        
+
         // Update visualization spectrum (Proof of Concept)
-        // In a real implementation we might want to store this in the Individual
-        // but for now we'll re-render once or use a cached version if we had one.
-        // For simplicity, let's just trigger a re-render of THIS specific individual to get its spectrum
+        // In a real implementation we might want to store this in the
+        // Individual but for now we'll re-render once or use a cached version
+        // if we had one. For simplicity, let's just trigger a re-render of THIS
+        // specific individual to get its spectrum
         juce::AudioBuffer<float> bestBuffer = renderPreset(individual.preset);
-        
+
         const int fftSize = 1024;
         std::vector<float> fftData(static_cast<size_t>(fftSize * 2), 0.0f);
-        const float* data = bestBuffer.getReadPointer(0);
+        const float *data = bestBuffer.getReadPointer(0);
         for (int i = 0; i < fftSize && i < bestBuffer.getNumSamples(); ++i)
-            fftData[static_cast<size_t>(i)] = data[i];
-            
+          fftData[static_cast<size_t>(i)] = data[i];
+
         fft_.performFrequencyOnlyForwardTransform(fftData.data());
-        
+
         currentBestSpectrum_.clear();
         for (int i = 0; i < fftSize / 2; ++i)
-            currentBestSpectrum_.push_back(std::abs(fftData[static_cast<size_t>(i)]));
+          currentBestSpectrum_.push_back(
+              std::abs(fftData[static_cast<size_t>(i)]));
       }
       if (individual.fitness < worst) {
         worst = individual.fitness;
@@ -1082,14 +1084,16 @@ void PresetGeneticistAgent::setTargetAudio(const juce::File &file) {
   juce::AudioFormatManager manager;
   manager.registerBasicFormats();
 
-  std::unique_ptr<juce::AudioFormatReader> reader(manager.createReaderFor(file));
+  std::unique_ptr<juce::AudioFormatReader> reader(
+      manager.createReaderFor(file));
   if (reader == nullptr)
     return;
 
   // Read a representative section (middle 1 second)
-  juce::int64 startSample = reader->lengthInSamples / 2;
-  juce::int64 numSamples = std::min(reader->lengthInSamples - startSample,
-                                   (juce::int64)reader->sampleRate);
+  int64_t startSample = reader->lengthInSamples / 2;
+  int64_t numSamples =
+      std::min(static_cast<juce::int64>(reader->lengthInSamples - startSample),
+               static_cast<juce::int64>(reader->sampleRate));
 
   juce::AudioBuffer<float> tempBuffer(static_cast<int>(reader->numChannels),
                                       static_cast<int>(numSamples));
@@ -1107,7 +1111,8 @@ void PresetGeneticistAgent::setTargetAudio(const juce::File &file) {
       tempBuffer.addFrom(0, 0, tempBuffer, ch, 0, tempBuffer.getNumSamples());
     }
     tempBuffer.applyGain(0, 0, tempBuffer.getNumSamples(),
-                         1.0f / static_cast<float>(tempBuffer.getNumChannels()));
+                         1.0f /
+                             static_cast<float>(tempBuffer.getNumChannels()));
   }
 
   const float *data = tempBuffer.getReadPointer(0);
@@ -1119,8 +1124,8 @@ void PresetGeneticistAgent::setTargetAudio(const juce::File &file) {
   for (int i = 0; i < fftSize; ++i) {
     float window =
         0.5f * (1.0f - std::cos(2.0f * juce::MathConstants<float>::pi *
-                                 static_cast<float>(i) /
-                                 static_cast<float>(fftSize - 1)));
+                                static_cast<float>(i) /
+                                static_cast<float>(fftSize - 1)));
     fftData[static_cast<size_t>(i)] *= window;
   }
 

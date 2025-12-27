@@ -38,6 +38,11 @@
 
 namespace zenith {
 
+// Forward declarations
+namespace dsp {
+    class SpectralProcessor;
+}
+
 //==============================================================================
 // Marker/Region for sample editor
 //==============================================================================
@@ -178,13 +183,17 @@ public:
     void setRecordInputChannel(int channel) { recordInputChannel_ = channel; }
     
     //==============================================================================
-    // UNDO/REDO (Critical Feature)
-    void undo();
-    void redo();
-    bool canUndo() const { return !undoStack_.empty(); }
-    bool canRedo() const { return !redoStack_.empty(); }
-    void pushUndoState(const juce::String& description);
+    // UNDO/REDO (Integrated with Global UndoManager)
+    void undo() { projectState_.undo(); }
+    void redo() { projectState_.redo(); }
+    bool canUndo() const { return projectState_.canUndo(); }
+    bool canRedo() const { return projectState_.canRedo(); }
     
+    // Internal use for UndoableAction
+    void setEditBuffer(const juce::AudioBuffer<float>& newBuffer);
+    const juce::AudioBuffer<float>* getEditBuffer() const { return editBuffer_.get(); }
+    const juce::AudioBuffer<float>* getSourceBuffer() const { return audioHandle_ ? &audioHandle_->buffer : nullptr; }
+
     //==============================================================================
     // SAVE/EXPORT (Critical Feature)
     void saveToFile();
@@ -230,7 +239,7 @@ public:
     // NOISE REDUCTION (Spectral Subtraction)
     void captureNoiseProfile();  // Capture noise from selection
     void applyNoiseReduction(float strength = 1.0f);
-    bool hasNoiseProfile() const { return noiseProfile_ != nullptr; }
+    bool hasNoiseProfile() const;
     
     //==============================================================================
     // EQ TOOL (Edison-style inline EQ)
@@ -288,6 +297,9 @@ public:
     void removeRegion(const juce::String& regionId);
     void clearRegions();
     const std::vector<SampleRegion>& getRegions() const { return regions_; }
+    
+    // Internal undo support
+    void pushUndoState(const juce::String& transactionName);
     
     //==============================================================================
     // Snap settings
@@ -374,6 +386,7 @@ private:
     void drawPlayhead(SkCanvas* canvas, const SkRect& bounds);
     void drawMarkers(SkCanvas* canvas, const SkRect& bounds);
     void drawRegions(SkCanvas* canvas, const SkRect& bounds);
+    void drawWarpMarkers(SkCanvas* canvas, const SkRect& bounds);
     void drawScrollbar(SkCanvas* canvas, const SkRect& bounds);
     void drawBackground(SkCanvas* canvas, float w, float h, float radius);
     void drawEmptyState(SkCanvas* canvas, float w, float h);
@@ -416,22 +429,8 @@ private:
     std::unique_ptr<juce::AudioBuffer<float>> recordBuffer_;
     std::atomic<int> recordWritePos_{0};
 
-    // Thread-safe FIFO for incoming audio
-
-    
-    // Thread-safe recording
     std::unique_ptr<juce::AbstractFifo> incomingFifo_;
     juce::AudioBuffer<float> incomingBuffer_;
-    
-    //==============================================================================
-    // Undo/Redo
-    struct UndoState {
-        juce::String description;
-        std::unique_ptr<juce::AudioBuffer<float>> buffer;
-    };
-    std::vector<UndoState> undoStack_;
-    std::vector<UndoState> redoStack_;
-    static constexpr int maxUndoLevels_ = 20;
     
     //==============================================================================
     // Warp Markers
@@ -445,15 +444,17 @@ private:
     
     //==============================================================================
     // Noise Reduction
-    std::unique_ptr<std::vector<float>> noiseProfile_;
+    std::unique_ptr<dsp::SpectralProcessor> spectralProcessor_;
     
     //==============================================================================
     // Pencil tool state
     bool pencilToolEnabled_ = false;
     
     //==============================================================================
-    // FFT for spectral processing (placeholder - would use FFTW or similar)
-    static constexpr int fftSize_ = 2048;
+    // Frequency selection for spectrogram editing
+    float frequencySelectionLow_ = 0.0f;
+    float frequencySelectionHigh_ = 0.0f;
+    bool hasFrequencySelection_ = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SampleEditorComponent)
 };

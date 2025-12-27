@@ -1,19 +1,26 @@
+/*
+  ==============================================================================
+
+    PluginChain.cpp
+    Created: 2025
+    Author:  Zenith DAW
+
+  ==============================================================================
+*/
+
 #include "PluginChain.h"
 #include "RealTimeGarbageCollector.h"
+#include <algorithm>
 
 namespace zenith {
 
 PluginChain::PluginChain() {
   currentSnapshot_ = std::make_shared<PluginSnapshot>();
-  activeSnapshot_.store(currentSnapshot_.get(), std::memory_order_release);
+  activeSnapshot_.store(currentSnapshot_.get());
 }
 
 PluginChain::~PluginChain() {
-  pluginsOwned_.clear();
-  // No need to clear activeSnapshot_ atomic, but we should ensure currentSnapshot_ is released
-  // safely if other threads are accessing it? 
-  // Destructor should only run when no other threads are accessing this object.
-  activeSnapshot_.store(nullptr);
+  clearPlugins();
 }
 
 void PluginChain::addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin,
@@ -34,6 +41,14 @@ void PluginChain::addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin,
 
 void PluginChain::removePlugin(int index) {
   if (index >= 0 && index < (int)pluginsOwned_.size()) {
+    auto* pluginPtr = pluginsOwned_[index].get();
+
+    // Remove bindings for this plugin
+    bindingsOwned_.erase(
+        std::remove_if(bindingsOwned_.begin(), bindingsOwned_.end(),
+            [pluginPtr](const auto& b) { return b->getPlugin() == pluginPtr; }),
+        bindingsOwned_.end());
+
     pluginsOwned_[index]->releaseResources();
     pluginsOwned_.erase(pluginsOwned_.begin() + index);
     updateSnapshot();
@@ -41,6 +56,7 @@ void PluginChain::removePlugin(int index) {
 }
 
 void PluginChain::clearPlugins() {
+  bindingsOwned_.clear();
   for (auto &p : pluginsOwned_)
     p->releaseResources();
   pluginsOwned_.clear();
@@ -56,14 +72,61 @@ juce::AudioPluginInstance *PluginChain::getPlugin(int index) const {
 }
 
 void PluginChain::process(juce::AudioBuffer<float> &buffer,
-                          juce::MidiBuffer &midi) {
-  auto *snapshot = activeSnapshot_.load(std::memory_order_acquire);
+                          juce::MidiBuffer &midi,
+                          const juce::AudioBuffer<float> *sidechain) {
+  const PluginSnapshot *snapshot =
+      activeSnapshot_.load(std::memory_order_acquire);
   if (!snapshot)
     return;
 
+  const int numSamples = buffer.getNumSamples();
+  const int numMainChannels = buffer.getNumChannels();
+
+  // Process parameter automation
+  for (const auto& binding : snapshot->bindings) {
+    if (binding) binding->applyAutomation(numSamples);
+  }
+
   for (const auto &plugin : snapshot->plugins) {
     if (plugin && !plugin->isSuspended()) {
-      plugin->processBlock(buffer, midi);
+      // Check if plugin has sidechain inputs and sidechain data is available
+      const int numTotalInputChannels = plugin->getTotalNumInputChannels();
+      
+      // If the plugin has more inputs than our main bus, assume the rest are sidechain/aux
+      if (sidechain != nullptr && numTotalInputChannels > numMainChannels) {
+        // Ensure proxy buffer is big enough
+        if (sidechainProxyBuffer_.getNumChannels() < numTotalInputChannels || 
+            sidechainProxyBuffer_.getNumSamples() < numSamples) {
+            sidechainProxyBuffer_.setSize(numTotalInputChannels, numSamples, false, true, true);
+        }
+
+        // Copy main channels
+        for (int i = 0; i < numMainChannels; ++i)
+          sidechainProxyBuffer_.copyFrom(i, 0, buffer, i, 0, numSamples);
+          
+        // Silence any gaps between main channels and sidechain start if any?
+        // Assuming sidechain inputs start immediately after main inputs.
+        
+        // Copy sidechain channels
+        const int numSidechainChansToCopy = juce::jmin(sidechain->getNumChannels(),
+                                                       numTotalInputChannels - numMainChannels);
+        
+        for (int i = 0; i < numSidechainChansToCopy; ++i)
+          sidechainProxyBuffer_.copyFrom(numMainChannels + i, 0, *sidechain, i, 0,
+                                     numSamples);
+                                     
+        // Clear any remaining unconnected channels
+        for (int i = numMainChannels + numSidechainChansToCopy; i < numTotalInputChannels; ++i)
+           sidechainProxyBuffer_.clear(i, 0, numSamples);
+
+        plugin->processBlock(sidechainProxyBuffer_, midi);
+
+        // Copy back main channels
+        for (int i = 0; i < numMainChannels; ++i)
+          buffer.copyFrom(i, 0, sidechainProxyBuffer_, i, 0, numSamples);
+      } else {
+        plugin->processBlock(buffer, midi);
+      }
     }
   }
 }
@@ -72,10 +135,20 @@ void PluginChain::prepareToPlay(double sampleRate, int blockSize) {
   currentSampleRate_ = sampleRate;
   currentBlockSize_ = blockSize;
 
+  // Initial maxChannels based on current configuration if known, or start small and grow
+  int maxChannels = 2; // Default minimum
   for (auto &p : pluginsOwned_) {
     p->prepareToPlay(sampleRate, blockSize);
     p->setNonRealtime(false);
+    maxChannels = juce::jmax(maxChannels, p->getTotalNumInputChannels(), p->getTotalNumOutputChannels());
   }
+  
+  // Prepare bindings
+  for (auto& b : bindingsOwned_) {
+      b->prepare(sampleRate);
+  }
+
+  sidechainProxyBuffer_.setSize(maxChannels, blockSize, false, true, true);
 }
 
 void PluginChain::releaseResources() {
@@ -84,17 +157,115 @@ void PluginChain::releaseResources() {
 }
 
 void PluginChain::updateSnapshot() {
-  auto newSnapshot = std::make_shared<PluginSnapshot>(pluginsOwned_);
-  
-  // Update atomic pointer
+  auto newSnapshot = std::make_shared<PluginSnapshot>(pluginsOwned_, bindingsOwned_);
   activeSnapshot_.store(newSnapshot.get(), std::memory_order_release);
   
-  // Defer deletion of old snapshot
-  if (currentSnapshot_) {
-    RealTimeGarbageCollector::getInstance().push(currentSnapshot_);
-  }
-  
+  RealTimeGarbageCollector::getInstance().deferDelete(currentSnapshot_);
   currentSnapshot_ = newSnapshot;
+}
+
+std::shared_ptr<PluginAutomationBinding> PluginChain::findBinding(int pluginIndex, int paramIndex) {
+    auto* plugin = getPlugin(pluginIndex);
+    if (!plugin) return nullptr;
+    
+    for (const auto& b : bindingsOwned_) {
+        if (b->getPlugin() == plugin && b->getParameterIndex() == paramIndex)
+            return b;
+    }
+    return nullptr;
+}
+
+//==============================================================================
+// Plugin Parameter Automation Support
+//==============================================================================
+
+int PluginChain::getNumParameters(int pluginIndex) const {
+  if (auto* plugin = getPlugin(pluginIndex)) {
+    return static_cast<int>(plugin->getParameters().size());
+  }
+  return 0;
+}
+
+juce::AudioProcessorParameter* PluginChain::getParameter(int pluginIndex,
+                                                          int paramIndex) const {
+  if (auto* plugin = getPlugin(pluginIndex)) {
+    auto& params = plugin->getParameters();
+    if (paramIndex >= 0 && paramIndex < static_cast<int>(params.size())) {
+      return params[paramIndex];
+    }
+  }
+  return nullptr;
+}
+
+juce::String PluginChain::getParameterName(int pluginIndex, int paramIndex) const {
+  if (auto* param = getParameter(pluginIndex, paramIndex)) {
+    return param->getName(64);
+  }
+  return {};
+}
+
+void PluginChain::setParameterValue(int pluginIndex, int paramIndex,
+                                     float normalizedValue) {
+    auto binding = findBinding(pluginIndex, paramIndex);
+    if (binding) {
+        binding->setTargetValue(normalizedValue);
+    } else {
+        auto* plugin = getPlugin(pluginIndex);
+        if (plugin) {
+            auto newBinding = std::make_shared<PluginAutomationBinding>(plugin, paramIndex);
+            newBinding->prepare(currentSampleRate_ > 0 ? currentSampleRate_ : 44100.0);
+            newBinding->setTargetValue(normalizedValue);
+            bindingsOwned_.push_back(newBinding);
+            updateSnapshot();
+        }
+    }
+}
+
+std::vector<PluginChain::ParameterInfo>
+PluginChain::getAutomatableParameters(int pluginIndex) const {
+  std::vector<ParameterInfo> result;
+
+  if (auto* plugin = getPlugin(pluginIndex)) {
+    auto& params = plugin->getParameters();
+    result.reserve(params.size());
+
+    for (int i = 0; i < static_cast<int>(params.size()); ++i) {
+      auto* param = params[i];
+      if (param == nullptr)
+        continue;
+
+      if (param->isMetaParameter())
+        continue;
+
+      ParameterInfo info;
+      info.pluginIndex = pluginIndex;
+      info.paramIndex = i;
+      info.name = param->getName(64);
+      info.label = param->getLabel();
+      info.defaultValue = param->getDefaultValue();
+
+      // Without RTTI (-fno-rtti), we cannot use dynamic_cast.
+      // Assume normalized 0-1 range for all parameters.
+      info.minValue = 0.0f;
+      info.maxValue = 1.0f;
+
+      result.push_back(info);
+    }
+  }
+
+  return result;
+}
+
+std::vector<PluginChain::ParameterInfo>
+PluginChain::getAllAutomatableParameters() const {
+  std::vector<ParameterInfo> result;
+
+  for (int pluginIdx = 0; pluginIdx < getNumPlugins(); ++pluginIdx) {
+    auto pluginParams = getAutomatableParameters(pluginIdx);
+    result.insert(result.end(), pluginParams.begin(), pluginParams.end());
+  }
+
+  return result;
 }
 
 } // namespace zenith

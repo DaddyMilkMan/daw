@@ -7,6 +7,7 @@
 #include "Engine.h"
 #include "../engine/Track.h"
 #include "../engine/PluginHost.h"
+#include "../design-system/ZenithTheme.h"
 
 using namespace zenith;
 
@@ -32,7 +33,7 @@ PluginBrowserComponent::PluginBrowserComponent(Engine& eng)
 
     searchBox.setMultiLine(false);
     searchBox.setReturnKeyStartsNewLine(false);
-    searchBox.setTextToShowWhenEmpty("Type to filter plugins...", juce::Colours::grey);
+    searchBox.setTextToShowWhenEmpty("Type to filter plugins...", ZenithTheme::Colors::text_secondary);
     searchBox.addListener(this);
     addAndMakeVisible(searchBox);
 
@@ -62,8 +63,9 @@ PluginBrowserComponent::PluginBrowserComponent(Engine& eng)
 
     // Plugin table
     pluginTable.setModel(this);
-    pluginTable.setColour(juce::ListBox::backgroundColourId, juce::Colour(0xff2e2e2e));
-    pluginTable.setColour(juce::ListBox::outlineColourId, juce::Colour(0xff555555));
+    pluginTable.setModel(this);
+    pluginTable.setColour(juce::ListBox::backgroundColourId, ZenithTheme::Colors::bg_02);
+    pluginTable.setColour(juce::ListBox::outlineColourId, ZenithTheme::Colors::border_default);
     pluginTable.setOutlineThickness(1);
     pluginTable.setMultipleSelectionEnabled(false);
 
@@ -83,7 +85,8 @@ PluginBrowserComponent::PluginBrowserComponent(Engine& eng)
     // Status label
     statusLabel.setText("No target track selected", juce::dontSendNotification);
     statusLabel.setJustificationType(juce::Justification::centredLeft);
-    statusLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
+    statusLabel.setJustificationType(juce::Justification::centredLeft);
+    statusLabel.setColour(juce::Label::textColourId, ZenithTheme::Colors::text_secondary);
     addAndMakeVisible(statusLabel);
 
     // Populate track selector
@@ -97,7 +100,7 @@ PluginBrowserComponent::~PluginBrowserComponent()
 
 void PluginBrowserComponent::paint(juce::Graphics& g)
 {
-    g.fillAll(juce::Colour(0xff1e1e1e));  // Dark grey background
+    g.fillAll(ZenithTheme::Colors::bg_00);  // Dark grey background
 }
 
 void PluginBrowserComponent::resized()
@@ -212,16 +215,16 @@ int PluginBrowserComponent::getNumRows()
 void PluginBrowserComponent::paintRowBackground(juce::Graphics& g, int rowNumber, int width, int height, bool rowIsSelected)
 {
     if (rowIsSelected)
-        g.fillAll(juce::Colour(0xff4a4a4a));
+        g.fillAll(ZenithTheme::Colors::accent_subtle); // Selected
     else if (rowNumber % 2 == 0)
-        g.fillAll(juce::Colour(0xff2a2a2a));
+        g.fillAll(ZenithTheme::Colors::bg_01);
     else
-        g.fillAll(juce::Colour(0xff2e2e2e));
+        g.fillAll(ZenithTheme::Colors::bg_02);
 }
 
 void PluginBrowserComponent::paintCell(juce::Graphics& g, int rowNumber, int columnId, int width, int height, bool rowIsSelected)
 {
-    g.setColour(rowIsSelected ? juce::Colours::white : juce::Colours::lightgrey);
+    g.setColour(rowIsSelected ? ZenithTheme::Colors::text_primary : ZenithTheme::Colors::text_secondary);
     g.setFont(14.0f);
 
     if (rowNumber >= 0 && rowNumber < filteredPlugins.size())

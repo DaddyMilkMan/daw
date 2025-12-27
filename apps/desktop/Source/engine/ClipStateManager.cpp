@@ -12,21 +12,15 @@
 
 #include "ClipStateManager.h"
 #include "ProjectState.h"
+#include "ZenithLogger.h"
 
 namespace zenith {
 
 //==============================================================================
-// Constructor
-//==============================================================================
-
 ClipStateManager::ClipStateManager(ProjectState& projectState)
     : projectState_(projectState)
 {
 }
-
-//==============================================================================
-// Clip Creation/Deletion
-//==============================================================================
 
 juce::String ClipStateManager::addClip(const juce::String& trackId,
                                         const juce::String& clipType,
@@ -34,8 +28,10 @@ juce::String ClipStateManager::addClip(const juce::String& trackId,
                                         int laneIndex)
 {
     auto clipsNode = getClipsContainer(trackId);
-    if (!clipsNode.isValid())
+    if (!clipsNode.isValid()) {
+        ZENITH_LOG_ERROR("ClipStateManager: Failed to add clip - Track not found: " + trackId);
         return {};
+    }
 
     juce::String clipId = generateClipId();
 
@@ -43,8 +39,8 @@ juce::String ClipStateManager::addClip(const juce::String& trackId,
     juce::ValueTree clip(ProjectState::ID_CLIP);
     clip.setProperty(ProjectState::PROP_ID, clipId, nullptr);
     clip.setProperty(ProjectState::PROP_TYPE, clipType, nullptr);
-    clip.setProperty(ProjectState::PROP_START, startBeats, nullptr);
-    clip.setProperty(ProjectState::PROP_LENGTH, lengthBeats, nullptr);
+    clip.setProperty(ProjectState::PROP_START_BEATS, startBeats, nullptr);
+    clip.setProperty(ProjectState::PROP_LENGTH_BEATS, lengthBeats, nullptr);
     clip.setProperty(ProjectState::PROP_MUTE, false, nullptr);
     clip.setProperty("lane", laneIndex, nullptr);
 
@@ -55,10 +51,10 @@ juce::String ClipStateManager::addClip(const juce::String& trackId,
         clip.addChild(notesNode, -1, nullptr);
     }
 
-    // Add with undo - PASS ADDRESS OF REFERENCED OBJECT
+    // Add with undo
     clipsNode.addChild(clip, -1, &projectState_.getUndoManager());
 
-    DBG("ClipStateManager: Added " + clipType + " clip (ID: " + clipId + 
+    ZENITH_LOG_INFO("ClipStateManager: Added " + clipType + " clip (ID: " + clipId + 
         ") at " + juce::String(startBeats) + " beats");
 
     return clipId;
@@ -70,10 +66,11 @@ juce::String ClipStateManager::createEmptyClip(const juce::String& trackId,
                                                 const juce::String& actionName)
 {
     auto clipsNode = getClipsContainer(trackId);
-    if (!clipsNode.isValid())
+    if (!clipsNode.isValid()) {
+         ZENITH_LOG_ERROR("ClipStateManager: Failed to create empty clip - Track not found: " + trackId);
         return {};
+    }
 
-    // FIX: Use dot operator for reference
     projectState_.getUndoManager().beginNewTransaction(actionName);
 
     juce::String clipId = generateClipId();
@@ -82,8 +79,8 @@ juce::String ClipStateManager::createEmptyClip(const juce::String& trackId,
     clip.setProperty(ProjectState::PROP_ID, clipId, nullptr);
     clip.setProperty(ProjectState::PROP_TYPE, isMidi ? "midi" : "audio", nullptr);
     clip.setProperty(ProjectState::PROP_NAME, name, nullptr);
-    clip.setProperty(ProjectState::PROP_START, startBeats, nullptr);
-    clip.setProperty(ProjectState::PROP_LENGTH, lengthBeats, nullptr);
+    clip.setProperty(ProjectState::PROP_START_BEATS, startBeats, nullptr);
+    clip.setProperty(ProjectState::PROP_LENGTH_BEATS, lengthBeats, nullptr);
     clip.setProperty(ProjectState::PROP_MUTE, false, nullptr);
 
     if (isMidi)
@@ -92,8 +89,9 @@ juce::String ClipStateManager::createEmptyClip(const juce::String& trackId,
         clip.addChild(notesNode, -1, nullptr);
     }
 
-    // FIX: Pass address
     clipsNode.addChild(clip, -1, &projectState_.getUndoManager());
+    
+    ZENITH_LOG_INFO("ClipStateManager: Created empty clip (ID: " + clipId + ")");
 
     return clipId;
 }
@@ -102,22 +100,24 @@ bool ClipStateManager::removeClip(const juce::String& trackId, const juce::Strin
                                    const juce::String& actionName)
 {
     auto clipsNode = getClipsContainer(trackId);
-    if (!clipsNode.isValid())
+    if (!clipsNode.isValid()) {
+        ZENITH_LOG_ERROR("ClipStateManager: Failed to remove clip - Track not found: " + trackId);
         return false;
+    }
 
     for (int i = 0; i < clipsNode.getNumChildren(); ++i)
     {
         auto clip = clipsNode.getChild(i);
         if (clip[ProjectState::PROP_ID].toString() == clipId)
         {
-            // FIX: Use dot operator
             projectState_.getUndoManager().beginNewTransaction(actionName);
-            // FIX: Pass address
             clipsNode.removeChild(i, &projectState_.getUndoManager());
-            DBG("ClipStateManager: Removed clip " + clipId);
+            ZENITH_LOG_INFO("ClipStateManager: Removed clip " + clipId);
             return true;
         }
     }
+    
+    ZENITH_LOG_WARNING("ClipStateManager: Failed to remove clip - Clip ID not found: " + clipId);
     return false;
 }
 
@@ -130,9 +130,7 @@ void ClipStateManager::deleteClip(const juce::String& clipId, const juce::String
     auto clipsNode = clipTree.getParent();
     if (clipsNode.isValid())
     {
-        // FIX: Use dot operator
         projectState_.getUndoManager().beginNewTransaction(actionName);
-        // FIX: Pass address
         clipsNode.removeChild(clipTree, &projectState_.getUndoManager());
     }
 }
@@ -198,10 +196,8 @@ bool ClipStateManager::moveClip(const juce::String& trackId, const juce::String&
     if (!clip.isValid())
         return false;
 
-    // FIX: Use dot operator
     projectState_.getUndoManager().beginNewTransaction(actionName);
-    // FIX: Pass address
-    clip.setProperty(ProjectState::PROP_START, newStartBeats, &projectState_.getUndoManager());
+    clip.setProperty(ProjectState::PROP_START_BEATS, newStartBeats, &projectState_.getUndoManager());
     return true;
 }
 
@@ -218,20 +214,17 @@ void ClipStateManager::moveClipToTrack(const juce::String& clipId,
     if (!newClipsNode.isValid())
         return;
 
-    // FIX: Use dot operator
     projectState_.getUndoManager().beginNewTransaction(actionName);
 
     // Copy the clip
     juce::ValueTree clipCopy = clip.createCopy();
-    clipCopy.setProperty(ProjectState::PROP_START, newStartBeats, nullptr);
+    clipCopy.setProperty(ProjectState::PROP_START_BEATS, newStartBeats, nullptr);
 
     // Remove from old location
     auto oldClipsNode = clip.getParent();
-    // FIX: Pass address
     oldClipsNode.removeChild(clip, &projectState_.getUndoManager());
 
     // Add to new location
-    // FIX: Pass address
     newClipsNode.addChild(clipCopy, -1, &projectState_.getUndoManager());
 }
 
@@ -242,10 +235,8 @@ bool ClipStateManager::resizeClip(const juce::String& trackId, const juce::Strin
     if (!clip.isValid())
         return false;
 
-    // FIX: Use dot operator
     projectState_.getUndoManager().beginNewTransaction(actionName);
-    // FIX: Pass address
-    clip.setProperty(ProjectState::PROP_LENGTH, newLengthBeats, &projectState_.getUndoManager());
+    clip.setProperty(ProjectState::PROP_LENGTH_BEATS, newLengthBeats, &projectState_.getUndoManager());
     return true;
 }
 
@@ -257,11 +248,9 @@ void ClipStateManager::setClipRange(const juce::String& clipId,
     if (!clip.isValid())
         return;
 
-    // FIX: Use dot operator
     projectState_.getUndoManager().beginNewTransaction(actionName);
-    // FIX: Pass address
-    clip.setProperty(ProjectState::PROP_START, newStartBeats, &projectState_.getUndoManager());
-    clip.setProperty(ProjectState::PROP_LENGTH, newLengthBeats, &projectState_.getUndoManager());
+    clip.setProperty(ProjectState::PROP_START_BEATS, newStartBeats, &projectState_.getUndoManager());
+    clip.setProperty(ProjectState::PROP_LENGTH_BEATS, newLengthBeats, &projectState_.getUndoManager());
 }
 
 bool ClipStateManager::setClipAudioFile(const juce::String& trackId, const juce::String& clipId,
@@ -271,9 +260,7 @@ bool ClipStateManager::setClipAudioFile(const juce::String& trackId, const juce:
     if (!clip.isValid())
         return false;
 
-    // FIX: Use dot operator
     projectState_.getUndoManager().beginNewTransaction(actionName);
-    // FIX: Pass address
     clip.setProperty(ProjectState::PROP_AUDIO_FILE, audioFile.getFullPathName(), 
                      &projectState_.getUndoManager());
     clip.setProperty(ProjectState::PROP_TYPE, "audio", &projectState_.getUndoManager());
@@ -292,15 +279,14 @@ std::pair<juce::String, juce::String> ClipStateManager::splitClip(
     if (!clip.isValid())
         return {{}, {}};
 
-    double startBeats = clip[ProjectState::PROP_START];
-    double lengthBeats = clip[ProjectState::PROP_LENGTH];
+    double startBeats = clip.getProperty(ProjectState::PROP_START_BEATS);
+    double lengthBeats = clip.getProperty(ProjectState::PROP_LENGTH_BEATS);
     double endBeats = startBeats + lengthBeats;
 
     // Validate split position
     if (splitBeats <= startBeats || splitBeats >= endBeats)
         return {{}, {}};
 
-    // FIX: Use dot operator
     projectState_.getUndoManager().beginNewTransaction(actionName);
 
     // Calculate new lengths
@@ -308,8 +294,7 @@ std::pair<juce::String, juce::String> ClipStateManager::splitClip(
     double rightLength = endBeats - splitBeats;
 
     // Resize original clip (becomes left part)
-    // FIX: Pass address
-    clip.setProperty(ProjectState::PROP_LENGTH, leftLength, &projectState_.getUndoManager());
+    clip.setProperty(ProjectState::PROP_LENGTH_BEATS, leftLength, &projectState_.getUndoManager());
 
     // Create right part
     juce::String clipType = clip[ProjectState::PROP_TYPE].toString();
@@ -345,7 +330,6 @@ juce::String ClipStateManager::duplicateClip(const juce::String& trackId, const 
     if (!clipsNode.isValid())
         return {};
 
-    // FIX: Use dot operator
     projectState_.getUndoManager().beginNewTransaction(actionName);
 
     // Deep copy
@@ -356,13 +340,12 @@ juce::String ClipStateManager::duplicateClip(const juce::String& trackId, const 
     copy.setProperty(ProjectState::PROP_ID, newId, nullptr);
 
     // Adjust position
-    double start = copy[ProjectState::PROP_START];
-    double length = copy[ProjectState::PROP_LENGTH];
+    double start = copy.getProperty(ProjectState::PROP_START_BEATS);
+    double length = copy.getProperty(ProjectState::PROP_LENGTH_BEATS);
     double newStart = (offsetBeats != 0.0) ? start + offsetBeats : start + length;
-    copy.setProperty(ProjectState::PROP_START, newStart, nullptr);
+    copy.setProperty(ProjectState::PROP_START_BEATS, newStart, nullptr);
 
     // Add copy
-    // FIX: Pass address
     clipsNode.addChild(copy, -1, &projectState_.getUndoManager());
 
     return newId;

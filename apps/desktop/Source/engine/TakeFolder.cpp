@@ -12,13 +12,24 @@
 
 #include "TakeFolder.h"
 #include <algorithm>
+#include "RealTimeGarbageCollector.h"
 
 namespace zenith {
 
 //==============================================================================
-TakeFolder::TakeFolder() { id_ = juce::Uuid().toString(); }
+TakeFolder::TakeFolder() {
+  id_ = juce::Uuid().toString();
+  // Pre-allocate buffer to max expected block size (8192 samples stereo)
+  // This prevents RT-unsafe allocations in getNextAudioBlock
+  regionBuffer_.setSize(2, 8192);
+  updateCompSnapshot();
+  updateTakesSnapshot();
+}
 
-TakeFolder::~TakeFolder() = default;
+TakeFolder::~TakeFolder() {
+  activeCompSnapshot_.store(nullptr);
+  activeTakesSnapshot_.store(nullptr);
+}
 
 //==============================================================================
 // Take Management
@@ -43,6 +54,9 @@ int TakeFolder::addTake(std::shared_ptr<Clip> clip) {
     recalculateLength();
   }
 
+  // Update takes snapshot for RT-safe access
+  updateTakesSnapshot();
+
   return index;
 }
 
@@ -53,15 +67,18 @@ void TakeFolder::removeTake(int index) {
   takes_.erase(takes_.begin() + index);
 
   // Adjust comp regions
-  juce::SpinLock::ScopedLockType lock(compRegionLock_);
-  for (auto &region : compRegions_) {
-    if (region.takeIndex == index) {
-      // Point to take 0 if the referenced take was removed
-      region.takeIndex = 0;
-    } else if (region.takeIndex > index) {
-      // Shift down indices above the removed one
-      region.takeIndex--;
+  if (currentCompSnapshot_) {
+    auto newRegions = currentCompSnapshot_->regions;
+    for (auto &region : newRegions) {
+      if (region.takeIndex == index) {
+        // Point to take 0 if the referenced take was removed
+        region.takeIndex = 0;
+      } else if (region.takeIndex > index) {
+        // Shift down indices above the removed one
+        region.takeIndex--;
+      }
     }
+    currentCompSnapshot_->regions = std::move(newRegions);
   }
 
   // If active take was removed, switch to comp mode
@@ -73,6 +90,9 @@ void TakeFolder::removeTake(int index) {
   }
 
   recalculateLength();
+  
+  // Update takes snapshot for RT-safe access
+  updateTakesSnapshot();
 }
 
 Clip *TakeFolder::getTake(int index) const {
@@ -98,13 +118,11 @@ void TakeFolder::setCompRegion(int64_t startSamples, int64_t lengthSamples,
   if (lengthSamples <= 0)
     return;
 
-  juce::SpinLock::ScopedLockType lock(compRegionLock_);
-
   // Find and remove/split any overlapping regions
   std::vector<CompRegion> newRegions;
   int64_t newEnd = startSamples + lengthSamples;
 
-  for (const auto &existing : compRegions_) {
+  for (const auto &existing : currentCompSnapshot_->regions) {
     int64_t existEnd = existing.getEndSamples();
 
     // No overlap - keep as is
@@ -145,14 +163,15 @@ void TakeFolder::setCompRegion(int64_t startSamples, int64_t lengthSamples,
               return a.startSamples < b.startSamples;
             });
 
-  compRegions_ = std::move(newRegions);
+  currentCompSnapshot_->regions = std::move(newRegions);
   normalizeCompRegions();
 }
 
 int TakeFolder::getTakeIndexAt(int64_t positionInFolder) const {
-  juce::SpinLock::ScopedLockType lock(compRegionLock_);
+  auto* snapshot = activeCompSnapshot_.load(std::memory_order_acquire);
+  if (!snapshot) return 0;
 
-  for (const auto &region : compRegions_) {
+  for (const auto &region : snapshot->regions) {
     if (positionInFolder >= region.startSamples &&
         positionInFolder < region.getEndSamples()) {
       return region.takeIndex;
@@ -164,30 +183,33 @@ int TakeFolder::getTakeIndexAt(int64_t positionInFolder) const {
 }
 
 void TakeFolder::clearCompRegions() {
-  juce::SpinLock::ScopedLockType lock(compRegionLock_);
-  compRegions_.clear();
+  if (!currentCompSnapshot_) {
+    currentCompSnapshot_ = std::make_shared<CompSnapshot>();
+  }
+  currentCompSnapshot_->regions.clear();
 
   // Create single region covering entire folder with take 0
   if (length_.load() > 0) {
-    compRegions_.emplace_back(0, length_.load(), 0);
+    currentCompSnapshot_->regions.emplace_back(0, length_.load(), 0);
   }
+  updateCompSnapshot();
 }
 
-const std::vector<CompRegion> &TakeFolder::getCompRegions() const {
-  // Caller should hold lock or be on message thread
-  return compRegions_;
-}
 
 //==============================================================================
-// Audio Rendering
+// Audio Rendering (RT-SAFE)
 //==============================================================================
 
 void TakeFolder::getNextAudioBlock(juce::AudioBuffer<float> &buffer,
                                    int64_t startSample, int numSamples,
                                    double sampleRate) {
+  // Note: sampleRate parameter reserved for future time-stretch support.
+  // Currently clips are assumed to match project sample rate.
   juce::ignoreUnused(sampleRate);
 
-  if (takes_.empty()) {
+  // Load RT-safe takes snapshot (acquired via RCU)
+  auto* takesSnap = activeTakesSnapshot_.load(std::memory_order_acquire);
+  if (!takesSnap || takesSnap->takes.empty()) {
     buffer.clear();
     return;
   }
@@ -203,9 +225,9 @@ void TakeFolder::getNextAudioBlock(juce::AudioBuffer<float> &buffer,
 
   // Are we auditioning a single take?
   int activeIdx = activeTakeIndex_.load();
-  if (activeIdx >= 0 && activeIdx < static_cast<int>(takes_.size())) {
+  if (activeIdx >= 0 && activeIdx < static_cast<int>(takesSnap->takes.size())) {
     // Audition mode: play single take
-    Clip *take = takes_[activeIdx].get();
+    Clip *take = takesSnap->takes[activeIdx];
     if (take) {
       take->getAudioSamples(buffer, startSample, numSamples);
     }
@@ -216,9 +238,12 @@ void TakeFolder::getNextAudioBlock(juce::AudioBuffer<float> &buffer,
   buffer.clear();
 
   // Process each region that overlaps with the requested range
-  juce::SpinLock::ScopedLockType lock(compRegionLock_);
+  auto* compSnap = activeCompSnapshot_.load(std::memory_order_acquire);
+  if (!compSnap) return;
 
-  for (const auto &region : compRegions_) {
+  const int numTakes = static_cast<int>(takesSnap->takes.size());
+
+  for (const auto &region : compSnap->regions) {
     int64_t regionStart = folderStart + region.startSamples;
     int64_t regionEnd = regionStart + region.lengthSamples;
 
@@ -232,19 +257,19 @@ void TakeFolder::getNextAudioBlock(juce::AudioBuffer<float> &buffer,
     int bufferOffset = static_cast<int>(overlapStart - startSample);
     int samplesToRender = static_cast<int>(overlapEnd - overlapStart);
 
-    // Get audio from the appropriate take
-    if (region.takeIndex >= 0 &&
-        region.takeIndex < static_cast<int>(takes_.size())) {
-      Clip *take = takes_[region.takeIndex].get();
+    // Get audio from the appropriate take (using snapshot)
+    if (region.takeIndex >= 0 && region.takeIndex < numTakes) {
+      Clip *take = takesSnap->takes[region.takeIndex];
       if (take) {
-        // Create sub-buffer for this region
-        juce::AudioBuffer<float> regionBuffer(buffer.getNumChannels(),
-                                              samplesToRender);
-        take->getAudioSamples(regionBuffer, overlapStart, samplesToRender);
+        // regionBuffer_ is pre-allocated to 8192 samples.
+        // Only copy what we need - no reallocation needed for typical block sizes.
+        jassert(samplesToRender <= regionBuffer_.getNumSamples());
+        
+        take->getAudioSamples(regionBuffer_, overlapStart, samplesToRender);
 
         // Copy to output buffer at correct offset
         for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
-          buffer.copyFrom(ch, bufferOffset, regionBuffer, ch, 0,
+          buffer.copyFrom(ch, bufferOffset, regionBuffer_, ch, 0,
                           samplesToRender);
         }
       }
@@ -256,50 +281,71 @@ void TakeFolder::getNextAudioBlock(juce::AudioBuffer<float> &buffer,
 // Flatten
 //==============================================================================
 
-std::unique_ptr<Clip> TakeFolder::flatten(double sampleRate) {
-
+std::unique_ptr<Clip> TakeFolder::flatten(double sampleRate, const juce::File& outputDirectory) {
   int64_t totalLength = length_.load();
   if (totalLength <= 0 || takes_.empty())
     return nullptr;
 
-  // Create buffer for entire folder length
-  juce::AudioBuffer<float> flattenedBuffer(2, static_cast<int>(totalLength));
-  flattenedBuffer.clear();
+  // 1. Prepare output file
+  outputDirectory.createDirectory();
+  juce::File outputFile = outputDirectory.getChildFile(name_ + "_flattened.wav")
+                                         .getNonexistentSibling();
+  
+  if (outputFile.exists()) outputFile.deleteFile(); // Should check above, but extra safety
 
-  // Render the entire comp
-  int64_t folderStart = startPosition_.load();
+  // 2. Setup format writer
+  juce::WavAudioFormat wavFormat;
+  std::unique_ptr<juce::FileOutputStream> fileStream(new juce::FileOutputStream(outputFile)); // Raw ptr for createWriterFor
 
-  // Process in chunks to avoid huge single allocations
-  constexpr int chunkSize = 65536;
-  int64_t position = folderStart;
-  int remaining = static_cast<int>(totalLength);
-
-  while (remaining > 0) {
-    int samplesToProcess = juce::jmin(remaining, chunkSize);
-    int bufferOffset = static_cast<int>(position - folderStart);
-
-    juce::AudioBuffer<float> chunkBuffer(2, samplesToProcess);
-    getNextAudioBlock(chunkBuffer, position, samplesToProcess, sampleRate);
-
-    // Copy chunk to flattened buffer
-    for (int ch = 0; ch < 2; ++ch) {
-      flattenedBuffer.copyFrom(ch, bufferOffset, chunkBuffer, ch, 0,
-                               samplesToProcess);
-    }
-
-    position += samplesToProcess;
-    remaining -= samplesToProcess;
+  if (fileStream->failedToOpen()) {
+    DBG("TakeFolder: Failed to open output file for flattening: " + outputFile.getFullPathName());
+    return nullptr;
   }
 
-  // Create new clip with flattened audio
+  // Writer takes ownership of stream
+  std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(
+      fileStream.release(), sampleRate, 2, 24, {}, 0));
+
+  if (!writer) {
+     DBG("TakeFolder: Failed to create WAV writer");
+     return nullptr;
+  }
+
+  // 3. Render and write in chunks
+  int64_t folderStart = startPosition_.load();
+  constexpr int chunkSize = 8192; // Manageable chunk size
+  int64_t position = 0; // Relative to folder start
+  int64_t remaining = totalLength;
+
+  juce::AudioBuffer<float> chunkBuffer(2, chunkSize);
+
+  while (remaining > 0) {
+    int samplesToProcess = static_cast<int>(juce::jmin((int64_t)chunkSize, remaining));
+    
+    // getNextAudioBlock expects absolute project time
+    getNextAudioBlock(chunkBuffer, folderStart + position, samplesToProcess, sampleRate);
+
+    if (writer->writeFromAudioSampleBuffer(chunkBuffer, 0, samplesToProcess)) {
+      position += samplesToProcess;
+      remaining -= samplesToProcess;
+    } else {
+      DBG("TakeFolder: Write failed");
+      return nullptr;
+    }
+  }
+
+  // Writer destructor finalizes file
+  writer.reset();
+
+  // 4. Create Clip referencing the new file
   auto flatClip = std::make_unique<Clip>();
   flatClip->setType(Clip::Type::Audio);
   flatClip->setName(name_ + " (Flattened)");
   flatClip->setStartPosition(folderStart);
   flatClip->setLength(totalLength);
-
-  // Set the audio buffer
-  flatClip->setAudioBuffer(flattenedBuffer);
+  
+  // Important: set the audio file so calls to prepareToPlay load it safely from pool
+  flatClip->setAudioFile(outputFile);
 
   return flatClip;
 }
@@ -320,14 +366,14 @@ void TakeFolder::recalculateLength() {
 
 void TakeFolder::normalizeCompRegions() {
   // This is called with lock held
-  if (compRegions_.empty())
+  if (!currentCompSnapshot_ || currentCompSnapshot_->regions.empty())
     return;
 
   // Merge adjacent regions with same take index
   std::vector<CompRegion> merged;
-  merged.reserve(compRegions_.size());
+  merged.reserve(currentCompSnapshot_->regions.size());
 
-  for (const auto &region : compRegions_) {
+  for (const auto &region : currentCompSnapshot_->regions) {
     if (merged.empty()) {
       merged.push_back(region);
       continue;
@@ -343,7 +389,45 @@ void TakeFolder::normalizeCompRegions() {
     }
   }
 
-  compRegions_ = std::move(merged);
+  currentCompSnapshot_->regions = std::move(merged);
+  updateCompSnapshot();
+}
+
+void TakeFolder::updateCompSnapshot() {
+  auto newSnapshot = std::make_shared<CompSnapshot>();
+  if (currentCompSnapshot_) {
+    newSnapshot->regions = currentCompSnapshot_->regions;
+  }
+  
+  activeCompSnapshot_.store(newSnapshot.get(), std::memory_order_release);
+  
+  // Move old snapshot to trash with current epoch
+  if (currentCompSnapshot_) {
+    RealTimeGarbageCollector::getInstance().deferDelete(currentCompSnapshot_);
+  }
+  currentCompSnapshot_ = newSnapshot;
+}
+
+void TakeFolder::updateTakesSnapshot() {
+  auto newSnapshot = std::make_shared<TakesSnapshot>();
+  
+  // Copy raw pointers from shared_ptr vector
+  newSnapshot->takes.reserve(takes_.size());
+  for (const auto& take : takes_) {
+    newSnapshot->takes.push_back(take.get());
+  }
+  
+  // Store atomically for RT access
+  activeTakesSnapshot_.store(newSnapshot.get(), std::memory_order_release);
+  
+  // Bump epoch to signal new generation
+  takesSnapshotEpoch_.fetch_add(1, std::memory_order_release);
+  
+  // Move old snapshot to trash
+  if (currentTakesSnapshot_) {
+    RealTimeGarbageCollector::getInstance().deferDelete(currentTakesSnapshot_);
+  }
+  currentTakesSnapshot_ = newSnapshot;
 }
 
 } // namespace zenith

@@ -13,8 +13,6 @@
 */
 
 #include "RoutingGraph.h"
-#include "AuxBus.h"
-#include "Track.h"
 #include "RealTimeGarbageCollector.h"
 
 namespace zenith {
@@ -100,104 +98,37 @@ void RoutingGraph::updateSnapshot() {
   // Update state
   currentTopology_ = nextTopology;
 
-  // Create new snapshot and store atomically
+  // Create new snapshot
   auto newSnapshot = std::make_shared<Snapshot>(nodes_, currentTopology_);
-  
-  // Update atomic raw pointer
+
+  // Atomic swap
   activeSnapshot_.store(newSnapshot.get(), std::memory_order_release);
-  
-  // Defer deletion of old snapshot
-  if (currentSnapshot_) {
-    RealTimeGarbageCollector::getInstance().push(currentSnapshot_);
-  }
-  
+  RealTimeGarbageCollector::getInstance().deferDelete(currentSnapshot_);
   currentSnapshot_ = newSnapshot;
 }
 
 void RoutingGraph::updateSnapshotWithPointers(
-    const std::vector<Track *> &tracks, const std::vector<AuxBus *> &auxBuses) {
+    const std::unordered_map<juce::String, std::shared_ptr<Track>> &trackMap,
+    const std::unordered_map<juce::String, std::shared_ptr<AuxBus>> &auxBusMap) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   const juce::ScopedLock sl(writeLock_);
 
   // 10/10 Optimization: Reuse the currentTopology_ (no re-sort, no copy of
   // connections)
   auto newSnapshot = std::make_shared<Snapshot>(nodes_, currentTopology_);
-
-  // Build lookups from vectors
-  for (auto *track : tracks) {
-    if (track)
-      newSnapshot->trackLookup[track->getTrackId()] = track;
+  
+  // Convert shared_ptr to weak_ptr for non-owning references
+  // This prevents potential reference cycles and ensures proper cleanup
+  for (const auto& [key, value] : trackMap) {
+    newSnapshot->trackLookup[key] = value;  // Implicit shared_ptr -> weak_ptr
   }
-
-  for (auto *bus : auxBuses) {
-    if (bus)
-      newSnapshot->auxBusLookup[bus->getId()] = bus;
-  }
-
-  // Build the flattened processing sequence for the audio thread
-  if (currentTopology_) {
-    newSnapshot->processingSequence.reserve(
-        currentTopology_->processingOrder.size());
-
-    for (const auto &nodeId : currentTopology_->processingOrder) {
-      Snapshot::ProcessorNode pNode;
-
-      // Try Track
-      auto trackIt = newSnapshot->trackLookup.find(nodeId);
-      if (trackIt != newSnapshot->trackLookup.end()) {
-        pNode.type = Snapshot::ProcessorType::Track;
-        pNode.track = trackIt->second;
-        // Find index in the provided vector for direct buffer access
-        // Note: tracks vector here comes from Engine::tracks_, which matches
-        // AudioRenderer::trackBuffers_
-        pNode.trackIndex = -1;
-        for (size_t i = 0; i < tracks.size(); ++i) {
-          if (tracks[i] == pNode.track) {
-            pNode.trackIndex = static_cast<int>(i);
-            break;
-          }
-        }
-      }
-      // Try Bus
-      else {
-        auto busIt = newSnapshot->auxBusLookup.find(nodeId);
-        if (busIt != newSnapshot->auxBusLookup.end()) {
-          pNode.type = Snapshot::ProcessorType::Bus;
-          pNode.bus = busIt->second;
-          // Find index in the provided vector
-          pNode.busIndex = -1;
-          for (size_t i = 0; i < auxBuses.size(); ++i) {
-            if (auxBuses[i] == pNode.bus) {
-              pNode.busIndex = static_cast<int>(i);
-              break;
-            }
-          }
-        } else {
-          continue; // Master or unknown node
-        }
-      }
-
-      // Pre-calculate master gain
-      pNode.masterGain = 0.0f; // Default to 0 (no output to master)
-      for (const auto &conn : currentTopology_->connections) {
-        if (conn.sourceId == nodeId && conn.destId == "master") {
-          pNode.masterGain = conn.gain;
-          break;
-        }
-      }
-
-      newSnapshot->processingSequence.push_back(pNode);
-    }
+  for (const auto& [key, value] : auxBusMap) {
+    newSnapshot->auxBusLookup[key] = value;  // Implicit shared_ptr -> weak_ptr
   }
 
   // Atomic swap
   activeSnapshot_.store(newSnapshot.get(), std::memory_order_release);
-  
-  // Defer deletion of old snapshot
-  if (currentSnapshot_) {
-    RealTimeGarbageCollector::getInstance().push(currentSnapshot_);
-  }
-  
+  RealTimeGarbageCollector::getInstance().deferDelete(currentSnapshot_);
   currentSnapshot_ = newSnapshot;
 }
 
@@ -233,7 +164,8 @@ void RoutingGraph::removeNode(const juce::String &nodeId) {
 }
 
 bool RoutingGraph::connect(const juce::String &sourceId,
-                           const juce::String &destId, float gain) {
+                           const juce::String &destId, float gain,
+                           bool isSidechain) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
   const juce::ScopedLock sl(writeLock_);
@@ -246,7 +178,8 @@ bool RoutingGraph::connect(const juce::String &sourceId,
 
   // Check if connection already exists
   for (const auto &c : connections_) {
-    if (c.sourceId == sourceId && c.destId == destId)
+    if (c.sourceId == sourceId && c.destId == destId &&
+        c.isSidechain == isSidechain)
       return true; // Already connected
   }
 
@@ -254,6 +187,7 @@ bool RoutingGraph::connect(const juce::String &sourceId,
   c.sourceId = sourceId;
   c.destId = destId;
   c.gain = gain;
+  c.isSidechain = isSidechain;
   connections_.push_back(c);
 
   updateSnapshot();
@@ -286,7 +220,7 @@ bool RoutingGraph::disconnect(const juce::String &sourceId,
 
 bool RoutingGraph::hasNode(const juce::String &nodeId) const {
   // RT-SAFE: Uses atomic snapshot load
-  auto snapshot = getSnapshot();
+  const auto *snapshot = getSnapshot();
   if (!snapshot)
     return false;
   return snapshot->nodes.find(nodeId.toStdString()) != snapshot->nodes.end();
@@ -295,7 +229,7 @@ bool RoutingGraph::hasNode(const juce::String &nodeId) const {
 const RoutingGraph::Node *
 RoutingGraph::getNode(const juce::String &nodeId) const {
   // RT-SAFE: Uses atomic snapshot load
-  auto snapshot = getSnapshot();
+  const auto *snapshot = getSnapshot();
   if (!snapshot)
     return nullptr;
 
@@ -308,7 +242,7 @@ RoutingGraph::getNode(const juce::String &nodeId) const {
 std::vector<RoutingGraph::Connection>
 RoutingGraph::getConnectionsFrom(const juce::String &sourceId) const {
   // RT-SAFE: Uses atomic snapshot load
-  auto snapshot = getSnapshot();
+  const auto *snapshot = getSnapshot();
   if (!snapshot || !snapshot->topology)
     return {};
 
@@ -325,7 +259,7 @@ RoutingGraph::getConnectionsFrom(const juce::String &sourceId) const {
 std::vector<RoutingGraph::Connection>
 RoutingGraph::getConnectionsTo(const juce::String &destId) const {
   // RT-SAFE: Uses atomic snapshot load
-  auto snapshot = getSnapshot();
+  const auto *snapshot = getSnapshot();
   if (!snapshot || !snapshot->topology)
     return {};
 
@@ -341,7 +275,7 @@ RoutingGraph::getConnectionsTo(const juce::String &destId) const {
 
 std::vector<juce::String> RoutingGraph::getProcessingOrder() const {
   // RT-SAFE: Uses atomic snapshot load
-  auto snapshot = getSnapshot();
+  const auto *snapshot = getSnapshot();
   if (!snapshot || !snapshot->topology)
     return {};
   return snapshot->topology->processingOrder;
@@ -355,31 +289,32 @@ juce::var RoutingGraph::toVar() const {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
   const juce::ScopedLock sl(writeLock_);
-  auto *obj = new juce::DynamicObject();
+  juce::DynamicObject::Ptr obj = new juce::DynamicObject();
 
   // Serialize Nodes
   juce::var nodesArray;
   for (const auto &pair : nodes_) {
-    auto *nodeObj = new juce::DynamicObject();
+    juce::DynamicObject::Ptr nodeObj = new juce::DynamicObject();
     nodeObj->setProperty("id", pair.second.id);
     nodeObj->setProperty("name", pair.second.name);
     nodeObj->setProperty("type", (int)pair.second.type);
-    nodesArray.append(nodeObj);
+    nodesArray.append(juce::var(nodeObj.get()));
   }
   obj->setProperty("nodes", nodesArray);
 
   // Serialize Connections
   juce::var connsArray;
   for (const auto &c : connections_) {
-    auto *connObj = new juce::DynamicObject();
+    juce::DynamicObject::Ptr connObj = new juce::DynamicObject();
     connObj->setProperty("source", c.sourceId);
     connObj->setProperty("dest", c.destId);
     connObj->setProperty("gain", c.gain);
-    connsArray.append(connObj);
+    connObj->setProperty("isSidechain", c.isSidechain);
+    connsArray.append(juce::var(connObj.get()));
   }
   obj->setProperty("connections", connsArray);
 
-  return juce::var(obj);
+  return juce::var(obj.get());
 }
 
 void RoutingGraph::fromVar(const juce::var &data) {
@@ -416,6 +351,7 @@ void RoutingGraph::fromVar(const juce::var &data) {
           c.sourceId = connObj->getProperty("source").toString();
           c.destId = connObj->getProperty("dest").toString();
           c.gain = connObj->getProperty("gain");
+          c.isSidechain = connObj->getProperty("isSidechain");
           connections_.push_back(c);
         }
       }
@@ -436,6 +372,7 @@ juce::ValueTree RoutingGraph::toValueTree() const {
     conn.setProperty("source", c.sourceId, nullptr);
     conn.setProperty("dest", c.destId, nullptr);
     conn.setProperty("gain", c.gain, nullptr);
+    conn.setProperty("isSidechain", c.isSidechain, nullptr);
     tree.appendChild(conn, nullptr);
   }
 
@@ -455,6 +392,7 @@ void RoutingGraph::fromValueTree(const juce::ValueTree &state) {
         c.sourceId = child.getProperty("source");
         c.destId = child.getProperty("dest");
         c.gain = child.getProperty("gain", 1.0f);
+        c.isSidechain = child.getProperty("isSidechain", false);
         connections_.push_back(c);
       }
     }

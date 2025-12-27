@@ -6,10 +6,14 @@
 #pragma once
 
 #include "../../engine/ProjectState.h"
-#include "../framework/SkiaComponent.h"
+#include "SkiaComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <memory>
+#include "TakeFolderComponent.h"
 #include <vector>
+#include "../controls/ZenithSlider.h"
+#include "../controls/ZenithKnob.h"
+#include "../controls/SkiaButton.h" 
+#include "../design-system/ZenithTheme.h"
 
 namespace zenith {
 
@@ -21,11 +25,14 @@ struct ArrangementSection {
   juce::Colour color;
 };
 
+class ArrangerGridUtils;
+
 class ArrangerTrackComponent : public SkiaComponent {
 public:
   enum class TrackType { Audio, Midi, Group, Master, Section };
 
-  ArrangerTrackComponent(ProjectState &ps, TrackType type = TrackType::Audio);
+  ArrangerTrackComponent(ProjectState &ps, ArrangerGridUtils &gridUtils,
+                         TrackType type = TrackType::Audio);
   ~ArrangerTrackComponent() override;
 
   void drawSkia(SkCanvas *canvas) override;
@@ -39,27 +46,29 @@ public:
 
   // Set the view parameters for rendering
   void setViewContext(double pixelsPerBeat, double viewStartBeats);
-  void syncWithState();
   void setVisibleRange(double startBeats, double endBeats);
+  
+  void updateTakeFolders(); // Rebuilds take folder components
 
   // Track Data Setters
   void setTrackId(const juce::String &id) { trackId_ = id; }
   void setTrackName(const juce::String &name) {
     trackName_ = name;
-    markDirty();
+    repaint();
   }
   void setTrackIndex(int index) {
     trackIndex_ = index;
-    markDirty();
+    repaint();
   }
 
   void setMuted(bool m);
   void setSoloed(bool s);
   void setRecordArmed(bool r);
+  void setInputMonitor(bool i);
 
   void setAccentColor(juce::Colour c) {
     accentColor_ = c;
-    markDirty();
+    repaint();
   }
 
   // Command to re-order sections (The "Magic" of this feature)
@@ -69,34 +78,40 @@ public:
   const ArrangementSection *getHoveredSection() const;
   const ArrangementSection *getDraggingSection() const;
 
+  std::function<void(const juce::String&)> onFreeze;
+  std::function<void(const juce::String&)> onUnfreeze;
+  std::function<void(const juce::String&)> onSeparateStems;
+  std::function<void(const juce::String&, const juce::String&)> onAutomationLaneRequested;
+  std::function<void(const juce::String&)> onHideAllAutomation;
+
 private:
   ProjectState &projectState;
+  ArrangerGridUtils &gridUtils_;
   TrackType type_;
 
   // Track State
   juce::String trackId_;
   juce::String trackName_ = "Track";
   int trackIndex_ = 0;
-  juce::Colour accentColor_ = juce::Colours::cyan;
+  juce::Colour accentColor_ = ZenithTheme::Colors::accent_primary;
 
   bool isMuted_ = false;
   bool isSoloed_ = false;
   bool isRecordArmed_ = false;
-  bool isSelected_ = false;
-
-  // Animation state
-  float selectionGlow_ = 0.0f;
-  std::unique_ptr<juce::VBlankAttachment> vBlankAttachment_;
+  bool isInputMonitoring_ = false;
 
   // Interaction State
   bool isHovered_ = false;
   int hoveredButtonIndex_ = -1; // 0=Mute, 1=Solo, 2=Rec
+  
+  // Controls
+  std::unique_ptr<ZenithSlider> volSlider;
+  std::unique_ptr<ZenithKnob> panKnob;
 
   // Section Specific State
   std::vector<ArrangementSection> sections_; // Cache
 
   // View State
-  static constexpr float HEADER_WIDTH = 220.0f;
   double pixelsPerBeat_ = 50.0;
   double viewStartBeats_ = 0.0;
 
@@ -112,6 +127,9 @@ private:
   void drawTrackBackground(SkCanvas *canvas, const SkRect &bounds);
   void drawControls(SkCanvas *canvas, float x, float y);
   void drawSections(SkCanvas *canvas, const SkRect &bounds);
+  
+  // Take Folders
+  std::vector<std::unique_ptr<TakeFolderComponent>> takeFolders_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArrangerTrackComponent)
 };

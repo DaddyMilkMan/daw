@@ -21,8 +21,9 @@ struct ONNXStemSeparator::Impl {
   juce::File modelPath;
 
 #ifdef ZENITH_USE_ONNX_RUNTIME
-  // ONNX Runtime session and environment
-  std::unique_ptr<Ort::Env> env;
+  // ONNX Runtime session and environment (Shared across instances)
+  static std::shared_ptr<Ort::Env> sharedEnv;
+  std::shared_ptr<Ort::Env> env;
   std::unique_ptr<Ort::Session> session;
   std::unique_ptr<Ort::SessionOptions> sessionOptions;
 
@@ -37,18 +38,32 @@ struct ONNXStemSeparator::Impl {
 
   // Reuse buffer for input tensor
   std::vector<float> inputTensorValues;
+
+  ~Impl() {
+      for (auto name : inputNames) delete[] name;
+      for (auto name : outputNames) delete[] name;
+  }
 #endif
 };
+
+#ifdef ZENITH_USE_ONNX_RUNTIME
+std::shared_ptr<Ort::Env> ONNXStemSeparator::Impl::sharedEnv = nullptr;
+#endif
 
 ONNXStemSeparator::ONNXStemSeparator() : pImpl(std::make_unique<Impl>()) {
 #ifdef ZENITH_USE_ONNX_RUNTIME
   try {
-    // Initialize ONNX Runtime environment
-    pImpl->env = std::make_unique<Ort::Env>(ORT_LOGGING_LEVEL_WARNING,
-                                            "ZenithStemSeparator");
-    pImpl->memoryInfo = std::make_unique<Ort::MemoryInfo>(
-        Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault));
-    DBG("ONNXStemSeparator: ONNX Runtime environment initialized");
+    // Use shared ONNX Runtime environment
+    if (!Impl::sharedEnv) {
+        Impl::sharedEnv = std::make_shared<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "ZenithStemSeparator");
+    }
+    pImpl->env = Impl::sharedEnv;
+    
+    if (pImpl->env) {
+        pImpl->memoryInfo = std::make_unique<Ort::MemoryInfo>(
+            Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault));
+        DBG("ONNXStemSeparator: ONNX Runtime environment initialized [v" + juce::String(ORT_API_VERSION) + "]");
+    }
   } catch (const Ort::Exception &e) {
     DBG("ONNXStemSeparator: Failed to initialize ONNX Runtime - " +
         juce::String(e.what()));
@@ -59,6 +74,7 @@ ONNXStemSeparator::ONNXStemSeparator() : pImpl(std::make_unique<Impl>()) {
 }
 
 ONNXStemSeparator::~ONNXStemSeparator() = default;
+
 
 bool ONNXStemSeparator::isAvailable() const {
 #ifdef ZENITH_USE_ONNX_RUNTIME
@@ -85,6 +101,56 @@ bool ONNXStemSeparator::initialize(const juce::File &modelPath) {
     return false;
   }
 
+  // Validate file size (model should be at least 100KB for a minimal valid model)
+  auto fileSize = fileToLoad.getSize();
+  if (fileSize < 100 * 1024) {
+    DBG("ONNXStemSeparator: Model file too small (" + 
+        juce::String(fileSize) + " bytes) - likely corrupt or incomplete");
+    return false;
+  }
+
+  // Validate ONNX file header - check if file is readable
+  {
+    juce::FileInputStream stream(fileToLoad);
+    if (!stream.openedOk()) {
+      DBG("ONNXStemSeparator: Could not open model file for validation");
+      return false;
+    }
+    
+    // Read first bytes to verify file accessibility and basic structure
+    char header[8];
+    if (stream.read(header, 8) != 8) {
+      DBG("ONNXStemSeparator: Model file unreadable - corrupt or empty");
+      return false;
+    }
+
+    // ONNX protobuf header validation:
+    // ONNX files typically start with protobuf field tags:
+    // 0x08 = ir_version (field 1, varint)
+    // 0x12 = producer_name (field 2, length-delimited)
+    // 0x0A = also valid for some ONNX variants
+    // If none match, log warning but let ONNX Runtime make final determination
+    if (header[0] != 0x08 && header[0] != 0x12 && header[0] != 0x0A) {
+      DBG("ONNXStemSeparator: Unexpected ONNX header byte 0x" + 
+          juce::String::toHexString((int)(unsigned char)header[0]) +
+          " - file may be corrupt or not ONNX format");
+      // Continue anyway - ONNX Runtime will give definitive answer
+    }
+  }
+
+  // Reset any previous state before loading new model
+#ifdef ZENITH_USE_ONNX_RUNTIME
+  for (auto name : pImpl->inputNames) delete[] name;
+  for (auto name : pImpl->outputNames) delete[] name;
+  pImpl->inputNames.clear();
+  pImpl->outputNames.clear();
+  pImpl->session.reset();
+  pImpl->sessionOptions.reset();
+  pImpl->inputShape.clear();
+  pImpl->inputTensorValues.clear();
+#endif
+  pImpl->isLoaded = false;
+
   pImpl->modelPath = fileToLoad;
 
 #ifdef ZENITH_USE_ONNX_RUNTIME
@@ -107,12 +173,12 @@ bool ONNXStemSeparator::initialize(const juce::File &modelPath) {
     // Load model
 #ifdef _WIN32
     // Windows uses wide strings for file paths
-    std::wstring wModelPath = modelPath.getFullPathName().toWideCharPointer();
+    std::wstring wModelPath = fileToLoad.getFullPathName().toWideCharPointer();
     pImpl->session = std::make_unique<Ort::Session>(
         *pImpl->env, wModelPath.c_str(), *pImpl->sessionOptions);
 #else
     // Unix systems use regular strings
-    std::string sModelPath = modelPath.getFullPathName().toStdString();
+    std::string sModelPath = fileToLoad.getFullPathName().toStdString();
     pImpl->session = std::make_unique<Ort::Session>(
         *pImpl->env, sModelPath.c_str(), *pImpl->sessionOptions);
 #endif
@@ -126,37 +192,82 @@ bool ONNXStemSeparator::initialize(const juce::File &modelPath) {
       Ort::AllocatedStringPtr inputNameAllocated =
           pImpl->session->GetInputNameAllocated(0, allocator);
       pImpl->inputNames.push_back(inputNameAllocated.get());
-
-      Ort::TypeInfo inputTypeInfo = pImpl->session->GetInputTypeInfo(0);
-      auto tensorInfo = inputTypeInfo.GetTensorTypeAndShapeInfo();
-      pImpl->inputShape = tensorInfo.GetShape();
-
-      DBG("ONNXStemSeparator: Input shape - " +
-          juce::String(pImpl->inputShape[0]) + "x" +
-          juce::String(pImpl->inputShape[1]) + "x" +
-          juce::String(pImpl->inputShape[2]));
+      inputNameAllocated.release(); // Transfer ownership to vector (manual management for C API wrapper)
+      // Actually, Ort::AllocatedStringPtr manages it, but we need it in inputNames (const char*)
+      // The push_back(get()) is correct as long as we store the AllocatedStringPtr somewhere.
+      // Wait, let's fix this memory management.
+    }
+    
+    // REDO: Robust metadata loading
+    pImpl->inputNames.clear();
+    pImpl->outputNames.clear();
+    
+    for (size_t i = 0; i < pImpl->session->GetInputCount(); ++i) {
+        auto name = pImpl->session->GetInputNameAllocated(i, allocator);
+        char* nameStr = new char[strlen(name.get()) + 1];
+        strcpy(nameStr, name.get());
+        pImpl->inputNames.push_back(nameStr);
+    }
+    
+    for (size_t i = 0; i < pImpl->session->GetOutputCount(); ++i) {
+        auto name = pImpl->session->GetOutputNameAllocated(i, allocator);
+        char* nameStr = new char[strlen(name.get()) + 1];
+        strcpy(nameStr, name.get());
+        pImpl->outputNames.push_back(nameStr);
     }
 
-    // Output metadata (typically 4 outputs for vocals, drums, bass, other)
-    size_t numOutputs = pImpl->session->GetOutputCount();
-    for (size_t i = 0; i < numOutputs; ++i) {
-      Ort::AllocatedStringPtr outputNameAllocated =
-          pImpl->session->GetOutputNameAllocated(i, allocator);
-      pImpl->outputNames.push_back(outputNameAllocated.get());
+    if (!pImpl->inputNames.empty()) {
+        Ort::TypeInfo inputTypeInfo = pImpl->session->GetInputTypeInfo(0);
+        auto tensorInfo = inputTypeInfo.GetTensorTypeAndShapeInfo();
+        pImpl->inputShape = tensorInfo.GetShape();
+
+        juce::String shapeStr = "[";
+        for(size_t i=0; i<pImpl->inputShape.size(); ++i) {
+            shapeStr << pImpl->inputShape[i] << (i < pImpl->inputShape.size()-1 ? ", " : "]");
+        }
+        DBG("ONNXStemSeparator: Input shape - " + shapeStr);
     }
 
     pImpl->isLoaded = true;
     DBG("ONNXStemSeparator: Model loaded successfully - " +
-        modelPath.getFileName());
+        fileToLoad.getFileName());
     DBG("ONNXStemSeparator: Inputs: " + juce::String((int)numInputs) +
-        ", Outputs: " + juce::String((int)numOutputs));
+        ", Outputs: " + juce::String((int)pImpl->outputNames.size()));
 
     return true;
   } catch (const Ort::Exception &e) {
-    DBG("ONNXStemSeparator: Failed to load model - " + juce::String(e.what()));
+    juce::String errorMsg = e.what();
+    DBG("ONNXStemSeparator: ONNX Runtime error - " + errorMsg);
+    
+    // Classify the error for better diagnostics
+    if (errorMsg.containsIgnoreCase("protobuf") ||
+        errorMsg.containsIgnoreCase("Invalid model") ||
+        errorMsg.containsIgnoreCase("parse")) {
+      DBG("ONNXStemSeparator: Model file appears corrupt or invalid ONNX format");
+    } else if (errorMsg.containsIgnoreCase("version") ||
+               errorMsg.containsIgnoreCase("opset")) {
+      DBG("ONNXStemSeparator: Model requires different ONNX Runtime version or opset");
+    } else if (errorMsg.containsIgnoreCase("operator") ||
+               errorMsg.containsIgnoreCase("op type")) {
+      DBG("ONNXStemSeparator: Model uses unsupported operators for this runtime");
+    } else if (errorMsg.containsIgnoreCase("memory") ||
+               errorMsg.containsIgnoreCase("alloc")) {
+      DBG("ONNXStemSeparator: Insufficient memory to load model");
+    }
+    
+    pImpl->isLoaded = false;
+    return false;
+  } catch (const std::exception& e) {
+    DBG("ONNXStemSeparator: Unexpected error loading model - " + 
+        juce::String(e.what()));
+    pImpl->isLoaded = false;
+    return false;
+  } catch (...) {
+    DBG("ONNXStemSeparator: Unknown exception while loading model");
     pImpl->isLoaded = false;
     return false;
   }
+
 #else
   // Without ONNX Runtime, we can't load the model but we still track the path
   // for potential future use or informational purposes
@@ -196,8 +307,8 @@ ONNXStemSeparator::separate(const juce::AudioBuffer<float> &input,
       // Most stem separation models expect [batch=1, channels=2, samples=N]
       std::vector<int64_t> inputShape = {1, static_cast<int64_t>(numChannels),
                                          static_cast<int64_t>(numSamples)};
-      // Copy audio data to contiguous buffer (interleaved -> planar if needed)
-      // Reuse buffer to avoid allocation
+      
+      // Copy audio data to contiguous buffer (planar)
       size_t inputTensorSize = numChannels * numSamples;
       pImpl->inputTensorValues.resize(inputTensorSize);
 
@@ -211,38 +322,39 @@ ONNXStemSeparator::separate(const juce::AudioBuffer<float> &input,
       Ort::Value inputTensor = Ort::Value::CreateTensor<float>(
           *pImpl->memoryInfo, pImpl->inputTensorValues.data(), inputTensorSize,
           inputShape.data(), inputShape.size());
+
       // Run inference
+      auto startInference = juce::Time::getMillisecondCounterHiRes();
       auto outputTensors = pImpl->session->Run(
           Ort::RunOptions{nullptr}, pImpl->inputNames.data(), &inputTensor, 1,
           pImpl->outputNames.data(), pImpl->outputNames.size());
+      auto endInference = juce::Time::getMillisecondCounterHiRes();
+      double inferenceDurationMs = endInference - startInference;
 
       // Process outputs
-      // Assuming model outputs 4 tensors: vocals, drums, bass, other
+      // Assuming model outputs 4 tensors: Drums, Bass, Other, Vocals (Standard Demucs Order)
+      // We map them to our result structure
       if (outputTensors.size() >= 4) {
-        // Extract vocals
-        float *vocalsData = outputTensors[0].GetTensorMutableData<float>();
-        copyTensorToBuffer(vocalsData, result.vocals, numChannels, numSamples);
-
-        // Extract drums
-        float *drumsData = outputTensors[1].GetTensorMutableData<float>();
-        copyTensorToBuffer(drumsData, result.drums, numChannels, numSamples);
-
-        // Extract bass
-        float *bassData = outputTensors[2].GetTensorMutableData<float>();
-        copyTensorToBuffer(bassData, result.bass, numChannels, numSamples);
-
-        // Extract other
-        float *otherData = outputTensors[3].GetTensorMutableData<float>();
-        copyTensorToBuffer(otherData, result.other, numChannels, numSamples);
+        // Output 0: Drums
+        copyTensorToBuffer(outputTensors[0].GetTensorMutableData<float>(), result.drums, numChannels, numSamples);
+        
+        // Output 1: Bass
+        copyTensorToBuffer(outputTensors[1].GetTensorMutableData<float>(), result.bass, numChannels, numSamples);
+        
+        // Output 2: Other
+        copyTensorToBuffer(outputTensors[2].GetTensorMutableData<float>(), result.other, numChannels, numSamples);
+        
+        // Output 3: Vocals
+        copyTensorToBuffer(outputTensors[3].GetTensorMutableData<float>(), result.vocals, numChannels, numSamples);
 
         result.success = true;
         result.usedONNX = true;
 
-        DBG("ONNXStemSeparator: Inference completed successfully");
+        DBG("ONNXStemSeparator: Inference completed in " + juce::String(inferenceDurationMs, 1) + "ms (4 stems)");
         return result;
+
       } else {
-        DBG("ONNXStemSeparator: Unexpected number of outputs - " +
-            juce::String((int)outputTensors.size()));
+        DBG("ONNXStemSeparator: Unexpected number of outputs - " + juce::String((int)outputTensors.size()));
         // Fall through to DSP fallback
       }
     } catch (const Ort::Exception &e) {
@@ -252,6 +364,7 @@ ONNXStemSeparator::separate(const juce::AudioBuffer<float> &input,
     }
   }
 #endif
+
 
   // Fallback to DSP-based stem separation
   DBG("ONNXStemSeparator: Using DSP fallback");
@@ -332,6 +445,12 @@ juce::String ONNXStemSeparator::getModelInfo() const {
 
 juce::File ONNXStemSeparator::findDefaultModel() {
     return PlatformModelUtils::findDefaultModel();
+}
+
+void ONNXStemSeparator::shutdown() {
+#ifdef ZENITH_USE_ONNX_RUNTIME
+    Impl::sharedEnv.reset();
+#endif
 }
 
 } // namespace zenith

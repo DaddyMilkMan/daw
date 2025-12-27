@@ -12,22 +12,22 @@
 
 #pragma once
 
+#include <memory>
+#include <vector>
+
 #include "../../engine/EngineConstants.h"
-#include "MixerComponent.h"
+#include "../mixer/MixerComponent.h"
 #include "PianoKeyboardViewSkia.h"
 #include "SkiaComponent.h"
-#include "../design-system/ZenithDesignSystem.h"
 
-#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
-#include "ZenithSkia.h"
-#endif
-
+#include <core/SkCanvas.h>
+#include <core/SkFont.h>
+#include <core/SkPaint.h>
+#include <core/SkRect.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <memory>
-#include <vector>
 
 namespace zenith {
 class Engine;
@@ -40,6 +40,7 @@ namespace ai {
 class SessionDebuggerAgent;
 }
 class DebugConsoleComponent;
+class AutoSaveIndicator;
 
 #ifdef ZENITH_USE_SKIA
 
@@ -69,6 +70,7 @@ private:
   std::unique_ptr<DebugConsoleComponent> debugConsole_;
   std::unique_ptr<DeviceChainComponent> deviceChain_;
   std::unique_ptr<MixerComponent> mixerComponent_;
+  std::unique_ptr<AutoSaveIndicator> autoSaveIndicator_;
 
   bool keyboardVisible_ = false;
   bool deviceChainVisible_ = true;  // Show device chain by default
@@ -88,19 +90,6 @@ private:
   ::SkRect cachedBounds_;
 
   void updateCachedPaints(const ::SkRect &bounds);
-};
-
-#else // ZENITH_USE_SKIA
-
-class BottomBar : public juce::Component {
-public:
-    BottomBar(juce::MidiKeyboardState&, Engine&, ProjectState&) {}
-    ~BottomBar() override = default;
-    void paint(juce::Graphics& g) override { g.fillAll(juce::Colours::black); }
-    void setKeyboardVisible(bool) {}
-    void setDeviceChainVisible(bool) {}
-    void setDebugger(ai::SessionDebuggerAgent*) {}
-    void setDebugConsoleVisible(bool) {}
 };
 
 #endif // ZENITH_USE_SKIA

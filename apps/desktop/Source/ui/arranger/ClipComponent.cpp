@@ -10,23 +10,29 @@
  */
 
 // POLISH: spacing normalized to 8px grid (rounded corners 4px)
-// POLISH: typography now uses SkiaTheme::Typography (body)
+// POLISH: typography now uses ZenithDesignSystem
 // POLISH: flattened visuals (track colors, no gradients)
 
 #include "ClipComponent.h"
-#include "ProjectState.h"
+#include "../../engine/ProjectState.h"
+#include <JuceHeader.h>
 
-#include "SkiaTheme.h"
-#include "ZenithSkia.h"
+#include "../design-system/ZenithDesignSystem.h"
+#include "../design-system/ZenithTheme.h"
+#include <core/SkCanvas.h>
+#include <core/SkFont.h>
+#include <core/SkPaint.h>
 #include <core/SkPath.h>
+#include <core/SkRRect.h>
 #include <effects/SkDashPathEffect.h>
 #include <effects/SkGradientShader.h>
+
 
 using namespace zenith;
 
 ClipComponent::ClipComponent(juce::ValueTree clipNode) : clip(clipNode) {
   setMouseCursor(juce::MouseCursor::PointingHandCursor);
-  startTimerHz(60); // 60 Hz for smooth animations
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60); // 60 Hz for smooth animations
 }
 
 ClipComponent::~ClipComponent() { stopTimer(); }
@@ -104,8 +110,7 @@ void ClipComponent::updateBounds(double pixelsPerBeat, int yPosition,
 
 void ClipComponent::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds();
-  auto &theme = ::zenith::SkiaTheme::getInstance();
-  auto &colors = theme.getColors();
+  using namespace zenith::design;
 
   float fWidth = (float)bounds.getWidth();
   float fHeight = (float)bounds.getHeight();
@@ -145,7 +150,7 @@ void ClipComponent::drawSkia(SkCanvas *canvas) {
   // 2. Setup Colors
   juce::String clipType = clip[ProjectState::PROP_TYPE].toString();
   SkColor baseColor =
-      (clipType == "midi") ? colors.waveformMidi : colors.waveformAudio;
+      (clipType == "midi") ? design::colors::NEON_PURPLE : design::colors::CYAN;
 
   // Header Color (Solid)
   SkColor headerColor = baseColor;
@@ -353,14 +358,15 @@ void ClipComponent::drawSkia(SkCanvas *canvas) {
   if (isSelected) {
     SkPaint selectionPaint;
     selectionPaint.setAntiAlias(true);
-    selectionPaint.setColor(SkColorSetA(colors.primary, 255)); // Bright accent
+    selectionPaint.setColor(
+        SkColorSetA(design::colors::CYAN, 255)); // Bright accent
     selectionPaint.setStyle(SkPaint::kStroke_Style);
     selectionPaint.setStrokeWidth(2.0f);
     canvas->drawRRect(clipRRect, selectionPaint);
   } else {
     SkPaint borderPaint;
     borderPaint.setAntiAlias(true);
-    borderPaint.setColor(SkColorSetA(colors.borderSubtle, 100));
+    borderPaint.setColor(SkColorSetA(design::colors::BORDER_SUBTLE, 100));
     borderPaint.setStyle(SkPaint::kStroke_Style);
     borderPaint.setStrokeWidth(1.0f);
     canvas->drawRRect(clipRRect, borderPaint);

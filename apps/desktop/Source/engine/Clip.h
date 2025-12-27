@@ -35,6 +35,7 @@
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <memory>
 #include <vector>
 
 namespace zenith {
@@ -52,11 +53,11 @@ struct MidiNoteSpec {
   int pitch;          // MIDI note number (0-127)
   double startBeats;  // Start time in beats (relative to clip start)
   double lengthBeats; // Duration in beats
-  int velocity;       // Note velocity (0-127)
+  uint16_t velocity;  // Note velocity (High-res 0-65535)
   bool muted;         // Muted flag
 
   MidiNoteSpec()
-      : pitch(60), startBeats(0.0), lengthBeats(1.0), velocity(100),
+      : pitch(60), startBeats(0.0), lengthBeats(1.0), velocity(51400),
         muted(false) {}
 };
 
@@ -70,16 +71,31 @@ struct MidiNoteSpec {
 
     Thread-safe design allows clips to be modified from the UI thread while
     playing back on the audio thread.
+
+    ## Ownership Model (to prevent shared_ptr cycles):
+
+    **ClipTrack -> Clip:** ClipTrack owns Clip via std::unique_ptr
+    **Clip -> Track:** No back-reference stored (track passed by parameter when
+   needed)
+    **Clip -> AudioFilePool:** Uses shared_ptr<const void> for RT-safe handle
+   (no cycle)
+
+    @note Clip should NEVER hold std::shared_ptr<Track> or
+   std::shared_ptr<ClipTrack>
 */
 class Clip : public juce::AudioSource {
 public:
   //==============================================================================
-  enum class Type { Audio, MIDI };
+  /**
+   * @brief Enumeration of clip types.
+   */
+  enum class Type {
+    Audio, /**< Audio clip containing waveform data */
+    MIDI   /**< MIDI clip containing note data */
+  };
 
   //==============================================================================
   Clip();
-  Clip(Clip &&other) noexcept;
-  Clip &operator=(Clip &&other) noexcept;
   ~Clip() override;
 
   //==============================================================================
@@ -99,7 +115,16 @@ public:
 
   //==============================================================================
   // Timeline position (in samples)
+  /**
+   * @brief Sets the start position of the clip on the timeline.
+   * @param position Position in samples.
+   */
   void setStartPosition(int64_t position);
+
+  /**
+   * @brief Gets the start position of the clip.
+   * @return Position in samples.
+   */
   int64_t getStartPosition() const { return startPosition.load(); }
 
   void setLength(int64_t lengthInSamples);
@@ -132,6 +157,15 @@ public:
   // Audio clip specific
 
   // Phase 1.2: Use AudioFilePool for RT-safe file access
+  /**
+   * @brief Sets the audio file for this clip using the AudioFilePool.
+   *
+   * This is the preferred method for loading audio files as it ensures
+   * thread-safe access to the file handle.
+   *
+   * @param file The audio file to load.
+   * @param pool Reference to the AudioFilePool to use for loading.
+   */
   void setAudioFileFromPool(const juce::File &file,
                             zenith::AudioFilePool &pool);
 
@@ -143,6 +177,14 @@ public:
   const juce::AudioBuffer<float> *getAudioBuffer() const {
     return &audioBuffer;
   }
+
+  /**
+   * @brief Extract a range of audio samples from the clip.
+   * @param destBuffer Buffer to fill.
+   * @param startSampleInClip Start position relative to clip start (0 = clip start).
+   * @param numSamples Number of samples to extract.
+   */
+  void getAudioSamples(juce::AudioBuffer<float>& destBuffer, int64_t startSampleInClip, int numSamples) const;
 
   //==============================================================================
   // MIDI clip specific
@@ -217,6 +259,7 @@ public:
   //==============================================================================
   friend class Track;
   friend class AudioTrack;
+  friend class InstrumentTrack;
 
 private:
   //==============================================================================
@@ -227,16 +270,16 @@ private:
 
   //==============================================================================
   // Timeline position (atomic for lock-free access)
-  std::atomic<juce::int64> startPosition{0};
-  std::atomic<juce::int64> clipLength{0};
-  std::atomic<juce::int64> clipOffset{0};
-  std::atomic<juce::int64> transportPosition{0};
+  std::atomic<int64_t> startPosition{0};
+  std::atomic<int64_t> clipLength{0};
+  std::atomic<int64_t> clipOffset{0};
+  std::atomic<int64_t> transportPosition{0};
 
   //==============================================================================
   // Playback state (atomic for lock-free access)
   std::atomic<bool> playing{false};
-  std::atomic<juce::int64> fadeInLength{0};
-  std::atomic<juce::int64> fadeOutLength{0};
+  std::atomic<int64_t> fadeInLength{0};
+  std::atomic<int64_t> fadeOutLength{0};
   std::atomic<float> fadeCurve{0.5f}; // 0.5 = Linear
   std::atomic<float> gain{1.0f};
   std::atomic<bool> looping{false};
@@ -245,6 +288,8 @@ private:
   // Audio data
   juce::File audioFile;
   juce::AudioBuffer<float> audioBuffer; // Legacy: for setAudioBuffer()
+  // MESSAGE THREAD ONLY - Protects file/buffer swapping on message thread.
+  // Audio thread access is through audioFileHandle_ (atomic).
   juce::CriticalSection audioLock;
 
   // Legacy audio source (required for setAudioFile)
@@ -257,6 +302,8 @@ private:
   //==============================================================================
   // MIDI data
   std::atomic<std::shared_ptr<const juce::MidiMessageSequence>> midiSequence_;
+  // MESSAGE THREAD ONLY - Protects MIDI sequence updates.
+  // Audio thread access is through midiSequence_ (atomic).
   juce::CriticalSection midiLock;
 
   //==============================================================================
@@ -294,6 +341,7 @@ private:
   float calculateFadeMultiplier(int64_t positionInClip) const;
 
   void applyFadesSIMD(const juce::AudioSourceChannelInfo &bufferToFill,
+                      int destOffset,
                       int64_t startPositionInClip, int numSamples);
 
   //==============================================================================

@@ -5,64 +5,53 @@
  */
 
 #include "ZenithTheme.h"
-#include "../../engine/ZenithLogger.h"
-#include "FontManager.h"
+#include "ColorBridge.h" // Added for ColorBridge access
 #include <cmath>
 
 namespace zenith {
 
 //==============================================================================
-// Modern Color Palette Definitions
+// Modern Color Palette Definitions (Sourced from ZenithDesignSystem)
 //==============================================================================
 
 // Background layers
-const juce::Colour ZenithTheme::Colors::bg_00 = juce::Colour(0xff0a0a0a);
-const juce::Colour ZenithTheme::Colors::bg_01 = juce::Colour(0xff121212);
-const juce::Colour ZenithTheme::Colors::bg_02 = juce::Colour(0xff1a1a1a);
-const juce::Colour ZenithTheme::Colors::bg_03 = juce::Colour(0xff242424);
-const juce::Colour ZenithTheme::Colors::bg_04 = juce::Colour(0xff2e2e2e);
+const juce::Colour ZenithTheme::Colors::bg_00 = design::toJuceColour(design::colors::BG_00);
+const juce::Colour ZenithTheme::Colors::bg_01 = design::toJuceColour(design::colors::BG_01);
+const juce::Colour ZenithTheme::Colors::bg_02 = design::toJuceColour(design::colors::BG_02);
+const juce::Colour ZenithTheme::Colors::bg_03 = design::toJuceColour(design::colors::BG_03);
+const juce::Colour ZenithTheme::Colors::bg_04 = design::toJuceColour(design::colors::BG_04);
 
 // Borders with proper opacity
-const juce::Colour ZenithTheme::Colors::border_subtle =
-    juce::Colour(0xffffffff).withAlpha(0.06f);
-const juce::Colour ZenithTheme::Colors::border_default =
-    juce::Colour(0xffffffff).withAlpha(0.12f);
-const juce::Colour ZenithTheme::Colors::border_strong =
-    juce::Colour(0xffffffff).withAlpha(0.20f);
-const juce::Colour ZenithTheme::Colors::border_focus = juce::Colour(0xff3b82f6);
+const juce::Colour ZenithTheme::Colors::border_subtle = design::toJuceColour(design::colors::BORDER_SUBTLE);
+const juce::Colour ZenithTheme::Colors::border_default = design::toJuceColour(design::colors::BORDER_DEFAULT);
+const juce::Colour ZenithTheme::Colors::border_strong = design::toJuceColour(design::colors::BORDER_STRONG);
+const juce::Colour ZenithTheme::Colors::border_focus = design::toJuceColour(design::colors::BORDER_FOCUS);
 
 // Text hierarchy
-const juce::Colour ZenithTheme::Colors::text_primary =
-    juce::Colour(0xffffffff).withAlpha(0.95f);
-const juce::Colour ZenithTheme::Colors::text_secondary =
-    juce::Colour(0xffffffff).withAlpha(0.60f);
-const juce::Colour ZenithTheme::Colors::text_tertiary =
-    juce::Colour(0xffffffff).withAlpha(0.35f);
-const juce::Colour ZenithTheme::Colors::text_inverse =
-    juce::Colour(0xff000000).withAlpha(0.90f);
+const juce::Colour ZenithTheme::Colors::text_primary = design::toJuceColour(design::colors::TEXT_PRIMARY);
+const juce::Colour ZenithTheme::Colors::text_secondary = design::toJuceColour(design::colors::TEXT_SECONDARY);
+const juce::Colour ZenithTheme::Colors::text_tertiary = design::toJuceColour(design::colors::TEXT_TERTIARY);
+const juce::Colour ZenithTheme::Colors::text_inverse = design::toJuceColour(design::colors::TEXT_INVERSE);
 
-// Professional blue accent (not garish cyan)
-const juce::Colour ZenithTheme::Colors::accent_primary =
-    juce::Colour(0xff3b82f6);
-const juce::Colour ZenithTheme::Colors::accent_hover = juce::Colour(0xff60a5fa);
-const juce::Colour ZenithTheme::Colors::accent_pressed =
-    juce::Colour(0xff2563eb);
-const juce::Colour ZenithTheme::Colors::accent_subtle =
-    juce::Colour(0xff3b82f6).withAlpha(0.10f);
+// Primary accent (unified with Neon Noir design system)
+const juce::Colour ZenithTheme::Colors::accent_primary = design::toJuceColour(design::colors::ACCENT_PRIMARY);
+const juce::Colour ZenithTheme::Colors::accent_secondary = design::toJuceColour(design::colors::ACCENT_SECONDARY);
+const juce::Colour ZenithTheme::Colors::accent_hover = design::toJuceColour(design::colors::ACCENT_PRIMARY).brighter(0.2f);
+const juce::Colour ZenithTheme::Colors::accent_pressed = design::toJuceColour(design::colors::ACCENT_PRIMARY).darker(0.1f);
+const juce::Colour ZenithTheme::Colors::accent_subtle = design::toJuceColour(design::colors::ACCENT_PRIMARY).withAlpha(0.10f);
+const juce::Colour ZenithTheme::Colors::hover_overlay = design::toJuceColour(design::colors::GLASS_HOVER);
 
 // Semantic colors
-const juce::Colour ZenithTheme::Colors::success = juce::Colour(0xff10b981);
-const juce::Colour ZenithTheme::Colors::warning = juce::Colour(0xfff59e0b);
-const juce::Colour ZenithTheme::Colors::error = juce::Colour(0xffef4444);
-const juce::Colour ZenithTheme::Colors::info = juce::Colour(0xff06b6d4);
+const juce::Colour ZenithTheme::Colors::success = design::toJuceColour(design::colors::SUCCESS);
+const juce::Colour ZenithTheme::Colors::warning = design::toJuceColour(design::colors::WARNING);
+const juce::Colour ZenithTheme::Colors::error = design::toJuceColour(design::colors::DANGER);
+const juce::Colour ZenithTheme::Colors::info = design::toJuceColour(design::colors::INFO);
 
 // Audio-specific colors
-const juce::Colour ZenithTheme::Colors::waveform_audio =
-    juce::Colour(0xff3b82f6);
-const juce::Colour ZenithTheme::Colors::waveform_midi =
-    juce::Colour(0xff8b5cf6);
-const juce::Colour ZenithTheme::Colors::automation = juce::Colour(0xffec4899);
-const juce::Colour ZenithTheme::Colors::playhead = juce::Colour(0xfff97316);
+const juce::Colour ZenithTheme::Colors::waveform_audio = design::toJuceColour(design::colors::WAVEFORM_AUDIO);
+const juce::Colour ZenithTheme::Colors::waveform_midi = design::toJuceColour(design::colors::WAVEFORM_MIDI);
+const juce::Colour ZenithTheme::Colors::automation = design::toJuceColour(design::colors::AUTOMATION);
+const juce::Colour ZenithTheme::Colors::playhead = design::toJuceColour(design::colors::PLAYHEAD);
 
 // Track color generation using golden ratio for even distribution
 juce::Colour ZenithTheme::Colors::getTrackColor(int index, float saturation,
@@ -94,27 +83,19 @@ juce::Colour ZenithTheme::Colors::darken(const juce::Colour &color,
 //==============================================================================
 
 juce::Font ZenithTheme::Typography::getFont(float size, Weight weight) {
-    // Determine internal weight and family mapping
-    design::FontWeight fw = design::FontWeight::Regular;
-    design::FontFamily ff = design::FontFamily::UI;
+  auto fontName = juce::Font::getDefaultSansSerifFontName();
 
-    switch (weight) {
-        case Weight::Regular: fw = design::FontWeight::Regular; break;
-        case Weight::Medium:  fw = design::FontWeight::Medium; break;
-        case Weight::Bold:    fw = design::FontWeight::Bold; break;
-        default: break;
-    }
-
-    // Use FontManager to get the JUCE Typeface (bypassing system lookup)
-    auto typeface = design::FontManager::getInstance().getJuceTypeface(ff, fw);
-
-    if (typeface != nullptr) {
-        return juce::Font(typeface).withHeight(size);
-    }
-
-    // Fallback (should not happen if FontManager initialized correctly)
-    auto fontName = juce::Font::getDefaultSansSerifFontName();
-    return juce::Font(fontName, size, juce::Font::plain);
+  switch (weight) {
+  case Weight::Regular:
+    return juce::Font(juce::FontOptions(fontName, size, juce::Font::plain));
+  case Weight::Medium:
+    return juce::Font(juce::FontOptions(fontName, size, juce::Font::plain))
+        .withExtraKerningFactor(0.05f);
+  case Weight::Bold:
+    return juce::Font(juce::FontOptions(fontName, size, juce::Font::bold));
+  default:
+    return juce::Font(juce::FontOptions(fontName, size, juce::Font::plain));
+  }
 }
 
 juce::Font ZenithTheme::Typography::getTinyFont(Weight weight) {

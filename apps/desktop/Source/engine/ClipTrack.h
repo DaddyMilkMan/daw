@@ -6,6 +6,17 @@
 
 namespace zenith {
 
+/**
+ * @brief Track that can contain clips (Audio, MIDI, or Instrument tracks)
+ *
+ * ## Ownership Model (to prevent shared_ptr cycles):
+ *
+ * **ClipTrack -> Clips:** Owned via std::unique_ptr in clipsOwned_ vector
+ * **ClipSnapshot:** Uses shared_ptr for RCU pattern, but only for internal management
+ * **Clips -> Track:** No back-reference stored in Clip (uses parameter passing)
+ *
+ * @note Clips should NEVER hold std::shared_ptr<ClipTrack> or std::shared_ptr<Track>
+ */
 class ClipTrack : public Track {
 public:
   ClipTrack(const juce::String &name, Type type) : Track(name, type) {

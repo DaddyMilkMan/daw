@@ -4,16 +4,19 @@
  */
 
 #include "MixerComponent.h"
+#include "../design-system/ZenithDesignSystem.h"
 #include "../engine/Track.h"
+#include "../framework/GlassmorphicPanel.h"
 #include "Engine.h"
-#include "GlassmorphicPanel.h"
 #include "MixerChannelComponent.h"
-#include "ZenithDesignSystem.h"
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "ZenithSkia.h"
+#include <core/SkCanvas.h>
+#include <core/SkPaint.h>
+#include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
+#include <include/core/SkColor.h>
 
 namespace zenith {
 
@@ -75,8 +78,11 @@ int MixerComponent::ChannelContainer::getTotalWidth(int stripWidth,
 
 MixerComponent::MixerComponent(Engine &engine, ProjectState &state)
     : engine_(engine), projectState_(state) {
-  // Listen to state changes
-  projectState_.addListener(this);
+  // Thread Safety: Constructor must be called from message thread
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  // Listen to the entire state tree for changes
+  projectState_.getState().addListener(this);
 
   // Create channel container for viewport
   trackContainer_ = std::make_unique<ChannelContainer>();
@@ -99,7 +105,7 @@ MixerComponent::MixerComponent(Engine &engine, ProjectState &state)
     }
   }
   if (masterTrack) {
-    masterChannel_ = std::make_unique<MixerChannelComponent>(masterTrack, true);
+    masterChannel_ = std::make_unique<MixerChannelComponent>(masterTrack, projectState_, engine_, true);
     addAndMakeVisible(masterChannel_.get());
   }
 
@@ -107,8 +113,20 @@ MixerComponent::MixerComponent(Engine &engine, ProjectState &state)
   rebuildChannels();
 }
 
+void MixerComponent::rebuildChannels() {
+  trackContainer_->clearChannels();
+  
+  auto tracks = engine_.tracks();
+  for (auto& t : tracks) {
+      if (t->getType() != Track::Type::Master) {
+        auto channel = std::make_unique<MixerChannelComponent>(t.get(), projectState_, engine_);
+        trackContainer_->addChannel(std::move(channel));
+      }
+  }
+}
+
 MixerComponent::~MixerComponent() {
-  projectState_.removeListener(this);
+  projectState_.getState().removeListener(this);
   trackContainer_->clearChannels();
   masterChannel_.reset();
 }
@@ -121,12 +139,12 @@ void MixerComponent::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
   SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
 
-  // 1. Draw Background with Gradient
-  GlassmorphicPanel::fillBackground(canvas, skBounds);
+  // 1. Draw Background with Glassmorphism
+  GlassmorphicPanel::draw(canvas, skBounds, GlassmorphicPanel::Style::Subtle);
 
-  // 2. Draw Top Border/Glow
+  // 2. Draw Top Border/Glow (Enhanced)
   SkPaint borderPaint;
-  borderPaint.setColor(SkColorSetARGB(100, 255, 255, 255));
+  borderPaint.setColor(design::colors::BORDER_SUBTLE);
   borderPaint.setStrokeWidth(1.0f);
   borderPaint.setStyle(SkPaint::kStroke_Style);
   borderPaint.setAntiAlias(true);
@@ -233,6 +251,9 @@ void MixerComponent::resized() {
 //==============================================================================
 
 void MixerComponent::selectChannel(const juce::String &trackId) {
+  // Thread Safety: Selection changes must happen on message thread
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
   if (selectedTrackId_ == trackId)
     return;
 
@@ -258,38 +279,6 @@ void MixerComponent::updateSelection() {
   if (masterChannel_) {
     masterChannel_->setSelected(false);
   }
-}
-
-//==============================================================================
-// Channel Rebuilding
-//==============================================================================
-
-void MixerComponent::rebuildChannels() {
-  trackContainer_->clearChannels();
-
-  // Iterate tracks from ProjectState to maintain order
-  auto tracksNode =
-      projectState_.getState().getChildWithName(ProjectState::ID_TRACKS);
-  if (!tracksNode.isValid())
-    return;
-
-  for (const auto &trackNode : tracksNode) {
-    juce::String trackId = trackNode[ProjectState::PROP_ID].toString();
-
-    Track *track = findTrackById(trackId);
-    if (track) {
-      auto channel = std::make_unique<MixerChannelComponent>(track, false);
-
-      // Setup click handler for selection
-      channel->onClick = [this, trackId]() { selectChannel(trackId); };
-
-      trackContainer_->addChannel(std::move(channel));
-    }
-  }
-
-  resized();
-  updateSelection();
-  repaint();
 }
 
 Track *MixerComponent::findTrackById(const juce::String &trackId) {

@@ -1,12 +1,13 @@
 #pragma once
 
-#include "../controls/ZenithButton.h"
-#include "../framework/SkiaComponent.h"
 #include "Engine.h"
 #include "ProjectState.h"
+#include "SkiaComponent.h"
+#include "controls/ZenithButton.h"
 #include <functional>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <vector>
+
 
 namespace zenith {
 
@@ -36,6 +37,7 @@ public:
   // Callbacks to access Arranger context
   std::function<juce::StringArray()> getSelectedClipIds;
   std::function<juce::String()> getSelectedTrackId;
+  std::function<void(float, const juce::String &)> onFreezeProgress;
 
   // Proximity check from parent
   void checkProximity(juce::Point<float> mousePosInParent);

@@ -26,7 +26,7 @@ SkiaTextEditor::SkiaTextEditor(const juce::String &componentName) {
   placeholderColour_ = design::withAlpha(design::colors::TEXT_PRIMARY, 0.5f);
 
   // Start caret blink timer
-  startTimerHz(2); // 2Hz for caret blinking
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(2); // 2Hz for caret blinking
 }
 
 SkiaTextEditor::~SkiaTextEditor() { stopTimer(); }

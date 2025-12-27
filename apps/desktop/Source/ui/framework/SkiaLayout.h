@@ -13,6 +13,7 @@
 #pragma once
 
 #include "SkiaComponent.h"
+#include <cfloat>
 #include <juce_core/juce_core.h>
 
 namespace zenith {

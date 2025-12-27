@@ -6,15 +6,15 @@
 #include "SkiaRenderer.h"
 
 // Skia headers
-#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
+
 #include <core/SkCanvas.h>
 #include <core/SkColorSpace.h>
 #include <core/SkSurface.h>
 #include <gpu/GpuTypes.h>
-#include <gpu/ganesh/GrBackendSurface.h>
+// #include <gpu/ganesh/GrBackendSurface.h> // Triggers D3D headers on some
+// configs
 #include <gpu/ganesh/GrDirectContext.h>
 #include <gpu/ganesh/SkSurfaceGanesh.h>
-#endif
 
 // Platform-specific headers
 #if JUCE_MAC
@@ -24,10 +24,12 @@
 #include <gpu/ganesh/mtl/GrMtlTypes.h>
 #include <objc/message.h>
 #include <objc/runtime.h>
-#elif JUCE_LINUX
-// Use OpenGL on Linux as vcpkg Skia build lacks Vulkan Ganesh support
+#elif 0 // JUCE_LINUX
+// #define SK_VULKAN 1
+#include <gpu/ganesh/vk/GrVkBackendContext.h>
+#include <gpu/ganesh/vk/GrVkTypes.h>
+#include <vulkan/vulkan.h>
 #elif JUCE_WINDOWS
-#define SK_DIRECT3D 1
 #include <d3d12.h>
 #include <dxgi1_4.h>
 #include <gpu/ganesh/d3d/GrD3DBackendContext.h>
@@ -37,10 +39,8 @@ using Microsoft::WRL::ComPtr;
 #endif
 
 // OpenGL backend (always available as fallback)
-#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
 #include <gpu/ganesh/gl/GrGLDirectContext.h>
 #include <gpu/ganesh/gl/GrGLInterface.h>
-#endif
 
 namespace zenith {
 
@@ -69,7 +69,6 @@ bool SkiaRenderer::initialize() {
 
   DBG("Initializing SkiaRenderer...");
 
-#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
   bool contextCreated = createGpuContext();
 
   // Fallback chain if primary backend fails
@@ -97,10 +96,6 @@ bool SkiaRenderer::initialize() {
   initialized_ = true;
   lastFrameTime_ = juce::Time::getCurrentTime();
   return true;
-#else
-  DBG("Skia disabled - SkiaRenderer disabled");
-  return false;
-#endif
 }
 
 void SkiaRenderer::shutdown() {
@@ -118,7 +113,6 @@ void SkiaRenderer::shutdown() {
 //==============================================================================
 
 void SkiaRenderer::render(std::function<void(SkCanvas *)> drawCallback) {
-#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
   if (!initialized_ || !surface_)
     return;
 
@@ -139,15 +133,14 @@ void SkiaRenderer::render(std::function<void(SkCanvas *)> drawCallback) {
   updateStats();
 
   if (vsyncEnabled_) {
-    auto frameTime = juce::Time::getCurrentTime() - startTime;
-    auto targetFrameTime =
-        juce::RelativeTime::milliseconds((juce::int64)(1000.0 / targetFPS_));
-    if (frameTime < targetFrameTime)
-      juce::Thread::sleep((int)(targetFrameTime - frameTime).inMilliseconds());
+    // VSync should be handled by the backend (swap buffers), not by sleeping on the message thread.
+    // Sleeping here causes UI freezes.
+    // auto frameTime = juce::Time::getCurrentTime() - startTime;
+    // auto targetFrameTime =
+    //    juce::RelativeTime::milliseconds((juce::int64)(1000.0 / targetFPS_));
+    // if (frameTime < targetFrameTime)
+    //   juce::Thread::sleep((int)(targetFrameTime - frameTime).inMilliseconds());
   }
-#else
-  juce::ignoreUnused(drawCallback);
-#endif
 }
 
 void SkiaRenderer::resize(int width, int height) {
@@ -161,11 +154,12 @@ void SkiaRenderer::resize(int width, int height) {
 
 SkiaRenderer::Backend SkiaRenderer::detectBestBackend() const {
 #if JUCE_WINDOWS
-  return Backend::OpenGL; // Fallback to OpenGL until D3D header issues resolved
+  // Default to OpenGL for maximum compatibility on Windows
+  return Backend::OpenGL; 
 #elif JUCE_MAC
-  return Backend::Metal;
+  return Backend::OpenGL;
 #elif JUCE_LINUX
-  return Backend::OpenGL; // Use OpenGL by default on Linux
+  return Backend::OpenGL;
 #else
   return Backend::OpenGL;
 #endif
@@ -198,13 +192,12 @@ void SkiaRenderer::setVSyncEnabled(bool enable) { vsyncEnabled_ = enable; }
 //==============================================================================
 
 bool SkiaRenderer::createGpuContext() {
-#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
   switch (backend_) {
 #if JUCE_MAC
   case Backend::Metal:
     return createMetalContext();
 #endif
-#if JUCE_LINUX && defined(SK_VULKAN)
+#if 0 // JUCE_LINUX
   case Backend::Vulkan:
     return createVulkanContext();
 #endif
@@ -226,13 +219,9 @@ bool SkiaRenderer::createGpuContext() {
   default:
     return false;
   }
-#else
-  return false;
-#endif
 }
 
 bool SkiaRenderer::createSurface(int width, int height) {
-#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
   if (width <= 0 || height <= 0)
     return false;
   surface_.reset();
@@ -252,9 +241,6 @@ bool SkiaRenderer::createSurface(int width, int height) {
         SkSurfaces::RenderTarget(grContext_.get(), skgpu::Budgeted::kNo, info);
   }
   return surface_ != nullptr;
-#else
-  return false;
-#endif
 }
 
 void SkiaRenderer::updateStats() {
@@ -363,8 +349,8 @@ bool SkiaRenderer::createVulkanContext() {
 
 #if JUCE_WINDOWS
 bool SkiaRenderer::createD3DContext() {
-  DBG("SkiaRenderer: D3D12 context creation disabled due to valid header "
-      "issues.");
+  // D3D12 backend requires valid headers and linkage.
+  // Returning false triggers automatic fallback to OpenGL/Software.
   return false;
 }
 #endif

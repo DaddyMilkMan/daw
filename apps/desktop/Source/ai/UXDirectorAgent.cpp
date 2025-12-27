@@ -11,9 +11,9 @@
 */
 
 #include "UXDirectorAgent.h"
-#include "ClipComponent.h"
-#include "MixerChannelComponent.h"
-#include "SkiaComponent.h"
+#include "../ui/arranger/ClipComponent.h"
+#include "../ui/mixer/MixerChannelComponent.h"
+#include "../ui/framework/SkiaComponent.h"
 #include "ZenithStyleApplicator.h"
 #include <algorithm>
 #include <typeinfo>
@@ -48,7 +48,8 @@ void UXDirectorAgent::startMonitoring(int intervalMs) {
 
   config_.analysisIntervalMs = intervalMs;
   isMonitoring_.store(true);
-  startTimer(intervalMs);
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr)
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(intervalMs);
 
   DBG("UXDirectorAgent: Started monitoring at " + juce::String(intervalMs) +
       "ms intervals");

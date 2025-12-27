@@ -13,8 +13,6 @@
 */
 
 #include "ZenithPolySynthVoice.h"
-#include "ZenithPolySynth.h"
-#include <algorithm>
 #include <cmath>
 
 namespace zenith {
@@ -106,11 +104,11 @@ void ZenithPolySynthVoice::noteStarted() {
   }
 
   targetFrequency_ = note.getFrequencyInHertz();
-  velocity_ = std::pow(note.noteOnVelocity.asSignedFloat(), velocityCurve_);
+  velocity_ = std::pow(note.noteOnVelocity.asUnsignedFloat(), velocityCurve_);
 
   // Initialize MPE values
-  aftertouch_ = note.pressure.asSignedFloat();
-  timbre_ = note.timbre.asSignedFloat();
+  aftertouch_ = note.pressure.asUnsignedFloat();
+  timbre_ = note.timbre.asUnsignedFloat();
 
   // Pitch bend calculation for Mod Matrix (normalized approx)
   // ZenithPolySynth uses pitchBendRange_ parameter, we can normalize against it
@@ -134,7 +132,7 @@ void ZenithPolySynthVoice::noteStopped(bool allowTailOff) {
 }
 
 void ZenithPolySynthVoice::notePressureChanged() {
-  aftertouch_ = getCurrentlyPlayingNote().pressure.asSignedFloat();
+  aftertouch_ = getCurrentlyPlayingNote().pressure.asUnsignedFloat();
 }
 
 void ZenithPolySynthVoice::notePitchbendChanged() {
@@ -145,7 +143,7 @@ void ZenithPolySynthVoice::notePitchbendChanged() {
 }
 
 void ZenithPolySynthVoice::noteTimbreChanged() {
-  timbre_ = getCurrentlyPlayingNote().timbre.asSignedFloat();
+  timbre_ = getCurrentlyPlayingNote().timbre.asUnsignedFloat();
 }
 
 void ZenithPolySynthVoice::noteKeyStateChanged() {
@@ -198,37 +196,38 @@ void ZenithPolySynthVoice::renderNextBlock(
   while (samplesProcessed < numSamples) {
     int chunk = juce::jmin(numSamples - samplesProcessed,
                            maxBlockSize_); // Limit to max safe block
-    int upsampledChunk = chunk * oversamplingFactor_;
 
-    // Safety check against buffer sizes
-    if (chunk > downsamplingBuffer_.getNumSamples() ||
-        upsampledChunk > oversamplingBuffer_.getNumSamples()) {
-      // This should theoretically not happen if maxBlockSize_ is respected and
-      // buffers are sized correctly
-      jassertfalse;
-      // Fallback: render non-oversampled to avoid crash/silence
-      renderInnerBlock(outputBuffer, startSample + samplesProcessed,
-                       numSamples - samplesProcessed);
-      return;
+    // Create a block for the input chunk
+    juce::dsp::AudioBlock<float> inputBlock(outputBuffer);
+    auto subBlock =
+        inputBlock.getSubBlock(startSample + samplesProcessed, chunk);
+
+    // 1. Upsample (returns the upsampled block to process)
+    auto upsampledBlock = oversampler_->processSamplesUp(subBlock);
+
+    // 2. Wrap the upsampled block in a juce::AudioBuffer to render into it
+    // Note: We use the pointers directly from the upsampled block
+    int upsampledSamples = static_cast<int>(upsampledBlock.getNumSamples());
+    
+    // Use the existing oversamplingBuffer_ as a bridge to ensure channel consistency
+    oversamplingBuffer_.setSize(
+        static_cast<int>(upsampledBlock.getNumChannels()), upsampledSamples,
+        false, false, true);
+    oversamplingBuffer_.clear();
+
+    // 3. Render synth logic at upsampled rate
+    renderInnerBlock(oversamplingBuffer_, 0, upsampledSamples);
+
+    // 4. Copy to upsampled block for downsampling
+    for (size_t ch = 0; ch < upsampledBlock.getNumChannels(); ++ch) {
+      std::copy(oversamplingBuffer_.getReadPointer(static_cast<int>(ch)),
+                oversamplingBuffer_.getReadPointer(static_cast<int>(ch)) +
+                    upsampledSamples,
+                upsampledBlock.getChannelPointer(ch));
     }
 
-    // 1. Render synth logic into upsampled buffer
-    // Note: Internal components (Oscs, Filters) are already configured for
-    // baseRate * factor
-    oversamplingBuffer_.clear(0, upsampledChunk);
-    renderInnerBlock(oversamplingBuffer_, 0, upsampledChunk);
-
-    // 2. Downsample
-    juce::dsp::AudioBlock<float> upBlock(oversamplingBuffer_);
-    // Slice only the valid part
-    juce::dsp::AudioBlock<float> validUpBlock =
-        upBlock.getSubBlock(0, upsampledChunk);
-
-    juce::dsp::AudioBlock<float> downBlock(downsamplingBuffer_);
-    juce::dsp::AudioBlock<float> validDownBlock =
-        downBlock.getSubBlock(0, chunk);
-
-    oversampler_->processSamplesDown(validDownBlock);
+    // 5. Downsample
+    oversampler_->processSamplesDown(subBlock);
 
     // 3. Mix into output buffer
     for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch) {
@@ -612,10 +611,10 @@ void ZenithPolySynthVoice::setQualityPreset(QualityPreset quality) {
     } else {
       oversampler_ = nullptr;
     }
-
-    // Call updateSampleRate only when the factor changes.
-    updateSampleRate();
   }
+
+  // Call updateSampleRate to propagate the new rate (Bug Fix)
+  updateSampleRate();
 }
 
 void ZenithPolySynthVoice::setAmpEnvelope(float attack, float decay,

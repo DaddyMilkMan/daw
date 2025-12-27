@@ -9,9 +9,12 @@
 */
 
 #include "BottomBar.h"
-#include "MixerComponent.h"
 #include "../../ai/SessionDebuggerAgent.h"
-#include "DebugConsoleComponent.h"
+#include "../controls/DebugConsoleComponent.h"
+#include "../controls/DeviceChainComponent.h"
+#include "../transport/AutoSaveIndicator.h"
+#include "../mixer/MixerComponent.h"
+#include <memory>
 
 #define ZENITH_USE_SKIA 1 // FORCE DEFINITION FOR DEBUGGING
 
@@ -22,8 +25,8 @@
 
 #endif
 
+#include "../controls/DeviceChainComponent.h"
 #include "Engine.h"
-#include "DeviceChainComponent.h"
 
 namespace zenith {
 
@@ -45,6 +48,11 @@ BottomBar::BottomBar(juce::MidiKeyboardState &state, Engine &engine,
   mixerComponent_ = std::make_unique<MixerComponent>(engine, projectState);
   addChildComponent(mixerComponent_.get());
 
+  // Create Auto-Save Indicator
+  autoSaveIndicator_ = std::make_unique<AutoSaveIndicator>(projectState);
+  addChildComponent(autoSaveIndicator_.get());
+  autoSaveIndicator_->setVisible(true);
+
   // Debug console is created when setDebugger is called
 
   // Default size
@@ -57,6 +65,7 @@ BottomBar::~BottomBar() {
   debugConsole_.reset();
   deviceChain_.reset();
   mixerComponent_.reset();
+  autoSaveIndicator_.reset();
 }
 
 void BottomBar::setDebugger(ai::SessionDebuggerAgent *debugger) {
@@ -194,6 +203,11 @@ void BottomBar::resized() {
 
         // Should device chain avoid console?
         linkArea.removeFromRight(consoleWidth + 20);
+      }
+
+      // Position Auto-Save Indicator (Top Right of Bottom Bar)
+      if (autoSaveIndicator_) {
+        autoSaveIndicator_->setBounds(area.getWidth() - 100, 5, 80, 20);
       }
 
       if (deviceChain_ && deviceChainVisible_) {

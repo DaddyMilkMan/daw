@@ -104,7 +104,7 @@ void ZenithTooltipOverlay::drawTooltipCard(SkCanvas *canvas,
   }
 
   SkRect cardRect = SkRect::MakeXYWH(cardX, cardY, cardW, cardH);
-  SkRRect rrect = SkRRect::MakeRectXY(cardRect, 8.0f, 8.0f);
+  SkRRect rrect = SkRRect::MakeRectXY(cardRect, design::dimensions::RADIUS_SM, design::dimensions::RADIUS_SM);
 
   // Card background (glass)
   paint.setStyle(SkPaint::kFill_Style);

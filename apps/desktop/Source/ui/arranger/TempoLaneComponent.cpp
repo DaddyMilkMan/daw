@@ -1,339 +1,376 @@
 /**
  * @file TempoLaneComponent.cpp
  * @brief Tempo lane implementation - FULLY IMPLEMENTED
- *
- * Allows visual editing of tempo changes in the timeline.
- * Features:
- * - Display tempo curve with interpolation
- * - Create tempo points (double-click)
- * - Drag tempo points (horizontal for time, vertical for BPM)
- * - Delete tempo points (Delete key)
- * - Sync with ProjectState tempo map
+ * 
+ * Allows visual editing of tempo automation.
  */
 
 #include "TempoLaneComponent.h"
+#include "../design-system/ZenithDesignSystem.h"
+#include <core/SkPaint.h>
+#include <core/SkPath.h>
+#include <core/SkFont.h>
+#include <effects/SkGradientShader.h>
 
 using namespace zenith;
 
 //==============================================================================
-TempoLaneComponent::TempoLaneComponent(ProjectState &state)
-    : projectState(state) {
-  setWantsKeyboardFocus(true);
-
-  // Listen to tempo map changes
-  projectState.addListener(this);
-
-  DBG("TempoLaneComponent: Constructor - FULLY IMPLEMENTED");
+TempoLaneComponent::TempoLaneComponent(ProjectState& state)
+    : projectState(state)
+{
+    setWantsKeyboardFocus(true);
+    projectState.getState().addListener(this);
 }
 
-TempoLaneComponent::~TempoLaneComponent() {
-  projectState.removeListener(this);
-  DBG("TempoLaneComponent: Destructor");
+TempoLaneComponent::~TempoLaneComponent()
+{
+    projectState.getState().removeListener(this);
 }
 
 //==============================================================================
 // Component Interface
 //==============================================================================
 
-void TempoLaneComponent::paint(juce::Graphics &g) {
-  auto bounds = getLocalBounds();
+void TempoLaneComponent::resized()
+{
+    repaint();
+}
 
-  // Background
-  g.fillAll(juce::Colour(0xff2a2a2a));
+void TempoLaneComponent::drawSkia(SkCanvas* canvas)
+{
+    using namespace zenith::design;
 
-  // Border
-  g.setColour(juce::Colours::black);
-  g.drawRect(bounds, 1);
+    auto bounds = getLocalBounds();
+    float width = (float)bounds.getWidth();
+    float height = (float)bounds.getHeight();
 
-  // Draw grid lines for BPM
-  drawGrid(g);
+    // Background
+    SkPaint bgPaint;
+    bgPaint.setColor(SkColorSetRGB(40, 40, 40)); // slightly darker than marker lane
+    canvas->drawRect(SkRect::MakeWH(width, height), bgPaint);
 
-  // Draw tempo curve
-  drawTempoCurve(g);
+    // Grid
+    drawGrid(canvas);
 
-  // Draw tempo points
-  drawTempoPoints(g);
+    // Curve
+    drawTempoCurve(canvas);
 
-  // Draw hovered point highlight
-  if (hoveredPointId.isNotEmpty()) {
-    auto tempoMap = projectState.getTempoMap();
-    for (auto point : tempoMap) {
-      if (point[ProjectState::PROP_ID].toString() == hoveredPointId) {
-        double timeBeats = point[ProjectState::PROP_TIME_BEATS];
+    // Points
+    drawTempoPoints(canvas);
+    
+    // Border
+    SkPaint borderPaint;
+    borderPaint.setColor(SK_ColorBLACK);
+    borderPaint.setStyle(SkPaint::kStroke_Style);
+    canvas->drawRect(SkRect::MakeWH(width, height), borderPaint);
+}
+
+void TempoLaneComponent::drawGrid(SkCanvas* canvas) const
+{
+    float width = (float)getWidth();
+    SkPaint gridPaint;
+    gridPaint.setColor(SkColorSetARGB(30, 255, 255, 255));
+    gridPaint.setStrokeWidth(1.0f);
+
+    // Draw horizontal lines for key BPMs
+    std::vector<double> gridBpms = {60, 80, 100, 120, 140, 160, 180, 200};
+    
+    for (double bpm : gridBpms)
+    {
+        if (bpm >= minBpm && bpm <= maxBpm)
+        {
+            float y = bpmToY(bpm);
+            canvas->drawLine(0, y, width, y, gridPaint);
+            
+            // Label
+            SkPaint textPaint;
+            textPaint.setColor(SkColorSetARGB(100, 255, 255, 255));
+            SkFont font = zenith::design::typography::getMonoFont(10.0f);
+            canvas->drawString(juce::String(bpm).toStdString().c_str(), 5, y - 2, font, textPaint);
+        }
+    }
+}
+
+void TempoLaneComponent::drawTempoCurve(SkCanvas* canvas) const
+{
+    auto points = projectState.getTempoMap(); // Assumes sorted by time
+    if (points.getNumChildren() == 0) return;
+
+    SkPath curvePath;
+    bool first = true;
+
+    // Iterate through points to build path
+    for (auto point : points)
+    {
+        double time = point[ProjectState::PROP_TIME_BEATS];
         double bpm = point[ProjectState::PROP_BPM];
-        float x = beatsToX(timeBeats);
+        
+        float x = beatsToX(time);
         float y = bpmToY(bpm);
 
-        g.setColour(juce::Colours::yellow.withAlpha(0.3f));
-        g.fillEllipse(x - 8, y - 8, 16, 16);
-        break;
-      }
-    }
-  }
-}
-
-void TempoLaneComponent::resized() {}
-
-void TempoLaneComponent::mouseDown(const juce::MouseEvent &event) {
-  if (event.mods.isPopupMenu())
-    return;
-
-  auto clickPos = event.getPosition().toFloat();
-
-  // Try to select a point
-  selectedPointId = findPointAt(clickPos.x, clickPos.y);
-
-  if (selectedPointId.isNotEmpty()) {
-    // Start dragging
-    isDraggingPoint = true;
-    dragStartX = clickPos.x;
-    dragStartY = clickPos.y;
-    repaint();
-  }
-}
-
-void TempoLaneComponent::mouseDrag(const juce::MouseEvent &event) {
-  if (!isDraggingPoint || selectedPointId.isEmpty())
-    return;
-
-  auto currentPos = event.getPosition().toFloat();
-
-  // Calculate new position
-  double newBeats = xToBeats(currentPos.x);
-  double newBpm = yToBpm(currentPos.y);
-
-  // Clamp values
-  newBeats = juce::jmax(0.0, newBeats);
-  newBpm = juce::jlimit(minBpm, maxBpm, newBpm);
-
-  // Update ProjectState
-  auto tempoMap = projectState.getTempoMap();
-  for (auto point : tempoMap) {
-    if (point[ProjectState::PROP_ID].toString() == selectedPointId) {
-      point.setProperty(ProjectState::PROP_TIME_BEATS, newBeats,
-                        &projectState.getUndoManager());
-      point.setProperty(ProjectState::PROP_BPM, newBpm,
-                        &projectState.getUndoManager());
-      break;
-    }
-  }
-
-  repaint();
-}
-
-void TempoLaneComponent::mouseUp(const juce::MouseEvent & /* event */) {
-  isDraggingPoint = false;
-}
-
-void TempoLaneComponent::mouseDoubleClick(const juce::MouseEvent &event) {
-  // Create new tempo point
-  auto clickPos = event.getPosition().toFloat();
-  double timeBeats = xToBeats(clickPos.x);
-  double bpm = yToBpm(clickPos.y);
-
-  // Clamp values
-  timeBeats = juce::jmax(0.0, timeBeats);
-  bpm = juce::jlimit(minBpm, maxBpm, bpm);
-
-  // Add to ProjectState
-  projectState.addTempoChange(timeBeats, bpm, "Add tempo point");
-
-  repaint();
-}
-
-void TempoLaneComponent::mouseMove(const juce::MouseEvent &event) {
-  auto currentPos = event.getPosition().toFloat();
-  juce::String newHoveredId = findPointAt(currentPos.x, currentPos.y);
-
-  if (newHoveredId != hoveredPointId) {
-    hoveredPointId = newHoveredId;
-    repaint();
-  }
-}
-
-void TempoLaneComponent::mouseExit(const juce::MouseEvent & /* event */) {
-  if (hoveredPointId.isNotEmpty()) {
-    hoveredPointId = juce::String();
-    repaint();
-  }
-}
-
-bool TempoLaneComponent::keyPressed(const juce::KeyPress &key) {
-  if (key == juce::KeyPress::deleteKey || key == juce::KeyPress::backspaceKey) {
-    if (selectedPointId.isNotEmpty()) {
-      // Delete selected point
-      auto tempoMap = projectState.getTempoMap();
-      for (int i = 0; i < tempoMap.getNumChildren(); ++i) {
-        auto point = tempoMap.getChild(i);
-        if (point[ProjectState::PROP_ID].toString() == selectedPointId) {
-          tempoMap.removeChild(i, &projectState.getUndoManager());
-          selectedPointId = juce::String();
-          repaint();
-          return true;
+        if (first)
+        {
+            curvePath.moveTo(0, y); // Start at t=0 with first bpm
+            curvePath.lineTo(x, y);
+            first = false;
         }
-      }
+        else
+        {
+            // Step change for now (or linear ramp if we support it later)
+            // Logic: Line to new X, old Y (hold value), then jump to new Y? 
+            // Standard DAW automation is usually points connected linearly or hold.
+            // Let's assume linear ramp for tempo curves
+            SkPoint lastPt;
+            if (curvePath.getLastPt(&lastPt)) {
+                curvePath.lineTo(x, y); 
+            }
+        }
     }
-  }
+    
+    // Extend to end
+    SkPoint lastPt;
+    if (curvePath.getLastPt(&lastPt)) {
+        curvePath.lineTo((float)getWidth(), lastPt.fY);
+    }
 
-  return false;
+    SkPaint curvePaint;
+    curvePaint.setColor(SkColorSetRGB(100, 200, 255)); // Light blue
+    curvePaint.setStyle(SkPaint::kStroke_Style);
+    curvePaint.setStrokeWidth(2.0f);
+    curvePaint.setAntiAlias(true);
+    
+    canvas->drawPath(curvePath, curvePaint);
+    
+    // Fill below curve
+    curvePath.lineTo((float)getWidth(), (float)getHeight());
+    curvePath.lineTo(0, (float)getHeight());
+    curvePath.close();
+    
+    SkPaint fillPaint;
+    fillPaint.setShader(SkGradientShader::MakeLinear(
+        new SkPoint[2]{SkPoint::Make(0, 0), SkPoint::Make(0, (float)getHeight())},
+        new SkColor[2]{SkColorSetARGB(50, 100, 200, 255), SkColorSetARGB(10, 100, 200, 255)},
+        nullptr, 2, SkTileMode::kClamp));
+    fillPaint.setStyle(SkPaint::kFill_Style);
+    
+    canvas->drawPath(curvePath, fillPaint);
+}
+
+void TempoLaneComponent::drawTempoPoints(SkCanvas* canvas) const
+{
+    auto points = projectState.getTempoMap();
+
+    for (auto point : points)
+    {
+        double time = point[ProjectState::PROP_TIME_BEATS];
+        double bpm = point[ProjectState::PROP_BPM];
+        juce::String id = point[ProjectState::PROP_ID].toString();
+        
+        bool selected = (id == selectedPointId);
+        drawTempoPoint(canvas, time, bpm, selected);
+    }
+}
+
+void TempoLaneComponent::drawTempoPoint(SkCanvas* canvas, double timeBeats, double bpm, bool selected) const
+{
+    float x = beatsToX(timeBeats);
+    float y = bpmToY(bpm);
+    float radius = 4.0f;
+
+    SkPaint pointPaint;
+    pointPaint.setColor(selected ? SK_ColorWHITE : SkColorSetRGB(100, 200, 255));
+    pointPaint.setStyle(SkPaint::kFill_Style);
+    pointPaint.setAntiAlias(true);
+    
+    canvas->drawCircle(x, y, radius, pointPaint);
+    
+    if (selected)
+    {
+        SkPaint ringPaint;
+        ringPaint.setColor(SK_ColorWHITE);
+        ringPaint.setStyle(SkPaint::kStroke_Style);
+        ringPaint.setStrokeWidth(1.0f);
+        ringPaint.setAntiAlias(true);
+        canvas->drawCircle(x, y, radius + 2.0f, ringPaint);
+    }
+}
+
+//==============================================================================
+// Interaction
+//==============================================================================
+
+void TempoLaneComponent::mouseDown(const juce::MouseEvent& event)
+{
+    juce::String id = findPointAt((float)event.x, (float)event.y);
+    
+    if (id.isNotEmpty())
+    {
+        selectedPointId = id;
+        isDraggingPoint = true;
+        dragStartX = (float)event.x;
+        dragStartY = (float)event.y;
+    }
+    else
+    {
+        selectedPointId.clear();
+    }
+    repaint();
+}
+
+void TempoLaneComponent::mouseDrag(const juce::MouseEvent& event)
+{
+    if (isDraggingPoint && selectedPointId.isNotEmpty())
+    {
+        double newBeats = xToBeats((float)event.x);
+        double newBpm = yToBpm((float)event.y);
+        
+        newBeats = std::max(0.0, newBeats);
+        newBpm = juce::jlimit(minBpm, maxBpm, newBpm);
+        
+        projectState.moveTempoChange(selectedPointId, newBeats, newBpm, "Move Tempo Change");
+    }
+}
+
+void TempoLaneComponent::mouseUp(const juce::MouseEvent&)
+{
+    isDraggingPoint = false;
+}
+
+void TempoLaneComponent::mouseDoubleClick(const juce::MouseEvent& event)
+{
+    // Add point
+    double beats = xToBeats((float)event.x);
+    double bpm = yToBpm((float)event.y);
+    
+    // Snap bpm
+    bpm = std::round(bpm);
+    
+    projectState.addTempoChange(beats, bpm, "Add Tempo Change");
+}
+
+void TempoLaneComponent::mouseMove(const juce::MouseEvent& event)
+{
+    juce::String id = findPointAt((float)event.x, (float)event.y);
+    if (id != hoveredPointId)
+    {
+        hoveredPointId = id;
+        repaint();
+    }
+}
+
+void TempoLaneComponent::mouseExit(const juce::MouseEvent&)
+{
+    if (hoveredPointId.isNotEmpty())
+    {
+        hoveredPointId.clear();
+        repaint();
+    }
+}
+
+bool TempoLaneComponent::keyPressed(const juce::KeyPress& key)
+{
+    if ((key == juce::KeyPress::deleteKey || key == juce::KeyPress::backspaceKey) && selectedPointId.isNotEmpty())
+    {
+        projectState.deleteTempoChange(selectedPointId, "Delete Tempo Change");
+        selectedPointId.clear();
+        repaint();
+        return true;
+    }
+    return false;
+}
+
+//==============================================================================
+// Helpers
+//==============================================================================
+
+double TempoLaneComponent::xToBeats(float x) const
+{
+    float width = (float)getWidth();
+    if (width <= 0.0f) return 0.0;
+    return viewStartBeats + (x / width) * (viewEndBeats - viewStartBeats);
+}
+
+float TempoLaneComponent::beatsToX(double beats) const
+{
+    float width = (float)getWidth();
+    double range = viewEndBeats - viewStartBeats;
+    if (range <= 0.0) return 0.0f;
+    return (float)((beats - viewStartBeats) / range * width);
+}
+
+double TempoLaneComponent::yToBpm(float y) const
+{
+    float height = (float)getHeight();
+    if (height <= 0.0f) return minBpm;
+    
+    // Inverted Y: 0 is maxBpm, height is minBpm
+    double normalized = y / height;
+    return maxBpm - normalized * (maxBpm - minBpm);
+}
+
+float TempoLaneComponent::bpmToY(double bpm) const
+{
+    float height = (float)getHeight();
+    double range = maxBpm - minBpm;
+    if (range <= 0.0) return 0.0f;
+    
+    // Inverted Y
+    return (float)((maxBpm - bpm) / range * height);
+}
+
+juce::String TempoLaneComponent::findPointAt(float x, float y) const
+{
+    const float kHitRadius = 6.0f;
+    
+    auto points = projectState.getTempoMap();
+    juce::String detectedId;
+    float minDist = 99999.0f;
+    
+    for (auto point : points)
+    {
+        double time = point[ProjectState::PROP_TIME_BEATS];
+        double bpm = point[ProjectState::PROP_BPM];
+        
+        float px = beatsToX(time);
+        float py = bpmToY(bpm);
+        
+        float dist = std::sqrt(std::pow(x - px, 2) + std::pow(y - py, 2));
+        
+        if (dist < kHitRadius && dist < minDist)
+        {
+            minDist = dist;
+            detectedId = point[ProjectState::PROP_ID].toString();
+        }
+    }
+    
+    return detectedId;
 }
 
 //==============================================================================
 // ValueTree::Listener
 //==============================================================================
 
-void TempoLaneComponent::valueTreePropertyChanged(
-    juce::ValueTree & /* tree */, const juce::Identifier & /* property */) {
-  repaint();
+void TempoLaneComponent::valueTreePropertyChanged(juce::ValueTree&, const juce::Identifier&)
+{
+    repaint();
 }
 
-void TempoLaneComponent::valueTreeChildAdded(juce::ValueTree & /* parent */,
-                                             juce::ValueTree & /* child */) {
-  repaint();
+void TempoLaneComponent::valueTreeChildAdded(juce::ValueTree&, juce::ValueTree&)
+{
+    repaint();
 }
 
-void TempoLaneComponent::valueTreeChildRemoved(juce::ValueTree & /* parent */,
-                                               juce::ValueTree & /* child */,
-                                               int /* index */) {
-  repaint();
+void TempoLaneComponent::valueTreeChildRemoved(juce::ValueTree&, juce::ValueTree&, int)
+{
+    repaint();
 }
 
-void TempoLaneComponent::valueTreeChildOrderChanged(
-    juce::ValueTree & /* parent */, int /* oldIndex */, int /* newIndex */) {
-  repaint();
+void TempoLaneComponent::valueTreeChildOrderChanged(juce::ValueTree&, int, int)
+{
+    repaint();
 }
 
-void TempoLaneComponent::valueTreeParentChanged(juce::ValueTree & /* tree */) {}
-
-//==============================================================================
-// Helper Methods
-//==============================================================================
-
-double TempoLaneComponent::xToBeats(float x) const {
-  float normalized = x / getWidth();
-  return viewStartBeats + normalized * (viewEndBeats - viewStartBeats);
-}
-
-float TempoLaneComponent::beatsToX(double beats) const {
-  double normalized =
-      (beats - viewStartBeats) / (viewEndBeats - viewStartBeats);
-  return static_cast<float>(normalized * getWidth());
-}
-
-double TempoLaneComponent::yToBpm(float y) const {
-  float normalized = y / getHeight();
-  return maxBpm - normalized * (maxBpm - minBpm);
-}
-
-float TempoLaneComponent::bpmToY(double bpm) const {
-  double normalized = (maxBpm - bpm) / (maxBpm - minBpm);
-  return static_cast<float>(normalized * getHeight());
-}
-
-juce::String TempoLaneComponent::findPointAt(float x, float y) const {
-  const float hitRadius = 8.0f;
-  auto tempoMap = projectState.getTempoMap();
-
-  for (auto point : tempoMap) {
-    double timeBeats = point[ProjectState::PROP_TIME_BEATS];
-    double bpm = point[ProjectState::PROP_BPM];
-
-    float px = beatsToX(timeBeats);
-    float py = bpmToY(bpm);
-
-    float distance = std::sqrt((x - px) * (x - px) + (y - py) * (y - py));
-    if (distance <= hitRadius) {
-      return point[ProjectState::PROP_ID].toString();
-    }
-  }
-
-  return juce::String();
-}
-
-void TempoLaneComponent::drawGrid(juce::Graphics &g) const {
-  auto bounds = getLocalBounds().toFloat();
-
-  // Draw horizontal BPM grid lines
-  g.setColour(juce::Colour(0xff3a3a3a));
-  const int bpmStep = 20;
-
-  for (int bpm = static_cast<int>(minBpm); bpm <= static_cast<int>(maxBpm);
-       bpm += bpmStep) {
-    float y = bpmToY(bpm);
-    g.drawLine(0, y, bounds.getWidth(), y, 1.0f);
-
-    // Draw BPM label
-    g.setColour(juce::Colours::grey);
-    g.setFont(10.0f);
-    g.drawText(juce::String(bpm) + " BPM", 5, static_cast<int>(y) - 12, 60, 12,
-               juce::Justification::centredLeft);
-  }
-}
-
-void TempoLaneComponent::drawTempoCurve(juce::Graphics &g) const {
-  auto tempoMap = projectState.getTempoMap();
-  if (tempoMap.getNumChildren() == 0)
-    return;
-
-  // Draw connecting lines between tempo points
-  g.setColour(juce::Colour(0xff4a9eff).withAlpha(0.7f));
-
-  juce::Path curvePath;
-  bool firstPoint = true;
-
-  for (auto point : tempoMap) {
-    double timeBeats = point[ProjectState::PROP_TIME_BEATS];
-    double bpm = point[ProjectState::PROP_BPM];
-
-    float x = beatsToX(timeBeats);
-    float y = bpmToY(bpm);
-
-    if (firstPoint) {
-      curvePath.startNewSubPath(x, y);
-      firstPoint = false;
-    } else {
-      curvePath.lineTo(x, y);
-    }
-  }
-
-  g.strokePath(curvePath, juce::PathStrokeType(2.0f));
-}
-
-void TempoLaneComponent::drawTempoPoints(juce::Graphics &g) const {
-  auto tempoMap = projectState.getTempoMap();
-
-  for (auto point : tempoMap) {
-    double timeBeats = point[ProjectState::PROP_TIME_BEATS];
-    double bpm = point[ProjectState::PROP_BPM];
-    juce::String pointId = point[ProjectState::PROP_ID].toString();
-
-    bool selected = (pointId == selectedPointId);
-
-    drawTempoPoint(g, timeBeats, bpm, selected);
-  }
-}
-
-void TempoLaneComponent::drawTempoPoint(juce::Graphics &g, double timeBeats,
-                                        double bpm, bool selected) const {
-  float x = beatsToX(timeBeats);
-  float y = bpmToY(bpm);
-
-  // Draw point
-  if (selected) {
-    g.setColour(juce::Colours::orange);
-    g.fillEllipse(x - 6, y - 6, 12, 12);
-  } else {
-    g.setColour(juce::Colours::white);
-    g.fillEllipse(x - 5, y - 5, 10, 10);
-  }
-
-  // Draw border
-  g.setColour(juce::Colours::black);
-  g.drawEllipse(x - 5, y - 5, 10, 10, 1.0f);
-
-  // Draw BPM label
-  g.setColour(juce::Colours::white);
-  g.setFont(10.0f);
-  g.drawText(juce::String(bpm, 1), static_cast<int>(x) - 20,
-             static_cast<int>(y) + 8, 40, 12, juce::Justification::centred);
+void TempoLaneComponent::valueTreeParentChanged(juce::ValueTree&)
+{
+    repaint();
 }

@@ -126,9 +126,17 @@ private:
 
   // Layout
   SkRect mainCardBounds_;
-  SkRect recentArea_;
-  SkRect templatesArea_;
-  SkRect accountArea_;
+  SkRect recentArea_; // Total area for recent projects section
+  SkRect recentHeaderBounds_;
+  SkRect recentGridBounds_;
+
+  SkRect accountArea_; // Total area for account section
+  SkRect accountHeaderBounds_;
+  SkRect accountContentBounds_;
+
+  SkRect templatesArea_; // Total area for templates section
+  SkRect quickStartHeaderBounds_;
+  SkRect templatesContentBounds_;
 
   struct RecentProject {
     juce::String name;

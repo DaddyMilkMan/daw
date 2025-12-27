@@ -7,12 +7,13 @@
   ==============================================================================
 */
 
-#include "ui/design-system/PlatformFontUtils.h"
+#include "../../../ui/design-system/PlatformFontUtils.h"
 
 #ifdef __linux__
-#include <ports/SkFontMgr_fontconfig.h>
-#include <ports/SkFontScanner_FreeType.h>
+#include <include/ports/SkFontMgr_fontconfig.h>
+#include <include/ports/SkFontScanner_FreeType.h>
 #include <juce_core/juce_core.h>
+#include <memory>
 
 namespace zenith {
 namespace design {

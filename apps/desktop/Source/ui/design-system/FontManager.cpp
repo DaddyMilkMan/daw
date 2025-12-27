@@ -11,12 +11,9 @@
 */
 
 #include "FontManager.h"
-
-#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
 #include <core/SkFontTypes.h>
 #include <include/core/SkData.h>
 #include <include/core/SkStream.h>
-#endif
 
 // Platform-specific font manager includes
 #include "PlatformFontUtils.h"
@@ -35,9 +32,13 @@ static int getWeightIndex(FontWeight weight) {
     return 2;
   case FontWeight::Bold:
     return 3;
+  default:
+    // Unknown weight - fallback to Regular. This handles future weight additions
+    // gracefully without crashing.
+    DBG("[FontManager] Unknown FontWeight value: " + juce::String(static_cast<int>(weight)) +
+        ", falling back to Regular");
+    return 0;
   }
-  jassertfalse;
-  return 0;
 }
 // ============================================================================
 // SINGLETON ACCESS
@@ -103,15 +104,15 @@ void FontManager::initialize() {
   }
 
   if (!fontDir_.isDirectory()) {
-    std::cout << "[FontManager] WARNING: Font directory not found. Tried: "
-              << fontDir_.getFullPathName() << std::endl;
-    std::cout << "[FontManager] Custom fonts will not be available - using system "
-                 "fallback" << std::endl;
+    DBG("[FontManager] WARNING: Font directory not found. Tried: "
+        << fontDir_.getFullPathName());
+    DBG("[FontManager] Custom fonts will not be available - using system "
+        "fallback");
     fontsLoaded_ = false;
     return;
   }
 
-  std::cout << "[FontManager] Loading fonts from: " << fontDir_.getFullPathName() << std::endl;
+  DBG("[FontManager] Loading fonts from: " << fontDir_.getFullPathName());
 
   // Load Inter fonts (UI family)
   bool interRegular =
@@ -123,15 +124,10 @@ void FontManager::initialize() {
   bool interBold = loadFont("Inter-Bold.ttf", FontFamily::UI, FontWeight::Bold);
 
   // Load JetBrains Mono fonts (Mono family)
-  bool monoRegular = loadFont("JetBrainsMono-Regular.ttf", FontFamily::Mono,
-                               FontWeight::Regular);
-  bool monoMedium = loadFont("JetBrainsMono-Medium.ttf", FontFamily::Mono,
-                              FontWeight::Medium);
-  // Try SemiBold first, fallback to Medium if not present
-  bool monoSemiBold = loadFont("JetBrainsMono-SemiBold.ttf", FontFamily::Mono,
-                               FontWeight::SemiBold);
-  bool monoBold =
-      loadFont("JetBrainsMono-Bold.ttf", FontFamily::Mono, FontWeight::Bold);
+  bool monoRegular = loadFont("JetBrainsMono-Regular.ttf", FontFamily::Mono, FontWeight::Regular);
+  bool monoMedium = loadFont("JetBrainsMono-Medium.ttf", FontFamily::Mono, FontWeight::Medium);
+  bool monoSemiBold = loadFont("JetBrainsMono-SemiBold.ttf", FontFamily::Mono, FontWeight::SemiBold);
+  bool monoBold = loadFont("JetBrainsMono-Bold.ttf", FontFamily::Mono, FontWeight::Bold);
 
   // Create synthetic weight fallbacks for missing fonts
   // This ensures getFont() always returns a usable typeface
@@ -140,51 +136,33 @@ void FontManager::initialize() {
   // If SemiBold missing, use Medium as fallback
   if (!monoSemiBold && monoMedium) {
     typefaces_[monoIdx][2] = typefaces_[monoIdx][1]; // SemiBold = Medium
-    typefacesJuce_[monoIdx][2] = typefacesJuce_[monoIdx][1];
-    std::cout << "[FontManager] Using Medium as SemiBold fallback for Mono" << std::endl;
+    DBG("[FontManager] Using Medium as SemiBold fallback for Mono");
   }
   // If SemiBold still missing but Bold exists, use Bold
   if (!typefaces_[monoIdx][2] && monoBold) {
     typefaces_[monoIdx][2] = typefaces_[monoIdx][3]; // SemiBold = Bold
-    typefacesJuce_[monoIdx][2] = typefacesJuce_[monoIdx][3];
-    std::cout << "[FontManager] Using Bold as SemiBold fallback for Mono" << std::endl;
+    DBG("[FontManager] Using Bold as SemiBold fallback for Mono");
   }
 
   // Display family shares typefaces with UI family
   // (Could load InterDisplay variants in the future for optical sizing)
   int uiFamilyIdx = static_cast<int>(FontFamily::UI);
   int displayFamilyIdx = static_cast<int>(FontFamily::Display);
-  
-  std::cout << "[FontManager] Starting Display/UI copy loop..." << std::endl;
   for (int w = 0; w < kNumWeights; ++w) {
-    // std::cout << "[FontManager] Copying weight " << w << std::endl;
     typefaces_[displayFamilyIdx][w] = typefaces_[uiFamilyIdx][w];
-    typefacesJuce_[displayFamilyIdx][w] = typefacesJuce_[uiFamilyIdx][w];
   }
-  std::cout << "[FontManager] Loop complete." << std::endl;
 
   // Check if we have at least the essential fonts
   fontsLoaded_ = interRegular && monoRegular;
 
   if (fontsLoaded_) {
-    int count = 0;
-    for (int f = 0; f < kNumFamilies; ++f) {
-      for (int w = 0; w < kNumWeights; ++w) {
-        if (typefaces_[f][w]) count++;
-      }
-    }
-    // Subtract shared Display family
-    for (int w = 0; w < kNumWeights; ++w) {
-         if (typefaces_[displayFamilyIdx][w]) count--;
-    }
-    
-    std::cout << "[FontManager] Font initialization complete. Loaded "
-              << count << " typefaces." << std::endl;
+    DBG("[FontManager] Font initialization complete. Loaded "
+        << getLoadedTypefaceCount() << " typefaces.");
   } else {
-    std::cout << "[FontManager] WARNING: Some essential fonts failed to load." << std::endl;
-    std::cout << "[FontManager]   Inter-Regular: " << (interRegular ? "OK" : "FAILED") << std::endl;
-    std::cout << "[FontManager]   JetBrainsMono-Regular: " << (monoRegular ? "OK"
-                                                                  : "FAILED") << std::endl;
+    DBG("[FontManager] WARNING: Some essential fonts failed to load.");
+    DBG("[FontManager]   Inter-Regular: " << (interRegular ? "OK" : "FAILED"));
+    DBG("[FontManager]   JetBrainsMono-Regular: " << (monoRegular ? "OK"
+                                                                  : "FAILED"));
   }
 }
 
@@ -204,10 +182,6 @@ bool FontManager::loadFont(const juce::String &filename, FontFamily family,
     return false;
   }
 
-  int familyIdx = static_cast<int>(family);
-  int weightIdx = getWeightIndex(weight);
-
-#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
   // Create Skia data from font file contents
   sk_sp<SkData> skData =
       SkData::MakeWithCopy(fontData.getData(), fontData.getSize());
@@ -224,18 +198,10 @@ bool FontManager::loadFont(const juce::String &filename, FontFamily family,
   }
 
   // Store in cache
-  typefaces_[familyIdx][weightIdx] = std::move(typeface);
-#else
-  typefaces_[familyIdx][weightIdx] = std::make_shared<SkTypeface>();
-#endif
+  int familyIdx = static_cast<int>(family);
+  int weightIdx = getWeightIndex(weight);
 
-  // Load JUCE typeface
-  auto juceTypeface = juce::Typeface::createSystemTypefaceFor(fontData.getData(), fontData.getSize());
-  if (juceTypeface) {
-      typefacesJuce_[familyIdx][weightIdx] = juceTypeface;
-  } else {
-      DBG("[FontManager] Failed to create JUCE typeface for: " << filename);
-  }
+  typefaces_[familyIdx][weightIdx] = std::move(typeface);
 
   DBG("[FontManager] Loaded: " << filename);
   return true;
@@ -264,41 +230,7 @@ sk_sp<SkTypeface> FontManager::getTypeface(FontFamily family,
   return nullptr;
 }
 
-juce::Typeface::Ptr FontManager::getJuceTypeface(FontFamily family, FontWeight weight) const {
-  std::lock_guard<std::mutex> lock(mutex_);
-  
-  int familyIdx = static_cast<int>(family);
-  // Map Display to UI family
-  if (family == FontFamily::Display) {
-    familyIdx = static_cast<int>(FontFamily::UI);
-  }
-  
-  int weightIdx = getWeightIndex(weight);
-  
-  if (familyIdx >= 0 && familyIdx < kNumFamilies && weightIdx >= 0 &&
-      weightIdx < kNumWeights) {
-      
-      auto tf = typefacesJuce_[familyIdx][weightIdx];
-      
-      // Fallbacks
-      if (tf == nullptr) {
-          // Fallback to Regular
-          tf = typefacesJuce_[familyIdx][0];
-      }
-      if (tf == nullptr && family != FontFamily::UI) {
-          // Fallback to UI family
-          tf = typefacesJuce_[(int)FontFamily::UI][weightIdx];
-          if (tf == nullptr) tf = typefacesJuce_[(int)FontFamily::UI][0];
-      }
-      
-      return tf;
-  }
-  return nullptr;
-}
-
-
 void FontManager::configureFont(SkFont &font) const {
-#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
   // Configure for optimal rendering on Windows
   // Per research: setEdging(kSubpixelAntiAlias), setSubpixel(true), and slight
   // hinting
@@ -311,15 +243,12 @@ void FontManager::configureFont(SkFont &font) const {
 
   // Baseline snapping for pixel-perfect alignment
   font.setBaselineSnap(true);
-#else
-  juce::ignoreUnused(font);
-#endif
 }
 
 SkFont FontManager::getFont(FontFamily family, FontWeight weight,
                             float size) const {
   std::lock_guard<std::mutex> lock(mutex_);
-
+  
   sk_sp<SkTypeface> typeface = getTypeface(family, weight);
 
   if (!typeface) {

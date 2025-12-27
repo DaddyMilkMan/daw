@@ -15,51 +15,49 @@ namespace zenith {
 namespace effects {
 
 void ConsoleEmulation::prepare(juce::dsp::ProcessSpec &spec) {
-  sampleRate = static_cast<float>(spec.sampleRate);
-
-  // Pre-calculate coefficients for all possible modes
-  vintageCoeffs =
-      juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, 16000.0f);
-  modernCoeffs =
-      juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, 20000.0f);
-
-  coefficientsDirty = true; // Force coefficient update on prepare
+  sampleRate = (float)spec.sampleRate;
+  lowPass.prepare(spec);
+  coefficientsDirty = true;
   reset();
 }
 
 void ConsoleEmulation::reset() {
-  // Initialize lowpass filter with default coefficients
-  updateFilterCoefficients();
+  updateCoefficients();
   lowPass.reset();
 }
 
-void ConsoleEmulation::updateFilterCoefficients() {
-  // Only update coefficients when mode has changed (performance optimization)
+void ConsoleEmulation::updateCoefficients() {
   if (!coefficientsDirty)
     return;
-  coefficientsDirty = false;
 
-  // Swap to pre-calculated coefficients
+  // Guard: ensure sampleRate is valid before creating coefficients
+  if (sampleRate <= 0.0f)
+    return;
+
+  // Guard: ensure coefficients pointer is valid (prepared)
+  if (lowPass.coefficients == nullptr)
+    return;
+
   if (mode == Mode::Vintage) {
-    if (vintageCoeffs)
-      lowPass.coefficients = vintageCoeffs;
+    *lowPass.coefficients =
+        *juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, 16000.0f);
   } else {
-    if (modernCoeffs)
-      lowPass.coefficients = modernCoeffs;
+    *lowPass.coefficients =
+        *juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, 20000.0f);
   }
+
+  coefficientsDirty = false;
 }
 
 void ConsoleEmulation::process(juce::AudioBuffer<float> &buffer) {
-  if (mode == Mode::Clean && drive < 0.01f)
+  if (mode == Mode::Clean && drive < 0.01f && character < 0.01f)
     return;
 
-  // Update filter coefficients only when mode has changed
-  updateFilterCoefficients();
+  updateCoefficients();
 
   const int numChannels = buffer.getNumChannels();
   const int numSamples = buffer.getNumSamples();
 
-  // Drive gain compensation (rough)
   float gainComp = 1.0f / (1.0f + drive * 0.5f);
 
   for (int ch = 0; ch < numChannels; ++ch) {
@@ -67,16 +65,17 @@ void ConsoleEmulation::process(juce::AudioBuffer<float> &buffer) {
     for (int i = 0; i < numSamples; ++i) {
       float in = data[i];
 
-      // Saturation
-      float out = applySaturation(in, drive * 2.0f); // Boost drive range
+      float saturated = applySaturation(in, drive * 2.0f);
 
-      // Applying saturation based on selected mode and drive intensity
+      float mixed = saturated;
+      if (character < 1.0f) {
+        mixed = in * (1.0f - character) + saturated * character;
+      }
 
-      data[i] = out * gainComp;
+      data[i] = mixed * gainComp;
     }
   }
 
-  // Apply filters if needed (Vintage roll-off)
   if (mode == Mode::Vintage) {
     juce::dsp::AudioBlock<float> block(buffer);
     juce::dsp::ProcessContextReplacing<float> context(block);
@@ -87,10 +86,6 @@ void ConsoleEmulation::process(juce::AudioBuffer<float> &buffer) {
 float ConsoleEmulation::applySaturation(float input, float driveAmount) {
   if (mode == Mode::Clean)
     return input;
-
-  // Simple tanh saturation
-  // x = input * (1 + drive)
-  // f(x) = tanh(x)
 
   float x = input * (1.0f + driveAmount * 2.0f);
 

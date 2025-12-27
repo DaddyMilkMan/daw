@@ -1,4 +1,4 @@
-/*
+﻿/*
   ==============================================================================
 
     MixerChannel.h
@@ -56,15 +56,15 @@ public:
 
     // Lookahead buffer (5ms - use constant)
     lookaheadSamples_ =
-        static_cast<int>(sampleRate * constants::kCompLookaheadMs / 1000.0);
-    lookaheadBuffer_.setSize(2, lookaheadSamples_ + maxBlockSize);
+        static_cast<int>(sampleRate * ::zenith::constants::kCompLookaheadMs / 1000.0);
+    lookaheadBuffer_.setSize(2, std::max(1, lookaheadSamples_ + maxBlockSize));
     lookaheadBuffer_.clear();
     lookaheadWritePos_ = 0;
 
     // RMS buffer (10ms window - use constant)
     rmsWindowSamples_ =
-        static_cast<int>(sampleRate * constants::kCompRmsWindowMs / 1000.0);
-    rmsBuffer_.resize(rmsWindowSamples_, 0.0f);
+        std::max(1, static_cast<int>(sampleRate * ::zenith::constants::kCompRmsWindowMs / 1000.0));
+    rmsBuffer_.assign(rmsWindowSamples_, 0.0f);
     rmsWritePos_ = 0;
     rmsSum_ = 0.0f;
 
@@ -210,13 +210,13 @@ public:
   }
 
 private:
-  double sampleRate_ = constants::kDefaultSampleRate;
+  double sampleRate_ = ::zenith::constants::kDefaultSampleRate;
 
   // Parameters (initialized from EngineConstants)
-  float threshold_ = constants::kDefaultCompThresholdDb;
-  float ratio_ = constants::kDefaultCompRatio;
-  float attackMs_ = constants::kDefaultCompAttackMs;
-  float releaseMs_ = constants::kDefaultCompReleaseMs;
+  float threshold_ = ::zenith::constants::kDefaultCompThresholdDb;
+  float ratio_ = ::zenith::constants::kDefaultCompRatio;
+  float attackMs_ = ::zenith::constants::kDefaultCompAttackMs;
+  float releaseMs_ = ::zenith::constants::kDefaultCompReleaseMs;
   float makeup_ = 0.0f;
   float knee_ = 6.0f; // Soft knee width in dB
   float autoMakeup_ = 0.0f;
@@ -276,8 +276,9 @@ private:
       output = threshold_ + (inputDb - threshold_) / ratio_;
     } else {
       // In knee region - smooth transition
-      float x = inputDb - threshold_ + halfKnee;
-      float kneeGain = (1.0f / ratio_ - 1.0f) / (2.0f * knee_);
+      float safeKnee = std::max(0.1f, knee_);
+      float x = inputDb - threshold_ + safeKnee * 0.5f;
+      float kneeGain = (1.0f / ratio_ - 1.0f) / (2.0f * safeKnee);
       output = inputDb + kneeGain * x * x;
     }
 
@@ -365,7 +366,7 @@ public:
     std::atomic<bool> enabled{false};
     std::atomic<float> frequency{1000.0f};
     std::atomic<float> gain{0.0f}; // In dB
-    std::atomic<float> q{constants::kDefaultEQQ};
+    std::atomic<float> q{::zenith::constants::kDefaultEQQ};
 
     enum class Type { LowShelf, Peak, HighShelf };
     Type type = Type::Peak;
@@ -495,7 +496,7 @@ private:
 
   //==============================================================================
   // EQ section
-  static constexpr int numEQBands = constants::kNumEQBands;
+  static constexpr int numEQBands = ::zenith::constants::kNumEQBands;
   EQBand eqBands[numEQBands];
   juce::IIRFilter eqFiltersL[numEQBands];
   juce::IIRFilter eqFiltersR[numEQBands];
@@ -512,15 +513,15 @@ private:
   // Dynamics section - Now using ProCompressor
   ProCompressor compressor_;
   std::atomic<bool> compressorEnabled{false};
-  std::atomic<float> compThreshold{constants::kDefaultCompThresholdDb};
-  std::atomic<float> compRatio{constants::kDefaultCompRatio};
-  std::atomic<float> compAttack{constants::kDefaultCompAttackMs};
-  std::atomic<float> compRelease{constants::kDefaultCompReleaseMs};
+  std::atomic<float> compThreshold{::zenith::constants::kDefaultCompThresholdDb};
+  std::atomic<float> compRatio{::zenith::constants::kDefaultCompRatio};
+  std::atomic<float> compAttack{::zenith::constants::kDefaultCompAttackMs};
+  std::atomic<float> compRelease{::zenith::constants::kDefaultCompReleaseMs};
   std::atomic<float> compMakeup{0.0f};
 
   //==============================================================================
   // Send effects
-  static constexpr int numSends = constants::kNumSends;
+  static constexpr int numSends = ::zenith::constants::kNumSends;
   std::atomic<float> sendLevels[numSends];
   std::atomic<bool> sendPreFader[numSends];
 
@@ -547,8 +548,8 @@ private:
 
   //==============================================================================
   // Processing state
-  double currentSampleRate = constants::kDefaultSampleRate;
-  int currentBlockSize = constants::kDefaultBufferSize;
+  double currentSampleRate = ::zenith::constants::kDefaultSampleRate;
+  int currentBlockSize = ::zenith::constants::kDefaultBufferSize;
 
   //==============================================================================
   // Helper methods

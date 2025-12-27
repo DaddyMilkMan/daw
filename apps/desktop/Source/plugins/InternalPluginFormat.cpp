@@ -67,8 +67,9 @@ void InternalPluginFormat::findAllTypesForFile(
     juce::OwnedArray<juce::PluginDescription> &results,
     const juce::String &fileOrIdentifier) {
   // If identifier is passed, find specific
-  if (descriptions.count(fileOrIdentifier)) {
-    results.add(new juce::PluginDescription(descriptions[fileOrIdentifier]));
+  auto it = descriptions.find(fileOrIdentifier);
+  if (it != descriptions.end()) {
+    results.add(new juce::PluginDescription(it->second));
     return;
   }
 
@@ -86,21 +87,23 @@ bool InternalPluginFormat::fileMightContainThisPluginType(
 
 juce::String InternalPluginFormat::getNameOfPluginFromIdentifier(
     const juce::String &fileOrIdentifier) {
-  if (descriptions.count(fileOrIdentifier))
-    return descriptions[fileOrIdentifier].name;
+  auto it = descriptions.find(fileOrIdentifier);
+  if (it != descriptions.end())
+    return it->second.name;
   return {};
 }
 
 bool InternalPluginFormat::doesPluginStillExist(
     const juce::PluginDescription &desc) {
-  return descriptions.count(desc.fileOrIdentifier) > 0;
+  return descriptions.find(desc.fileOrIdentifier) != descriptions.end();
 }
 
 void InternalPluginFormat::createPluginInstance(
     const juce::PluginDescription &desc, double initialSampleRate,
     int initialBlockSize, PluginCreationCallback callback) {
-  if (creators.count(desc.fileOrIdentifier)) {
-    auto instance = creators[desc.fileOrIdentifier]();
+  auto it = creators.find(desc.fileOrIdentifier);
+  if (it != creators.end()) {
+    auto instance = it->second();
     if (instance) {
       instance->prepareToPlay(initialSampleRate, initialBlockSize);
       callback(std::move(instance), {});
@@ -114,8 +117,9 @@ std::unique_ptr<juce::AudioPluginInstance>
 InternalPluginFormat::createInstanceFromDescription(
     const juce::PluginDescription &desc, double initialSampleRate,
     int initialBlockSize, juce::String &errorMessage) {
-  if (creators.count(desc.fileOrIdentifier)) {
-    auto instance = creators[desc.fileOrIdentifier]();
+  auto it = creators.find(desc.fileOrIdentifier);
+  if (it != creators.end()) {
+    auto instance = it->second();
     if (instance) {
       instance->prepareToPlay(initialSampleRate, initialBlockSize);
       return instance;

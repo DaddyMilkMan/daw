@@ -22,6 +22,8 @@ public:
   juce::var setTrackEQ(const juce::var &params);
   juce::var setTrackCompressor(const juce::var &params);
   juce::var separateTrack(const juce::var &params);
+  juce::var freezeTrack(const juce::var &params);
+  juce::var unfreezeTrack(const juce::var &params);
 
 private:
   Engine &engine;

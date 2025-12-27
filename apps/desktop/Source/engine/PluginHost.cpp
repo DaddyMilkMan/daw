@@ -19,13 +19,6 @@ namespace zenith {
 PluginHost::PluginHost() {
   DBG("PluginHost: Initializing...");
 
-  // Setup blacklist file
-  blacklistFile =
-      juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-          .getChildFile("ZenithDAW")
-          .getChildFile("blacklisted.xml");
-  loadBlacklist();
-
   // Add VST3 format
   formatManager.addDefaultFormats();
   formatManager.addFormat(new InternalPluginFormat());
@@ -74,39 +67,112 @@ int PluginHost::scanInternal(
 
   int foundCount = 0;
 
-  // Collect all files to scan
-  juce::Array<juce::File> filesToScan;
+  // Scan each location
   for (int i = 0; i < searchPaths.getNumPaths(); ++i) {
-    auto location = searchPaths[i];
-    if (location.isDirectory()) {
-      location.findChildFiles(filesToScan, juce::File::findFiles, true,
-                              "*.vst3");
-    } else if (location.exists()) {
-      filesToScan.add(location);
-    }
-  }
-
-  // Scan each file
-  for (int i = 0; i < filesToScan.size(); ++i) {
     if (shouldCancel_)
       break;
 
-    auto file = filesToScan[i];
+    auto location = searchPaths[i];
     if (onProgress)
-      onProgress("Scanning (" + juce::String(i + 1) + "/" +
-                 juce::String(filesToScan.size()) + "): " + file.getFileName());
+      onProgress("Scanning: " + location.getFullPathName());
 
-    if (isBlacklisted(file.getFullPathName())) {
-      DBG("PluginHost: Skipping blacklisted plugin: " + file.getFullPathName());
+    if (!location.exists())
       continue;
-    }
 
-    if (scanOutOfProcess(file, onProgress)) {
-      foundCount++;
+    // Recursive file find
+    juce::Array<juce::File> filesToScan;
+    location.findChildFiles(filesToScan, 
+                            juce::File::findFiles, 
+                            true, // recursive
+                            "*.vst3"); // VST3 only for now
+
+    for (const auto& file : filesToScan) {
+        if (shouldCancel_) break;
+        
+        juce::String pluginName = file.getFileNameWithoutExtension(); // temp name
+        if (onProgress) onProgress("Scanning: " + pluginName);
+
+        juce::PluginDescription desc;
+        if (scanFileOutProcess(file, desc)) {
+            // Check if already known
+            if (!knowsAboutPlugin(desc)) {
+                addToKnownPlugins(desc);
+                foundCount++;
+            }
+        }
     }
   }
 
-  return knownPlugins.getNumTypes();
+  return foundCount;
+}
+
+bool PluginHost::scanFileOutProcess(const juce::File& file, juce::PluginDescription& result)
+{
+    juce::File currentApp = juce::File::getSpecialLocation(juce::File::currentApplicationFile);
+    juce::File scannerExe = currentApp.getSiblingFile("ZenithPluginScanner");
+    
+    #if JUCE_WINDOWS
+    if (!scannerExe.hasFileExtension("exe")) scannerExe = scannerExe.withFileExtension("exe");
+    #endif
+
+    if (!scannerExe.existsAsFile()) {
+        // Fallback for Debug builds where it might be in same dir
+        DBG("PluginHost: Scanner not found at " + scannerExe.getFullPathName());
+        return false;
+    }
+
+    juce::ChildProcess process;
+    juce::StringArray args;
+    args.add(scannerExe.getFullPathName());
+    args.add("--scan");
+    args.add(file.getFullPathName());
+
+    if (process.start(args))
+    {
+        juce::String output = process.readAllProcessOutput();
+        process.waitForProcessToFinish(5000); // 5 sec timeout
+        
+        if (process.getExitCode() == 0)
+        {
+            // Parse JSON output
+            // Output usually contains JSON on one line, but maybe headers.
+            // We look for the last valid JSON lines or clean output.
+            
+            output = output.trim();
+            int jsonStart = output.indexOf("{");
+            int jsonEnd = output.lastIndexOf("}");
+            
+            if (jsonStart >= 0 && jsonEnd > jsonStart)
+            {
+                juce::String jsonStr = output.substring(jsonStart, jsonEnd + 1);
+                auto json = juce::JSON::parse(jsonStr);
+                
+                if (!json.isVoid() && json.hasProperty("status"))
+                {
+                   juce::String status = json["status"];
+                   if (status == "success") {
+                       result.fileOrIdentifier = file.getFullPathName();
+                       result.name = json["name"];
+                       result.manufacturerName = json["manufacturer"];
+                       result.version = json["version"];
+                       result.uniqueId = json["uid"].toString().getIntValue();
+                       result.pluginFormatName = "VST3";
+                       result.lastInfoUpdateTime = juce::Time::getCurrentTime();
+                       
+                       bool isInst = json["isInstrument"];
+                       result.isInstrument = isInst;
+                       
+                       return true;
+                   }
+                }
+            }
+        }
+        else {
+             DBG("PluginHost: Detailed Crash detected scanning " + file.getFileName());
+        }
+    }
+    
+    return false;
 }
 
 int PluginHost::scanDefaultLocations(bool async) {
@@ -170,21 +236,27 @@ bool PluginHost::scanPath(const juce::File &path) {
 
   DBG("PluginHost: Scanning path: " + path.getFullPathName());
 
+  // Use the robust out-of-process logic instead of the in-process juce::PluginDirectoryScanner
   juce::Array<juce::File> filesToScan;
   if (path.isDirectory()) {
-    path.findChildFiles(filesToScan, juce::File::findFiles, true, "*.vst3");
-  } else {
-    filesToScan.add(path);
+      path.findChildFiles(filesToScan, juce::File::findFiles, true, "*.vst3");
+  } else if (path.hasFileExtension(".vst3")) {
+      filesToScan.add(path);
   }
 
-  for (const auto &file : filesToScan) {
-    if (isBlacklisted(file.getFullPathName()))
-      continue;
-    scanOutOfProcess(file, nullptr);
+  int foundCount = 0;
+  for (const auto& file : filesToScan) {
+      juce::PluginDescription desc;
+      if (scanFileOutProcess(file, desc)) {
+          if (!knowsAboutPlugin(desc)) {
+              addToKnownPlugins(desc);
+              foundCount++;
+          }
+      }
   }
 
-  DBG("PluginHost: Path scan complete - total plugins: " +
-      juce::String(knownPlugins.getNumTypes()));
+  DBG("PluginHost: Path scan complete - found " + juce::String(foundCount) + 
+      " new plugins. Total: " + juce::String(knownPlugins.getNumTypes()));
 
   return true;
 }
@@ -301,105 +373,21 @@ juce::StringArray PluginHost::getSearchPaths() const {
 
 int PluginHost::scanAll(bool async) { return scanDefaultLocations(async); }
 
-bool PluginHost::isBlacklisted(const juce::String &filePath) const {
-  return blacklist.contains(filePath);
-}
+//==============================================================================
+// Internal Helpers
+//==============================================================================
 
-void PluginHost::blacklistPlugin(const juce::String &filePath) {
-  if (!blacklist.contains(filePath)) {
-    blacklist.add(filePath);
-    saveBlacklist();
-  }
-}
-
-void PluginHost::clearBlacklist() {
-  blacklist.clear();
-  saveBlacklist();
-}
-
-juce::StringArray PluginHost::getBlacklistedPlugins() const {
-  return blacklist;
-}
-
-void PluginHost::loadBlacklist() {
-  if (blacklistFile.existsAsFile()) {
-    if (auto xml = juce::XmlDocument::parse(blacklistFile)) {
-      blacklist.clear();
-      for (auto *child : xml->getChildIterator()) {
-        if (child->hasTagName("PLUGIN")) {
-          blacklist.add(child->getStringAttribute("path"));
-        }
-      }
+bool PluginHost::knowsAboutPlugin(const juce::PluginDescription& desc) const {
+    for (const auto& existing : knownPlugins.getTypes()) {
+        if (existing.fileOrIdentifier == desc.fileOrIdentifier && existing.uniqueId == desc.uniqueId)
+            return true;
     }
-  }
-}
-
-void PluginHost::saveBlacklist() {
-  juce::XmlElement xml("BLACKLIST");
-  for (const auto &path : blacklist) {
-    auto *el = xml.createNewChildElement("PLUGIN");
-    el->setAttribute("path", path);
-  }
-  xml.writeTo(blacklistFile);
-}
-
-bool PluginHost::scanOutOfProcess(
-    const juce::File &file,
-    std::function<void(const juce::String &)> onProgress) {
-  // Path to the PluginScanner executable
-  // In a real app, this would be bundled. Here we look in the build directory.
-  juce::File scannerExe =
-      juce::File::getSpecialLocation(juce::File::currentExecutableFile)
-          .getSiblingFile("PluginScanner");
-
-#if JUCE_WINDOWS
-  if (!scannerExe.exists())
-    scannerExe = scannerExe.withFileExtension(".exe");
-#endif
-
-  if (!scannerExe.exists()) {
-    DBG("PluginHost: Scanner not found at " + scannerExe.getFullPathName());
     return false;
-  }
+}
 
-  juce::StringArray args;
-  args.add(scannerExe.getFullPathName());
-  args.add(file.getFullPathName());
-
-  juce::ChildProcess process;
-  if (process.start(args)) {
-    // Wait for process to finish with a 5s timeout
-    if (process.waitForProcessToFinish(5000)) { // 5000ms = 5s
-      int exitCode = process.getExitCode();
-      if (exitCode == 0) {
-        juce::String output = process.readAllProcessOutput();
-        if (auto xml = juce::XmlDocument::parse(output)) {
-          bool anyAdded = false;
-          for (auto *child : xml->getChildIterator()) {
-            juce::PluginDescription desc;
-            if (desc.loadFromXml(*child)) {
-              knownPlugins.addType(desc);
-              anyAdded = true;
-            }
-          }
-          return anyAdded;
-        }
-      } else {
-        DBG("PluginHost: Scanner failed with exit code " +
-            juce::String(exitCode) + " for " + file.getFileName());
-        blacklistPlugin(file.getFullPathName());
-      }
-    } else {
-      // Timeout!
-      DBG("PluginHost: Scanner timed out for " + file.getFileName());
-      process.kill();
-      blacklistPlugin(file.getFullPathName());
-    }
-  } else {
-    DBG("PluginHost: Failed to start scanner for " + file.getFileName());
-  }
-
-  return false;
+void PluginHost::addToKnownPlugins(const juce::PluginDescription& desc) {
+    knownPlugins.addType(desc);
 }
 
 } // namespace zenith
+

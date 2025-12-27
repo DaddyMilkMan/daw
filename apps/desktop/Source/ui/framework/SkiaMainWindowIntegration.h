@@ -9,7 +9,7 @@
 #include <juce_opengl/juce_opengl.h>
 
 #ifdef ZENITH_USE_SKIA
-#include "ZenithSkia.h"
+#include <core/SkCanvas.h>
 #include <core/SkColorSpace.h>
 #include <core/SkRefCnt.h>
 #include <core/SkSurface.h>
@@ -18,7 +18,6 @@
 #include <gpu/ganesh/SkSurfaceGanesh.h>
 #include <gpu/ganesh/gl/GrGLBackendSurface.h>
 #include <gpu/ganesh/gl/GrGLDirectContext.h>
-#include <gpu/ganesh/gl/GrGLInterface.h>
 
 #endif
 
@@ -35,7 +34,8 @@ namespace zenith {
  * NOTE: Renamed from SkiaRenderer to SkiaOpenGLRenderer to avoid conflict
  * with the standalone SkiaRenderer class in rendering/SkiaRenderer.h
  */
-class SkiaOpenGLRenderer : public juce::OpenGLRenderer {
+class SkiaOpenGLRenderer : public juce::OpenGLRenderer, 
+                           private juce::Timer {
 public:
   explicit SkiaOpenGLRenderer(juce::Component *componentToAttach);
   virtual ~SkiaOpenGLRenderer();
@@ -47,6 +47,34 @@ public:
   void newOpenGLContextCreated() override;
   void renderOpenGL() override;
   void openGLContextClosing() override;
+  
+  // Timer callback for deferred attachment
+  void timerCallback() override;
+  
+  /**
+   * @brief Attach the OpenGL context to the target component.
+   * Call this when the component has a valid peer (window handle).
+   */
+  void attachContextNow();
+  
+  /**
+   * @brief Schedule a check for peer availability and attach context when ready.
+   */
+  /**
+   * @brief Schedule a check for peer availability and attach context when ready.
+   */
+  void scheduleAttachmentCheck();
+
+  /**
+   * @brief Check if the Skia context has been successfully initialized.
+   */
+  bool isContextInitialized() const { return contextInitialized_; }
+
+  /**
+   * @brief Request a repaint. Use this instead of relying on continuous repainting.
+   * Thread-safe: can be called from any thread.
+   */
+  void triggerRepaint();
 
 protected:
   /**
@@ -66,9 +94,9 @@ protected:
   sk_sp<SkSurface> surface_;
   SkCanvas *skiaCanvas_ = nullptr;
   bool contextInitialized_ = false;
+  juce::Component *targetComponent_ = nullptr;
 
 private:
-  juce::Component *targetComponent_ = nullptr;
   int lastWidth_ = 0;
   int lastHeight_ = 0;
 
@@ -89,27 +117,12 @@ public:
   // Component overrides
   void paint(juce::Graphics &g) override;
   void resized() override;
+  void parentHierarchyChanged() override;
+  void visibilityChanged() override;
 
   SkiaMainWindowIntegration(const SkiaMainWindowIntegration &) = delete;
   SkiaMainWindowIntegration &
   operator=(const SkiaMainWindowIntegration &) = delete;
-};
-
-#else // ZENITH_USE_SKIA
-
-class SkiaOpenGLRenderer {
-public:
-    SkiaOpenGLRenderer(juce::Component*) {}
-    virtual ~SkiaOpenGLRenderer() = default;
-    virtual void drawSkiaContent(SkCanvas*) = 0;
-};
-
-class SkiaMainWindowIntegration : public juce::Component, public SkiaOpenGLRenderer {
-public:
-    SkiaMainWindowIntegration() : SkiaOpenGLRenderer(this) {}
-    virtual ~SkiaMainWindowIntegration() = default;
-    void paint(juce::Graphics& g) override { g.fillAll(juce::Colours::black); }
-    void drawSkiaContent(SkCanvas*) override {}
 };
 
 #endif // ZENITH_USE_SKIA

@@ -43,15 +43,11 @@ private:
   juce::dsp::NoiseGate<float> gate;
 
   // EQ Chain: HPF -> LowShelf -> Peak -> HighShelf
-  // Using ProcessorDuplicator to access .state for coefficient updates
-  using FilterType = juce::dsp::ProcessorDuplicator<
-      juce::dsp::IIR::Filter<float>, 
-      juce::dsp::IIR::Coefficients<float>>;
   using EQChain =
-      juce::dsp::ProcessorChain<FilterType, // HPF
-                                FilterType, // Low Shelf
-                                FilterType, // Mid Peak
-                                FilterType  // High Shelf
+      juce::dsp::ProcessorChain<juce::dsp::IIR::Filter<float>, // HPF
+                                juce::dsp::IIR::Filter<float>, // Low Shelf
+                                juce::dsp::IIR::Filter<float>, // Mid Peak
+                                juce::dsp::IIR::Filter<float>  // High Shelf
                                 >;
   EQChain eq;
 
@@ -85,6 +81,17 @@ private:
   std::atomic<float> *drive = nullptr;
   std::atomic<float> *outputGain = nullptr;
 
+  // Cached EQ param values for dirty checking
+  float cachedHpfFreq = 0.0f;
+  float cachedLowFreq = 0.0f;
+  float cachedLowGain = 0.0f;
+  float cachedMidFreq = 0.0f;
+  float cachedMidGain = 0.0f;
+  float cachedMidQ = 0.0f;
+  float cachedHighFreq = 0.0f;
+  float cachedHighGain = 0.0f;
+
+  void updateEqCoefficientsIfNeeded(double sampleRate);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithChannelStrip)
 };

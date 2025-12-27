@@ -27,20 +27,31 @@ endif()
 
 # 4. Options
 option(ENABLE_IPO "Enable Interprocedural Optimization (LTO)" OFF)
-option(ENABLE_HARDENING "Enable Security Hardening Flags" OFF)
-option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" OFF)
 option(ENABLE_SPECTRE "Enable Spectre Mitigations (MSVC)" OFF)
 
-# Auto-enable sanitizers in Debug builds
-# (Disabled to prevent ASAN in Release builds)
-# if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "Debug")
-#     set(ENABLE_SANITIZERS ON CACHE BOOL "Enable Address and UB Sanitizers in Debug" FORCE)
-#     set(ENABLE_HARDENING ON CACHE BOOL "Enable Security Hardening Flags in Debug" FORCE)
-# endif()
+# Auto-enable sanitizers and hardening in Debug builds
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" ON)
+    option(ENABLE_HARDENING "Enable Security Hardening Flags" ON)
+else()
+    option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" OFF)
+    option(ENABLE_HARDENING "Enable Security Hardening Flags" OFF)
+endif()
+
+# Add sanitizer flags if enabled
+if(ENABLE_SANITIZERS)
+    if(MSVC)
+        add_compile_options(/fsanitize=address)
+    else()
+        add_compile_options(-fsanitize=address -fsanitize=undefined)
+        add_link_options(-fsanitize=address -fsanitize=undefined)
+    endif()
+endif()
 
 # 5. C++ Standard (Enforced later via target_compile_features)
-# set(CMAKE_CXX_STANDARD 20) - Removed in favor of target properties
-# set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Always enable Skia (Phase 2 decision)
 # add_definitions(-DZENITH_USE_SKIA=1) - Removed: Handled via target_compile_definitions in SkiaManualIntegration.cmake
@@ -69,14 +80,43 @@ set(ZENITH_SOURCES
     apps/desktop/Source/utils/SampleGenerator.cpp
 )
 
-# Shared Sources (Engine, AI, Platform)
-set(ZENITH_CORE_SOURCES
-    apps/desktop/Source/ui/design-system/ZenithLayout.cpp
+# Test sources (optional, can be disabled)
+set(ZENITH_TEST_SOURCES
+    apps/desktop/Source/tests/TestMain.cpp
+    apps/desktop/Source/tests/AudioEngineTests.cpp
+    apps/desktop/Source/tests/ProjectStateTests.cpp
+    apps/desktop/Source/tests/EngineTests.cpp
+    apps/desktop/Source/tests/ConcurrencyTests.cpp
+    apps/desktop/Source/tests/ThemeTests.cpp
+    apps/desktop/Source/tests/UITests.cpp
+    apps/desktop/Source/tests/Midi2Tests.cpp
+    apps/desktop/Source/tests/AITests.cpp
+    apps/desktop/Source/tests/AccessibilityTests.cpp
+    apps/desktop/Source/tests/CRDTSyncTests.cpp
+    apps/desktop/Source/tests/OnnxPipelineTests.cpp
+    apps/desktop/Source/tests/PluginAutomationTests.cpp
+    apps/desktop/Source/tests/SampleEditorRecordingTests.cpp
+    apps/desktop/Source/tests/CollaborationMultiPeerTest.cpp
+)
 
+# Common sources used by both DAW and Tests
+set(ZENITH_COMMON_SOURCES
+    apps/desktop/Source/ui/design-system/ZenithLayout.cpp
+    apps/desktop/Source/ui/framework/UITestFramework.cpp
     
-    # Engine sources required for linking
+    # Engine sources
     apps/desktop/Source/engine/Engine.cpp
+    apps/desktop/Source/engine/EngineTransport.cpp
+    apps/desktop/Source/engine/EngineTrackManagement.cpp
+    apps/desktop/Source/engine/EngineMixing.cpp
+    apps/desktop/Source/engine/EngineRecording.cpp
+    apps/desktop/Source/engine/EngineExport.cpp
+    apps/desktop/Source/engine/EngineMIDI.cpp
+    apps/desktop/Source/engine/EngineSync.cpp
+    apps/desktop/Source/engine/EnginePlugins.cpp
     apps/desktop/Source/engine/ProjectState.cpp
+    apps/desktop/Source/engine/PluginChain.cpp
+    apps/desktop/Source/engine/PluginAutomationBinding.cpp
     apps/desktop/Source/engine/Track.cpp
     apps/desktop/Source/engine/Clip.cpp
     apps/desktop/Source/engine/MixerChannel.cpp
@@ -84,9 +124,12 @@ set(ZENITH_CORE_SOURCES
     apps/desktop/Source/engine/PluginHost.cpp
     apps/desktop/Source/engine/AuxBus.cpp
     apps/desktop/Source/engine/ZenithLogger.cpp
+    apps/desktop/Source/engine/RealTimeGarbageCollector.cpp
     apps/desktop/Source/engine/TrackPluginState.cpp
     apps/desktop/Source/engine/AudioRecorder.cpp
     apps/desktop/Source/engine/RoutingGraph.cpp
+
+    # Deprecated synchronizers (for reflog/legacy support)
     apps/desktop/Source/engine/ClipSynchronizer.cpp
     apps/desktop/Source/engine/TrackStateSynchronizer.cpp
     apps/desktop/Source/engine/TrackAutomationSynchronizer.cpp
@@ -101,106 +144,262 @@ set(ZENITH_CORE_SOURCES
     apps/desktop/Source/engine/Metronome.cpp
     apps/desktop/Source/engine/AudioTrack.cpp
     apps/desktop/Source/engine/MIDITrack.cpp
+    apps/desktop/Source/engine/InstrumentTrack.cpp
+    apps/desktop/Source/plugins/modulation/ZenithTremolo.cpp
+    # Instruments
+    apps/desktop/Source/instruments/Instrument.cpp
+    apps/desktop/Source/instruments/InstrumentRegistry.cpp
+    apps/desktop/Source/instruments/RegisterBuiltInInstruments.cpp
+    apps/desktop/Source/instruments/PresetGenerator.cpp
+    apps/desktop/Source/instruments/ZenithOscillator.cpp
+    apps/desktop/Source/instruments/ZenithFilter.cpp
+    apps/desktop/Source/instruments/ZenithEffects.cpp
+    apps/desktop/Source/instruments/ZenithPolySynthVoice.cpp
+    apps/desktop/Source/instruments/ZenithPolySynth.cpp
+    apps/desktop/Source/instruments/ZenithPolySynthParameterManager.cpp
+    apps/desktop/Source/instruments/ZenithPolySynthEditor.cpp
+    apps/desktop/Source/instruments/ZenithPresetManager.cpp
+    apps/desktop/Source/instruments/ZenithSampler.cpp
+    apps/desktop/Source/instruments/ZenithSamplerEditor.cpp
+
+    # AI
+    apps/desktop/Source/ai/SessionDebuggerAgent.cpp
+    apps/desktop/Source/ai/AIMasteringAgent.cpp
+
+    apps/desktop/Source/ai/SampleHunterAgent.cpp
+    apps/desktop/Source/ai/UXDirectorAgent.cpp
+    apps/desktop/Source/ai/ProjectRefactorerAgent.cpp
+    apps/desktop/Source/ai/PresetGeneticistAgent.cpp
+
     apps/desktop/Source/engine/ClipTrack.cpp
     apps/desktop/Source/engine/AuxBusTrack.cpp
-    apps/desktop/Source/engine/EngineExport.cpp
     apps/desktop/Source/engine/ClipStateManager.cpp
     apps/desktop/Source/engine/TrackStateManager.cpp
     apps/desktop/Source/engine/AutomationManager.cpp
     apps/desktop/Source/engine/PluginChain.cpp
     apps/desktop/Source/engine/RecentProjectManager.cpp
+    apps/desktop/Source/engine/ProjectFileIO.cpp
     apps/desktop/Source/engine/ProjectEngineBridge.cpp
-    apps/desktop/Source/plugins/InternalPluginFormat.cpp
+    apps/desktop/Source/engine/AudioExporter.cpp
+    apps/desktop/Source/utils/AudioAnalysisUtils.cpp
     apps/desktop/Source/ui/common/PluginEditorWindow.cpp
-    
-    # Command API sources moved to ZENITH_APP_SOURCES
-    
-    # Additional sources required for linking
-    apps/desktop/Source/engine/InstrumentTrack.cpp
-    apps/desktop/Source/engine/EngineTrackManagement.cpp
-    apps/desktop/Source/engine/EngineRecording.cpp
-    apps/desktop/Source/engine/EngineMixing.cpp
-    apps/desktop/Source/engine/EngineTransport.cpp
-    apps/desktop/Source/ai/AIMasteringAgent.cpp
+    # apps/desktop/Source/tests/FlecsSyncTests.cpp - Removed
+    # Dependencies for tests
+    apps/desktop/Source/ui/mixer/MixerChannelComponent.cpp
+    apps/desktop/Source/ui/mixer/MixerComponent.cpp
+    apps/desktop/Source/ui/mixer/MixerView.cpp
+    apps/desktop/Source/ui/mixer/PluginBrowser.cpp
+    apps/desktop/Source/network/AudioAnalysisService.cpp
+    apps/desktop/Source/ui/framework/ConfigurationManager.cpp
+    apps/desktop/Source/ui/framework/SkiaComponent.cpp
+    apps/desktop/Source/ui/framework/AuroraBackground.cpp
+    apps/desktop/Source/ui/framework/SkiaLayout.cpp
+    apps/desktop/Source/ui/design-system/ZenithTheme.cpp
+    apps/desktop/Source/ui/design-system/ZenithDesignSystem.cpp
+    apps/desktop/Source/ui/design-system/ZenithLookAndFeel.cpp
+    apps/desktop/Source/ui/design-system/FontManager.cpp
+    apps/desktop/Source/ui/controls/SkiaSpectrumComponent.cpp
+    apps/desktop/Source/ui/controls/ContextMenuManager.cpp
+    apps/desktop/Source/ui/controls/SkiaPopupMenu.cpp
+    apps/desktop/Source/platform/linux/fonts/PlatformFontUtils_Linux.cpp
+
+    # Arranger
+    apps/desktop/Source/ui/arranger/ArrangerClipManager.cpp
+    apps/desktop/Source/ui/arranger/ArrangerComponent.cpp
+    apps/desktop/Source/ui/arranger/ArrangerGridUtils.cpp
+    apps/desktop/Source/ui/arranger/ArrangerInputHandler.cpp
+    apps/desktop/Source/ui/arranger/ArrangerRenderer.cpp
+    apps/desktop/Source/ui/arranger/ArrangerTrackComponent.cpp
+    apps/desktop/Source/ui/arranger/AutomationLaneComponent.cpp
+    apps/desktop/Source/ui/arranger/ClipComponent.cpp
+    apps/desktop/Source/ui/arranger/GridResolutionDropdown.cpp
+    apps/desktop/Source/ui/arranger/MarkerLaneComponent.cpp
+    apps/desktop/Source/ui/arranger/MiniMapComponent.cpp
+    apps/desktop/Source/ui/arranger/TakeFolderComponent.cpp
+    apps/desktop/Source/ui/arranger/TempoLaneComponent.cpp
+    apps/desktop/Source/ui/arranger/TimelineRuler.cpp
+
+    # Browser
+    apps/desktop/Source/ui/browser/BrowserFilterBar.cpp
+    apps/desktop/Source/ui/browser/BrowserListView.cpp
+    apps/desktop/Source/ui/browser/BrowserPreviewPanel.cpp
+    apps/desktop/Source/ui/browser/BrowserSearchBar.cpp
+    apps/desktop/Source/ui/browser/BrowserHoverPreview.cpp
+    apps/desktop/Source/ui/browser/BrowserPanel.cpp
+    apps/desktop/Source/ui/browser/BrowserRecentSidebar.cpp
+    apps/desktop/Source/ui/browser/BrowserWaveformLoader.cpp
+    apps/desktop/Source/ui/browser/InstrumentBrowserPanel.cpp
+    apps/desktop/Source/ui/browser/PluginBrowserComponent.cpp
+
+    # Dialogs
+    apps/desktop/Source/ui/dialogs/AdaptiveUISettings.cpp
+    apps/desktop/Source/ui/dialogs/ExportDialog.cpp
+    apps/desktop/Source/ui/dialogs/HardwareControlPanel.cpp
+    apps/desktop/Source/ui/dialogs/SettingsComponent.cpp
+
+    # Transport
+    apps/desktop/Source/ui/transport/TransportBar.cpp
+
+    # Piano Roll
+    apps/desktop/Source/ui/piano-roll/ModulationMatrixView.cpp
+    apps/desktop/Source/ui/piano-roll/PianoRollComponent.cpp
+    apps/desktop/Source/ui/piano-roll/QuantizeSettingsComponent.cpp
+
+    # Common & Framework
+    apps/desktop/Source/ui/common/AIAssistantPanel.cpp
+    apps/desktop/Source/ui/common/AudioFeedback.cpp
+    apps/desktop/Source/ui/common/BottomBar.cpp
+    apps/desktop/Source/ui/common/HelpViewPanel.cpp
+    apps/desktop/Source/ui/common/MacroToolbar.cpp
+    apps/desktop/Source/ui/controls/CollabPanel.cpp
+    apps/desktop/Source/ui/framework/LayoutManager.cpp
+    apps/desktop/Source/ui/controls/SpectraAnalyzerComponent.cpp
+    apps/desktop/Source/ui/controls/MarkdownComponent.cpp
+    apps/desktop/Source/ui/framework/SkiaMainWindowIntegration.cpp
+    apps/desktop/Source/ui/framework/ConfigurationManager.cpp
+    apps/desktop/Source/browser/BrowserModel.cpp
+    apps/desktop/Source/browser/BrowserPreviewEngine.cpp
+    apps/desktop/Source/browser/BrowserScanner.cpp
+    apps/desktop/Source/browser/BrowserScanner.cpp
+    apps/desktop/Source/browser/BrowserPreviewEngine.cpp
+    apps/desktop/Source/ui/session/SessionViewComponent.cpp
+    apps/desktop/Source/network/GrokDAWController.cpp
+    apps/desktop/Source/ui/controls/ZenithButton.cpp
+    apps/desktop/Source/ui/controls/ZenithSlider.cpp
+    apps/desktop/Source/ui/controls/ZenithToggle.cpp
+    apps/desktop/Source/ui/controls/ZenithTextInput.cpp
+    apps/desktop/Source/ui/controls/ZenithDropdown.cpp
+    apps/desktop/Source/ui/controls/ZenithModMatrix.cpp
+    apps/desktop/Source/ui/controls/ZenithTooltipOverlay.cpp
+    apps/desktop/Source/ui/controls/SkiaListBox.cpp
+    apps/desktop/Source/ui/controls/SkiaComboBox.cpp
+    apps/desktop/Source/ui/controls/SkiaLabel.cpp
+    apps/desktop/Source/ui/controls/SkiaAlertWindow.cpp
+    apps/desktop/Source/ui/controls/SkiaFileChooser.cpp
+    apps/desktop/Source/ui/controls/SkiaTextEditor.cpp
+    apps/desktop/Source/ui/controls/DeviceChainComponent.cpp
+    apps/desktop/Source/ui/controls/DebugConsoleComponent.cpp
+    apps/desktop/Source/ui/controls/ExportProgressBar.cpp
+    apps/desktop/Source/ui/controls/FreezeProgressOverlay.cpp
+    apps/desktop/Source/ui/session/DrumPadComponent.cpp
+    apps/desktop/Source/ui/controls/CollabPanel.cpp
+    apps/desktop/Source/platform/linux/window/PlatformWindowUtils_Linux.cpp
+    apps/desktop/Source/ui/common/MainLayoutComponent.cpp
+    apps/desktop/Source/ui/common/MainWindow.cpp
+    apps/desktop/Source/ui/common/MenuBar.cpp
+    apps/desktop/Source/ui/common/PianoKeyboardViewSkia.cpp
+    apps/desktop/Source/ui/common/ResizablePanelContainer.cpp
+    apps/desktop/Source/ui/common/RightSidePanel.cpp
+    apps/desktop/Source/ui/common/UndoHistoryPanel.cpp
+    apps/desktop/Source/ui/common/WingmanPanel.cpp
+    apps/desktop/Source/ui/common/ZenithHubComponent.cpp
+    apps/desktop/Source/ai/ZenithStyleApplicator.cpp
+    apps/desktop/Source/network/SecureKeyStore.cpp
+    apps/desktop/Source/platform/linux/network/SecureKeyStore_Linux.cpp
+    apps/desktop/Source/ui/browser/PresetBrowserComponent.cpp
     apps/desktop/Source/effects/ConsoleEmulation.cpp
-    apps/desktop/Source/plugins/modulation/ZenithTremolo.cpp
+    apps/desktop/Source/plugins/InternalPluginFormat.cpp
     apps/desktop/Source/effects/ZenithChannelStrip.cpp
     apps/desktop/Source/effects/ZenithDeEsser.cpp
     apps/desktop/Source/effects/ZenithTransientShaper.cpp
     apps/desktop/Source/effects/ZenithVoiceChanger.cpp
     apps/desktop/Source/plugins/ZenithPlugin.cpp
     apps/desktop/Source/plugins/ZenithPluginEditor.cpp
+    apps/desktop/Source/plugins/modulation/ZenithTremolo.cpp
     apps/desktop/Source/dsp/DSPVoiceChanger.cpp
-    apps/desktop/Source/instruments/InstrumentRegistry.cpp
-    apps/desktop/Source/instruments/Instrument.cpp
-    apps/desktop/Source/instruments/RegisterBuiltInInstruments.cpp
-    apps/desktop/Source/network/GrokUtils.cpp
-    apps/desktop/Source/ai/SessionDebuggerAgent.cpp
-    apps/desktop/Source/ai/AIStatusManager.cpp
-    apps/desktop/Source/ai/AIEventBus.cpp
-    apps/desktop/Source/ai/AIResponseCache.cpp
-    apps/desktop/Source/ai/AudioFitnessEvaluator.cpp
-    apps/desktop/Source/ai/AudioFitnessEvaluator.cpp
-    apps/desktop/Source/instruments/ZenithPolySynth.cpp
-    apps/desktop/Source/instruments/ZenithOscillator.cpp
-    apps/desktop/Source/instruments/ZenithFilter.cpp
-    apps/desktop/Source/instruments/ZenithPolySynthParameterManager.cpp
-    apps/desktop/Source/instruments/ZenithEffects.cpp
-    apps/desktop/Source/instruments/ZenithPolySynthVoice.cpp
-    apps/desktop/Source/instruments/ZenithSampler.cpp
-    apps/desktop/Source/instruments/ZenithPresetManager.cpp
-    apps/desktop/Source/instruments/ZenithSamplerEditor.cpp
     apps/desktop/Source/ui/instruments/ZenithPolySynthUI.cpp
-    apps/desktop/Source/ui/design-system/ZenithLookAndFeel.cpp
-    apps/desktop/Source/ui/panels/PresetBrowserComponent.cpp
-    apps/desktop/Source/ui/framework/SkiaComponent.cpp
-    apps/desktop/Source/ui/design-system/ZenithTheme.cpp
-    apps/desktop/Source/ui/design-system/ZenithDesignSystem.cpp
-    apps/desktop/Source/ui/design-system/FontManager.cpp
-    apps/desktop/Source/rendering/SkiaRenderer.cpp
-    apps/desktop/Source/ui/visualization/ZenithVisualizer.cpp
     apps/desktop/Source/ui/controls/ZenithControl.cpp
     apps/desktop/Source/ui/controls/ZenithKnob.cpp
+    apps/desktop/Source/rendering/SkiaRenderer.cpp
+    apps/desktop/Source/rendering/SkiaLinkerFix.cpp
+    apps/desktop/Source/ui/controls/ZenithVisualizer.cpp
+    apps/desktop/Source/ai/AIEventBus.cpp
+    apps/desktop/Source/ai/AIResponseCache.cpp
+    apps/desktop/Source/ai/AIStatusManager.cpp
+    apps/desktop/Source/ai/AudioFitnessEvaluator.cpp
+    apps/desktop/Source/platform/linux/engine/PlatformAudioUtils_Linux.cpp
+    apps/desktop/Source/platform/linux/dsp/PlatformModelUtils_Linux.cpp
+    apps/desktop/Source/network/GrokUtils.cpp
+    apps/desktop/Source/network/GrokDAWController.cpp
+    apps/desktop/Source/network/GrokDAWClient.cpp
+    apps/desktop/Source/network/CollaborationManager.cpp
+    apps/desktop/Source/network/FreesoundClient.cpp
+    apps/desktop/Source/network/AIPrompts.cpp
+    apps/desktop/Source/network/AITools.cpp
+    apps/desktop/Source/network/MCPServer.cpp
+    apps/desktop/Source/dsp/DSPStemSeparator.cpp
+    apps/desktop/Source/dsp/ONNXStemSeparator.cpp
+    apps/desktop/Source/ui/sample-editor/SampleEditorComponent.cpp
+    apps/desktop/Source/engine/MixerController.cpp
+    apps/desktop/Source/engine/TrackProcessor.cpp
+    apps/desktop/Source/engine/AudioExporter.cpp
+    apps/desktop/Source/utils/AudioAnalysisUtils.cpp
+    apps/desktop/Source/utils/StemSeparationJob.cpp
+    apps/desktop/Source/dsp/SpectralProcessor.cpp
+    apps/desktop/Source/dsp/TimeStretcher.cpp
+    apps/desktop/Source/dsp/DSPVoiceChanger.cpp
+    apps/desktop/Source/engine/PropertyExchangeManager.cpp
+    apps/desktop/Source/engine/RealTimeGarbageCollector.cpp
+    apps/desktop/Source/engine/Midi2DiscoveryService.cpp
+    apps/desktop/Source/engine/AudioAsMidiBridge.cpp
+    apps/desktop/Source/commands/CommandAPI.cpp
+    apps/desktop/Source/commands/TrackCommands.cpp
+    apps/desktop/Source/commands/TransportCommands.cpp
+    apps/desktop/Source/commands/ClipCommands.cpp
+    apps/desktop/Source/commands/SessionGraph.cpp
     apps/desktop/Source/ui/controls/ZenithButton.cpp
-    apps/desktop/Source/ui/controls/SkiaButton.cpp
+    apps/desktop/Source/ui/controls/ZenithSlider.cpp
+    apps/desktop/Source/ui/controls/ZenithKnob.cpp
+    apps/desktop/Source/ui/controls/ZenithToggle.cpp
+    apps/desktop/Source/ui/controls/ZenithTextInput.cpp
+    apps/desktop/Source/ui/controls/ZenithDropdown.cpp
     apps/desktop/Source/ui/controls/SkiaComboBox.cpp
     apps/desktop/Source/ui/controls/SkiaLabel.cpp
+    apps/desktop/Source/ui/controls/SkiaTextEditor.cpp
+    apps/desktop/Source/ui/controls/SkiaAlertWindow.cpp
     apps/desktop/Source/ui/controls/SkiaListBox.cpp
-    apps/desktop/Source/ui/controls/ZenithSlider.cpp
-    apps/desktop/Source/ui/controls/ZenithToggle.cpp
-    apps/desktop/Source/engine/ProjectFileIO.cpp
-    apps/desktop/Source/ai/PresetGeneticistAgent.cpp
+    apps/desktop/Source/ui/controls/SkiaFileChooser.cpp
+    apps/desktop/Source/ui/controls/ZenithModMatrix.cpp
+    apps/desktop/Source/ui/controls/ZenithTooltipOverlay.cpp
+    apps/desktop/Source/ui/controls/ExportProgressBar.cpp
+    apps/desktop/Source/ui/controls/FreezeProgressOverlay.cpp
+    apps/desktop/Source/platform/linux/window/PlatformWindowUtils_Linux.cpp
+    apps/desktop/Source/platform/linux/ui/PlatformDisplayUtils_Linux.cpp
+    apps/desktop/Source/platform/linux/system/PlatformSystemUtils_Linux.cpp
+    apps/desktop/Source/platform/linux/config/PlatformPathUtils_Linux.cpp
 )
 
-set(ZENITH_APP_SOURCES
-    apps/desktop/Source/commands/CommandAPI.cpp
-    apps/desktop/Source/commands/SessionGraph.cpp
-    apps/desktop/Source/commands/TrackCommands.cpp
-    apps/desktop/Source/commands/ClipCommands.cpp
-    apps/desktop/Source/commands/TransportCommands.cpp
-    apps/desktop/Source/dsp/ONNXStemSeparator.cpp
-    apps/desktop/Source/ai/UXDirectorAgent.cpp
-)
+# Combine sources for the main app
+list(APPEND ZENITH_SOURCES ${ZENITH_COMMON_SOURCES})
 
-set(ZENITH_SOURCES 
-    apps/desktop/Source/Main.cpp
-    apps/desktop/Source/utils/SampleGenerator.cpp
-    ${ZENITH_CORE_SOURCES}
-    ${ZENITH_APP_SOURCES}
-)
+# Explicitly add SkiaLinkerFix to ensure it's compiled on Linux
+if(UNIX AND NOT APPLE AND ZENITH_USE_SKIA)
+    list(APPEND ZENITH_SOURCES apps/desktop/Source/rendering/SkiaLinkerFix.cpp)
+endif()
 
-set(ZENITH_TEST_SOURCES
-    apps/desktop/Source/tests/TestMain.cpp
-    apps/desktop/Source/tests/AudioEngineTests.cpp
-    apps/desktop/Source/tests/ProjectStateTests.cpp
-    apps/desktop/Source/tests/EngineTests.cpp
-    apps/desktop/Source/tests/ConcurrencyTests.cpp
-    apps/desktop/Source/tests/AITests.cpp
-    apps/desktop/Source/tests/UITests.cpp
-    apps/desktop/Source/tests/HeadlessEngineTests.cpp
-    external/JUCE/modules/juce_graphics/unicode/sheenbidi/Source/SheenBidi.c
-    ${ZENITH_CORE_SOURCES}
-)
+message(STATUS "Main App Sources: ${ZENITH_SOURCES}")
+
+# ==============================================================================
+# ONNX Runtime Integration (Moved early for global visibility)
+# ==============================================================================
+option(ENABLE_ONNX "Enable ONNX Runtime" ON)
+if(ENABLE_ONNX)
+    if(UNIX AND NOT APPLE)
+        include(FetchContent)
+        FetchContent_Declare(
+            onnxruntime
+            URL https://github.com/microsoft/onnxruntime/releases/download/v1.17.1/onnxruntime-linux-x64-1.17.1.tgz
+        )
+        FetchContent_MakeAvailable(onnxruntime)
+        
+        # Use global compile definitions to ensure all modular sources see it
+        add_compile_definitions(ZENITH_USE_ONNX_RUNTIME=1)
+        message(STATUS "Zenith DAW: ONNX Runtime support ENABLED")
+    else()
+        message(STATUS "Zenith DAW: ONNX Runtime support disabled for this platform")
+    endif()
+endif()
+
 
 # Create main executable
 juce_add_gui_app(ZenithDAW
@@ -221,6 +420,7 @@ target_sources(ZenithDAW PRIVATE ${ZENITH_SOURCES})
 option(ZENITH_ENABLE_SKIA "Enable Skia Rendering" ON)
 
 # Modularized Source Groups (Complaint #6 Fix)
+add_subdirectory(apps/desktop/Source/plugins)
 add_subdirectory(apps/desktop/Source/engine)
 add_subdirectory(apps/desktop/Source/ui)
 add_subdirectory(apps/desktop/Source/instruments)
@@ -230,18 +430,9 @@ add_subdirectory(apps/desktop/Source/rendering)
 add_subdirectory(apps/desktop/Source/dsp)
 add_subdirectory(apps/desktop/Source/browser)
 add_subdirectory(apps/desktop/Source/ai)
-add_subdirectory(apps/desktop/Source/effects)
-add_subdirectory(apps/desktop/Source/plugins)
-add_subdirectory(apps/desktop/Source/mcp)
-
-# Platform Integration
-if(WIN32)
-    add_subdirectory(windows/master)
-elseif(APPLE)
-    add_subdirectory(mac/master)
-elseif(UNIX AND NOT APPLE)
-    add_subdirectory(linux/master)
-endif()
+add_subdirectory(apps/desktop/Source/utils)
+add_subdirectory(apps/desktop/Source/platform)
+add_subdirectory(apps/scanner)
 
 
 # Include directories (updated for new domain-based structure)
@@ -259,9 +450,6 @@ target_include_directories(ZenithDAW PUBLIC
     apps/desktop/Source/ui/transport
     apps/desktop/Source/ui/common
     apps/desktop/Source/ui/widgets
-    apps/desktop/Source/ui/controls
-    apps/desktop/Source/ui/panels
-    apps/desktop/Source/ui/views
     apps/desktop/Source/ui/session
     apps/desktop/Source/ui/instruments
     apps/desktop/Source/ui/dialogs
@@ -284,6 +472,9 @@ target_link_libraries(ZenithDAW PRIVATE
     juce::juce_cryptography
     juce::juce_events
     juce::juce_graphics
+    juce::juce_data_structures
+    juce::juce_gui_basics
+    juce::juce_gui_extra
     juce::juce_audio_basics
     juce::juce_audio_devices
     juce::juce_audio_formats
@@ -291,33 +482,28 @@ target_link_libraries(ZenithDAW PRIVATE
     juce::juce_audio_utils
     juce::juce_dsp
     juce::juce_opengl
-    juce::juce_gui_extra
-    juce::juce_gui_basics
 )
 
-# Audio Driver Configuration
-include(apps/desktop/cmake/AudioDrivers.cmake)
-
-if(UNIX AND NOT APPLE)
-    if(TARGET alsa_driver)
-        target_link_libraries(ZenithDAW PRIVATE alsa_driver)
-        target_compile_definitions(ZenithDAW PRIVATE JUCE_ALSA=1)
-    endif()
+# Link ONNX Runtime if enabled
+if(UNIX AND NOT APPLE AND ENABLE_ONNX)
+    target_link_libraries(ZenithDAW PRIVATE ${onnxruntime_SOURCE_DIR}/lib/libonnxruntime.so)
+    target_include_directories(ZenithDAW PRIVATE ${onnxruntime_SOURCE_DIR}/include)
     
-    if(TARGET jack_driver)
-        target_link_libraries(ZenithDAW PRIVATE jack_driver)
-        target_compile_definitions(ZenithDAW PRIVATE JUCE_JACK=1)
-    else()
-        target_compile_definitions(ZenithDAW PRIVATE JUCE_JACK=0)
-    endif()
-    
-    if(TARGET pulse_driver)
-        target_link_libraries(ZenithDAW PRIVATE pulse_driver)
-        target_compile_definitions(ZenithDAW PRIVATE JUCE_PULSEAUDIO=1)
-    else()
-        target_compile_definitions(ZenithDAW PRIVATE JUCE_PULSEAUDIO=0)
-    endif()
+    # Copy shared library to output directory
+    add_custom_command(TARGET ZenithDAW POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${onnxruntime_SOURCE_DIR}/lib/libonnxruntime.so.1.17.1"
+        "$<TARGET_FILE_DIR:ZenithDAW>/libonnxruntime.so.1.17.1"
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+        "libonnxruntime.so.1.17.1"
+        "$<TARGET_FILE_DIR:ZenithDAW>/libonnxruntime.so.1"
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+        "libonnxruntime.so.1.17.1"
+        "$<TARGET_FILE_DIR:ZenithDAW>/libonnxruntime.so"
+        COMMENT "Copying ONNX Runtime library to output directory"
+    )
 endif()
+
 
 # Platform-specific libraries for Graphics Backends
 if(WIN32)
@@ -331,29 +517,17 @@ elseif(UNIX AND NOT APPLE)
         target_link_libraries(ZenithDAW PRIVATE Vulkan::Vulkan)
     else()
         message(STATUS "Vulkan not found - Skia Vulkan backend might fail at runtime")
-        # target_link_libraries(ZenithDAW PRIVATE vulkan) # Removed: causes link error if not on system
+        target_link_libraries(ZenithDAW PRIVATE vulkan) # Try explicit link
     endif()
-    
-    # Linux-specific libraries for Skia FontConfig and X11 UI
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(FONTCONFIG REQUIRED fontconfig)
-    pkg_check_modules(FREETYPE REQUIRED freetype2)
-    pkg_check_modules(X11 REQUIRED x11)
-    
-    target_include_directories(ZenithDAW PRIVATE 
-        ${FONTCONFIG_INCLUDE_DIRS}
-        ${FREETYPE_INCLUDE_DIRS}
-        ${X11_INCLUDE_DIRS}
-    )
-    target_link_libraries(ZenithDAW PRIVATE 
-        ${FONTCONFIG_LIBRARIES}
-        ${FREETYPE_LIBRARIES}
-        ${X11_LIBRARIES}
-    )
 endif()
 
 # Skia Integration (Manual) - option defined earlier
 if(ZENITH_ENABLE_SKIA)
+    # Anti-Gravity Rule: Skia acts weird with debug builds (DLL issues).
+    # if(CMAKE_BUILD_TYPE MATCHES "^Debug$")
+    #    message(FATAL_ERROR "Anti-Gravity Agent Violation: Skia cannot be built in Debug mode due to ABI incompatibilities. Please switch to Release mode or disable ZENITH_ENABLE_SKIA.")
+    # endif()
+
     include(apps/desktop/cmake/SkiaManualIntegration.cmake)
     target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_SKIA=1)
     message(STATUS "Zenith DAW: Skia rendering ENABLED")
@@ -378,6 +552,8 @@ target_compile_definitions(ZenithDAW PRIVATE
 
     JUCE_REPORT_APP_USAGE=0
 )
+
+# Selective RTTI disabling removed in favor of LinkerFix.cpp
 
 # Removed commented-out MSVC calling convention code (2025-01-XX)
 # If needed in future, see git history for previous implementation
@@ -476,35 +652,41 @@ endif()
 # Optional: Test executable
 option(BUILD_TESTS "Build unit tests" OFF)
 if(BUILD_TESTS)
-    juce_add_console_app(ZenithDAWTests
-        PRODUCT_NAME "Zenith DAW Tests"
+    juce_add_gui_app(ZenithDAWTests
+        PRODUCT_NAME "ZenithDAWTests"
     )
     
     # Generate JuceHeader.h for test target (fixes C1083: Cannot open include file: 'JuceHeader.h')
     juce_generate_juce_header(ZenithDAWTests)
     
-    target_sources(ZenithDAWTests PRIVATE ${ZENITH_TEST_SOURCES})
+    message(STATUS "Common Sources for Tests: ${ZENITH_COMMON_SOURCES}")
+    target_sources(ZenithDAWTests PRIVATE ${ZENITH_TEST_SOURCES} ${ZENITH_COMMON_SOURCES})
     target_include_directories(ZenithDAWTests PRIVATE 
         apps/desktop/Source 
         apps/desktop/Source/engine
-        apps/desktop/Source/plugins
-        apps/desktop/Source/instruments
         apps/desktop/Source/ui
+        apps/desktop/Source/ui/framework
+        apps/desktop/Source/ui/design-system
         apps/desktop/Source/ui/common
         apps/desktop/Source/ui/instruments
-        apps/desktop/Source/ui/design-system
         apps/desktop/Source/ui/browser
-        apps/desktop/Source/ui/framework
-        apps/desktop/Source/dsp
-        apps/desktop/Source/effects
-        apps/desktop/Source/ai
-        apps/desktop/Source/network
-        apps/desktop/Source/utils
-        apps/desktop/Source/ui/widgets
         apps/desktop/Source/ui/arranger
         apps/desktop/Source/ui/mixer
         apps/desktop/Source/ui/piano-roll
+        apps/desktop/Source/ui/widgets
+        apps/desktop/Source/ui/session
+        apps/desktop/Source/ui/dialogs
+        apps/desktop/Source/ui/sample-editor
+        apps/desktop/Source/commands
+        apps/desktop/Source/instruments
+        apps/desktop/Source/network
+        apps/desktop/Source/dsp
+        apps/desktop/Source/rendering
+        apps/desktop/Source/ui/skia
+        apps/desktop/Source/utils
+        apps/desktop/Source/ai
         apps/desktop/include
+        ${CMAKE_PREFIX_PATH}/include
         ${CMAKE_BINARY_DIR}/ZenithDAWTests_artefacts/JuceLibraryCode
         "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
     )
@@ -523,95 +705,27 @@ if(BUILD_TESTS)
         juce::juce_gui_basics
         juce::juce_gui_extra
         juce::juce_opengl
-        GL
-        X11
-        dl
-        pthread
     )
+    
+
+    if(UNIX AND NOT APPLE AND ENABLE_ONNX)
+        target_link_libraries(ZenithDAWTests PRIVATE ${onnxruntime_SOURCE_DIR}/lib/libonnxruntime.so)
+        target_include_directories(ZenithDAWTests PRIVATE ${onnxruntime_SOURCE_DIR}/include)
+    endif()
+
     target_compile_definitions(ZenithDAWTests PRIVATE
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
-        JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
-        JUCE_MODULE_AVAILABLE_juce_core=1
-        JUCE_MODULE_AVAILABLE_juce_data_structures=1
-        JUCE_MODULE_AVAILABLE_juce_events=1
-        JUCE_MODULE_AVAILABLE_juce_audio_basics=1
-        JUCE_MODULE_AVAILABLE_juce_audio_devices=1
-        JUCE_MODULE_AVAILABLE_juce_audio_formats=1
-        JUCE_MODULE_AVAILABLE_juce_audio_processors=1
-        JUCE_MODULE_AVAILABLE_juce_audio_utils=1
-        JUCE_MODULE_AVAILABLE_juce_dsp=1
-        JUCE_MODULE_AVAILABLE_juce_graphics=1
-        JUCE_MODULE_AVAILABLE_juce_gui_basics=1
-        JUCE_MODULE_AVAILABLE_juce_gui_extra=1
     )
 
     target_compile_features(ZenithDAWTests PRIVATE cxx_std_20)
 
     if(ZENITH_ENABLE_SKIA)
         target_include_directories(ZenithDAWTests PRIVATE ${SKIA_ROOT}/include ${SKIA_INCLUDE_DIR})
-        target_link_libraries(ZenithDAWTests PRIVATE ${SKIA_LIBRARY})
+        target_link_libraries(ZenithDAWTests PRIVATE ${SKIA_LIBRARIES} ${SKIA_LIBRARY})
         target_compile_definitions(ZenithDAWTests PRIVATE ZENITH_USE_SKIA=1)
     endif()
-
-    # Add Linux platform sources for tests
-    if(UNIX AND NOT APPLE)
-        target_sources(ZenithDAWTests PRIVATE
-            linux/ui/PlatformDisplayUtils_Linux.cpp
-            linux/fonts/PlatformFontUtils_Linux.cpp
-            linux/engine/PlatformAudioUtils_Linux.cpp
-            linux/system/PlatformLogUtils_Linux.cpp
-        )
-        target_include_directories(ZenithDAWTests PRIVATE linux/ui linux/fonts linux/engine linux/system)
-    endif()
 endif()
-
-# Plugin Scanner Subprocess
-juce_add_console_app(PluginScanner
-    PRODUCT_NAME "PluginScanner"
-)
-
-target_sources(PluginScanner PRIVATE apps/desktop/Source/engine/PluginScanner.cpp)
-target_include_directories(PluginScanner PRIVATE 
-    apps/desktop/Source 
-    "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
-)
-target_link_libraries(PluginScanner PRIVATE
-    juce::juce_audio_processors
-    juce::juce_audio_formats
-    juce::juce_gui_basics
-    juce::juce_core
-)
-target_compile_features(PluginScanner PRIVATE cxx_std_20)
-
-target_compile_definitions(PluginScanner PRIVATE
-    JUCE_WEB_BROWSER=0
-    JUCE_USE_CURL=0
-    JUCE_VST3_CAN_REPLACE_VST2=0
-)
-
-if(UNIX AND NOT APPLE)
-    target_include_directories(PluginScanner PRIVATE 
-        ${FONTCONFIG_INCLUDE_DIRS}
-        ${FREETYPE_INCLUDE_DIRS}
-        ${X11_INCLUDE_DIRS}
-    )
-    target_link_libraries(PluginScanner PRIVATE 
-        ${FONTCONFIG_LIBRARIES}
-        ${FREETYPE_LIBRARIES}
-        ${X11_LIBRARIES}
-        pthread
-        dl
-    )
-endif()
-
-# Copy PluginScanner to ZenithDAW output directory
-add_custom_command(TARGET PluginScanner POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    $<TARGET_FILE:PluginScanner>
-    $<TARGET_FILE_DIR:ZenithDAW>/PluginScanner
-    COMMENT "Copying PluginScanner to ZenithDAW binary directory"
-)
 
 # Installation
 install(TARGETS ZenithDAW

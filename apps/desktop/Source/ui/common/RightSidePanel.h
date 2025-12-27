@@ -12,29 +12,31 @@
 
 #pragma once
 
-#include <memory>
-#include <vector>
-
-#include "../visualization/SpectraAnalyzerComponent.h"
-#include "SkiaComponent.h"
 #include "WingmanPanel.h" // Include full header to use unique_ptr
-#include "ZenithSkia.h"
-#include <juce_core/juce_core.h>
-#include <juce_graphics/juce_graphics.h>
+#include "UndoHistoryPanel.h"
+#include "../controls/SpectraAnalyzerComponent.h"
+#include "SkiaComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_core/juce_core.h>
+#include <core/SkCanvas.h>
+#include <core/SkFont.h>
+#include <core/SkPaint.h>
+#include <core/SkRect.h>
+
 
 namespace zenith {
 
 // Forward declarations
-// Forward declarations
 class CommandAPI;
 class Engine;
+class ProjectState;
 
 #ifdef ZENITH_USE_SKIA
 
 class RightSidePanel : public SkiaComponent {
 public:
-  RightSidePanel(CommandAPI &api, Engine &engine);
+  RightSidePanel(CommandAPI &api, Engine &engine, ProjectState &projectState);
   ~RightSidePanel() override;
 
   void drawSkia(SkCanvas *canvas) override;
@@ -45,6 +47,7 @@ private:
   // Child components
   std::unique_ptr<WingmanPanel> wingmanPanel_;
   std::unique_ptr<SpectraAnalyzerComponent> spectraAnalyzer_;
+  std::unique_ptr<UndoHistoryPanel> undoHistoryPanel_;
 
   // Cached resources for 60FPS rendering
   ::SkPaint bgPaint_;
@@ -64,15 +67,6 @@ private:
   void updateCachedPaints(const ::SkRect &bounds);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RightSidePanel)
-};
-
-#else // ZENITH_USE_SKIA
-
-class RightSidePanel : public juce::Component {
-public:
-    RightSidePanel(CommandAPI&, Engine&) {}
-    ~RightSidePanel() override = default;
-    void paint(juce::Graphics& g) override { g.fillAll(juce::Colours::black); }
 };
 
 #endif // ZENITH_USE_SKIA

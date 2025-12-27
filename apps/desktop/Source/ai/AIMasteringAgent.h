@@ -83,11 +83,9 @@ public:
 
   GrokMasteringAI();
 
-  using Callback = std::function<void(const MasteringDecision &)>;
-
-  void getMasteringDecision(const AudioFeatureExtractor::Features &features,
-                            const juce::String &userIntent,
-                            float targetLoudness, Callback callback);
+  MasteringDecision
+  getMasteringDecision(const AudioFeatureExtractor::Features &features,
+                       const juce::String &userIntent, float targetLoudness);
 
 private:
   juce::String buildPrompt(const AudioFeatureExtractor::Features &features,
@@ -114,36 +112,8 @@ public:
 
   MasteringEQ() = default;
 
-  void prepare(const juce::dsp::ProcessSpec &spec) {
-    highPass_.prepare(spec);
-    highPass_.setType(juce::dsp::StateVariableTPTFilterType::highpass);
-    highPass_.setCutoffFrequency(30.0f);
-
-    lowShelf_.prepare(spec);
-    *lowShelf_.state = *juce::dsp::IIR::Coefficients<float>::makeLowShelf(
-        spec.sampleRate, 100.0f, 0.7f, juce::Decibels::decibelsToGain(1.0f));
-
-    midCut_.prepare(spec);
-    *midCut_.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter(
-        spec.sampleRate, 300.0f, 1.0f, juce::Decibels::decibelsToGain(-1.0f));
-
-    presence_.prepare(spec);
-    *presence_.state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter(
-        spec.sampleRate, 3000.0f, 1.0f, juce::Decibels::decibelsToGain(1.5f));
-
-    airBand_.prepare(spec);
-    *airBand_.state = *juce::dsp::IIR::Coefficients<float>::makeHighShelf(
-        spec.sampleRate, 10000.0f, 0.7f, juce::Decibels::decibelsToGain(2.0f));
-  }
-
-  void reset() {
-    highPass_.reset();
-    lowShelf_.reset();
-    midCut_.reset();
-    presence_.reset();
-    airBand_.reset();
-  }
-
+  void prepare(const juce::dsp::ProcessSpec &spec);
+  void reset();
   void setSettings(const Settings &settings) { settings_ = settings; }
 
   template <typename ProcessContext>
@@ -221,27 +191,9 @@ class MasteringLimiter {
 public:
   MasteringLimiter() = default;
 
-  void prepare(const juce::dsp::ProcessSpec &spec) {
-    sampleRate_ = spec.sampleRate;
-    lookaheadSamples_ = static_cast<int>(sampleRate_ * 0.005);
-    lookaheadBuffer_.setSize(static_cast<int>(spec.numChannels),
-                             lookaheadSamples_ + 1);
-    lookaheadBuffer_.clear();
-    lookaheadPos_ = 0;
-    envelope_ = 1.0f;
-    attackCoeff_ = std::exp(-1.0f / static_cast<float>(sampleRate_ * 0.001f));
-    releaseCoeff_ = std::exp(-1.0f / static_cast<float>(sampleRate_ * 0.100f));
-  }
-
-  void reset() {
-    lookaheadBuffer_.clear();
-    lookaheadPos_ = 0;
-    envelope_ = 1.0f;
-  }
-
-  void setCeiling(float ceilingDb) {
-    ceiling_ = juce::Decibels::decibelsToGain(ceilingDb);
-  }
+  void prepare(const juce::dsp::ProcessSpec &spec);
+  void reset();
+  void setCeiling(float ceilingDb);
 
   template <typename ProcessContext>
   void process(const ProcessContext &context) {
@@ -320,7 +272,6 @@ public:
   void setBypass(bool bypass) { bypassed_.store(bypass); }
   bool isBypassed() const { return bypassed_.load(); }
   bool isConfigured() const { return isConfigured_.load(); }
-  bool isAnalyzing() const { return isAnalyzing_.load(); }
 
   GrokMasteringAI::MasteringDecision getLastDecision() const {
     const juce::ScopedLock lock(decisionLock_);
@@ -330,6 +281,8 @@ public:
 private:
   void applyAIDecision(const GrokMasteringAI::MasteringDecision &decision);
   void balanceTracks(const Options &options);
+  void normalizeLoudness(juce::AudioBuffer<float> &buffer,
+                         float targetLoudness);
 
   Engine &engine_;
   double sampleRate_ = 44100.0;
@@ -346,7 +299,6 @@ private:
   // State
   std::atomic<bool> isPrepared_{false};
   std::atomic<bool> isConfigured_{false};
-  std::atomic<bool> isAnalyzing_{false};
   std::atomic<bool> bypassed_{false};
 
   mutable juce::CriticalSection decisionLock_;

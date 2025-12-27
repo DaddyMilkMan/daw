@@ -20,7 +20,6 @@ target_sources(ZenithDAW PRIVATE
     # Agents
     AIMasteringAgent.h
     AIMasteringAgent.cpp
-
     SessionDebuggerAgent.h
     SessionDebuggerAgent.cpp
     ProjectRefactorerAgent.h
@@ -28,7 +27,10 @@ target_sources(ZenithDAW PRIVATE
     UXDirectorAgent.h
     UXDirectorAgent.cpp
     SampleHunterAgent.h
+
     SampleHunterAgent.cpp
     PresetGeneticistAgent.h
     PresetGeneticistAgent.cpp
+    PresetSuggestionService.h
+    PresetSuggestionService.cpp
 )

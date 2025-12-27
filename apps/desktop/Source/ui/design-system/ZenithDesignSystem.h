@@ -14,112 +14,14 @@
 
 #pragma once
 #include "FontManager.h"
-#include <algorithm>
-#include <cstdint>
+#include <core/SkBlurTypes.h>
+#include <include/core/SkColor.h>
+#include <include/core/SkFont.h>
 #include <juce_core/juce_core.h>
+#include <juce_data_structures/juce_data_structures.h>
+#include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
-#include <map>
 #include <vector>
-
-#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
-#include "ZenithSkia.h"
-#else
-#include <memory>
-// sk_sp is defined in FontManager.h which is included above
-
-using SkColor = uint32_t;
-using U8CPU = uint32_t;
-#define SK_ColorBLACK 0xFF000000
-#define SK_ColorWHITE 0xFFFFFFFF
-#define SK_ColorRED 0xFFFF0000
-#define SK_ColorGREEN 0xFF00FF00
-#define SK_ColorBLUE 0xFF0000FF
-#define SK_ColorTRANSPARENT 0x00000000
-#define SK_ColorCYAN 0xFF00FFFF
-
-inline uint8_t SkColorGetA(SkColor c) { return (c >> 24) & 0xFF; }
-inline uint8_t SkColorGetR(SkColor c) { return (c >> 16) & 0xFF; }
-inline uint8_t SkColorGetG(SkColor c) { return (c >> 8) & 0xFF; }
-inline uint8_t SkColorGetB(SkColor c) { return (c) & 0xFF; }
-inline SkColor SkColorSetARGB(U8CPU a, U8CPU r, U8CPU g, U8CPU b) { 
-    return (a << 24) | (r << 16) | (g << 8) | b; 
-}
-inline SkColor SkColorSetRGB(U8CPU r, U8CPU g, U8CPU b) { 
-    return (0xFF << 24) | (r << 16) | (g << 8) | b; 
-}
-
-struct SkRect { 
-    float fLeft, fTop, fRight, fBottom; 
-    SkRect makeInset(float dx, float dy) const { return *this; }
-    void outset(float dx, float dy) { fLeft -= dx; fTop -= dy; fRight += dx; fBottom += dy; }
-    static SkRect MakeEmpty() { return {0,0,0,0}; }
-    static SkRect MakeXYWH(float x, float y, float w, float h) { return {x,y,x+w,y+h}; }
-    static SkRect MakeWH(float w, float h) { return {0,0,w,h}; }
-    float getX() const { return fLeft; }
-    float getY() const { return fTop; }
-    float getWidth() const { return fRight - fLeft; }
-    float getHeight() const { return fBottom - fTop; }
-    float width() const { return getWidth(); }
-    float height() const { return getHeight(); }
-    float x() const { return fLeft; }
-    float y() const { return fTop; }
-    float left() const { return fLeft; }
-    float top() const { return fTop; }
-    float right() const { return fRight; }
-    float bottom() const { return fBottom; }
-    float getCentreX() const { return (fLeft + fRight) * 0.5f; }
-    float getCentreY() const { return (fTop + fBottom) * 0.5f; }
-};
-
-struct SkRRect { 
-    SkRect fRect;
-    static SkRRect MakeRectXY(const SkRect& r, float, float) { SkRRect rr; rr.fRect = r; return rr; }
-    SkRRect makeOffset(float, float) const { return *this; }
-    const SkRect& rect() const { return fRect; }
-};
-
-#ifndef SK_TEXT_ENCODING_DEFINED
-#define SK_TEXT_ENCODING_DEFINED
-enum class SkTextEncoding { kUTF8 };
-#endif
-
-class SkImage;
-class SkTypeface;
-
-class SkTextBlob {
-public:
-    static sk_sp<SkTextBlob> MakeFromText(const void*, size_t, const SkFont&, SkTextEncoding) { return nullptr; }
-    SkRect bounds() const { return {}; }
-};
-
-class SkPaint {
-public:
-    enum Style { kStroke_Style, kFill_Style };
-    void setAntiAlias(bool) {}
-    void setStyle(Style) {}
-    void setStrokeWidth(float) {}
-    void setColor(SkColor) {}
-    void setMaskFilter(sk_sp<void>) {}
-    void setShader(sk_sp<void>) {}
-};
-
-class SkCanvas {
-public:
-    void drawRRect(const SkRRect&, const SkPaint&) {}
-    void drawRoundRect(const SkRect&, float, float, const SkPaint&) {}
-    void clear(SkColor) {}
-    void drawRect(const SkRect&, const SkPaint&) {}
-    void drawLine(float, float, float, float, const SkPaint&) {}
-    void save() {}
-    void restore() {}
-    void translate(float, float) {}
-    void drawImage(sk_sp<SkImage>, float, float) {}
-    void drawImageRect(const SkImage*, const SkRect&, const struct SkSamplingOptions&, const SkPaint*) {}
-    void drawTextBlob(const SkTextBlob*, float, float, const SkPaint&) {}
-    void drawString(const char*, float, float, const SkFont&, const SkPaint&) {}
-    void flushAndSubmit() {}
-};
-#endif
 
 namespace zenith {
 namespace design {
@@ -129,63 +31,177 @@ namespace design {
 // ============================================================================
 
 namespace colors {
-// Primary Accents - "Electric Dreams"
-inline SkColor CYAN = 0xFF00F3FF;        // Electric Cyan (Neon Noir)
-inline SkColor MAGENTA = 0xFFFF00D4;     // Hot Pink/Magenta
+// ============================================================================
+// PRIMARY PALETTE (Single Source of Truth)
+// ============================================================================
+
+// Brand Colors
+inline SkColor CYAN = 0xFF00F0FF;        // Electric Blue (Primary Brand)
+inline SkColor MAGENTA = 0xFFFF00D4;     // Hot Pink (Secondary Brand)
+inline SkColor VIOLET = 0xFF7000FF;      // Deep Violet
+inline SkColor ORANGE = 0xFFFF8800;      // Orange
 inline SkColor NEON_GREEN = 0xFF00FF9D;  // Spring Green
-inline SkColor NEON_PINK = 0xFFFF00AA;   // Hot Pink (Neon Noir)
+inline SkColor NEON_PINK = 0xFFFF1493;   // Deep Pink
 inline SkColor NEON_RED = 0xFFFF073A;    // Neon Red
-inline SkColor NEON_CYAN = 0xFF00F3FF;   // Match Electric Cyan
 inline SkColor NEON_YELLOW = 0xFFFFFF00; // Yellow
 inline SkColor NEON_PURPLE = 0xFFAA00FF; // Purple
-inline SkColor VIOLET = 0xFF7000FF;      // Deep Violet
+inline SkColor CYAN_DARK = 0xFF008888;   // Dark Cyan
 
-// Semantic/Status Colors
-inline SkColor AMBER = 0xFFFFBD2E; // Bright Amber (Neon Noir)
-inline SkColor RED = 0xFFFF453A;   // Soft Red (Apple style)
-inline SkColor GREEN = 0xFF32D74B; // Soft Green
-inline SkColor BLUE = 0xFF0A84FF;  // iOS Blue
+// Functional Palette
+inline SkColor BLUE = 0xFF3B82F6;        // Standard Blue (Info/Action)
+inline SkColor GREEN = 0xFF10B981;       // Success/Safe
+inline SkColor YELLOW = 0xFFF59E0B;      // Warning/Caution
+inline SkColor RED = 0xFFEF4444;         // Error/Danger
+inline SkColor PINK = 0xFFEC4899;        // Automation
+inline SkColor AMBER = 0xFFFFAB00;       // Warm Warning
 
-// Backgrounds - "Onyx & Slate" (Rich, deep greys, not voids)
-inline SkColor BG_DARKEST = 0xFF050505; // Base/Window Background (Deep Black)
-inline SkColor BG_DARKER = 0xFF121212;  // Panel Background (Dark Grey)
-inline SkColor BG_DARK = 0xFF1C1C24;    // Surface/Component Background
-inline SkColor BG_MEDIUM = 0xFF25252D;  // Hover Surface
-inline SkColor BG_LIGHT = 0xFF2F2F3D;   // Active/Selected Surface
+// Background Layers (Deepest to Elevated)
+inline SkColor BG_00 = 0xFF0A0A0A;       // Deepest/App Background
+inline SkColor BG_01 = 0xFF121212;       // Canvas/Main
+inline SkColor BG_02 = 0xFF1A1A1A;       // Panels
+inline SkColor BG_03 = 0xFF242424;       // Elevated Surfaces
+inline SkColor BG_04 = 0xFF2E2E2E;       // Highest Elevation (Modals/Popups)
 
-// Text - "High Legibility"
-inline SkColor TEXT_PRIMARY = 0xFFF2F2F7;   // Off-white for less eye strain
-inline SkColor TEXT_SECONDARY = 0xFFA1A1AA; // Zinc-400 equivalent
-inline SkColor TEXT_TERTIARY = 0xFF71717A;  // Zinc-500 equivalent
+// Legacy Background Aliases (Deprecated)
+inline SkColor BG_DARKEST = BG_00;
+inline SkColor BG_DARKER = BG_01;
+inline SkColor BG_DARK = BG_02;
+inline SkColor BG_MEDIUM = BG_03;
+inline SkColor BG_LIGHT = BG_04;
+
+// Semantic Aliases
+inline SkColor ACCENT_PRIMARY = CYAN;
+inline SkColor ACCENT_SECONDARY = MAGENTA;
+inline SkColor NEON_CYAN = CYAN;         // Deprecated Alias
+inline SkColor SURFACE_BASE = BG_01;
+inline SkColor SURFACE_ELEVATED = BG_02;
+inline SkColor SUCCESS = GREEN;
+inline SkColor DANGER = RED;
+inline SkColor WARNING = AMBER;
+inline SkColor INFO = BLUE;
+
+// Text Hierarchy
+inline SkColor TEXT_PRIMARY = 0xFFF2F2F7;    // High Emphasis (95%)
+inline SkColor TEXT_SECONDARY = 0xFFA1A1AA;  // Medium Emphasis (60%)
+inline SkColor TEXT_TERTIARY = 0xFF71717A;   // Disabled/Hints (35%)
+inline SkColor TEXT_DISABLED = 0xFF52525B;   // Disabled text
+inline SkColor TEXT_INVERSE = 0xFF111111;    // Text on Accent
 
 // Borders & Dividers
-inline SkColor BORDER_DEFAULT = 0x1FFFFFFF; // Very subtle white overlay
-inline SkColor BORDER_FOCUS = CYAN;
-inline SkColor BORDER_SUBTLE = 0x0FFFFFFF;   // Ultra subtle
-inline SkColor BORDER_STRONG = 0x33FFFFFF;   // Visible separation
-inline SkColor BORDER_GREETING = 0x1AFFFFFF; // For interactive text fields
+inline SkColor BORDER_SUBTLE = 0x0FFFFFFF;   // 6% White
+inline SkColor BORDER_DEFAULT = 0x1FFFFFFF;  // 12% White
+inline SkColor BORDER_STRONG = 0x33FFFFFF;   // 20% White
+inline SkColor BORDER_FOCUS = CYAN;          // Focus Ring
+inline SkColor BORDER_GREETING = 0x1AFFFFFF; // Legacy
 
 // Glassmorphism System
 inline SkColor GLASS_HIGHLIGHT = 0x1AFFFFFF; // Top edge highlight
-inline SkColor GLASS_SHADOW = 0x40000000;    // Drop shadow
+inline SkColor GLASS_SHADOW = 0x66000000;    // Drop shadow
 inline SkColor GLASS_HOVER = 0x0DFFFFFF;     // White overlay for hover
-inline SkColor GLASS_10 = 0x1AFFFFFF; // 10% white (alias for legacy code)
+inline SkColor GLASS_10 = 0x1AFFFFFF;        // Generic glass
 
-// Text (Additional)
-inline SkColor TEXT_DISABLED = 0xFF52525B; // Disabled text (Zinc-600)
+// Audio Visualization
+inline SkColor WAVEFORM_AUDIO = BLUE;
+inline SkColor WAVEFORM_MIDI = MAGENTA;
+inline SkColor AUTOMATION = PINK;
+inline SkColor PLAYHEAD = ORANGE;
 
-// Helper to reset
+// Helper to reset ALL colors (for runtime theme reload and testing)
 inline void resetToDefault() {
+  // Brand Colors
   CYAN = 0xFF00F0FF;
   MAGENTA = 0xFFFF00D4;
+  VIOLET = 0xFF7000FF;
+  ORANGE = 0xFFFF8800;
   NEON_GREEN = 0xFF00FF9D;
-  // ... (Full reset logic implied)
+  NEON_PINK = 0xFFFF1493;
+  NEON_RED = 0xFFFF073A;
+  NEON_YELLOW = 0xFFFFFF00;
+  NEON_PURPLE = 0xFFAA00FF;
+  CYAN_DARK = 0xFF008888;
+
+  // Functional Palette
+  BLUE = 0xFF3B82F6;
+  GREEN = 0xFF10B981;
+  YELLOW = 0xFFF59E0B;
+  RED = 0xFFEF4444;
+  PINK = 0xFFEC4899;
+  AMBER = 0xFFFFAB00;
+
+  // Background Layers
+  BG_00 = 0xFF0A0A0A;
+  BG_01 = 0xFF121212;
+  BG_02 = 0xFF1A1A1A;
+  BG_03 = 0xFF242424;
+  BG_04 = 0xFF2E2E2E;
+
+  // Legacy Background Aliases
+  BG_DARKEST = BG_00;
+  BG_DARKER = BG_01;
+  BG_DARK = BG_02;
+  BG_MEDIUM = BG_03;
+  BG_LIGHT = BG_04;
+
+  // Semantic Aliases
+  ACCENT_PRIMARY = CYAN;
+  ACCENT_SECONDARY = MAGENTA;
+  NEON_CYAN = CYAN;
+  SURFACE_BASE = BG_01;
+  SURFACE_ELEVATED = BG_02;
+  SUCCESS = GREEN;
+  DANGER = RED;
+  WARNING = AMBER;
+  INFO = BLUE;
+
+  // Text Hierarchy
+  TEXT_PRIMARY = 0xFFF2F2F7;
+  TEXT_SECONDARY = 0xFFA1A1AA;
+  TEXT_TERTIARY = 0xFF71717A;
+  TEXT_DISABLED = 0xFF52525B;
+  TEXT_INVERSE = 0xFF111111;
+
+  // Borders & Dividers
+  BORDER_SUBTLE = 0x0FFFFFFF;
+  BORDER_DEFAULT = 0x1FFFFFFF;
+  BORDER_STRONG = 0x33FFFFFF;
+  BORDER_FOCUS = CYAN;
+  BORDER_GREETING = 0x1AFFFFFF;
+
+  // Glassmorphism System
+  GLASS_HIGHLIGHT = 0x1AFFFFFF;
+  GLASS_SHADOW = 0x66000000;
+  GLASS_HOVER = 0x0DFFFFFF;
+  GLASS_10 = 0x1AFFFFFF;
+
+  // Audio Visualization
+  WAVEFORM_AUDIO = BLUE;
+  WAVEFORM_MIDI = MAGENTA;
+  AUTOMATION = PINK;
+  PLAYHEAD = ORANGE;
 }
 } // namespace colors
 
 // ============================================================================
 // THEME MANAGER
 // ============================================================================
+
+/**
+ * @brief Theme preset enumeration for built-in themes
+ */
+enum class ThemePreset {
+  Dark,   // Neon Noir - vibrant accents on dark backgrounds
+  Darker, // OLED Black - pure black backgrounds for power saving
+  Light   // Light mode - inverted palette for daylight use
+};
+
+/**
+ * @brief Listener interface for theme change notifications
+ */
+class ThemeListener {
+public:
+  virtual ~ThemeListener() = default;
+  virtual void themeChanged(ThemePreset newTheme) = 0;
+};
 
 class ThemeManager : public juce::ChangeBroadcaster {
 public:
@@ -199,6 +215,15 @@ public:
     std::map<juce::String, uint32_t> colors; // name -> ARGB
   };
 
+  // Built-in preset management
+  void setActiveTheme(ThemePreset preset);
+  ThemePreset getActiveTheme() const { return activePreset_; }
+
+  // Listener management
+  void addListener(ThemeListener *listener);
+  void removeListener(ThemeListener *listener);
+
+  // Custom theme management
   void saveTheme(const juce::String &name);
   void loadTheme(const juce::String &name);
   void deleteTheme(const juce::String &name);
@@ -207,9 +232,52 @@ public:
 
   // Apply current colors to ZenithDesignSystem::Colors
   void applyTheme(const Theme &theme);
+  
+  // Reset state for testing
+  void resetToDefault();
+
+  // Palette accessors for current theme
+  struct ThemePalette {
+    // Backgrounds
+    SkColor bgDarkest;
+    SkColor bgDarker;
+    SkColor bgDark;
+    SkColor bgMedium;
+    SkColor bgLight;
+
+    // Accents
+    SkColor accentPrimary;
+    SkColor accentSecondary;
+
+    // Text
+    SkColor textPrimary;
+    SkColor textSecondary;
+    SkColor textTertiary;
+
+    // Borders
+    SkColor borderDefault;
+    SkColor borderSubtle;
+    SkColor borderFocus;
+
+    // Semantic
+    SkColor success;
+    SkColor warning;
+    SkColor error;
+  };
+
+  const ThemePalette &getPalette() const { return currentPalette_; }
 
 private:
-  ThemeManager() = default;
+  ThemeManager();
+
+  void applyDarkTheme();
+  void applyDarkerTheme();
+  void applyLightTheme();
+  void notifyListeners();
+
+  ThemePreset activePreset_ = ThemePreset::Dark;
+  ThemePalette currentPalette_;
+  std::vector<ThemeListener *> listeners_;
 
   juce::File getThemeDir() const {
     auto dir =
@@ -220,6 +288,7 @@ private:
     return dir;
   }
 };
+
 
 // ============================================================================
 // LAYOUT MANAGER
@@ -330,6 +399,33 @@ inline SkFont getDisplayFont(float size, FontWeight weight = FontWeight::Bold) {
 }
 
 // ============================================================================
+// JUCE FONT COMPATIBILITY
+// ============================================================================
+
+/**
+ * Get a juce::Font that matches the design system's Inter font.
+ * Used by standard JUCE components that don't use Skia rendering.
+ */
+inline juce::Font getJuceFont(float size, FontWeight weight = FontWeight::Regular) {
+    juce::FontOptions options;
+    options = options.withHeight(size);
+    options = options.withName("Inter");
+    
+    if (weight == FontWeight::Bold) options = options.withStyle("Bold");
+    else if (weight == FontWeight::SemiBold) options = options.withStyle("SemiBold");
+    else if (weight == FontWeight::Medium) options = options.withStyle("Medium");
+    
+    return juce::Font(options);
+}
+
+/**
+ * Get a juce::Font for monospace text.
+ */
+inline juce::Font getJuceMonoFont(float size) {
+    return juce::Font(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), size, juce::Font::plain));
+}
+
+// ============================================================================
 // LEGACY COMPATIBILITY
 // ============================================================================
 
@@ -403,20 +499,28 @@ constexpr float BOTTOM_PANEL_HEIGHT = 200.0f;
 constexpr float MIN_PANEL_WIDTH = 200.0f;
 constexpr float MIN_PANEL_HEIGHT = 100.0f;
 
-// Border Radii - "Soft Modern"
-constexpr float RADIUS_XS = 2.0f;
-constexpr float RADIUS_SM = 4.0f;
-constexpr float RADIUS_MD = 8.0f;      // Standard components
-constexpr float RADIUS_LG = 12.0f;     // Panels/Containers
-constexpr float RADIUS_XL = 16.0f;     // Floating windows
-constexpr float RADIUS_FULL = 9999.0f; // Pills/Circles
+// Border Radii - Standardized Two-Tier System
+// Small (8px): Buttons, inputs, cards, small components
+// Large (16px): Panels, dialogs, modals, large containers
+constexpr float RADIUS_NONE = 0.0f;       // Sharp corners
+constexpr float RADIUS_SM = 8.0f;         // Standard components (buttons, inputs, cards)
+constexpr float RADIUS_LG = 16.0f;        // Large containers (panels, dialogs, modals)
+constexpr float RADIUS_FULL = 9999.0f;    // Pills/Circles
+
+// Legacy aliases - kept for backward compatibility, prefer RADIUS_SM/RADIUS_LG
+[[deprecated("Use RADIUS_SM (8.0f) instead")]]
+constexpr float RADIUS_XS = RADIUS_SM;
+[[deprecated("Use RADIUS_SM (8.0f) instead")]]
+constexpr float RADIUS_MD = RADIUS_SM;
+[[deprecated("Use RADIUS_LG (16.0f) instead")]]
+constexpr float RADIUS_XL = RADIUS_LG;
 } // namespace dimensions
 
 // ============================================================================
 // EFFECTS - "The Glow System"
 // ============================================================================
 
-namespace glow {
+namespace effects {
 // Glow/Blur Radii
 constexpr float GLOW_SUBTLE = 2.0f;  // Hover
 constexpr float GLOW_MEDIUM = 4.0f;  // Active
@@ -434,7 +538,7 @@ constexpr float OPACITY_INTENSE = 0.8f;
 constexpr float SHADOW_OFFSET_SM = 2.0f;
 constexpr float SHADOW_OFFSET_MD = 4.0f;
 constexpr float SHADOW_OFFSET_LG = 8.0f;
-} // namespace glow
+} // namespace effects
 
 // ============================================================================
 // ANIMATION - "Smooth & Buttery"
