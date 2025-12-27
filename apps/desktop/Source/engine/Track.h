@@ -171,6 +171,8 @@ public:
 
   void setEnabled(bool shouldBeEnabled);
   bool isEnabled() const { return enabled.load(); }
+  void setInputMonitorEnabled(bool enabled) { inputMonitor_.store(enabled); }
+  bool isInputMonitorEnabled() const { return inputMonitor_.load(); }
 
   void setInputChannel(int channel) { inputChannelIndex.store(channel); }
   int getInputChannel() const { return inputChannelIndex.load(); }
