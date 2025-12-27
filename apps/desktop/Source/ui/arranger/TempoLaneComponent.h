@@ -20,6 +20,8 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include "ProjectState.h"
+#include "../framework/SkiaComponent.h"
+#include <core/SkCanvas.h>
 
 //==============================================================================
 namespace zenith {
@@ -33,7 +35,7 @@ namespace zenith {
  * - Drag to move tempo point (horizontal = time, vertical = BPM)
  * - Select point + Delete/Backspace to remove
  */
-class TempoLaneComponent : public juce::Component,
+class TempoLaneComponent : public SkiaComponent,
                            private juce::ValueTree::Listener
 {
 public:
@@ -53,7 +55,7 @@ public:
     // Component interface
     //==========================================================================
 
-    void paint(juce::Graphics& g) override;
+    void drawSkia(SkCanvas* canvas) override;
     void resized() override;
 
     void mouseDown(const juce::MouseEvent& event) override;
@@ -70,8 +72,8 @@ private:
 
     void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
     void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
-    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index) [[maybe_unused]] override;
-    void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) [[maybe_unused]] override;
+    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index) override;
+    void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) override;
     void valueTreeParentChanged(juce::ValueTree& tree) override;
 
     //==========================================================================
@@ -106,22 +108,22 @@ private:
     /**
      * @brief Draw a tempo point
      */
-    void drawTempoPoint(juce::Graphics& g, double timeBeats, double bpm, bool selected) const;
+    void drawTempoPoint(SkCanvas* canvas, double timeBeats, double bpm, bool selected) const;
 
     /**
      * @brief Draw grid lines for BPM
      */
-    void drawGrid(juce::Graphics& g) const;
+    void drawGrid(SkCanvas* canvas) const;
 
     /**
      * @brief Draw tempo curve connecting points
      */
-    void drawTempoCurve(juce::Graphics& g) const;
+    void drawTempoCurve(SkCanvas* canvas) const;
 
     /**
      * @brief Draw all tempo points
      */
-    void drawTempoPoints(juce::Graphics& g) const;
+    void drawTempoPoints(SkCanvas* canvas) const;
 
     /**
      * @brief Track mouse movement for hover effects

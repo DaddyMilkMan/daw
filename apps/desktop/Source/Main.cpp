@@ -5,9 +5,7 @@
  * This file initializes the JUCE application and creates the main window.
  */
 
-#include "MainWindow.h"
-#include "utils/SampleGenerator.h"
-#include "utils/PlatformSystemUtils.h"
+// JUCE includes first
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -17,6 +15,14 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_gui_extra/juce_gui_extra.h>
+
+// Project includes after JUCE
+#include "ui/common/MainWindow.h"
+#include "engine/ProjectState.h"
+#include "utils/SampleGenerator.h"
+#include "utils/PlatformSystemUtils.h"
+#include "ui/design-system/FontManager.h"
+#include "engine/ZenithLogger.h"
 
 
 //==============================================================================
@@ -54,23 +60,30 @@ public:
     DBG("JUCE Version: " + juce::SystemStats::getJUCEVersion());
 
     // Log system info
-    zenith::PlatformSystemUtils::logSystemInfo();
+    ::zenith::PlatformSystemUtils::logSystemInfo();
 
     // Ensure content validity (Generate missing samples if needed)
-    zenith::SampleGenerator::generateMissingSamples();
+    ::zenith::SampleGenerator::generateMissingSamples();
+
+    // Pre-initialize FontManager to avoid hangs when UI is created
+    DBG("Initializing FontManager...");
+    ::zenith::design::FontManager::getInstance();
+    DBG("FontManager initialized.");
 
     // Create main window
-    mainWindow = std::make_unique<MainWindow>(getApplicationName());
+    mainWindow = std::make_unique<::zenith::MainWindow>(getApplicationName());
 
     DBG("Zenith DAW initialized successfully!");
   }
 
   void shutdown() override {
+    ZENITH_LOG_INFO("ZenithApplication::shutdown() STARTED");
     DBG("Zenith DAW shutting down...");
 
     // Close main window (releases all resources)
     mainWindow.reset();
 
+    ZENITH_LOG_INFO("ZenithApplication::shutdown() COMPLETE");
     DBG("Zenith DAW shutdown complete.");
   }
 
@@ -82,7 +95,7 @@ public:
         int result = juce::NativeMessageBox::showYesNoCancelBox(
             juce::AlertWindow::WarningIcon, "Unsaved Changes",
             "You have unsaved changes. Do you want to save before quitting?",
-            mainWindow.get(), nullptr);
+            static_cast<juce::Component*>(mainWindow.get()), nullptr);
 
         // JUCE NativeMessageBox return values:
         // 1 = Yes, 2 = No, 0 = Cancel
@@ -115,7 +128,7 @@ public:
 
 private:
   //==========================================================================
-  std::unique_ptr<MainWindow> mainWindow;
+  std::unique_ptr<::zenith::MainWindow> mainWindow;
 };
 
 //==============================================================================

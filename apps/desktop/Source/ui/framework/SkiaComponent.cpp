@@ -17,6 +17,7 @@ namespace zenith {
 
 int SkiaComponent::systemRefreshRate_ = 60;
 int SkiaComponent::targetFPS_ = 60;
+std::function<void(const juce::String &, const juce::String &)> SkiaComponent::globalHelpCallback;
 
 SkiaComponent::SkiaComponent() {
   setOpaque(false);
@@ -35,8 +36,10 @@ SkiaComponent::SkiaComponent() {
   }
 
   // Initialize with theme accent
-  juce::Colour accent = ZenithTheme::Colors::accent_primary;
-  glowColor_ = SkColorSetRGB(accent.getRed(), accent.getGreen(), accent.getBlue());
+  glowColor_ = design::colors::ACCENT_PRIMARY;
+
+  // Property to identify SkiaComponent without RTTI
+  getProperties().set("zenith_is_skia", true);
 }
 
 SkiaComponent::~SkiaComponent() { stopAllAnimations(); }
@@ -119,6 +122,11 @@ void SkiaComponent::resized() {
 void SkiaComponent::mouseEnter(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
   isHovered_ = true;
+  
+  if (globalHelpCallback && helpTitle_.isNotEmpty()) {
+      globalHelpCallback(helpTitle_, helpDescription_);
+  }
+  
   onHoverEnter();
   markDirty();
 }
@@ -151,7 +159,8 @@ void SkiaComponent::focusLost(juce::Component::FocusChangeType cause) {
 void SkiaComponent::drawChildren(SkCanvas *canvas) {
   for (auto *child : getChildren()) {
     if (child->isVisible()) {
-      if (auto *skiaChild = dynamic_cast<SkiaComponent *>(child)) {
+      if (child->getProperties().contains("zenith_is_skia")) {
+        auto *skiaChild = static_cast<SkiaComponent *>(child);
         canvas->save();
         canvas->translate((float)child->getX(), (float)child->getY());
         skiaChild->drawSkia(canvas);
@@ -179,7 +188,7 @@ void SkiaComponent::animateTo(const juce::String &property, float target,
   }
 
   it->second->setTarget(target, durationMs, ::zenith::animation::Easing::EaseOut);
-  startTimer(1000 / targetFPS_);
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(1000 / targetFPS_);
 }
 
 void SkiaComponent::animateWithSpring(const juce::String &property,
@@ -196,7 +205,7 @@ void SkiaComponent::animateWithSpring(const juce::String &property,
   config.damping = damping * 100.0f;     // Scale to match new engine range
   
   it->second->setTargetSpring(target, config);
-  startTimer(1000 / targetFPS_);
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(1000 / targetFPS_);
 }
 
 void SkiaComponent::stopAnimation(const juce::String &property) {

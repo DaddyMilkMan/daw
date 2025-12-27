@@ -16,6 +16,7 @@
 #pragma once
 
 #include "SkiaComponent.h"
+#include "SkiaPopupMenu.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #ifdef ZENITH_USE_SKIA
@@ -94,6 +95,8 @@ private:
 
   bool hovered_ = false;
   bool isOpen_ = false;
+  
+  std::unique_ptr<SkiaPopupMenu> activeMenu_;
 
   SkColor accentColor_ = SkColorSetRGB(0, 255, 255);
 

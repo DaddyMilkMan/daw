@@ -41,19 +41,9 @@ void MIDITrack::getNextAudioBlock(
   // If the plugin supports UMP, we should ensure the buffer is in UMP format.
   // For this implementation, we assume the PluginChain handles UMP translation if needed.
 
-  // 4. Process Plugin Chain (Instrument)
-  juce::AudioBuffer<float> proxyBuffer(
-      bufferToFill.buffer->getArrayOfWritePointers(),
-      bufferToFill.buffer->getNumChannels(), bufferToFill.startSample,
-      numSamples);
-
-  processPluginChain(proxyBuffer, midiBuffer, numSamples, sidechainBuffer);
-
-  // 5. Apply Mixer
-  applyGainAndPan(proxyBuffer, numSamples);
-
-  // 6. Metering
-  updateLevelMeters(proxyBuffer, numSamples);
+  // 4. Process through plugin chain and mixer (delegated to Processor)
+  juce::AudioSourceChannelInfo blockInfo(bufferToFill.buffer, bufferToFill.startSample, numSamples);
+  processor->processBlock(blockInfo, midiBuffer, auxBuffers, sidechainBuffer);
 }
 
 } // namespace zenith

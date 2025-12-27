@@ -1,5 +1,6 @@
 target_sources(ZenithDAW PRIVATE
-    GrokAPIClient.cpp
+
+    GrokDAWClient.cpp
     GrokDAWController.cpp
     GrokUtils.cpp
     SecureKeyStore.cpp

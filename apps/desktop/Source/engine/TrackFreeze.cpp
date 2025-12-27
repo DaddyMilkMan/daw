@@ -11,6 +11,7 @@
 */
 
 #include "TrackFreeze.h"
+#include "../instruments/Instrument.h"
 #include "Track.h"
 #include "Clip.h"
 #include "Engine.h"
@@ -71,16 +72,20 @@ bool TrackFreezeManager::freezeTrack(Track& track,
     // Save instrument state if present
     if (track.hasInstrument()) {
         auto* instrument = track.getInstrument();
-        if (instrument != nullptr) {
-            // Save instrument state to memory block
-            // Note: This depends on instrument interface - placeholder for now
-            DBG("TrackFreeze: Saving instrument state");
+        if (instrument != nullptr && instrument->getAudioProcessor() != nullptr) {
+            // Save instrument state using JUCE's AudioProcessor state mechanism
+            instrument->getAudioProcessor()->getStateInformation(state.instrumentState);
+            DBG("TrackFreeze: Saved instrument state (" + 
+                juce::String(state.instrumentState.getSize()) + " bytes)");
         }
     }
     
     // Mark as freezing
     isFreezing_.store(true);
     shouldCancel_.store(false);
+
+    // Set track internal flag for audio thread safety
+    track.setBeingFrozen(true);
     
     // Start background render thread
     freezeThread_ = std::make_unique<FreezeRenderThread>(
@@ -225,20 +230,22 @@ void FreezeRenderThread::run() {
     
     // Create output file
     juce::WavAudioFormat wavFormat;
-    auto outputStream = std::make_unique<juce::FileOutputStream>(outputFile_);
+    auto fileStream = std::make_unique<juce::FileOutputStream>(outputFile_);
     
-    if (!outputStream->openedOk()) {
+    if (!fileStream->openedOk()) {
         DBG("FreezeRenderThread: Failed to create output file");
         return;
     }
+
+    std::unique_ptr<juce::OutputStream> outputStream = std::move(fileStream);
     
-    std::unique_ptr<juce::AudioFormatWriter> writer(
-        wavFormat.createWriterFor(outputStream.release(),
-                                  sampleRate,
-                                  2,  // Stereo
-                                  constants::kFreezeBitDepth,
-                                  {},
-                                  0));
+    auto writerOptions = juce::AudioFormatWriter::Options()
+        .withSampleRate(sampleRate)
+        .withNumChannels(2)
+        .withBitsPerSample(constants::kFreezeBitDepth);
+
+    std::unique_ptr<juce::AudioFormatWriter> writer = 
+        wavFormat.createWriterFor(outputStream, writerOptions);
     
     if (writer == nullptr) {
         DBG("FreezeRenderThread: Failed to create audio writer");
@@ -297,46 +304,55 @@ void FreezeRenderThread::run() {
     if (shouldCancel_.load()) {
         DBG("FreezeRenderThread: Cancelled");
         outputFile_.deleteFile();
+        
+        // CRITIC FIX: Look up track by ID on message thread - NEVER capture by reference
+        const juce::String cancelledTrackId = track_.getTrackId();
+        Engine& engineRef = engine_; // Engine outlives threads, safe to reference
+        juce::MessageManager::callAsync([cancelledTrackId, &engineRef]() {
+            if (auto* track = engineRef.getTrackById(cancelledTrackId)) {
+                track->setBeingFrozen(false);
+            }
+        });
         return;
     }
     
     // Success - finalize freeze on message thread
-  // CRITIC FIX: NEVER capture references to member variables in async callbacks!
-  // The FreezeRenderThread could be destroyed before the callback executes.
-  // Instead, capture by VALUE and look up the track safely using Engine::getTrackById().
-  const juce::String trackId = track_.getTrackId();
-  const juce::String trackName = track_.getName();
-  auto progressCopy = progress_;
-  Engine* enginePtr = &engine_; // Raw pointer is safe - Engine outlives this callback
-  
-  juce::MessageManager::callAsync([trackId, trackName, progressCopy, enginePtr]() {
-    // SAFE: Look up the track by ID - if track was deleted, we get nullptr
-    Track* track = enginePtr->getTrackById(trackId);
-    if (track == nullptr) {
-      DBG("FreezeRenderThread: Track " + trackId + " no longer exists - skipping finalization");
-      return;
-    }
+    // CRITIC FIX: Capture ONLY by value. Look up track by ID on message thread.
+    // The comment "track reference should still be valid" was WRONG and dangerous.
+    const juce::String trackId = track_.getTrackId();
+    const juce::String trackName = track_.getName();
+    auto progressCopy = progress_; // Copy the callback
+    Engine& engineRef = engine_; // Engine outlives threads, safe to reference
     
-    // Disable all plugins on the track
-    for (int i = 0; i < track->getNumPlugins(); ++i) {
-      auto* plugin = track->getPlugin(i);
-      if (plugin != nullptr) {
-        plugin->suspendProcessing(true);
-      }
-    }
-    
-    // Mark track as frozen
-    track->setFrozen(true);
-    
-    // Disable arming
-    track->setArmed(false);
-    
-    DBG("FreezeRenderThread: Freeze complete for " + trackName);
-    
-    if (progressCopy) {
-      progressCopy(1.0f, "Freeze complete");
-    }
-  });
+    juce::MessageManager::callAsync([trackId, trackName, progressCopy, &engineRef]() {
+        // SAFE: Look up track by ID on message thread
+        auto* track = engineRef.getTrackById(trackId);
+        if (track == nullptr) {
+            DBG("FreezeRenderThread: Track was deleted during freeze: " + trackName);
+            return; // Track was deleted - nothing to do
+        }
+        
+        // Disable all plugins on the track
+        for (int i = 0; i < track->getNumPlugins(); ++i) {
+            auto* plugin = track->getPlugin(i);
+            if (plugin != nullptr) {
+                plugin->suspendProcessing(true);
+            }
+        }
+        
+        // Mark track as frozen
+        track->setFrozen(true);
+        track->setBeingFrozen(false); // Enable access again
+        
+        // Disable arming
+        track->setArmed(false);
+        
+        DBG("FreezeRenderThread: Freeze complete for " + trackName);
+        
+        if (progressCopy) {
+            progressCopy(1.0f, "Freeze complete");
+        }
+    });
 }
 
 } // namespace zenith

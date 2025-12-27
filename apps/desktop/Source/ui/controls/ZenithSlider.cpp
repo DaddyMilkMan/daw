@@ -11,6 +11,7 @@
 */
 
 #include "ZenithSlider.h"
+#include "../design-system/ColorBridge.h"
 #include "ui/design-system/ZenithDesignSystem.h"
 
 #ifdef ZENITH_USE_SKIA
@@ -23,12 +24,16 @@
 namespace zenith {
 
 ZenithSlider::ZenithSlider() : ZenithControl("") {
-  accentColor_ = design::colors::MAGENTA;
+  accentColor_ = design::unified::accent_secondary();
+}
+
+ZenithSlider::ZenithSlider(const juce::String &name) : ZenithControl(name) {
+  accentColor_ = design::unified::accent_secondary();
 }
 
 ZenithSlider::ZenithSlider(Orientation orientation)
     : ZenithControl(""), orientation_(orientation) {
-  accentColor_ = design::colors::MAGENTA;
+  accentColor_ = design::unified::accent_secondary();
 }
 
 ZenithSlider::ZenithSlider(const juce::String &name, SkColor color)
@@ -81,6 +86,11 @@ void ZenithSlider::setRange(float min, float max, float defaultValue) {
 
 void ZenithSlider::drawSkia(SkCanvas *canvas) {
   drawTrack(canvas);
+  
+  if (showDBScale_) {
+    drawDBScale(canvas);
+  }
+  
   float handlePos = getHandlePosition();
   if (showFillBar_) {
     drawFillBar(canvas, handlePos);
@@ -178,7 +188,7 @@ void ZenithSlider::drawTrack(SkCanvas *canvas) {
   SkPaint paint;
   paint.setAntiAlias(true);
   paint.setStyle(SkPaint::kFill_Style);
-  paint.setColor(design::colors::BG_DARKER);
+  paint.setColor(design::unified::bg_01());
 
   SkRect trackRect;
   float cornerRadius = 2.0f;
@@ -203,8 +213,67 @@ void ZenithSlider::drawTrack(SkCanvas *canvas) {
 
   paint.setStyle(SkPaint::kStroke_Style);
   paint.setStrokeWidth(1.0f);
-  paint.setColor(design::colors::BORDER_DEFAULT);
+  paint.setColor(design::unified::border_default());
   canvas->drawRRect(trackRRect, paint);
+}
+
+void ZenithSlider::drawDBScale(SkCanvas *canvas) {
+  auto bounds = getLocalBounds().toFloat();
+  float w = bounds.getWidth();
+  float h = bounds.getHeight();
+  
+  // Standard positions for typical DAW fader (+6dB max, 0dB @ ~0.75)
+  struct Tick { float normPos; const char* label; bool major; };
+  // Visual tweaks to match typical log taper where 0dB is comfortably high
+  const Tick ticks[] = {
+      { 1.0f,  "+6", true },
+      { 0.75f, "0",  true },
+      { 0.6f,  "-6", false },
+      { 0.45f, "-12", false },
+      { 0.3f,  "-24", false },
+      { 0.15f, "-48", false },
+      { 0.0f,  "-inf", true }
+  };
+
+  SkPaint tickPaint;
+  tickPaint.setAntiAlias(true);
+  tickPaint.setColor(design::unified::text_tertiary());
+  tickPaint.setStrokeWidth(1.0f);
+  
+  SkFont font;
+  font.setSize(9.0f); // Small font for db
+  
+  for (const auto& tick : ticks) {
+      if (orientation_ == Vertical) {
+          float y = h * (1.0f - marginEnd_) - (h * (1.0f - marginStart_ - marginEnd_) * tick.normPos);
+          float cx = w / 2.0f;
+          float rightEdge = cx + trackWidth_ / 2.0f + 6.0f;
+          float tickLen = tick.major ? 6.0f : 4.0f;
+          
+          canvas->drawLine(rightEdge, y, rightEdge + tickLen, y, tickPaint);
+          
+          if (tick.major) {
+             SkPaint textPaint;
+             textPaint.setColor(design::unified::text_secondary());
+             textPaint.setAntiAlias(true);
+             canvas->drawString(tick.label, rightEdge + tickLen + 3.0f, y + 3.0f, font, textPaint);
+          }
+      } 
+      // Horizontal implementation omitted for brevity as faders are usually vertical, 
+      // but could be added if needed.
+  }
+
+  // Unity Snap Marker
+  if (unitySnap_) {
+      SkPaint snapPaint;
+      snapPaint.setColor(design::unified::accent_secondary());
+      snapPaint.setStrokeWidth(2.0f); // Prominent
+      
+      float ySnap = h * (1.0f - marginEnd_) - (h * (1.0f - marginStart_ - marginEnd_) * unityValue_);
+      float cx = w / 2.0f;
+      float halfWidth = trackWidth_/2.0f + 4.0f;
+      canvas->drawLine(cx - halfWidth, ySnap, cx + halfWidth, ySnap, snapPaint);
+  }
 }
 
 } // namespace zenith

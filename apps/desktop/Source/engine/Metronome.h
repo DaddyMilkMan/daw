@@ -67,6 +67,8 @@ private:
   static constexpr float kClickDurationSec = 0.1f;
   static constexpr float kReleaseTimeSec = 0.05f; // Short decay
 
+  double lastBeat_ = -1.0;
+
   // Helper to trigger a click
   void triggerClick(float frequency);
 };

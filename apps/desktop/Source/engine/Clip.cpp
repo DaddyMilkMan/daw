@@ -24,7 +24,7 @@
 namespace zenith {
 
 //==============================================================================
-Clip::Clip() : midiSequence_(std::make_shared<juce::MidiMessageSequence>()) {}
+Clip::Clip() : midiSequence_(std::make_shared<juce::MidiMessageSequence>()), fadeInLength(0), fadeOutLength(0) {}
 
 Clip::~Clip() { releaseResources(); }
 
@@ -58,9 +58,19 @@ void Clip::releaseResources() {
 void Clip::getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill) {
   bufferToFill.clearActiveBufferRegion();
 
-  if (!playing.load() || !isActive()) {
+  if (!playing.load())
     return;
-  }
+
+  // Check if ANY part of the buffer range overlaps with the clip
+  // (processAudioClip handles the partial overlap logic)
+  const int64_t transport = transportPosition.load();
+  const int64_t bufferEnd = transport + bufferToFill.numSamples;
+  const int64_t clipStart = startPosition.load();
+  const int64_t clipEnd = clipStart + clipLength.load();
+  
+  // Early exit only if buffer is completely before or after clip
+  if (bufferEnd <= clipStart || transport >= clipEnd)
+    return;
 
   if (clipType == Type::Audio) {
     processAudioClip(bufferToFill);
@@ -258,7 +268,7 @@ void Clip::buildMidiSequenceFromNotes(const juce::Array<MidiNoteSpec> &notes,
   juce::MidiMessageSequence newSequence;
 
   // Convert tempo to seconds per beat
-  const double secondsPerBeat = 60.0 / tempo;
+  const double secondsPerBeat = 60.0 / std::max(0.1, tempo);
 
   // Build note-on and note-off events for each note
   for (const auto &note : notes) {
@@ -332,9 +342,10 @@ void Clip::getMidiEvents(juce::MidiBuffer &midiBuffer, int numSamples) {
   if (posInClip < 0)
     return; // Clip hasn't started yet
 
-  const double startTime = static_cast<double>(posInClip) / currentSampleRate;
+  const double safeRate = std::max(1.0, currentSampleRate);
+  const double startTime = static_cast<double>(posInClip) / safeRate;
   const double endTime =
-      static_cast<double>(posInClip + numSamples) / currentSampleRate;
+      static_cast<double>(posInClip + numSamples) / safeRate;
 
   // Find and add all MIDI events in this time range
   for (int i = 0; i < sequence->getNumEvents(); ++i) {
@@ -520,55 +531,103 @@ void Clip::processAudioClip(const juce::AudioSourceChannelInfo &bufferToFill,
   const int64_t clipLen = clipLength.load();
   const int64_t clipOff = clipOffset.load();
   const float clipGain = gain.load();
+  const int bufferLen = bufferToFill.numSamples;
 
-  int64_t positionInClip = playheadSamples - clipStart;
-  if (positionInClip < 0 || positionInClip >= clipLen)
+  // Calculate the range of timeline samples this buffer covers
+  const int64_t bufferStart = playheadSamples;
+  const int64_t bufferEnd = playheadSamples + bufferLen;
+  const int64_t clipEnd = clipStart + clipLen;
+
+  // Check if buffer range overlaps with clip range at all
+  if (bufferEnd <= clipStart || bufferStart >= clipEnd)
+    return;
+
+  // Calculate where in the buffer we should start/stop writing
+  // and where in the clip (source audio) we should start reading
+  int destOffset = 0;  // Where to start writing in output buffer
+  int64_t sourceStartInClip = 0;  // Position within clip to start reading
+  int numSamplesToRender = bufferLen;
+
+  if (bufferStart < clipStart) {
+    // Buffer starts before clip: skip leading silence
+    destOffset = static_cast<int>(clipStart - bufferStart);
+    sourceStartInClip = 0;
+    numSamplesToRender = bufferLen - destOffset;
+  } else {
+    // Buffer starts within or after clip start
+    destOffset = 0;
+    sourceStartInClip = bufferStart - clipStart;
+  }
+
+  // Don't render past clip end (unless looping)
+  const bool isLooping = looping.load();
+  if (!isLooping && bufferStart + destOffset + numSamplesToRender > clipEnd) {
+    numSamplesToRender = static_cast<int>(clipEnd - (bufferStart + destOffset));
+  }
+
+  if (numSamplesToRender <= 0)
+    return;
+
+  const int sourceLen = sourceBuffer->getNumSamples();
+  if (sourceLen <= 0)
     return;
 
   // Fast path: rate is 1.0 (Standard playback)
   if (std::abs(rate - 1.0) < 0.001) {
-    int64_t sourcePos = positionInClip + clipOff;
-    const int sourceLen = sourceBuffer->getNumSamples();
-    // Bug 39: Guard against modulo by zero
-    if (looping.load() && sourceLen > 0)
-      sourcePos = sourcePos % sourceLen;
+    int64_t currentClipPos = sourceStartInClip;
+    int currentDestOffset = destOffset;
+    int samplesPending = numSamplesToRender;
 
-    const int numToCopy =
-        juce::jmin(bufferToFill.numSamples,
-                   (int)(sourceBuffer->getNumSamples() - sourcePos),
-                   (int)(clipLen - positionInClip));
-    if (numToCopy <= 0)
-      return;
+    while (samplesPending > 0) {
+      int64_t sourcePos = currentClipPos + clipOff;
+      // sourceLen already declared and checked in outer scope
 
-    for (int ch = 0; ch < juce::jmin(bufferToFill.buffer->getNumChannels(),
-                                     sourceBuffer->getNumChannels());
-         ++ch) {
-      bufferToFill.buffer->copyFrom(ch, bufferToFill.startSample, *sourceBuffer,
-                                    ch, (int)sourcePos, numToCopy);
-      if (clipGain != 1.0f)
-        juce::FloatVectorOperations::multiply(
-            bufferToFill.buffer->getWritePointer(ch, bufferToFill.startSample),
-            clipGain, numToCopy);
+      if (looping.load()) {
+          sourcePos = sourcePos % sourceLen;
+          if (sourcePos < 0) sourcePos += sourceLen;
+      } else if (sourcePos >= sourceLen) {
+           break; 
+      }
+
+      int maxReadable = (int)(sourceLen - sourcePos);
+      if (looping.load() && maxReadable <= 0) maxReadable = sourceLen;
+
+      int chunk = juce::jmin(samplesPending, maxReadable);
+      
+      for (int ch = 0; ch < juce::jmin(bufferToFill.buffer->getNumChannels(),
+                                       sourceBuffer->getNumChannels());
+           ++ch) {
+        bufferToFill.buffer->copyFrom(ch, bufferToFill.startSample + currentDestOffset, *sourceBuffer,
+                                      ch, (int)sourcePos, chunk);
+        if (clipGain != 1.0f)
+          juce::FloatVectorOperations::multiply(
+              bufferToFill.buffer->getWritePointer(ch, bufferToFill.startSample + currentDestOffset),
+              clipGain, chunk);
+      }
+
+      samplesPending -= chunk;
+      currentDestOffset += chunk;
+      currentClipPos += chunk;
     }
 
-    applyFadesSIMD(bufferToFill, positionInClip, numToCopy);
+    applyFadesSIMD(bufferToFill, destOffset, sourceStartInClip, numSamplesToRender);
     return;
   }
 
   // Slow path: Linear Interpolation (SIMD candidate for alpha ramp)
+  // Also used for looping to handle wrap-around correctly
   // For now, let's keep it simple but remove the fade calculations from the
   // inner loop
-  const int numSamples =
-      juce::jmin(bufferToFill.numSamples, (int)(clipLen - positionInClip));
-  const int sourceLen = sourceBuffer->getNumSamples();
+  const int numSamples = numSamplesToRender;
+  // sourceLen already declared above
 
   for (int ch = 0; ch < juce::jmin(bufferToFill.buffer->getNumChannels(),
                                    sourceBuffer->getNumChannels());
        ++ch) {
     auto *outData =
-        bufferToFill.buffer->getWritePointer(ch, bufferToFill.startSample);
+        bufferToFill.buffer->getWritePointer(ch, bufferToFill.startSample + destOffset);
     const auto *inData = sourceBuffer->getReadPointer(ch);
-    double currentReadPos = (double)(positionInClip + clipOff) * rate;
+    double currentReadPos = (double)(sourceStartInClip + clipOff) * rate;
 
     for (int i = 0; i < numSamples; ++i) {
       int idx0 = static_cast<int>(currentReadPos);
@@ -592,7 +651,7 @@ void Clip::processAudioClip(const juce::AudioSourceChannelInfo &bufferToFill,
       juce::FloatVectorOperations::multiply(outData, clipGain, numSamples);
   }
 
-  applyFadesSIMD(bufferToFill, positionInClip, numSamples);
+  applyFadesSIMD(bufferToFill, destOffset, sourceStartInClip, numSamples);
 }
 
 // Legacy overload: uses internal transportPosition
@@ -701,8 +760,8 @@ float Clip::calculateFadeMultiplier(int64_t positionInClip) const {
 
   return multiplier;
 }
-
 void Clip::applyFadesSIMD(const juce::AudioSourceChannelInfo &bufferToFill,
+                          int destOffset,
                           int64_t startPositionInClip, int numSamples) {
   const int64_t fadeIn = fadeInLength.load();
   const int64_t fadeOut = fadeOutLength.load();
@@ -711,6 +770,27 @@ void Clip::applyFadesSIMD(const juce::AudioSourceChannelInfo &bufferToFill,
   if (fadeIn <= 0 && fadeOut <= 0)
     return;
 
+  // Optimization: Cache pointers to avoid getWritePointer() in loop
+  const int numChannels = bufferToFill.buffer->getNumChannels();
+  
+  // Use stack buffer for common case, heap for edge cases (huge amounts of channels)
+  float** channelPtrs = nullptr;
+  float* stackPtrs[64];
+  std::vector<float*> heapPtrs;
+
+  if (numChannels <= 64) {
+      channelPtrs = stackPtrs;
+  } else {
+      heapPtrs.resize(numChannels);
+      channelPtrs = heapPtrs.data();
+  }
+
+  for (int ch = 0; ch < numChannels; ++ch) {
+      // Use destOffset to target correct buffer region
+      channelPtrs[ch] = bufferToFill.buffer->getWritePointer(ch, bufferToFill.startSample + destOffset);
+  }
+
+  // Iterate samples
   for (int i = 0; i < numSamples; ++i) {
     const int64_t pos = startPositionInClip + i;
     float multiplier = 1.0f;
@@ -725,9 +805,8 @@ void Clip::applyFadesSIMD(const juce::AudioSourceChannelInfo &bufferToFill,
     }
 
     if (multiplier != 1.0f) {
-      for (int ch = 0; ch < bufferToFill.buffer->getNumChannels(); ++ch)
-        bufferToFill.buffer->getWritePointer(ch, bufferToFill.startSample)[i] *=
-            multiplier;
+      for (int ch = 0; ch < numChannels; ++ch)
+        channelPtrs[ch][i] *= multiplier;
     }
   }
 }

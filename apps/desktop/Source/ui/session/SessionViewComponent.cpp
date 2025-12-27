@@ -11,9 +11,10 @@
 */
 
 #include "SessionViewComponent.h"
+#include "../design-system/ColorBridge.h"
+#include "../design-system/ZenithDesignSystem.h"
 #include "../engine/Track.h"
 #include "FontManager.h"
-#include "ZenithDesignSystem.h"
 
 #ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
@@ -43,7 +44,7 @@ SessionViewComponent::SessionViewComponent(Engine &engine, ProjectState &state)
   rebuildClipSlots();
 
   // Start animation timer (60 FPS)
-  startTimerHz(60);
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60);
 }
 
 SessionViewComponent::~SessionViewComponent() {
@@ -395,8 +396,8 @@ void SessionViewComponent::drawBackground(SkCanvas *canvas) {
 
   // Deep slate background with gradient
   SkPoint pts[2] = {{0, 0}, {0, bounds.getHeight()}};
-  SkColor colors[2] = {design::colors::BG_DARKEST,
-                       design::darken(design::colors::BG_DARKEST, 0.2f)};
+  SkColor colors[2] = {design::colors::BG_00,
+                       design::darken(design::colors::BG_00, 0.2f)};
 
   SkPaint bgPaint;
   bgPaint.setShader(SkGradientShader::MakeLinear(pts, colors, nullptr, 2,
@@ -452,9 +453,7 @@ void SessionViewComponent::drawTrackHeaders(SkCanvas *canvas) {
 
     // Track color indicator bar
     SkPaint colorPaint;
-    SkColor trackColor =
-        SkColorSetRGB(header.trackColor.getRed(), header.trackColor.getGreen(),
-                      header.trackColor.getBlue());
+    SkColor trackColor = design::toSkColor(header.trackColor);
     colorPaint.setColor(trackColor);
     canvas->drawRect(SkRect::MakeXYWH(headerRect.left() + 4,
                                       headerRect.top() + 4, 4,
@@ -503,7 +502,7 @@ void SessionViewComponent::drawTrackControlButtons(SkCanvas *canvas,
 
     // Inner dot
     if (header.isArmed) {
-      armPaint.setColor(SK_ColorWHITE);
+      armPaint.setColor(design::colors::TEXT_PRIMARY);
       canvas->drawCircle(armRect.centerX(), armRect.centerY(), 4, armPaint);
     }
   }
@@ -589,9 +588,7 @@ void SessionViewComponent::drawClipSlot(SkCanvas *canvas, const ClipSlot &slot,
   SkPoint pts[2] = {{slotRect.left(), slotRect.top()},
                     {slotRect.left(), slotRect.bottom()}};
 
-  SkColor baseColor = slot.isMidi ? SkColorSetRGB(slot.clipColor.getRed(),
-                                                  slot.clipColor.getGreen(),
-                                                  slot.clipColor.getBlue())
+  SkColor baseColor = slot.isMidi ? design::toSkColor(slot.clipColor)
                                   : design::colors::BLUE;
 
   SkColor colors[2] = {design::lighten(baseColor, 0.1f),
@@ -644,7 +641,7 @@ void SessionViewComponent::drawClipSlot(SkCanvas *canvas, const ClipSlot &slot,
   if (isHovered) {
     // Semi-transparent overlay
     SkPaint overlayPaint;
-    overlayPaint.setColor(SkColorSetARGB(100, 0, 0, 0));
+    overlayPaint.setColor(design::withAlpha(design::colors::BG_DARKEST, 0.4f));
     canvas->drawRRect(rrect, overlayPaint);
 
     // Play button
@@ -710,22 +707,19 @@ void SessionViewComponent::drawWaveformPreview(SkCanvas *canvas,
                                                const ClipSlot &slot,
                                                const SkRect &contentRect) {
   if (slot.waveformPeaks.empty()) {
-    // Placeholder waveform
-    SkPaint wavePaint;
-    wavePaint.setAntiAlias(true);
-    wavePaint.setColor(design::withAlpha(design::colors::CYAN, 0.6f));
-    wavePaint.setStyle(SkPaint::kStroke_Style);
-    wavePaint.setStrokeWidth(1.0f);
-
-    float midY = contentRect.centerY();
-    float stepX = contentRect.width() / 30.0f;
-
-    for (int i = 0; i < 30; ++i) {
-      float x = contentRect.left() + i * stepX;
-      float amplitude =
-          10.0f * (0.3f + 0.7f * std::sin(i * 0.5f + animationPhase_ * 0.1f));
-      canvas->drawLine(x, midY - amplitude, x, midY + amplitude, wavePaint);
-    }
+    // Draw "Loading..." indicator instead of fake animated waveform
+    SkPaint loadingPaint;
+    loadingPaint.setAntiAlias(true);
+    loadingPaint.setColor(design::withAlpha(design::colors::TEXT_TERTIARY, 0.6f));
+    
+    SkFont loadingFont = design::typography::getSkFont(10.0f, design::FontWeight::Regular);
+    canvas->drawString("Loading...", contentRect.centerX() - 25.0f, 
+                       contentRect.centerY() + 4.0f, loadingFont, loadingPaint);
+    
+    // Draw subtle center line
+    loadingPaint.setColor(design::withAlpha(design::colors::TEXT_TERTIARY, 0.2f));
+    canvas->drawLine(contentRect.left(), contentRect.centerY(),
+                     contentRect.right(), contentRect.centerY(), loadingPaint);
     return;
   }
 
@@ -763,16 +757,19 @@ void SessionViewComponent::drawMidiPreview(SkCanvas *canvas,
   notePaint.setColor(design::colors::MAGENTA);
 
   if (slot.midiNotes.empty()) {
-    // Placeholder MIDI notes
-    for (int i = 0; i < 8; ++i) {
-      float x = contentRect.left() + (i * contentRect.width() / 8.0f);
-      float y = contentRect.top() + ((i % 4) * contentRect.height() / 5.0f);
-      float noteWidth = contentRect.width() / 16.0f;
-      float noteHeight = 4.0f;
-
-      canvas->drawRect(SkRect::MakeXYWH(x, y, noteWidth, noteHeight),
-                       notePaint);
-    }
+    // Draw "Loading..." indicator instead of fake MIDI notes
+    SkPaint loadingPaint;
+    loadingPaint.setAntiAlias(true);
+    loadingPaint.setColor(design::withAlpha(design::colors::TEXT_TERTIARY, 0.6f));
+    
+    SkFont loadingFont = design::typography::getSkFont(10.0f, design::FontWeight::Regular);
+    canvas->drawString("Loading...", contentRect.centerX() - 25.0f, 
+                       contentRect.centerY() + 4.0f, loadingFont, loadingPaint);
+    
+    // Draw subtle center line
+    loadingPaint.setColor(design::withAlpha(design::colors::TEXT_TERTIARY, 0.2f));
+    canvas->drawLine(contentRect.left(), contentRect.centerY(),
+                     contentRect.right(), contentRect.centerY(), loadingPaint);
     return;
   }
 
@@ -866,7 +863,7 @@ void SessionViewComponent::drawSceneLaunchColumn(SkCanvas *canvas) {
     btnPaint.setColor(isHovered ? design::colors::CYAN
                                 : design::colors::BG_MEDIUM);
 
-    SkRRect btnRRect = SkRRect::MakeRectXY(btnRect, 4, 4);
+    SkRRect btnRRect = SkRRect::MakeRectXY(btnRect, design::dimensions::RADIUS_SM, design::dimensions::RADIUS_SM);
     canvas->drawRRect(btnRRect, btnPaint);
 
     // Play icon

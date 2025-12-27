@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include "ArrangerComponent.h" // For context if needed
+#include "../arranger/ArrangerComponent.h" // For context if needed
 
 // Skia Includes
 #ifdef ZENITH_USE_SKIA
@@ -25,7 +25,7 @@ MacroToolbar::MacroToolbar(Engine &engine, ProjectState &projectState)
   targetOpacity_ = 0.2f;  // Idle state (semi-visible)
 
   rebuildButtons();
-  startTimerHz(60); // Animation loop (SkiaComponent has virtual timerCallback)
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60); // Animation loop (SkiaComponent has virtual timerCallback)
 }
 
 MacroToolbar::~MacroToolbar() = default;

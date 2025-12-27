@@ -58,6 +58,10 @@ struct BrowserItemMetadata
     // Plugin specific
     juce::String version;
     bool isInstrument = false;
+
+    // Professional Metadata
+    int rating = 0; // 0-5 stars
+    std::map<juce::String, juce::String> tagColors; // tag -> hex color
 };
 
 //==============================================================================

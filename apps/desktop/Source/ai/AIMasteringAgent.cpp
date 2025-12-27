@@ -381,7 +381,13 @@ Be precise, musical, and conservative in your decisions. Respond ONLY with valid
 
   // Call Grok API
   DBG("Querying Grok 4.1 for mastering decision...");
-  juce::String response = grokClient_->callGrok(prompt, systemMsg);
+  juce::String response = grokClient_->callGrok(
+      prompt, systemMsg, GrokAPIClient::ModelType::Reasoning);
+
+  if (response.startsWith("Error:")) {
+      DBG("Grok API Error: " + response);
+      return MasteringDecision();
+  }
 
   // Parse response
   return parseGrokResponse(response);
@@ -432,6 +438,11 @@ void AIMasteringAgent::analyzeAndConfigure(
   DBG("╔════════════════════════════════════════════════════════════╗");
   DBG("║          AI MASTERING ANALYSIS STARTING...                 ║");
   DBG("╚════════════════════════════════════════════════════════════╝");
+
+  // Safety: This analysis allocates memory (feature extraction temp buffers),
+  // so it MUST run on the message thread or a background thread, NEVER the audio thread.
+  JUCE_ASSERT_MESSAGE_THREAD; 
+
 
   // Extract audio features
   auto features = featureExtractor_.extract(analysisBuffer, sampleRate_);

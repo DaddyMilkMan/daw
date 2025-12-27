@@ -23,13 +23,14 @@ ZenithVisualizer::ZenithVisualizer(ZenithPolySynthProcessor &processor)
   spectrumData_.assign(numBands_, 0.0f);
   spectrumPeakData_.assign(numBands_, 0.0f);
 
-  // Updates are driven by parent or own timer
-  startTimerHz(60);
+  // Updates are driven by parent (ZenithPolySynthUI)
+  // if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60); 
 }
 
 void ZenithVisualizer::timerCallback() {
-  updateAudioData();
-  repaint();
+  // Driven externally
+  // updateAudioData();
+  // repaint();
 }
 
 void ZenithVisualizer::updateAudioData() {

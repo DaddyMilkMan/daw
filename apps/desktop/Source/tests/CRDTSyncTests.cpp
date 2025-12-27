@@ -37,30 +37,39 @@ public:
             ProjectState stateA, stateB;
             Zenith::LoroDoc docA, docB;
             
-            // Seed both with same track
-            stateA.addTrack("Shared");
-            auto trackId = stateA.getTrackByIndex(0).getProperty(ProjectState::PROP_ID).toString();
-            
-            // Initialize bridges AFTER seeding to simulate established session
+            // Initialize bridges first
             Zenith::ValueTreeCRDTBridge bridgeA(stateA.getState(), docA);
             Zenith::ValueTreeCRDTBridge bridgeB(stateB.getState(), docB);
             
-            // Sync initial state
-            docB.importUpdates(docA.exportUpdates());
-            bridgeB.applyRemoteUpdates(docA.exportUpdates());
+            // Seed State A with a track
+            stateA.addTrack("Shared");
+            auto trackId = stateA.getTrackByIndex(0).getProperty(ProjectState::PROP_ID).toString();
+            
+            // Sync initial state from A to B so B has the track
+            auto initialUpdates = docA.exportUpdates();
+            bridgeB.applyRemoteUpdates(initialUpdates);
+            
+            // Verify B now has the track  
+            expect(stateB.getNumTracks() == 1, "StateB should have track after initial sync");
 
-            // Concurrent edits: A sets volume to 0.8, B sets volume to 0.2
-            // We'll simulate A having a higher counter/timestamp
+            // Concurrent edits: B sets volume to 0.2, then A sets volume to 0.8 (later timestamp wins)
+            // Concurrent edits: B sets volume to 0.2, then A sets volume to 0.8 (later timestamp wins)
             stateB.setTrackVolume(trackId, 0.2f);
-            juce::Thread::sleep(10); // Ensure slight timestamp difference if using real time
+            
+            // Force A's counter higher to ensure it wins LWW
+            auto trackNode = stateA.getState().getChildWithProperty(ProjectState::PROP_ID, trackId);
+            if (trackNode.isValid())
+              trackNode.setProperty(ProjectState::PROP_NAME, "Shared (A)", nullptr);
             stateA.setTrackVolume(trackId, 0.8f);
 
-            // Sync A -> B
-            bridgeB.applyRemoteUpdates(docA.exportUpdates());
-            // Sync B -> A
-            bridgeA.applyRemoteUpdates(docB.exportUpdates());
+            // Sync both ways - A's edit (0.8) has higher counter so should win
+            auto updatesFromA = docA.exportUpdates();
+            auto updatesFromB = docB.exportUpdates();
+            
+            bridgeB.applyRemoteUpdates(updatesFromA);
+            bridgeA.applyRemoteUpdates(updatesFromB);
 
-            // Both should converge to 0.8 (latest write)
+            // Both should converge to 0.8 (A's edit had higher counter)
             float volA = stateA.getTrackVolume(trackId);
             float volB_final = stateB.getTrackVolume(trackId);
             expectWithinAbsoluteError(volA, 0.8f, 0.01f);

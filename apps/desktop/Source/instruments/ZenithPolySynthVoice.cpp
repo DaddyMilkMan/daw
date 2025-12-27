@@ -205,40 +205,29 @@ void ZenithPolySynthVoice::renderNextBlock(
     // 1. Upsample (returns the upsampled block to process)
     auto upsampledBlock = oversampler_->processSamplesUp(subBlock);
 
-    // 2. Create temp buffer and render synth logic at upsampled rate
+    // 2. Wrap the upsampled block in a juce::AudioBuffer to render into it
+    // Note: We use the pointers directly from the upsampled block
     int upsampledSamples = static_cast<int>(upsampledBlock.getNumSamples());
+    
+    // Use the existing oversamplingBuffer_ as a bridge to ensure channel consistency
     oversamplingBuffer_.setSize(
         static_cast<int>(upsampledBlock.getNumChannels()), upsampledSamples,
         false, false, true);
     oversamplingBuffer_.clear();
+
+    // 3. Render synth logic at upsampled rate
     renderInnerBlock(oversamplingBuffer_, 0, upsampledSamples);
 
-    // Copy rendered audio to upsampled block
+    // 4. Copy to upsampled block for downsampling
     for (size_t ch = 0; ch < upsampledBlock.getNumChannels(); ++ch) {
-      upsampledBlock.getChannelPointer(ch);
       std::copy(oversamplingBuffer_.getReadPointer(static_cast<int>(ch)),
                 oversamplingBuffer_.getReadPointer(static_cast<int>(ch)) +
                     upsampledSamples,
                 upsampledBlock.getChannelPointer(ch));
     }
 
-    // 1. Render synth logic into upsampled buffer
-    // Note: Internal components (Oscs, Filters) are already configured for
-    // baseRate * factor
-    oversamplingBuffer_.clear(0, upsampledSamples);
-    renderInnerBlock(oversamplingBuffer_, 0, upsampledSamples);
-
-    // 2. Downsample
-    juce::dsp::AudioBlock<float> upBlock(oversamplingBuffer_);
-    // Slice only the valid part
-    juce::dsp::AudioBlock<float> validUpBlock =
-        upBlock.getSubBlock(0, upsampledSamples);
-
-    juce::dsp::AudioBlock<float> downBlock(downsamplingBuffer_);
-    juce::dsp::AudioBlock<float> validDownBlock =
-        downBlock.getSubBlock(0, chunk);
-
-    oversampler_->processSamplesDown(validDownBlock);
+    // 5. Downsample
+    oversampler_->processSamplesDown(subBlock);
 
     // 3. Mix into output buffer
     for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch) {

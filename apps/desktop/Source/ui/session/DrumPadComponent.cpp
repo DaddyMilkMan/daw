@@ -11,7 +11,8 @@
 
 using namespace zenith;
 
-//==============================================================================
+namespace zenith {
+
 //==============================================================================
 DrumPadComponent::DrumPadComponent(zenith::Engine &eng,
                                    zenith::ProjectState &state)
@@ -34,7 +35,7 @@ DrumPadComponent::DrumPadComponent(zenith::Engine &eng,
       pads[i].color = juce::Colour(design::colors::NEON_PURPLE); // Percs
   }
 
-  startTimerHz(60); // Animation loop at 60fps
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60); // Animation loop at 60fps
 }
 
 DrumPadComponent::~DrumPadComponent() {
@@ -362,8 +363,6 @@ void DrumPadComponent::hitPad(int index, float velocity) {
       clipLength = 4.0; // Default to 4 beats (e.g., a bar)
 
     // Calculate relative position with loop wrapping
-    // Calculate relative position with loop wrapping
-
     double relativeStart = position - clipStart + clipOffset;
 
     // For a drum pad component, recording should always wrap within the clip's
@@ -497,3 +496,5 @@ void DrumPadComponent::timerCallback() {
   SkiaComponent::timerCallback();
   updateAnimations();
 }
+
+} // namespace zenith

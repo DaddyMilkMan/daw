@@ -124,14 +124,10 @@ void FontManager::initialize() {
   bool interBold = loadFont("Inter-Bold.ttf", FontFamily::UI, FontWeight::Bold);
 
   // Load JetBrains Mono fonts (Mono family)
-  bool monoRegular = false; // loadFont("JetBrainsMono-Regular.ttf", FontFamily::Mono, FontWeight::Regular);
-  bool monoMedium = false; // loadFont("JetBrainsMono-Medium.ttf", FontFamily::Mono, FontWeight::Medium);
-  // Try SemiBold first, fallback to Medium if not present
-  bool monoSemiBold = false; 
-      // loadFont("JetBrainsMono-SemiBold.ttf", FontFamily::Mono, FontWeight::SemiBold); // Disabled due to hang
-  
-  bool monoBold = false; 
-      // loadFont("JetBrainsMono-Bold.ttf", FontFamily::Mono, FontWeight::Bold); // Disabled due to hang
+  bool monoRegular = loadFont("JetBrainsMono-Regular.ttf", FontFamily::Mono, FontWeight::Regular);
+  bool monoMedium = loadFont("JetBrainsMono-Medium.ttf", FontFamily::Mono, FontWeight::Medium);
+  bool monoSemiBold = loadFont("JetBrainsMono-SemiBold.ttf", FontFamily::Mono, FontWeight::SemiBold);
+  bool monoBold = loadFont("JetBrainsMono-Bold.ttf", FontFamily::Mono, FontWeight::Bold);
 
   // Create synthetic weight fallbacks for missing fonts
   // This ensures getFont() always returns a usable typeface

@@ -13,6 +13,7 @@
 #include "ZenithDesignSystem.h"
 
 #include <core/SkCanvas.h>
+#include <core/SkFontTypes.h>
 #include <core/SkColor.h>
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
@@ -31,8 +32,8 @@ public:
     // Add some macro knobs
     for (int i = 0; i < 8; ++i) {
       auto knob = std::make_unique<SkiaKnob>("Macro " + juce::String(i + 1));
-      knob->setStyle(SkiaKnob::Style::Arc);
-      knob->setLabelPosition(SkiaKnob::LabelPosition::Below);
+      knob->setStyle(ZenithKnob::Style::Standard);
+      knob->setLabelPosition(15.0f);
       knob->setValue(0.5f); // Default
       addAndMakeVisible(knob.get());
       macros_.push_back(std::move(knob));
@@ -66,7 +67,7 @@ public:
     font.setSubpixel(true);
 
     juce::String name = plugin_ ? plugin_->getName() : "Empty Device";
-    canvas->drawString(name.toStdString().c_str(), 10, 20, font, headerPaint);
+    canvas->drawString(name.toStdString().c_str(), 10.0f, 20.0f, font, headerPaint);
   }
 
   void resized() override {
@@ -132,8 +133,14 @@ void DeviceChainComponent::drawSkia(SkCanvas *canvas) {
     font.setSize(16.0f);
     font.setSubpixel(true);
 
-    canvas->drawString("No Track Selected", bounds.getWidth() / 2 - 60,
-                       bounds.getHeight() / 2, font, textPaint);
+    juce::String msg = "No Track Selected";
+    SkRect textBounds;
+    font.measureText(msg.toRawUTF8(), msg.length(), SkTextEncoding::kUTF8, &textBounds);
+    
+    canvas->drawString(msg.toRawUTF8(), 
+                       bounds.getWidth() / 2.0f - textBounds.width() / 2.0f,
+                       bounds.getHeight() / 2.0f, 
+                       font, textPaint);
   }
 }
 

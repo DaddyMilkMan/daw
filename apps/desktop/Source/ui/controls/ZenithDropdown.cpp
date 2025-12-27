@@ -11,6 +11,7 @@
 */
 
 #include "ZenithDropdown.h"
+#include "SkiaPopupMenu.h"
 
 #ifdef ZENITH_USE_SKIA
 #include <core/SkBlurTypes.h>
@@ -101,26 +102,32 @@ void ZenithDropdown::mouseExit(const juce::MouseEvent &e) {
 }
 
 void ZenithDropdown::showPopupMenu() {
-  juce::PopupMenu menu;
-
+  activeMenu_ = std::make_unique<SkiaPopupMenu>();
+  
+  // Configure menu
+  activeMenu_->setBackdropBlurEnabled(true);
+  
+  // Add items
   for (int i = 0; i < items_.size(); ++i) {
-    menu.addItem(i + 1, items_[i].text, true, i == selectedIndex_);
+    int index = i; // capture index
+    activeMenu_->addItem(items_[i].id, items_[i].text, true, i == selectedIndex_,
+      [this, index]() {
+        setSelectedIndex(index, true);
+      });
   }
-
+  
+  // Handle dismissal
+  activeMenu_->onDismiss = [this]() {
+     isOpen_ = false;
+     activeMenu_ = nullptr; // release
+     repaint();
+  };
+  
   isOpen_ = true;
   repaint();
-
-  menu.showMenuAsync(
-      juce::PopupMenu::Options().withTargetComponent(this).withMinimumWidth(
-          getWidth()),
-      [this](int result) {
-        isOpen_ = false;
-        repaint();
-
-        if (result > 0) {
-          setSelectedIndex(result - 1, true);
-        }
-      });
+  
+  // Show it
+  activeMenu_->showAt(this, 0, getHeight());
 }
 
 void ZenithDropdown::drawSkia(SkCanvas *canvas) {

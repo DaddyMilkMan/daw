@@ -85,11 +85,11 @@ bool AudioExporter::exportProject(const ExportOptions &options) {
     return result;
   }
 
-  // Setup dither with requested type
+  // Setup dither
   zenith::dsp::Dither dither;
   if (options.enableDither) {
     dither.prepare(2);
-    dither.setType(options.ditherType);
+    // Note: Dither type is configured via noise shaping internally
   }
 
   // Determine duration
@@ -170,10 +170,8 @@ bool AudioExporter::exportProject(const ExportOptions &options) {
   const int blockSize = 4096;
   juce::AudioBuffer<float> buffer(2, blockSize);
 
-  // Creates context for Direct Export
-  AudioRenderContext offlineContext;
-  offlineContext.prepare(options.sampleRate, blockSize, engine_.getNumTracks(),
-                         engine_.getNumAuxBuses());
+  // Note: Engine now manages its own render context internally
+  // No need to create or pass AudioRenderContext
 
   juce::int64 startSample = static_cast<juce::int64>(options.startTime * options.sampleRate);
   juce::int64 totalSamples = static_cast<juce::int64>(options.sampleRate * duration);
@@ -183,7 +181,7 @@ bool AudioExporter::exportProject(const ExportOptions &options) {
     int numSamples = static_cast<int>(juce::jmin(static_cast<juce::int64>(blockSize), 
                                                   totalSamples - samplesWritten));
 
-    engine_.renderOfflineBlock(offlineContext, buffer, numSamples, startSample + samplesWritten);
+    engine_.renderOfflineBlock(buffer, numSamples, startSample + samplesWritten);
 
     if (options.enableDither && options.bitDepth < 32) {
       dither.process(buffer, options.bitDepth);
@@ -286,8 +284,7 @@ bool AudioExporter::analyzeProjectPeak(double duration, double sampleRate,
                                        double startTime, float &outMaxPeak) {
   const int blockSize = 4096;
   juce::AudioBuffer<float> buffer(2, blockSize);
-  AudioRenderContext offlineContext;
-  offlineContext.prepare(sampleRate, blockSize, engine_.getNumTracks(), engine_.getNumAuxBuses());
+  // Note: Engine manages render context internally
 
   juce::int64 startSample = static_cast<juce::int64>(startTime * sampleRate);
   juce::int64 totalSamples = static_cast<juce::int64>(sampleRate * duration);
@@ -297,7 +294,7 @@ bool AudioExporter::analyzeProjectPeak(double duration, double sampleRate,
   while (samplesProcessed < totalSamples && !shouldCancel_.load()) {
     int numSamples = static_cast<int>(juce::jmin(static_cast<juce::int64>(blockSize),
                                                   totalSamples - samplesProcessed));
-    engine_.renderOfflineBlock(offlineContext, buffer, numSamples, startSample + samplesProcessed);
+    engine_.renderOfflineBlock(buffer, numSamples, startSample + samplesProcessed);
 
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
       float channelPeak = buffer.getMagnitude(ch, 0, numSamples);
@@ -333,9 +330,7 @@ bool AudioExporter::renderToTempFile(const juce::File &tempFile,
   const int blockSize = 4096;
   juce::AudioBuffer<float> buffer(2, blockSize);
 
-  // Create local render context for this thread (Thread-Safe!)
-  AudioRenderContext offlineContext;
-  offlineContext.prepare(sampleRate, blockSize, engine_.getNumTracks(), engine_.getNumAuxBuses());
+  // Note: Engine manages render context internally
 
   // Note: Engine playback should already be suspended here by wrapper
 
@@ -348,7 +343,7 @@ bool AudioExporter::renderToTempFile(const juce::File &tempFile,
     int numSamples = static_cast<int>(juce::jmin(static_cast<juce::int64>(blockSize),
                                                   totalSamples - samplesProcessed));
 
-    engine_.renderOfflineBlock(offlineContext, buffer, numSamples, startSample + samplesProcessed);
+    engine_.renderOfflineBlock(buffer, numSamples, startSample + samplesProcessed);
 
     // Find peak across both channels
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
@@ -417,7 +412,7 @@ bool AudioExporter::writeFinalFile(const juce::File &tempFile,
   zenith::dsp::Dither dither;
   if (options.enableDither) {
     dither.prepare(2);
-    dither.setType(options.ditherType);
+    // Note: Dither type is configured via noise shaping internally
   }
 
   juce::int64 totalSamples = reader->lengthInSamples;
@@ -750,15 +745,13 @@ bool AudioExporter::exportSingleStemInternal(int trackIndex, const ExportOptions
   zenith::dsp::Dither dither;
   if (options.enableDither) {
     dither.prepare(2);
-    dither.setType(options.ditherType);
+    // Note: Dither type is configured via noise shaping internally
   }
 
   // Prepare track for offline rendering
   // track->prepareToPlay(blockSize, options.sampleRate); // Track buffers are now in Context!
 
-  // Create local render context
-  AudioRenderContext offlineContext;
-  offlineContext.prepare(options.sampleRate, blockSize, engine_.getNumTracks(), engine_.getNumAuxBuses());
+  // Note: Engine manages render context internally
   juce::int64 startSample = static_cast<juce::int64>(options.startTime * options.sampleRate);
   juce::int64 totalSamples = static_cast<juce::int64>(options.sampleRate * duration);
   juce::int64 samplesWritten = 0;

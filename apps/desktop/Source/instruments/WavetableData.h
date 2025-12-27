@@ -249,15 +249,20 @@ private:
     @return MIP level (0 = full bandwidth, higher = more filtered)
 */
 inline int calculateMipLevel(float frequency, double sampleRate) {
-  // Base frequency is table size cycles per second at 1 Hz playback
-  // At 1 Hz, all harmonics are below Nyquist
-  // At higher frequencies, harmonics fold back
+  if (frequency <= 0.0f || sampleRate <= 0.0)
+    return 0;
 
-  // Number of octaves above base (C1 = ~32 Hz reference)
-  float octaves = std::log2(frequency / 32.0f);
+  // The phase increment determines how many table entries we step over per output
+  // sample. A larger increment means higher frequency playback, which requires
+  // more anti-aliasing.
+  const float phaseIncrement =
+      frequency * (static_cast<float>(WAVETABLE_FRAME_SIZE) /
+                   static_cast<float>(sampleRate));
 
-  // Each MIP level removes one octave of content
-  int level = static_cast<int>(std::max(0.0f, octaves));
+  // The MIP level is the base-2 logarithm of the phase increment.
+  // This effectively selects a pre-filtered table that matches the required
+  // bandwidth.
+  const int level = static_cast<int>(std::log2(std::max(1.0f, phaseIncrement)));
 
   return juce::jlimit(0, WAVETABLE_MIP_LEVELS - 1, level);
 }

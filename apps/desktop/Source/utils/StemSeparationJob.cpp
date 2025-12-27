@@ -94,12 +94,11 @@ juce::ThreadPoolJob::JobStatus StemSeparationJob::runJob() {
     result.success = true;
     result.usedNeuralEngine = separationResult.usedONNX;
     statusMgr.completeOperation(opId, true, "Stem separation completed successfully");
-
   } else {
     abortWithError("Failed to write stem files");
   }
 
-  // 5. Callback on Message Thread
+  // 5. Callback on Message Thread (Single point of contact)
   if (callback_) {
     juce::MessageManager::callAsync(
         [cb = callback_, res = result]() { cb(res); });

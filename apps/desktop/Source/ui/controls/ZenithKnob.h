@@ -109,6 +109,18 @@ public:
     glowIntensity_ = juce::jlimit(0.0f, 1.0f, intensity);
   }
 
+  // ----- Modulation -----
+  void setModulationAmount(float amount) {
+    modulationAmount_ = juce::jlimit(-1.0f, 1.0f, amount);
+    repaint();
+  }
+  float getModulationAmount() const { return modulationAmount_; }
+
+  void setModulationColor(SkColor color) {
+    modulationColor_ = color;
+    repaint();
+  }
+
   // ----- Callbacks -----
   std::function<void()> onValueChange; // Legacy compatibility
 
@@ -131,6 +143,7 @@ private:
   void drawTrack(SkCanvas *canvas, float cx, float cy, float radius);
   void drawTickMarks(SkCanvas *canvas, float cx, float cy, float radius);
   void drawValueArc(SkCanvas *canvas, float cx, float cy, float radius);
+  void drawModulationRing(SkCanvas *canvas, float cx, float cy, float radius);
   void drawCenterCap(SkCanvas *canvas, float cx, float cy, float radius);
   void drawIndicator(SkCanvas *canvas, float cx, float cy, float radius);
   void drawValueTooltip(SkCanvas *canvas, float cx, float cy, float radius);
@@ -159,6 +172,10 @@ private:
   float labelYOffset_ = 15.0f;
   float glowIntensity_ = 0.5f;
 
+  // Modulation
+  float modulationAmount_ = 0.0f;
+  SkColor modulationColor_ = SkColorSetRGB(255, 100, 0); // Orange default
+
   // Animation
   float animatedGlow_ = 0.0f;
   juce::int64 lastChangeTime_ = 0;
@@ -167,5 +184,8 @@ private:
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithKnob)
 };
+
+// Legacy alias for backward compatibility
+using SkiaKnob = ZenithKnob;
 
 } // namespace zenith

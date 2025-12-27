@@ -45,7 +45,7 @@ void ExportProgressBar::setStatusMessage(const juce::String& message) {
 }
 
 void ExportProgressBar::startAnimation() {
-  startTimerHz(60); // 60fps animation
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60); // 60fps animation
 }
 
 void ExportProgressBar::stopAnimation() {

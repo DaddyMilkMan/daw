@@ -1,10 +1,12 @@
 /*
   ==============================================================================
     apps/desktop/Source/dsp/Dither.h
-    High-quality TPDF Dithering with HP (High-Pass) Noise Shaping.
+    High-quality TPDF Dithering for bit-depth reduction.
     
-    CRITIC FIX: Previously lastErrors was allocated but NEVER USED.
-    Now implements proper HP-TPDF noise shaping for improved perceived quality.
+    Supports:
+    - Flat TPDF (standard triangular probability density function)
+    - Noise-shaped TPDF (first-order error feedback pushing noise to less 
+      audible frequencies)
   ==============================================================================
 */
 
@@ -14,109 +16,192 @@
 #include <random>
 #include <vector>
 #include <cmath>
+#include <array>
 
 namespace zenith {
 namespace dsp {
 
 /**
- * @brief TPDF Dither with optional HP noise shaping
+ * @brief Dither algorithm type
+ */
+enum class DitherType {
+    None,        ///< No dithering (not recommended for bit depth reduction)
+    FlatTPDF,    ///< Standard triangular probability density function dither
+    ShapedTPDF   ///< Noise-shaped TPDF with first-order error feedback
+};
+
+/**
+ * @class Dither
+ * @brief High-quality dithering for professional bit-depth reduction
  * 
- * HP-TPDF (High-Pass Triangular Probability Density Function) is the 
- * industry standard for CD mastering. The noise shaping pushes 
- * quantization noise into higher frequencies where human hearing is 
- * less sensitive.
+ * Implements TPDF (Triangular Probability Density Function) dithering which 
+ * is the industry standard for audio mastering. The shaped variant uses
+ * first-order noise shaping to push quantization noise into less audible
+ * frequency ranges.
  */
 class Dither
 {
 public:
-    Dither() = default;
+    static constexpr int kMaxChannels = 8;
 
-    void prepare(int numChannels)
-    {
-        lastErrors.resize(static_cast<size_t>(numChannels), 0.0f);
-        // Seed the generator
-        rng.seed(std::random_device{}());
+    Dither() : ditherType_(DitherType::ShapedTPDF) {
+        errorBuffer_.fill(0.0f);
+        previousSample_.fill(0.0f);
     }
 
     /**
-     * @brief Enable/disable high-pass noise shaping
-     * @param enabled true for HP-TPDF (better quality), false for flat TPDF
+     * @brief Set the dither algorithm type
+     * @param type DitherType to use
      */
-    void setNoiseShapingEnabled(bool enabled) { noiseShapingEnabled = enabled; }
+    void setType(DitherType type) noexcept { ditherType_ = type; }
+    
+    /**
+     * @brief Get current dither type
+     */
+    DitherType getType() const noexcept { return ditherType_; }
 
     /**
-     * @brief Apply TPDF dither with optional noise shaping
-     * @param buffer Audio buffer to dither (modified in-place)
-     * @param targetBitDepth Target bit depth (16, 24, etc.)
+     * @brief Prepare the ditherer for processing
+     * @param numChannels Number of audio channels (max 8)
+     */
+    void prepare(int numChannels)
+    {
+        numChannels_ = juce::jmin(numChannels, kMaxChannels);
+        reset();
+        // Seed the generator with high-quality random seed
+        std::random_device rd;
+        rng_.seed(rd());
+    }
+
+    /**
+     * @brief Reset all internal state (error buffers, etc.)
+     */
+    void reset()
+    {
+        errorBuffer_.fill(0.0f);
+        previousSample_.fill(0.0f);
+    }
+
+    /**
+     * @brief Apply TPDF dither to a buffer for a specific target bit depth
+     * @param buffer Audio buffer to process (modified in-place)
+     * @param targetBitDepth Target bit depth (8, 16, 24). 32-bit is bypassed.
      */
     void process(juce::AudioBuffer<float>& buffer, int targetBitDepth)
     {
-        // No dithering needed for 32-bit float or higher
-        if (targetBitDepth >= 32) return;
+        // No dithering needed for 32-bit float or if disabled
+        if (targetBitDepth >= 32 || ditherType_ == DitherType::None) 
+            return;
 
-        // Calculate scale for the target bit depth
-        // 16-bit signed: 2^15 = 32768, so 1 LSB = 1/32768
-        const float scale = std::pow(2.0f, static_cast<float>(targetBitDepth - 1));
-        const float invScale = 1.0f / scale;
+        // Calculate quantization step size (1 LSB in float representation)
+        // For signed PCM: range is -1.0 to +1.0, quantized to 2^(bits-1) levels per side
+        // 16-bit: 2^15 = 32768 levels -> 1 LSB = 1/32768 ≈ 0.0000305
+        // 24-bit: 2^23 = 8388608 levels -> 1 LSB = 1/8388608 ≈ 0.000000119
+        const float quantizationLevels = std::pow(2.0f, static_cast<float>(targetBitDepth - 1));
+        const float lsbSize = 1.0f / quantizationLevels;
         
+        const int numChannels = juce::jmin(buffer.getNumChannels(), numChannels_);
+        const int numSamples = buffer.getNumSamples();
+
+        if (ditherType_ == DitherType::FlatTPDF) {
+            processFlatTPDF(buffer, numChannels, numSamples, lsbSize);
+        } else {
+            processShapedTPDF(buffer, numChannels, numSamples, lsbSize, quantizationLevels);
+        }
+    }
+
+private:
+    /**
+     * @brief Standard flat TPDF dithering
+     * Adds triangular-distributed noise at 1 LSB amplitude.
+     */
+    void processFlatTPDF(juce::AudioBuffer<float>& buffer, int numChannels, 
+                         int numSamples, float lsbSize)
+    {
         std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
 
-        for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+        for (int ch = 0; ch < numChannels; ++ch)
         {
             float* data = buffer.getWritePointer(ch);
-            const int numSamples = buffer.getNumSamples();
-            float& lastError = lastErrors[static_cast<size_t>(ch)];
 
             for (int i = 0; i < numSamples; ++i)
             {
-                // TPDF: Sum of two uniform random variables gives triangular distribution
-                float r1 = dist(rng);
-                float r2 = dist(rng);
-                float tpdf = (r1 + r2) * 0.5f; // Range -1 to 1, triangular distribution
+                // TPDF: Sum of two independent uniform random variables
+                // This creates a triangular distribution centered at 0
+                const float r1 = dist(rng_);
+                const float r2 = dist(rng_);
+                const float tpdfNoise = (r1 + r2) * 0.5f; // Range [-1, 1], triangular PDF
 
-                // Scale noise to 1 LSB magnitude
-                float noise = tpdf * invScale;
-
-                if (noiseShapingEnabled)
-                {
-                    // HP-TPDF: Subtract the previous sample's error
-                    // This creates a first-order high-pass filter on the noise,
-                    // pushing it into higher frequencies where hearing is less sensitive
-                    float shapedNoise = noise - lastError;
-                    
-                    // Quantize to get the error term for next sample
-                    float original = data[i];
-                    float dithered = original + shapedNoise;
-                    float quantized = std::round(dithered * scale) * invScale;
-                    
-                    // Calculate error for next iteration
-                    lastError = quantized - original;
-                    
-                    data[i] = dithered;
-                }
-                else
-                {
-                    // Flat TPDF (simpler, less CPU)
-                    data[i] += noise;
-                }
+                // Scale noise to 1 LSB magnitude and apply
+                data[i] += tpdfNoise * lsbSize;
             }
         }
     }
 
     /**
-     * @brief Reset noise shaping state (call between songs/sessions)
+     * @brief Noise-shaped TPDF dithering with first-order error feedback
+     * 
+     * Uses error feedback to shape the noise spectrum, pushing energy into
+     * higher frequencies where human hearing is less sensitive. This provides
+     * a perceptual improvement of approximately 3-4 dB in signal-to-noise ratio.
+     * 
+     * The algorithm:
+     * 1. Add TPDF dither noise
+     * 2. Quantize to target bit depth (for error calculation)
+     * 3. Calculate quantization error
+     * 4. Subtract previous error (first-order high-pass shaping)
+     * 5. Store error for next sample
      */
-    void reset()
+    void processShapedTPDF(juce::AudioBuffer<float>& buffer, int numChannels,
+                           int numSamples, float lsbSize, float quantLevels)
     {
-        std::fill(lastErrors.begin(), lastErrors.end(), 0.0f);
+        std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
+        
+        // Noise shaping coefficient (first-order high-pass)
+        // Higher values push more noise to high frequencies but risk instability
+        constexpr float shapingCoeff = 0.5f;
+
+        for (int ch = 0; ch < numChannels; ++ch)
+        {
+            float* data = buffer.getWritePointer(ch);
+            float& error = errorBuffer_[ch];
+
+            for (int i = 0; i < numSamples; ++i)
+            {
+                // Generate TPDF noise
+                const float r1 = dist(rng_);
+                const float r2 = dist(rng_);
+                const float tpdfNoise = (r1 + r2) * 0.5f * lsbSize;
+
+                // Get input sample and subtract previous quantization error (noise shaping)
+                float input = data[i] - (error * shapingCoeff);
+
+                // Add dither noise
+                float dithered = input + tpdfNoise;
+
+                // Simulate quantization to calculate error
+                // Quantize → round to nearest quantization level
+                float scaled = dithered * quantLevels;
+                float quantized = std::round(scaled) / quantLevels;
+
+                // Calculate and store quantization error for next sample
+                error = quantized - input;
+
+                // Output the dithered (but not quantized) signal
+                // The actual quantization happens in the AudioFormatWriter
+                data[i] = dithered;
+            }
+        }
     }
 
-private:
-    std::vector<float> lastErrors;
-    std::mt19937 rng;
-    bool noiseShapingEnabled = true; // Default to HP-TPDF for best quality
+    DitherType ditherType_;
+    int numChannels_ = 2;
+    std::mt19937 rng_;
+    
+    // Per-channel error feedback buffers for noise shaping
+    std::array<float, kMaxChannels> errorBuffer_;
+    std::array<float, kMaxChannels> previousSample_;
 };
 
 } // namespace dsp
 } // namespace zenith
-

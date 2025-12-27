@@ -112,6 +112,11 @@ void ZenithKnob::drawSkia(SkCanvas *canvas) {
   // 3. Value Arc with Gradient
   drawValueArc(canvas, cx, cy, radius);
 
+  // 3.5 Modulation Ring
+  if (std::abs(modulationAmount_) > 0.001f) {
+    drawModulationRing(canvas, cx, cy, radius);
+  }
+
   // 4. Center Cap (Metallic)
   drawCenterCap(canvas, cx, cy, radius);
 
@@ -241,6 +246,39 @@ void ZenithKnob::drawValueArc(SkCanvas *canvas, float cx, float cy,
   paint.setShader(nullptr);
 }
 
+void ZenithKnob::drawModulationRing(SkCanvas *canvas, float cx, float cy, float radius) {
+  float normValue = getNormalizedValue();
+  float modTarget = juce::jlimit(0.0f, 1.0f, normValue + modulationAmount_);
+  
+  if (std::abs(modTarget - normValue) < 0.001f) return;
+
+  SkPaint paint;
+  paint.setAntiAlias(true);
+  paint.setStyle(SkPaint::kStroke_Style);
+  paint.setStrokeWidth(trackWidth_ * 0.8f); // Slightly thinner than main arc
+  paint.setStrokeCap(SkPaint::kRound_Cap);
+  paint.setColor(modulationColor_);
+
+  SkRect arcRect = SkRect::MakeXYWH(cx - radius, cy - radius, radius * 2, radius * 2);
+
+  // Calculate angles
+  float startDeg = startAngle_ + normValue * sweepRange_;
+  float endDeg = startAngle_ + modTarget * sweepRange_;
+  float sweepDeg = endDeg - startDeg;
+
+  // Draw glow for modulation
+  paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
+  paint.setStrokeWidth(trackWidth_ + 2.0f);
+  paint.setColor(SkColorSetA(modulationColor_, 100)); // Transparent glow
+  canvas->drawArc(arcRect, startDeg, sweepDeg, false, paint);
+
+  // Draw main modulation arc
+  paint.setMaskFilter(nullptr);
+  paint.setStrokeWidth(trackWidth_ * 0.8f);
+  paint.setColor(modulationColor_);
+  canvas->drawArc(arcRect, startDeg, sweepDeg, false, paint);
+}
+
 void ZenithKnob::drawCenterCap(SkCanvas *canvas, float cx, float cy,
                                float radius) {
   float capRadius = radius * 0.7f;
@@ -303,15 +341,15 @@ void ZenithKnob::drawValueTooltip(SkCanvas *canvas, float cx, float cy,
   float textWidth =
       font.measureText(str.c_str(), str.length(), SkTextEncoding::kUTF8);
 
-  // Position tooltip above the knob
-  float tooltipY = cy - radius - 15.0f;
+  // Position tooltip above the knob, clamped to top
+  float tooltipY = std::max(2.0f, cy - radius - 15.0f);
   float tooltipX = cx - textWidth / 2.0f;
 
   // Background pill
   float padding = 6.0f;
   SkRect bgRect = SkRect::MakeXYWH(tooltipX - padding, tooltipY - 12.0f,
                                    textWidth + padding * 2, 16.0f);
-  SkRRect bgRRect = SkRRect::MakeRectXY(bgRect, 4.0f, 4.0f);
+  SkRRect bgRRect = SkRRect::MakeRectXY(bgRect, design::dimensions::RADIUS_SM, design::dimensions::RADIUS_SM);
 
   SkPaint bgPaint;
   bgPaint.setAntiAlias(true);

@@ -259,6 +259,7 @@ public:
   //==============================================================================
   friend class Track;
   friend class AudioTrack;
+  friend class InstrumentTrack;
 
 private:
   //==============================================================================
@@ -340,6 +341,7 @@ private:
   float calculateFadeMultiplier(int64_t positionInClip) const;
 
   void applyFadesSIMD(const juce::AudioSourceChannelInfo &bufferToFill,
+                      int destOffset,
                       int64_t startPositionInClip, int numSamples);
 
   //==============================================================================

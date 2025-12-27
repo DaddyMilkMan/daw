@@ -58,6 +58,9 @@ private:
   static constexpr float PPM_RISE_TIME = 0.010f; // 10ms
   static constexpr float PPM_FALL_TIME = 1.500f; // Slow fallback
 
+  // Scratch buffer for LUFS processing (RT-safe)
+  juce::AudioBuffer<float> scratchBuffer_;
+
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MeteringSystem)
 };
 

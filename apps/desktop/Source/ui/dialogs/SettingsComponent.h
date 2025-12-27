@@ -32,8 +32,8 @@
 #include "HardwareControlPanel.h"
 
 #include <juce_audio_utils/juce_audio_utils.h>
-#include "../network/SecureKeyStore.h"
-#include "../network/GrokAPIClient.h"
+#include "../../network/SecureKeyStore.h"
+#include "../../network/GrokDAWClient.h"
 
 namespace zenith {
 
@@ -64,6 +64,11 @@ private:
     std::unique_ptr<SkiaButton> setupButton_;
     std::unique_ptr<SkiaComboBox> backendSelector_;
     std::unique_ptr<SkiaLabel> backendLabel_;
+    std::unique_ptr<SkiaComboBox> bufferSizeSelector_;
+    std::unique_ptr<SkiaLabel> bufferLabel_;
+    std::unique_ptr<SkiaButton> pdcToggle_;
+    std::unique_ptr<SkiaButton> monitoringToggle_;
+    std::unique_ptr<SkiaSlider> monitoringVolumeSlider_;
 };
 
 //==============================================================================
@@ -78,6 +83,76 @@ public:
 private:
     std::unique_ptr<SkiaSlider> fpsSlider_;
     std::unique_ptr<SkiaSlider> glowSlider_;
+    std::unique_ptr<SkiaComboBox> themeSelector_;
+    std::unique_ptr<SkiaButton> animationsToggle_;
+    std::unique_ptr<SkiaButton> highContrastToggle_;
+    std::unique_ptr<SkiaComboBox> meterBallisticsSelector_;
+    std::unique_ptr<SkiaSlider> peakHoldSlider_;
+};
+
+//==============================================================================
+// Recording Settings Tab
+//==============================================================================
+class RecordingSettingsTab : public SettingsTab {
+public:
+    RecordingSettingsTab();
+    void resized() override;
+    void drawSkia(SkCanvas* canvas) override;
+
+private:
+    std::unique_ptr<SkiaSlider> countInSlider_;
+    std::unique_ptr<SkiaButton> metronomeCountInToggle_;
+    std::unique_ptr<SkiaComboBox> bitDepthSelector_;
+    std::unique_ptr<SkiaComboBox> fileTypeSelector_;
+    std::unique_ptr<SkiaButton> tempoLockToggle_;
+};
+
+//==============================================================================
+// MIDI Settings Tab
+//==============================================================================
+class MIDISettingsTab : public SettingsTab {
+public:
+    MIDISettingsTab();
+    void resized() override;
+    void drawSkia(SkCanvas* canvas) override;
+
+private:
+    std::unique_ptr<SkiaButton> midiThroughToggle_;
+    std::unique_ptr<SkiaButton> midiClockOutToggle_;
+    std::unique_ptr<SkiaButton> mtcInToggle_;
+    std::unique_ptr<SkiaSlider> latencyCompSlider_;
+};
+
+//==============================================================================
+// Editing Settings Tab
+//==============================================================================
+class EditingSettingsTab : public SettingsTab {
+public:
+    EditingSettingsTab();
+    void resized() override;
+    void drawSkia(SkCanvas* canvas) override;
+
+private:
+    std::unique_ptr<SkiaSlider> crossfadeSlider_;
+    std::unique_ptr<SkiaButton> snapToggle_;
+    std::unique_ptr<SkiaButton> linkSelectionToggle_;
+};
+
+//==============================================================================
+// Project Settings Tab
+//==============================================================================
+class ProjectSettingsTab : public SettingsTab {
+public:
+    ProjectSettingsTab();
+    void resized() override;
+    void drawSkia(SkCanvas* canvas) override;
+
+private:
+    std::unique_ptr<SkiaButton> autoSaveToggle_;
+    std::unique_ptr<SkiaSlider> autoSaveIntervalSlider_;
+    std::unique_ptr<SkiaSlider> undoHistorySlider_;
+    std::unique_ptr<SkiaButton> projectFolderButton_;
+    juce::String currentProjectFolder_;
 };
 
 //==============================================================================
@@ -114,7 +189,17 @@ private:
     std::unique_ptr<SkiaButton> validateButton_;
     std::unique_ptr<SkiaLabel> helpLabel_;
     std::unique_ptr<SkiaLabel> statusLabel_;
-    std::unique_ptr<GrokAPIClient> testClient_;
+    std::unique_ptr<GrokDAWClient> testClient_;
+};
+
+//==============================================================================
+// About Tab
+//==============================================================================
+class AboutTab : public SettingsTab {
+public:
+    AboutTab();
+    void resized() override;
+    void drawSkia(SkCanvas* canvas) override;
 };
 
 //==============================================================================
@@ -137,9 +222,14 @@ private:
 
     std::unique_ptr<AudioSettingsTab> audioTab_;
     std::unique_ptr<DisplaySettingsTab> displayTab_;
+    std::unique_ptr<RecordingSettingsTab> recordingTab_;
+    std::unique_ptr<MIDISettingsTab> midiTab_;
+    std::unique_ptr<EditingSettingsTab> editingTab_;
+    std::unique_ptr<ProjectSettingsTab> projectTab_;
     std::unique_ptr<PluginSettingsTab> pluginTab_;
     std::unique_ptr<AISettingsTab> aiTab_;
     std::unique_ptr<HardwareControlPanel> hardwareTab_;
+    std::unique_ptr<AboutTab> aboutTab_;
 
     SkiaComponent* currentTab_ = nullptr;
 
