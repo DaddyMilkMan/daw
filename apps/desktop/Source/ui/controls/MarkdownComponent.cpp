@@ -9,7 +9,9 @@
 */
 
 #include "MarkdownComponent.h"
-#include "ZenithTheme.h"
+#include "../design-system/ZenithDesignSystem.h"
+#include "../design-system/ColorBridge.h"
+#include "../design-system/ZenithTheme.h"
 
 namespace zenith {
 namespace widgets {
@@ -54,8 +56,8 @@ MarkdownComponent::MarkdownComponent() {
 MarkdownComponent::~MarkdownComponent() = default;
 
 void MarkdownComponent::paint(juce::Graphics &g) {
-    g.fillAll(ZenithTheme::Colors::bg_02);
-    g.setColour(ZenithTheme::Colors::border_default);
+    g.fillAll(design::toJuceColour(design::unified::bg_02()));
+    g.setColour(design::toJuceColour(design::unified::border_default()));
     g.drawRect(getLocalBounds(), 1);
 }
 
@@ -73,14 +75,14 @@ void MarkdownComponent::appendMessage(const juce::String &speaker, const juce::S
   juce::String timestamp = juce::Time::getCurrentTime().toString(false, true, false, true);
   juce::AttributedString header;
   header.setJustification(juce::Justification::topLeft);
-  header.append("\n[" + timestamp + "] ", ZenithTheme::Typography::getSmallFont(), ZenithTheme::Colors::text_secondary);
-  header.append(speaker + ":\n", ZenithTheme::Typography::getBodyFont().boldened(), 
-                speaker == "You" ? ZenithTheme::Colors::text_primary : ZenithTheme::Colors::accent_primary);
+  header.append("\n[" + timestamp + "] ", design::typography::getJuceFont(10.0f), design::toJuceColour(design::colors::TEXT_SECONDARY));
+  header.append(speaker + ":\n", design::typography::getJuceFont(14.0f, design::FontWeight::Bold), 
+                speaker == "You" ? design::toJuceColour(design::colors::TEXT_PRIMARY) : design::toJuceColour(design::colors::ACCENT_PRIMARY));
   
   contentComp_->append(header);
 
   // 2. Body with Markdown
-  juce::Colour msgColor = ZenithTheme::Colors::text_primary;
+  juce::Colour msgColor = design::toJuceColour(design::colors::TEXT_PRIMARY);
   auto body = parseMarkdown(message, msgColor);
   contentComp_->append(body);
   
@@ -93,10 +95,10 @@ juce::AttributedString MarkdownComponent::parseMarkdown(const juce::String &text
   juce::AttributedString as;
   as.setJustification(juce::Justification::topLeft);
   
-  const juce::Font regular = ZenithTheme::Typography::getBodyFont();
-  const juce::Font bold = regular.boldened();
-  const juce::Font italic = regular.italicised();
-  const juce::Font monospace = juce::Font(juce::Font::getDefaultMonospacedFontName(), 13.0f, juce::Font::plain);
+  const juce::Font regular = design::typography::getJuceFont(14.0f);
+  const juce::Font bold = regular.withStyle(juce::Font::bold);
+  const juce::Font italic = regular.withStyle(juce::Font::italic);
+  const juce::Font monospace = design::typography::getJuceMonoFont(13.0f);
   const juce::Colour codeBg = juce::Colour(0xff2d2d2d); // Dark box for code
 
   juce::String currentSegment;
@@ -122,8 +124,8 @@ juce::AttributedString MarkdownComponent::parseMarkdown(const juce::String &text
          }
          
          // Code block background is hard in AttributedString, we simulated it with color/font usually
-         // For A+, we'll just use the monospace font and a slightly lighter color
-         juce::Colour c = (isCode || isCodeBlock) ? ZenithTheme::Colors::text_secondary : currentColor;
+          // For A+, we'll just use the monospace font and a slightly lighter color
+          juce::Colour c = (isCode || isCodeBlock) ? design::toJuceColour(design::colors::TEXT_SECONDARY) : currentColor;
          
          as.append(currentSegment, f, c);
          currentSegment.clear();

@@ -167,6 +167,9 @@ public:
   /** Humanize velocities of selected notes */
   void humanizeVelocity(float amount = 0.3f);
 
+  /** Randomize variation to note timing (nudge) */
+  void humanizeTiming(float amount = 0.02f);
+
   /** Apply velocity curve to selected notes */
   enum class VelocityCurve { RampUp, RampDown, Compress, Expand, Invert };
   void applyVelocityCurve(VelocityCurve curve, float amount = 1.0f);
@@ -378,6 +381,9 @@ public:
 
   /** Set probability (0.0-1.0) for selected notes to play */
   void setNoteProbability(float probability);
+
+  /** Set tension (-1.0 to 1.0) for a specific note */
+  void setNoteTension(const juce::String& noteId, float tension);
 
   /** Get probability for a specific note */
   float getNoteProbability(const juce::String &noteId) const;
@@ -692,7 +698,9 @@ public:
   std::vector<NoteRect> &getNotesForScripting() { return noteRects; }
 
 private:
-  //==========================================================================
+  void broadcastSelection();
+
+private:
   // Internal Note Representation
   //==========================================================================
 

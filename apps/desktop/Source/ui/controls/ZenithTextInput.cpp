@@ -11,7 +11,10 @@
 */
 
 #include "ZenithTextInput.h"
-#include "../design-system/ZenithTheme.h"
+#include "ZenithTextInput.h"
+#include "../design-system/ColorBridge.h"
+#include "../design-system/ZenithDesignSystem.h"
+// #include "../design-system/ZenithTheme.h" // Deprecated
 
 #ifdef ZENITH_USE_SKIA
 #include <core/SkBlurTypes.h>
@@ -70,16 +73,51 @@ void ZenithTextInput::resized() {
 
 void ZenithTextInput::mouseDown(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
+  
+  dragStartPos_ = e.position;
+  dragStartValue_ = getValue();
+  isDragging_ = false;
+  
+  // Don't start editing immediately, wait to see if it's a drag
+}
 
-  if (!isEditing_) {
-    startEditing();
+void ZenithTextInput::mouseUp(const juce::MouseEvent &e) {
+  if (!isDragging_ && !isEditing_ && contains(e.position.toInt())) {
+     startEditing();
   }
+  isDragging_ = false;
+}
+
+void ZenithTextInput::mouseDrag(const juce::MouseEvent &e) {
+  if (inputType_ == InputType::Text) return; // No drag for text fields
+  
+  if (!isDragging_) {
+     if (e.position.getDistanceFrom(dragStartPos_) > 5.0f) {
+        isDragging_ = true;
+     } else {
+        return;
+     }
+  }
+  
+  float deltaY = dragStartPos_.y - e.position.y;
+  float sensitivity = stepSize_ * 0.5f; // Pixels to value
+  if (e.mods.isShiftDown()) sensitivity *= 0.1f;
+  
+  double newValue = dragStartValue_ + deltaY * sensitivity;
+  setValue(newValue, true);
 }
 
 void ZenithTextInput::mouseEnter(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
   hovered_ = true;
   repaint();
+}
+
+void ZenithTextInput::mouseMove(const juce::MouseEvent &e) {
+  juce::ignoreUnused(e);
+  if (!isEditing_) {
+     setMouseCursor(juce::MouseCursor::IBeamCursor);
+  }
 }
 
 void ZenithTextInput::mouseExit(const juce::MouseEvent &e) {
@@ -150,9 +188,9 @@ void ZenithTextInput::startEditing() {
   // Style the editor
   editor_->setColour(juce::TextEditor::backgroundColourId,
                      juce::Colours::transparentBlack);
-  editor_->setColour(juce::TextEditor::textColourId, ZenithTheme::Colors::text_primary);
+  editor_->setColour(juce::TextEditor::textColourId, design::toJuceColour(design::colors::TEXT_PRIMARY));
   editor_->setColour(juce::TextEditor::highlightColourId,
-                     ZenithTheme::Colors::accent_primary.withAlpha(0.3f));
+                     design::toJuceColour(design::colors::ACCENT_PRIMARY).withAlpha(0.3f));
   editor_->setColour(juce::TextEditor::outlineColourId,
                      juce::Colours::transparentBlack);
   editor_->setColour(juce::TextEditor::focusedOutlineColourId,
@@ -253,16 +291,15 @@ void ZenithTextInput::drawSkia(SkCanvas *canvas) {
 void ZenithTextInput::drawBackground(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
   SkRect rect = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
-  SkRRect rrect = SkRRect::MakeRectXY(rect, ZenithTheme::Radius::sm, ZenithTheme::Radius::sm);
+  SkRRect rrect = SkRRect::MakeRectXY(rect, design::dimensions::RADIUS_SM, design::dimensions::RADIUS_SM);
 
   SkPaint paint;
   paint.setAntiAlias(true);
 
   // Background
   paint.setStyle(SkPaint::kFill_Style);
-  juce::Colour bg = ZenithTheme::Colors::bg_03;
-  paint.setColor(
-      SkColorSetARGB(isEditing_ ? 180 : (hovered_ ? 140 : 120), bg.getRed(), bg.getGreen(), bg.getBlue()));
+  SkColor bg = design::colors::BG_03;
+  paint.setColor(design::withAlpha(bg, isEditing_ ? 0.7f : (hovered_ ? 0.55f : 0.47f))); // Approximate alphas
   canvas->drawRRect(rrect, paint);
 
   // Border/focus ring
@@ -270,15 +307,15 @@ void ZenithTextInput::drawBackground(SkCanvas *canvas) {
   paint.setStrokeWidth(1.0f);
 
   if (isEditing_) {
-    juce::Colour accent = ZenithTheme::Colors::accent_primary;
-    paint.setColor(SkColorSetRGB(accent.getRed(), accent.getGreen(), accent.getBlue()));
+    SkColor accent = design::colors::ACCENT_PRIMARY;
+    paint.setColor(accent);
     paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f));
     canvas->drawRRect(rrect, paint);
     paint.setMaskFilter(nullptr);
   }
 
-  juce::Colour border = ZenithTheme::Colors::border_default;
-  paint.setColor(SkColorSetARGB(hovered_ ? 100 : 60, border.getRed(), border.getGreen(), border.getBlue()));
+  SkColor border = design::colors::BORDER_DEFAULT;
+  paint.setColor(design::withAlpha(border, hovered_ ? 0.39f : 0.23f)); // 100/255 -> 0.39
   canvas->drawRRect(rrect, paint);
 }
 
@@ -291,10 +328,14 @@ void ZenithTextInput::drawText(SkCanvas *canvas) {
 
   SkPaint paint;
   paint.setAntiAlias(true);
-  juce::Colour txtMain = ZenithTheme::Colors::text_primary;
-  juce::Colour txtPlace = ZenithTheme::Colors::text_tertiary;
-  paint.setColor(text_.isEmpty() ? SkColorSetARGB(100, txtPlace.getRed(), txtPlace.getGreen(), txtPlace.getBlue())
-                                 : SkColorSetARGB(220, txtMain.getRed(), txtMain.getGreen(), txtMain.getBlue()));
+  SkColor txtMain = design::colors::TEXT_PRIMARY;
+  SkColor txtPlace = design::colors::TEXT_TERTIARY;
+  
+  if (text_.isEmpty()) {
+      paint.setColor(design::withAlpha(txtPlace, 0.39f)); // 100/255
+  } else {
+      paint.setColor(design::withAlpha(txtMain, 0.86f)); // 220/255
+  }
 
   juce::String displayText = text_.isEmpty() ? "0" : text_;
   if (prefix_.isNotEmpty()) {
@@ -317,5 +358,7 @@ void ZenithTextInput::drawLabel(SkCanvas *canvas) {
 }
 
 #endif // ZENITH_USE_SKIA
+
+
 
 } // namespace zenith

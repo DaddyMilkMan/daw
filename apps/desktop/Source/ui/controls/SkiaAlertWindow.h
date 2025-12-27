@@ -57,6 +57,9 @@ public:
                         const juce::String &button3Text = {},
                         std::function<void(int)> callback = {});
 
+  // Test Mode: Auto-dismiss windows to prevent leaks in headless tests
+  static void setTestMode(bool enabled) { testModeEnabled_ = enabled; }
+
   // Component interface
   void drawSkia(SkCanvas *canvas) override;
   void resized() override;
@@ -103,6 +106,8 @@ private:
   void layoutComponents();
   void handleButtonPressed(Result result);
   void hideWindow();
+  
+  static bool testModeEnabled_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SkiaAlertWindow)
 };

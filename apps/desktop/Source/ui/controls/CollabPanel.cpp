@@ -17,7 +17,7 @@ CollabPanel::CollabPanel() {
     setWantsKeyboardFocus(true);
     CollaborationManager::getInstance().addChangeListener(this);
     setSize(350, 600);
-    startTimerHz(30); // Animation updates
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(30); // Animation updates
 }
 
 CollabPanel::~CollabPanel() {
@@ -47,26 +47,31 @@ void CollabPanel::drawSkia(SkCanvas* canvas) {
     // --- Background with glassmorphism ---
     SkPaint bgPaint;
     bgPaint.setColor(SkColorSetARGB(230, 25, 25, 35));
-    canvas->drawRoundRect(SkRect::MakeWH(w, h), 12.0f, 12.0f, bgPaint);
+    canvas->drawRoundRect(SkRect::MakeWH(w, h), design::dimensions::RADIUS_LG, design::dimensions::RADIUS_LG, bgPaint);
 
     // Subtle border glow
     SkPaint borderPaint;
     borderPaint.setStyle(SkPaint::kStroke_Style);
     borderPaint.setStrokeWidth(1.0f);
     borderPaint.setColor(design::unified::border_subtle());
-    canvas->drawRoundRect(SkRect::MakeWH(w, h), 12.0f, 12.0f, borderPaint);
+    canvas->drawRoundRect(SkRect::MakeWH(w, h), design::dimensions::RADIUS_LG, design::dimensions::RADIUS_LG, borderPaint);
 
     // --- Title ---
     SkFont titleFont;
     titleFont.setSize(22.0f);
     paint.setColor(design::unified::text_primary());
-    canvas->drawString("Real-Time Collaboration", 20.0f, 35.0f, titleFont, paint);
+    
+    // Dynamic padding
+    float padding = 20.0f;
+    float currentY = 35.0f;
+    
+    canvas->drawString("Real-Time Collaboration", padding, currentY, titleFont, paint);
 
     // Subtitle
     SkFont subFont;
     subFont.setSize(11.0f);
     paint.setColor(design::unified::text_secondary());
-    canvas->drawString("P2P • UDP Hole Punching • Global", 20.0f, 52.0f, subFont, paint);
+    canvas->drawString("P2P • UDP Hole Punching • Global", padding, currentY + 17.0f, subFont, paint);
 
     auto& mgr = CollaborationManager::getInstance();
     auto state = mgr.getState();
@@ -137,7 +142,7 @@ void CollabPanel::drawSkia(SkCanvas* canvas) {
                 SkPaint userPaint;
                 userPaint.setColor(SkColorSetARGB(50, 0, 255, 200));
                 canvas->drawRoundRect(
-                    SkRect::MakeXYWH(20.0f, yOffset, w - 40.0f, 24.0f), 4.0f, 4.0f,
+                    SkRect::MakeXYWH(20.0f, yOffset, w - 40.0f, 24.0f), design::dimensions::RADIUS_SM, design::dimensions::RADIUS_SM,
                     userPaint);
 
                 // Online dot
@@ -277,14 +282,14 @@ void CollabPanel::drawTextField(SkCanvas* canvas, const SkRect& bounds,
     // Background
     paint.setColor(focused ? design::unified::withAlpha(design::unified::accent_primary(), 0.3f)
                            : design::unified::bg_02());
-    canvas->drawRoundRect(bounds, 6.0f, 6.0f, paint);
+    canvas->drawRoundRect(bounds, design::dimensions::RADIUS_SM, design::dimensions::RADIUS_SM, paint);
 
     // Border
     paint.setStyle(SkPaint::kStroke_Style);
     paint.setStrokeWidth(focused ? 2.0f : 1.0f);
     paint.setColor(focused ? design::unified::accent_primary()
                            : design::unified::border_default());
-    canvas->drawRoundRect(bounds, 6.0f, 6.0f, paint);
+    canvas->drawRoundRect(bounds, design::dimensions::RADIUS_SM, design::dimensions::RADIUS_SM, paint);
 
     // Text
     SkFont font;
@@ -326,7 +331,7 @@ void CollabPanel::drawButton(SkCanvas* canvas, const SkRect& bounds, const char*
                       SkPoint::Make(bounds.fLeft, bounds.fBottom)};
     paint.setShader(SkGradientShader::MakeLinear(pts, colors, nullptr, 2,
                                                  SkTileMode::kClamp));
-    canvas->drawRoundRect(bounds, 8.0f, 8.0f, paint);
+    canvas->drawRoundRect(bounds, design::dimensions::RADIUS_SM, design::dimensions::RADIUS_SM, paint);
     paint.setShader(nullptr);
 
     // Glow when active
@@ -335,7 +340,7 @@ void CollabPanel::drawButton(SkCanvas* canvas, const SkRect& bounds, const char*
         glowPaint.setColor(accentColor);
         glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 8.0f));
         glowPaint.setAlpha(100);
-        canvas->drawRoundRect(bounds, 8.0f, 8.0f, glowPaint);
+        canvas->drawRoundRect(bounds, design::dimensions::RADIUS_SM, design::dimensions::RADIUS_SM, glowPaint);
     }
 
     // Label
@@ -373,6 +378,10 @@ void CollabPanel::drawStatusIndicator(SkCanvas* canvas,
         case CollaborationManager::ConnectionState::Punching:
             statusText = "Punching Firewall...";
             statusColor = design::unified::accent_secondary();
+            break;
+        case CollaborationManager::ConnectionState::Handshaking:
+            statusText = "Authenticating Peer...";
+            statusColor = design::unified::info();
             break;
         case CollaborationManager::ConnectionState::Hosting:
             statusText = "Hosting - Waiting for peers";

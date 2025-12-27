@@ -15,6 +15,8 @@
 #define ZENITH_USE_SKIA 1 // Force for debugging
 
 #ifdef ZENITH_USE_SKIA
+#include "../design-system/ZenithDesignSystem.h"
+#include "../design-system/ColorBridge.h"
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
 #include <core/SkFont.h>
@@ -39,7 +41,7 @@ DebugConsoleComponent::DebugConsoleComponent(ai::SessionDebuggerAgent &debugger)
   setSize(300, static_cast<int>(kCollapsedHeight));
 
   // Start animation timer
-  startTimerHz(30); // 30 FPS for smooth animations
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(30); // 30 FPS for smooth animations
 }
 
 DebugConsoleComponent::~DebugConsoleComponent() {
@@ -75,7 +77,7 @@ void DebugConsoleComponent::drawCollapsedView(SkCanvas *canvas,
   drawHealthIndicator(canvas, kPadding + 8.0f, centerY, 12.0f);
 
   // Status text
-  textPaint_.setColor(SK_ColorWHITE);
+  textPaint_.setColor(design::unified::text_primary());
 
   int issueCount = debugger_.getUnresolvedIssueCount();
   int fixCount = debugger_.getFixCount();
@@ -110,7 +112,7 @@ void DebugConsoleComponent::drawExpandedView(SkCanvas *canvas,
   drawHealthIndicator(canvas, kPadding + 8.0f, y + 8.0f, 12.0f);
 
   boldFont_.setSize(14.0f);
-  textPaint_.setColor(SK_ColorWHITE);
+  textPaint_.setColor(design::unified::text_primary());
   canvas->drawString("Session Debugger", kPadding + 28.0f, y + 12.0f, boldFont_,
                      textPaint_);
 
@@ -127,7 +129,7 @@ void DebugConsoleComponent::drawExpandedView(SkCanvas *canvas,
 
   // Divider line
   SkPaint dividerPaint;
-  dividerPaint.setColor(SkColorSetARGB(40, 255, 255, 255));
+  dividerPaint.setColor(design::unified::withAlpha(design::unified::text_primary(), 0.15f));
   dividerPaint.setStrokeWidth(1.0f);
   canvas->drawLine(kPadding, y, bounds.width() - kPadding, y, dividerPaint);
 
@@ -153,7 +155,7 @@ void DebugConsoleComponent::drawExpandedView(SkCanvas *canvas,
 
   SkRect barBg = SkRect::MakeXYWH(barX, y + 4.0f, barWidth, barHeight);
   SkPaint barBgPaint;
-  barBgPaint.setColor(SkColorSetARGB(50, 0, 0, 0));
+  barBgPaint.setColor(design::unified::withAlpha(design::unified::bg_00(), 0.4f));
   canvas->drawRoundRect(barBg, 3.0f, 3.0f, barBgPaint);
 
   float fillWidth = barWidth * (cpu / 100.0f);
@@ -171,11 +173,11 @@ void DebugConsoleComponent::drawExpandedView(SkCanvas *canvas,
 
   // Latency row
   float latency = debugger_.getTotalLatencyMs();
-  SkColor latencyColor = (latency > 50.0f)   ? 0xFFFF4444
-                         : (latency > 20.0f) ? 0xFFFFAA00
-                                             : 0xFF44FF44;
+  SkColor latencyColor = (latency > 50.0f)   ? design::unified::error()
+                         : (latency > 20.0f) ? design::unified::warning()
+                                             : design::unified::success();
 
-  textPaint_.setColor(SkColorSetARGB(150, 255, 255, 255));
+  textPaint_.setColor(design::unified::withAlpha(design::unified::text_primary(), 0.6f));
   canvas->drawString("Latency", kPadding, y + 10.0f, smallFont_, textPaint_);
 
   textPaint_.setColor(latencyColor);
@@ -186,9 +188,9 @@ void DebugConsoleComponent::drawExpandedView(SkCanvas *canvas,
 
   // Clipping row
   int clippingCount = debugger_.getClippingTrackCount();
-  SkColor clipColor = (clippingCount > 0) ? 0xFFFF4444 : 0xFF44FF44;
+  SkColor clipColor = (clippingCount > 0) ? design::unified::error() : design::unified::success();
 
-  textPaint_.setColor(SkColorSetARGB(150, 255, 255, 255));
+  textPaint_.setColor(design::unified::withAlpha(design::unified::text_primary(), 0.6f));
   canvas->drawString("Clipping", kPadding, y + 10.0f, smallFont_, textPaint_);
 
   textPaint_.setColor(clipColor);
@@ -203,7 +205,7 @@ void DebugConsoleComponent::drawExpandedView(SkCanvas *canvas,
 
   // Fix summary at bottom
   if (debugger_.getFixCount() > 0) {
-    textPaint_.setColor(0xFF00AAFF);
+    textPaint_.setColor(design::unified::accent_secondary());
     canvas->drawString(debugger_.getFixSummary().toStdString().c_str(),
                        kPadding, y + 10.0f, smallFont_, textPaint_);
   }
@@ -232,7 +234,7 @@ void DebugConsoleComponent::drawHealthIndicator(SkCanvas *canvas, float x,
   // Highlight
   SkPaint highlightPaint;
   highlightPaint.setAntiAlias(true);
-  highlightPaint.setColor(SkColorSetA(SK_ColorWHITE, 80));
+  highlightPaint.setColor(design::unified::withAlpha(design::unified::text_primary(), 0.3f)); // Fallback from GLASS_HIGHLIGHT
   canvas->drawCircle(x - pulseSize * 0.3f, y - pulseSize * 0.3f,
                      pulseSize * 0.4f, highlightPaint);
 }
@@ -274,18 +276,18 @@ void DebugConsoleComponent::drawNotificationBadge(SkCanvas *canvas, float x,
   SkPaint badgePaint;
   badgePaint.setAntiAlias(true);
   badgePaint.setColor(
-      SkColorSetARGB(static_cast<unsigned>(alpha * 255), 0, 200, 255));
+      design::unified::withAlpha(design::unified::accent_primary(), alpha));
 
   canvas->drawCircle(x, y, 6.0f, badgePaint);
 }
 
 SkColor DebugConsoleComponent::getHealthColor(float score) const {
   if (score >= 80.0f) {
-    return 0xFF00FF64; // Green
+    return design::unified::success();
   } else if (score >= 50.0f) {
-    return 0xFFFFAA00; // Orange
+    return design::unified::warning();
   } else {
-    return 0xFFFF4444; // Red
+    return design::unified::error();
   }
 }
 
@@ -396,36 +398,36 @@ void DebugConsoleComponent::setExpanded(bool expanded) {
 void DebugConsoleComponent::updateCachedPaints() {
   // Background - dark with subtle transparency
   bgPaint_.setAntiAlias(true);
-  bgPaint_.setColor(SkColorSetARGB(230, 25, 25, 30));
+  bgPaint_.setColor(design::unified::withAlpha(design::unified::bg_01(), 0.9f));
   bgPaint_.setStyle(SkPaint::kFill_Style);
 
   // Border - subtle glow
   borderPaint_.setAntiAlias(true);
-  borderPaint_.setColor(SkColorSetARGB(60, 100, 200, 255));
+  borderPaint_.setColor(design::unified::withAlpha(design::unified::accent_primary(), 0.25f));
   borderPaint_.setStyle(SkPaint::kStroke_Style);
   borderPaint_.setStrokeWidth(1.0f);
 
   // Health colors
   healthGoodPaint_.setAntiAlias(true);
-  healthGoodPaint_.setColor(0xFF00FF64);
+  healthGoodPaint_.setColor(design::unified::success());
 
   healthWarningPaint_.setAntiAlias(true);
-  healthWarningPaint_.setColor(0xFFFFAA00);
+  healthWarningPaint_.setColor(design::unified::warning());
 
   healthCriticalPaint_.setAntiAlias(true);
-  healthCriticalPaint_.setColor(0xFFFF4444);
+  healthCriticalPaint_.setColor(design::unified::error());
 
   // Text
   textPaint_.setAntiAlias(true);
-  textPaint_.setColor(SK_ColorWHITE);
+  textPaint_.setColor(design::unified::text_primary());
 
   // Icons
   iconPaint_.setAntiAlias(true);
-  iconPaint_.setColor(SK_ColorWHITE);
+  iconPaint_.setColor(design::unified::text_primary());
 
   // Notification
   notificationPaint_.setAntiAlias(true);
-  notificationPaint_.setColor(0xFF00AAFF);
+  notificationPaint_.setColor(design::unified::accent_secondary());
 
   // Fonts
   font_.setSize(12.0f);

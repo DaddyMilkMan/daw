@@ -26,28 +26,30 @@
 
 namespace zenith {
 
-// Forward declarations
-class Engine;
-class MixerChannelComponent;
+    // Forward declarations
+    class ProjectState;
+    class Engine;
+    class MixerChannelComponent;
 
-//==============================================================================
-/**
- * @class MixerView
- * @brief Container for all mixer channels
- *
- * Displays one MixerChannelComponent per track in the engine.
- * Updates automatically when tracks are added or removed.
- */
-class MixerView : public juce::Component,
-                  private juce::Timer
-{
-public:
     //==========================================================================
     /**
-     * @brief Constructor
-     * @param engine Reference to the audio engine
+     * @class MixerView
+     * @brief Container for all mixer channels
+     *
+     * Displays one MixerChannelComponent per track in the engine.
+     * Updates automatically when tracks are added or removed.
      */
-    explicit MixerView(Engine& engine);
+    class MixerView : public juce::Component,
+                      private juce::Timer
+    {
+    public:
+        //==========================================================================
+        /**
+         * @brief Constructor
+         * @param engine Reference to the audio engine
+         * @param state Reference to project state
+         */
+        explicit MixerView(Engine& engine, ProjectState& state);
     ~MixerView() override;
 
     //==========================================================================
@@ -81,6 +83,7 @@ private:
     //==========================================================================
 
     Engine& engine_;
+    ProjectState& state_;
 
     // Channel strips (one per track)
     std::vector<std::unique_ptr<MixerChannelComponent>> channels_;

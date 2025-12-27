@@ -15,6 +15,8 @@
 
 namespace zenith {
 
+bool SkiaAlertWindow::testModeEnabled_ = false;
+
 SkiaAlertWindow::SkiaAlertWindow(const juce::String &title,
                                  const juce::String &message, IconType iconType)
     : iconType_(iconType) {
@@ -124,6 +126,13 @@ SkiaAlertWindow::getTextEditorContents(const juce::String &name) const {
 
 void SkiaAlertWindow::showAsync(Callback callback) {
   callback_ = callback;
+  
+  if (testModeEnabled_) {
+      DBG("SkiaAlertWindow: Test mode enabled, auto-dismissing '" + getName() + "'");
+      handleButtonPressed(Result::Cancelled); // Default to Cancel/Close
+      return;
+  }
+  
   // In a real implementation, this would show as a modal dialog
   setVisible(true);
   toFront(true);
@@ -195,6 +204,9 @@ void SkiaAlertWindow::drawSkia(SkCanvas *canvas) {
   SkPaint titleBgPaint;
   titleBgPaint.setColor(design::colors::BG_DARK);
   canvas->drawRect(SkRect::MakeXYWH(0, 0, bounds.getWidth(), 40), titleBgPaint);
+
+  // Draw child components (labels, buttons, etc.)
+  drawChildren(canvas);
 }
 
 void SkiaAlertWindow::resized() { layoutComponents(); }
@@ -252,10 +264,10 @@ void SkiaAlertWindow::layoutComponents() {
 }
 
 void SkiaAlertWindow::handleButtonPressed(Result result) {
+  hideWindow();
   if (callback_) {
     callback_(result);
   }
-  hideWindow();
 }
 
 void SkiaAlertWindow::hideWindow() {

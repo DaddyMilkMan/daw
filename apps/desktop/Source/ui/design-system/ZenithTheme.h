@@ -10,6 +10,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "ZenithDesignSystem.h"
 
 namespace zenith {
 
@@ -130,12 +131,12 @@ public:
   // Border Radius System
   //==========================================================================
   struct Radius {
-    static constexpr float none = 0.0f;
-    static constexpr float sm = 4.0f;      // Buttons, small controls
-    static constexpr float md = 6.0f;      // Cards, panels
-    static constexpr float lg = 8.0f;      // Modals, large panels
-    static constexpr float xl = 12.0f;     // Special elements
-    static constexpr float full = 9999.0f; // Pills, circular
+    static constexpr float none = design::dimensions::RADIUS_NONE;
+    static constexpr float sm = design::dimensions::RADIUS_SM;      // Buttons, small controls
+    static constexpr float md = design::dimensions::RADIUS_SM;      // Cards, panels
+    static constexpr float lg = design::dimensions::RADIUS_LG;      // Modals, large panels
+    static constexpr float xl = design::dimensions::RADIUS_LG;     // Special elements
+    static constexpr float full = design::dimensions::RADIUS_FULL; // Pills, circular
   };
 
   //==========================================================================

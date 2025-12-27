@@ -20,7 +20,7 @@ SkiaSpectrumComponent::SkiaSpectrumComponent(FFTSize fftSize)
 {
     // Set target FPS to 60 for smooth visualization
     setTargetFPS(60);
-    startTimerHz(60);
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60);
     
     int numPoints = 1 << (int)fftSize;
     fftData_.assign(numPoints * 2, 0.0f);

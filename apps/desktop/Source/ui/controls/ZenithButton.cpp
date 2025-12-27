@@ -14,6 +14,7 @@
 
 #ifdef ZENITH_USE_SKIA
 #include "../design-system/ZenithDesignSystem.h" // Add design system include
+#include "../design-system/ZenithIcons.h" // Add icons include
 #include <core/SkBlurTypes.h>
 #include <core/SkFont.h>
 #include <core/SkMaskFilter.h>
@@ -67,6 +68,12 @@ void ZenithButton::setIcon(sk_sp<SkImage> icon) {
   layoutDirty_ = true;
   repaint();
 }
+
+void ZenithButton::setIconPath(const SkPath& path) {
+  iconPath_ = path;
+  layoutDirty_ = true;
+  repaint();
+}
 #endif
 
 void ZenithButton::setIconText(const juce::String &iconText) {
@@ -117,13 +124,13 @@ void ZenithButton::setEnabled(bool enabled) {
 void ZenithButton::mouseEnter(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
   hovered_ = true;
-  repaint();
+  animateTo("hover", 1.0f, 150);
 }
 
 void ZenithButton::mouseExit(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
   hovered_ = false;
-  repaint();
+  animateTo("hover", 0.0f, 200);
 }
 
 void ZenithButton::mouseDown(const juce::MouseEvent &e) {
@@ -183,11 +190,11 @@ float ZenithButton::getButtonHeight() const {
 float ZenithButton::getCornerRadius() const {
   switch (size_) {
   case Size::Small:
-    return 4.0f;
+    return design::dimensions::RADIUS_SM;
   case Size::Large:
-    return 8.0f;
+    return design::dimensions::RADIUS_LG;
   default:
-    return 6.0f; // Medium
+    return design::dimensions::RADIUS_SM; // Medium
   }
 }
 
@@ -260,7 +267,13 @@ void ZenithButton::drawSkia(SkCanvas *canvas) {
 
 SkColor ZenithButton::getBackgroundColor() const {
   SkColor base;
-  uint8_t alpha = pressed_ ? 200 : (hovered_ ? 180 : 150);
+  float hoverAnim = getAnimatedValue("hover");
+  
+  uint8_t normalAlpha = 150;
+  uint8_t hoverAlpha = 180;
+  uint8_t currentAlpha = (uint8_t)(normalAlpha + (hoverAlpha - normalAlpha) * hoverAnim);
+  
+  if (pressed_) currentAlpha = 200;
 
   switch (style_) {
   case Style::Primary:
@@ -276,9 +289,9 @@ SkColor ZenithButton::getBackgroundColor() const {
     base = design::colors::GREEN;
     break;
   case Style::Ghost:
-    base = hovered_ ? design::lighten(design::colors::BG_DARK, 0.1f)
-                    : SK_ColorTRANSPARENT;
-    alpha = hovered_ ? 100 : 0;
+    base = design::lighten(design::colors::BG_DARK, 0.1f);
+    currentAlpha = (uint8_t)(100 * hoverAnim);
+    if (pressed_) currentAlpha = 150;
     break;
   case Style::Secondary:
   default:
@@ -288,14 +301,14 @@ SkColor ZenithButton::getBackgroundColor() const {
 
   if (toggleable_ && toggleState_) {
     base = getGlowColor();
-    alpha = 200;
+    currentAlpha = 200;
   }
 
   if (!isEnabled()) {
-    alpha = 80;
+    currentAlpha = 80;
   }
 
-  return SkColorSetA(base, alpha);
+  return SkColorSetA(base, currentAlpha);
 }
 
 SkColor ZenithButton::getTextColor() const {
@@ -403,6 +416,33 @@ void ZenithButton::drawIcon(SkCanvas *canvas, const SkRect &rect) {
     canvas->drawSimpleText(str.c_str(), str.length(), SkTextEncoding::kUTF8,
                            rect.centerX() - textWidth / 2,
                            rect.centerY() + getFontSize() * 0.35f, font, paint);
+  } else if (!iconPath_.isEmpty()) {
+     // Use ZenithIcons helper if available, or manual scaling
+     // Since we included ZenithIcons.h, we can use drawIconCentered? 
+     // ZenithIcons.h functions are in zenith::icons namespace.
+     // Let's use it for consistency.
+     
+     icons::IconStyle style;
+     style.color = getTextColor();
+     // Active/Pressed state handling
+     if (toggleable_ && toggleState_) {
+         style.filled = true;
+         // Brighten color for active state if appropriate
+         style.color = SK_ColorWHITE; 
+     }
+     
+     // Highlight on hover
+     if (hovered_ && !toggleState_) {
+          style.color = SK_ColorWHITE;
+     }
+
+     style.strokeWidth = icons::STROKE_REGULAR;
+     
+     // Calculate size
+     float size = std::min(rect.width(), rect.height());
+     
+     icons::drawIconCentered(canvas, iconPath_, rect, size, style);
+      
   } else if (icon_ != nullptr) {
     SkPaint paint;
     paint.setAntiAlias(true);
@@ -461,7 +501,7 @@ void ZenithButton::calculateLayout() {
   float iconSize = getFontSize() + 4.0f;
   float spacing = 6.0f;
 
-  bool hasIcon = iconText_.isNotEmpty() || icon_ != nullptr;
+  bool hasIcon = iconText_.isNotEmpty() || icon_ != nullptr || !iconPath_.isEmpty();
   bool hasText = text_.isNotEmpty() && iconPosition_ != IconPosition::Only;
 
   if (hasIcon && hasText) {

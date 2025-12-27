@@ -29,6 +29,7 @@ public:
   enum Orientation { Vertical, Horizontal };
 
   ZenithSlider();
+  explicit ZenithSlider(const juce::String &name);
   explicit ZenithSlider(Orientation orientation);
   ZenithSlider(const juce::String &name, SkColor color);
   ~ZenithSlider() override;
@@ -63,6 +64,22 @@ public:
   // Helper to get display value (assuming just value for now)
   float getDisplayValue() const { return value_; }
 
+  // Fader specific
+  void setShowDBScale(bool show) {
+    showDBScale_ = show;
+    repaint();
+  }
+  
+  void setUnitySnap(bool enabled, float unityValue = 0.793701f) {
+    unitySnap_ = enabled;
+    unityValue_ = unityValue;
+    // Note: The logic for actual snapping during drag would need to be in mouseDrag
+    // Since we use base mouseDrag, we might need to override it if we want strong snapping
+    // or just implement a visual snap?
+    // For now, let's just do visual indication.
+    repaint();
+  }
+
   //==========================================================================
   // ZenithControl / SkiaComponent Overrides
   //==========================================================================
@@ -90,6 +107,11 @@ private:
 
   bool showFillBar_ = true;
   bool bipolar_ = false;
+  
+  // Fader specific
+  bool showDBScale_ = false;
+  bool unitySnap_ = false;
+  float unityValue_ = 0.793701f;
 
   // Members used in .cpp
   float value_ = 0.0f;
@@ -111,8 +133,12 @@ private:
   void drawFillBar(SkCanvas *canvas, float handlePos);
   void drawHandle(SkCanvas *canvas, float handlePos);
   void drawValueTooltip(SkCanvas *canvas, float handlePos);
+  void drawDBScale(SkCanvas *canvas);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithSlider)
 };
+
+// Legacy alias for backward compatibility
+using SkiaSlider = ZenithSlider;
 
 } // namespace zenith

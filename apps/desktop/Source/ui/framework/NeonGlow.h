@@ -21,7 +21,8 @@
 #include "../../Settings.h"
 #include "../../Settings.h"
 #include "ZenithDesignSystem.h"
-#include "../design-system/ZenithTheme.h"
+#include "../design-system/ColorBridge.h"
+// #include "../design-system/ZenithTheme.h" // Deprecated
 #include <core/SkBlurTypes.h>
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
@@ -265,19 +266,14 @@ public:
     // Determine peak color based on level
     SkColor peakColor;
     
-    juce::Colour cError = ZenithTheme::Colors::error;
-    juce::Colour cWarning = ZenithTheme::Colors::warning;
-    juce::Colour cSuccess = ZenithTheme::Colors::success;
-    juce::Colour cInfo = ZenithTheme::Colors::accent_primary;
-
     if (value > 0.95f) {
-      peakColor = SkColorSetRGB(cError.getRed(), cError.getGreen(), cError.getBlue()); // Clipping
+      peakColor = design::colors::DANGER; // Clipping
     } else if (value > 0.8f) {
-      peakColor = SkColorSetRGB(cWarning.getRed(), cWarning.getGreen(), cWarning.getBlue()); // Hot
+      peakColor = design::colors::WARNING; // Hot
     } else if (value > 0.5f) {
-      peakColor = SkColorSetRGB(cSuccess.getRed(), cSuccess.getGreen(), cSuccess.getBlue()); // Good
+      peakColor = design::colors::SUCCESS; // Good
     } else {
-      peakColor = SkColorSetRGB(cInfo.getRed(), cInfo.getGreen(), cInfo.getBlue()); // Low
+      peakColor = design::colors::ACCENT_PRIMARY; // Low
     }
 
     // Draw glow at peak position

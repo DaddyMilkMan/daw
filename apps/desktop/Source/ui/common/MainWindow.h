@@ -12,8 +12,10 @@
 #include "../browser/BrowserPanel.h"
 #include "../controls/SkiaButton.h"
 #include "../framework/SkiaMainWindowIntegration.h"
+#include "../framework/AuroraBackground.h"
 #include "../mixer/MixerComponent.h"
 #include "../session/SessionViewComponent.h"
+#include "../design-system/ZenithLookAndFeel.h"
 #include "../transport/TransportBar.h"
 #include "ArrangementComponent.h"
 #include "BottomBar.h"
@@ -44,6 +46,7 @@ class ZenithMenuBar;
 class ZenithHubComponent;
 class ZenithKnob;
 class ProjectFileIO;
+class CollaborationPresenceBar;
 namespace ai {
 class UXDirectorAgent;
 class PresetGeneticistAgent;
@@ -51,7 +54,6 @@ class PresetGeneticistAgent;
 namespace mcp {
 class MCPServer;
 } // namespace mcp
-} // namespace zenith
 
 //==============================================================================
 /**
@@ -78,6 +80,8 @@ public:
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseDrag(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
+  
+  void handleAnimationTimer();
 
 protected:
   void drawSkiaContent(SkCanvas *canvas) override;
@@ -87,10 +91,21 @@ public:
                   Component *originatingComponent) override;
 
 private:
+  struct AnimationTimer : public juce::Timer {
+      MainComponent& owner;
+      AnimationTimer(MainComponent& o) : owner(o) {}
+      void timerCallback() override { owner.handleAnimationTimer(); }
+  };
+  std::unique_ptr<AnimationTimer> animationTimer_;
+
   juce::Component *activeDragComponent = nullptr;
   juce::Rectangle<int> dragStartBounds;
 
+  zenith::AuroraBackground aurora_;
+  float animationTime_ = 0.0f;
+
   void openPianoRoll(const juce::String &trackId, const juce::String &clipId);
+  void setMainUiVisible(bool shouldBeVisible);
 
   zenith::Engine &engine;
   zenith::ProjectState &projectState;
@@ -102,14 +117,13 @@ private:
   std::unique_ptr<zenith::MainLayoutComponent> mainLayout;
   std::unique_ptr<zenith::RightSidePanel> rightSidePanel;
   std::unique_ptr<zenith::BottomBar> bottomBar;
-  std::unique_ptr<zenith::WingmanPanel> wingmanPanelPtr_;
+  std::unique_ptr<CollaborationPresenceBar> presenceBar;
 
   juce::MidiKeyboardState midiKeyboardState;
 
   void handleImportAudio();
 
-  std::unique_ptr<zenith::ZenithHubComponent> hubComponent;
-  std::unique_ptr<zenith::ZenithKnob> volumeKnob;
+  std::unique_ptr<ZenithHubComponent> hubComponent;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
@@ -154,12 +168,15 @@ private:
   std::unique_ptr<zenith::CommandAPI> commandAPI;
   std::unique_ptr<zenith::ClipSynchronizer> clipSynchronizer;
   std::unique_ptr<zenith::RecentProjectManager> recentProjectManager_;
+  std::unique_ptr<zenith::ZenithLookAndFeel> lookAndFeel;
 
   std::unique_ptr<MainComponent> mainComponent;
 
-  std::unique_ptr<zenith::ai::UXDirectorAgent> uxDirector;
-  std::unique_ptr<zenith::ai::PresetGeneticistAgent> presetGeneticist;
-  std::unique_ptr<zenith::mcp::MCPServer> mcpServer;
+  std::unique_ptr<ai::UXDirectorAgent> uxDirector;
+  std::unique_ptr<ai::PresetGeneticistAgent> presetGeneticist;
+  std::unique_ptr<mcp::MCPServer> mcpServer;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };
+
+} // namespace zenith
