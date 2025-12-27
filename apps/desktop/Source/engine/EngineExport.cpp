@@ -60,7 +60,8 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
   prepareTracks(offlineBlockSize,
                 sampleRate); // Prepare tracks for new rate/size
   if (audioRenderer_) {
-    audioRenderer_->prepare(sampleRate, offlineBlockSize, tracks_.size(),
+    // AudioRenderer is stateless, prepare context instead
+    renderContext_.prepare(sampleRate, offlineBlockSize, tracks_.size(),
                             auxBuses_.size());
   }
 
@@ -109,6 +110,7 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
         tmpPlugins.push_back(p);
 
       audioRenderer_->renderAudioGraph(
+          renderContext_, // Pass context
           renderBuffer, samplesToRender, samplesRendered, trackPtrs, auxPtrs,
           routingGraph_, masterLimiter_, tmpPlugins, tempoMap_.get(),
           &dummyMidi, nullptr, 0);
@@ -131,7 +133,7 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
 
   prepareTracks(originalSize, originalRate);
   if (audioRenderer_) {
-    audioRenderer_->prepare(originalRate, originalSize, tracks_.size(),
+    renderContext_.prepare(originalRate, originalSize, tracks_.size(),
                             auxBuses_.size());
   }
 
@@ -187,7 +189,7 @@ bool Engine::exportProject(const ExportOptions &options) {
   const int blockSize = 4096;
   juce::AudioBuffer<float> renderBuffer(2, blockSize);
   if (audioRenderer_) {
-    audioRenderer_->prepare(options.sampleRate, blockSize, tracks_.size(),
+    renderContext_.prepare(options.sampleRate, blockSize, tracks_.size(),
                             auxBuses_.size());
   }
 
@@ -206,14 +208,8 @@ bool Engine::exportProject(const ExportOptions &options) {
     int numSamples =
         (int)juce::jmin((juce::int64)blockSize, totalSamples - samplesWritten);
 
-    // Render Mix - create raw pointer vectors for export
-    std::vector<zenith::Track*> trackPtrs;
-    std::vector<zenith::AuxBus*> auxPtrs;
-    for (const auto& t : tracks_) { if (t) trackPtrs.push_back(t.get()); }
-    for (const auto& a : auxBuses_) { if (a) auxPtrs.push_back(a.get()); }
-    
     // Use Engine's wrapper which handles graph rendering
-    renderAudioGraph(renderBuffer, numSamples, samplesWritten, trackPtrs, auxPtrs, nullptr);
+    renderOfflineBlock(renderContext_, renderBuffer, numSamples, samplesWritten);
 
     // Apply Dithering
     if (options.enableDither && options.bitDepth < 32) {
@@ -294,24 +290,6 @@ double Engine::autoDetectProjectDuration() const {
   return maxDuration;
 }
 
-void Engine::renderOfflineBlock(juce::AudioBuffer<float> &buffer, int numSamples,
-                             juce::int64 position) {
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-
-  // Build raw pointer vectors for AudioRenderer
-  std::vector<Track *> trackPtrs;
-  std::vector<AuxBus *> auxPtrs;
-  for (const auto &t : tracks_) {
-    if (t)
-      trackPtrs.push_back(t.get());
-  }
-  for (const auto &a : auxBuses_) {
-    if (a)
-      auxPtrs.push_back(a.get());
-  }
-
-  juce::MidiBuffer emptyMidi;
-  renderAudioGraph(buffer, numSamples, position, trackPtrs, auxPtrs, &emptyMidi);
-}
+// function removed (moved to Engine.cpp with updated signature)
 
 } // namespace zenith

@@ -20,7 +20,7 @@ namespace zenith {
 class AutoSaveIndicator : public SkiaComponent {
 public:
   AutoSaveIndicator(ProjectState &state) : projectState(state) {
-    startTimer(500); // Check state every 500ms
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(500); // Check state every 500ms
     setWantsKeyboardFocus(false);
   }
 

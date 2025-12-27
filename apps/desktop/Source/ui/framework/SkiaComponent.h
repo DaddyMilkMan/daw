@@ -201,6 +201,15 @@ namespace zenith {
     static void setTargetFPS(int fps);
     static int getTargetFPS();
 
+    void setHelpText(const juce::String &title, const juce::String &description) {
+      helpTitle_ = title;
+      helpDescription_ = description;
+    }
+
+    // Global callback for "Info View" style help (Ableton-like)
+    static std::function<void(const juce::String &, const juce::String &)>
+        globalHelpCallback;
+
   protected:
     void drawChildren(SkCanvas *canvas); // Helper to draw child components
     SkCanvas *getSkiaCanvas(juce::Graphics &g);
@@ -210,6 +219,8 @@ namespace zenith {
 
   private:
     bool isHovered_ = false;
+    juce::String helpTitle_;
+    juce::String helpDescription_;
     bool needsRepaint_ = true;
     SkColor glowColor_ = SkColorSetRGB(0, 255, 255);
     float glowRadius_ = 0.0f;

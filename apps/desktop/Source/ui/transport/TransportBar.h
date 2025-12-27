@@ -89,9 +89,12 @@ public:
   std::function<void()> onPlayClicked;
   std::function<void()> onStopClicked;
   std::function<void()> onRecordClicked;
+  std::function<void()> onLoopToggled;
+  std::function<void()> onRewind;
   std::function<void()> onViewToggleClicked;
   std::function<void()> onSettingsClicked;
   std::function<void()> onExportClicked;
+  std::function<void()> onClearAllSolos;
 
 private:
   bool isPlaying_ = false;
@@ -109,6 +112,10 @@ private:
   juce::Rectangle<int> viewToggleButtonBounds_;
   juce::Rectangle<int> settingsButtonBounds_;
   juce::Rectangle<int> exportButtonBounds_;
+
+  // Dynamic layout bounds
+  juce::Rectangle<int> centerInfoBounds_;
+  juce::Rectangle<int> cpuMeterBounds_;
 
   // Interaction states
   InteractionState playState_;

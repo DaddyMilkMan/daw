@@ -34,19 +34,10 @@ void AuxBusTrack::getNextAudioBlock(
     }
   }
 
-  // 3. Process Plugins (Effects)
+  // 3. Process Plugins and Mixer (delegated to Processor)
+  juce::AudioSourceChannelInfo blockInfo(bufferToFill.buffer, bufferToFill.startSample, numSamples);
   juce::MidiBuffer emptyMidi;
-  juce::AudioBuffer<float> proxyBuffer(
-      bufferToFill.buffer->getArrayOfWritePointers(),
-      bufferToFill.buffer->getNumChannels(), bufferToFill.startSample,
-      numSamples);
-  processPluginChain(proxyBuffer, emptyMidi, numSamples, sidechainBuffer);
-
-  // 4. Mixer (Volume/Pan for bus output)
-  applyGainAndPan(proxyBuffer, numSamples);
-
-  // 5. Metering
-  updateLevelMeters(proxyBuffer, numSamples);
+  processor->processBlock(blockInfo, emptyMidi, {}, sidechainBuffer);
 }
 
 } // namespace zenith

@@ -43,4 +43,9 @@ using SkiaCanvasComponent = SkiaComponent;
 // Alias for lightweight widget system
 using SkiaWidget = SkiaComponent;
 
+// Legacy aliases for backward compatibility during refactor
+using SkiaButton = ZenithButton;
+using SkiaKnob = ZenithKnob;
+using SkiaSlider = ZenithSlider;
+
 } // namespace zenith

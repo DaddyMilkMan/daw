@@ -65,7 +65,7 @@ PresetGeneticistView::PresetGeneticistView(
   };
 
   // Start UI update timer at 60Hz
-  startTimerHz(60);
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60);
 }
 
 PresetGeneticistView::~PresetGeneticistView() { stopTimer(); }

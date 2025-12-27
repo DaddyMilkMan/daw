@@ -9,6 +9,7 @@
 */
 
 #include "FreezeProgressOverlay.h"
+#include "../design-system/ZenithTypography.h"
 
 // Skia Includes
 #ifdef ZENITH_USE_SKIA
@@ -39,7 +40,7 @@ constexpr float kStrokeWidth = 12.0f;
 FreezeProgressOverlay::FreezeProgressOverlay() {
   setAlwaysOnTop(true);
   setInterceptsMouseClicks(true, true); // Block clicks to underlying components
-  startTimerHz(60);                     // Animation loop
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60);                     // Animation loop
 }
 
 FreezeProgressOverlay::~FreezeProgressOverlay() {}
@@ -80,7 +81,7 @@ void FreezeProgressOverlay::mouseDown(const juce::MouseEvent &e) {
 
 void FreezeProgressOverlay::paint(juce::Graphics &g) {
   // Draw text (Skia handles the graphics background)
-  g.setFont(juce::Font(20.0f, juce::Font::bold));
+  g.setFont(ZenithTypography::getHeaderFont().withHeight(20.0f));
   g.setColour(juce::Colours::white);
 
   auto bounds = getLocalBounds();
@@ -90,7 +91,7 @@ void FreezeProgressOverlay::paint(juce::Graphics &g) {
              center.y + layout::kTextYOffset, 100, 30,
              juce::Justification::centred);
 
-  g.setFont(juce::Font(16.0f));
+  g.setFont(ZenithTypography::getBodyFont().withHeight(16.0f));
   g.setColour(juce::Colours::lightgrey);
   g.drawText(statusText_, bounds.getX(), center.y + layout::kStatusYOffset,
              bounds.getWidth(), 30, juce::Justification::centred);

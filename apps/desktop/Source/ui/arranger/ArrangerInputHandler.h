@@ -31,6 +31,8 @@ enum class DragMode {
     MoveClips,       ///< Dragging selected clips
     ResizeClipLeft,  ///< Resizing clip from left edge
     ResizeClipRight, ///< Resizing clip from right edge
+    ResizeFadeIn,    ///< Resizing fade-in handle
+    ResizeFadeOut,   ///< Resizing fade-out handle
     Marquee          ///< Marquee selection in progress
 };
 

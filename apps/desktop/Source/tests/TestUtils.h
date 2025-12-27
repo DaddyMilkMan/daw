@@ -69,7 +69,13 @@ public:
     desc.category = "Test";
     desc.manufacturerName = "Zenith Tests";
     desc.version = "1.0";
+    desc.version = "1.0";
     desc.uniqueId = 0;
+  }
+
+  // Helper to expose addParameter for test setups
+  void addTestParameter(juce::AudioProcessorParameter* param) {
+      juce::AudioProcessor::addParameter(param);
   }
 };
 

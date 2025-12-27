@@ -211,7 +211,7 @@ public:
    * @param sampleRate Sample rate for the rendered clip.
    * @return New clip containing the flattened audio.
    */
-  std::unique_ptr<Clip> flatten(double sampleRate);
+  std::unique_ptr<Clip> flatten(double sampleRate, const juce::File& outputDirectory);
 
   //==========================================================================
   // Expansion State (for UI)

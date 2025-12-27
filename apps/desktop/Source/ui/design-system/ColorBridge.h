@@ -21,98 +21,98 @@
 
 #pragma once
 
-#include "ZenithTheme.h"
+#include "ZenithDesignSystem.h"
 #include <include/core/SkColor.h>
 #include <juce_graphics/juce_graphics.h>
 
 namespace zenith {
 namespace design {
 
-// ============================================================================
-// COLOR CONVERSION UTILITIES
-// ============================================================================
-
-/**
- * Convert JUCE Colour to Skia SkColor.
- * Both use ARGB format, so this is a direct conversion.
- */
-inline SkColor toSkColor(const juce::Colour& c) {
-    return SkColorSetARGB(c.getAlpha(), c.getRed(), c.getGreen(), c.getBlue());
-}
-
-/**
- * Convert Skia SkColor to JUCE Colour.
- */
-inline juce::Colour toJuceColour(SkColor c) {
-    return juce::Colour((juce::uint8)SkColorGetR(c), 
-                        (juce::uint8)SkColorGetG(c), 
-                        (juce::uint8)SkColorGetB(c), 
-                        (juce::uint8)SkColorGetA(c));
-}
-
-/**
- * Convert JUCE Colour to SkColor with alpha modification.
- */
-inline SkColor toSkColor(const juce::Colour& c, float alpha) {
-    return SkColorSetARGB(
-        static_cast<U8CPU>(alpha * 255.0f),
-        c.getRed(),
-        c.getGreen(),
-        c.getBlue()
-    );
-}
-
-// ============================================================================
-// UNIFIED COLOR ACCESSORS (Skia format, sourced from ZenithTheme)
-// ============================================================================
-// These provide a single source of truth using ZenithTheme as the canonical
-// color definitions, with automatic conversion to SkColor for Skia rendering.
-
-namespace unified {
-
-// Background layers
-inline SkColor bg_00() { return toSkColor(ZenithTheme::Colors::bg_00); }
-inline SkColor bg_01() { return toSkColor(ZenithTheme::Colors::bg_01); }
-inline SkColor bg_02() { return toSkColor(ZenithTheme::Colors::bg_02); }
-inline SkColor bg_03() { return toSkColor(ZenithTheme::Colors::bg_03); }
-inline SkColor bg_04() { return toSkColor(ZenithTheme::Colors::bg_04); }
-
-// Borders
-inline SkColor border_subtle() { return toSkColor(ZenithTheme::Colors::border_subtle); }
-inline SkColor border_default() { return toSkColor(ZenithTheme::Colors::border_default); }
-inline SkColor border_strong() { return toSkColor(ZenithTheme::Colors::border_strong); }
-inline SkColor border_focus() { return toSkColor(ZenithTheme::Colors::border_focus); }
-
-// Text hierarchy
-inline SkColor text_primary() { return toSkColor(ZenithTheme::Colors::text_primary); }
-inline SkColor text_secondary() { return toSkColor(ZenithTheme::Colors::text_secondary); }
-inline SkColor text_tertiary() { return toSkColor(ZenithTheme::Colors::text_tertiary); }
-inline SkColor text_inverse() { return toSkColor(ZenithTheme::Colors::text_inverse); }
-
-// Accent colors
-inline SkColor accent_primary() { return toSkColor(ZenithTheme::Colors::accent_primary); }
-inline SkColor accent_secondary() { return toSkColor(ZenithTheme::Colors::accent_secondary); }
-inline SkColor accent_hover() { return toSkColor(ZenithTheme::Colors::accent_hover); }
-inline SkColor accent_pressed() { return toSkColor(ZenithTheme::Colors::accent_pressed); }
-inline SkColor accent_subtle() { return toSkColor(ZenithTheme::Colors::accent_subtle); }
-inline SkColor hover_overlay() { return toSkColor(ZenithTheme::Colors::hover_overlay); }
-
-// Semantic colors
-inline SkColor success() { return toSkColor(ZenithTheme::Colors::success); }
-inline SkColor warning() { return toSkColor(ZenithTheme::Colors::warning); }
-inline SkColor error() { return toSkColor(ZenithTheme::Colors::error); }
-inline SkColor info() { return toSkColor(ZenithTheme::Colors::info); }
-
-// Audio-specific colors
-inline SkColor waveform_audio() { return toSkColor(ZenithTheme::Colors::waveform_audio); }
-inline SkColor waveform_midi() { return toSkColor(ZenithTheme::Colors::waveform_midi); }
-inline SkColor automation() { return toSkColor(ZenithTheme::Colors::automation); }
-inline SkColor playhead() { return toSkColor(ZenithTheme::Colors::playhead); }
-
-// Track colors (dynamic)
-inline SkColor getTrackColor(int index, float saturation = 0.65f, float brightness = 0.75f) {
-    return toSkColor(ZenithTheme::Colors::getTrackColor(index, saturation, brightness));
-}
+    // ============================================================================
+    // COLOR CONVERSION UTILITIES
+    // ============================================================================
+    
+    /**
+     * Convert JUCE Colour to Skia SkColor.
+     */
+    inline SkColor toSkColor(const juce::Colour& c) {
+        return SkColorSetARGB(c.getAlpha(), c.getRed(), c.getGreen(), c.getBlue());
+    }
+    
+    /**
+     * Convert Skia SkColor to JUCE Colour.
+     */
+    inline juce::Colour toJuceColour(SkColor c) {
+        return juce::Colour((juce::uint8)SkColorGetR(c), 
+                            (juce::uint8)SkColorGetG(c), 
+                            (juce::uint8)SkColorGetB(c), 
+                            (juce::uint8)SkColorGetA(c));
+    }
+    
+    /**
+     * Convert JUCE Colour to SkColor with alpha modification.
+     */
+    inline SkColor toSkColor(const juce::Colour& c, float alpha) {
+        return SkColorSetARGB(
+            static_cast<U8CPU>(alpha * 255.0f),
+            c.getRed(),
+            c.getGreen(),
+            c.getBlue()
+        );
+    }
+    
+    // ============================================================================
+    // UNIFIED COLOR ACCESSORS (Skia format, sourced from ZenithDesignSystem)
+    // ============================================================================
+    
+    namespace unified {
+    
+    // Background layers
+    inline SkColor bg_00() { return design::colors::BG_00; }
+    inline SkColor bg_01() { return design::colors::BG_01; }
+    inline SkColor bg_02() { return design::colors::BG_02; }
+    inline SkColor bg_03() { return design::colors::BG_03; }
+    inline SkColor bg_04() { return design::colors::BG_04; }
+    
+    // Borders
+    inline SkColor border_subtle() { return design::colors::BORDER_SUBTLE; }
+    inline SkColor border_default() { return design::colors::BORDER_DEFAULT; }
+    inline SkColor border_strong() { return design::colors::BORDER_STRONG; }
+    inline SkColor border_focus() { return design::colors::BORDER_FOCUS; }
+    
+    // Text hierarchy
+    inline SkColor text_primary() { return design::colors::TEXT_PRIMARY; }
+    inline SkColor text_secondary() { return design::colors::TEXT_SECONDARY; }
+    inline SkColor text_tertiary() { return design::colors::TEXT_TERTIARY; }
+    inline SkColor text_inverse() { return design::colors::TEXT_INVERSE; }
+    
+    // Accent colors
+    inline SkColor accent_primary() { return design::colors::ACCENT_PRIMARY; }
+    inline SkColor accent_secondary() { return design::colors::ACCENT_SECONDARY; }
+    inline SkColor accent_hover() { return design::colors::CYAN; } // Default hover
+    inline SkColor accent_pressed() { return design::colors::CYAN; } // Default pressed
+    inline SkColor accent_subtle() { return design::withAlpha(design::colors::ACCENT_PRIMARY, 0.1f); }
+    inline SkColor hover_overlay() { return design::colors::GLASS_HOVER; }
+    
+    // Semantic colors
+    inline SkColor success() { return design::colors::SUCCESS; }
+    inline SkColor warning() { return design::colors::WARNING; }
+    inline SkColor error() { return design::colors::DANGER; }
+    inline SkColor info() { return design::colors::INFO; }
+    
+    // Audio-specific colors
+    inline SkColor waveform_audio() { return design::colors::WAVEFORM_AUDIO; }
+    inline SkColor waveform_midi() { return design::colors::WAVEFORM_MIDI; }
+    inline SkColor automation() { return design::colors::AUTOMATION; }
+    inline SkColor playhead() { return design::colors::PLAYHEAD; }
+    
+    // Track colors (dynamic)
+    inline SkColor getTrackColor(int index, float saturation = 0.65f, float brightness = 0.75f) {
+        // Simple hue rotation based on index
+        float hue = std::fmod(index * 0.618033988749895f, 1.0f);
+        SkScalar hsv[3] = {hue * 360.0f, saturation, brightness};
+        return SkHSVToColor(hsv);
+    }
 
 // Alpha/brightness modifiers
 inline SkColor withAlpha(SkColor color, float alpha) {

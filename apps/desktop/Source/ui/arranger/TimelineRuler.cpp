@@ -8,6 +8,8 @@
 // POLISH: flattened background (bg2, no gradients)
 
 #include "TimelineRuler.h"
+#include "../design-system/ZenithDesignSystem.h"
+#include "../design-system/ColorBridge.h"
 
 #ifdef ZENITH_USE_SKIA
 #include "../Theme.h"
@@ -22,10 +24,17 @@ TimelineRuler::TimelineRuler() {
   setSize(800, 30);
 
   // Start 60Hz animation timer for smooth hover effects
-  startTimerHz(60);
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60);
 
   // Enable mouse events
   setMouseCursor(juce::MouseCursor::PointingHandCursor);
+}
+
+void TimelineRuler::resized() {
+}
+
+void TimelineRuler::timerCallback() {
+  repaint();
 }
 
 void TimelineRuler::setVisibleRange(double start, double length) {
@@ -42,6 +51,147 @@ double TimelineRuler::pixelsToBeats(int pixels) const {
   return viewStartBeat + (pixels / pixelsPerBeat);
 }
 
+void TimelineRuler::setLoopRange(double startBeat, double endBeat, bool enabled) {
+  if (loopStartBeat != startBeat || loopEndBeat != endBeat ||
+      loopEnabled != enabled) {
+    loopStartBeat = startBeat;
+    loopEndBeat = endBeat;
+    loopEnabled = enabled;
+    repaint();
+  }
+}
+
+void TimelineRuler::mouseMove(const juce::MouseEvent &event) {
+  mousePosition = event.getPosition();
+
+  // Calculate which measure is being hovered
+  double beatAtMouse = pixelsToBeats(mousePosition.x);
+  hoveredMeasure = static_cast<int>(beatAtMouse / 4.0) + 1;
+
+  // Check hover state for loop handles
+  if (loopEnabled) {
+      int loopStartX = beatsToPixels(loopStartBeat);
+      int loopEndX = beatsToPixels(loopEndBeat);
+      int tolerance = 8;
+      
+      bool overStart = std::abs(event.x - loopStartX) < tolerance;
+      bool overEnd = std::abs(event.x - loopEndX) < tolerance;
+      bool overRegion = event.x > loopStartX && event.x < loopEndX && event.y < 12;
+      
+      if (overStart || overEnd)
+          setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
+      else if (overRegion)
+          setMouseCursor(juce::MouseCursor::DraggingHandCursor);
+      else
+          setMouseCursor(juce::MouseCursor::PointingHandCursor);
+  } else {
+      setMouseCursor(juce::MouseCursor::PointingHandCursor);
+  }
+
+  repaint();
+}
+
+void TimelineRuler::mouseEnter(const juce::MouseEvent &event) {
+  isHovered = true;
+  mousePosition = event.getPosition();
+}
+
+void TimelineRuler::mouseExit(const juce::MouseEvent &event) {
+  isHovered = false;
+  hoveredMeasure = -1;
+  repaint();
+}
+
+void TimelineRuler::mouseDown(const juce::MouseEvent &event) {
+  double beatAtClick = pixelsToBeats(event.x);
+  
+  if (loopEnabled) {
+      int loopStartX = beatsToPixels(loopStartBeat);
+      int loopEndX = beatsToPixels(loopEndBeat);
+      int tolerance = 8;
+      
+      if (std::abs(event.x - loopStartX) < tolerance) {
+          currentDragMode = DragMode::MoveLoopStart;
+          dragStartBeat = loopStartBeat;
+          return;
+      }
+      
+      if (std::abs(event.x - loopEndX) < tolerance) {
+          currentDragMode = DragMode::MoveLoopEnd;
+          dragStartBeat = loopEndBeat;
+          return;
+      }
+      
+      if (event.x > loopStartX && event.x < loopEndX && event.y < 12) {
+          currentDragMode = DragMode::MoveLoopRegion;
+          dragStartBeat = beatAtClick;
+          initialLoopStart = loopStartBeat;
+          initialLoopEnd = loopEndBeat;
+          return;
+      }
+  }
+
+  // Click-to-seek functionality
+  currentDragMode = DragMode::Seek;
+  
+  // Snap to nearest beat for seek
+  double snapBeat = std::round(beatAtClick);
+
+  // Call seek callback if set
+  if (onSeek)
+    onSeek(snapBeat);
+}
+
+void TimelineRuler::mouseDrag(const juce::MouseEvent &event) {
+    if (currentDragMode == DragMode::None) return;
+    
+    double beatAtMouse = pixelsToBeats(event.x);
+    
+    if (currentDragMode == DragMode::Seek) {
+        if (onSeek)
+            onSeek(std::max(0.0, beatAtMouse));
+        return;
+    }
+    
+    double newStart = loopStartBeat;
+    double newEnd = loopEndBeat;
+    
+    if (currentDragMode == DragMode::MoveLoopStart) {
+        newStart = beatAtMouse;
+        // Apply snap
+        if (!event.mods.isShiftDown()) newStart = std::round(newStart * 4.0) / 4.0;
+        
+        // Constraint
+        if (newStart >= newEnd) newStart = newEnd - 0.25;
+        
+    } else if (currentDragMode == DragMode::MoveLoopEnd) {
+        newEnd = beatAtMouse;
+        // Apply snap
+        if (!event.mods.isShiftDown()) newEnd = std::round(newEnd * 4.0) / 4.0;
+        
+        // Constraint
+        if (newEnd <= newStart) newEnd = newStart + 0.25;
+        
+    } else if (currentDragMode == DragMode::MoveLoopRegion) {
+        double delta = beatAtMouse - dragStartBeat;
+        // Snap delta
+        if (!event.mods.isShiftDown()) delta = std::round(delta * 4.0) / 4.0;
+        
+        double length = initialLoopEnd - initialLoopStart;
+        newStart = initialLoopStart + delta;
+        newEnd = newStart + length;
+    }
+    
+    // Notify change
+    if (onLoopChanged) {
+        onLoopChanged(std::max(0.0, newStart), std::max(0.0, newEnd));
+    }
+}
+
+void TimelineRuler::mouseUp(const juce::MouseEvent &) {
+    currentDragMode = DragMode::None;
+}
+
 #ifdef ZENITH_USE_SKIA
 void TimelineRuler::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds();
@@ -50,7 +200,7 @@ void TimelineRuler::drawSkia(SkCanvas *canvas) {
   // POLISH: Flat background using BG_DARKER (no gradients)
   SkPaint bgPaint;
   bgPaint.setAntiAlias(true);
-  bgPaint.setColor(colors::BG_DARKER);
+  bgPaint.setColor(design::unified::bg_01());
   canvas->drawRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()),
                    bgPaint);
 
@@ -107,8 +257,8 @@ void TimelineRuler::drawSkia(SkCanvas *canvas) {
       juce::String text = juce::String(measure);
       SkPaint textPaint;
       textPaint.setAntiAlias(true);
-      textPaint.setColor(isHoveredMeasure ? colors::CYAN
-                                          : colors::TEXT_SECONDARY);
+      textPaint.setColor(isHoveredMeasure ? design::unified::accent_primary()
+                                          : design::unified::text_secondary());
       if (isHoveredMeasure)
         textPaint.setAlpha(
             static_cast<uint8_t>(255 * hoverAnimation * 0.5f + 255 * 0.5f));
@@ -125,6 +275,55 @@ void TimelineRuler::drawSkia(SkCanvas *canvas) {
       canvas->drawLine(x, bounds.getHeight() - 8, x, bounds.getHeight(),
                        tickPaint);
     }
+  }
+
+  // Draw Loop Region
+  if (loopEnabled) {
+      int loopStartX = beatsToPixels(loopStartBeat);
+      int loopEndX = beatsToPixels(loopEndBeat);
+      
+      // Only draw if visible
+      if (loopEndX >= 0 && loopStartX <= bounds.getWidth()) {
+          SkPaint bracketPaint;
+          bracketPaint.setAntiAlias(true);
+          bracketPaint.setColor(colors::NEON_GREEN);
+          bracketPaint.setStyle(SkPaint::kStroke_Style);
+          bracketPaint.setStrokeWidth(2.0f);
+          
+          float rulerTop = 2.0f;
+          float rulerBottom = 15.0f; // Limit brackets to top half
+          float bracketWidth = 8.0f;
+          
+          // Left bracket: ⌐
+          SkPath leftBracket;
+          leftBracket.moveTo(loopStartX + bracketWidth, rulerTop);
+          leftBracket.lineTo(loopStartX, rulerTop);
+          leftBracket.lineTo(loopStartX, rulerBottom);
+          canvas->drawPath(leftBracket, bracketPaint);
+          
+          // Right bracket: ¬
+          SkPath rightBracket;
+          rightBracket.moveTo(loopEndX - bracketWidth, rulerTop);
+          rightBracket.lineTo(loopEndX, rulerTop);
+          rightBracket.lineTo(loopEndX, rulerBottom);
+          canvas->drawPath(rightBracket, bracketPaint);
+          
+          // Shaded region in ruler (top strip)
+          SkPaint regionPaint;
+          regionPaint.setColor(withAlpha(colors::NEON_GREEN, 0.15f));
+          canvas->drawRect(SkRect::MakeLTRB(loopStartX, 0, loopEndX, bounds.getHeight()), regionPaint);
+          
+          // Loop Label
+          if (loopEndX - loopStartX > 60) {
+              SkFont labelFont = typography::getSkFont(typography::FONT_XS, FontWeight::Bold);
+              SkPaint textPaint;
+              textPaint.setColor(design::unified::accent_primary());
+              textPaint.setAntiAlias(true);
+              
+              const char* lbl = "LOOP";
+              canvas->drawString(lbl, loopStartX + 5, 12, labelFont, textPaint);
+          }
+      }
   }
 
   // Tooltip (preserved from original)
@@ -241,8 +440,8 @@ void TimelineRuler::drawBeatMarkers(juce::Graphics &g,
 
       // Measure number - clean and minimal
       juce::String text = juce::String(measure);
-      g.setFont(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(),
-                                  11.0f, juce::Font::plain));
+      juce::Font monoFont(juce::Font::getDefaultMonospacedFontName(), 11.0f, juce::Font::plain);
+      g.setFont(monoFont);
 
       g.setColour(isHoveredMeasure ? juce::Colour(0xff0A84FF).withAlpha(0.9f)
                                    : juce::Colours::white.withAlpha(0.5f));
@@ -284,9 +483,11 @@ void TimelineRuler::drawTooltip(juce::Graphics &g) {
   juce::String timeText = formatTimePosition(beatAtMouse);
 
   // Tooltip styling - Apple-inspired
-  juce::Font tooltipFont(juce::Font::getDefaultMonospacedFontName(), 11.0f,
-                         juce::Font::plain);
-  int textWidth = tooltipFont.getStringWidth(timeText);
+  juce::Font tooltipFont(juce::Font::getDefaultMonospacedFontName(), 11.0f, juce::Font::plain);
+  
+  juce::GlyphArrangement ga;
+  ga.addFittedText(tooltipFont, timeText, 0.0f, 0.0f, 1000.0f, 20.0f, juce::Justification::left, 1);
+  int textWidth = (int)ga.getBoundingBox(0, -1, true).getWidth();
   int tooltipWidth = textWidth + 16;
   int tooltipHeight = 24;
 
@@ -329,57 +530,6 @@ juce::String TimelineRuler::formatTimePosition(double beat) const {
   else // Between beats
     return juce::String::formatted("%d.%d.%02d", measure, beatInMeasure,
                                    static_cast<int>(fraction * 100));
-}
-
-void TimelineRuler::mouseMove(const juce::MouseEvent &event) {
-  mousePosition = event.getPosition();
-
-  // Calculate which measure is being hovered
-  double beatAtMouse = pixelsToBeats(mousePosition.x);
-  hoveredMeasure = static_cast<int>(beatAtMouse / 4.0) + 1;
-
-  repaint();
-}
-
-void TimelineRuler::mouseEnter(const juce::MouseEvent &event) {
-  isHovered = true;
-  mousePosition = event.getPosition();
-}
-
-void TimelineRuler::mouseExit(const juce::MouseEvent &event) {
-  isHovered = false;
-  hoveredMeasure = -1;
-  repaint();
-}
-
-void TimelineRuler::mouseDown(const juce::MouseEvent &event) {
-  // Click-to-seek functionality
-  double beatAtClick = pixelsToBeats(event.x);
-
-  // Snap to nearest beat
-  beatAtClick = std::round(beatAtClick);
-
-  // Call seek callback if set
-  if (onSeek)
-    onSeek(beatAtClick);
-}
-
-void TimelineRuler::timerCallback() {
-  // Smooth animation for hover effect (60Hz)
-  const float animationSpeed = 0.2f;
-  float target = isHovered ? 1.0f : 0.0f;
-
-  hoverAnimation += (target - hoverAnimation) * animationSpeed;
-
-  // Only repaint if animation is active
-  if (std::abs(hoverAnimation - target) > 0.01f)
-    repaint();
-}
-
-void TimelineRuler::resized() {
-  // Calculate pixels per beat based on width
-  if (viewLengthBeats > 0)
-    pixelsPerBeat = getWidth() / viewLengthBeats;
 }
 
 } // namespace zenith

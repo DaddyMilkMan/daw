@@ -10,7 +10,9 @@
 
 #include "BrowserModel.h"
 #include "../engine/PluginHost.h"
+#include "../engine/ZenithLogger.h"
 #include "../instruments/InstrumentRegistry.h"
+#include "FuzzyMatcher.h"
 
 
 namespace zenith {
@@ -18,9 +20,9 @@ namespace zenith {
 BrowserModel::BrowserModel(InstrumentRegistry &registry, PluginHost &host)
     : instrumentRegistry_(registry), pluginHost_(host) {
   // Default paths
-  userLibraryPaths_.add(
-      juce::File::getSpecialLocation(juce::File::userMusicDirectory)
-          .getFullPathName());
+  // userLibraryPaths_.add(
+  //    juce::File::getSpecialLocation(juce::File::userMusicDirectory)
+  //        .getFullPathName());
   // userLibraryPaths_.add(juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getFullPathName());
 
   refresh();
@@ -79,9 +81,11 @@ void BrowserModel::buildStructure() {
                                               BrowserItemType::Folder);
   rootItem->addChild(presetsNode);
 
-  // Load saved favorites and tags
+  // Load saved favorites, tags, ratings, and recent items
   loadFavorites();
   loadTags();
+  loadRatings();
+  loadRecent();
 }
 
 void BrowserModel::populateInternalInstruments() {
@@ -214,35 +218,48 @@ void BrowserModel::populateUserLibrary() {
 // Search & Filter
 //==============================================================================
 
+#include "FuzzyMatcher.h"
+
 std::vector<std::shared_ptr<BrowserItem>>
 BrowserModel::search(const juce::String &queryText) {
   std::vector<std::shared_ptr<BrowserItem>> results;
-  juce::String query = queryText.toLowerCase();
+  juce::String query = queryText.toLowerCase().trim();
 
   if (query.isEmpty())
     return results;
 
+  struct ScoredItem {
+      std::shared_ptr<BrowserItem> item;
+      int score;
+  };
+  std::vector<ScoredItem> scoredItems;
+
   for (const auto &item : allIndexableItems_) {
-    if (item == nullptr)
-      continue;
+    if (!item) continue;
 
-    juce::String itemNameLower = item->name.toLowerCase();
-    bool nameMatches = itemNameLower.contains(query);
-
-    juce::String itemCatLower = item->metadata.category.toLowerCase();
-    bool catMatches = itemCatLower.contains(query);
-
-    bool tagMatches = false;
+    int nameScore = FuzzyMatcher::score(query, item->name);
+    int catScore = FuzzyMatcher::score(query, item->metadata.category);
+    
+    int tagScore = 0;
     for (const auto &tag : item->metadata.tags) {
-      if (tag.toLowerCase().contains(query)) {
-        tagMatches = true;
-        break;
-      }
+        tagScore = std::max(tagScore, FuzzyMatcher::score(query, tag));
     }
 
-    if (nameMatches || catMatches || tagMatches) {
-      results.push_back(item);
+    int finalScore = std::max({nameScore, catScore, tagScore});
+    
+    if (finalScore > 0) {
+      scoredItems.push_back({item, finalScore});
     }
+  }
+
+  // Sort by score descending
+  std::sort(scoredItems.begin(), scoredItems.end(), [](const ScoredItem &a, const ScoredItem &b) {
+      if (a.score != b.score) return a.score > b.score;
+      return a.item->name.compareNatural(b.item->name) < 0;
+  });
+
+  for (const auto &si : scoredItems) {
+      results.push_back(si.item);
   }
 
   return getFilteredItems(results);
@@ -418,17 +435,36 @@ BrowserModel::getItemsByTag(const juce::String &tag) {
   return results;
 }
 
+void BrowserModel::setTagColor(const juce::String &tag, const juce::String &hexColor) {
+  if (tag.isEmpty()) return;
+  tagColors_[tag.toLowerCase().trim()] = hexColor;
+  saveTags();
+  sendChangeMessage();
+}
+
+juce::String BrowserModel::getTagColor(const juce::String &tag) const {
+  auto it = tagColors_.find(tag.toLowerCase().trim());
+  if (it != tagColors_.end()) return it->second;
+  return ""; // Default
+}
+
 void BrowserModel::saveTags() {
   juce::File file = getTagsFile();
-  juce::var jsonRoot;
+  juce::var jsonRoot(new juce::DynamicObject());
 
+  juce::var itemsObj(new juce::DynamicObject());
   for (const auto &[itemId, tags] : itemTags_) {
     juce::var tagArray;
-    for (const auto &tag : tags)
-      tagArray.append(tag);
-
-    jsonRoot.getDynamicObject()->setProperty(itemId, tagArray);
+    for (const auto &tag : tags) tagArray.append(tag);
+    itemsObj.getDynamicObject()->setProperty(itemId, tagArray);
   }
+  jsonRoot.getDynamicObject()->setProperty("items", itemsObj);
+
+  juce::var colorsObj(new juce::DynamicObject());
+  for (const auto &[tag, color] : tagColors_) {
+    colorsObj.getDynamicObject()->setProperty(tag, color);
+  }
+  jsonRoot.getDynamicObject()->setProperty("colors", colorsObj);
 
   file.replaceWithText(juce::JSON::toString(jsonRoot));
 }
@@ -437,28 +473,83 @@ void BrowserModel::loadTags() {
   juce::File file = getTagsFile();
   if (file.existsAsFile()) {
     auto json = juce::JSON::parse(file.loadFileAsString());
-
     if (auto *obj = json.getDynamicObject()) {
-      for (const auto &prop : obj->getProperties()) {
-        juce::String itemId = prop.name.toString();
-
-        if (prop.value.isArray()) {
-          for (int i = 0; i < prop.value.size(); ++i) {
-            juce::String tag = prop.value[i].toString();
-            itemTags_[itemId].push_back(tag);
-            allTags_.insert(tag);
+      // Load item tags
+      if (obj->hasProperty("items")) {
+          auto items = obj->getProperty("items");
+          if (auto* itemsObj = items.getDynamicObject()) {
+              for (const auto& prop : itemsObj->getProperties()) {
+                  juce::String itemId = prop.name.toString();
+                  if (prop.value.isArray()) {
+                      for (int i = 0; i < prop.value.size(); ++i) {
+                          juce::String tag = prop.value[i].toString();
+                          itemTags_[itemId].push_back(tag);
+                          allTags_.insert(tag);
+                      }
+                  }
+              }
           }
-        }
+      }
+      // Load tag colors
+      if (obj->hasProperty("colors")) {
+          auto colors = obj->getProperty("colors");
+          if (auto* colorsObj = colors.getDynamicObject()) {
+              for (const auto& prop : colorsObj->getProperties()) {
+                  tagColors_[prop.name.toString()] = prop.value.toString();
+              }
+          }
       }
     }
   }
 }
 
 juce::File BrowserModel::getTagsFile() const {
-  return juce::File::getSpecialLocation(
-             juce::File::userApplicationDataDirectory)
+  return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
       .getChildFile("ZenithDAW")
-      .getChildFile("browser_tags.json");
+      .getChildFile("browser_tags_v2.json"); // Bump version for new format
+}
+
+//==============================================================================
+// Ratings
+//==============================================================================
+
+void BrowserModel::setItemRating(std::shared_ptr<BrowserItem> item, int rating) {
+  if (!item) return;
+  itemRatings_[item->id] = juce::jlimit(0, 5, rating);
+  item->metadata.rating = itemRatings_[item->id];
+  saveRatings();
+  sendChangeMessage();
+}
+
+int BrowserModel::getItemRating(const juce::String &itemId) const {
+  auto it = itemRatings_.find(itemId);
+  if (it != itemRatings_.end()) return it->second;
+  return 0;
+}
+
+void BrowserModel::saveRatings() {
+  juce::File file = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                        .getChildFile("ZenithDAW")
+                        .getChildFile("browser_ratings.json");
+  juce::var jsonRoot(new juce::DynamicObject());
+  for (const auto &[itemId, rating] : itemRatings_) {
+    jsonRoot.getDynamicObject()->setProperty(itemId, rating);
+  }
+  file.replaceWithText(juce::JSON::toString(jsonRoot));
+}
+
+void BrowserModel::loadRatings() {
+  juce::File file = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                        .getChildFile("ZenithDAW")
+                        .getChildFile("browser_ratings.json");
+  if (file.existsAsFile()) {
+    auto json = juce::JSON::parse(file.loadFileAsString());
+    if (auto *obj = json.getDynamicObject()) {
+      for (const auto &prop : obj->getProperties()) {
+        itemRatings_[prop.name.toString()] = (int)prop.value;
+      }
+    }
+  }
 }
 
 //==============================================================================
@@ -526,6 +617,59 @@ std::vector<std::shared_ptr<BrowserItem>> BrowserModel::getFilteredItems(
   }
 
   return filtered;
+}
+
+void BrowserModel::addToRecent(std::shared_ptr<BrowserItem> item) {
+  if (!item || item->id.isEmpty() || item->isDirectory) return;
+  recentItemIds_.erase(std::remove(recentItemIds_.begin(), recentItemIds_.end(), item->id), recentItemIds_.end());
+  recentItemIds_.push_front(item->id);
+  while (recentItemIds_.size() > maxRecentSize_) recentItemIds_.pop_back();
+  saveRecent();
+  sendChangeMessage();
+}
+
+std::vector<std::shared_ptr<BrowserItem>> BrowserModel::getRecentItems() const {
+  std::vector<std::shared_ptr<BrowserItem>> results;
+  for (const auto &id : recentItemIds_) {
+    for (const auto &item : allIndexableItems_) {
+      if (item && item->id == id) {
+        results.push_back(item);
+        break;
+      }
+    }
+  }
+  return results;
+}
+
+void BrowserModel::clearRecent() {
+  recentItemIds_.clear();
+  saveRecent();
+  sendChangeMessage();
+}
+
+void BrowserModel::saveRecent() {
+  juce::File file = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                        .getChildFile("ZenithDAW")
+                        .getChildFile("browser_recent.txt");
+  juce::StringArray ids;
+  for (const auto& id : recentItemIds_)
+    ids.add(id);
+  file.create();
+  file.replaceWithText(ids.joinIntoString("\n"));
+}
+
+void BrowserModel::loadRecent() {
+  juce::File file = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                        .getChildFile("ZenithDAW")
+                        .getChildFile("browser_recent.txt");
+  if (file.existsAsFile()) {
+    juce::StringArray ids;
+    ids.addTokens(file.loadFileAsString(), "\n", "");
+    for (const auto& id : ids) {
+      if (id.isNotEmpty())
+        recentItemIds_.push_back(id);
+    }
+  }
 }
 
 } // namespace zenith

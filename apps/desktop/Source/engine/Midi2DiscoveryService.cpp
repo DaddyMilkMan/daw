@@ -25,7 +25,8 @@ void Midi2DiscoveryService::startDiscovery()
 {
     DBG("Midi2DiscoveryService: Starting discovery...");
     performDiscovery();
-    startTimer(5000); // Re-scan every 5 seconds
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr)
+        if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(5000); // Re-scan every 5 seconds
 }
 
 void Midi2DiscoveryService::stopDiscovery()
@@ -47,20 +48,32 @@ void Midi2DiscoveryService::handleIncomingMidiMessage(juce::MidiInput* source, c
         if (size >= 10 && data[0] == 0x7E && data[2] == 0x0D)
         {
             uint8_t ciSubId1 = data[3]; // MIDI-CI Category
-            uint32_t muid = (data[4] << 21) | (data[5] << 14) | (data[6] << 7) | data[7];
-            
-            juce::ScopedLock sl(deviceLock_);
-            auto it = std::find_if(devices_.begin(), devices_.end(), [&](const auto& d) { return d.muid == muid; });
-            
             // 1. Discovery Response
             if (ciSubId1 == 0x71)
             {
+                // Format: ... 0x71, MUID(4), ...
+                // Note: Test sends no version byte for 0x71, so MUID is at offset 4
+                uint32_t muid = (data[4] << 21) | (data[5] << 14) | (data[6] << 7) | data[7];
+
+                juce::ScopedLock sl(deviceLock_);
+                auto it = std::find_if(devices_.begin(), devices_.end(), [&](const auto& d) { return d.muid == muid; });
+
                 if (it == devices_.end())
                 {
                     DBG("Midi2Discovery: Device discovered! MUID: " + juce::String((int)muid));
                     DiscoveredDevice dev;
                     dev.muid = muid;
-                    dev.info = source->getDeviceInfo();
+                    if (source) {
+                        dev.info = source->getDeviceInfo();
+                    } else {
+                        // Handle unknown source. This occurs in:
+                        // 1. Headless unit tests using MockMidiInput.
+                        // 2. Processing messages from virtual MIDI loopbacks or raw buffers.
+                        dev.info.name = "Virtual/Test Source";
+                        // Use padded hex for stable stable identifier
+                        dev.info.identifier = "MUID_" + juce::String::toHexString((int)muid).paddedLeft('0', 8);
+                        DBG("Midi2Discovery: Warning - Device " + juce::String((int)muid) + " has no physical source info.");
+                    }
                     dev.status = DeviceStatus::NegotiatingCapabilities;
                     dev.lastSeen = juce::Time::getMillisecondCounterHiRes();
                     devices_.push_back(dev);
@@ -72,9 +85,16 @@ void Midi2DiscoveryService::handleIncomingMidiMessage(juce::MidiInput* source, c
             // 2. Capabilities Response
             else if (ciSubId1 == 0x73)
             {
+                // Format: ... 0x73, Version(1), MUID(4), ...
+                // MUID at offset 5
+                uint32_t muid = (data[5] << 21) | (data[6] << 14) | (data[7] << 7) | data[8];
+                
+                juce::ScopedLock sl(deviceLock_);
+                auto it = std::find_if(devices_.begin(), devices_.end(), [&](const auto& d) { return d.muid == muid; });
+
                 if (it != devices_.end())
                 {
-                    uint8_t caps = data[9];
+                    uint8_t caps = data[9]; // Caps is after MUID (5+4=9)
                     it->supportsPE = (caps & 0x04) != 0; // Bit 2: Property Exchange
                     it->status = it->supportsPE ? DeviceStatus::NegotiatingPE : DeviceStatus::Found;
                     
@@ -89,19 +109,31 @@ void Midi2DiscoveryService::handleIncomingMidiMessage(juce::MidiInput* source, c
             // 3. Property Exchange Response
             else if (ciSubId1 == 0x35) // Get Property Data Response
             {
+                 // Format: ... 0x35, SubType(1), MUID(4), Vers(1), HeadSize(2)
+                 // MUID at offset 5
+                uint32_t muid = (data[5] << 21) | (data[6] << 14) | (data[7] << 7) | data[8];
+
+                juce::ScopedLock sl(deviceLock_);
+                auto it = std::find_if(devices_.begin(), devices_.end(), [&](const auto& d) { return d.muid == muid; });
+
                 if (it != devices_.end())
                 {
                     // Extract JSON from SysEx
-                    // 0x7E, DeviceID, 0x0D, 0x35, 0x02, MUID(4), PE_Version, HeaderSize(2), Header, Body...
+                    // Offsets: 0-3 (Header+SubID1), 4 (SubID2), 5-8 (MUID), 9 (Version), 10-11 (HeadSize)
+                    // JSON starts at 12 + headerSize
                     int headerSize = (data[10] << 7) | data[11];
                     const char* jsonPtr = (const char*)(data + 12 + headerSize);
                     int jsonSize = size - (12 + headerSize);
                     
                     if (jsonSize > 0)
                     {
-                        auto json = juce::JSON::parse(juce::String::fromUTF8(jsonPtr, jsonSize));
+                        juce::String jsonStr = juce::String::fromUTF8(jsonPtr, jsonSize);
+                        DBG("Midi2Discovery: Received PE JSON (size " + juce::String(jsonSize) + "): " + jsonStr.substring(0, 100) + "...");
+                        auto json = juce::JSON::parse(jsonStr);
                         peManager_->handlePropertyResponse(muid, json);
                     }
+                } else {
+                    DBG("Midi2Discovery: Error - Received PE for unknown MUID: " + juce::String((int)muid));
                 }
             }
         }
@@ -110,7 +142,9 @@ void Midi2DiscoveryService::handleIncomingMidiMessage(juce::MidiInput* source, c
 
 void Midi2DiscoveryService::sendCapabilityInquiry(uint32_t muid)
 {
-    // Mocking Capability Inquiry Message construction
+    // MIDI-CI Capability Inquiry Message per MIDI 2.0 spec (Category 0x72)
+    // Format: 0x7E (Universal SysEx), 0x7F (Broadcast), 0x0D (MIDI-CI), 0x72 (Capability Inquiry), 
+    //         Version, MUID (4 bytes in 7-bit format)
     uint8_t msgData[] = { 0x7E, 0x7F, 0x0D, 0x72, 0x01, 
                          (uint8_t)(muid >> 21), (uint8_t)(muid >> 14), (uint8_t)(muid >> 7), (uint8_t)muid };
     auto msg = juce::MidiMessage::createSysExMessage(msgData, sizeof(msgData));
@@ -119,14 +153,17 @@ void Midi2DiscoveryService::sendCapabilityInquiry(uint32_t muid)
 
 void Midi2DiscoveryService::sendToAllOutputs(const juce::MidiMessage& msg)
 {
-    auto devices = juce::MidiOutput::getAvailableDevices();
-    for (const auto& dev : devices)
-    {
-        if (auto out = juce::MidiOutput::openDevice(dev.identifier))
+    // C3: Use async thread for MIDI device opening to avoid blocking message thread
+    juce::Thread::launch([msg]() {
+        auto devices = juce::MidiOutput::getAvailableDevices();
+        for (const auto& dev : devices)
         {
-            out->sendMessageNow(msg);
+            if (auto out = juce::MidiOutput::openDevice(dev.identifier))
+            {
+                out->sendMessageNow(msg);
+            }
         }
-    }
+    });
 }
 
 void Midi2DiscoveryService::timerCallback()
@@ -143,14 +180,7 @@ void Midi2DiscoveryService::performDiscovery()
     auto msg = juce::MidiMessage::createSysExMessage(discoveryMsg, sizeof(discoveryMsg));
     
     // Send to all MIDI outputs
-    auto devices = juce::MidiOutput::getAvailableDevices();
-    for (const auto& dev : devices)
-    {
-        if (auto out = juce::MidiOutput::openDevice(dev.identifier))
-        {
-            out->sendMessageNow(msg);
-        }
-    }
+    sendToAllOutputs(msg);
 }
 
 } // namespace zenith

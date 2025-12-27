@@ -79,6 +79,16 @@ public:
    */
   std::function<void(double)> onSeek;
 
+  /**
+   * @brief Set loop region
+   */
+  void setLoopRange(double startBeat, double endBeat, bool enabled);
+
+  /**
+   * @brief Callback when loop region is changed by user
+   */
+  std::function<void(double start, double end)> onLoopChanged;
+
   //==========================================================================
   // Component interface
   //==========================================================================
@@ -93,6 +103,8 @@ public:
   void mouseEnter(const juce::MouseEvent &event) override;
   void mouseExit(const juce::MouseEvent &event) override;
   void mouseDown(const juce::MouseEvent &event) override;
+  void mouseDrag(const juce::MouseEvent &event) override;
+  void mouseUp(const juce::MouseEvent &event) override;
   void timerCallback() override;
 
 private:
@@ -101,11 +113,22 @@ private:
   double viewLengthBeats = 32.0;
   double pixelsPerBeat = 20.0;
 
+  // Loop state
+  double loopStartBeat = 0.0;
+  double loopEndBeat = 4.0;
+  bool loopEnabled = false;
+
   // Hover state
   bool isHovered = false;
   int hoveredMeasure = -1;
   juce::Point<int> mousePosition;
   float hoverAnimation = 0.0f;
+
+  enum class DragMode { None, Seek, MoveLoopStart, MoveLoopEnd, MoveLoopRegion };
+  DragMode currentDragMode = DragMode::None;
+  double dragStartBeat = 0.0;
+  double initialLoopStart = 0.0;
+  double initialLoopEnd = 0.0;
 
   // Helper methods
   void drawBackground(juce::Graphics &g, const juce::Rectangle<int> &bounds);

@@ -7,7 +7,7 @@ target_sources(ZenithDAW PRIVATE
     ZenithOscillator.cpp
     ZenithFilter.cpp
     ZenithEffects.cpp
-    ZenithPolySynthVoice_Fixed.cpp
+    ZenithPolySynthVoice.cpp
     ZenithPolySynth.cpp
     ZenithPolySynthParameterManager.cpp
     ZenithPolySynthEditor.cpp

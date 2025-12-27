@@ -229,10 +229,17 @@ void AudioRecorder::startRecording(
     }
 
     juce::WavAudioFormat wavFormat;
-    std::unique_ptr<juce::AudioFormatWriter> baseWriter(
-        wavFormat.createWriterFor(fileStream.release(), deviceSampleRate,
-                                  static_cast<unsigned int>(sessionNumChannels),
-                                  constants::kRecordingBitDepth, {}, 0));
+
+    // Move to generic OutputStream unique_ptr for the new API
+    std::unique_ptr<juce::OutputStream> outputStream = std::move(fileStream);
+
+    auto writerOptions = juce::AudioFormatWriter::Options()
+        .withSampleRate(deviceSampleRate)
+        .withNumChannels(static_cast<int>(sessionNumChannels))
+        .withBitsPerSample(constants::kRecordingBitDepth);
+
+    std::unique_ptr<juce::AudioFormatWriter> baseWriter = 
+        wavFormat.createWriterFor(outputStream, writerOptions);
 
     if (!baseWriter)
       continue;

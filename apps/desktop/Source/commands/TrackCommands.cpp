@@ -2,9 +2,10 @@
 #include "../dsp/ONNXStemSeparator.h"
 #include "../engine/MixerChannel.h"
 #include "../engine/Track.h"
+#include "../engine/TrackFreeze.h"
 #include "CommandUtils.h"
-#include "Engine.h"
-#include "ProjectState.h"
+#include "../engine/Engine.h"
+#include "../engine/ProjectState.h"
 
 namespace zenith {
 
@@ -332,6 +333,12 @@ juce::var TrackCommands::separateTrack(const juce::var &params) {
   if (maxEnd == 0)
     return createErrorResponse("Track is empty");
 
+  // Safety Limit: Prevent huge allocations (e.g. > 15 mins @ 48kHz) to avoid crash
+  // 15 * 60 * 48000 = 43,200,000 samples.
+  const juce::int64 kMaxSeparationSamples = 45000000; 
+  if (maxEnd > kMaxSeparationSamples)
+      return createErrorResponse("Track too long for separation (limit: ~15 mins). Please split the clip.");
+
   double sampleRate = engine.getSampleRate();
   if (sampleRate <= 0)
     sampleRate = 44100.0;
@@ -396,12 +403,17 @@ juce::var TrackCommands::separateTrack(const juce::var &params) {
   for (const auto &stem : stems) {
     juce::File stemFile =
         recordingsDir.getChildFile(baseName + "_" + stem.suffix + ".wav");
-    std::unique_ptr<juce::FileOutputStream> fileStream(
-        new juce::FileOutputStream(stemFile));
+    auto fileStream = std::make_unique<juce::FileOutputStream>(stemFile);
 
     if (fileStream->openedOk()) {
-      std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(
-          fileStream.release(), sampleRate, 2, 24, {}, 0));
+      auto writerOptions = juce::AudioFormatWriter::Options()
+                               .withSampleRate(sampleRate)
+                               .withNumChannels(2)
+                               .withBitsPerSample(24);
+
+      std::unique_ptr<juce::OutputStream> outputStream = std::move(fileStream);
+      std::unique_ptr<juce::AudioFormatWriter> writer =
+          wavFormat.createWriterFor(outputStream, writerOptions);
 
       if (writer) {
         writer->writeFromAudioSampleBuffer(stem.buffer, 0,
@@ -435,6 +447,47 @@ juce::var TrackCommands::separateTrack(const juce::var &params) {
   resultObj->setProperty("success", true);
 
   return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var TrackCommands::freezeTrack(const juce::var &params) {
+  if (!params.hasProperty("trackId"))
+    return createErrorResponse("Missing 'trackId' parameter");
+
+  juce::String trackId = params["trackId"].toString();
+  Track *track = findTrackById(engine, trackId);
+  if (!track)
+    return createErrorResponse("Track not found: " + trackId);
+
+  juce::File freezeDir = projectState.getAssetDirectory("Freeze");
+  
+  // Use Engine's freeze manager
+  if (engine.getTrackFreezeManager().freezeTrack(*track, engine, freezeDir, nullptr)) {
+      auto *resultObj = new juce::DynamicObject();
+      resultObj->setProperty("trackId", trackId);
+      resultObj->setProperty("status", "freezing");
+      return createSuccessResponse(juce::var(resultObj));
+  }
+
+  return createErrorResponse("Failed to start freeze operation");
+}
+
+juce::var TrackCommands::unfreezeTrack(const juce::var &params) {
+  if (!params.hasProperty("trackId"))
+    return createErrorResponse("Missing 'trackId' parameter");
+
+  juce::String trackId = params["trackId"].toString();
+  Track *track = findTrackById(engine, trackId);
+  if (!track)
+    return createErrorResponse("Track not found: " + trackId);
+
+  if (engine.getTrackFreezeManager().unfreezeTrack(*track)) {
+      auto *resultObj = new juce::DynamicObject();
+      resultObj->setProperty("trackId", trackId);
+      resultObj->setProperty("status", "unfrozen");
+      return createSuccessResponse(juce::var(resultObj));
+  }
+
+  return createErrorResponse("Failed to unfreeze track");
 }
 
 } // namespace zenith

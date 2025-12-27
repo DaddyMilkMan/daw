@@ -26,41 +26,43 @@ void AudioTrack::getNextAudioBlock(
 
   if (currentSnapshot) {
     for (auto *clip : currentSnapshot->clips) {
-      if (clip != nullptr && clip->isPlaying() &&
-          clip->isActiveAt(playheadSamples)) {
-        if (clip->getType() == Clip::Type::Audio) {
-          clipBuffer_.clear();
-          juce::AudioSourceChannelInfo clipInfo(&clipBuffer_, 0,
-                                                bufferToFill.numSamples);
-          clip->processAudioClip(clipInfo, playheadSamples);
+      if (clip != nullptr && clip->isPlaying() && clip->getType() == Clip::Type::Audio) {
+        const int64_t clipStart = clip->getStartPosition();
+        const int64_t clipEnd = clip->getEndPosition();
+        const int64_t blockStart = playheadSamples;
+        const int64_t blockEnd = playheadSamples + bufferToFill.numSamples;
 
-          const int channelsToMix =
-              juce::jmin(bufferToFill.buffer->getNumChannels(),
-                         clipBuffer_.getNumChannels());
-          for (int ch = 0; ch < channelsToMix; ++ch) {
-            bufferToFill.buffer->addFrom(ch, bufferToFill.startSample,
-                                         clipBuffer_, ch, 0,
-                                         bufferToFill.numSamples);
+        // Check for overlap
+        if (blockEnd > clipStart && blockStart < clipEnd) {
+          const int64_t overlapStart = std::max(blockStart, clipStart);
+          const int64_t overlapEnd = std::min(blockEnd, clipEnd);
+          const int numToProcess = static_cast<int>(overlapEnd - overlapStart);
+
+          if (numToProcess > 0) {
+            const int startOffsetInBuffer = static_cast<int>(overlapStart - blockStart);
+            
+            clipBuffer_.clear();
+            juce::AudioSourceChannelInfo clipInfo(&clipBuffer_, 0, numToProcess);
+            
+            // Process the intersecting part of the clip
+            clip->processAudioClip(clipInfo, overlapStart);
+
+            const int channelsToMix = juce::jmin(bufferToFill.buffer->getNumChannels(),
+                                                 clipBuffer_.getNumChannels());
+            for (int ch = 0; ch < channelsToMix; ++ch) {
+              bufferToFill.buffer->addFrom(ch, bufferToFill.startSample + startOffsetInBuffer,
+                                           clipBuffer_, ch, 0, numToProcess);
+            }
           }
         }
       }
     }
   }
 
-  juce::AudioBuffer<float> localBuffer(
-      bufferToFill.buffer->getArrayOfWritePointers(),
-      bufferToFill.buffer->getNumChannels(), bufferToFill.startSample,
-      bufferToFill.numSamples);
-
-  // Process through plugin chain (Base class)
+  // 3. Process through plugin chain and mixer (delegated to Processor)
+  juce::AudioSourceChannelInfo blockInfo(bufferToFill.buffer, bufferToFill.startSample, bufferToFill.numSamples);
   juce::MidiBuffer dummyMidi;
-  processPluginChain(localBuffer, dummyMidi, bufferToFill.numSamples,
-                     sidechainBuffer);
-
-  // Mixer processing (Base class)
-  juce::AudioSourceChannelInfo mixerInfo(&localBuffer, 0,
-                                         bufferToFill.numSamples);
-  mixerChannel.getNextAudioBlock(mixerInfo, auxBuffers);
+  processor->processBlock(blockInfo, dummyMidi, auxBuffers, sidechainBuffer);
 }
 
 } // namespace zenith

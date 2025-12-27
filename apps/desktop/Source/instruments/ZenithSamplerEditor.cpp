@@ -142,7 +142,7 @@ ZenithSamplerEditor::ZenithSamplerEditor(
     loadSampleMapData();
 
     // Start timer for status updates
-    startTimer(100);
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(100);
 }
 
 ZenithSamplerEditor::~ZenithSamplerEditor()

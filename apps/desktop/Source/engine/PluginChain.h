@@ -126,7 +126,6 @@ private:
   
   std::atomic<const PluginSnapshot *> activeSnapshot_{nullptr};
   std::shared_ptr<PluginSnapshot> currentSnapshot_;
-  std::vector<std::shared_ptr<PluginSnapshot>> snapshotTrash_; // Keep old snapshots alive until safe
 
   double currentSampleRate_ = 0;
   int currentBlockSize_ = 0;

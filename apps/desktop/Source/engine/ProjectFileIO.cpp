@@ -6,6 +6,7 @@
 #include "ProjectFileIO.h"
 #include "ProjectState.h"
 #include "TempoMap.h"
+#include "ZenithLogger.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -233,7 +234,7 @@ void ProjectFileIO::saveToFileAsync(
         prepareSuccess = true;
       }
     } else {
-      // MessagePack placeholder
+      // Binary format using JUCE's efficient ValueTree serialization
       juce::MemoryOutputStream mo(msgPackData, false);
       stateSnapshot.writeToStream(mo);
       prepareSuccess = true;

@@ -59,7 +59,8 @@ void ProjectEngineBridge::start(int automationUpdateRateHz)
     forceFullSync();
 
     // Start timer for automation updates
-    startTimer(1000 / automationUpdateRateHz);
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr)
+        if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(1000 / automationUpdateRateHz);
 
     isActive_ = true;
 }
@@ -456,7 +457,11 @@ double ProjectEngineBridge::sampleEnvelope(const juce::ValueTree& envelope, doub
     double nextValue = nextPoint[ProjectState::PROP_VALUE];
 
     // Normalized position between points
-    double t = (timeBeats - prevTime) / (nextTime - prevTime);
+    double timeDelta = nextTime - prevTime;
+    if (timeDelta <= 0.00001)
+        return nextValue; // Points are at same time or reversed
+
+    double t = (timeBeats - prevTime) / timeDelta;
     t = juce::jlimit(0.0, 1.0, t);
 
     // Get curve type and tension from the previous point (curve applies forward)
@@ -472,20 +477,30 @@ double ProjectEngineBridge::sampleEnvelope(const juce::ValueTree& envelope, doub
         // Exponential curve: fast start, slow end (or vice versa based on tension)
         // tension < 0.5 = convex (fast start), tension > 0.5 = concave (slow start)
         double exponent = 1.0 + (tension - 0.5) * 4.0;  // Range: -1 to 3
-        if (exponent > 0.01)
+        
+        if (exponent < 0.0) {
+            // Negative exponent: avoid 0^neg division
+            curvedT = (t > 0.0001) ? std::pow(t, exponent) : 0.0;
+        } else if (exponent > 0.01) {
             curvedT = std::pow(t, exponent);
-        else
+        } else {
             curvedT = t;
+        }
     }
     else if (curveType == "logarithmic")
     {
         // Logarithmic curve: slow start, fast end
         // Inverse of exponential
         double exponent = 1.0 + (0.5 - tension) * 4.0;
-        if (exponent > 0.01)
-            curvedT = std::pow(t, 1.0 / exponent);
-        else
+        if (std::abs(exponent) > 0.01) {
+            double invExp = 1.0 / exponent;
+            if (invExp < 0.0)
+                curvedT = (t > 0.0001) ? std::pow(t, invExp) : 0.0;
+            else
+                curvedT = std::pow(t, invExp);
+        } else {
             curvedT = t;
+        }
     }
     else if (curveType == "smooth" || curveType == "scurve")
     {

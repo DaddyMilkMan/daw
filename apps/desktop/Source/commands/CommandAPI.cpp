@@ -55,6 +55,8 @@ void CommandAPI::initializeCommandMap() {
   commandMap["export_audio"] = CommandID::ExportAudio;
   commandMap["export_project_advanced"] = CommandID::ExportProjectAdvanced;
   commandMap["separate_track"] = CommandID::SeparateTrack;
+  commandMap["freeze_track"] = CommandID::FreezeTrack;
+  commandMap["unfreeze_track"] = CommandID::UnfreezeTrack;
 
   commandMap["list_clips"] = CommandID::ListClips;
   commandMap["create_clip"] =
@@ -165,6 +167,15 @@ void CommandAPI::initializeCommandMap() {
   });
   registerCommand("set_track_pan", [this](const juce::var &p) {
     return trackCommands->setTrackPan(p);
+  });
+  registerCommand("separate_track", [this](const juce::var &p) {
+    return trackCommands->separateTrack(p);
+  });
+  registerCommand("freeze_track", [this](const juce::var &p) {
+    return trackCommands->freezeTrack(p);
+  });
+  registerCommand("unfreeze_track", [this](const juce::var &p) {
+    return trackCommands->unfreezeTrack(p);
   });
 
   registerCommand("export_audio",

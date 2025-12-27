@@ -25,6 +25,7 @@
 #ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
 #include <core/SkImage.h>
+#include <core/SkPath.h>
 #include <core/SkTextBlob.h>
 #endif
 
@@ -83,6 +84,8 @@ public:
 #ifdef ZENITH_USE_SKIA
   void setIcon(sk_sp<SkImage> icon);
   sk_sp<SkImage> getIcon() const { return icon_; }
+  void setIconPath(const SkPath& path);
+  SkPath getIconPath() const { return iconPath_; }
 #endif
   void setIconText(const juce::String &iconText); // Unicode icons/emojis
   void setIconPosition(IconPosition pos);
@@ -146,6 +149,7 @@ private:
   juce::String iconText_;
 #ifdef ZENITH_USE_SKIA
   sk_sp<SkImage> icon_;
+  SkPath iconPath_;
   sk_sp<SkTextBlob> textBlob_;
 #endif
 
@@ -183,5 +187,8 @@ private:
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithButton)
 };
+
+// Legacy alias for backward compatibility
+using SkiaButton = ZenithButton;
 
 } // namespace zenith

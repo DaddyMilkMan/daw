@@ -177,6 +177,21 @@ void SkiaOpenGLRenderer::renderOpenGL() {
     return;
   }
 
+  // ROBUSTNESS: Check if we are being destroyed or if peer is gone
+  // This prevents accessing invalid window handles during teardown
+  if (targetComponent_ == nullptr || targetComponent_->getPeer() == nullptr) {
+       return;
+  }
+  
+  if (!targetComponent_->isVisible()) {
+      return; 
+  }
+  
+  // ROBUSTNESS: Check if we are being destroyed or if peer is gone
+  if (targetComponent_ == nullptr || targetComponent_->getPeer() == nullptr) {
+       return;
+  }
+
   // Thread safety: try to lock the message manager to safely access component hierarchy.
   // Use attemptLock to avoid blocking the GL thread if the message thread is busy.
   juce::MessageManagerLock mmLock(juce::Thread::getCurrentThread());

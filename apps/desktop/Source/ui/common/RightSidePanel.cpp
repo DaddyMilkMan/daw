@@ -48,7 +48,7 @@ RightSidePanel::RightSidePanel(CommandAPI &api, Engine &engine, ProjectState &pr
   undoHistoryPanel_->setVisible(true);
 
   ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: Starting timer...");
-  startTimerHz(60); // Animation timer
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60); // Animation timer
   ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: Constructor complete");
 }
 

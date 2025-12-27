@@ -233,13 +233,8 @@ void RecordingManager::captureMidi(const juce::MidiMessage &message,
     midiFifoIndex_.finishedWrite(1);
   } else {
     // Bug 17: FIFO overflow - track dropped messages
-    // RT-safe logging (only periodically)
-    uint64_t dropped = droppedMidiMessages_.fetch_add(1, std::memory_order_relaxed);
-    if ((dropped & 0xFF) == 0) { // Log every 256 drops to avoid flooding
-        // Note: DBG isn't strictly RT-safe, but this is an error condition
-        // In production, we might want a lock-free logger
-        DBG("RecordingManager: MIDI FIFO overflow - " + juce::String(dropped + 1) + " messages dropped");
-    }
+    // RT-Safety: Just increment counter, do not log (DBG is not RT-safe)
+    droppedMidiMessages_.fetch_add(1, std::memory_order_relaxed);
   }
 }
 

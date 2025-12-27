@@ -51,7 +51,7 @@ public:
   //==========================================================================
   MasterLimiter()
       : oversampling_(
-            1, constants::kOversamplingFactor,
+            2, constants::kOversamplingFactor,
             juce::dsp::Oversampling<float>::filterHalfBandPolyphaseIIR) {}
   ~MasterLimiter() = default;
 
@@ -66,6 +66,12 @@ public:
    * @note Must be called before process() - MESSAGE THREAD ONLY
    */
   void prepare(double sampleRate, int maxBlockSize) {
+    if (sampleRate <= 0.0 || maxBlockSize <= 0) {
+      sampleRate_ = constants::kDefaultSampleRate;
+      lookaheadBufferSize_ = 0;
+      return;
+    }
+
     sampleRate_ = sampleRate;
 
     // Prepare oversampling for true peak detection
@@ -79,18 +85,26 @@ public:
     const double oversampledRate = sampleRate * constants::kOversamplingFactor;
     lookaheadSamples_ = static_cast<int>(constants::kLimiterLookaheadMs *
                                          oversampledRate / 1000.0);
+    lookaheadSamples_ = std::max(1, lookaheadSamples_);
 
     // Allocate lookahead delay line (for oversampled processing)
     const int oversampledBlockSize =
         maxBlockSize * constants::kOversamplingFactor;
     lookaheadBufferSize_ = lookaheadSamples_ + oversampledBlockSize;
+    
+    // Safety check for buffer size
+    if (lookaheadBufferSize_ <= 0) {
+      lookaheadBufferSize_ = 0;
+      return;
+    }
+
     for (int ch = 0; ch < 2; ++ch) {
-      lookaheadBuffer_[ch].resize(lookaheadBufferSize_, 0.0f);
+      lookaheadBuffer_[ch].assign(lookaheadBufferSize_, 0.0f);
       lookaheadWritePos_[ch] = 0;
     }
 
     // Allocate gain reduction buffer for lookahead
-    gainReductionBuffer_.resize(lookaheadBufferSize_, 1.0f);
+    gainReductionBuffer_.assign(lookaheadBufferSize_, 1.0f);
     gainReductionWritePos_ = 0;
 
     // Calculate envelope coefficients (at oversampled rate)
@@ -106,13 +120,17 @@ public:
    */
   void reset() {
     for (int ch = 0; ch < 2; ++ch) {
-      std::fill(lookaheadBuffer_[ch].begin(), lookaheadBuffer_[ch].end(), 0.0f);
+      if (!lookaheadBuffer_[ch].empty()) {
+        std::fill(lookaheadBuffer_[ch].begin(), lookaheadBuffer_[ch].end(), 0.0f);
+      }
       lookaheadWritePos_[ch] = 0;
     }
-    std::fill(gainReductionBuffer_.begin(), gainReductionBuffer_.end(), 1.0f);
+    if (!gainReductionBuffer_.empty()) {
+      std::fill(gainReductionBuffer_.begin(), gainReductionBuffer_.end(), 1.0f);
+    }
     gainReductionWritePos_ = 0;
 
-    envelope_ = 0.0f;
+    envelope_ = 1.0f; // Start with unity gain
     currentGainReduction_.store(1.0f);
   }
 
@@ -183,7 +201,7 @@ public:
    * @note AUDIO THREAD - RT-safe, no allocations
    */
   void process(juce::AudioBuffer<float> &buffer) noexcept {
-    if (!enabled_.load()) {
+    if (!enabled_.load() || lookaheadBufferSize_ <= 0) {
       currentGainReduction_.store(1.0f);
       return;
     }
@@ -194,7 +212,7 @@ public:
     auto oversampledBlock = oversampling_.processSamplesUp(inputBlock);
 
     const int numSamples = static_cast<int>(oversampledBlock.getNumSamples());
-    const int numChannels = static_cast<int>(oversampledBlock.getNumChannels());
+    const int numChannels = std::min(static_cast<int>(oversampledBlock.getNumChannels()), 2);
     const float ceiling = ceilingLinear_.load();
     const float attackCoeff = attackCoeff_.load();
     const float releaseCoeff = releaseCoeff_.load();
@@ -207,10 +225,11 @@ public:
       float inputPeak = 0.0f;
       for (int ch = 0; ch < numChannels; ++ch) {
         float input = std::abs(oversampledBlock.getSample(ch, sample));
+        if (std::isnan(input)) input = 0.0f; // NaN protection
         inputPeak = juce::jmax(inputPeak, input);
       }
 
-      // Write input to lookahead buffer
+      // Write input to lookahead buffer for available channels
       for (int ch = 0; ch < numChannels; ++ch) {
         int writePos = (lookaheadWritePos_[ch] + sample) % lookaheadBufferSize_;
         lookaheadBuffer_[ch][writePos] = oversampledBlock.getSample(ch, sample);
@@ -218,7 +237,7 @@ public:
 
       // Calculate required gain reduction
       float targetGain = 1.0f;
-      if (inputPeak > ceiling) {
+      if (inputPeak > ceiling && inputPeak > 1e-9f) {
         targetGain = ceiling / inputPeak;
       }
 
@@ -240,7 +259,7 @@ public:
                     lookaheadBufferSize_;
       float delayedGain = gainReductionBuffer_[readPos];
 
-      // Apply gain to delayed audio
+      // Apply gain to delayed audio for available channels
       for (int ch = 0; ch < numChannels; ++ch) {
         int audioReadPos = (lookaheadWritePos_[ch] + sample -
                             lookaheadSamples_ + lookaheadBufferSize_) %
@@ -252,8 +271,8 @@ public:
       maxGainReduction = juce::jmin(maxGainReduction, delayedGain);
     }
 
-    // Update write positions
-    for (int ch = 0; ch < numChannels; ++ch) {
+    // Update write positions for ALL supported channels to keep them in sync (Bug Fix)
+    for (int ch = 0; ch < 2; ++ch) {
       lookaheadWritePos_[ch] =
           (lookaheadWritePos_[ch] + numSamples) % lookaheadBufferSize_;
     }
@@ -318,7 +337,7 @@ private:
   int gainReductionWritePos_ = 0;
 
   // Envelope follower
-  float envelope_ = 0.0f;
+  float envelope_ = 1.0f;
 
   //==========================================================================
   // Parameters (atomic for lock-free access)

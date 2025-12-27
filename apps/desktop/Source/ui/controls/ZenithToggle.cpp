@@ -30,7 +30,9 @@ ZenithToggle::ZenithToggle(const juce::String &label) : label_(label) {
 void ZenithToggle::setToggleState(bool state, bool sendNotification) {
   if (toggleState_ != state) {
     toggleState_ = state;
-    animationProgress_ = state ? 1.0f : 0.0f;
+    toggleState_ = state;
+    // animationProgress_ = state ? 1.0f : 0.0f;
+    animateTo("toggle", state ? 1.0f : 0.0f, 150.0); // 150ms smooth transition
     repaint();
 
     if (sendNotification && onToggle) {
@@ -117,7 +119,10 @@ void ZenithToggle::drawSwitch(SkCanvas *canvas) {
   paint.setAntiAlias(true);
 
   // Track background
-  SkColor trackColor = toggleState_ ? activeColor_ : inactiveColor_;
+  // Track background
+  float progress = getAnimatedValue("toggle");
+  SkColor trackColor = design::interpolateColor(inactiveColor_, activeColor_, progress);
+
   if (!toggleState_ && hovered_) {
     trackColor = SkColorSetRGB(70, 70, 80);
   }
@@ -135,8 +140,11 @@ void ZenithToggle::drawSwitch(SkCanvas *canvas) {
   }
 
   // Knob position
-  float knobX = trackX + (toggleState_ ? (trackWidth - knobRadius - 4.0f)
-                                       : (knobRadius + 4.0f));
+  // Knob position
+  float progValue = getAnimatedValue("toggle");
+  float startX = knobRadius + 4.0f;
+  float endX = trackWidth - knobRadius - 4.0f;
+  float knobX = trackX + startX + (endX - startX) * progValue;
   float knobY = trackY + trackHeight / 2.0f;
 
   // Knob shadow

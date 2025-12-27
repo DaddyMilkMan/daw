@@ -7,6 +7,7 @@
 #include "../../engine/Midi2DiscoveryService.h"
 #include "../../engine/PropertyExchangeManager.h"
 #include "../../ui/design-system/ZenithTheme.h"
+#include "../../ui/design-system/ColorBridge.h"
 
 namespace zenith {
 
@@ -60,9 +61,8 @@ void HardwareControlPanel::refreshUI(bool forceRebuild)
             auto control = std::make_unique<PropertyControl>();
             control->id = prop.id;
             
-            control->slider = std::make_unique<SkiaSlider>(prop.name);
-            control->slider->setStyle(SkiaSlider::Style::Bar);
-            control->slider->setDisplayRange(prop.min, prop.max);
+            control->slider = std::make_unique<SkiaSlider>(prop.name, design::unified::accent_primary());
+            control->slider->setRange(prop.min, prop.max, prop.value);
             control->slider->setValue(prop.value);
             
             control->slider->onValueChange = [this, propId = prop.id](float val) {
