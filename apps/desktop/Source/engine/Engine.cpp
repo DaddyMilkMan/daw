@@ -305,8 +305,6 @@ juce::String Engine::getAudioDeviceInfo() const {
 
   return name + " @ " + juce::String(sampleRate, 0) + " Hz, " +
          juce::String(bufferSize) + " samples";
-  return name + " @ " + juce::String(sampleRate, 0) + " Hz, " +
-         juce::String(bufferSize) + " samples";
 }
 
 //==============================================================================
@@ -431,11 +429,7 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice *device) {
   }
 
   // Prepare AudioRenderer (Handles buffers, PDC, metering, limiter)
-  if (audioRenderer_) {
-    // Prepare LIVE Context buffers
-    renderContext_.prepare(currentSampleRate.load(), currentBufferSize.load(),
-                         tracks_.size(), auxBuses_.size());
-  }
+  // REMOVED: renderContext_.prepare() - AudioRenderer now manages its own internal state
 
   // Prepare MasterLimiter (owned by Engine, used by AudioRenderer via ref)
   masterLimiter_.prepare(currentSampleRate.load(), currentBufferSize.load());
@@ -522,7 +516,6 @@ void Engine::audioDeviceIOCallbackWithContext(
 
       if (audioRenderer_) {
         audioRenderer_->renderAudioGraph(
-            liveContext_,
             buffer1, samplesBeforeLoop, currentPos, snapshot->tracks,
             snapshot->auxBuses, routingGraph_, masterLimiter_, masterPlugins,
             tempoMap_.get(), &midi1, inputChannelData, numInputChannels);
@@ -555,7 +548,6 @@ void Engine::audioDeviceIOCallbackWithContext(
 
         if (audioRenderer_) {
           audioRenderer_->renderAudioGraph(
-              liveContext_,
               buffer2, samplesAfter, loopStart, snapshot->tracks,
               snapshot->auxBuses, routingGraph_, masterLimiter_, masterPlugins,
               tempoMap_.get(), &emptyMidi, offsets,
@@ -762,41 +754,7 @@ void Engine::processAudioBlock(const float *const *inputChannelData,
   }
 }
 
-void Engine::renderOfflineBlock(
-    AudioRenderContext& context,
-    juce::AudioBuffer<float> &buffer,
-    int numSamples, 
-    juce::int64 position) {
-  if (audioRenderer_) {
-    // Get routing snapshot
-    const auto *snapshot = routingGraph_.getSnapshot();
-    
-    // Get master plugins snapshot
-    auto *masterSnapshot = activeMasterPluginsSnapshot_.load();
-    std::span<const std::shared_ptr<juce::AudioPluginInstance>> masterPlugins;
-    if (masterSnapshot) masterPlugins = masterSnapshot->plugins;
-
-    // Convert Tracks to span (pointers from vector)
-    // Use thread-safe snapshot
-    auto tracksSnapshot = getTracksSnapshot();
-    std::vector<Track*> trackPtrs; 
-    trackPtrs.reserve(tracksSnapshot.size());
-    for(auto& t : tracksSnapshot) trackPtrs.push_back(t.get());
-
-    std::vector<AuxBus*> auxPtrs;
-    auxPtrs.reserve(auxBuses_.size());
-    for(auto& b : auxBuses_) auxPtrs.push_back(b.get());
-
-    audioRenderer_->renderAudioGraph(
-        context,
-        buffer, numSamples, position,
-        trackPtrs, auxPtrs, routingGraph_,
-        masterLimiter_, masterPlugins,
-        tempoMap_.get(), nullptr, nullptr, 0);
-  } else {
-    buffer.clear();
-  }
-}
+// NOTE: renderOfflineBlock() is implemented in EngineExport.cpp
 
 //==============================================================================
 // Track Management (MESSAGE THREAD)

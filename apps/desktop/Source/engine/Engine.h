@@ -275,11 +275,8 @@ public:
   // Render Context (Live)
   //==========================================================================
 
-  /**
-   * @brief Get the live render context (for latency queries etc)
-   * @warning Use with caution! Contains live buffers.
-   */
-  const AudioRenderContext& getLiveContext() const { return liveContext_; } 
+  // REMOVED: getLiveContext() - AudioRenderer now manages its own internal state
+  // The AudioRenderContext is owned by AudioRenderer, not Engine. 
 
   //==========================================================================
   // Transport Position & Looping
@@ -800,10 +797,6 @@ public:
    * @brief Handle incoming MIDI messages from input devices
    * @note Runs on MIDI input thread, routes to armed tracks
    */
-  /**
-   * @brief Handle incoming MIDI messages from input devices
-   * @note Runs on MIDI input thread, routes to armed tracks
-   */
   void handleIncomingMidiMessage(juce::MidiInput *source,
                                  const juce::MidiMessage &message) override;
 
@@ -830,7 +823,7 @@ public:
    * @param position Sample position in the project
    * @note Message thread only
    */
-  void renderOfflineBlock(AudioRenderContext& context, juce::AudioBuffer<float>& buffer, int numSamples, juce::int64 position);
+  void renderOfflineBlock(juce::AudioBuffer<float>& buffer, int numSamples, juce::int64 position);
 
   /**
    * @brief Export project to WAV file
@@ -899,10 +892,6 @@ private:
   // Audio Processing (AUDIO THREAD)
   //==========================================================================
 
-  /**
-   * @brief Process audio when playing
-   * @note AUDIO THREAD - real-time safe!
-   */
   /**
    * @brief Process audio when playing
    * @note AUDIO THREAD - real-time safe!
@@ -989,8 +978,6 @@ private:
 
   // Track container (message thread for modification)
   // Use shared_ptr instead of unique_ptr to enable RT-safe snapshot sharing
-  // Track container (message thread for modification)
-  // Use shared_ptr instead of unique_ptr to enable RT-safe snapshot sharing
   mutable juce::ReadWriteLock tracksLock_;
   std::vector<std::shared_ptr<zenith::Track>> tracks_;
 
@@ -1061,7 +1048,6 @@ private:
   std::unique_ptr<zenith::InstrumentRegistry> instrumentRegistry_;
 
   // Session Debugger Agent
-  // Session Debugger Agent
   std::unique_ptr<ai::SessionDebuggerAgent> sessionDebugger_;
   std::unique_ptr<ai::AIMasteringAgent> masteringAgent_;
   std::unique_ptr<Metronome> metronome_;
@@ -1085,9 +1071,8 @@ private:
   //==========================================================================
 
   std::unique_ptr<AudioRenderer> audioRenderer_;
-  AudioRenderContext liveContext_;    // Context for live playback
+  // REMOVED: liveContext_ and renderContext_ - AudioRenderer now manages its own internal state
   std::atomic<bool> isSuspended_{false}; // Suspend flag
-  AudioRenderContext renderContext_;  // Context for offline rendering (Legacy/Unused?)
   std::unique_ptr<RecordingManager> recordingManager_;
   std::unique_ptr<TransportController> transportController_;
   std::unique_ptr<MeteringSystem> meteringSystem_;
