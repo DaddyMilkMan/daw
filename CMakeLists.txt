@@ -97,6 +97,13 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/tests/PluginAutomationTests.cpp
     apps/desktop/Source/tests/SampleEditorRecordingTests.cpp
     apps/desktop/Source/tests/CollaborationMultiPeerTest.cpp
+    apps/desktop/Source/tests/CollaborationSecurityTest.cpp
+    apps/desktop/Source/tests/DSPVoiceChangerTest.cpp
+    apps/desktop/Source/tests/RecordingTempoTest.cpp
+    # apps/desktop/Source/tests/PluginBufferingTests.cpp  # Still broken in JUCE 8
+    apps/desktop/Source/tests/RecordingTests.cpp
+    apps/desktop/Source/tests/RoutingGraphTest.cpp
+    apps/desktop/Source/tests/ExportTests.cpp
 )
 
 # Common sources used by both DAW and Tests
@@ -106,14 +113,6 @@ set(ZENITH_COMMON_SOURCES
     
     # Engine sources
     apps/desktop/Source/engine/Engine.cpp
-    apps/desktop/Source/engine/EngineTransport.cpp
-    apps/desktop/Source/engine/EngineTrackManagement.cpp
-    apps/desktop/Source/engine/EngineMixing.cpp
-    apps/desktop/Source/engine/EngineRecording.cpp
-    apps/desktop/Source/engine/EngineExport.cpp
-    apps/desktop/Source/engine/EngineMIDI.cpp
-    apps/desktop/Source/engine/EngineSync.cpp
-    apps/desktop/Source/engine/EnginePlugins.cpp
     apps/desktop/Source/engine/ProjectState.cpp
     apps/desktop/Source/engine/PluginChain.cpp
     apps/desktop/Source/engine/PluginAutomationBinding.cpp
@@ -128,6 +127,8 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/engine/TrackPluginState.cpp
     apps/desktop/Source/engine/AudioRecorder.cpp
     apps/desktop/Source/engine/RoutingGraph.cpp
+    # apps/desktop/Source/engine/ScriptableProcessor.cpp - Missing Lua dependency
+    apps/desktop/Source/engine/GrokGodModeHelper.cpp
 
     # Deprecated synchronizers (for reflog/legacy support)
     apps/desktop/Source/engine/ClipSynchronizer.cpp
@@ -162,15 +163,32 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/instruments/ZenithSampler.cpp
     apps/desktop/Source/instruments/ZenithSamplerEditor.cpp
 
-    # AI
+    # AI (FIXED for JUCE 8 compatibility)
+    apps/desktop/Source/ai/GrokAPIClient.h
+    apps/desktop/Source/ai/GrokAPIClient.cpp
+    apps/desktop/Source/ai/VisualAnalyzer.h
+    apps/desktop/Source/ai/VisualAnalyzer.cpp
+    apps/desktop/Source/ai/CreativePartner.h
+    apps/desktop/Source/ai/CreativePartner.cpp
     apps/desktop/Source/ai/SessionDebuggerAgent.cpp
     apps/desktop/Source/ai/AIMasteringAgent.cpp
-
     apps/desktop/Source/ai/SampleHunterAgent.cpp
     apps/desktop/Source/ai/UXDirectorAgent.cpp
     apps/desktop/Source/ai/ProjectRefactorerAgent.cpp
     apps/desktop/Source/ai/PresetGeneticistAgent.cpp
-
+    
+    # Audio Components
+    apps/desktop/Source/audio/RealTimeAudioBuffer.cpp
+    apps/desktop/Source/ai/ReferenceMatcher.cpp
+    apps/desktop/Source/ai/GenreDetector.cpp
+    apps/desktop/Source/ai/ProjectContext.cpp
+    apps/desktop/Source/ai/PresetSuggestionService.cpp
+    apps/desktop/Source/ai/AudioThreadSafeProcessor.cpp
+    apps/desktop/Source/ai/RealNeuralNetwork.cpp
+    apps/desktop/Source/ai/MLGenreClassifier.cpp
+    apps/desktop/Source/ai/CreativeNeuralNetwork.cpp
+    apps/desktop/Source/ai/PredictiveMastering.cpp
+    apps/desktop/Source/ai/GrokAPIReal.cpp
     apps/desktop/Source/engine/ClipTrack.cpp
     apps/desktop/Source/engine/AuxBusTrack.cpp
     apps/desktop/Source/engine/ClipStateManager.cpp
@@ -181,6 +199,7 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/engine/ProjectFileIO.cpp
     apps/desktop/Source/engine/ProjectEngineBridge.cpp
     apps/desktop/Source/engine/AudioExporter.cpp
+    apps/desktop/Source/engine/ExportJob.cpp
     apps/desktop/Source/utils/AudioAnalysisUtils.cpp
     apps/desktop/Source/ui/common/PluginEditorWindow.cpp
     # apps/desktop/Source/tests/FlecsSyncTests.cpp - Removed
@@ -190,6 +209,7 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/ui/views/MixerView.cpp
     apps/desktop/Source/ui/mixer/PluginBrowser.cpp
     apps/desktop/Source/network/AudioAnalysisService.cpp
+    apps/desktop/Source/network/GrokDAWController.cpp
     apps/desktop/Source/ui/framework/ConfigurationManager.cpp
     apps/desktop/Source/ui/framework/SkiaComponent.cpp
     apps/desktop/Source/ui/framework/AuroraBackground.cpp
@@ -261,6 +281,7 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/browser/BrowserPreviewEngine.cpp
     apps/desktop/Source/browser/BrowserScanner.cpp
     apps/desktop/Source/network/GrokDAWController.cpp
+    apps/desktop/Source/ui/views/SessionViewComponent.cpp
 
     apps/desktop/Source/ui/controls/ZenithButton.cpp
     apps/desktop/Source/ui/controls/ZenithSlider.cpp
@@ -280,7 +301,6 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/ui/controls/ExportProgressBar.cpp
     apps/desktop/Source/ui/controls/FreezeProgressOverlay.cpp
     apps/desktop/Source/ui/session/DrumPadComponent.cpp
-    apps/desktop/Source/ui/controls/CollabPanel.cpp
     apps/desktop/Source/platform/linux/window/PlatformWindowUtils_Linux.cpp
     apps/desktop/Source/ui/common/MainLayoutComponent.cpp
     apps/desktop/Source/ui/common/MainWindow.cpp
@@ -293,6 +313,12 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/ui/common/ZenithHubComponent.cpp
     apps/desktop/Source/ai/ZenithStyleApplicator.cpp
     apps/desktop/Source/network/SecureKeyStore.cpp
+<<<<<<< HEAD
+=======
+    apps/desktop/Source/network/AuthenticationService.cpp
+    apps/desktop/Source/ui/common/LoginComponent.cpp
+    apps/desktop/Source/platform/linux/network/SecureKeyStore_Linux.cpp
+>>>>>>> origin/master
     apps/desktop/Source/ui/panels/PresetBrowserComponent.cpp
 
     apps/desktop/Source/effects/ConsoleEmulation.cpp
@@ -303,19 +329,39 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/effects/ZenithVoiceChanger.cpp
     apps/desktop/Source/plugins/ZenithPlugin.cpp
     apps/desktop/Source/plugins/ZenithPluginEditor.cpp
-    apps/desktop/Source/plugins/modulation/ZenithTremolo.cpp
     apps/desktop/Source/dsp/DSPVoiceChanger.cpp
     apps/desktop/Source/ui/instruments/ZenithPolySynthUI.cpp
     apps/desktop/Source/ui/controls/ZenithControl.cpp
     apps/desktop/Source/ui/controls/ZenithKnob.cpp
+    apps/desktop/Source/ui/controls/ZenithButton.cpp
+    apps/desktop/Source/ui/controls/ZenithSlider.cpp
+    apps/desktop/Source/ui/controls/ZenithToggle.cpp
+    apps/desktop/Source/ui/controls/ZenithTextInput.cpp
+    apps/desktop/Source/ui/controls/ZenithDropdown.cpp
+    apps/desktop/Source/ui/controls/ZenithModMatrix.cpp
+    apps/desktop/Source/ui/controls/ZenithTooltipOverlay.cpp
     apps/desktop/Source/rendering/SkiaRenderer.cpp
     apps/desktop/Source/rendering/SkiaLinkerFix.cpp
     apps/desktop/Source/ui/controls/ZenithVisualizer.cpp
+    apps/desktop/Source/ui/controls/DeviceChainComponent.cpp
+    apps/desktop/Source/ui/controls/DebugConsoleComponent.cpp
+    apps/desktop/Source/ui/controls/ExportProgressBar.cpp
+    apps/desktop/Source/ui/controls/FreezeProgressOverlay.cpp
+    apps/desktop/Source/ui/controls/SkiaComboBox.cpp
+    apps/desktop/Source/ui/controls/SkiaLabel.cpp
+    apps/desktop/Source/ui/controls/SkiaTextEditor.cpp
+    apps/desktop/Source/ui/controls/SkiaAlertWindow.cpp
+    apps/desktop/Source/ui/controls/SkiaListBox.cpp
+    apps/desktop/Source/ui/controls/SkiaFileChooser.cpp
+    apps/desktop/Source/ui/controls/MarkdownComponent.cpp
+    apps/desktop/Source/ui/controls/SpectraAnalyzerComponent.cpp
+    apps/desktop/Source/ui/controls/CollabPanel.cpp
     apps/desktop/Source/ai/AIEventBus.cpp
     apps/desktop/Source/ai/AIResponseCache.cpp
     apps/desktop/Source/ai/AIStatusManager.cpp
     apps/desktop/Source/ai/AudioFitnessEvaluator.cpp
     apps/desktop/Source/platform/linux/engine/PlatformAudioUtils_Linux.cpp
+    apps/desktop/Source/platform/linux/network/SecureKeyStore_Linux.cpp
     apps/desktop/Source/network/GrokUtils.cpp
 
     apps/desktop/Source/network/GrokDAWController.cpp
@@ -330,37 +376,21 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/ui/sample-editor/SampleEditorComponent.cpp
     apps/desktop/Source/engine/MixerController.cpp
     apps/desktop/Source/engine/TrackProcessor.cpp
-    apps/desktop/Source/engine/AudioExporter.cpp
-    apps/desktop/Source/utils/AudioAnalysisUtils.cpp
     apps/desktop/Source/utils/StemSeparationJob.cpp
     apps/desktop/Source/dsp/SpectralProcessor.cpp
     apps/desktop/Source/dsp/TimeStretcher.cpp
-    apps/desktop/Source/dsp/DSPVoiceChanger.cpp
     apps/desktop/Source/engine/PropertyExchangeManager.cpp
-    apps/desktop/Source/engine/RealTimeGarbageCollector.cpp
     apps/desktop/Source/engine/Midi2DiscoveryService.cpp
     apps/desktop/Source/engine/AudioAsMidiBridge.cpp
+    # TEMPORARILY DISABLED - depends on disabled AI agents
     apps/desktop/Source/commands/CommandAPI.cpp
     apps/desktop/Source/commands/TrackCommands.cpp
     apps/desktop/Source/commands/TransportCommands.cpp
     apps/desktop/Source/commands/ClipCommands.cpp
     apps/desktop/Source/commands/SessionGraph.cpp
-    apps/desktop/Source/ui/controls/ZenithButton.cpp
-    apps/desktop/Source/ui/controls/ZenithSlider.cpp
-    apps/desktop/Source/ui/controls/ZenithKnob.cpp
-    apps/desktop/Source/ui/controls/ZenithToggle.cpp
-    apps/desktop/Source/ui/controls/ZenithTextInput.cpp
-    apps/desktop/Source/ui/controls/ZenithDropdown.cpp
-    apps/desktop/Source/ui/controls/SkiaComboBox.cpp
-    apps/desktop/Source/ui/controls/SkiaLabel.cpp
-    apps/desktop/Source/ui/controls/SkiaTextEditor.cpp
-    apps/desktop/Source/ui/controls/SkiaAlertWindow.cpp
-    apps/desktop/Source/ui/controls/SkiaListBox.cpp
-    apps/desktop/Source/ui/controls/SkiaFileChooser.cpp
-    apps/desktop/Source/ui/controls/ZenithModMatrix.cpp
-    apps/desktop/Source/ui/controls/ZenithTooltipOverlay.cpp
-    apps/desktop/Source/ui/controls/ExportProgressBar.cpp
-    apps/desktop/Source/ui/controls/FreezeProgressOverlay.cpp
+    apps/desktop/Source/platform/linux/ui/PlatformDisplayUtils_Linux.cpp
+    apps/desktop/Source/platform/linux/system/PlatformSystemUtils_Linux.cpp
+    apps/desktop/Source/platform/linux/config/PlatformPathUtils_Linux.cpp
     apps/desktop/Source/platform/linux/window/PlatformWindowUtils_Linux.cpp
 )
 
@@ -670,6 +700,7 @@ if(BUILD_TESTS)
         apps/desktop/Source/ui/skia
         apps/desktop/Source/utils
         apps/desktop/Source/ai
+        apps/desktop/Source/tests
         apps/desktop/include
         ${CMAKE_PREFIX_PATH}/include
         ${CMAKE_BINARY_DIR}/ZenithDAWTests_artefacts/JuceLibraryCode
@@ -686,10 +717,10 @@ if(BUILD_TESTS)
         juce::juce_audio_processors  # Required for TestUtils.h StubAudioPlugin
         juce::juce_audio_utils
         juce::juce_dsp
+        juce::juce_opengl
         juce::juce_graphics
         juce::juce_gui_basics
         juce::juce_gui_extra
-        juce::juce_opengl
     )
     
 

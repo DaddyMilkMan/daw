@@ -4,14 +4,16 @@
  */
 
 #include "MixerView.h"
+#include "engine/ProjectState.h"
 #include "MixerChannelComponent.h"
 #include "Engine.h"
 #include "../../Source/engine/Track.h"
+#include "../../Source/engine/ProjectState.h"
 
 using namespace zenith;
 #include "../design-system/ZenithTheme.h"
 #include "../design-system/ColorBridge.h"
-#include "../design-system/ZenithTypography.h"
+#include "../design-system/ZenithDesignSystem.h"
 
 //==============================================================================
 MixerView::MixerView(Engine& engine, ProjectState& state)
@@ -22,16 +24,16 @@ MixerView::MixerView(Engine& engine, ProjectState& state)
     viewport_.setScrollBarsShown(true, false);  // Vertical scrollbar, no horizontal
     addAndMakeVisible(viewport_);
 
+    // Register as listener to ProjectState
+    state_.getState().addListener(this);
+
     // Initial channel rebuild
     rebuildChannels();
-
-    // Start timer to check for track count changes (10 Hz)
-    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(100);
 }
 
 MixerView::~MixerView()
 {
-    stopTimer();
+    state_.getState().removeListener(this);
     channels_.clear();
 }
 
@@ -45,7 +47,7 @@ void MixerView::paint(juce::Graphics& g)
     if (channels_.empty())
     {
         g.setColour(design::toJuceColour(design::unified::text_tertiary()));
-        g.setFont(ZenithTypography::getBodyFont().withHeight(16.0f));
+        g.setFont(design::typography::getJuceFont(16.0f));
         g.drawText("No tracks in mixer",
                    getLocalBounds(),
                    juce::Justification::centred,
@@ -81,39 +83,66 @@ void MixerView::resized()
 }
 
 //==============================================================================
-void MixerView::timerCallback()
+//==============================================================================
+void MixerView::valueTreeChildAdded(juce::ValueTree& parentTree, juce::ValueTree& /*childWhichHasBeenAdded*/)
 {
-    // Check if track count has changed
-    int currentTrackCount = engine_.getNumTracks();
-
-    if (currentTrackCount != lastTrackCount_)
+    if (parentTree.hasType(ProjectState::ID_TRACKS))
     {
-        DBG("MixerView: Track count changed from " + juce::String(lastTrackCount_)
-            + " to " + juce::String(currentTrackCount) + ", rebuilding channels");
-        rebuildChannels();
-        lastTrackCount_ = currentTrackCount;
+        // Use Async call to ensure Engine has processed the change first (listener ordering)
+        juce::MessageManager::callAsync([this]() { rebuildChannels(); });
     }
+}
+
+void MixerView::valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& /*childWhichHasBeenRemoved*/, int)
+{
+    if (parentTree.hasType(ProjectState::ID_TRACKS))
+        juce::MessageManager::callAsync([this]() { rebuildChannels(); });
+}
+
+void MixerView::valueTreeChildOrderChanged(juce::ValueTree& parentTree, int, int)
+{
+    if (parentTree.hasType(ProjectState::ID_TRACKS))
+        juce::MessageManager::callAsync([this]() { rebuildChannels(); });
+}
+
+void MixerView::valueTreeRedirected(juce::ValueTree& treeWhichHasBeenChanged)
+{
+    if (treeWhichHasBeenChanged == state_.getState())
+        juce::MessageManager::callAsync([this]() { rebuildChannels(); });
 }
 
 void MixerView::rebuildChannels()
 {
-    DBG("MixerView: Rebuilding mixer channels");
+    DBG("MixerView: Rebuilding mixer channels from ProjectState");
 
     // Clear existing channels
     channels_.clear();
     channelContainer_.deleteAllChildren();
 
-    // Get tracks from engine (message thread only)
-    const auto& tracks = engine_.tracks();
+    // Get tracks from ProjectState (Source of Truth)
+    auto tracksNode = state_.getState().getChildWithName(ProjectState::ID_TRACKS);
+    if (!tracksNode.isValid()) return;
 
-    // Create a channel for each track
-    for (const auto& track : tracks)
+    // Create a channel for each track in the project state
+    for (const auto& trackNode : tracksNode)
     {
+        juce::String trackId = trackNode[ProjectState::PROP_ID];
+        
+        // Lookup the corresponding engine track
+        // This is safe because we use the ID as the key, not strict index
+        auto* track = engine_.getTrackById(trackId);
+
         if (track != nullptr)
         {
-            auto channel = std::make_unique<MixerChannelComponent>(track.get(), state_, engine_);
+            auto channel = std::make_unique<MixerChannelComponent>(track, state_, engine_);
             channelContainer_.addAndMakeVisible(channel.get());
             channels_.push_back(std::move(channel));
+        }
+        else
+        {
+            // This might happen if UI updates before EngineSync has finished.
+            // In a real scenario, we might want to schedule a retry, but callAsync handles most cases.
+            DBG("MixerView Warning: Track found in ProjectState but not yet in Engine: " + trackId);
         }
     }
 

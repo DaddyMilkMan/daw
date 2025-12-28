@@ -71,6 +71,32 @@ WingmanPanel::WingmanPanel(CommandAPI &api, Engine &engine)
   addAndMakeVisible(sendButton.get());
 
   //==========================================================================
+  // Vibe DAW Buttons (Accept/Deny)
+  acceptButton = std::make_unique<juce::TextButton>("Accept");
+  acceptButton->setButtonText("Accept Changes");
+  acceptButton->setColour(juce::TextButton::buttonColourId,
+                          design::toJuceColour(design::colors::SUCCESS));
+  acceptButton->setVisible(false);
+  acceptButton->addListener(this);
+  addAndMakeVisible(acceptButton.get());
+
+  denyButton = std::make_unique<juce::TextButton>("Deny");
+  denyButton->setButtonText("Rollback");
+  denyButton->setColour(juce::TextButton::buttonColourId,
+                        design::toJuceColour(design::colors::DANGER));
+  denyButton->setVisible(false);
+  denyButton->addListener(this);
+  addAndMakeVisible(denyButton.get());
+
+  grokController->setOnChangesPending([this](bool pending) {
+      juce::MessageManager::callAsync([this, pending]() {
+          acceptButton->setVisible(pending);
+          denyButton->setVisible(pending);
+          resized();
+      });
+  });
+
+  //==========================================================================
   // Mode Selector
   modeLabel = std::make_unique<juce::Label>("ModeLabel", "Mode:");
   modeLabel->setColour(juce::Label::textColourId,
@@ -157,9 +183,20 @@ void WingmanPanel::resized() {
   auto statusArea = bounds.removeFromBottom(30);
   statusLabel->setBounds(statusArea.reduced(5));
 
-  // Input area (80px)
-  auto inputArea = bounds.removeFromBottom(80);
+  // Input area (dynamic height)
+  int inputHeight = 80;
+  if (acceptButton->isVisible()) inputHeight += 40;
+  
+  auto inputArea = bounds.removeFromBottom(inputHeight);
   inputArea.reduce(10, 10);
+
+  // Vibe Row (Accept/Deny)
+  if (acceptButton->isVisible()) {
+      auto vibeRow = inputArea.removeFromTop(30);
+      acceptButton->setBounds(vibeRow.removeFromLeft(vibeRow.getWidth() / 2).reduced(2, 0));
+      denyButton->setBounds(vibeRow.reduced(2, 0));
+      inputArea.removeFromTop(10);
+  }
 
   // Mode selector row
   auto modeRow = inputArea.removeFromTop(30);
@@ -196,22 +233,27 @@ bool WingmanPanel::initializeGrok(const juce::String &apiKey) {
 bool WingmanPanel::isGrokReady() const { return grokController->isReady(); }
 
 //==============================================================================
-void WingmanPanel::textEditorReturnKeyPressed(juce::TextEditor &editor) {
-  if (&editor == inputField.get()) {
-    sendCommand();
-  }
-}
-
 void WingmanPanel::buttonClicked(juce::Button *button) {
   if (button == sendButton.get()) {
     sendCommand();
+  } else if (button == acceptButton.get()) {
+    grokController->acceptLastChanges();
+    appendToConversation("Wingman", "*Changes applied and committed.*");
+  } else if (button == denyButton.get()) {
+    grokController->denyLastChanges();
+    appendToConversation("Wingman", "*Changes rolled back.*");
   } else if (button == clearButton.get()) {
     conversationDisplay->clear();
     grokController->clearHistory();
-    appendToConversation("Wingman",
-                         "Conversation cleared. How can I help you?");
   } else if (button == settingsButton.get()) {
     showSettings();
+  }
+}
+
+//==============================================================================
+void WingmanPanel::textEditorReturnKeyPressed(juce::TextEditor &editor) {
+  if (&editor == inputField.get()) {
+    sendCommand();
   }
 }
 

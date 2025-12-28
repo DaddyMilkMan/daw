@@ -19,7 +19,8 @@
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
 
-static constexpr float HEADER_WIDTH = 240.0f; // Aligned with design::spacing::trackHeaderWidth
+// Layout Constants - USE DESIGN SYSTEM (Single Source of Truth)
+static constexpr float HEADER_WIDTH = zenith::design::dimensions::ARRANGER_HEADER_WIDTH;
 
 namespace zenith {
 
@@ -200,27 +201,47 @@ void ArrangerTrackComponent::drawTrackBackground(SkCanvas *canvas,
                                                  const SkRect &bounds) {
   using namespace design;
 
-  // Alternating row tint
+  // Base track lane background (subtle but VISIBLE)
+  {
+    SkPaint lanePaint;
+    lanePaint.setColor(design::withAlpha(design::colors::BG_02, 0.5f));
+    canvas->drawRect(SkRect::MakeXYWH(HEADER_WIDTH, 0,
+                                      bounds.width() - HEADER_WIDTH,
+                                      bounds.height()),
+                     lanePaint);
+  }
+
+  // Alternating row tint - INCREASED from pathetic 3% to visible 10%
   if (trackIndex_ % 2 == 1) {
     SkPaint altRowPaint;
-    altRowPaint.setColor(design::withAlpha(design::colors::BG_04, 0.03f));
+    altRowPaint.setColor(design::withAlpha(design::colors::BG_04, 0.10f)); // Was 0.03f
     canvas->drawRect(SkRect::MakeXYWH(HEADER_WIDTH, 0,
                                       bounds.width() - HEADER_WIDTH,
                                       bounds.height()),
                      altRowPaint);
   }
 
-  // Separator
-  SkPaint sepPaint;
-  SkPoint sepPts[2] = {{0, 0}, {bounds.width(), 0}};
-  SkColor sepColors[3] = {SkColorSetARGB(60, 255, 255, 255),
-                          SkColorSetARGB(30, 255, 255, 255),
-                          SkColorSetARGB(10, 255, 255, 255)};
-  float sepPos[3] = {0.0f, 0.3f, 1.0f};
-  sepPaint.setShader(SkGradientShader::MakeLinear(sepPts, sepColors, sepPos, 3,
-                                                  SkTileMode::kClamp));
-  canvas->drawLine(0, bounds.height() - 0.5f, bounds.width(),
-                   bounds.height() - 0.5f, sepPaint);
+  // TOP Separator - subtle highlight
+  {
+    SkPaint topSepPaint;
+    topSepPaint.setColor(design::withAlpha(design::colors::BORDER_SUBTLE, 0.3f));
+    canvas->drawLine(HEADER_WIDTH, 0.5f, bounds.width(), 0.5f, topSepPaint);
+  }
+
+  // BOTTOM Separator - clear lane boundary
+  {
+    SkPaint sepPaint;
+    SkPoint sepPts[2] = {{HEADER_WIDTH, bounds.height()}, {bounds.width(), bounds.height()}};
+    SkColor sepColors[2] = {
+        design::withAlpha(design::colors::BORDER_SUBTLE, 0.5f),
+        design::withAlpha(design::colors::BORDER_SUBTLE, 0.2f)
+    };
+    sepPaint.setShader(SkGradientShader::MakeLinear(sepPts, sepColors, nullptr, 2,
+                                                    SkTileMode::kClamp));
+    sepPaint.setStrokeWidth(1.0f);
+    canvas->drawLine(HEADER_WIDTH, bounds.height() - 0.5f, bounds.width(),
+                     bounds.height() - 0.5f, sepPaint);
+  }
 }
 
 void ArrangerTrackComponent::drawControls(SkCanvas *canvas, float startX,

@@ -142,8 +142,8 @@ public:
 
   zenith::ProjectState *getProjectState() const { return projectState.get(); }
 
-  void saveProject();
-  void saveProjectAs();
+  void saveProject(std::function<void(bool)> onComplete = nullptr);
+  void saveProjectAs(std::function<void(bool)> onComplete = nullptr);
   bool loadProject(const juce::File &file);
   void openProject();
   void newProject();

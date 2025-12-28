@@ -179,8 +179,8 @@ void AudioRecorder::startRecording(
     const juce::File &recordingsDir) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-  if (isRecording_.load()) {
-    DBG("AudioRecorder: Already recording, ignoring start request");
+  if (state_.load() != RecordingState::Idle) {
+    DBG("AudioRecorder: Not idle, ignoring start request");
     return;
   }
 
@@ -278,72 +278,26 @@ void AudioRecorder::startRecording(
 
   if (!sessions_.empty()) {
     writerThread_->addTimeSliceClient(this);
-    isRecording_.store(true);
+    state_.store(RecordingState::Recording);
   }
 }
 
-std::vector<RecordingResult> AudioRecorder::stopRecording() {
+void AudioRecorder::stopRecording(std::function<void(std::vector<RecordingResult>)> completionCallback) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-  std::vector<RecordingResult> results;
+  if (state_.load() != RecordingState::Recording) {
+    if (completionCallback)
+      completionCallback({});
+    return;
+  }
 
-  if (!isRecording_.load())
-    return results;
+  completionCallback_ = std::move(completionCallback);
+  state_.store(RecordingState::Finalizing);
 
-  isRecording_.store(false);
-
+  // Notify writer thread to finalize
   if (writerThread_) {
-    writerThread_->removeTimeSliceClient(this);
+    writerThread_->notify();
   }
-
-  // Process results BEFORE clearing sessions
-  for (auto &session : sessions_) {
-    if (!session->isActive.load())
-      continue;
-
-    // Final flush
-    while (session->ringBuffer->getNumReady() > 0) {
-      const int numRead =
-          session->ringBuffer->read(tempReadBuffer_, kFlushBlockSize);
-      if (numRead > 0) {
-        const float *channels[2] = {tempReadBuffer_.getReadPointer(0),
-                                    session->numChannels > 1
-                                        ? tempReadBuffer_.getReadPointer(1)
-                                        : tempReadBuffer_.getReadPointer(0)};
-        session->writer->write(channels, numRead);
-      }
-    }
-
-    if (session->ringBuffer->hasOverflowed(true)) {
-      DBG("AudioRecorder: WARNING - Ring buffer overflow detected");
-    }
-
-    // Reset writer blocks until done
-    session->writer.reset();
-
-    RecordingResult result;
-    result.file = session->file;
-    result.trackIndex = session->trackIndex;
-    result.trackId = session->trackId;
-    result.startSamplePosition = session->startSamplePosition;
-    result.samplesRecorded = session->samplesRecorded.load();
-    result.sampleRate = session->sampleRate;
-    results.push_back(result);
-  }
-
-  // Add any previously completed takes from loop recording
-  for (const auto &take : completedTakes_) {
-    results.push_back(take);
-  }
-  completedTakes_.clear();
-
-  // Clear sessions
-  sessions_.clear();
-
-  // Update snapshot to clear audio thread view
-  updateSessionSnapshot();
-
-  return results;
 }
 
 void AudioRecorder::onLoopCycle() {
@@ -454,7 +408,7 @@ void AudioRecorder::updateSessionSnapshot() {
 void AudioRecorder::write(const float *const *inputChannelData,
                           int numInputChannels, int numSamples,
                           const std::vector<std::shared_ptr<Track>> &tracks) {
-  if (!isRecording_.load() || inputChannelData == nullptr || numSamples <= 0)
+  if (state_.load() != RecordingState::Recording || inputChannelData == nullptr || numSamples <= 0)
     return;
 
   // RCU Lock-Free Access
@@ -498,23 +452,29 @@ void AudioRecorder::write(const float *const *inputChannelData,
 }
 
 int AudioRecorder::useTimeSlice() {
-  if (!isRecording_.load())
+  const auto currentState = state_.load();
+  if (currentState == RecordingState::Idle)
     return -1;
 
   // RCU Lock-Free Access
-  // Both Audio Thread and Background Thread share read access to the snapshot
   auto *snapshot = activeSessionSnapshot_.load(std::memory_order_acquire);
   if (!snapshot)
     return -1;
 
   bool anyWork = false;
+  bool finalizing = (currentState == RecordingState::Finalizing);
 
   for (const auto &session : snapshot->sessions) {
     if (!session->isActive.load() || !session->ringBuffer || !session->writer)
       continue;
 
     const int numReady = session->ringBuffer->getNumReady();
-    if (numReady >= kFlushBlockSize / 2) {
+    
+    // In finalizing state, we flush EVERYTHING. 
+    // In recording state, we only flush if we have enough data (hysteresis).
+    const int threshold = finalizing ? 1 : (kFlushBlockSize / 2);
+
+    if (numReady >= threshold) {
       if (tempReadBuffer_.getNumChannels() < session->numChannels) {
         tempReadBuffer_.setSize(session->numChannels, kFlushBlockSize, false,
                                 false, true);
@@ -524,14 +484,54 @@ int AudioRecorder::useTimeSlice() {
       const int numRead = session->ringBuffer->read(tempReadBuffer_, toRead);
 
       if (numRead > 0) {
-        const float *channels[2] = {tempReadBuffer_.getReadPointer(0),
-                                    session->numChannels > 1
-                                        ? tempReadBuffer_.getReadPointer(1)
-                                        : tempReadBuffer_.getReadPointer(0)};
-        session->writer->write(channels, numRead);
+        // Correcting channel mapping logic for safety
+        const float* writerChannels[2];
+        writerChannels[0] = tempReadBuffer_.getReadPointer(0);
+        writerChannels[1] = session->numChannels > 1 ? tempReadBuffer_.getReadPointer(1) : writerChannels[0];
+
+        session->writer->write(writerChannels, numRead);
         anyWork = true;
       }
     }
+  }
+
+  if (finalizing && !anyWork) {
+    // Everything flushed from ring buffers, now finalize writers and results
+    std::vector<RecordingResult> results;
+    
+    for (auto& session : sessions_) {
+      if (session->ringBuffer->hasOverflowed(true)) {
+        DBG("AudioRecorder: WARNING - Ring buffer overflow detected");
+      }
+
+      // Resetting ThreadedWriter flushes its internal fifo to disk (BLOCKING on this thread)
+      session->writer.reset();
+
+      RecordingResult result;
+      result.file = session->file;
+      result.trackIndex = session->trackIndex;
+      result.trackId = session->trackId;
+      result.startSamplePosition = session->startSamplePosition;
+      result.samplesRecorded = session->samplesRecorded.load();
+      result.sampleRate = session->sampleRate;
+      results.push_back(result);
+    }
+
+    // Trigger callback on Message Thread
+    auto callback = std::move(completionCallback_);
+    juce::MessageManager::callAsync([this, callback, results]() {
+      // Clear sessions on message thread
+      sessions_.clear();
+      updateSessionSnapshot();
+      writerThread_->removeTimeSliceClient(this);
+      
+      state_.store(RecordingState::Idle);
+
+      if (callback)
+        callback(results);
+    });
+
+    return -1;
   }
 
   return anyWork ? 0 : 5;

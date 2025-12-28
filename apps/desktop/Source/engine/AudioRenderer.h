@@ -51,6 +51,11 @@ struct AudioRenderContext {
   std::vector<juce::AudioBuffer<float>> trackBuffers;
   std::vector<juce::AudioBuffer<float>> auxBusBuffers;
 
+  // Feedback Buffers (for 1-block cycle delay)
+  // These store the output of a node from the previous block, if it's part of a cycle
+  std::vector<juce::AudioBuffer<float>> trackFeedbackBuffers;
+  std::vector<juce::AudioBuffer<float>> auxBusFeedbackBuffers;
+
   // PDC State
   std::vector<juce::AudioBuffer<float>> pdcDelayBuffers;
   std::vector<int> pdcDelayWritePos;
@@ -74,8 +79,13 @@ struct AudioRenderContext {
     // Resize track buffers
     if (trackBuffers.size() != numTracks) {
       trackBuffers.resize(numTracks);
+      trackFeedbackBuffers.resize(numTracks); // Resize feedback buffers
     }
     for (auto &buffer : trackBuffers) {
+      buffer.setSize(2, blockSize);
+      buffer.clear();
+    }
+    for (auto &buffer : trackFeedbackBuffers) {
       buffer.setSize(2, blockSize);
       buffer.clear();
     }
@@ -83,8 +93,13 @@ struct AudioRenderContext {
     // Resize aux buffers
     if (auxBusBuffers.size() != numAuxBuses) {
       auxBusBuffers.resize(numAuxBuses);
+      auxBusFeedbackBuffers.resize(numAuxBuses); // Resize feedback buffers
     }
     for (auto &buffer : auxBusBuffers) {
+      buffer.setSize(2, blockSize);
+      buffer.clear();
+    }
+    for (auto &buffer : auxBusFeedbackBuffers) {
       buffer.setSize(2, blockSize);
       buffer.clear();
     }
@@ -106,7 +121,9 @@ struct AudioRenderContext {
 
   void reset() {
     for (auto &buffer : trackBuffers) buffer.clear();
+    for (auto &buffer : trackFeedbackBuffers) buffer.clear(); // Clear feedback
     for (auto &buffer : auxBusBuffers) buffer.clear();
+    for (auto &buffer : auxBusFeedbackBuffers) buffer.clear(); // Clear feedback
     for (auto &buffer : pdcDelayBuffers) buffer.clear();
     std::fill(pdcDelayWritePos.begin(), pdcDelayWritePos.end(), 0);
     std::fill(trackLatencies.begin(), trackLatencies.end(), 0);

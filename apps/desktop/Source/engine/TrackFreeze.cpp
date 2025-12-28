@@ -33,7 +33,10 @@ bool TrackFreezeManager::freezeTrack(Track& track,
                                      Engine& engine,
                                      const juce::File& outputDir,
                                      ProgressCallback progress) {
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    if (!juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+        jassertfalse;
+        return false;
+    }
     
     // Check if already frozen
     if (isFrozen(track)) {
@@ -98,7 +101,10 @@ bool TrackFreezeManager::freezeTrack(Track& track,
 
 //==============================================================================
 bool TrackFreezeManager::unfreezeTrack(Track& track) {
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    if (!juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+        jassertfalse;
+        return false;
+    }
     
     juce::String trackId = track.getTrackId();
     auto it = freezeStates_.find(trackId);

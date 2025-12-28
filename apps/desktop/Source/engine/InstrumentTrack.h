@@ -37,7 +37,7 @@ public:
   void getNextAudioBlock(
       const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
       const juce::MidiBuffer *incomingMidi = nullptr,
-      const std::vector<juce::AudioBuffer<float> *> &auxBuffers = {},
+      std::span<juce::AudioBuffer<float> * const> auxBuffers = {},
       const TempoMap *tempoMap = nullptr,
       const juce::AudioBuffer<float> *sidechainBuffer = nullptr) override;
 

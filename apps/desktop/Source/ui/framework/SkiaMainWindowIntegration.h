@@ -7,6 +7,7 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_opengl/juce_opengl.h>
+#include <atomic>
 
 #ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
@@ -99,8 +100,19 @@ protected:
 private:
   int lastWidth_ = 0;
   int lastHeight_ = 0;
+  
+  // Thread-safe dimensions (Atomic for lock-free read/write)
+  std::atomic<int> safeWidth_{0};
+  std::atomic<int> safeHeight_{0};
 
   void recreateSurface();
+public:
+  void updateDimensions(int width, int height) {
+      safeWidth_.store(width);
+      safeHeight_.store(height);
+  }
+
+  JUCE_DECLARE_WEAK_REFERENCEABLE(SkiaOpenGLRenderer)
 };
 
 /**

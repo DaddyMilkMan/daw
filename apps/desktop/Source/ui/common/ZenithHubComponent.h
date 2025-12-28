@@ -19,6 +19,7 @@
 #include <JuceHeader.h>
 
 #include "../../engine/RecentProjectManager.h"
+#include "../../network/AuthenticationService.h"
 #include "../utils/PhysicsSpring.h"
 #include "AuroraBackground.h"
 #include "GlassmorphicPanel.h"
@@ -30,8 +31,11 @@
 
 namespace zenith {
 
+class LoginComponent;  // Forward declaration
+
 class ZenithHubComponent : public SkiaComponent,
-                           public RecentProjectManager::Listener {
+                           public RecentProjectManager::Listener,
+                           public AuthenticationService::Listener {
 public:
   /**
    * @brief Callback type for project loading
@@ -78,6 +82,9 @@ public:
 
   // RecentProjectManager::Listener
   void recentProjectsChanged() override;
+  
+  // AuthenticationService::Listener
+  void authStateChanged(bool isLoggedIn, const AuthUser& user) override;
 
   void show();
   void dismiss();
@@ -162,9 +169,19 @@ private:
   };
   std::vector<TemplateItem> templates_;
 
-  // Profile
+  // Profile / Auth State
   SkRect profileBounds_;
   bool isProfileHovered_ = false;
+  
+  // Login UI
+  AuthUser currentUser_;           // Current authenticated user
+  SkRect signInButtonBounds_;      // "Sign In" button when not logged in
+  bool isSignInHovered_ = false;
+  std::unique_ptr<LoginComponent> loginComponent_;
+  bool showingLogin_ = false;
+  
+  void showLoginComponent();
+  void hideLoginComponent();
 
   // New Project Button
   SkRect newProjectButtonBounds_;

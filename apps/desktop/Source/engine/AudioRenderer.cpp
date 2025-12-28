@@ -51,6 +51,17 @@ void AudioRenderer::renderAudioGraph(
   const size_t numBuses = juce::jmin(auxBuses.size(), context.auxBusBuffers.size());
   for (size_t i = 0; i < numBuses; ++i) {
     context.auxBusBuffers[i].clear();
+    
+    // INJECT FEEDBACK: Mix signal from previous block (delay)
+    if (i < context.auxBusFeedbackBuffers.size()) {
+       auto& feedback = context.auxBusFeedbackBuffers[i];
+       // Simply add feedback buffer contents to input. 
+       // Feedback buffer contains what was written by feedback sources in previous block.
+       for (int ch = 0; ch < juce::jmin(context.auxBusBuffers[i].getNumChannels(), feedback.getNumChannels()); ++ch) {
+           context.auxBusBuffers[i].addFrom(ch, 0, feedback, ch, 0, numSamples);
+       }
+       feedback.clear(); // Clear for next block capture
+    }
   }
 
   // Build aux buffer pointers for tracks (RT-safe stack allocation or fixed member)
@@ -62,11 +73,7 @@ void AudioRenderer::renderAudioGraph(
     auxBufferPtrs[actualAuxCount++] = &context.auxBusBuffers[i];
   }
   
-  // Wrap in a vector-like view for getNextAudioBlock compatibility
-  // Note: Track::getNextAudioBlock takes std::vector<juce::AudioBuffer<float> *>.
-  // This is a violation of RT-safety if we create the vector here, but if we pass 
-  // a pre-allocated one, it's fine. However, the signature expects std::vector.
-  // We'll have to use the context's vector to avoid allocation.
+  // Initialize vector with standard (forward) pointers
   context.auxBufferPtrsVector.clear();
   for(size_t i = 0; i < actualAuxCount; ++i) context.auxBufferPtrsVector.push_back(auxBufferPtrs[i]);
 
@@ -77,14 +84,13 @@ void AudioRenderer::renderAudioGraph(
     if (trackIt != snapshot->trackLookup.end()) {
       if (auto trackPtr = trackIt->second.lock()) {
         Track* track = trackPtr.get();
-      int trackIdx = track->getTrackIndex(); 
+        int trackIdx = track->getTrackIndex(); 
 
       // Handle frozen tracks - play back their freeze buffer (RT-safe)
       if (track->isFrozen()) {
         auto freezeBuffer = track->getFreezeBuffer();
         if (freezeBuffer != nullptr && trackIdx >= 0 && trackIdx < (int)context.trackBuffers.size()) {
           auto &trackBuffer = context.trackBuffers[trackIdx];
-
           trackBuffer.clear();
 
           const juce::int64 readPos = playheadPosition;
@@ -128,10 +134,43 @@ void AudioRenderer::renderAudioGraph(
 
       auto &trackBuffer = context.trackBuffers[trackIdx];
       trackBuffer.clear();
+      
+      // INJECT TRACK FEEDBACK (if any)
+      // Tracks can receive feedback on input if routed that way? 
+      // Current design doesn't really support general Track Input routing from other tracks except Sidechain.
+      // But if we supported it:
+      // if (trackIdx < context.trackFeedbackBuffers.size()) { ... mix ... clear ... }
 
       // Skip processing if track is currently being frozen (prevent race condition)
       if (track->isBeingFrozen()) {
           continue;
+      }
+
+      // PREPARE ROUTING FOR THIS TRACK
+      // 1. Reset Aux Ptrs to Default (Forward)
+      for(size_t i = 0; i < actualAuxCount; ++i) context.auxBufferPtrsVector[i] = auxBufferPtrs[i];
+      
+      bool isFeedbackSource = false;
+
+      // 2. Scan Connections for this node to handle Feedback Routing
+      for (const auto &conn : snapshot->topology->connections) {
+          if (conn.sourceId == nodeId) {
+              if (conn.isFeedback) {
+                  isFeedbackSource = true;
+                  // If sending to Aux Bus in Feedback loop, swap pointer!
+                  if (auto auxIt = snapshot->auxBusLookup.find(conn.destId); auxIt != snapshot->auxBusLookup.end()) {
+                      if (auto auxPtr = auxIt->second.lock()) {
+                          int auxIdx = auxPtr->getBusIndex();
+                          if (auxIdx >= 0 && auxIdx < (int)context.auxBufferPtrsVector.size()) {
+                              // Point to Feedback Buffer instead of Input Buffer
+                              if (auxIdx < (int)context.auxBusFeedbackBuffers.size()) {
+                                  context.auxBufferPtrsVector[auxIdx] = &context.auxBusFeedbackBuffers[auxIdx];
+                              }
+                          }
+                      }
+                  }
+              }
+          }
       }
 
       juce::AudioSourceChannelInfo trackInfo(&trackBuffer, 0, numSamples);
@@ -144,7 +183,20 @@ void AudioRenderer::renderAudioGraph(
       if (auto* sourceTrack = track->getSidechainSource()) {
           int sourceIdx = sourceTrack->getTrackIndex();
           if (sourceIdx >= 0 && sourceIdx < (int)context.trackBuffers.size()) {
-              sidechainBuffer = &context.trackBuffers[sourceIdx];
+              // Check if Sidechain connection is Feedback
+              bool isSidechainFeedback = false;
+              for (const auto &conn : snapshot->topology->connections) {
+                  if (conn.sourceId == sourceTrack->getId() && conn.destId == nodeId && conn.isFeedback) {
+                      isSidechainFeedback = true;
+                      break;
+                  }
+              }
+              
+              if (isSidechainFeedback && sourceIdx < (int)context.trackFeedbackBuffers.size()) {
+                   sidechainBuffer = &context.trackFeedbackBuffers[sourceIdx];
+              } else {
+                   sidechainBuffer = &context.trackBuffers[sourceIdx];
+              }
           }
       }
 
@@ -154,6 +206,16 @@ void AudioRenderer::renderAudioGraph(
 
       if (pdcEnabled_.load()) {
         applyPDCDelay(context, trackBuffer, static_cast<int>(trackIdx), numSamples);
+      }
+      
+      // SAVE FEEDBACK SOURCE
+      if (isFeedbackSource) {
+           if (trackIdx < (int)context.trackFeedbackBuffers.size()) {
+               // Copy output to feedback buffer for next block usage
+               for (int ch = 0; ch < juce::jmin(trackBuffer.getNumChannels(), context.trackFeedbackBuffers[trackIdx].getNumChannels()); ++ch) {
+                   context.trackFeedbackBuffers[trackIdx].copyFrom(ch, 0, trackBuffer, ch, 0, numSamples);
+               }
+           }
       }
 
       // FIXED: connections is in topology
@@ -174,35 +236,41 @@ void AudioRenderer::renderAudioGraph(
     if (busIt != snapshot->auxBusLookup.end()) {
        if (auto busPtr = busIt->second.lock()) {
          AuxBus* bus = busPtr.get();
-       // We need the index of the bus for the buffer
-       // For now, let's look it up in the auxBuses span for the index
-       // (Optimization: AuxBus could also store its index)
-       size_t busIdx = 0;
-       bool found = false;
-       for (size_t i = 0; i < auxBuses.size(); ++i) {
-           if (auxBuses[i] == bus) {
-               busIdx = i;
-               found = true;
-               break;
-           }
-       }
+         
+         // Fast lookup via cached index
+         int busIdx = bus->getBusIndex();
 
-       if (found && busIdx < context.auxBusBuffers.size()) {
-        auto &busBuffer = context.auxBusBuffers[busIdx];
-
-        juce::AudioSourceChannelInfo auxInfo(&busBuffer, 0, numSamples);
-        bus->getNextAudioBlock(auxInfo);
-
-        // FIXED: connections is in topology
-        for (const auto &conn : snapshot->topology->connections) {
-          if (conn.sourceId == nodeId && conn.destId == "master") {
-            for (int ch = 0; ch < juce::jmin(outputBuffer.getNumChannels(), busBuffer.getNumChannels()); ++ch) {
-              outputBuffer.addFrom(ch, 0, busBuffer, ch, 0, numSamples, conn.gain);
+         if (busIdx >= 0 && busIdx < (int)context.auxBusBuffers.size()) {
+           auto &busBuffer = context.auxBusBuffers[busIdx];
+           juce::AudioSourceChannelInfo auxInfo(&busBuffer, 0, numSamples);
+           bus->getNextAudioBlock(auxInfo);
+           
+           // Check if this Aux Bus is a source of feedback (e.g. Aux -> Aux or Aux -> Track)
+           bool isFeedbackSource = false;
+            for (const auto &conn : snapshot->topology->connections) {
+                  if (conn.sourceId == nodeId && conn.isFeedback) {
+                      isFeedbackSource = true; 
+                      break; 
+                  }
             }
-            break;
-          }
-        }
-        }
+            
+            if (isFeedbackSource && busIdx < (int)context.auxBusFeedbackBuffers.size()) {
+                 // Save output
+                 for (int ch = 0; ch < juce::jmin(busBuffer.getNumChannels(), context.auxBusFeedbackBuffers[busIdx].getNumChannels()); ++ch) {
+                     context.auxBusFeedbackBuffers[busIdx].copyFrom(ch, 0, busBuffer, ch, 0, numSamples);
+                 }
+            }
+
+           // FIXED: connections is in topology
+           for (const auto &conn : snapshot->topology->connections) {
+             if (conn.sourceId == nodeId && conn.destId == "master") {
+               for (int ch = 0; ch < juce::jmin(outputBuffer.getNumChannels(), busBuffer.getNumChannels()); ++ch) {
+                 outputBuffer.addFrom(ch, 0, busBuffer, ch, 0, numSamples, conn.gain);
+               }
+               break;
+             }
+           }
+         }
       }
       continue;
     }
