@@ -110,6 +110,7 @@ private:
     std::atomic<int> samplesSinceAnalysis{0};
     std::atomic<int> samplesPerAnalysis{0};
     std::atomic<bool> newAnalysisAvailable{false};
+    mutable std::atomic<uint32_t> analysisSequence{0}; // For Seqlock
     AudioAnalysisData lastAnalysis;
     
     // Analysis methods (real-time safe)

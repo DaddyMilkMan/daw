@@ -10,13 +10,10 @@
 #include "SkiaComponent.h"
 #include "ZenithDesignSystem.h"
 #include <JuceHeader.h>
-#include <core/SkCanvas.h>
-#include <core/SkFont.h>
+#include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
-#include <core/SkPaint.h>
 #include <core/SkPath.h>
 #include <core/SkPoint.h>
-#include <core/SkRect.h>
 #include <map>
 #include <string>
 

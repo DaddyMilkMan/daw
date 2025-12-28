@@ -311,9 +311,8 @@ void FreezeRenderThread::run() {
         DBG("FreezeRenderThread: Cancelled");
         outputFile_.deleteFile();
         
-        // CRITIC FIX: Look up track by ID on message thread - NEVER capture by reference
+        // THREAD SAFETY FIX: Use Engine::getInstance() for safe async access
         const juce::String cancelledTrackId = track_.getTrackId();
-        
         juce::MessageManager::callAsync([cancelledTrackId]() {
             if (auto* engine = Engine::getInstance()) {
                 if (auto* track = engine->getTrackById(cancelledTrackId)) {
@@ -325,17 +324,18 @@ void FreezeRenderThread::run() {
     }
     
     // Success - finalize freeze on message thread
-    // CRITIC FIX: Capture ONLY by value. Look up track by ID on message thread.
-    // The comment "track reference should still be valid" was WRONG and dangerous.
+    // THREAD SAFETY FIX: Use Engine::getInstance() for safe async access
     const juce::String trackId = track_.getTrackId();
     const juce::String trackName = track_.getName();
     auto progressCopy = progress_; // Copy the callback
     
     juce::MessageManager::callAsync([trackId, trackName, progressCopy]() {
-        // SAFE: Look up track by ID on message thread
+        // SAFE: Look up engine via singleton, check for null
         auto* engine = Engine::getInstance();
-        if (engine == nullptr) return; // Engine shut down?
-
+        if (engine == nullptr || engine->isShuttingDown()) {
+            DBG("FreezeRenderThread: Engine shutting down, skipping finalize");
+            return;
+        }
         auto* track = engine->getTrackById(trackId);
         if (track == nullptr) {
             DBG("FreezeRenderThread: Track was deleted during freeze: " + trackName);

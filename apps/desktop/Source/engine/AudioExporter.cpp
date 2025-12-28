@@ -170,8 +170,9 @@ bool AudioExporter::exportProject(const ExportOptions &options) {
 
   juce::AudioBuffer<float> buffer(2, kExportBlockSize);
 
-  // Note: Engine now manages its own render context internally
-  // No need to create or pass AudioRenderContext
+  // Create local render context
+  AudioRenderContext context;
+  context.prepare(options.sampleRate, blockSize, engine_.getNumTracks(), engine_.getNumAuxBuses());
 
   juce::int64 startSample = static_cast<juce::int64>(options.startTime * options.sampleRate);
   juce::int64 totalSamples = static_cast<juce::int64>(options.sampleRate * duration);
@@ -181,7 +182,8 @@ bool AudioExporter::exportProject(const ExportOptions &options) {
     int numSamples = static_cast<int>(juce::jmin(static_cast<juce::int64>(kExportBlockSize), 
                                                   totalSamples - samplesWritten));
 
-    engine_.renderOfflineBlock(buffer, numSamples, startSample + samplesWritten);
+    engine_.renderOfflineBlock(context, buffer, numSamples, startSample + samplesWritten);
+
 
     if (options.enableDither && options.bitDepth < 32) {
       dither.process(buffer, options.bitDepth);
@@ -342,8 +344,12 @@ void AudioExporter::reportAggregateProgress(const ExportOptions& options) {
 
 bool AudioExporter::analyzeProjectPeak(double duration, double sampleRate,
                                        double startTime, float &outMaxPeak) {
-  juce::AudioBuffer<float> buffer(2, kExportBlockSize);
-  // Note: Engine manages render context internally
+  const int blockSize = kExportBlockSize;
+  juce::AudioBuffer<float> buffer(2, blockSize);
+  
+  // Create local render context
+  AudioRenderContext context;
+  context.prepare(sampleRate, blockSize, engine_.getNumTracks(), engine_.getNumAuxBuses());
 
   juce::int64 startSample = static_cast<juce::int64>(startTime * sampleRate);
   juce::int64 totalSamples = static_cast<juce::int64>(sampleRate * duration);
@@ -353,7 +359,8 @@ bool AudioExporter::analyzeProjectPeak(double duration, double sampleRate,
   while (samplesProcessed < totalSamples && !shouldCancel_.load()) {
     int numSamples = static_cast<int>(juce::jmin(static_cast<juce::int64>(kExportBlockSize),
                                                   totalSamples - samplesProcessed));
-    engine_.renderOfflineBlock(buffer, numSamples, startSample + samplesProcessed);
+    engine_.renderOfflineBlock(context, buffer, numSamples, startSample + samplesProcessed);
+
 
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
       float channelPeak = buffer.getMagnitude(ch, 0, numSamples);
@@ -388,7 +395,10 @@ bool AudioExporter::renderToTempFile(const juce::File &tempFile,
 
   juce::AudioBuffer<float> buffer(2, kExportBlockSize);
 
-  // Note: Engine manages render context internally
+  // Create local render context
+  AudioRenderContext context;
+  context.prepare(sampleRate, blockSize, engine_.getNumTracks(), engine_.getNumAuxBuses());
+
 
   // Note: Engine playback should already be suspended here by wrapper
 
@@ -401,7 +411,8 @@ bool AudioExporter::renderToTempFile(const juce::File &tempFile,
     int numSamples = static_cast<int>(juce::jmin(static_cast<juce::int64>(kExportBlockSize),
                                                   totalSamples - samplesProcessed));
 
-    engine_.renderOfflineBlock(buffer, numSamples, startSample + samplesProcessed);
+    engine_.renderOfflineBlock(context, buffer, numSamples, startSample + samplesProcessed);
+
 
     // Find peak across both channels
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {

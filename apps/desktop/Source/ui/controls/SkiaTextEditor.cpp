@@ -19,7 +19,8 @@ SkiaTextEditor::SkiaTextEditor(const juce::String &componentName) {
   setName(componentName);
 
   // Set default appearance
-  font_.setSize(design::typography::FONT_MD);
+  font_ = zenith::design::getSkFont(design::typography::FONT_MD,
+                                    design::FontWeight::Regular);
   textColour_ = design::colors::TEXT_PRIMARY;
   backgroundColour_ = design::colors::BG_DARK;
   placeholderColour_ = design::withAlpha(design::colors::TEXT_PRIMARY, 0.5f);

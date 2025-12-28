@@ -29,14 +29,8 @@
 #pragma once
 
 #include "ZenithDesignSystem.h"
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunknown-warning-option"
-#pragma clang diagnostic ignored "-Wattributes"
-#include <core/SkCanvas.h>
+#include "ZenithSkia.h"
 #include <core/SkColorFilter.h>
-#include <core/SkPaint.h>
-#include <core/SkRRect.h>
 #include <core/SkSurface.h>
 #include <effects/SkGradientShader.h>
 #include <effects/SkImageFilters.h>

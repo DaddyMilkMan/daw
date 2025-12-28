@@ -16,11 +16,8 @@
 
 #pragma once
 
-#include <core/SkBlurTypes.h>
-#include <core/SkCanvas.h>
-#include <core/SkColor.h>
+#include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
-#include <core/SkPaint.h>
 #include <core/SkPath.h>
 
 namespace zenith {

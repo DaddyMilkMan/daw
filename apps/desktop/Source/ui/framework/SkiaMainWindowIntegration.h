@@ -111,6 +111,8 @@ public:
       safeWidth_.store(width);
       safeHeight_.store(height);
   }
+
+  JUCE_DECLARE_WEAK_REFERENCEABLE(SkiaOpenGLRenderer)
 };
 
 /**

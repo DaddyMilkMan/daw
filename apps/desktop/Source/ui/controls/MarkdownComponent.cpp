@@ -9,7 +9,9 @@
 */
 
 #include "MarkdownComponent.h"
+#include "../../engine/ZenithLogger.h"
 #include "../design-system/ZenithDesignSystem.h"
+
 #include "../design-system/ColorBridge.h"
 #include "../design-system/ZenithTheme.h"
 
@@ -25,11 +27,14 @@ void MarkdownComponent::ContentComp::paint(juce::Graphics &g) {
 }
 
 void MarkdownComponent::ContentComp::append(const juce::AttributedString &text) {
+  ZENITH_LOG_INFO("ContentComp: appending text...");
   content_.append(text);
   
   // Recalculate height
+  ZENITH_LOG_INFO("ContentComp: creating layout...");
   juce::TextLayout layout;
   layout.createLayout(content_, 600.0f); // approx width
+  ZENITH_LOG_INFO("ContentComp: layout created");
   height_ = layout.getHeight() + 20.0f;
   setSize(getWidth(), (int)height_);
 }

@@ -37,9 +37,10 @@ namespace zenith {
 //==============================================================================
 CommandAPI::CommandAPI(ProjectState &state, Engine &eng)
     : projectState(state), engine(eng) {
-  trackCommands = std::make_unique<TrackCommands>(engine, projectState);
-  clipCommands = std::make_unique<ClipCommands>(engine, projectState);
-  transportCommands = std::make_unique<TransportCommands>(engine, projectState);
+  trackCommands = std::make_unique<TrackCommands>(engine, projectState, *this);
+  clipCommands = std::make_unique<ClipCommands>(engine, projectState, *this);
+  transportCommands = std::make_unique<TransportCommands>(engine, projectState, *this);
+
 
   DBG("CommandAPI: Initialized");
   initializeCommandMap();

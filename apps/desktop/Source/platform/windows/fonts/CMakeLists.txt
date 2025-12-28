@@ -1,1 +1,2 @@
-target_sources(ZenithDAW PRIVATE PlatformFontUtils_Windows.cpp)
+file(GLOB FONTS_SOURCES *.cpp *.h *.mm)
+target_sources(ZenithDAW PRIVATE ${FONTS_SOURCES})

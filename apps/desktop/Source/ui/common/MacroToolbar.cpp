@@ -7,10 +7,7 @@
 // Skia Includes
 #ifdef ZENITH_USE_SKIA
 #include "ZenithDesignSystem.h"
-#include <core/SkCanvas.h>
-#include <core/SkColor.h>
-#include <core/SkPaint.h>
-#include <core/SkRRect.h>
+#include "ZenithSkia.h"
 #include <effects/SkRuntimeEffect.h>
 #endif
 
@@ -35,16 +32,16 @@ void MacroToolbar::rebuildButtons() {
   buttons_.clear();
 
   // 1. Heal Splits
-  macros_.push_back({"Heal Splits", "Merge selected adjacent clips", "🧩",
+  macros_.push_back({"Heal Splits", "Merge selected adjacent clips", "[H]",
                      [this](Engine &, ProjectState &) { healSplits(); }});
 
   // 2. Instant Freeze
-  macros_.push_back({"Instant Freeze", "Bounce selected track to audio", "❄️",
+  macros_.push_back({"Instant Freeze", "Bounce selected track to audio", "[F]",
                      [this](Engine &, ProjectState &) { instantFreeze(); }});
 
   // 3. Color by Track
   macros_.push_back({"Color by Track", "Reset clip colors to track default",
-                     "🎨",
+                     "[C]",
                      [this](Engine &, ProjectState &) { colorByTrack(); }});
 
   // Create buttons

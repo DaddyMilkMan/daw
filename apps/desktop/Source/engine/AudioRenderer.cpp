@@ -200,6 +200,7 @@ void AudioRenderer::renderAudioGraph(
           }
       }
 
+
       track->getNextAudioBlock(trackInfo, playheadPosition, trackMidiInput,
                                 context.auxBufferPtrsVector, tempoMap, sidechainBuffer);
 

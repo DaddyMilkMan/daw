@@ -2,24 +2,26 @@
   ==============================================================================
 
     PlatformPathUtils_Linux.cpp
-    Created: 2025-12-22
+    Created: 2025-12-28
+
+    Linux implementation for platform-specific path utility functions.
 
   ==============================================================================
 */
 
 #include "../../../ui/framework/PlatformPathUtils.h"
 
-#ifdef __linux__
 namespace zenith {
 
 juce::File PlatformPathUtils::getDefaultConfigurationFile() {
-juce::String xdgConfigHome = juce::SystemStats::getEnvironmentVariable("XDG_CONFIG_HOME", juce::String());
-    if (xdgConfigHome.isNotEmpty()) {
-        return juce::File(xdgConfigHome).getChildFile("ZenithDAW").getChildFile("config.json");
+    auto configDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                         .getChildFile("zenith");
+
+    if (!configDir.exists()) {
+        configDir.createDirectory();
     }
-    return juce::File::getSpecialLocation(juce::File::userHomeDirectory)
-        .getChildFile(".config/ZenithDAW/config.json");
+
+    return configDir.getChildFile("zenith.settings");
 }
 
 } // namespace zenith
-#endif

@@ -21,7 +21,7 @@
 #endif
 
 // Zenith Includes
-#include "../browser/BrowserDragSource.h"
+#include "../../browser/BrowserDragSource.h"
 #include "GridResolutionDropdown.h"
 #include "ZenithDesignSystem.h"
 
@@ -44,8 +44,9 @@ static constexpr float TOP_MARGIN = zenith::design::dimensions::ARRANGER_TOP_MAR
 // Constructor & Destructor
 //==============================================================================
 
-ArrangerComponent::ArrangerComponent(Engine& eng, ProjectState& ps)
-    : engine_(eng), projectState(ps) {
+ArrangerComponent::ArrangerComponent(Engine& eng, ProjectState& ps, CommandAPI& api)
+    : engine_(eng), projectState(ps), commandAPI(api) {
+
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
     setWantsKeyboardFocus(true);
@@ -277,7 +278,22 @@ juce::String ArrangerComponent::getTooltip() {
 
 #ifdef ZENITH_USE_SKIA
 void ArrangerComponent::drawSkia(SkCanvas* canvas) {
-    renderer_->drawSkia(canvas);
+    auto bounds = getLocalBounds().toFloat();
+    SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
+
+    // 1. Draw Background
+    SkPaint bgPaint;
+    bgPaint.setColor(design::colors::BG_DARKEST);
+    canvas->drawRect(skBounds, bgPaint);
+
+    // 2. Draw Child SkiaComponents (Tracks, Ruler, MiniMap, etc.)
+    // Note: Tracks should be behind clips (which are drawn in step 3)
+    drawChildren(canvas);
+
+    // 3. Draw ArrangerRenderer (Grid, Clips, Playhead, etc.)
+    if (renderer_) {
+        renderer_->drawSkia(canvas);
+    }
 }
 #endif
 

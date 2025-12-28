@@ -13,21 +13,10 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
+#include <juce_events/juce_events.h>
 #include <functional>
 #include <thread>
 #include <atomic>
-
-#if JUCE_LINUX || JUCE_MAC
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#endif
-
-#if JUCE_WINDOWS
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#pragma comment(lib, "ws2_32.lib")
-#endif
 
 namespace zenith {
 
@@ -69,16 +58,12 @@ private:
     std::atomic<bool> shouldStop_{false};
     std::unique_ptr<std::thread> serverThread_;
     
-#if JUCE_LINUX || JUCE_MAC
-    int serverSocket_ = -1;
-#elif JUCE_WINDOWS
-    SOCKET serverSocket_ = INVALID_SOCKET;
-#endif
+    std::unique_ptr<juce::StreamingSocket> serverSocket_;
     
     void runServer(int port, CodeReceivedCallback callback, int timeoutSeconds);
     juce::String parseAuthCode(const juce::String& request);
     juce::String parseError(const juce::String& request);
-    void sendResponse(int clientSocket, bool success);
+    void sendResponse(juce::StreamingSocket* clientSocket, bool success);
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OAuthRedirectServer)
 };

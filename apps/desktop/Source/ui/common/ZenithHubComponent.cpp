@@ -498,7 +498,7 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
   icons::drawIconCentered(canvas, icons::Edit(), greetingEditIconBounds_,
                           kGreetingIconSize, iconStyle);
 
-  drawRecentProjects(canvas);
+  drawProjectList(canvas);
   drawAccount(canvas);
   drawNewProjectButton(canvas);
   drawTemplates(canvas);
@@ -518,7 +518,7 @@ void ZenithHubComponent::drawBackground(SkCanvas *canvas) {
   canvas->drawRect(SkRect::MakeWH(getWidth(), getHeight()), bgPaint);
 }
 
-void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
+void ZenithHubComponent::drawProjectList(SkCanvas *canvas) {
   textPaint_.setColor(colors::TEXT_PRIMARY);
   drawText(canvas, "Recent Projects", recentHeaderBounds_, headerFont_, textPaint_, true);
 

@@ -1,4 +1,5 @@
 #include "ArrangerTrackComponent.h"
+#include "../framework/Animation.h"
 #include "TakeFolderComponent.h"
 #include "../design-system/ColorBridge.h"
 #include "../design-system/ZenithDesignSystem.h"
@@ -84,6 +85,9 @@ void ArrangerTrackComponent::drawSkia(SkCanvas *canvas) {
     drawTrackBackground(canvas, rect);
     drawTrackHeader(canvas, rect);
   }
+  
+  // Draw child components (like TakeFolderComponents)
+  drawChildren(canvas);
 }
 
 void ArrangerTrackComponent::drawTrackHeader(SkCanvas *canvas,
@@ -109,6 +113,21 @@ void ArrangerTrackComponent::drawTrackHeader(SkCanvas *canvas,
     trackBgPaint.setShader(SkGradientShader::MakeLinear(
         hdrGradPts, hdrGradColors, hdrPositions, 3, SkTileMode::kClamp));
     canvas->drawRect(headerRect, trackBgPaint);
+
+    // HOVER GLOW ANIMATION
+    if (hoverIntensity_ > 0.001f) {
+        SkPaint glowPaint;
+        glowPaint.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.1f * hoverIntensity_));
+        // Use a quicker blur for performance
+        // glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 10.0f)); 
+        // Actually, just drawing a semi-transparent overlay is faster and sharp for "glass" feel
+        canvas->drawRect(headerRect, glowPaint);
+        
+        // Left accent bar
+        SkPaint accentBar;
+        accentBar.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.8f * hoverIntensity_));
+        canvas->drawRect(SkRect::MakeXYWH(0, 0, 3.0f, trackHeight), accentBar);
+    }
   }
 
   // Top edge highlight
@@ -610,11 +629,37 @@ void ArrangerTrackComponent::mouseMove(const juce::MouseEvent &e) {
   }
 }
 
+void ArrangerTrackComponent::mouseEnter(const juce::MouseEvent &e) {
+  using namespace design::animation;
+  Animator::getInstance().animate(
+      trackId_ + "_hover",
+      hoverIntensity_, 1.0f,
+      DURATION_FAST,
+      Curve::EaseOutQuad,
+      [this](float val) {
+          hoverIntensity_ = val;
+          repaint();
+      }
+  );
+}
+
 void ArrangerTrackComponent::mouseExit(const juce::MouseEvent &e) {
+  using namespace design;
   if (hoveredButtonIndex_ != -1) {
     hoveredButtonIndex_ = -1;
     repaint();
   }
+  
+  animation::Animator::getInstance().animate(
+      trackId_ + "_hover",
+      hoverIntensity_, 0.0f,
+      animation::DURATION_NORMAL,
+      animation::Curve::EaseOutCubic,
+      [this](float val) {
+          hoverIntensity_ = val;
+          repaint();
+      }
+  );
 }
 
 void ArrangerTrackComponent::moveSection(int index, double newStartBeats) {

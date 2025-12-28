@@ -19,14 +19,9 @@
 #include "Engine.h"
 #include <algorithm>
 #include <cmath>
-#include <core/SkBlurTypes.h>
-#include <core/SkCanvas.h>
-#include <core/SkColor.h>
-#include <core/SkFont.h>
+#include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
-#include <core/SkPaint.h>
 #include <core/SkPath.h>
-#include <core/SkRRect.h>
 #include <effects/SkDashPathEffect.h>
 #include <effects/SkGradientShader.h>
 

@@ -64,26 +64,43 @@ else()
     message(FATAL_ERROR "Skia headers not found at ${SKIA_INCLUDE_DIR}")
 endif()
 
-# Check for library
-find_library(SKIA_LIBRARY NAMES skia skia.dll PATHS ${SKIA_LIB_DIR} NO_DEFAULT_PATH)
+# Check for library (Static or Shared)
+find_library(SKIA_LIBRARY NAMES skia skia.dll skia.so skia.dylib PATHS ${SKIA_LIB_DIR} NO_DEFAULT_PATH)
 if(SKIA_LIBRARY)
     message(STATUS "  Skia library: ${SKIA_LIBRARY}")
     target_link_libraries(ZenithDAW PRIVATE ${SKIA_LIBRARY})
+    if(TARGET ZenithDAWTests)
+        target_link_libraries(ZenithDAWTests PRIVATE ${SKIA_LIBRARY})
+    endif()
     message(STATUS "  Skia graphics library: LINKED (Manual)")
 else()
     message(FATAL_ERROR "Skia library not found in ${SKIA_LIB_DIR}")
 endif()
 
-# Auto-copy DLLs
-file(GLOB SKIA_DLLS "${SKIA_BIN_DIR}/*.dll")
-foreach(DLL ${SKIA_DLLS})
-    get_filename_component(DLL_NAME ${DLL} NAME)
-    message(STATUS "  Found dependency: ${DLL} - Configuring auto-copy")
+# Auto-copy Shared Libraries (DLL/SO/DYLIB)
+file(GLOB SKIA_SHARED_LIBS 
+    "${SKIA_BIN_DIR}/*.dll" 
+    "${SKIA_LIB_DIR}/*.so*" 
+    "${SKIA_LIB_DIR}/*.dylib"
+)
+
+foreach(LIB_FILE ${SKIA_SHARED_LIBS})
+    get_filename_component(LIB_NAME ${LIB_FILE} NAME)
+    message(STATUS "  Found dependency: ${LIB_FILE} - Configuring auto-copy")
+    
     add_custom_command(TARGET ZenithDAW POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${DLL}"
-        "$<TARGET_FILE_DIR:ZenithDAW>/${DLL_NAME}"
+        "${LIB_FILE}"
+        "$<TARGET_FILE_DIR:ZenithDAW>/${LIB_NAME}"
     )
+    
+    if(TARGET ZenithDAWTests)
+        add_custom_command(TARGET ZenithDAWTests POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${LIB_FILE}"
+            "$<TARGET_FILE_DIR:ZenithDAWTests>/${LIB_NAME}"
+        )
+    endif()
 endforeach()
 
 # Skia UI source files are now included from apps/desktop/Source/ui/CMakeLists.txt

@@ -41,6 +41,8 @@ public:
   void mouseDrag(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
   void mouseDoubleClick(const juce::MouseEvent &e) override;
+
+  void mouseEnter(const juce::MouseEvent &e) override;
   void mouseExit(const juce::MouseEvent &e) override;
   void mouseMove(const juce::MouseEvent &e) override;
 
@@ -102,6 +104,8 @@ private:
 
   // Interaction State
   bool isHovered_ = false;
+  float hoverIntensity_ = 0.0f; // 0.0 to 1.0 for animation
+
   int hoveredButtonIndex_ = -1; // 0=Mute, 1=Solo, 2=Rec
   
   // Controls

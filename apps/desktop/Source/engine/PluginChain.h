@@ -47,6 +47,7 @@ public:
 
   int getNumPlugins() const;
   juce::AudioPluginInstance *getPlugin(int index) const;
+  const std::vector<std::shared_ptr<juce::AudioPluginInstance>>& getPlugins() const { return pluginsOwned_; }
 
   // Audio thread safe
   void process(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midi,

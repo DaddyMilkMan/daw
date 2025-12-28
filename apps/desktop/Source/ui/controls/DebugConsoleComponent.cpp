@@ -23,7 +23,6 @@
 #include <core/SkPaint.h>
 #include <core/SkPath.h>
 #include <core/SkPoint.h>
-#include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
 
 #endif
@@ -234,7 +233,8 @@ void DebugConsoleComponent::drawHealthIndicator(SkCanvas *canvas, float x,
   // Highlight
   SkPaint highlightPaint;
   highlightPaint.setAntiAlias(true);
-  highlightPaint.setColor(design::unified::withAlpha(design::unified::text_primary(), 0.3f)); // Fallback from GLASS_HIGHLIGHT
+  highlightPaint.setColor(design::withAlpha(design::colors::TEXT_PRIMARY, 0.3f)); // Fallback from GLASS_HIGHLIGHT
+
   canvas->drawCircle(x - pulseSize * 0.3f, y - pulseSize * 0.3f,
                      pulseSize * 0.4f, highlightPaint);
 }
@@ -276,18 +276,22 @@ void DebugConsoleComponent::drawNotificationBadge(SkCanvas *canvas, float x,
   SkPaint badgePaint;
   badgePaint.setAntiAlias(true);
   badgePaint.setColor(
-      design::unified::withAlpha(design::unified::accent_primary(), alpha));
+      design::withAlpha(design::colors::ACCENT_PRIMARY, alpha));
+
 
   canvas->drawCircle(x, y, 6.0f, badgePaint);
 }
 
 SkColor DebugConsoleComponent::getHealthColor(float score) const {
   if (score >= 80.0f) {
-    return design::unified::success();
+    return design::colors::SUCCESS;
+
   } else if (score >= 50.0f) {
-    return design::unified::warning();
+    return design::colors::WARNING;
+
   } else {
-    return design::unified::error();
+    return design::colors::DANGER;
+
   }
 }
 
@@ -398,36 +402,44 @@ void DebugConsoleComponent::setExpanded(bool expanded) {
 void DebugConsoleComponent::updateCachedPaints() {
   // Background - dark with subtle transparency
   bgPaint_.setAntiAlias(true);
-  bgPaint_.setColor(design::unified::withAlpha(design::unified::bg_01(), 0.9f));
+  bgPaint_.setColor(design::withAlpha(design::colors::BG_01, 0.9f));
+
   bgPaint_.setStyle(SkPaint::kFill_Style);
 
   // Border - subtle glow
   borderPaint_.setAntiAlias(true);
-  borderPaint_.setColor(design::unified::withAlpha(design::unified::accent_primary(), 0.25f));
+  borderPaint_.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.25f));
+
   borderPaint_.setStyle(SkPaint::kStroke_Style);
   borderPaint_.setStrokeWidth(1.0f);
 
   // Health colors
   healthGoodPaint_.setAntiAlias(true);
-  healthGoodPaint_.setColor(design::unified::success());
+  healthGoodPaint_.setColor(design::colors::SUCCESS);
+
 
   healthWarningPaint_.setAntiAlias(true);
-  healthWarningPaint_.setColor(design::unified::warning());
+  healthWarningPaint_.setColor(design::colors::WARNING);
+
 
   healthCriticalPaint_.setAntiAlias(true);
-  healthCriticalPaint_.setColor(design::unified::error());
+  healthCriticalPaint_.setColor(design::colors::DANGER);
+
 
   // Text
   textPaint_.setAntiAlias(true);
-  textPaint_.setColor(design::unified::text_primary());
+  textPaint_.setColor(design::colors::TEXT_PRIMARY);
+
 
   // Icons
   iconPaint_.setAntiAlias(true);
-  iconPaint_.setColor(design::unified::text_primary());
+  iconPaint_.setColor(design::colors::TEXT_PRIMARY);
+
 
   // Notification
   notificationPaint_.setAntiAlias(true);
-  notificationPaint_.setColor(design::unified::accent_secondary());
+  notificationPaint_.setColor(design::colors::ACCENT_SECONDARY);
+
 
   // Fonts
   font_.setSize(12.0f);
