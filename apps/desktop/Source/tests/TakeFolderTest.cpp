@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "../engine/TakeFolder.h"
 #include "../engine/Clip.h"
+#include "../engine/AudioFilePool.h"
+#include "TestUtils.h"
 #include <juce_core/juce_core.h>
 
 namespace zenith {
@@ -28,15 +30,14 @@ public:
             take1->setStartPosition(0);
             take1->setLength(44100); // 1 sec
             
-            // Create dummy audio file for the take so it can produce audio?
-            // Actually, an empty clip produces silence, which is fine for "writing something".
-            // Ideally we'd fill it with data, but Clip logic requires valid file/buffer.
-            // Let's use internal buffer for the test take.
-            juce::AudioBuffer<float> buffer(2, 44100);
-            buffer.clear();
-            // Fill with DC offset to verify we wrote data and not just silence
-            for (int i=0; i<44100; ++i) buffer.setSample(0, i, 0.5f);
-            take1->setAudioBuffer(buffer);
+            // Create dummy audio file for the take
+            juce::File takeFile = createTempWavFile("take_test_" + juce::Uuid().toString(), 44100);
+            
+            // Setup AudioFilePool
+            AudioFilePool pool;
+            
+            take1->setAudioFileFromPool(takeFile, pool);
+
             
             folder.addTake(take1);
             
@@ -44,7 +45,8 @@ public:
             folder.setCompRegion(0, 44100, 0);
 
             // Execute Flatten
-            auto flatClip = folder.flatten(44100.0, tempDir);
+            auto flatClip = folder.flatten(44100.0, tempDir, pool);
+
 
             // Verify
             expect(flatClip != nullptr, "Flatten returned null");
@@ -59,6 +61,9 @@ public:
             }
 
             // Teardown
+            // Unload files from pool before deletion
+             pool.clear();
+             takeFile.deleteFile();
             tempDir.deleteRecursively();
         }
     }

@@ -9,7 +9,7 @@
 */
 
 #include "FreezeProgressOverlay.h"
-#include "../design-system/ZenithTypography.h"
+#include "../design-system/ZenithDesignSystem.h"
 
 // Skia Includes
 #ifdef ZENITH_USE_SKIA
@@ -81,7 +81,7 @@ void FreezeProgressOverlay::mouseDown(const juce::MouseEvent &e) {
 
 void FreezeProgressOverlay::paint(juce::Graphics &g) {
   // Draw text (Skia handles the graphics background)
-  g.setFont(ZenithTypography::getHeaderFont().withHeight(20.0f));
+  g.setFont(design::typography::getJuceFont(20.0f, design::typography::FontWeight::Bold));
   g.setColour(juce::Colours::white);
 
   auto bounds = getLocalBounds();
@@ -91,7 +91,7 @@ void FreezeProgressOverlay::paint(juce::Graphics &g) {
              center.y + layout::kTextYOffset, 100, 30,
              juce::Justification::centred);
 
-  g.setFont(ZenithTypography::getBodyFont().withHeight(16.0f));
+  g.setFont(design::typography::getJuceFont(16.0f));
   g.setColour(juce::Colours::lightgrey);
   g.drawText(statusText_, bounds.getX(), center.y + layout::kStatusYOffset,
              bounds.getWidth(), 30, juce::Justification::centred);
@@ -136,7 +136,7 @@ void FreezeProgressOverlay::drawSkia(SkCanvas *canvas) {
   SkPaint progressPaint;
   progressPaint.setStyle(SkPaint::kStroke_Style);
   progressPaint.setStrokeWidth(strokeWidth);
-  progressPaint.setColor(colors::NEON_CYAN); // Default Brand Color
+  progressPaint.setColor(colors::CYAN); // Default Brand Color
   progressPaint.setStrokeCap(SkPaint::kRound_Cap);
 
   // Add glow

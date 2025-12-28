@@ -5,7 +5,7 @@
 #include "../../ui/framework/SkiaComponent.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../design-system/ColorBridge.h"
-#include "../design-system/ZenithTypography.h"
+#include "../design-system/ZenithDesignSystem.h"
 
 namespace zenith {
 

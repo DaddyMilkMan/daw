@@ -1,0 +1,196 @@
+[  0%] Building CXX object CMakeFiles/ZenithDAW.dir/apps/desktop/Source/Main.cpp.o
+[  1%] Building CXX object CMakeFiles/ZenithDAW.dir/apps/desktop/Source/engine/Engine.cpp.o
+[  2%] Building CXX object CMakeFiles/ZenithDAW.dir/apps/desktop/Source/engine/EngineExport.cpp.o
+[  3%] Building CXX object CMakeFiles/ZenithDAW.dir/apps/desktop/Source/ai/AIMasteringAgent.cpp.o
+[  3%] Building CXX object CMakeFiles/ZenithDAW.dir/apps/desktop/Source/ai/SampleHunterAgent.cpp.o
+[  3%] Building CXX object CMakeFiles/ZenithDAW.dir/apps/desktop/Source/ai/UXDirectorAgent.cpp.o
+[  4%] Building CXX object CMakeFiles/ZenithDAW.dir/apps/desktop/Source/ai/ProjectRefactorerAgent.cpp.o
+[  4%] Building CXX object CMakeFiles/ZenithDAW.dir/apps/desktop/Source/engine/ProjectEngineBridge.cpp.o
+[  4%] Building CXX object CMakeFiles/ZenithDAW.dir/apps/desktop/Source/ui/mixer/MixerChannelComponent.cpp.o
+[  4%] Building CXX object CMakeFiles/ZenithDAW.dir/apps/desktop/Source/engine/AudioExporter.cpp.o
+[  5%] Building CXX object CMakeFiles/ZenithDAW.dir/apps/desktop/Source/engine/ExportJob.cpp.o
+[  5%] Building CXX object CMakeFiles/ZenithDAW.dir/apps/desktop/Source/ui/mixer/MixerComponent.cpp.o
+In file included from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ai/SampleHunterAgent.h:33,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ai/SampleHunterAgent.cpp:12:
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/ai/GrokAPIClient.h:53:36: error: ‘ModelType’ has not been declared
+   53 |                                    ModelType modelType = ModelType::Reasoning) {
+      |                                    ^~~~~~~~~
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/ai/GrokAPIClient.h:53:69: error: could not convert ‘zenith::ai::GrokAPIClient::ModelType::Reasoning’ from ‘zenith::ai::GrokAPIClient::ModelType’ to ‘int’
+   53 |                                    ModelType modelType = ModelType::Reasoning) {
+      |                                                          ~~~~~~~~~~~^~~~~~~~~
+      |                                                                     |
+      |                                                                     zenith::ai::GrokAPIClient::ModelType
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/ai/GrokAPIClient.h: In member function ‘juce::String zenith::ai::GrokAPIClient::callGrokWithLearning(const juce::String&, const juce::String&, const juce::String&, const juce::AudioBuffer<float>*, int)’:
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/ai/GrokAPIClient.h:71:58: error: cannot convert ‘int’ to ‘zenith::ai::GrokAPIClient::ModelType’
+   71 |     return callGrok(enhancedPrompt, buildSystemPrompt(), modelType);
+      |                                                          ^~~~~~~~~
+      |                                                          |
+      |                                                          int
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/ai/GrokAPIClient.h:124:35: note:   initializing argument 3 of ‘juce::String zenith::ai::GrokAPIClient::callGrok(const juce::String&, const juce::String&, ModelType)’
+  124 |                         ModelType modelType = ModelType::Reasoning) {
+      |                         ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ai/AIMasteringAgent.h:9,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ai/AIMasteringAgent.cpp:7:
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/ai/GrokAPIClient.h:53:36: error: ‘ModelType’ has not been declared
+   53 |                                    ModelType modelType = ModelType::Reasoning) {
+      |                                    ^~~~~~~~~
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/ai/GrokAPIClient.h:53:69: error: could not convert ‘zenith::ai::GrokAPIClient::ModelType::Reasoning’ from ‘zenith::ai::GrokAPIClient::ModelType’ to ‘int’
+   53 |                                    ModelType modelType = ModelType::Reasoning) {
+      |                                                          ~~~~~~~~~~~^~~~~~~~~
+      |                                                                     |
+      |                                                                     zenith::ai::GrokAPIClient::ModelType
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/ai/GrokAPIClient.h: In member function ‘juce::String zenith::ai::GrokAPIClient::callGrokWithLearning(const juce::String&, const juce::String&, const juce::String&, const juce::AudioBuffer<float>*, int)’:
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/ai/GrokAPIClient.h:71:58: error: cannot convert ‘int’ to ‘zenith::ai::GrokAPIClient::ModelType’
+   71 |     return callGrok(enhancedPrompt, buildSystemPrompt(), modelType);
+      |                                                          ^~~~~~~~~
+      |                                                          |
+      |                                                          int
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/ai/GrokAPIClient.h:124:35: note:   initializing argument 3 of ‘juce::String zenith::ai::GrokAPIClient::callGrok(const juce::String&, const juce::String&, ModelType)’
+  124 |                         ModelType modelType = ModelType::Reasoning) {
+      |                         ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/EngineExport.cpp: In member function ‘void zenith::LegacyExportThread::finish()’:
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/EngineExport.cpp:129:30: error: ‘void zenith::Engine::prepareTracks(int, double)’ is private within this context
+  129 |         engine_.prepareTracks(originalBufferSize_, originalSampleRate_);
+      |         ~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/EngineExport.cpp:7:
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/Engine.h:930:8: note: declared private here
+  930 |   void prepareTracks(int samplesPerBlockExpected, double sampleRate);
+      |        ^~~~~~~~~~~~~
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/EngineExport.cpp: In member function ‘void zenith::Engine::cancelExport()’:
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/EngineExport.cpp:135:9: error: ‘exportThread_’ was not declared in this scope
+  135 |     if (exportThread_ && exportThread_->isThreadRunning()) {
+      |         ^~~~~~~~~~~~~
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/EngineExport.cpp:142:5: error: ‘exportThread_’ was not declared in this scope
+  142 |     exportThread_.reset();
+      |     ^~~~~~~~~~~~~
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/EngineExport.cpp: In member function ‘bool zenith::Engine::exportProjectToWav(const juce::File&, double, int, double, double, ExportProgressCallback)’:
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/EngineExport.cpp:151:7: error: ‘exportThread_’ was not declared in this scope
+  151 |   if (exportThread_ && exportThread_->isThreadRunning()) {
+      |       ^~~~~~~~~~~~~
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/EngineExport.cpp:179:3: error: ‘exportThread_’ was not declared in this scope
+  179 |   exportThread_ = std::make_unique<LegacyExportThread>(*this, outputFile, sampleRate, bitDepth, durationInSeconds, startTimeSeconds, progressCallback);
+      |   ^~~~~~~~~~~~~
+In file included from /home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/core/SkTextBlob.h:21,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ui/mixer/../controls/ZenithButton.h:32,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ui/mixer/../controls/SkiaButton.h:14,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ui/mixer/MixerChannelComponent.h:30,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ui/mixer/MixerChannelComponent.cpp:13:
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/private/base/SkTemplates.h:126:32: warning: ‘clang::reinitializes’ scoped attribute directive ignored [-Wattributes]
+  126 |     void reset(size_t count = 0) {
+      |                                ^
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/private/base/SkTemplates.h:214:25: warning: ‘clang::reinitializes’ scoped attribute directive ignored [-Wattributes]
+  214 |     void reset(int count) {
+      |                         ^
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/private/base/SkTemplates.h:335:30: warning: ‘clang::reinitializes’ scoped attribute directive ignored [-Wattributes]
+  335 |     T* reset(size_t count = 0) {
+      |                              ^
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/private/base/SkTemplates.h:406:26: warning: ‘clang::reinitializes’ scoped attribute directive ignored [-Wattributes]
+  406 |     T* reset(size_t count) {
+      |                          ^
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/ai/AIMasteringAgent.cpp: In constructor ‘zenith::ai::GrokMasteringAI::GrokMasteringAI()’:
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/ai/AIMasteringAgent.cpp:178:20: error: ‘class zenith::ai::GrokAPIClient’ has no member named ‘setAPIKey’; did you mean ‘hasAPIKey’?
+  178 |       grokClient_->setAPIKey(key);
+      |                    ^~~~~~~~~
+      |                    hasAPIKey
+gmake[3]: *** [CMakeFiles/ZenithDAW.dir/build.make:920: CMakeFiles/ZenithDAW.dir/apps/desktop/Source/ai/SampleHunterAgent.cpp.o] Error 1
+gmake[3]: *** Waiting for unfinished jobs....
+In file included from /home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/core/SkTextBlob.h:21,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ai/../ui/mixer/../controls/ZenithButton.h:32,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ai/../ui/mixer/../controls/SkiaButton.h:14,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ai/../ui/mixer/MixerChannelComponent.h:30,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ai/UXDirectorAgent.cpp:15:
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/private/base/SkTemplates.h:126:32: warning: ‘clang::reinitializes’ scoped attribute directive ignored [-Wattributes]
+  126 |     void reset(size_t count = 0) {
+      |                                ^
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/private/base/SkTemplates.h:214:25: warning: ‘clang::reinitializes’ scoped attribute directive ignored [-Wattributes]
+  214 |     void reset(int count) {
+      |                         ^
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/private/base/SkTemplates.h:335:30: warning: ‘clang::reinitializes’ scoped attribute directive ignored [-Wattributes]
+  335 |     T* reset(size_t count = 0) {
+      |                              ^
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/private/base/SkTemplates.h:406:26: warning: ‘clang::reinitializes’ scoped attribute directive ignored [-Wattributes]
+  406 |     T* reset(size_t count) {
+      |                          ^
+In file included from /home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/../ai/AIMasteringAgent.h:9,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/Engine.cpp:18:
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/../ai/GrokAPIClient.h:53:36: error: ‘ModelType’ has not been declared
+   53 |                                    ModelType modelType = ModelType::Reasoning) {
+      |                                    ^~~~~~~~~
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/../ai/GrokAPIClient.h:53:69: error: could not convert ‘zenith::ai::GrokAPIClient::ModelType::Reasoning’ from ‘zenith::ai::GrokAPIClient::ModelType’ to ‘int’
+   53 |                                    ModelType modelType = ModelType::Reasoning) {
+      |                                                          ~~~~~~~~~~~^~~~~~~~~
+      |                                                                     |
+      |                                                                     zenith::ai::GrokAPIClient::ModelType
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/../ai/GrokAPIClient.h: In member function ‘juce::String zenith::ai::GrokAPIClient::callGrokWithLearning(const juce::String&, const juce::String&, const juce::String&, const juce::AudioBuffer<float>*, int)’:
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/../ai/GrokAPIClient.h:71:58: error: cannot convert ‘int’ to ‘zenith::ai::GrokAPIClient::ModelType’
+   71 |     return callGrok(enhancedPrompt, buildSystemPrompt(), modelType);
+      |                                                          ^~~~~~~~~
+      |                                                          |
+      |                                                          int
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/../ai/GrokAPIClient.h:124:35: note:   initializing argument 3 of ‘juce::String zenith::ai::GrokAPIClient::callGrok(const juce::String&, const juce::String&, ModelType)’
+  124 |                         ModelType modelType = ModelType::Reasoning) {
+      |                         ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+gmake[3]: *** [CMakeFiles/ZenithDAW.dir/build.make:906: CMakeFiles/ZenithDAW.dir/apps/desktop/Source/ai/AIMasteringAgent.cpp.o] Error 1
+In file included from /home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/core/SkTextBlob.h:21,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ui/controls/ZenithButton.h:32,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ui/common/MacroToolbar.h:6,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ui/common/../arranger/ArrangerComponent.h:31,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ui/common/MainWindow.h:11,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/Main.cpp:20:
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/private/base/SkTemplates.h:126:32: warning: ‘clang::reinitializes’ scoped attribute directive ignored [-Wattributes]
+  126 |     void reset(size_t count = 0) {
+      |                                ^
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/private/base/SkTemplates.h:214:25: warning: ‘clang::reinitializes’ scoped attribute directive ignored [-Wattributes]
+  214 |     void reset(int count) {
+      |                         ^
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/private/base/SkTemplates.h:335:30: warning: ‘clang::reinitializes’ scoped attribute directive ignored [-Wattributes]
+  335 |     T* reset(size_t count = 0) {
+      |                              ^
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/private/base/SkTemplates.h:406:26: warning: ‘clang::reinitializes’ scoped attribute directive ignored [-Wattributes]
+  406 |     T* reset(size_t count) {
+      |                          ^
+gmake[3]: *** [CMakeFiles/ZenithDAW.dir/build.make:206: CMakeFiles/ZenithDAW.dir/apps/desktop/Source/engine/EngineExport.cpp.o] Error 1
+In file included from /home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/core/SkTextBlob.h:21,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ui/mixer/../controls/ZenithButton.h:32,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ui/mixer/../controls/SkiaButton.h:14,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ui/mixer/MixerChannelComponent.h:30,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ui/mixer/MixerComponent.h:23,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ui/mixer/MixerComponent.cpp:6:
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/private/base/SkTemplates.h:126:32: warning: ‘clang::reinitializes’ scoped attribute directive ignored [-Wattributes]
+  126 |     void reset(size_t count = 0) {
+      |                                ^
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/private/base/SkTemplates.h:214:25: warning: ‘clang::reinitializes’ scoped attribute directive ignored [-Wattributes]
+  214 |     void reset(int count) {
+      |                         ^
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/private/base/SkTemplates.h:335:30: warning: ‘clang::reinitializes’ scoped attribute directive ignored [-Wattributes]
+  335 |     T* reset(size_t count = 0) {
+      |                              ^
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/private/base/SkTemplates.h:406:26: warning: ‘clang::reinitializes’ scoped attribute directive ignored [-Wattributes]
+  406 |     T* reset(size_t count) {
+      |                          ^
+In file included from /home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/../ai/SampleHunterAgent.h:33,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ui/common/WingmanPanel.h:19,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ui/common/RightSidePanel.h:15,
+                 from /home/micah/Desktop/zenith/daw/apps/desktop/Source/ui/common/MainWindow.h:26:
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/../ai/GrokAPIClient.h:53:36: error: ‘ModelType’ has not been declared
+   53 |                                    ModelType modelType = ModelType::Reasoning) {
+      |                                    ^~~~~~~~~
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/../ai/GrokAPIClient.h:53:69: error: could not convert ‘zenith::ai::GrokAPIClient::ModelType::Reasoning’ from ‘zenith::ai::GrokAPIClient::ModelType’ to ‘int’
+   53 |                                    ModelType modelType = ModelType::Reasoning) {
+      |                                                          ~~~~~~~~~~~^~~~~~~~~
+      |                                                                     |
+      |                                                                     zenith::ai::GrokAPIClient::ModelType
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/../ai/GrokAPIClient.h: In member function ‘juce::String zenith::ai::GrokAPIClient::callGrokWithLearning(const juce::String&, const juce::String&, const juce::String&, const juce::AudioBuffer<float>*, int)’:
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/../ai/GrokAPIClient.h:71:58: error: cannot convert ‘int’ to ‘zenith::ai::GrokAPIClient::ModelType’
+   71 |     return callGrok(enhancedPrompt, buildSystemPrompt(), modelType);
+      |                                                          ^~~~~~~~~
+      |                                                          |
+      |                                                          int
+/home/micah/Desktop/zenith/daw/apps/desktop/Source/engine/../ai/GrokAPIClient.h:124:35: note:   initializing argument 3 of ‘juce::String zenith::ai::GrokAPIClient::callGrok(const juce::String&, const juce::String&, ModelType)’
+  124 |                         ModelType modelType = ModelType::Reasoning) {
+      |                         ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+gmake[3]: *** [CMakeFiles/ZenithDAW.dir/build.make:136: CMakeFiles/ZenithDAW.dir/apps/desktop/Source/engine/Engine.cpp.o] Error 1
+gmake[3]: *** [CMakeFiles/ZenithDAW.dir/build.make:80: CMakeFiles/ZenithDAW.dir/apps/desktop/Source/Main.cpp.o] Error 1
+gmake[2]: *** [CMakeFiles/Makefile2:523: CMakeFiles/ZenithDAW.dir/all] Error 2
+gmake[1]: *** [CMakeFiles/Makefile2:530: CMakeFiles/ZenithDAW.dir/rule] Error 2
+gmake: *** [Makefile:170: ZenithDAW] Error 2

@@ -44,15 +44,11 @@ void Clip::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
   currentSampleRate = sampleRate;
   currentBlockSize = samplesPerBlockExpected;
 
-  if (audioSource != nullptr) {
-    audioSource->prepareToPlay(samplesPerBlockExpected, sampleRate);
-  }
+
 }
 
 void Clip::releaseResources() {
-  if (audioSource != nullptr) {
-    audioSource->releaseResources();
-  }
+
 }
 
 void Clip::getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill) {
@@ -73,9 +69,9 @@ void Clip::getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill) {
     return;
 
   if (clipType == Type::Audio) {
-    processAudioClip(bufferToFill);
+    processAudioClip(bufferToFill, transport);
   } else if (clipType == Type::MIDI) {
-    processMidiClip(bufferToFill);
+    // MIDI clips produce silence in audio path (handled by clearActiveBufferRegion above)
   }
 }
 
@@ -145,70 +141,15 @@ void Clip::setAudioFileFromPool(const juce::File &file, AudioFilePool &pool) {
     audioFileHandle_ = nullptr;
   }
 
-  // Clear legacy audioSource (unused)
-  audioSource.reset();
+
+
 }
 
-// Legacy method (kept for backward compatibility, but not recommended)
-void Clip::setAudioFile(const juce::File &file) {
-  const juce::ScopedLock sl(audioLock);
 
-  audioFile = file;
+juce::File Clip::getAudioFile() const { return audioFile; }
 
-  // Load the audio file (legacy path - loads directly without pool)
-  juce::AudioFormatManager formatManager;
-  formatManager.registerBasicFormats();
 
-  auto *reader = formatManager.createReaderFor(file);
 
-  if (reader != nullptr && reader->numChannels > 0 &&
-      reader->lengthInSamples > 0) {
-    // Bug 31: Ensure buffer reallocation is only done from message thread
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-
-    // Read the entire file into memory
-    audioBuffer.setSize(static_cast<int>(reader->numChannels),
-                        static_cast<int>(reader->lengthInSamples));
-
-    bool readSuccess =
-        reader->read(&audioBuffer, 0, static_cast<int>(reader->lengthInSamples),
-                     0, true, true);
-
-    if (!readSuccess) {
-      // Read failed - clear the buffer
-      audioBuffer.setSize(0, 0);
-      // Bug 19: Use unique_ptr to ensure deletion (though raw delete was here)
-      delete reader;
-      DBG("Clip: Failed to read audio file - file may be corrupted");
-      return;
-    }
-
-    // Bug 26: Fix ownership issue & Bug 19: Use unique_ptr
-    // AudioFormatReaderSource takes ownership of the reader
-    // We must extract length before passing it if we want to be safe,
-    // though reader pointer usually remains valid inside Source until Source is
-    // deleted. However, better safely wrap reader first.
-    std::unique_ptr<juce::AudioFormatReader> safeReader(reader);
-
-    // Update clip length
-    clipLength.store(safeReader->lengthInSamples);
-
-    // Create audio source for playback - release ownership to Source
-    audioSource.reset(
-        new juce::AudioFormatReaderSource(safeReader.release(), true));
-
-    if (currentSampleRate > 0) {
-      audioSource->prepareToPlay(currentBlockSize, currentSampleRate);
-    }
-  }
-}
-
-void Clip::setAudioBuffer(const juce::AudioBuffer<float> &buffer) {
-  const juce::ScopedLock sl(audioLock);
-
-  audioBuffer.makeCopyOf(buffer);
-  clipLength.store(buffer.getNumSamples());
-}
 
 void Clip::getAudioSamples(juce::AudioBuffer<float>& destBuffer, int64_t startSampleInClip, int numSamples) const {
     if (clipType != Type::Audio || numSamples <= 0) return;
@@ -220,7 +161,7 @@ void Clip::getAudioSamples(juce::AudioBuffer<float>& destBuffer, int64_t startSa
     if (handle != nullptr && handle->isValid()) {
         sourceBuffer = &handle->buffer;
     } else {
-        sourceBuffer = &audioBuffer;
+        sourceBuffer = &audioBuffer; // Fallback to empty buffer
     }
 
     if (sourceBuffer == nullptr || sourceBuffer->getNumSamples() == 0) return;
@@ -459,7 +400,7 @@ juce::ValueTree Clip::getState() const {
   return state;
 }
 
-void Clip::loadState(const juce::ValueTree &state) {
+void Clip::loadState(const juce::ValueTree &state, AudioFilePool* pool) {
   if (!state.hasType("Clip"))
     return;
 
@@ -483,7 +424,16 @@ void Clip::loadState(const juce::ValueTree &state) {
   if (clipType == Type::Audio) {
     juce::String audioFilePath = state.getProperty("audioFile", "");
     if (audioFilePath.isNotEmpty()) {
-      setAudioFile(juce::File(audioFilePath));
+      juce::File file(audioFilePath);
+      if (pool != nullptr) {
+          setAudioFileFromPool(file, *pool);
+      } else {
+          // Warning: Cannot load audio file without pool!
+          // We store the path but cannot load the data safely.
+          // This might happen during early initialization or tests without pool.
+          // For now, we just rely on the path being there.
+          DBG("Clip::loadState - Warning: No AudioFilePool provided, cannot load audio file: " + audioFilePath);
+      }
     }
   } else if (clipType == Type::MIDI) {
     juce::String midiDataBase64 = state.getProperty("midiData", "");
@@ -520,7 +470,7 @@ void Clip::processAudioClip(const juce::AudioSourceChannelInfo &bufferToFill,
   } else {
     // Fallback to legacy audioBuffer (RT-unsafe if modified, but we remove the
     // lock)
-    sourceBuffer = &audioBuffer;
+    sourceBuffer = &audioBuffer; 
   }
 
   if (sourceBuffer == nullptr || sourceBuffer->getNumSamples() == 0)
@@ -654,10 +604,8 @@ void Clip::processAudioClip(const juce::AudioSourceChannelInfo &bufferToFill,
   applyFadesSIMD(bufferToFill, destOffset, sourceStartInClip, numSamples);
 }
 
-// Legacy overload: uses internal transportPosition
-void Clip::processAudioClip(const juce::AudioSourceChannelInfo &bufferToFill) {
-  processAudioClip(bufferToFill, transportPosition.load());
-}
+
+
 
 // Phase 2A: Process MIDI clip - schedule MIDI events into MidiBuffer
 void Clip::processMidiClip(juce::MidiBuffer &midiBuffer,
@@ -721,22 +669,8 @@ void Clip::processMidiClip(juce::MidiBuffer &midiBuffer,
   }
 }
 
-// Legacy overload: uses internal transportPosition (for AudioSourceChannelInfo)
-// Bug 43: Parameters intentionally unused - MIDI clips produce MIDI events, not
-// audio They need to be processed by instrument plugins via
-// processMidiClip(MidiBuffer&, ...)
-void Clip::processMidiClip(const juce::AudioSourceChannelInfo &bufferToFill,
-                           int64_t playheadSamples) {
-  juce::ignoreUnused(bufferToFill, playheadSamples);
-  // Legacy path - MIDI clips don't produce audio directly
-  // They need to be processed by instrument plugins
-  bufferToFill.clearActiveBufferRegion();
-}
 
-// Legacy overload: uses internal transportPosition
-void Clip::processMidiClip(const juce::AudioSourceChannelInfo &bufferToFill) {
-  processMidiClip(bufferToFill, transportPosition.load());
-}
+
 
 float Clip::calculateFadeMultiplier(int64_t positionInClip) const {
   const int64_t fadeIn = fadeInLength.load();

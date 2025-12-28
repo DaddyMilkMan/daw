@@ -53,6 +53,8 @@
 #include "../Source/engine/RoutingGraph.h"
 #include "AudioRenderer.h"
 #include "EngineEvent.h"
+#include "ExportCommon.h"
+#include "../audio/RealTimeAudioBuffer.h"
 
 // Forward declarations
 namespace zenith {
@@ -76,11 +78,13 @@ class MeteringSystem;
 class MixerController;
 class Midi2DiscoveryService;
 class PropertyExchangeManager;
+class AudioAnalysisService;
 
 namespace ai {
 class SessionDebuggerAgent;
 class AIMasteringAgent;
 } // namespace ai
+
 
 //==============================================================================
 /**
@@ -113,6 +117,8 @@ class AIMasteringAgent;
  * @note To avoid memory leaks: NEVER store std::shared_ptr<Engine> in child components.
  *       Use Engine& or Engine* for back-references.
  */
+class ExportJob;
+
 class Engine : public juce::AudioIODeviceCallback,
                public juce::MidiInputCallback,
                public juce::ChangeListener {
@@ -130,6 +136,23 @@ public:
    * @brief Get the audio device manager
    */
   juce::AudioDeviceManager &getDeviceManager() { return deviceManager; }
+
+  //==========================================================================
+  // Global Access (Safety for Async Callbacks)
+  //==========================================================================
+
+  /**
+   * @brief Get the global Engine instance (if valid)
+   * @return Pointer to the engine, or nullptr if shutting down/not created
+   * @note Use this in loose async callbacks to avoid dangling references
+   */
+  static Engine* getInstance();
+
+  /**
+   * @brief Cancel current offline export
+   */
+  void cancelExport();
+
 
   //==========================================================================
   // Initialization / Shutdown
@@ -815,6 +838,8 @@ public:
   
   friend class AudioExporter;
   friend class AudioRecorder;
+  friend class ExportJob;
+
 
   /**
    * @brief Render a specific block of audio for offline export
@@ -825,39 +850,34 @@ public:
    */
   void renderOfflineBlock(juce::AudioBuffer<float>& buffer, int numSamples, juce::int64 position);
 
+  using ExportFormat = zenith::ExportFormat;
+
+  /// Progress callback type for export operations
+  using ExportProgressCallback = zenith::ExportProgressCallback;
+
   /**
    * @brief Export project to WAV file
    * @param outputFile Output file path
    * @param sampleRate Sample rate for export
    * @param bitDepth Bit depth (16, 24, or 32)
-   * @param durationInSeconds Duration to export
+   * @param durationInSeconds Duration to export (0 = auto-detect)
+   * @param startTimeSeconds Start time in seconds (default 0.0)
+   * @param progressCallback Optional callback for progress updates
    * @return true if successful
    */
   bool exportProjectToWav(const juce::File &outputFile, double sampleRate,
-                          int bitDepth, double durationInSeconds);
+                          int bitDepth, double durationInSeconds = 0.0,
+                          double startTimeSeconds = 0.0,
+                          ExportProgressCallback progressCallback = nullptr);
 
-  enum class ExportFormat { WAV, FLAC, OGG, AIFF };
+  /**
+   * @brief Synchronous version of project export for background threads (AI)
+   */
+  bool exportProjectToWavSync(const juce::File &outputFile, double sampleRate,
+                              int bitDepth, double durationInSeconds = 0.0,
+                              double startTimeSeconds = 0.0);
 
-  /// Progress callback type for export operations
-  using ExportProgressCallback = std::function<void(float progress, const juce::String& status)>;
-
-  struct ExportOptions {
-    juce::File outputFile;
-    double sampleRate = 44100.0;
-    int bitDepth = 24; // 8, 16, 24, 32
-    ExportFormat format = ExportFormat::WAV;
-    bool enableDither = true;
-    bool normalize = false;
-    double normalizeDb = -0.1;
-    double duration = 0.0;
-    
-    // Stem export options
-    bool exportStems = false;
-    std::vector<int> stemTrackIndices; // Empty = all tracks
-    
-    // Progress callback (optional)
-    ExportProgressCallback progressCallback = nullptr;
-  };
+using ExportOptions = zenith::ExportOptions;
 
   /**
    * @brief Advanced Project Export
@@ -885,6 +905,7 @@ public:
   juce::ThreadPool &getThreadPool();
 
   Midi2DiscoveryService* getMidi2DiscoveryService() const { return midi2DiscoveryService_.get(); }
+  AudioAnalysisService* getAnalysisService() const { return analysisService_.get(); }
 
 
 private:
@@ -1050,6 +1071,7 @@ private:
   // Session Debugger Agent
   std::unique_ptr<ai::SessionDebuggerAgent> sessionDebugger_;
   std::unique_ptr<ai::AIMasteringAgent> masteringAgent_;
+  std::unique_ptr<AudioAnalysisService> analysisService_;
   std::unique_ptr<Metronome> metronome_;
   std::unique_ptr<Midi2DiscoveryService> midi2DiscoveryService_;
 
@@ -1071,7 +1093,9 @@ private:
   //==========================================================================
 
   std::unique_ptr<AudioRenderer> audioRenderer_;
-  // REMOVED: liveContext_ and renderContext_ - AudioRenderer now manages its own internal state
+  // Render Contexts (State for AudioRenderer)
+  AudioRenderContext liveContext_;      // For real-time playback
+  AudioRenderContext renderContext_;    // For offline export/rendering
   std::atomic<bool> isSuspended_{false}; // Suspend flag
   std::unique_ptr<RecordingManager> recordingManager_;
   std::unique_ptr<TransportController> transportController_;
@@ -1092,6 +1116,9 @@ private:
 
   // Track Freeze Manager
   std::unique_ptr<TrackFreezeManager> freezeManager_;
+
+  // Real-time audio processor (Real-time safety and monitoring)
+  audio::RealTimeAudioProcessor rtProcessor_;
 
   // MIDI input handling
   std::vector<std::unique_ptr<juce::MidiInput>> midiInputs_;
@@ -1116,6 +1143,23 @@ private:
 
   // Macro Bank
   MacroBank macroBank_;
+
+  // Async Export Job Tracking
+  std::atomic<ExportJob*> currentExportJob_{nullptr};
+
+
+  // Global singleton instance pointer (for async callback safety)
+  static inline Engine* instance = nullptr;
+
+  // Weak reference support for God Mode
+  juce::WeakReference<Engine>::Master masterReference;
+  friend class juce::WeakReference<Engine>;
+
+
+  // Export Job (Async Legacy)
+  std::unique_ptr<juce::Thread> exportThread_;
+
+  friend class LegacyExportThread;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

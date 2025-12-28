@@ -145,6 +145,12 @@ struct RecordingResult {
 */
 class AudioRecorder : public juce::TimeSliceClient {
 public:
+  enum class RecordingState {
+    Idle,
+    Recording,
+    Finalizing
+  };
+
   AudioRecorder();
   ~AudioRecorder() override;
 
@@ -162,9 +168,11 @@ public:
                       const juce::AudioDeviceManager &deviceManager,
                       juce::int64 startSample, const juce::File &recordingsDir);
 
-  std::vector<RecordingResult> stopRecording();
+  void stopRecording(std::function<void(std::vector<RecordingResult>)> completionCallback);
 
-  bool isRecording() const { return isRecording_.load(); }
+  RecordingState getState() const { return state_.load(); }
+  bool isRecording() const { return state_.load() == RecordingState::Recording; }
+  bool isFinalizing() const { return state_.load() == RecordingState::Finalizing; }
 
   //==========================================================================
   // Audio Capture (AUDIO THREAD ONLY - RT-SAFE)
@@ -210,7 +218,8 @@ private:
                                  const juce::String &trackName);
 
   std::unique_ptr<juce::TimeSliceThread> writerThread_;
-  std::atomic<bool> isRecording_{false};
+  std::atomic<RecordingState> state_{RecordingState::Idle};
+  std::function<void(std::vector<RecordingResult>)> completionCallback_;
   double sampleRate_ = constants::kDefaultSampleRate;
 
   juce::AudioBuffer<float> tempReadBuffer_;

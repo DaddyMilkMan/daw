@@ -41,9 +41,12 @@ target_sources(ZenithDAW PRIVATE
     PropertyExchangeManager.cpp
     RealTimeGarbageCollector.cpp
     
+    # Audio Components
+    ../audio/RealTimeAudioBuffer.cpp
     # Modular Engine Components (2025-12-11 Refactor)
     AudioRenderer.cpp
     AudioExporter.cpp
+    ExportJob.cpp
     RecordingManager.cpp
     TransportController.cpp
     ProjectEngineBridge.cpp

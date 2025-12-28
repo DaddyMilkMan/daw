@@ -589,6 +589,36 @@ public:
   juce::File getAssetDirectory(const juce::String& name);
 
   //==========================================================================
+  // God Mode Helpers (Eyes for AI)
+  //==========================================================================
+  
+  /**
+   * @brief Get a property from any node in the project by its unique ID
+   */
+  juce::var getProperty(const juce::String& nodeId, const juce::String& propId) const;
+
+  /**
+   * @brief Set a property on any node in the project by its unique ID
+   */
+  void setProperty(const juce::String& nodeId, const juce::String& propId, const juce::var& value);
+
+  /**
+   * @brief Returns a structured map of the entire project (IDs and Names)
+   * This gives the AI a 'mental map' of the project structure.
+   */
+  juce::var getProjectHierarchy() const;
+
+  /**
+   * @brief Returns a list of strings representing the undo history
+   */
+  juce::StringArray getUndoHistory() const;
+
+  /**
+   * @brief Perform multiple undos to reach a specific point in history
+   */
+  void undoTo(int index);
+
+  //==========================================================================
   // Routing Graph
   //==========================================================================
   zenith::RoutingGraph &getRoutingGraph() { return routingGraph; }
@@ -628,6 +658,7 @@ private:
   // juce::UndoManager undoManager; // Moved to public as per Step 1
   std::atomic<int> idCounter{0};
   mutable std::unordered_map<juce::String, juce::ValueTree> trackIdMap_;
+  mutable std::unordered_map<juce::String, juce::ValueTree> nodeCache_; // Full project cache
   std::atomic<bool> isDirty{false};
   juce::File projectFile;
   zenith::RoutingGraph routingGraph;

@@ -27,16 +27,28 @@ UndoHistoryPanel::UndoHistoryPanel(ProjectState& projectState)
     
     setSize(280, 200);
     updateCachedPaints();
-    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(10);  // Slower update rate - history doesn't change that often
+    
+    projectState_.getUndoManager().addChangeListener(this);
+    triggerAsyncUpdate();
 }
 
 UndoHistoryPanel::~UndoHistoryPanel() {
-    stopTimer();
+    projectState_.getUndoManager().removeChangeListener(this);
 }
 
-void UndoHistoryPanel::timerCallback() {
-    rebuildHistory();
-    repaint();
+void UndoHistoryPanel::changeListenerCallback(juce::ChangeBroadcaster* source) {
+    if (source == &projectState_.getUndoManager()) {
+        needsRebuild_ = true;
+        triggerAsyncUpdate();
+    }
+}
+
+void UndoHistoryPanel::handleAsyncUpdate() {
+    if (needsRebuild_) {
+        rebuildHistory();
+        needsRebuild_ = false;
+        markDirty();
+    }
 }
 
 void UndoHistoryPanel::resized() {
@@ -388,8 +400,8 @@ void UndoHistoryPanel::jumpToHistoryIndex(int index) {
     }
     
     // Rebuild to reflect new state
-    rebuildHistory();
-    repaint();
+    needsRebuild_ = true;
+    triggerAsyncUpdate();
 }
 
 } // namespace zenith

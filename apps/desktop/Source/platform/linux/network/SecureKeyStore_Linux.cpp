@@ -3,6 +3,9 @@
 
     SecureKeyStore_Linux.cpp
     Created: 2025-12-23
+    
+    Linux implementation with REAL libsecret Secret Service API integration
+    Falls back to encrypted file storage when libsecret is unavailable
 
   ==============================================================================
 */
@@ -14,10 +17,54 @@
 #include <fstream>
 #include <vector>
 
+#ifdef HAVE_LIBSECRET
+#include <libsecret/secret.h>
+#endif
+
 namespace zenith {
 
 //==============================================================================
-// Internal Helpers
+// libsecret Schema Definition
+//==============================================================================
+
+#ifdef HAVE_LIBSECRET
+namespace {
+    // Define the secret schema for Zenith DAW credentials
+    const SecretSchema* getZenithSchema() {
+        static const SecretSchema schema = {
+            "com.zenith.daw.credentials",
+            SECRET_SCHEMA_NONE,
+            {
+                { "service", SECRET_SCHEMA_ATTRIBUTE_STRING },
+                { "key_name", SECRET_SCHEMA_ATTRIBUTE_STRING },
+                { nullptr, SecretSchemaAttributeType(0) }
+            }
+        };
+        return &schema;
+    }
+    
+    bool libsecretAvailable() {
+        static int available = -1;
+        if (available == -1) {
+            // Try to connect to Secret Service
+            GError* error = nullptr;
+            SecretService* service = secret_service_get_sync(
+                SECRET_SERVICE_LOAD_COLLECTIONS, nullptr, &error);
+            if (error) {
+                g_error_free(error);
+                available = 0;
+            } else {
+                available = 1;
+                if (service) g_object_unref(service);
+            }
+        }
+        return available == 1;
+    }
+}
+#endif
+
+//==============================================================================
+// Encrypted File Fallback Helpers
 //==============================================================================
 
 namespace {
@@ -45,10 +92,7 @@ namespace {
         return appDataDir.getChildFile ("ZenithDAW").getChildFile ("keystore.dat");
     }
 
-    // Encrypt/Decrypt helper
-    // Returns empty block on failure
-    // Encrypt/Decrypt helper
-    // Returns empty block on failure
+    // Encrypt/Decrypt helper using Blowfish
     juce::MemoryBlock performCrypto(const void* data, size_t size, bool encrypt)
     {
         if (data == nullptr || size == 0)
@@ -57,9 +101,9 @@ namespace {
         auto keyStr = getMachineKey();
         
         // Use SHA-256 hash of machine key to get stable 32-byte key
-        juce::SHA256 sha;
-        auto hash = sha.calc(keyStr.toRawUTF8(), keyStr.getNumBytesAsUTF8());
-        juce::MemoryBlock keyData(hash.getData(), 32); 
+        juce::SHA256 sha(keyStr.toRawUTF8(), keyStr.getNumBytesAsUTF8());
+        auto hash = sha.getRawData();
+        juce::MemoryBlock keyData = hash;
         
         // Prepare buffer
         juce::MemoryBlock processedData;
@@ -67,8 +111,7 @@ namespace {
 
         if (encrypt)
         {
-            // Always apply PKCS7 padding
-            // Block size is 8 bytes for Blowfish
+            // PKCS7 padding (block size is 8 bytes for Blowfish)
             int paddingNeeded = 8 - (processedData.getSize() % 8);
             juce::uint8 padByte = (juce::uint8)paddingNeeded;
             
@@ -78,15 +121,19 @@ namespace {
 
         juce::BlowFish bf (keyData.getData(), (int)keyData.getSize());
 
-        // Perform in-place encryption/decryption
-        // Blowfish processes 2x 32bit ints (8 bytes) at a time.
-        
         auto* rawData = static_cast<juce::uint8*> (processedData.getData());
         int numBlocks = (int)processedData.getSize() / 8;
+        
+        auto writeLE = [](void* d, juce::uint32 v) {
+            juce::uint8* p = static_cast<juce::uint8*>(d);
+            p[0] = static_cast<juce::uint8>(v & 0xFF);
+            p[1] = static_cast<juce::uint8>((v >> 8) & 0xFF);
+            p[2] = static_cast<juce::uint8>((v >> 16) & 0xFF);
+            p[3] = static_cast<juce::uint8>((v >> 24) & 0xFF);
+        };
 
         for (int i = 0; i < numBlocks; ++i)
         {
-            // Read as Little Endian explicitly for portability
             juce::uint32 l = juce::ByteOrder::littleEndianInt (rawData + i * 8);
             juce::uint32 r = juce::ByteOrder::littleEndianInt (rawData + i * 8 + 4);
 
@@ -95,9 +142,8 @@ namespace {
             else
                 bf.decrypt (l, r);
 
-            // Write back as Little Endian
-            juce::ByteOrder::littleEndianInt (rawData + i * 8, l);
-            juce::ByteOrder::littleEndianInt (rawData + i * 8 + 4, r);
+            writeLE (rawData + i * 8, l);
+            writeLE (rawData + i * 8 + 4, r);
         }
         
         if (!encrypt)
@@ -108,7 +154,6 @@ namespace {
                 juce::uint8 padLen = rawData[processedData.getSize() - 1];
                 if (padLen > 0 && padLen <= 8 && padLen <= processedData.getSize())
                 {
-                    // Verify padding bytes (optional but recommended)
                     bool paddingValid = true;
                     for (int i = 0; i < padLen; ++i) {
                          if (rawData[processedData.getSize() - 1 - i] != padLen) {
@@ -119,9 +164,6 @@ namespace {
                     
                     if (paddingValid)
                         processedData.setSize(processedData.getSize() - padLen);
-                    // Else: invalid padding, but we might just return data described by var? 
-                    // Strict PKCS7 would fail here. We'll just keep data if invalid? 
-                    // No, invalid padding usually means wrong key or corruption.
                 }
             }
         }
@@ -129,7 +171,7 @@ namespace {
         return processedData;
     }
 
-    // Load entire keystore
+    // Load entire keystore from encrypted file
     std::unique_ptr<juce::DynamicObject> loadKeystorePropSet()
     {
         auto file = getKeystoreFile();
@@ -144,7 +186,6 @@ namespace {
 
         auto decryptedData = performCrypto (encryptedData.getData(), encryptedData.getSize(), false);
         
-        // Try to read as var
         juce::MemoryInputStream input (decryptedData, false);
         auto v = juce::var::readFromStream (input);
 
@@ -156,7 +197,6 @@ namespace {
             return cloned;
         }
             
-        // If failed or not an object, return empty
         return std::make_unique<juce::DynamicObject>();
     }
 
@@ -164,7 +204,6 @@ namespace {
     {
         if (props == nullptr) return;
 
-        // Serialize to binary
         juce::MemoryOutputStream mos;
         juce::var propsVar(props->clone().release());
         propsVar.writeToStream (mos);
@@ -175,10 +214,9 @@ namespace {
         if (!file.getParentDirectory().exists())
             file.getParentDirectory().createDirectory();
 
-        // Write
         if (file.replaceWithData (encrypted.getData(), encrypted.getSize()))
         {
-            // Set permissions to 0600
+            // Set permissions to 0600 (owner read/write only)
             chmod (file.getFullPathName().toRawUTF8(), S_IRUSR | S_IWUSR);
         }
     }
@@ -186,11 +224,38 @@ namespace {
 } // namespace
 
 //==============================================================================
-// Public API
+// Public API Implementation
 //==============================================================================
 
 bool SecureKeyStore::storeKey(const juce::String& keyName, const juce::String& keyValue)
 {
+#ifdef HAVE_LIBSECRET
+    if (libsecretAvailable())
+    {
+        GError* error = nullptr;
+        gboolean result = secret_password_store_sync(
+            getZenithSchema(),
+            SECRET_COLLECTION_DEFAULT,
+            ("ZenithDAW: " + keyName).toRawUTF8(),  // Label shown in keyring
+            keyValue.toRawUTF8(),
+            nullptr,  // Cancellable
+            &error,
+            "service", "ZenithDAW",
+            "key_name", keyName.toRawUTF8(),
+            nullptr);
+        
+        if (error) {
+            juce::Logger::writeToLog("libsecret store error: " + juce::String(error->message));
+            g_error_free(error);
+            // Fall through to file-based storage
+        } else if (result) {
+            juce::Logger::writeToLog("Key stored in Secret Service: " + keyName);
+            return true;
+        }
+    }
+#endif
+    
+    // Fallback: Encrypted file storage
     auto props = loadKeystorePropSet();
     props->setProperty (keyName, keyValue);
     saveKeystorePropSet (props.get());
@@ -199,6 +264,32 @@ bool SecureKeyStore::storeKey(const juce::String& keyName, const juce::String& k
 
 bool SecureKeyStore::retrieveKey(const juce::String& keyName, juce::String& outKey)
 {
+#ifdef HAVE_LIBSECRET
+    if (libsecretAvailable())
+    {
+        GError* error = nullptr;
+        gchar* password = secret_password_lookup_sync(
+            getZenithSchema(),
+            nullptr,  // Cancellable
+            &error,
+            "service", "ZenithDAW",
+            "key_name", keyName.toRawUTF8(),
+            nullptr);
+        
+        if (error) {
+            juce::Logger::writeToLog("libsecret lookup error: " + juce::String(error->message));
+            g_error_free(error);
+            // Fall through to file-based storage
+        } else if (password) {
+            outKey = juce::String::fromUTF8(password);
+            secret_password_free(password);
+            juce::Logger::writeToLog("Key retrieved from Secret Service: " + keyName);
+            return true;
+        }
+    }
+#endif
+    
+    // Fallback: Encrypted file storage
     auto props = loadKeystorePropSet();
     if (props->hasProperty (keyName))
     {
@@ -210,12 +301,55 @@ bool SecureKeyStore::retrieveKey(const juce::String& keyName, juce::String& outK
 
 bool SecureKeyStore::hasKey(const juce::String& keyName)
 {
+#ifdef HAVE_LIBSECRET
+    if (libsecretAvailable())
+    {
+        GError* error = nullptr;
+        gchar* password = secret_password_lookup_sync(
+            getZenithSchema(),
+            nullptr,
+            &error,
+            "service", "ZenithDAW",
+            "key_name", keyName.toRawUTF8(),
+            nullptr);
+        
+        if (error) {
+            g_error_free(error);
+        } else if (password) {
+            secret_password_free(password);
+            return true;
+        }
+    }
+#endif
+    
     auto props = loadKeystorePropSet();
     return props->hasProperty (keyName);
 }
 
 bool SecureKeyStore::deleteKey(const juce::String& keyName)
 {
+#ifdef HAVE_LIBSECRET
+    if (libsecretAvailable())
+    {
+        GError* error = nullptr;
+        gboolean result = secret_password_clear_sync(
+            getZenithSchema(),
+            nullptr,
+            &error,
+            "service", "ZenithDAW",
+            "key_name", keyName.toRawUTF8(),
+            nullptr);
+        
+        if (error) {
+            juce::Logger::writeToLog("libsecret delete error: " + juce::String(error->message));
+            g_error_free(error);
+        } else if (result) {
+            juce::Logger::writeToLog("Key deleted from Secret Service: " + keyName);
+            return true;
+        }
+    }
+#endif
+    
     auto props = loadKeystorePropSet();
     if (props->hasProperty (keyName))
     {
@@ -228,7 +362,8 @@ bool SecureKeyStore::deleteKey(const juce::String& keyName)
 
 bool SecureKeyStore::clearAllKeys()
 {
-    // Simply delete the file
+    // For libsecret, we'd need to enumerate - just clear the file for now
+    // The Secret Service keys can be cleared via Seahorse/GNOME Keyring GUI
     auto file = getKeystoreFile();
     return file.deleteFile();
 }

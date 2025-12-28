@@ -5,6 +5,7 @@
  */
 
 #include "Engine.h"
+#include "ExportJob.h"
 #include "../engine/AudioRenderer.h"
 #include "../engine/Track.h"
 #include "../engine/Clip.h"
@@ -17,127 +18,75 @@
 namespace zenith {
 
 //==============================================================================
-// Offline Export Implementation
+// Export Job Class (Async)
 //==============================================================================
 
-bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
-                                int bitDepth, double durationInSeconds) {
-  DBG("Engine: Starting WAV export to " + outputFile.getFullPathName());
+//==============================================================================
+// Asynchronous Export Implementation
+//==============================================================================
 
-  if (sampleRate <= 0.0)
-    return false;
-  if (bitDepth != 16 && bitDepth != 24 && bitDepth != 32)
-    return false;
+void Engine::cancelExport() {
+  auto* job = currentExportJob_.load();
+  if (job) {
+    job->cancel();
+  }
+}
+
+bool Engine::exportProjectToWav(const juce::File& outputFile, 
+                                double sampleRate,
+                                int bitDepth, 
+                                double durationInSeconds,
+                                double startTimeSeconds,
+                                ExportProgressCallback progressCallback) {
+  if (currentExportJob_.load() != nullptr) {
+      DBG("Engine: Export already in progress");
+      return false; 
+  }
+
+  DBG("Engine: Starting Async WAV export to " + outputFile.getFullPathName());
+
+  if (sampleRate <= 0.0) return false;
+  if (bitDepth != 16 && bitDepth != 24 && bitDepth != 32) return false;
 
   // Auto-detect duration
   if (durationInSeconds <= 0.0) {
-    double maxEndTime = 0.0;
-    for (const auto &track : tracks_) {
-      if (track) {
-        for (int i = 0; i < track->getNumClips(); ++i) {
-          auto *clip = track->getClip(i);
-          if (clip) {
-            double rate = currentSampleRate.load() > 0
-                              ? currentSampleRate.load()
-                              : 44100.0;
-            double clipEnd = static_cast<double>(clip->getStartPosition() +
-                                                 clip->getLength()) /
-                             rate;
-            maxEndTime = std::max(maxEndTime, clipEnd);
+    double projectDuration = autoDetectProjectDuration();
+    durationInSeconds = std::max(0.0, projectDuration - startTimeSeconds);
+  }
+  
+  // Create Options
+  ExportOptions options;
+  options.outputFile = outputFile;
+  options.sampleRate = sampleRate;
+  options.bitDepth = bitDepth;
+  options.duration = durationInSeconds;
+  options.startTime = startTimeSeconds;
+  options.format = ExportFormat::WAV; // Default/Legacy is WAV
+  options.progressCallback = progressCallback;
+
+  // Adapt completion callback to legacy progress callback format
+  auto completionCallback = [progressCallback](juce::Result result) {
+      if (progressCallback) {
+          if (result.wasOk()) {
+              progressCallback(1.0f, "Export complete!");
+          } else {
+              progressCallback(0.0f, "Error: " + result.getErrorMessage());
           }
-        }
       }
-    }
-    durationInSeconds = std::max(10.0, maxEndTime + 1.0);
+  };
+
+  // Launch Background Job
+  auto job = std::make_unique<ExportJob>(*this, options, progressCallback, completionCallback);
+  
+  // Store pointer for cancellation (job will clear it when done)
+  ExportJob* jobPtr = job.get();
+  ExportJob* expected = nullptr;
+  if (currentExportJob_.compare_exchange_strong(expected, jobPtr)) {
+      getThreadPool().addJob(job.release(), true); // Pool takes ownership
+      return true;
+  } else {
+      return false; // Race condition
   }
-
-  const juce::int64 totalSamples =
-      static_cast<juce::int64>(durationInSeconds * sampleRate);
-  constexpr int offlineBlockSize = 4096;
-  const int numChannels = 2;
-
-  // Prepare for export - message thread safe here
-  prepareTracks(offlineBlockSize,
-                sampleRate); // Prepare tracks for new rate/size
-  if (audioRenderer_) {
-    // AudioRenderer is stateless, prepare context instead
-    renderContext_.prepare(sampleRate, offlineBlockSize, tracks_.size(),
-                            auxBuses_.size());
-  }
-
-  juce::WavAudioFormat wavFormat;
-  std::unique_ptr<juce::OutputStream> fileStream = std::make_unique<juce::FileOutputStream>(outputFile);
-  if (fileStream == nullptr || static_cast<juce::FileOutputStream*>(fileStream.get())->failedToOpen()) return false;
-
-  auto writerOptions = juce::AudioFormatWriterOptions()
-                           .withSampleRate(sampleRate)
-                           .withNumChannels(static_cast<int>(numChannels))
-                           .withBitsPerSample(bitDepth);
-
-  std::unique_ptr<juce::AudioFormatWriter> writer = wavFormat.createWriterFor(fileStream, writerOptions);
-
-  if (!writer)
-    return false;
-
-  juce::AudioBuffer<float> renderBuffer(numChannels, offlineBlockSize);
-  juce::int64 samplesRendered = 0;
-
-  while (samplesRendered < totalSamples) {
-    const int samplesToRender =
-        static_cast<int>(juce::jmin(static_cast<juce::int64>(offlineBlockSize),
-                                    totalSamples - samplesRendered));
-
-    // Render using AudioRenderer
-    if (audioRenderer_) {
-      juce::MidiBuffer dummyMidi;
-      
-      // Build raw pointer vectors for AudioRenderer
-      std::vector<Track *> trackPtrs;
-      trackPtrs.reserve(tracks_.size());
-      for (const auto &t : tracks_)
-        if (t)
-          trackPtrs.push_back(t.get());
-
-      std::vector<AuxBus *> auxPtrs;
-      auxPtrs.reserve(auxBuses_.size());
-      for (const auto &a : auxBuses_)
-        if (a)
-          auxPtrs.push_back(a.get());
-
-      // Create temp shared_ptr vector for AudioRenderer compatibility
-      std::vector<std::shared_ptr<juce::AudioPluginInstance>> tmpPlugins;
-      for (const auto &p : masterPlugins_)
-        tmpPlugins.push_back(p);
-
-      audioRenderer_->renderAudioGraph(
-          renderContext_, // Pass context
-          renderBuffer, samplesToRender, samplesRendered, trackPtrs, auxPtrs,
-          routingGraph_, masterLimiter_, tmpPlugins, tempoMap_.get(),
-          &dummyMidi, nullptr, 0);
-    } else {
-      renderBuffer.clear();
-    }
-
-    if (!writer->writeFromAudioSampleBuffer(renderBuffer, 0, samplesToRender)) {
-      break; // Error
-    }
-
-    samplesRendered += samplesToRender;
-  }
-
-  writer.reset();
-
-  // Restore state
-  double originalRate = currentSampleRate.load();
-  int originalSize = currentBufferSize.load();
-
-  prepareTracks(originalSize, originalRate);
-  if (audioRenderer_) {
-    renderContext_.prepare(originalRate, originalSize, tracks_.size(),
-                            auxBuses_.size());
-  }
-
-  return true;
 }
 
 bool Engine::exportProject(const ExportOptions &options) {
@@ -209,7 +158,7 @@ bool Engine::exportProject(const ExportOptions &options) {
         (int)juce::jmin((juce::int64)blockSize, totalSamples - samplesWritten);
 
     // Use Engine's wrapper which handles graph rendering
-    renderOfflineBlock(renderContext_, renderBuffer, numSamples, samplesWritten);
+    renderOfflineBlock(renderBuffer, numSamples, samplesWritten);
 
     // Apply Dithering
     if (options.enableDither && options.bitDepth < 32) {
@@ -290,6 +239,97 @@ double Engine::autoDetectProjectDuration() const {
   return maxDuration;
 }
 
-// function removed (moved to Engine.cpp with updated signature)
+bool Engine::exportProjectToWavSync(const juce::File &outputFile, double sampleRate,
+                                    int bitDepth, double durationInSeconds,
+                                    double startTimeSeconds) {
+    if (sampleRate <= 0.0) return false;
+    
+    if (durationInSeconds <= 0.0) {
+        durationInSeconds = autoDetectProjectDuration() - startTimeSeconds;
+    }
+    
+    const juce::int64 startSample = static_cast<juce::int64>(startTimeSeconds * sampleRate);
+    const juce::int64 totalSamples = static_cast<juce::int64>(durationInSeconds * sampleRate);
+    constexpr int offlineBlockSize = 4096;
+    const int numChannels = 2;
+
+    // We must use a separate render context to avoid clashing with live playback
+    AudioRenderContext aiContext;
+    aiContext.prepare(sampleRate, offlineBlockSize, tracks_.size(), auxBuses_.size());
+
+    juce::WavAudioFormat wavFormat;
+    std::unique_ptr<juce::OutputStream> fileStream = outputFile.createOutputStream();
+    if (!fileStream || static_cast<juce::FileOutputStream*>(fileStream.get())->failedToOpen()) return false;
+
+    auto writerOptions = juce::AudioFormatWriterOptions()
+                           .withSampleRate(sampleRate)
+                           .withNumChannels(numChannels)
+                           .withBitsPerSample(bitDepth);
+
+    std::unique_ptr<juce::AudioFormatWriter> writer = wavFormat.createWriterFor(fileStream, writerOptions);
+    if (!writer) return false;
+
+    juce::AudioBuffer<float> renderBuffer(numChannels, offlineBlockSize);
+    juce::int64 samplesRendered = 0;
+
+    // Snapshot state for thread safety
+    auto tracksSnapshot = getTracksSnapshot();
+    std::vector<Track*> trackPtrs;
+    for (const auto& t : tracksSnapshot) if (t) trackPtrs.push_back(t.get());
+    
+    std::vector<AuxBus*> auxPtrs;
+    for (const auto& a : auxBuses_) if (a) auxPtrs.push_back(a.get());
+
+    while (samplesRendered < totalSamples) {
+        const int samplesToRender = static_cast<int>(juce::jmin(static_cast<juce::int64>(offlineBlockSize), totalSamples - samplesRendered));
+        const juce::int64 currentPosition = startSample + samplesRendered;
+
+        if (audioRenderer_) {
+            juce::MidiBuffer dummyMidi;
+            std::vector<std::shared_ptr<juce::AudioPluginInstance>> tmpPlugins;
+            for (const auto& p : masterPlugins_) tmpPlugins.push_back(p);
+
+            audioRenderer_->renderAudioGraph(aiContext, renderBuffer, samplesToRender, currentPosition, 
+                                           trackPtrs, auxPtrs, routingGraph_, masterLimiter_, tmpPlugins, 
+                                           tempoMap_.get(), &dummyMidi, nullptr, 0);
+        } else {
+            renderBuffer.clear();
+        }
+
+        if (!writer->writeFromAudioSampleBuffer(renderBuffer, 0, samplesToRender)) break;
+        samplesRendered += samplesToRender;
+    }
+
+    return true;
+}
+
+void Engine::renderOfflineBlock(juce::AudioBuffer<float>& buffer, int numSamples, juce::int64 position) {
+  if (audioRenderer_) {
+      // Get master plugins snapshot
+      auto *masterSnapshot = activeMasterPluginsSnapshot_.load();
+      std::span<const std::shared_ptr<juce::AudioPluginInstance>> masterPlugins;
+      if (masterSnapshot) masterPlugins = masterSnapshot->plugins;
+
+      // Convert Tracks to span (pointers from vector)
+      auto tracksSnapshot = getTracksSnapshot();
+      std::vector<Track*> trackPtrs; 
+      trackPtrs.reserve(tracksSnapshot.size());
+      for(auto& t : tracksSnapshot) trackPtrs.push_back(t.get());
+
+      std::vector<AuxBus*> auxPtrs;
+      auxPtrs.reserve(auxBuses_.size());
+      for(auto& b : auxBuses_) auxPtrs.push_back(b.get());
+
+      // Use renderContext_ (internal member)
+      audioRenderer_->renderAudioGraph(
+          renderContext_,
+          buffer, numSamples, position,
+          trackPtrs, auxPtrs, routingGraph_,
+          masterLimiter_, masterPlugins,
+          tempoMap_.get(), nullptr, nullptr, 0);
+  } else {
+    buffer.clear();
+  }
+}
 
 } // namespace zenith

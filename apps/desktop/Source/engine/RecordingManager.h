@@ -32,13 +32,15 @@
 #include <vector>
 
 #include "EngineConstants.h"
+#include "AudioRecorder.h" // Needed for RecordingResult
 
 namespace zenith {
 
-// Forward declarations
 class Track;
 class ProjectState;
-class AudioRecorder;
+class TempoMap;
+
+namespace tests { class RecordingTempoTest; }
 
 //==============================================================================
 /**
@@ -66,6 +68,7 @@ class RecordingManager {
 public:
   //==========================================================================
   RecordingManager();
+  friend class tests::RecordingTempoTest;
   ~RecordingManager();
 
   //==========================================================================
@@ -121,9 +124,11 @@ public:
   /**
    * @brief Stop all recording and finalize clips
    * @param tracks Vector of tracks
+   * @param tempoMap Tempo map for calculating clip positions 
    * @note MESSAGE THREAD ONLY
    */
-  void stopRecording(const std::vector<std::shared_ptr<Track>> &tracks);
+  void stopRecording(const std::vector<std::shared_ptr<Track>> &tracks,
+                     const TempoMap& tempoMap);
 
   /**
    * @brief Stop recording and discard all data (delete files)
@@ -172,29 +177,36 @@ public:
    */
   void drainMidiFifo();
 
-private:
+
   //==========================================================================
-  // Internal Methods
+  // Internal Methods (Public for testing)
   //==========================================================================
 
   /**
    * @brief Create clips from completed recordings
    */
-  void finalizeRecordings(const std::vector<std::shared_ptr<Track>> &tracks);
+  void finalizeRecordings(const std::vector<RecordingResult>& results,
+                          const std::vector<std::shared_ptr<Track>> &tracks,
+                          const TempoMap& tempoMap);
 
   /**
    * @brief Create an audio clip in ProjectState
    */
   void createAudioClip(const juce::File &audioFile, const juce::String &trackId,
                        juce::int64 startSamplePosition,
-                       juce::int64 lengthSamples, double sampleRate);
+                       juce::int64 lengthSamples, const TempoMap& tempoMap);
 
   /**
    * @brief Create a MIDI clip in ProjectState
    */
   void createMidiClip(const juce::MidiMessageSequence &sequence,
                       const juce::String &trackId,
-                      juce::int64 startSamplePosition, double sampleRate);
+                      juce::int64 startSamplePosition, const TempoMap& tempoMap);
+
+private:
+
+
+private:
 
   //==========================================================================
   // State
