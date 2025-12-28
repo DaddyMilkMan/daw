@@ -35,8 +35,8 @@ const juce::String SecureKeyStore::AnthropicAPIKey = "zenith_anthropic_api_key";
 // Public API - Common Implementations
 //==============================================================================
 
-// Fallback implementation for non-Linux platforms
-#ifndef __linux__
+// Fallback implementation for generic platforms (not Linux, Mac, or Windows)
+#if !defined(__linux__) && !defined(JUCE_MAC) && !defined(JUCE_WINDOWS)
 
 juce::String SecureKeyStore::getServiceName() {
   return "com.zenithaudio.zenith-daw";
@@ -106,6 +106,6 @@ bool SecureKeyStore::clearAllKeys() {
   return success;
 }
 
-#endif
+#endif // Generic Fallback
 
 } // namespace zenith
