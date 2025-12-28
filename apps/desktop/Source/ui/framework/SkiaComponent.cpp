@@ -162,7 +162,13 @@ void SkiaComponent::drawChildren(SkCanvas *canvas) {
       if (child->getProperties().contains("zenith_is_skia")) {
         auto *skiaChild = static_cast<SkiaComponent *>(child);
         canvas->save();
+        
+        // Translate to child's position
         canvas->translate((float)child->getX(), (float)child->getY());
+        
+        // Clip to child's bounds to prevent bleeding
+        canvas->clipRect(SkRect::MakeWH((float)child->getWidth(), (float)child->getHeight()));
+        
         skiaChild->drawSkia(canvas);
         canvas->restore();
       }

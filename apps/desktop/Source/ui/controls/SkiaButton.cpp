@@ -158,7 +158,7 @@ void SkiaButton::drawSkia(SkCanvas *canvas) {
   // 1. Draw Shadow (New)
   SkPaint shadowPaint;
   shadowPaint.setColor(SkColorSetARGB(100, 0, 0, 0));
-  shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 4.0f));
+  shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
   canvas->drawRRect(rrect.makeOffset(0, 2), shadowPaint);
 
   // 2. Draw glow
@@ -434,7 +434,7 @@ void SkiaButton::drawGlow(SkCanvas *canvas, const SkRRect &bounds) {
   }
 
   float radius = design::glow::GLOW_MEDIUM * glowIntensity;
-  paint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, radius));
+  paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, radius));
 
   canvas->drawRRect(bounds, paint);
 }

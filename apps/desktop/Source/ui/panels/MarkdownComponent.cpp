@@ -9,14 +9,10 @@
 */
 
 #include "MarkdownComponent.h"
-<<<<<<<< HEAD:apps/desktop/Source/ui/panels/MarkdownComponent.cpp
-#include "ZenithTheme.h"
-#include "../../engine/ZenithLogger.h"
-========
 #include "../design-system/ZenithDesignSystem.h"
 #include "../design-system/ColorBridge.h"
 #include "../design-system/ZenithTheme.h"
->>>>>>>> origin/master:apps/desktop/Source/ui/controls/MarkdownComponent.cpp
+#include "../../engine/ZenithLogger.h"
 
 namespace zenith {
 namespace widgets {

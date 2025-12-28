@@ -297,7 +297,7 @@ void SkiaSlider::drawSkia(SkCanvas *canvas) {
     if (isGlowEnabled() || isHovered()) {
       SkPaint glowPaint = fillPaint;
       glowPaint.setMaskFilter(
-          SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 8.0f));
+          SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 8.0f));
       glowPaint.setAlpha(100);
       canvas->drawRoundRect(fillRect, 4.0f, 4.0f, glowPaint);
     }
@@ -356,7 +356,7 @@ void SkiaSlider::drawSkia(SkCanvas *canvas) {
       SkPaint glowPaint;
       glowPaint.setColor(design::colors::CYAN);
       glowPaint.setMaskFilter(
-          SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 10.0f));
+          SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 10.0f));
       glowPaint.setAlpha(128);
       canvas->drawRect(handleRect, glowPaint);
     }

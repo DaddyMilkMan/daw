@@ -945,7 +945,7 @@ inline void drawIcon(SkCanvas *canvas, const SkPath &icon, float x, float y,
                                     : SkPaint::kStroke_Style);
     glowPaint.setStrokeWidth(style.strokeWidth);
     glowPaint.setMaskFilter(
-        SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, style.glowRadius));
+        SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, style.glowRadius));
     canvas->drawPath(icon, glowPaint);
   }
 

@@ -46,7 +46,6 @@ SpectraAnalyzerComponent::SpectraAnalyzerComponent(Engine &engine)
   scopeBtn.onClick = [this] { setMode(AnalysisMode::Scope); };
   stereoBtn.onClick = [this] { setMode(AnalysisMode::StereoField); };
 
-<<<<<<<< HEAD:apps/desktop/Source/ui/visualization/SpectraAnalyzerComponent.cpp
   // Enable toggle mode
   spectrumBtn.setToggleable(true);
   scopeBtn.setToggleable(true);
@@ -57,23 +56,10 @@ SpectraAnalyzerComponent::SpectraAnalyzerComponent(Engine &engine)
   scopeBtn.setStyle(ZenithButton::Style::Ghost);
   stereoBtn.setStyle(ZenithButton::Style::Ghost);
 
-  // Set explicit sizes if needed, or rely on default
+  // Set explicit sizes
   spectrumBtn.setSize(ZenithButton::Size::Small);
   scopeBtn.setSize(ZenithButton::Size::Small);
   stereoBtn.setSize(ZenithButton::Size::Small);
-========
-  // Basic styling
-  auto styleBtn = [](juce::TextButton &btn) {
-    btn.setColour(juce::TextButton::buttonColourId,
-                  design::toJuceColour(design::colors::BG_04));
-    btn.setColour(juce::TextButton::textColourOffId,
-                  design::toJuceColour(design::colors::TEXT_SECONDARY));
-    btn.setColour(juce::TextButton::textColourOnId, design::toJuceColour(design::colors::ACCENT_PRIMARY));
-  };
-  styleBtn(spectrumBtn);
-  styleBtn(scopeBtn);
-  styleBtn(stereoBtn);
->>>>>>>> origin/master:apps/desktop/Source/ui/controls/SpectraAnalyzerComponent.cpp
 
   setMode(AnalysisMode::Spectrum); // Default
 
@@ -296,7 +282,7 @@ void SpectraAnalyzerComponent::renderScope(SkCanvas *canvas,
     // Glow (Outer)
     paint.setStrokeWidth(3.0f);
     paint.setColor(SkColorSetA(color, 100));
-    paint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 3.0f));
+    paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f));
     canvas->drawPath(path, paint);
 
     // Core (Inner)
@@ -356,13 +342,8 @@ void SpectraAnalyzerComponent::renderStereoField(SkCanvas *canvas,
   // Glow
   SkPaint glow = paint;
   glow.setStrokeWidth(2.5f);
-<<<<<<<< HEAD:apps/desktop/Source/ui/visualization/SpectraAnalyzerComponent.cpp
-  glow.setColor(SkColorSetARGB(80, 0, 255, 128));
-  glow.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 2.0f));
-========
   glow.setColor(design::withAlpha(sField, 0.3f)); // 80/255 -> 0.31
   glow.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 2.0f));
->>>>>>>> origin/master:apps/desktop/Source/ui/controls/SpectraAnalyzerComponent.cpp
   canvas->drawPath(path, glow);
 
   canvas->drawPath(path, paint);

@@ -347,7 +347,7 @@ void SkiaKnob::drawSkia(SkCanvas *canvas) {
 
     if (globalGlow > 0.5f) {
       glowPaint.setMaskFilter(
-          SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 3.0f * globalGlow));
+          SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f * globalGlow));
     }
 
     canvas->drawArc(arcRect, startAngle, displayValue_ * rotationRange_, false,

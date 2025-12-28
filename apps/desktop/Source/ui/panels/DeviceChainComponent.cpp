@@ -12,16 +12,11 @@
 #include "Engine.h"
 #include "ZenithDesignSystem.h"
 
-<<<<<<<< HEAD:apps/desktop/Source/ui/panels/DeviceChainComponent.cpp
-#include "ZenithSkia.h"
-========
 #include <core/SkCanvas.h>
 #include <core/SkFontTypes.h>
 #include <core/SkColor.h>
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
-
->>>>>>>> origin/master:apps/desktop/Source/ui/controls/DeviceChainComponent.cpp
 
 namespace zenith {
 

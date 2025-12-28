@@ -166,10 +166,11 @@ int Engine::createAuxBus(const juce::String &name) {
   node.type = RoutingGraph::NodeType::Bus;
   routingGraph_.addNode(node);
 
-  if (audioRenderer_) {
-    liveContext_.prepare(currentSampleRate.load(), currentBufferSize.load(),
+  if (audioRenderer_ && renderContext_) {
+    renderContext_->prepare(currentSampleRate.load(), currentBufferSize.load(),
                           tracks_.size(), auxBuses_.size());
   }
+
 
   updateTrackSnapshot();
 
@@ -349,16 +350,21 @@ void Engine::recalculatePDC() {
           trackPtrs.push_back(t.get());
       }
       
-      int maxLatency = audioRenderer_->calculatePDC(liveContext_, trackPtrs);
+      int maxLatency = 0;
+      if (renderContext_)
+          maxLatency = audioRenderer_->calculatePDC(*renderContext_, trackPtrs);
+
+
       DBG("Engine: PDC Recalculated. Max latency: " + juce::String(maxLatency) + " samples");
   }
 }
 
 int Engine::getTrackLatency(int trackIndex) const {
   // Read from Live Context
-  if (trackIndex >= 0 && trackIndex < static_cast<int>(liveContext_.trackLatencies.size())) {
-      return liveContext_.trackLatencies[trackIndex];
+  if (renderContext_ && trackIndex >= 0 && trackIndex < static_cast<int>(renderContext_->trackLatencies.size())) {
+      return renderContext_->trackLatencies[trackIndex];
   }
+
   return 0;
 }
 
@@ -384,7 +390,9 @@ bool Engine::isPDCEnabled() const {
 }
 
 int Engine::getMaxTrackLatency() const {
-    return liveContext_.maxTrackLatency;
+    if (renderContext_) return renderContext_->maxTrackLatency;
+    return 0;
+
 }
 
 } // namespace zenith

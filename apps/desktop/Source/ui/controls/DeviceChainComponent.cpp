@@ -12,16 +12,11 @@
 #include "Engine.h"
 #include "ZenithDesignSystem.h"
 
-<<<<<<<< HEAD:apps/desktop/Source/ui/panels/DeviceChainComponent.cpp
-#include "ZenithSkia.h"
-========
 #include <core/SkCanvas.h>
 #include <core/SkFontTypes.h>
 #include <core/SkColor.h>
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
-
->>>>>>>> origin/master:apps/desktop/Source/ui/controls/DeviceChainComponent.cpp
 
 namespace zenith {
 
@@ -108,7 +103,7 @@ DeviceChainComponent::DeviceChainComponent(Engine &engine, ProjectState &state)
           std::make_unique<juce::Component>()) // Initialize unique_ptr member
 {
   // Listen to state changes
-  projectState_.addListener(this);
+  projectState_.getState().addListener(this);
 
   viewport_.setViewedComponent(contentContainer_.get(), false);
   viewport_.setScrollBarsShown(false, true); // Horizontal
@@ -119,7 +114,7 @@ DeviceChainComponent::DeviceChainComponent(Engine &engine, ProjectState &state)
 }
 
 DeviceChainComponent::~DeviceChainComponent() {
-  projectState_.removeListener(this);
+  projectState_.getState().removeListener(this);
 }
 
 void DeviceChainComponent::drawSkia(SkCanvas *canvas) {

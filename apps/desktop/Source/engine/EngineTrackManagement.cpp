@@ -158,8 +158,11 @@ void Engine::syncWithProjectState() {
   // Re-prepare AudioRenderer with new track/bus counts
   if (audioRenderer_) {
     // AudioRenderer is now stateless, so we prepare the context directly
-    liveContext_.prepare(currentSampleRate.load(), currentBufferSize.load(),
-                          tracks_.size(), auxBuses_.size());
+    if (renderContext_) {
+        renderContext_->prepare(currentSampleRate.load(), currentBufferSize.load(),
+                              tracks_.size(), auxBuses_.size());
+    }
+
   }
 
   DBG("Engine: Synced " + juce::String(tracks_.size()) + " tracks");
@@ -395,8 +398,11 @@ void Engine::prepareTracks(int samplesPerBlockExpected, double sampleRate) {
   }
 
   if (audioRenderer_) {
-    liveContext_.prepare(sampleRate, samplesPerBlockExpected, tracks_.size(),
-                          auxBuses_.size());
+    if (renderContext_) {
+        renderContext_->prepare(sampleRate, samplesPerBlockExpected, tracks_.size(),
+                              auxBuses_.size());
+    }
+
   }
 }
 

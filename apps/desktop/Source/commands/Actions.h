@@ -22,7 +22,8 @@ protected:
   // Protected wrappers to allow subclasses to access private ProjectState
   // members since friendship is not inherited.
   juce::ValueTree &getStateInternal() {
-    return projectState.getStateInternal();
+    return projectState.getState();
+
   }
   juce::String generateUniqueId(const juce::String &prefix) {
     return projectState.generateUniqueId(prefix);

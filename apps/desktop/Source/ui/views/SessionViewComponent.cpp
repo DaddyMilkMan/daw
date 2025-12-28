@@ -35,7 +35,7 @@ SessionViewComponent::SessionViewComponent(Engine &engine, ProjectState &state)
   setWantsKeyboardFocus(true);
 
   // Listen to state changes
-  projectState_.addListener(this);
+  projectState_.getState().addListener(this);
 
   // Build initial layout
   rebuildLayout();
@@ -47,7 +47,7 @@ SessionViewComponent::SessionViewComponent(Engine &engine, ProjectState &state)
 
 SessionViewComponent::~SessionViewComponent() {
   stopTimer();
-  projectState_.removeListener(this);
+  projectState_.getState().removeListener(this);
 }
 
 //==============================================================================
@@ -487,7 +487,7 @@ void SessionViewComponent::drawTrackControlButtons(SkCanvas *canvas,
     if (header.isArmed) {
       armPaint.setColor(design::colors::RED);
       // Glow effect
-      armPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 3.0f));
+      armPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f));
       canvas->drawCircle(armRect.centerX(), armRect.centerY(),
                          BUTTON_SIZE / 2 - 2, armPaint);
       armPaint.setMaskFilter(nullptr);
@@ -800,7 +800,7 @@ void SessionViewComponent::drawPlayingIndicator(
   glowPaint.setStrokeWidth(3.0f);
   glowPaint.setColor(
       design::withAlpha(design::colors::NEON_GREEN, glowIntensity));
-  glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 4.0f));
+  glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
 
   SkRRect rrect = SkRRect::MakeRectXY(slotRect, CORNER_RADIUS, CORNER_RADIUS);
   canvas->drawRRect(rrect, glowPaint);

@@ -60,7 +60,7 @@ void ZenithTooltipOverlay::drawSkia(SkCanvas *canvas) {
   paint.setStyle(SkPaint::kStroke_Style);
   paint.setStrokeWidth(2.0f);
   paint.setColor(SkColorSetRGB(0, 255, 255));
-  paint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 8.0f));
+  paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 8.0f));
   canvas->drawRect(targetRect, paint);
 
   // Sharp border

@@ -598,18 +598,20 @@ public:
   // Debug Helpers
   //==========================================================================
 
-#if JUCE_DEBUG
   void dumpClipStructureToLog() const;
-#endif
+
+  juce::String generateUniqueId(const juce::String &prefix);
+
+
 
 private:
   //==========================================================================
   // Helper Methods
   //==========================================================================
 
-  void createDefaultState();
-  juce::String generateUniqueId(const juce::String &prefix);
+  // Moved to public
   juce::ValueTree findTrackInternal(const juce::String &trackId) const;
+
   juce::ValueTree findNote(const juce::String &trackId,
                            const juce::String &clipId,
                            const juce::String &noteId);

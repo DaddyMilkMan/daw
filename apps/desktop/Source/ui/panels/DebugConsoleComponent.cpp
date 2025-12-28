@@ -15,16 +15,12 @@
 #define ZENITH_USE_SKIA 1 // Force for debugging
 
 #ifdef ZENITH_USE_SKIA
-<<<<<<<< HEAD:apps/desktop/Source/ui/panels/DebugConsoleComponent.cpp
-#include "ZenithSkia.h"
-========
 #include "../design-system/ZenithDesignSystem.h"
 #include "../design-system/ColorBridge.h"
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
->>>>>>>> origin/master:apps/desktop/Source/ui/controls/DebugConsoleComponent.cpp
 #include <core/SkPath.h>
 #include <core/SkPoint.h>
 #include <effects/SkGradientShader.h>

@@ -5,13 +5,17 @@ namespace zenith {
 
 AutomationManager::AutomationManager() {
     currentSnapshot_ = std::make_shared<AutomationSnapshot>();
-    activeSnapshot_.store(currentSnapshot_.get());
+    currentSnapshot_ = std::make_shared<AutomationSnapshot>();
+    activeSnapshot_.store(currentSnapshot_);
+
 }
 
 AutomationManager::~AutomationManager() {
     lanesOwned_.clear();
     currentSnapshot_ = std::make_shared<AutomationSnapshot>();
-    activeSnapshot_.store(currentSnapshot_.get());
+    currentSnapshot_ = std::make_shared<AutomationSnapshot>();
+    activeSnapshot_.store(currentSnapshot_);
+
 }
 
 void AutomationManager::addLane(const juce::String& paramId, std::shared_ptr<AutomationLane> lane) {
@@ -25,7 +29,8 @@ void AutomationManager::clearLanes() {
 }
 
 const std::shared_ptr<AutomationLane> AutomationManager::getLane(const juce::String& paramId) const {
-    const AutomationSnapshot* snapshot = activeSnapshot_.load(std::memory_order_acquire);
+    std::shared_ptr<AutomationSnapshot> snapshot = activeSnapshot_.load(std::memory_order_acquire);
+
     if (!snapshot) return nullptr;
     
     auto it = snapshot->lanes.find(paramId);
@@ -35,8 +40,10 @@ const std::shared_ptr<AutomationLane> AutomationManager::getLane(const juce::Str
 
 void AutomationManager::updateSnapshot() {
     auto newSnapshot = std::make_shared<AutomationSnapshot>(lanesOwned_);
-    activeSnapshot_.store(newSnapshot.get(), std::memory_order_release);
+    activeSnapshot_.store(newSnapshot, std::memory_order_release);
     RealTimeGarbageCollector::getInstance().deferDelete(currentSnapshot_);
+    currentSnapshot_ = newSnapshot;
+
     currentSnapshot_ = newSnapshot;
 }
 

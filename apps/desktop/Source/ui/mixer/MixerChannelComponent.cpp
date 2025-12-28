@@ -730,7 +730,8 @@ void MixerChannelComponent::LevelMeter::drawMeterBar(SkCanvas *canvas,
       SkPaint glowPaint;
       glowPaint.setColor(design::withAlpha(topColor, 0.3f));
       glowPaint.setMaskFilter(
-          SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 4.0f));
+          SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
+
       glowPaint.setAntiAlias(true);
       canvas->drawRoundRect(meterRect, 1.0f, 1.0f, glowPaint);
     }

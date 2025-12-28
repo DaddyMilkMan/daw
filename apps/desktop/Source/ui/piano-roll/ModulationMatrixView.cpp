@@ -344,7 +344,7 @@ void ModulationMatrixView::drawNodeGlow(SkCanvas *canvas,
   glowPaint.setAntiAlias(true);
   glowPaint.setColor(design::withAlpha(color, intensity * 0.4f));
   glowPaint.setMaskFilter(
-      SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, radius * 0.3f));
+      SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, radius * 0.3f));
 
   canvas->drawCircle(pos.x, pos.y, radius, glowPaint);
 }
@@ -373,7 +373,7 @@ void ModulationMatrixView::drawConnection(SkCanvas *canvas,
   glowPaint.setStyle(SkPaint::kStroke_Style);
   glowPaint.setStrokeWidth(thickness + 6.0f);
   glowPaint.setColor(design::withAlpha(color, 0.15f));
-  glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 4.0f));
+  glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
   canvas->drawPath(conn.path, glowPaint);
 
   // Main connection line with animated dash
@@ -433,7 +433,7 @@ void ModulationMatrixView::drawParticles(SkCanvas *canvas,
       glowPaint.setColor(
           design::withAlpha(particleColor, particle.alpha * 0.5f));
       glowPaint.setMaskFilter(
-          SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, particle.size));
+          SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, particle.size));
       canvas->drawCircle(pos.fX, pos.fY, particle.size * 1.5f, glowPaint);
 
       // Particle core
@@ -531,7 +531,7 @@ void ModulationMatrixView::drawDragPreview(SkCanvas *canvas) {
   SkPaint cursorPaint;
   cursorPaint.setAntiAlias(true);
   cursorPaint.setColor(design::colors::CYAN);
-  cursorPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 6.0f));
+  cursorPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 6.0f));
   canvas->drawCircle(dragCurrentPos_.x, dragCurrentPos_.y, 8.0f, cursorPaint);
 
   cursorPaint.setMaskFilter(nullptr);

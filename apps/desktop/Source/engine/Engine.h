@@ -122,6 +122,20 @@ public:
   ~Engine() override;
 
   /**
+   * @brief Get the singleton instance of the Engine
+   * @return Pointer to the Engine instance, or nullptr if not created or shutting down
+   * @note Thread-safe; used for safe async callback access
+   */
+  static Engine* getInstance() noexcept;
+
+  /**
+   * @brief Check if the engine is shutting down
+   * @return true if shutdown is in progress
+   * @note Thread-safe; used to prevent async callbacks during destruction
+   */
+  bool isShuttingDown() const noexcept { return isShuttingDown_.load(); }
+
+  /**
    * @brief Get the plugin format manager
    */
   juce::AudioPluginFormatManager &getPluginFormatManager();
@@ -823,7 +837,8 @@ public:
    * @param position Sample position in the project
    * @note Message thread only
    */
-  void renderOfflineBlock(juce::AudioBuffer<float>& buffer, int numSamples, juce::int64 position);
+  void renderOfflineBlock(AudioRenderContext& context, juce::AudioBuffer<float>& buffer, int numSamples, juce::int64 position);
+
 
   /**
    * @brief Export project to WAV file
@@ -1071,7 +1086,11 @@ private:
   //==========================================================================
 
   std::unique_ptr<AudioRenderer> audioRenderer_;
-  // REMOVED: liveContext_ and renderContext_ - AudioRenderer now manages its own internal state
+  // Re-added renderContext_ as AudioRenderer is stateless
+  // Re-added renderContext_ as AudioRenderer is stateless (unique_ptr to avoid header cycling)
+  std::unique_ptr<AudioRenderContext> renderContext_;  // For offline export
+  std::unique_ptr<AudioRenderContext> liveContext_;    // For live audio callback
+
   std::atomic<bool> isSuspended_{false}; // Suspend flag
   std::unique_ptr<RecordingManager> recordingManager_;
   std::unique_ptr<TransportController> transportController_;
@@ -1116,6 +1135,9 @@ private:
 
   // Macro Bank
   MacroBank macroBank_;
+
+  // Static instance for safe async access (set in constructor, cleared in destructor)
+  static inline std::atomic<Engine*> instance_{nullptr};
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

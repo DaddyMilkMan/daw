@@ -8,7 +8,7 @@
   ==============================================================================
 */
 
-#include "../browser/BrowserPanel.h"
+#include "BrowserPanel.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../design-system/ColorBridge.h"
 #include "../framework/GlassmorphicPanel.h"

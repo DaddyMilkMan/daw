@@ -83,7 +83,8 @@ public:
   void dismiss();
   void refreshProjects();
 
-  float getAlpha() const { return alpha_.getCurrentValue(); }
+  float getAlpha() const { return alpha_.get(); }
+
 
   /**
    * @brief Refresh the recent projects list from the manager

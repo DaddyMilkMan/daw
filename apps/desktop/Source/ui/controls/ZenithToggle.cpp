@@ -131,7 +131,7 @@ void ZenithToggle::drawSwitch(SkCanvas *canvas) {
 
   // Track glow when active
   if (toggleState_) {
-    paint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 6.0f));
+    paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 6.0f));
     paint.setColor(SkColorSetA(activeColor_, 100));
     canvas->drawRRect(trackRRect, paint);
     paint.setMaskFilter(nullptr);
@@ -149,7 +149,7 @@ void ZenithToggle::drawSwitch(SkCanvas *canvas) {
   SkPaint shadowPaint;
   shadowPaint.setAntiAlias(true);
   shadowPaint.setColor(SkColorSetARGB(80, 0, 0, 0));
-  shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 2.0f));
+  shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 2.0f));
   canvas->drawCircle(knobX, knobY + 1, knobRadius, shadowPaint);
 
   // Knob
@@ -231,7 +231,7 @@ void ZenithToggle::drawRadio(SkCanvas *canvas) {
     canvas->drawCircle(radioX, radioY, radioSize / 4, paint);
 
     // Glow
-    paint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 4.0f));
+    paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
     paint.setColor(SkColorSetA(activeColor_, 100));
     canvas->drawCircle(radioX, radioY, radioSize / 4, paint);
   }

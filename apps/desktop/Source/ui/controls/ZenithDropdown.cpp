@@ -167,7 +167,7 @@ void ZenithDropdown::drawBackground(SkCanvas *canvas) {
     paint.setStyle(SkPaint::kStroke_Style);
     paint.setStrokeWidth(1.0f);
     paint.setColor(SkColorSetA(accentColor_, 150));
-    paint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 4.0f));
+    paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
     canvas->drawRRect(rrect, paint);
     paint.setMaskFilter(nullptr);
   }

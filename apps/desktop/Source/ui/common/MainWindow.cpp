@@ -131,7 +131,8 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   // The "Perfect DAW" Tri-Pane Layout Manager
   ZENITH_LOG_INFO("-> Creating MainLayoutComponent...");
   mainLayout =
-      std::make_unique<zenith::MainLayoutComponent>(engine, projectState);
+      std::make_unique<zenith::MainLayoutComponent>(engine, projectState, api);
+
   addAndMakeVisible(mainLayout.get());
   ZENITH_LOG_INFO("[OK] MainLayoutComponent created");
 

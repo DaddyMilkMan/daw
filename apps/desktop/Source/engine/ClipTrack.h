@@ -116,7 +116,7 @@ public:
     }
   }
 
-  void removeTakeFolder(TakeFolder *folder) override {
+  void removeTakeFolder(TakeFolder *folder) {
     takeFoldersOwned_.erase(
         std::remove_if(takeFoldersOwned_.begin(), takeFoldersOwned_.end(),
                        [folder](const std::shared_ptr<TakeFolder> &f) {
