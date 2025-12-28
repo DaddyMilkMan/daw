@@ -152,7 +152,8 @@ target_sources(ZenithDAW PRIVATE
 # -----------------------------------------------------------------------------
 target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/instruments/ZenithPolySynthUI.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/instruments/PresetGeneticistView.cpp
+    # TEMPORARILY DISABLED - depends on disabled PresetGeneticistAgent
+    # ${CMAKE_CURRENT_SOURCE_DIR}/instruments/PresetGeneticistView.cpp
 )
 
 # -----------------------------------------------------------------------------

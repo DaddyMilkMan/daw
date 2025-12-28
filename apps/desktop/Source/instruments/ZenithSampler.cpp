@@ -307,11 +307,13 @@ void ZenithSamplerProcessor::loadBankAsync(const juce::File &bankFile) {
 
       if (procPtr->parseBankFile(bankFile, *bankData)) {
         // Apply on message thread - capture pointer by VALUE (not this!)
-        juce::MessageManager::callAsync([procPtr, data = bankData]() mutable {
-          // Note: We can't fully verify processor lifetime here without WeakReference.
-          // This is safer than before since we're not capturing 'this' (the thread).
-          procPtr->applyBankData(std::move(data));
-          procPtr->isLoadingPatch.store(false);
+        // Apply on message thread - use WeakReference for safety
+        juce::WeakReference<ZenithSamplerProcessor> safeProc(procPtr);
+        juce::MessageManager::callAsync([safeProc, data = bankData]() mutable {
+          if (safeProc) {
+              safeProc->applyBankData(std::move(data));
+              safeProc->isLoadingPatch.store(false);
+          }
         });
       } else {
         procPtr->isLoadingPatch.store(false);
@@ -360,9 +362,13 @@ void ZenithSamplerProcessor::loadBankFromJsonAsync(
 
         if (procPtr->parseBankJson(json, baseDir, *bankData)) {
           // Apply on message thread - capture pointer by VALUE (not this!)
-          juce::MessageManager::callAsync([procPtr, data = bankData]() mutable {
-            procPtr->applyBankData(data);
-            procPtr->isLoadingPatch.store(false);
+          // Apply on message thread - use WeakReference for safety
+          juce::WeakReference<ZenithSamplerProcessor> safeProc(procPtr);
+          juce::MessageManager::callAsync([safeProc, data = bankData]() mutable {
+            if (safeProc) {
+                safeProc->applyBankData(data);
+                safeProc->isLoadingPatch.store(false);
+            }
           });
           return;
         }

@@ -36,11 +36,26 @@
 #include "../engine/MixerController.h"
 #include "../engine/Midi2DiscoveryService.h"
 
+#include "GrokGodModeHelper.h"
+#include "ExportJob.h"
+#include "../network/AudioAnalysisService.h"
+
 //==============================================================================
 namespace zenith {
 
+// Static singleton instance for async callback safety
+
+
+Engine* Engine::getInstance() {
+    return instance;
+}
+
 Engine::Engine() {
+  instance = this;  // Set singleton instance
   DBG("Engine: Constructor");
+
+  // Register with God Mode Helper
+  GrokGodModeHelper::getInstance().setEngine(this);
 
   // Initialize Modular Components
   audioRenderer_ = std::make_unique<AudioRenderer>();
@@ -48,6 +63,9 @@ Engine::Engine() {
   transportController_ = std::make_unique<TransportController>();
   metronome_ = std::make_unique<Metronome>();
   meteringSystem_ = std::make_unique<MeteringSystem>();
+  mixerController_ = std::make_unique<MixerController>(*this);
+  analysisService_ = std::make_unique<AudioAnalysisService>();
+  GrokGodModeHelper::getInstance().setAnalysisService(analysisService_.get());
   DBG("Engine: Modular components initialized");
 
   // Initialize audio file pool for sample caching
@@ -106,7 +124,13 @@ Engine::Engine() {
 }
 
 Engine::~Engine() {
-  DBG("Engine: Destructor");
+    ZENITH_LOG_INFO("Engine: Destructor STARTED");
+    DBG("Engine: Destructor");
+
+    if (instance == this) {
+        instance = nullptr;
+    }
+
 
   // Set shutdown flag to prevent async callbacks during destruction
   isShuttingDown_.store(true);
@@ -1115,6 +1139,15 @@ void Engine::addTrack(std::shared_ptr<zenith::Track> track) {
   updateTrackSnapshot();
 }
 
+void Engine::registerFormats() {
+  // Bug 27: JUCE FormatManager takes ownership of registered formats
+  // Use member formatManager (AudioFormatManager) ensuring it's not the plugin one
+  // formatManager is defined in Engine.h
+  formatManager.registerBasicFormats();
+  formatManager.registerFormat(new juce::FlacAudioFormat(), false);
+  formatManager.registerFormat(new juce::OggVorbisAudioFormat(), false);
+}
+
 void Engine::removeTrack(int index) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
@@ -1228,6 +1261,10 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice *device) {
   DBG("Engine: Audio device started");
   DBG("  Sample Rate: " + juce::String(currentSampleRate.load()) + " Hz");
   DBG("  Buffer Size: " + juce::String(currentBufferSize.load()) + " samples");
+
+  // Prepare RealTimeAudioProcessor
+  rtProcessor_.initialize(2, currentSampleRate.load(), currentBufferSize.load());
+  rtProcessor_.setRealTimePriority(true);
 }
 
 void Engine::audioDeviceStopped() {
@@ -1246,126 +1283,123 @@ void Engine::audioDeviceIOCallbackWithContext(
     float *const *outputChannelData, int numOutputChannels, int numSamples,
     const juce::AudioIODeviceCallbackContext &context) noexcept {
 
-  juce::ignoreUnused(inputChannelData, numInputChannels, context);
+  juce::AudioBuffer<float> outputBuffer((float**)outputChannelData, numOutputChannels, numSamples);
+  
+  rtProcessor_.processAudioWithCallback(outputBuffer, [&](juce::AudioBuffer<float>& buffer) {
+    // Original callback logic (now wrapped and monitored)
+    
+    // Clean output buffers (already cleared by rtProcessor.processAudio in a real-world scenario, 
+    // but we use the provided buffer. juce::AudioBuffer(float**) doesn't clear by itself.)
+    buffer.clear();
 
-  // Clean output buffers
-  for (int i = 0; i < numOutputChannels; ++i) {
-    if (outputChannelData[i]) {
-      juce::FloatVectorOperations::clear(outputChannelData[i], numSamples);
-    }
-  }
+    // Load snapshots for RT-safe access
+    auto *snapshot = activeSnapshot_.load();
+    auto *masterSnapshot = activeMasterPluginsSnapshot_.load();
+    if (!snapshot)
+      return;
 
-  // Load snapshot for RT-safe access
-  auto *snapshot = activeSnapshot_.load();
-  if (!snapshot)
-    return;
+    // Process Events (Updates track parameters etc.)
+    processEvents();
 
-  // Process Events (Updates track parameters etc.)
-  processEvents();
+    // Midi Buffer for rendering (populated from FIFO)
+    juce::MidiBuffer midiBuffer;
+    midiFifo_.drainTo(midiBuffer, numSamples);
 
-  // Midi Buffer for rendering (populated from FIFO)
-  juce::MidiBuffer midiBuffer;
-  midiFifo_.drainTo(midiBuffer, numSamples);
+    // Master plugins for pass 1/2
+    std::span<const std::shared_ptr<juce::AudioPluginInstance>> masterPlugins;
+    if (masterSnapshot) masterPlugins = masterSnapshot->plugins;
 
-  if (transportController_ && transportController_->isPlaying()) {
-    juce::int64 currentPos = transportController_->getPlayheadSamples();
-    juce::int64 loopEnd = transportController_->getLoopEndSamples();
-    juce::int64 loopStart = transportController_->getLoopStartSamples();
-    bool looping = transportController_->isLooping();
+    if (transportController_ && transportController_->isPlaying()) {
+      juce::int64 currentPos = transportController_->getPlayheadSamples();
+      juce::int64 loopEnd = transportController_->getLoopEndSamples();
+      juce::int64 loopStart = transportController_->getLoopStartSamples();
+      bool looping = transportController_->isLooping();
 
-    // Check for loop wrap
-    bool wrapped = false;
-    int samplesBeforeLoop = numSamples;
+      // Check for loop wrap
+      bool wrapped = false;
+      int samplesBeforeLoop = numSamples;
 
-    if (looping && loopEnd > 0 && loopEnd > loopStart && currentPos < loopEnd &&
-        (currentPos + numSamples) > loopEnd) {
-      wrapped = true;
-      samplesBeforeLoop = static_cast<int>(loopEnd - currentPos);
-    }
-
-    // Pass 1
-    if (samplesBeforeLoop > 0) {
-      // Use proxy buffer to avoid allocation
-      juce::AudioBuffer<float> buffer1(outputChannelData, numOutputChannels,
-                                       samplesBeforeLoop);
-      juce::MidiBuffer midi1;
-      midiFifo_.drainTo(midi1, samplesBeforeLoop);
-
-      if (audioRenderer_) {
-        // NOTE: We pass 'midiBuffer' (full buffer) to first pass.
-        // This is a simplification; ideally we split MIDI events based on
-        // timestamp.
-        audioRenderer_->renderAudioGraph(
-            *renderContext_,
-            buffer1, samplesBeforeLoop, currentPos, snapshot->tracks,
-            snapshot->auxBuses, routingGraph_, masterLimiter_, masterPlugins,
-            tempoMap_.get(), &midi1, inputChannelData, numInputChannels);
-
-
-        // Mix Metronome (Pass 1)
-        if (metronome_) {
-          metronome_->getNextAudioBlock(buffer1, currentPos, true, *tempoMap_);
-        }
+      if (looping && loopEnd > 0 && loopEnd > loopStart && currentPos < loopEnd &&
+          (currentPos + numSamples) > loopEnd) {
+        wrapped = true;
+        samplesBeforeLoop = static_cast<int>(loopEnd - currentPos);
       }
-    }
 
-    // Pass 2 (Wrapped)
-    if (wrapped) {
-      int samplesAfter = numSamples - samplesBeforeLoop;
-      if (samplesAfter > 0) {
-        // Use stack array for channel pointers to avoid heap allocation
-        jassert(numOutputChannels <= 32 &&
-                "Audio callback has a hardcoded limit of 32 channels");
-        float *offsets[32]; // Max 32 channels supported
-        int safeNumChannels = juce::jmin(numOutputChannels, 32);
-
-        for (int ch = 0; ch < safeNumChannels; ++ch)
-          if (outputChannelData[ch])
-            offsets[ch] = outputChannelData[ch] + samplesBeforeLoop;
-
-        juce::AudioBuffer<float> buffer2(offsets, safeNumChannels,
-                                         samplesAfter);
-
-        juce::MidiBuffer emptyMidi; // No MIDI in wrapped part for now
+      // Pass 1
+      if (samplesBeforeLoop > 0) {
+        // Use proxy buffer to avoid allocation
+        juce::AudioBuffer<float> buffer1(buffer.getArrayOfWritePointers(), buffer.getNumChannels(),
+                                         samplesBeforeLoop);
+        juce::MidiBuffer midi1;
+        midiFifo_.drainTo(midi1, samplesBeforeLoop);
 
         if (audioRenderer_) {
           audioRenderer_->renderAudioGraph(
-              *renderContext_,
-              buffer2, samplesAfter, loopStart, snapshot->tracks,
+              liveContext_,
+              buffer1, samplesBeforeLoop, currentPos, snapshot->tracks,
               snapshot->auxBuses, routingGraph_, masterLimiter_, masterPlugins,
-              tempoMap_.get(), &emptyMidi, offsets,
-              safeNumChannels); // Using offset inputs
+              tempoMap_.get(), &midi1, inputChannelData, numInputChannels);
 
-          // Mix Metronome (Pass 2)
+          // Mix Metronome (Pass 1)
           if (metronome_) {
-            metronome_->getNextAudioBlock(buffer2, loopStart, true, *tempoMap_);
+            metronome_->getNextAudioBlock(buffer1, currentPos, true, *tempoMap_);
           }
         }
+      }
 
-        transportController_->setPlayheadSamples(loopStart + samplesAfter);
+      // Pass 2 (Wrapped)
+      if (wrapped) {
+        int samplesAfter = numSamples - samplesBeforeLoop;
+        if (samplesAfter > 0) {
+          // Use stack array for channel pointers to avoid heap allocation
+          jassert(numOutputChannels <= 32 &&
+                  "Audio callback has a hardcoded limit of 32 channels");
+          float *offsets[32]; // Max 32 channels supported
+          int safeNumChannels = juce::jmin(numOutputChannels, 32);
+
+          for (int ch = 0; ch < safeNumChannels; ++ch)
+            if (outputChannelData[ch])
+              offsets[ch] = outputChannelData[ch] + samplesBeforeLoop;
+
+          juce::AudioBuffer<float> buffer2(offsets, safeNumChannels,
+                                           samplesAfter);
+
+          juce::MidiBuffer emptyMidi; // No MIDI in wrapped part for now
+
+          if (audioRenderer_) {
+            audioRenderer_->renderAudioGraph(
+                liveContext_,
+                buffer2, samplesAfter, loopStart, snapshot->tracks,
+                snapshot->auxBuses, routingGraph_, masterLimiter_, masterPlugins,
+                tempoMap_.get(), &emptyMidi, offsets,
+                safeNumChannels); // Using offset inputs
+
+            // Mix Metronome (Pass 2)
+            if (metronome_) {
+              metronome_->getNextAudioBlock(buffer2, loopStart, true, *tempoMap_);
+            }
+          }
+
+          transportController_->setPlayheadSamples(loopStart + samplesAfter);
+        }
+      } else {
+        transportController_->advancePlayhead(numSamples);
       }
     } else {
-      transportController_->advancePlayhead(numSamples);
+      // Not playing?
     }
-  } else {
-    // Not playing?
-    // We could process reverb tails here if we wanted.
-  }
 
-  // Analysis / Visualizers
-  // We need to push the final output to the analysis FIFO.
-  // Reconstruct full buffer wrapper
-  juce::AudioBuffer<float> fullOutput(outputChannelData, numOutputChannels,
-                                      numSamples);
-  if (meteringSystem_) {
-    meteringSystem_->getAnalysisFifo().push(fullOutput, numSamples);
-  }
+    // Analysis / Visualizers
+    if (meteringSystem_) {
+      meteringSystem_->getAnalysisFifo().push(buffer, numSamples);
+    }
 
-  // Audio Recording
-  if (recordingManager_ && recordingManager_->isRecording()) {
-    recordingManager_->captureAudio(inputChannelData, numInputChannels,
-                                    numSamples, snapshot->lifecycle);
-  }
+    // Audio Recording
+    if (recordingManager_ && recordingManager_->isRecording()) {
+      recordingManager_->captureAudio(inputChannelData, numInputChannels,
+                                      numSamples, snapshot->lifecycle);
+    }
+  });
 }
 
 //==============================================================================

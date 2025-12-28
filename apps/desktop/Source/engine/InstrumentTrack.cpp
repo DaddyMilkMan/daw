@@ -1,10 +1,6 @@
 #include "InstrumentTrack.h"
 
 namespace zenith {
-<<<<<<< HEAD
-// Implementation is inline in header
-}
-=======
 
 void InstrumentTrack::getNextAudioBlock(
     const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
@@ -65,4 +61,3 @@ void InstrumentTrack::getNextAudioBlock(
 }
 
 } // namespace zenith
->>>>>>> origin/master

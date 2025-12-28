@@ -59,7 +59,6 @@ juce::ThreadPoolJob::JobStatus StemSeparationJob::runJob() {
   statusMgr.updateProgress(opId, 0.3f, "Initializing Neural Engine...");
   ONNXStemSeparator separator;
 
-<<<<<<< HEAD
   // Check for model file availability (delegated to platform discovery)
   if (!separator.isAvailable()) {
     result.error = "ONNX Runtime not available.";
@@ -70,8 +69,6 @@ juce::ThreadPoolJob::JobStatus StemSeparationJob::runJob() {
     return juce::ThreadPoolJob::jobHasFinished;
   }
 
-=======
->>>>>>> origin/master
   // Initialize with default model path
   juce::File modelFile = ONNXStemSeparator::findDefaultModel();
   if (!modelFile.existsAsFile() || !separator.initialize(modelFile)) {

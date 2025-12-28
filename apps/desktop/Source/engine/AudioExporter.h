@@ -20,6 +20,7 @@
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_core/juce_core.h>
 #include "../dsp/Dither.h"
+#include "ExportCommon.h"
 #include <functional>
 #include <vector>
 #include <atomic>
@@ -28,40 +29,9 @@
 namespace zenith {
 
 class Engine;
+class ExportJob;
 
-/// Export format enumeration
-enum class ExportFormat { WAV, FLAC, OGG, AIFF };
 
-/// Progress callback type for export operations
-using ExportProgressCallback = std::function<void(float progress, const juce::String& status)>;
-
-/// Export options for offline audio rendering
-struct ExportOptions {
-  juce::File outputFile;
-  double sampleRate = 44100.0;
-  int bitDepth = 24; // 8, 16, 24, 32
-  ExportFormat format = ExportFormat::WAV;
-  
-  // Dithering options
-  bool enableDither = true;
-  dsp::DitherType ditherType = dsp::DitherType::ShapedTPDF;
-  
-  // Normalization options
-  bool normalize = false;
-  double normalizeDb = -0.1;
-  
-  // Time range
-  double startTime = 0.0;
-  double duration = 0.0;  // 0 = auto-detect
-  
-  // Stem export options
-  bool exportStems = false;
-  bool exportStemsAsync = true;  // Use thread pool for parallel stem export
-  std::vector<int> stemTrackIndices; // Empty = all tracks
-  
-  // Progress callback (optional)
-  ExportProgressCallback progressCallback = nullptr;
-};
 
 /// Progress tracking for individual stem exports
 struct StemExportProgress {
@@ -84,6 +54,31 @@ public:
   /// Perform project export (blocking unless async stems)
   bool exportProject(const ExportOptions &options);
 
+  /// Completion callback type for async exports
+  using ExportCompletionCallback = std::function<void(juce::Result)>;
+
+  /**
+   * @brief Perform project export asynchronously (non-blocking)
+   * 
+   * This is the preferred method for UI integration as it does not block
+   * the message thread. Progress and completion are reported via callbacks.
+   * 
+   * @param options Export options (format, sample rate, output file, etc.)
+   * @param completion Callback when export finishes (success or error with message)
+   * @return true if export was started, false if another export is already running
+   * 
+   * @code
+   * exporter.exportProjectAsync(options, [](juce::Result result) {
+   *     if (result.wasOk())
+   *         showMessage("Export complete!");
+   *     else
+   *         showError(result.getErrorMessage());
+   * });
+   * @endcode
+   */
+  bool exportProjectAsync(const ExportOptions& options, 
+                          ExportCompletionCallback completion = nullptr);
+
   /// Cancel any ongoing export
   void cancelExport();
 
@@ -97,6 +92,9 @@ public:
   bool exportSingleStem(int trackIndex, const ExportOptions &options);
 
 private:
+  /// Export processing block size - used consistently across all export methods
+  static constexpr int kExportBlockSize = 4096;
+
   Engine &engine_;
   juce::AudioFormatManager formatManager_;
   
@@ -106,6 +104,10 @@ private:
   mutable juce::CriticalSection stemProgressLock_;
   std::vector<StemExportProgress> stemProgress_;
   std::atomic<int> completedStemCount_{0};
+  
+  /// Current async export job (for cancellation)
+  ExportJob* currentExportJob_{nullptr};
+  mutable juce::CriticalSection exportJobLock_;
 
   void registerFormats();
   juce::AudioFormat* getFormatForType(ExportFormat format);

@@ -93,7 +93,7 @@ T *ZenithPolySynthUI::addWidget(const juce::String &name,
   }
 
   T *ptr = widget.get();
-  addAndMakeVisible(*widget);
+  this->addAndMakeVisible(*widget);
   widgets_.push_back(std::move(widget));
   return ptr;
 }
@@ -102,39 +102,39 @@ void ZenithPolySynthUI::buildUI() {
   widgets_.clear();
 
   // Oscillators
-  auto* osc1Wave = addWidget<ZenithKnob>("Osc 1 Wave", ZenithPolySynthProcessor::Osc1Wave);
+  auto* osc1Wave = addWidget<ZenithKnob>("Osc 1 Wave", juce::String(ZenithPolySynthProcessor::Osc1Wave));
   osc1Wave->setHelpText("Oscillator 1 Waveform", "Selects the primary waveform. Pro Tip: Use the 'Wavetable' setting for complex timbres that cut through the mix.");
   
-  auto* osc1Mix = addWidget<ZenithKnob>("Osc 1 Mix", ZenithPolySynthProcessor::Osc1Mix);
+  auto* osc1Mix = addWidget<ZenithKnob>("Osc 1 Mix", juce::String(ZenithPolySynthProcessor::Osc1Mix));
   osc1Mix->setHelpText("Oscillator 1 Mix", "Adjusts the level of Osc 1. Tip: Reducing this while increasing Resonance can prevent harsh digital clipping.");
   
-  auto* osc2Wave = addWidget<ZenithKnob>("Osc 2 Wave", ZenithPolySynthProcessor::Osc2Wave);
+  auto* osc2Wave = addWidget<ZenithKnob>("Osc 2 Wave", juce::String(ZenithPolySynthProcessor::Osc2Wave));
   osc2Wave->setHelpText("Oscillator 2 Waveform", "Second oscillator waveform. Detune this slightly against Osc 1 for a thicker, 'unison' VA sound.");
   
-  auto* osc2Mix = addWidget<ZenithKnob>("Osc 2 Mix", ZenithPolySynthProcessor::Osc2Mix);
+  auto* osc2Mix = addWidget<ZenithKnob>("Osc 2 Mix", juce::String(ZenithPolySynthProcessor::Osc2Mix));
   osc2Mix->setHelpText("Oscillator 2 Mix", "Level of Osc 2. Use this to blend in a different harmonic structure compared to Osc 1.");
 
   // Filter
-  auto* cutoff = addWidget<ZenithKnob>("Cutoff", ZenithPolySynthProcessor::FilterCutoff);
+  auto* cutoff = addWidget<ZenithKnob>("Cutoff", juce::String(ZenithPolySynthProcessor::FilterCutoff));
   cutoff->setHelpText("Filter Cutoff", "Controls the brightness. Pro Tip: Automation of this parameter is the key to creating movement in your basslines.");
   
-  auto* resonance = addWidget<ZenithKnob>("Resonance", ZenithPolySynthProcessor::FilterResonance);
+  auto* resonance = addWidget<ZenithKnob>("Resonance", juce::String(ZenithPolySynthProcessor::FilterResonance));
   resonance->setHelpText("Filter Resonance", "Adds a peak at the cutoff frequency. High values create the classic 'squelch' found in acid house.");
   
-  auto* envAmt = addWidget<ZenithKnob>("Env Amt", ZenithPolySynthProcessor::FilterEnvAmount);
+  auto* envAmt = addWidget<ZenithKnob>("Env Amt", juce::String(ZenithPolySynthProcessor::FilterEnvAmount));
   envAmt->setHelpText("Envelope Amount", "Determines how much the Mod Envelope (Env 2) affects the Cutoff. Perfect for creating 'plucky' or 'snappy' sounds.");
 
   // Amp Envelope
-  auto* attack = addWidget<ZenithKnob>("Attack", ZenithPolySynthProcessor::AmpAttack);
+  auto* attack = addWidget<ZenithKnob>("Attack", juce::String(ZenithPolySynthProcessor::AmpAttack));
   attack->setHelpText("Amp Attack", "Sets the time for the sound to reach full volume. Long attack is great for cinematic pads.");
   
-  auto* decay = addWidget<ZenithKnob>("Decay", ZenithPolySynthProcessor::AmpDecay);
+  auto* decay = addWidget<ZenithKnob>("Decay", juce::String(ZenithPolySynthProcessor::AmpDecay));
   decay->setHelpText("Amp Decay", "The time taken to drop to the sustain level. Short decay creates percussive 'hits'.");
   
-  auto* sustain = addWidget<ZenithKnob>("Sustain", ZenithPolySynthProcessor::AmpSustain);
+  auto* sustain = addWidget<ZenithKnob>("Sustain", juce::String(ZenithPolySynthProcessor::AmpSustain));
   sustain->setHelpText("Amp Sustain", "The volume level held while a key is depressed. Set to 0 for short stabs.");
   
-  auto* release = addWidget<ZenithKnob>("Release", ZenithPolySynthProcessor::AmpRelease);
+  auto* release = addWidget<ZenithKnob>("Release", juce::String(ZenithPolySynthProcessor::AmpRelease));
   release->setHelpText("Amp Release", "How long the sound lingers after releasing the key. Add release for a more natural, acoustic feel.");
 
   layoutWidgets();
