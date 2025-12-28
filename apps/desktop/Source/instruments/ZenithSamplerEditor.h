@@ -1,9 +1,16 @@
 #pragma once
 
+#include "../ui/controls/SkiaComboBox.h"
+#include "../ui/controls/SkiaLabel.h"
+#include "../ui/controls/ZenithButton.h"
+#include "../ui/controls/ZenithKnob.h"
+#include "../ui/utils/ZenithParameterAttachment.h"
+#include "InstrumentPreset.h"
+#include "panels/PresetBrowserComponent.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "InstrumentPreset.h"
-#include "PresetBrowserComponent.h"
+#include <memory>
+#include <vector>
 
 namespace zenith {
 
@@ -21,136 +28,123 @@ class ZenithSampler;
  *   [Right]  Global controls (tune, gain, character)
  */
 class ZenithSamplerEditor : public juce::AudioProcessorEditor,
-                            private juce::Timer
-{
+                            private juce::Timer {
 public:
-    ZenithSamplerEditor(ZenithSamplerProcessor& processor,
-                       ZenithSampler& instrument,
-                       ZenithPresetManager& presetManager);
-    ~ZenithSamplerEditor() override;
+  ZenithSamplerEditor(ZenithSamplerProcessor &processor,
+                      ZenithSampler &instrument,
+                      ZenithPresetManager &presetManager);
+  ~ZenithSamplerEditor() override;
 
-    void paint(juce::Graphics& g) override;
-    void resized() override;
+  void paint(juce::Graphics &g) override;
+  void resized() override;
 
 private:
-    //==========================================================================
-    // Timer & Update
-    //==========================================================================
+  //==========================================================================
+  // Timer & Update
+  //==========================================================================
 
-    void timerCallback() override;
-    void updatePatchList();
-    void onPatchSelected();
+  void timerCallback() override;
+  void updatePatchList();
+  void onPatchSelected();
 
-    //==========================================================================
-    // Preset Management
-    //==========================================================================
+  //==========================================================================
+  // Preset Management
+  //==========================================================================
 
-    void onPresetLoaded(const Preset& preset);
-    Preset captureCurrentState() const;
-    void loadSampleMapData();
+  void onPresetLoaded(const Preset &preset);
+  Preset captureCurrentState() const;
+  void loadSampleMapData();
 
-    //==========================================================================
-    // Member Variables
-    //==========================================================================
+  //==========================================================================
+  // Member Variables
+  //==========================================================================
 
-    ZenithSamplerProcessor& sampler;
-    ZenithSampler& instrument_;
-    ZenithPresetManager& presetManager_;
+  ZenithSamplerProcessor &sampler;
+  ZenithSampler &instrument_;
+  ZenithPresetManager &presetManager_;
 
-    //==========================================================================
-    // Preset Browser
-    //==========================================================================
+  //==========================================================================
+  // Preset Browser
+  //==========================================================================
 
-    std::unique_ptr<PresetBrowserComponent> presetBrowser_;
-    juce::TextButton togglePresetBrowserButton_;
-    bool presetBrowserVisible_ = false;
+  std::unique_ptr<PresetBrowserComponent> presetBrowser_;
+  ZenithButton togglePresetBrowserButton_;
+  bool presetBrowserVisible_ = false;
 
-    //==========================================================================
-    // UI sections
-    //==========================================================================
+  //==========================================================================
+  // UI sections
+  //==========================================================================
 
-    juce::GroupComponent sampleMapGroup;
-    juce::GroupComponent envelopeGroup;
-    juce::GroupComponent filterGroup;
-    juce::GroupComponent globalGroup;
+  juce::GroupComponent sampleMapGroup;
+  juce::GroupComponent envelopeGroup;
+  juce::GroupComponent filterGroup;
+  juce::GroupComponent globalGroup;
 
-    //==========================================================================
-    // Sample Map Table
-    //==========================================================================
+  //==========================================================================
+  // Sample Map Table
+  //==========================================================================
 
-    juce::TableListBox sampleMapTable_;
-    juce::TextButton refreshSamplesButton_;
+  juce::TableListBox sampleMapTable_;
+  ZenithButton refreshSamplesButton_;
 
-    // Sample map data
-    struct SampleInfo
-    {
-        juce::String fileName;
-        int lowKey = 0;
-        int highKey = 127;
-        int lowVelocity = 0;
-        int highVelocity = 127;
-        int rootNote = 60;
-    };
+  // Sample map data
+  struct SampleInfo {
+    juce::String fileName;
+    int lowKey = 0;
+    int highKey = 127;
+    int lowVelocity = 0;
+    int highVelocity = 127;
+    int rootNote = 60;
+  };
 
-    std::vector<SampleInfo> sampleMapData_;
+  std::vector<SampleInfo> sampleMapData_;
 
-    //==========================================================================
-    // Sample Map Table Model
-    //==========================================================================
+  //==========================================================================
+  // Sample Map Table Model
+  //==========================================================================
 
-    class SampleMapTableModel : public juce::TableListBoxModel
-    {
-    public:
-        SampleMapTableModel(ZenithSamplerEditor& owner);
+  class SampleMapTableModel : public juce::TableListBoxModel {
+  public:
+    SampleMapTableModel(ZenithSamplerEditor &owner);
 
-        int getNumRows() override;
-        void paintRowBackground(juce::Graphics& g, int rowNumber, int width, int height,
-                               bool rowIsSelected) override;
-        void paintCell(juce::Graphics& g, int rowNumber, int columnId,
-                      int width, int height, bool rowIsSelected) override;
+    int getNumRows() override;
+    void paintRowBackground(juce::Graphics &g, int rowNumber, int width,
+                            int height, bool rowIsSelected) override;
+    void paintCell(juce::Graphics &g, int rowNumber, int columnId, int width,
+                   int height, bool rowIsSelected) override;
 
-    private:
-        ZenithSamplerEditor& owner_;
-    };
+  private:
+    ZenithSamplerEditor &owner_;
+  };
 
-    std::unique_ptr<SampleMapTableModel> sampleMapTableModel_;
+  std::unique_ptr<SampleMapTableModel> sampleMapTableModel_;
 
-    //==========================================================================
-    // Legacy preset selector
-    //==========================================================================
+  //==========================================================================
+  // Legacy preset selector
+  //==========================================================================
 
-    juce::GroupComponent presetGroup;
+  juce::GroupComponent presetGroup;
 
-    // Preset selector
-    juce::Label presetLabel;
-    juce::ComboBox presetComboBox;
-    juce::Label statusLabel;
+  // Preset selector
+  SkiaLabel presetLabel;
+  SkiaComboBox presetComboBox;
+  SkiaLabel statusLabel;
 
-    // Envelope controls
-    juce::Label attackLabel, decayLabel, sustainLabel, releaseLabel;
-    juce::Slider attackSlider, decaySlider, sustainSlider, releaseSlider;
+  // Envelope controls
+  SkiaLabel attackLabel, decayLabel, sustainLabel, releaseLabel;
+  ZenithKnob attackSlider, decaySlider, sustainSlider, releaseSlider;
 
-    // Filter controls
-    juce::Label filterCutoffLabel, filterResonanceLabel;
-    juce::Slider filterCutoffSlider, filterResonanceSlider;
+  // Filter controls
+  SkiaLabel filterCutoffLabel, filterResonanceLabel;
+  ZenithKnob filterCutoffSlider, filterResonanceSlider;
 
-    // Global controls
-    juce::Label tuneLabel, gainLabel, characterLabel;
-    juce::Slider tuneSlider, gainSlider, characterSlider;
+  // Global controls
+  SkiaLabel tuneLabel, gainLabel, characterLabel;
+  ZenithKnob tuneSlider, gainSlider, characterSlider;
 
-    // Parameter attachments
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attackAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> decayAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> sustainAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> releaseAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> filterCutoffAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> filterResonanceAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> tuneAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> gainAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> characterAttachment;
+  std::vector<std::unique_ptr<ZenithParameterAttachment>> attachments_;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithSamplerEditor)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithSamplerEditor)
 };
 
 } // namespace zenith
-

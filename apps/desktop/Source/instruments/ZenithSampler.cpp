@@ -71,53 +71,67 @@ ZenithSamplerProcessor::createParameterLayout() {
   // Amp Envelope
   layout.add(std::make_unique<juce::AudioParameterFloat>(
       juce::ParameterID("attack", 1), "Attack",
-      juce::NormalisableRange<float>(0.001f, 5.0f, 0.001f, 0.3f), 0.01f, "s"));
+      juce::NormalisableRange<float>(0.001f, 5.0f, 0.001f, 0.3f), 0.01f,
+      juce::AudioParameterFloatAttributes().withLabel("s")));
 
   layout.add(std::make_unique<juce::AudioParameterFloat>(
       juce::ParameterID("decay", 1), "Decay",
-      juce::NormalisableRange<float>(0.001f, 5.0f, 0.001f, 0.3f), 0.1f, "s"));
+      juce::NormalisableRange<float>(0.001f, 5.0f, 0.001f, 0.3f), 0.1f,
+      juce::AudioParameterFloatAttributes().withLabel("s")));
 
   layout.add(std::make_unique<juce::AudioParameterFloat>(
-      juce::ParameterID("sustain", 1), "Sustain", juce::NormalisableRange<float>(0.0f, 1.0f), 0.7f));
+      juce::ParameterID("sustain", 1), "Sustain",
+      juce::NormalisableRange<float>(0.0f, 1.0f), 0.7f,
+      juce::AudioParameterFloatAttributes()));
 
   layout.add(std::make_unique<juce::AudioParameterFloat>(
       juce::ParameterID("release", 1), "Release",
-      juce::NormalisableRange<float>(0.001f, 10.0f, 0.001f, 0.3f), 0.3f, "s"));
+      juce::NormalisableRange<float>(0.001f, 10.0f, 0.001f, 0.3f), 0.3f,
+      juce::AudioParameterFloatAttributes().withLabel("s")));
 
   // Filter
   layout.add(std::make_unique<juce::AudioParameterFloat>(
       juce::ParameterID("filterCutoff", 1), "Filter Cutoff",
-      juce::NormalisableRange<float>(0.0f, 1.0f), 1.0f));
+      juce::NormalisableRange<float>(0.0f, 1.0f), 1.0f,
+      juce::AudioParameterFloatAttributes()));
 
   layout.add(std::make_unique<juce::AudioParameterFloat>(
       juce::ParameterID("filterResonance", 1), "Filter Resonance",
-      juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f));
+      juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f,
+      juce::AudioParameterFloatAttributes()));
 
   // Sample controls
   layout.add(std::make_unique<juce::AudioParameterFloat>(
       juce::ParameterID("sampleStartOffset", 1), "Sample Start",
-      juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f));
+      juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f,
+      juce::AudioParameterFloatAttributes()));
 
   // Pitch controls
   layout.add(std::make_unique<juce::AudioParameterFloat>(
       juce::ParameterID("pitchFine", 1), "Fine Tune",
-      juce::NormalisableRange<float>(-100.0f, 100.0f, 1.0f), 0.0f, "cents"));
+      juce::NormalisableRange<float>(-100.0f, 100.0f, 1.0f), 0.0f,
+      juce::AudioParameterFloatAttributes().withLabel("cents")));
 
   layout.add(std::make_unique<juce::AudioParameterFloat>(
       juce::ParameterID("pitchSemitones", 1), "Pitch",
-      juce::NormalisableRange<float>(-24.0f, 24.0f, 1.0f), 0.0f, "semitones"));
+      juce::NormalisableRange<float>(-24.0f, 24.0f, 1.0f), 0.0f,
+      juce::AudioParameterFloatAttributes().withLabel("semitones")));
 
   // Global controls
   layout.add(std::make_unique<juce::AudioParameterFloat>(
-      juce::ParameterID("globalPan", 1), "Pan", juce::NormalisableRange<float>(0.0f, 1.0f), 0.5f));
+      juce::ParameterID("globalPan", 1), "Pan",
+      juce::NormalisableRange<float>(0.0f, 1.0f), 0.5f,
+      juce::AudioParameterFloatAttributes()));
 
   layout.add(std::make_unique<juce::AudioParameterFloat>(
-      juce::ParameterID("globalGain", 1), "Gain", juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f),
-      0.8f));
+      juce::ParameterID("globalGain", 1), "Gain",
+      juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f), 0.8f,
+      juce::AudioParameterFloatAttributes()));
 
   layout.add(std::make_unique<juce::AudioParameterFloat>(
-      juce::ParameterID("character", 1), "Character", juce::NormalisableRange<float>(0.0f, 1.0f),
-      0.5f));
+      juce::ParameterID("character", 1), "Character",
+      juce::NormalisableRange<float>(0.0f, 1.0f), 0.5f,
+      juce::AudioParameterFloatAttributes()));
 
   return layout;
 }
@@ -283,25 +297,30 @@ void ZenithSamplerProcessor::loadBankAsync(const juce::File &bankFile) {
   class LoadingThread : public juce::Thread {
   public:
     LoadingThread(ZenithSamplerProcessor &owner, const juce::File &file)
-        : juce::Thread("BankLoader"), processor(owner), bankFile(file) {}
+        : juce::Thread("BankLoader"), processor(&owner), bankFile(file) {}
 
     void run() override {
       auto bankData = std::make_shared<SampleBankData>();
+      
+      // Capture processor pointer by value for safe async access
+      ZenithSamplerProcessor* procPtr = processor;
 
-      if (processor.parseBankFile(bankFile, *bankData)) {
-        // Apply on message thread
-        juce::MessageManager::callAsync([this, data = bankData]() mutable {
-          processor.applyBankData(std::move(data));
-          processor.isLoadingPatch.store(false);
+      if (procPtr->parseBankFile(bankFile, *bankData)) {
+        // Apply on message thread - capture pointer by VALUE (not this!)
+        juce::MessageManager::callAsync([procPtr, data = bankData]() mutable {
+          // Note: We can't fully verify processor lifetime here without WeakReference.
+          // This is safer than before since we're not capturing 'this' (the thread).
+          procPtr->applyBankData(std::move(data));
+          procPtr->isLoadingPatch.store(false);
         });
       } else {
-        processor.isLoadingPatch.store(false);
+        procPtr->isLoadingPatch.store(false);
         DBG("Failed to load bank: " << bankFile.getFullPathName());
       }
     }
 
   private:
-    ZenithSamplerProcessor &processor;
+    ZenithSamplerProcessor* processor;  // Raw pointer - processor outlives thread
     juce::File bankFile;
   };
 
@@ -323,12 +342,15 @@ void ZenithSamplerProcessor::loadBankFromJsonAsync(
   public:
     JsonLoadingThread(ZenithSamplerProcessor &owner, const juce::String &json,
                       const juce::String &name)
-        : juce::Thread("JsonBankLoader"), processor(owner), jsonString(json),
+        : juce::Thread("JsonBankLoader"), processor(&owner), jsonString(json),
           bankName(name) {}
 
     void run() override {
       auto bankData = std::make_shared<SampleBankData>();
       bankData->bankName = bankName;
+      
+      // Capture processor pointer by value for safe async access
+      ZenithSamplerProcessor* procPtr = processor;
 
       auto json = juce::JSON::parse(jsonString);
       if (json.isObject()) {
@@ -336,22 +358,22 @@ void ZenithSamplerProcessor::loadBankFromJsonAsync(
         auto baseDir = ContentPaths::getInstance().getInstrumentTypeDirectory(
             "ZenithSampler");
 
-        if (processor.parseBankJson(json, baseDir, *bankData)) {
-          // Apply on message thread
-          juce::MessageManager::callAsync([this, data = bankData]() mutable {
-            processor.applyBankData(data);
-            processor.isLoadingPatch.store(false);
+        if (procPtr->parseBankJson(json, baseDir, *bankData)) {
+          // Apply on message thread - capture pointer by VALUE (not this!)
+          juce::MessageManager::callAsync([procPtr, data = bankData]() mutable {
+            procPtr->applyBankData(data);
+            procPtr->isLoadingPatch.store(false);
           });
           return;
         }
       }
 
-      processor.isLoadingPatch.store(false);
+      procPtr->isLoadingPatch.store(false);
       DBG("Failed to load JSON bank: " << bankName);
     }
 
   private:
-    ZenithSamplerProcessor &processor;
+    ZenithSamplerProcessor* processor;  // Raw pointer - processor outlives thread
     juce::String jsonString;
     juce::String bankName;
   };
@@ -618,7 +640,7 @@ void ZenithSamplerVoice::setParameters(
 void ZenithSamplerVoice::startNote(int midiNoteNumber, float vel,
                                    juce::SynthesiserSound *s,
                                    int /*currentPitchWheelPosition*/) {
-  if (auto *sound = dynamic_cast<ZenithSamplerSound *>(s)) {
+  if (auto *sound = static_cast<ZenithSamplerSound *>(s)) {
     // Check velocity layer
     int midiVelocity = static_cast<int>(vel * 127.0f);
     if (!sound->appliesToVelocity(midiVelocity)) {
@@ -695,7 +717,7 @@ void ZenithSamplerVoice::controllerMoved(int /*controllerNumber*/,
 
 void ZenithSamplerVoice::renderNextBlock(juce::AudioBuffer<float> &outputBuffer,
                                          int startSample, int numSamples) {
-  if (auto *sound = dynamic_cast<ZenithSamplerSound *>(
+  if (auto *sound = static_cast<ZenithSamplerSound *>(
           getCurrentlyPlayingSound().get())) {
     auto *audioData = sound->getAudioData();
     if (!audioData)
@@ -1075,8 +1097,7 @@ InstrumentMetadata ZenithSampler::createMetadata() {
 
 void ZenithSampler::registerPresets() {
   // Register built-in sample banks as presets
-  // Note: These are stubs - actual sample files would need to be in the
-  // content directory
+  // Actual sample files are expected in the content directory.
 
   // Built-in bank: 808 Essentials
   const char *bank808Json = R"({

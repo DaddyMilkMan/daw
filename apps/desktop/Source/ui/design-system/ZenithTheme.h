@@ -10,6 +10,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "ZenithDesignSystem.h"
 
 namespace zenith {
 
@@ -45,10 +46,12 @@ public:
 
     // Primary accent (professional blue instead of garish cyan)
     static const juce::Colour accent_primary; // #3b82f6 - Primary brand color
+    static const juce::Colour accent_secondary; // #8b5cf6 - Secondary accent (purple/magenta)
     static const juce::Colour accent_hover;   // #60a5fa - Hover state
     static const juce::Colour accent_pressed; // #2563eb - Pressed/active state
     static const juce::Colour
         accent_subtle; // Accent with 10% opacity - Backgrounds
+    static const juce::Colour hover_overlay; // White 8% - Hover overlay for surfaces
 
     // Semantic colors (status indicators)
     static const juce::Colour success; // #10b981 - Success states
@@ -128,12 +131,12 @@ public:
   // Border Radius System
   //==========================================================================
   struct Radius {
-    static constexpr float none = 0.0f;
-    static constexpr float sm = 4.0f;      // Buttons, small controls
-    static constexpr float md = 6.0f;      // Cards, panels
-    static constexpr float lg = 8.0f;      // Modals, large panels
-    static constexpr float xl = 12.0f;     // Special elements
-    static constexpr float full = 9999.0f; // Pills, circular
+    static constexpr float none = design::dimensions::RADIUS_NONE;
+    static constexpr float sm = design::dimensions::RADIUS_SM;      // Buttons, small controls
+    static constexpr float md = design::dimensions::RADIUS_SM;      // Cards, panels
+    static constexpr float lg = design::dimensions::RADIUS_LG;      // Modals, large panels
+    static constexpr float xl = design::dimensions::RADIUS_LG;     // Special elements
+    static constexpr float full = design::dimensions::RADIUS_FULL; // Pills, circular
   };
 
   //==========================================================================

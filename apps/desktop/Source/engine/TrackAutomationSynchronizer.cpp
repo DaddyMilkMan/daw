@@ -45,7 +45,8 @@ void TrackAutomationSynchronizer::start(int updateRateHz)
     jassert(updateRateHz > 0 && updateRateHz <= 1000);
 
     int intervalMs = 1000 / updateRateHz;
-    startTimer(intervalMs);
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr)
+        if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(intervalMs);
 
     DBG("TrackAutomationSynchronizer: Started at " + juce::String(updateRateHz) + " Hz");
 }
@@ -251,9 +252,41 @@ double TrackAutomationSynchronizer::sampleEnvelope(const juce::ValueTree& envelo
     double nextTime = nextPoint[zenith::ProjectState::PROP_TIME_BEATS];
     double nextValue = nextPoint[zenith::ProjectState::PROP_VALUE];
 
-    // Linear interpolation
-    double t = (timeBeats - prevTime) / (nextTime - prevTime);
+    // Get curve properties from the starting point
+    float tension = prevPoint.getProperty(zenith::ProjectState::PROP_TENSION, 0.0f);
+    int curveType = prevPoint.getProperty(zenith::ProjectState::PROP_CURVE_TYPE, 0); // 0=Linear, 1=Step, 2=Pulse?
+
+    // Step automation
+    if (curveType == 1) // Step
+        return prevValue;
+
+    // Linear/Curved interpolation
+    double timeDelta = nextTime - prevTime;
+    double t = (timeDelta > 0.0001) ? (timeBeats - prevTime) / timeDelta : 0.0;
     t = juce::jlimit(0.0, 1.0, t);
+
+    // Apply tension if significant
+    if (std::abs(tension) > 0.001f)
+    {
+        // Exponential interpolation: (exp(s*t) - 1) / (exp(s) - 1)
+        // Tension -1..1 scales to skew factor -10..10
+        // A standard approach for 'ease in/out' based on tension
+        
+        // Let's use a simpler power curve for predictable behavior symmetric around 0
+        // tension > 0: ease out (convex)
+        // tension < 0: ease in (concave)
+        // This maps tension 0..1 to exponent 1..3, and 0..-1 to exponent 1..0.33
+        
+        /* 
+           Alternative (Ableton/Bitwig style):
+           t_curved = (exp(skew * t) - 1) / (exp(skew) - 1)
+           where skew is proportional to tension.
+        */
+        
+        double skew = tension * 5.0; // Scale tension to useful exponential range
+        // Avoid skew=0 (handled by linear check above)
+        t = (std::exp(skew * t) - 1.0) / (std::exp(skew) - 1.0);
+    }
 
     return prevValue + t * (nextValue - prevValue);
 }
@@ -337,7 +370,59 @@ void TrackAutomationSynchronizer::updateTrackAutomation(const juce::String& trac
             track->setMuted(value >= 0.5);  // Binary: 0 or 1
         }
     }
+
+    //==========================================================================
+    // Plugin Parameter Automation
+    //==========================================================================
+    
+    // Get automation node for this track
+    auto automationNode = trackNode.getChildWithName(zenith::ProjectState::ID_AUTOMATION);
+    if (!automationNode.isValid())
+        return;
+    
+    // Iterate through all automation envelopes
+    for (int i = 0; i < automationNode.getNumChildren(); ++i)
+    {
+        auto envelope = automationNode.getChild(i);
+        if (!envelope.hasType(zenith::ProjectState::ID_ENVELOPE))
+            continue;
+        
+        juce::String paramId = envelope.getProperty(zenith::ProjectState::PROP_PARAM_ID).toString();
+        
+        // Check if this is a plugin parameter automation (format: "plugin_X_Y")
+        if (paramId.startsWith("plugin_"))
+        {
+            // Parse plugin and parameter indices
+            auto remainder = paramId.substring(7); // After "plugin_"
+            auto underscorePos = remainder.indexOf("_");
+            if (underscorePos < 0)
+                continue;
+            
+            int pluginIndex = remainder.substring(0, underscorePos).getIntValue();
+            int paramIndex = remainder.substring(underscorePos + 1).getIntValue();
+            
+            if (pluginIndex < 0 || paramIndex < 0)
+                continue;
+            
+            // Validate plugin exists
+            if (pluginIndex >= track->getNumPlugins())
+                continue;
+            
+            // Sample the envelope
+            auto pointsNode = envelope.getChildWithName(zenith::ProjectState::ID_POINTS);
+            if (!pointsNode.isValid())
+                continue;
+            
+            double value = sampleEnvelope(pointsNode, playbackBeats);
+            if (value >= 0.0)
+            {
+                // Apply the automation value to the plugin parameter
+                track->setPluginParameterValue(pluginIndex, paramIndex, static_cast<float>(value));
+            }
+        }
+    }
 }
+
 
 void TrackAutomationSynchronizer::rebuildListeners()
 {

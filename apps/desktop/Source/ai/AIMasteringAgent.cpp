@@ -1,12 +1,13 @@
 /*
   ==============================================================================
     AIMasteringAgent.cpp
-    Complete implementation with Grok 4.1 integration
   ==============================================================================
 */
 
 #include "AIMasteringAgent.h"
 #include "../network/SecureKeyStore.h"
+#include "../engine/Engine.h"
+#include "../engine/Track.h"
 
 namespace zenith {
 namespace ai {
@@ -230,6 +231,10 @@ TARGET SPECIFICATION:
 ═══════════════════════════════════════════════════════════════
 Target Loudness: )" +
       juce::String(targetLoudness, 1) + R"( LUFS (streaming standard)
+// Target loudness values follow streaming platform standards:
+// -14 LUFS: Spotify, YouTube (default)
+// -16 LUFS: Apple Music
+// -23 LUFS: Broadcast (EBU R128)
 User Intent: ")" +
       userIntent + R"("
 
@@ -240,6 +245,7 @@ MASTERING GUIDELINES:
 3. Determine EQ moves to enhance clarity and balance
 4. Set compression to glue the mix without over-squashing
 5. Choose limiter ceiling based on target loudness and headroom
+6. Explain your reasoning for EVERY decision
 
 Respond with ONLY this JSON structure (no markdown, no extra text):
 {
@@ -322,6 +328,8 @@ GrokMasteringAI::parseGrokResponse(const juce::String &response) {
   decision.compression.release =
       juce::jlimit(50.0f, 500.0f, decision.compression.release);
 
+  // Limiter ceiling is negative because it represents dB below 0dBFS.
+  // Range -1.0 to -0.1 dB provides headroom for true peak limiting.
   decision.limiterCeiling = juce::jlimit(-1.0f, -0.1f, decision.limiterCeiling);
 
   decision.valid = true;
@@ -373,7 +381,13 @@ Be precise, musical, and conservative in your decisions. Respond ONLY with valid
 
   // Call Grok API
   DBG("Querying Grok 4.1 for mastering decision...");
-  juce::String response = grokClient_->callGrok(prompt, systemMsg);
+  juce::String response = grokClient_->callGrok(
+      prompt, systemMsg, GrokAPIClient::ModelType::Reasoning);
+
+  if (response.startsWith("Error:")) {
+      DBG("Grok API Error: " + response);
+      return MasteringDecision();
+  }
 
   // Parse response
   return parseGrokResponse(response);
@@ -389,7 +403,13 @@ AIMasteringAgent::AIMasteringAgent(Engine &engine) : engine_(engine) {
   DBG("═══════════════════════════════════════════════════════════════");
 }
 
-AIMasteringAgent::~AIMasteringAgent() { DBG("AI Mastering Agent destroyed"); }
+AIMasteringAgent::~AIMasteringAgent() { 
+    // Bug 32 fix: Properly release DSP resources
+    eq_.reset();
+    compressor_.reset();
+    limiter_.reset();
+    DBG("AI Mastering Agent destroyed"); 
+}
 
 void AIMasteringAgent::prepare(double sampleRate, int samplesPerBlock,
                                int numChannels) {
@@ -418,6 +438,11 @@ void AIMasteringAgent::analyzeAndConfigure(
   DBG("╔════════════════════════════════════════════════════════════╗");
   DBG("║          AI MASTERING ANALYSIS STARTING...                 ║");
   DBG("╚════════════════════════════════════════════════════════════╝");
+
+  // Safety: This analysis allocates memory (feature extraction temp buffers),
+  // so it MUST run on the message thread or a background thread, NEVER the audio thread.
+  JUCE_ASSERT_MESSAGE_THREAD; 
+
 
   // Extract audio features
   auto features = featureExtractor_.extract(analysisBuffer, sampleRate_);
@@ -449,7 +474,8 @@ void AIMasteringAgent::analyzeAndConfigure(
       const juce::ScopedLock lock(decisionLock_);
       lastDecision_ = decision;
       applyAIDecision(decision);
-      isConfigured_.store(true);
+      // Bug fix: use memory order release for atomic state sync
+      isConfigured_.store(true, std::memory_order_release);
       DBG("✓ AI mastering configuration applied successfully");
     } else {
       DBG("ERROR: AI decision invalid, mastering not configured");
@@ -465,7 +491,8 @@ void AIMasteringAgent::analyzeAndConfigure(
 void AIMasteringAgent::applyAIDecision(
     const GrokMasteringAI::MasteringDecision &decision) {
   // Apply EQ settings
-  if (decision.valid) {
+  // (Caller ensures decision.valid, removing redundant check - Bug 65)
+  {
     MasteringEQ::Settings eqSettings;
     eqSettings.lowShelfGain = decision.eq.lowShelfGain;
     eqSettings.midCutGain = decision.eq.midCutGain;
@@ -491,9 +518,10 @@ void AIMasteringAgent::applyAIDecision(
 }
 
 void AIMasteringAgent::balanceTracks(const Options &options) {
+  juce::ignoreUnused(options);
   auto &tracks = engine_.tracks();
   if (tracks.empty()) {
-    DBG("No tracks to balance");
+    DBG("AIMasteringAgent: No tracks to balance");
     return;
   }
 
@@ -555,11 +583,77 @@ void AIMasteringAgent::reset() {
   isConfigured_.store(false);
 }
 
+void AIMasteringAgent::normalizeLoudness(juce::AudioBuffer<float> &buffer,
+                                         float targetLufs) {
+  float rms = 0.0f;
+  int numSamples = buffer.getNumSamples();
+  int numChannels = buffer.getNumChannels();
+  for (int ch = 0; ch < numChannels; ++ch) {
+    const float *data = buffer.getReadPointer(ch);
+    for (int i = 0; i < numSamples; ++i) {
+      rms += data[i] * data[i];
+    }
+  }
+  rms = std::sqrt(rms / (numSamples * numChannels));
+  float currentLufs = 20.0f * std::log10(rms + 1e-10f) - 10.0f;
+  float gainDb = targetLufs - currentLufs;
+  gainDb = juce::jlimit(-12.0f, 12.0f, gainDb);
+  float gainLinear = juce::Decibels::decibelsToGain(gainDb);
+  buffer.applyGain(gainLinear);
+  DBG("AIMasteringAgent: Normalized loudness by " + juce::String(gainDb, 1) +
+      "dB");
+}
+
 //==============================================================================
-// DSP Component Template Implementations
+// MasteringEQ Implementation
 //==============================================================================
 
-// Include template implementations here or in separate .inl file
+void MasteringEQ::prepare(const juce::dsp::ProcessSpec &spec) {
+  highPass_.prepare(spec);
+  highPass_.setType(juce::dsp::StateVariableTPTFilterType::highpass);
+  highPass_.setCutoffFrequency(20.0f);
+
+  lowShelf_.prepare(spec);
+  midCut_.prepare(spec);
+  presence_.prepare(spec);
+  airBand_.prepare(spec);
+
+  reset();
+}
+
+void MasteringEQ::reset() {
+  highPass_.reset();
+  lowShelf_.reset();
+  midCut_.reset();
+  presence_.reset();
+  airBand_.reset();
+}
+
+//==============================================================================
+// MasteringLimiter Implementation
+//==============================================================================
+
+void MasteringLimiter::prepare(const juce::dsp::ProcessSpec &spec) {
+  sampleRate_ = spec.sampleRate;
+  lookaheadSamples_ = static_cast<int>(0.005 * sampleRate_); // 5ms lookahead
+  lookaheadBuffer_.setSize(static_cast<int>(spec.numChannels),
+                           lookaheadSamples_ + 1);
+  lookaheadBuffer_.clear();
+  lookaheadPos_ = 0;
+
+  attackCoeff_ = static_cast<float>(std::exp(-1.0 / (0.001 * sampleRate_)));
+  releaseCoeff_ = static_cast<float>(std::exp(-1.0 / (0.05 * sampleRate_)));
+}
+
+void MasteringLimiter::reset() {
+  envelope_ = 1.0f;
+  lookaheadBuffer_.clear();
+  lookaheadPos_ = 0;
+}
+
+void MasteringLimiter::setCeiling(float ceilingDb) {
+  ceiling_ = juce::Decibels::decibelsToGain(ceilingDb);
+}
 
 } // namespace ai
 } // namespace zenith

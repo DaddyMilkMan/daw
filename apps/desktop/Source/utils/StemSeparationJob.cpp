@@ -1,14 +1,5 @@
-/*
-  ==============================================================================
-
-    StemSeparationJob.cpp
-    Created: 2025-12-09
-    Author:  Zenith DAW AI Team
-
-  ==============================================================================
-*/
-
 #include "StemSeparationJob.h"
+#include "../ai/AIStatusManager.h"
 #include <juce_events/juce_events.h>
 
 namespace zenith {
@@ -24,30 +15,37 @@ StemSeparationJob::StemSeparationJob(const juce::File &inputFile,
 StemSeparationJob::~StemSeparationJob() {}
 
 juce::ThreadPoolJob::JobStatus StemSeparationJob::runJob() {
+  // Start AI Status Tracking
+  auto &statusMgr = ai::AIStatusManager::getInstance();
+  juce::String opId = statusMgr.beginOperation(
+      "NeuralEngine", "Separating stems for " + inputFile_.getFileName());
+
   // 1. Initialize result
   StemFiles result;
 
-  if (!inputFile_.existsAsFile()) {
-    result.error = "Input file does not exist";
+  auto abortWithError = [&](const juce::String &err) {
+    result.error = err;
+    statusMgr.completeOperation(opId, false, err);
     if (callback_) {
       juce::MessageManager::callAsync(
           [cb = callback_, res = result]() { cb(res); });
     }
+  };
+
+  if (!inputFile_.existsAsFile()) {
+    abortWithError("Input file does not exist");
     return juce::ThreadPoolJob::jobHasFinished;
   }
 
   // 2. Load Audio File
+  statusMgr.updateProgress(opId, 0.1f, "Loading audio file...");
   juce::AudioFormatManager formatManager;
   formatManager.registerBasicFormats();
   std::unique_ptr<juce::AudioFormatReader> reader(
       formatManager.createReaderFor(inputFile_));
 
   if (!reader) {
-    result.error = "Could not read input file";
-    if (callback_) {
-      juce::MessageManager::callAsync(
-          [cb = callback_, res = result]() { cb(res); });
-    }
+    abortWithError("Could not read input file");
     return juce::ThreadPoolJob::jobHasFinished;
   }
 
@@ -58,32 +56,27 @@ juce::ThreadPoolJob::JobStatus StemSeparationJob::runJob() {
   double sampleRate = reader->sampleRate;
 
   // 3. Run Separation
+  statusMgr.updateProgress(opId, 0.3f, "Initializing Neural Engine...");
   ONNXStemSeparator separator;
 
-  // Check for model file availability (Assuming a default location or checking
-  // internal logic) The ONNXStemSeparator might look for models in app data or
-  // dll resource.
-  if (!separator.isAvailable()) {
-    result.error = "ONNX Runtime not available or model missing.";
-    if (callback_) {
-      juce::MessageManager::callAsync(
-          [cb = callback_, res = result]() { cb(res); });
-    }
-    return juce::ThreadPoolJob::jobHasFinished;
+  // Initialize with default model path
+  juce::File modelFile = ONNXStemSeparator::findDefaultModel();
+  if (!modelFile.existsAsFile() || !separator.initialize(modelFile)) {
+    // If initialization fails, we might still proceed with DSP fallback
+    // but we record the warning.
+    DBG("StemSeparationJob: Model initialization failed, attempting DSP fallback");
   }
 
+  statusMgr.updateProgress(opId, 0.4f, "Processing neural inference...");
   auto separationResult = separator.separate(buffer, sampleRate);
 
   if (!separationResult.success) {
-    result.error = separationResult.error;
-    if (callback_) {
-      juce::MessageManager::callAsync(
-          [cb = callback_, res = result]() { cb(res); });
-    }
+    abortWithError(separationResult.error);
     return juce::ThreadPoolJob::jobHasFinished;
   }
 
   // 4. Write Outputs
+  statusMgr.updateProgress(opId, 0.8f, "Writing stems to disk...");
   outputDirectory_.createDirectory();
   juce::String baseName = inputFile_.getFileNameWithoutExtension();
 
@@ -99,19 +92,21 @@ juce::ThreadPoolJob::JobStatus StemSeparationJob::runJob() {
   if (result.vocals.exists() && result.drums.exists() && result.bass.exists() &&
       result.other.exists()) {
     result.success = true;
+    result.usedNeuralEngine = separationResult.usedONNX;
+    statusMgr.completeOperation(opId, true, "Stem separation completed successfully");
   } else {
-    result.error = "Failed to write stem files";
+    abortWithError("Failed to write stem files");
   }
 
-  // 5. Callback on Message Thread
+  // 5. Callback on Message Thread (Single point of contact)
   if (callback_) {
-    // Capture by value to ensure safety
     juce::MessageManager::callAsync(
         [cb = callback_, res = result]() { cb(res); });
   }
 
   return juce::ThreadPoolJob::jobHasFinished;
 }
+
 
 juce::File
 StemSeparationJob::writeStemToFile(const juce::AudioBuffer<float> &buffer,
@@ -124,9 +119,17 @@ StemSeparationJob::writeStemToFile(const juce::AudioBuffer<float> &buffer,
   }
 
   juce::WavAudioFormat wavFormat;
-  std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(
-      new juce::FileOutputStream(outFile), sampleRate,
-      static_cast<unsigned int>(buffer.getNumChannels()), 24, {}, 0));
+  auto writerOptions = juce::AudioFormatWriterOptions()
+                           .withSampleRate(sampleRate)
+                           .withNumChannels((int)buffer.getNumChannels())
+                           .withBitsPerSample(24);
+
+  std::unique_ptr<juce::OutputStream> fileStream(new juce::FileOutputStream(outFile));
+  if (static_cast<juce::FileOutputStream*>(fileStream.get())->failedToOpen()) {
+      return juce::File(); 
+  }
+
+  std::unique_ptr<juce::AudioFormatWriter> writer = wavFormat.createWriterFor(fileStream, writerOptions);
 
   if (writer) {
     writer->writeFromAudioSampleBuffer(buffer, 0, buffer.getNumSamples());

@@ -38,7 +38,10 @@ class GrDirectContext;
 
 #ifndef ZENITH_USE_SKIA
 // Dummy sk_sp when Skia is disabled
-template <typename T> using sk_sp = std::unique_ptr<T>;
+#ifndef SK_SP_DEFINED
+#define SK_SP_DEFINED
+template <typename T> using sk_sp = std::shared_ptr<T>;
+#endif
 #endif
 
 namespace zenith {

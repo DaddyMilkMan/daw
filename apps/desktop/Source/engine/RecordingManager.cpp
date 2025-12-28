@@ -30,6 +30,9 @@ RecordingManager::~RecordingManager() {
   if (isRecording_.load()) {
     // Force stop - don't finalize properly
     isRecording_.store(false);
+    
+    // Bug 16: Ensure thread-safe access when clearing sessions
+    const juce::ScopedLock sl(sessionLock_);
     midiSessions_.clear();
   }
 
@@ -49,10 +52,14 @@ void RecordingManager::prepare(double sampleRate) {
 //==============================================================================
 void RecordingManager::prepareRecordingForTrack(
     const Track &track, int trackIndex, const juce::File &recordingsDir) {
+  juce::ignoreUnused(track, trackIndex);
   // Optimization: Pre-allocate resources or create directory
   // For now we just ensure the directory exists to avoid glitches during start
   if (!recordingsDir.exists()) {
-    recordingsDir.createDirectory();
+    if (!recordingsDir.createDirectory()) {
+      DBG("RecordingManager: Warning - failed to create recordings directory: " +
+          recordingsDir.getFullPathName());
+    }
   }
 }
 
@@ -63,7 +70,10 @@ void RecordingManager::setRecordingDirectory(const juce::File &recordDir) {
   // Store recording directory for later use
   recordingDirectory_ = recordDir;
   if (!recordingDirectory_.exists()) {
-    recordingDirectory_.createDirectory();
+    if (!recordingDirectory_.createDirectory()) {
+      DBG("RecordingManager: Error - failed to create recording directory: " +
+          recordDir.getFullPathName());
+    }
   }
 
   DBG("RecordingManager: Recording directory set to: " +
@@ -221,8 +231,11 @@ void RecordingManager::captureMidi(const juce::MidiMessage &message,
   if (size1 > 0) {
     midiFifoData_[start1] = {message, samplePosition, trackIndex};
     midiFifoIndex_.finishedWrite(1);
+  } else {
+    // Bug 17: FIFO overflow - track dropped messages
+    // RT-Safety: Just increment counter, do not log (DBG is not RT-safe)
+    droppedMidiMessages_.fetch_add(1, std::memory_order_relaxed);
   }
-  // If fifo is full, drop the message (RT-safe behavior)
 }
 
 //==============================================================================
@@ -233,46 +246,50 @@ void RecordingManager::drainMidiFifo() {
   const int numReady = midiFifoIndex_.getNumReady();
   midiFifoIndex_.prepareToRead(numReady, start1, size1, start2, size2);
 
-  // Process first block
-  for (int i = 0; i < size1; ++i) {
-    const auto &entry = midiFifoData_[start1 + i];
+  // Process both blocks under a single lock for efficiency
+  {
+      // Acquire lock ONCE before the loops to avoid overhead
+      const juce::ScopedLock sl(sessionLock_);
 
-    // Find matching session
-    const juce::ScopedLock sl(sessionLock_);
-    for (auto &session : midiSessions_) {
-      if (session.trackIndex == entry.trackIndex && session.isActive) {
-        // Calculate time relative to recording start
-        double timeSeconds = static_cast<double>(entry.samplePosition -
-                                                 session.startSamplePosition) /
-                             sampleRate_;
+      // Process first block
+      for (int i = 0; i < size1; ++i) {
+        const auto &entry = midiFifoData_[start1 + i];
 
-        // Only add positive time events
-        if (timeSeconds >= 0.0) {
-          session.sequence.addEvent(entry.message, timeSeconds);
+        // Find matching session
+        for (auto &session : midiSessions_) {
+          if (session.trackIndex == entry.trackIndex && session.isActive) {
+            // Calculate time relative to recording start
+            double timeSeconds = static_cast<double>(entry.samplePosition -
+                                                     session.startSamplePosition) /
+                                 sampleRate_;
+
+            // Only add positive time events
+            if (timeSeconds >= 0.0) {
+              session.sequence.addEvent(entry.message, timeSeconds);
+            }
+            break;
+          }
         }
-        break;
       }
-    }
-  }
 
-  // Process second block (wrap-around)
-  for (int i = 0; i < size2; ++i) {
-    const auto &entry = midiFifoData_[start2 + i];
-
-    const juce::ScopedLock sl(sessionLock_);
-    for (auto &session : midiSessions_) {
-      if (session.trackIndex == entry.trackIndex && session.isActive) {
-        double timeSeconds = static_cast<double>(entry.samplePosition -
-                                                 session.startSamplePosition) /
-                             sampleRate_;
-        if (timeSeconds >= 0.0) {
-          session.sequence.addEvent(entry.message, timeSeconds);
+      // Process second block (wrap-around)
+      for (int i = 0; i < size2; ++i) {
+        const auto &entry = midiFifoData_[start2 + i];
+        
+        // Find matching session
+        for (auto &session : midiSessions_) {
+          if (session.trackIndex == entry.trackIndex && session.isActive) {
+            double timeSeconds = static_cast<double>(entry.samplePosition -
+                                                     session.startSamplePosition) /
+                                 sampleRate_;
+            if (timeSeconds >= 0.0) {
+              session.sequence.addEvent(entry.message, timeSeconds);
+            }
+            break;
+          }
         }
-        break;
       }
-    }
   }
-
   midiFifoIndex_.finishedRead(size1 + size2);
 }
 
@@ -343,7 +360,11 @@ void RecordingManager::createAudioClip(const juce::File &audioFile,
 
   // Convert samples to beats for ProjectState
   // Using simple formula: beats = samples / (sampleRate * 60 / tempo)
-  const double tempo = projectState_->getTempo();
+  double tempo = projectState_->getTempo();
+  if (tempo <= 0.0) {
+      DBG("RecordingManager: Invalid tempo, defaulting to 120 BPM");
+      tempo = 120.0;
+  }
   const double samplesPerBeat = sampleRate * 60.0 / tempo;
 
   const double startBeats =

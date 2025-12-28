@@ -1,0 +1,67 @@
+JUCE v8.0.0
+Zenith DAW starting...
+Version: 0.1.0
+JUCE Version: JUCE v8.0.0
+System: Linux Linux
+ContentPaths: Using repo content directory: /home/micah/Desktop/zenith/daw/Content
+Engine: Constructor
+Engine: Modular components initialized
+Engine: AudioFilePool created
+PluginHost: Initializing...
+PluginHost: WARNING - VST3 format not available!
+PluginHost: Initialized
+PluginHost: Scanning default VST3 locations (Synchronous)...
+PluginHost: Scan complete - found 0 plugins
+Engine: PluginHost initialized with 0 cached plugins
+PluginEditorWindowManager created
+InstrumentRegistry: Initialized
+InstrumentRegistry: Registered instrument 'zenith_poly_synth'
+InstrumentRegistry: Registered instrument 'zenith_sampler'
+InstrumentRegistry: Registered instrument 'zenith_sampler.808_essentials'
+InstrumentRegistry: Registered instrument 'zenith_sampler.lofi_keys'
+InstrumentRegistry: Registered instrument 'zenith_sampler.trap_pluck'
+InstrumentRegistry: Registered instrument 'zenith_sampler.orchestral_strings'
+InstrumentRegistry: Registered instrument 'zenith_sampler.fx_impacts'
+Built-in instruments registered successfully (2 synths + 5 sample-based instruments)
+ContentPaths: Using repo content directory: /home/micah/Desktop/zenith/daw/Content
+Generated 500 presets for Zenith Poly Synth
+Engine: InstrumentRegistry initialized
+SessionDebuggerAgent: Initialized
+Engine: SessionDebuggerAgent initialized
+WARNING: GROK_API_KEY environment variable is not set. GrokAPIClient will not function until a valid API key is provided.
+GrokMasteringAI initialized with Grok 4.1 reasoning model
+═══════════════════════════════════════════════════════════════
+  AI MASTERING AGENT - Powered by Grok 4.1 Reasoning
+═══════════════════════════════════════════════════════════════
+Engine: AIMasteringAgent initialized
+Engine: TempoMap initialized
+Engine: TrackFreezeManager initialized
+Engine: Master bus registered in RoutingGraph
+ProjectState: Constructor
+ProjectState: Default state created
+ProjectFileIO: Creating new project
+ProjectState: Default state created
+ProjectFileIO: New project created
+TrackAutomationSynchronizer: Constructor
+TrackAutomationSynchronizer: Rebuilt listeners for 0 tracks
+CommandAPI: Initialized
+TrackStateSynchronizer: Constructor
+TrackStateSynchronizer: Initializing...
+TrackStateSynchronizer: Syncing all tracks...
+TrackStateSynchronizer: ProjectState has 0 tracks
+TrackStateSynchronizer: Engine has 0 tracks
+TrackStateSynchronizer: Sync complete
+TrackStateSynchronizer: Initialized
+Engine: Setting project state
+Engine: RecordingManager wired to ProjectState
+TrackAutomationSynchronizer: Constructor
+TrackAutomationSynchronizer: Rebuilt listeners for 0 tracks
+Engine: Created automation synchronizer
+Engine: Syncing with project state
+Engine: Synced 0 tracks
+TempoMap: Updated with 1 tempo points
+ClipSynchronizer: Constructor
+RecentProjectManager: No existing file at /home/micah/.config/ZenithDAW/recent_projects.json
+Starting embedded MCP server...
+[MCP] MCPServer: Starting background thread
+TrackStateManager: Added track 'Audio 1' (ID: track_c830d81b)

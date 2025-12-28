@@ -9,7 +9,6 @@
 #include "ProjectFileIO.h"
 #include "TrackStateManager.h"
 
-
 #include <functional>
 
 namespace {
@@ -58,6 +57,12 @@ const juce::Identifier ProjectState::ID_MARKERS("MARKERS");
 const juce::Identifier ProjectState::ID_MARKER("MARKER");
 const juce::Identifier ProjectState::ID_SECTIONS("SECTIONS");
 const juce::Identifier ProjectState::ID_SECTION("SECTION");
+const juce::Identifier ProjectState::ID_TAKE_FOLDER("TAKE_FOLDER");
+const juce::Identifier ProjectState::ID_COMP_REGIONS("COMP_REGIONS");
+const juce::Identifier ProjectState::ID_COMP_REGION("COMP_REGION");
+
+// Retained IDs
+
 
 const juce::Identifier ProjectState::PROP_NAME("name");
 const juce::Identifier ProjectState::PROP_TEMPO("tempo");
@@ -74,12 +79,17 @@ const juce::Identifier ProjectState::PROP_PAN("pan");
 const juce::Identifier ProjectState::PROP_MUTE("mute");
 const juce::Identifier ProjectState::PROP_SOLO("solo");
 const juce::Identifier ProjectState::PROP_ARMED("armed");
+const juce::Identifier ProjectState::PROP_INPUT_MONITOR("inputMonitor");
+const juce::Identifier ProjectState::PROP_ACTIVE_TAKE("activeTake");
+const juce::Identifier ProjectState::PROP_EXPANDED("expanded");
 
 const juce::Identifier ProjectState::PROP_START("start");
 const juce::Identifier ProjectState::PROP_LENGTH("length");
 const juce::Identifier ProjectState::PROP_OFFSET("offset");
 const juce::Identifier ProjectState::PROP_AUDIO_FILE("audioFile");
 const juce::Identifier ProjectState::PROP_LOOP_LENGTH("loopLength");
+const juce::Identifier ProjectState::PROP_FADE_IN("fadeIn");
+const juce::Identifier ProjectState::PROP_FADE_OUT("fadeOut");
 
 // Beat-based clip properties
 const juce::Identifier ProjectState::PROP_START_BEATS("startBeats");
@@ -93,6 +103,7 @@ const juce::Identifier ProjectState::PROP_PROBABILITY("probability");
 const juce::Identifier ProjectState::PROP_CONDITION("condition");
 const juce::Identifier ProjectState::PROP_RECURRENCE("recurrence");
 const juce::Identifier ProjectState::PROP_ARTICULATION_ID("articulationId");
+const juce::Identifier ProjectState::PROP_NOTE_TENSION("tension");
 
 // Automation properties
 const juce::Identifier ProjectState::PROP_PARAM("param");
@@ -102,6 +113,13 @@ const juce::Identifier ProjectState::PROP_TIME_BEATS("timeBeats");
 const juce::Identifier ProjectState::PROP_VALUE("value");
 const juce::Identifier ProjectState::PROP_CURVE_TYPE("curveType");
 const juce::Identifier ProjectState::PROP_TENSION("tension");
+const juce::Identifier ProjectState::PROP_TAKE_INDEX("takeIndex");
+
+// Plugin Automation Properties
+const juce::Identifier ProjectState::PROP_PLUGIN_INDEX("pluginIndex");
+const juce::Identifier ProjectState::PROP_PARAM_INDEX("paramIndex");
+const juce::Identifier ProjectState::PROP_PARAM_NAME("paramName");
+
 
 // Tempo/Marker properties
 const juce::Identifier ProjectState::PROP_BPM("bpm");
@@ -113,10 +131,14 @@ const juce::Identifier ProjectState::PROP_IS_QUARANTINE("isQuarantine");
 
 const juce::Identifier ProjectState::PROP_SELECTED_TRACK_ID("selectedTrackId");
 
+// Retained props
+
+
 //==============================================================================
 ProjectState::ProjectState() : state(Zenith::IDs::PROJECT) {
   DBG("ProjectState: Constructor");
-  
+
+  state.setProperty(PROP_ID, "root", nullptr);
   state.getOrCreateChildWithName(Zenith::IDs::TRACKS, nullptr);
 
   trackStateManager = std::make_unique<TrackStateManager>(*this);
@@ -170,51 +192,58 @@ void ProjectState::newProject() {
 
 bool ProjectState::loadFromFile(const juce::File &file) {
   if (projectFileIO)
-    return projectFileIO->loadFromFile(file);
+    return projectFileIO->loadFromFile(file) == FileIOError::Success;
   return false;
 }
 
 bool ProjectState::saveToFile(const juce::File &file) {
   if (projectFileIO)
-    return projectFileIO->saveToFile(file);
+    return projectFileIO->saveToFile(file) == FileIOError::Success;
   return false;
 }
 
 juce::File ProjectState::saveCrashDump() {
-  if (projectFileIO)
-    return projectFileIO->saveCrashDump();
+  if (projectFileIO) {
+    projectFileIO->autoSave();
+    return projectFileIO->getRecoveryFile();
+  }
   return juce::File();
 }
 
 void ProjectState::timerCallback() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   if (isDirty && projectFile.existsAsFile()) {
     DBG("ProjectState: Autosaving...");
-    
-    auto autosaveFile = projectFile.getSiblingFile(projectFile.getFileNameWithoutExtension() + "_autosave" + projectFile.getFileExtension());
-    
+
+    auto autosaveFile = projectFile.getSiblingFile(
+        projectFile.getFileNameWithoutExtension() + "_autosave" +
+        projectFile.getFileExtension());
+
     if (projectFileIO) {
-        ProjectFileIO::IOSettings settings;
-        settings.format = ProjectFileIO::SerializationFormat::MessagePack; // favor speed for autosave
-        settings.useAtomicWrite = true;
-        
-        projectFileIO->saveToFileAsync(autosaveFile, settings, [this](bool success, juce::String error) {
+      ProjectFileIO::IOSettings settings;
+      settings.format =
+          ProjectFileIO::SerializationFormat::MessagePack; // favor speed for
+                                                           // autosave
+      settings.useAtomicWrite = true;
+
+      projectFileIO->saveToFileAsync(
+          autosaveFile, settings, [this](bool success, juce::String error) {
             if (success) {
-                DBG("ProjectState: Autosave successful");
+              DBG("ProjectState: Autosave successful");
             } else {
-                DBG("ProjectState: Autosave failed: " + error);
+              DBG("ProjectState: Autosave failed: " + error);
             }
-        });
+          });
     }
   }
 }
 
 void ProjectState::startAutosaveTimer(int intervalMinutes) {
-    startTimer(intervalMinutes * 60 * 1000);
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr)
+      if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(intervalMinutes * 60 * 1000);
 }
 
-void ProjectState::stopAutosaveTimer() {
-    stopTimer();
-}
+void ProjectState::stopAutosaveTimer() { stopTimer(); }
 
 void ProjectState::valueTreeChildAdded(juce::ValueTree &parent,
                                        juce::ValueTree &child) {
@@ -250,7 +279,10 @@ void ProjectState::setProjectName(const juce::String &name) {
   state.setProperty(PROP_NAME, name, &undoManager);
 }
 
-double ProjectState::getTempo() const { return state[PROP_TEMPO]; }
+double ProjectState::getTempo() const { 
+    double tempo = state[PROP_TEMPO]; 
+    return std::max(0.1, tempo);
+}
 
 void ProjectState::setTempo(double tempo) {
   tempo = juce::jlimit(20.0, 999.0, tempo);
@@ -281,15 +313,44 @@ juce::String ProjectState::addTrack(const juce::String &name,
   return {};
 }
 
-void ProjectState::removeTrack(const juce::String &trackId) {
+void ProjectState::removeTrack(const juce::String &trackId,
+                               const juce::String &actionName) {
   if (trackStateManager)
     trackStateManager->removeTrack(trackId);
+}
+
+juce::String ProjectState::duplicateTrack(const juce::String &trackId,
+                                          const juce::String &actionName) {
+  if (trackStateManager)
+    return trackStateManager->duplicateTrack(trackId, actionName);
+  return {};
+}
+
+juce::String ProjectState::insertTrackAbove(const juce::String &targetTrackId,
+                                            const juce::String &type,
+                                            const juce::String &actionName) {
+  if (trackStateManager)
+    return trackStateManager->insertTrackAbove(targetTrackId, type, actionName);
+  return {};
+}
+
+juce::String ProjectState::insertTrackBelow(const juce::String &targetTrackId,
+                                            const juce::String &type,
+                                            const juce::String &actionName) {
+  if (trackStateManager)
+    return trackStateManager->insertTrackBelow(targetTrackId, type, actionName);
+  return {};
 }
 
 int ProjectState::getNumTracks() const {
   if (trackStateManager)
     return trackStateManager->getNumTracks();
   return 0;
+}
+
+void ProjectState::moveTrack(const juce::String& trackId, int newIndex, const juce::String& actionName) {
+  if (trackStateManager)
+    trackStateManager->moveTrack(trackId, newIndex, actionName);
 }
 
 juce::ValueTree ProjectState::getTrack(const juce::String &trackId) const {
@@ -338,6 +399,19 @@ bool ProjectState::isTrackArmed(const juce::String &trackId) const {
   return false;
 }
 
+void ProjectState::setTrackInputMonitor(const juce::String &trackId,
+                                        bool monitoring,
+                                        const juce::String &actionName) {
+  if (trackStateManager)
+    trackStateManager->setTrackInputMonitor(trackId, monitoring, actionName);
+}
+
+bool ProjectState::isTrackInputMonitoring(const juce::String &trackId) const {
+  if (trackStateManager)
+    return trackStateManager->isTrackInputMonitoring(trackId);
+  return false;
+}
+
 juce::String ProjectState::getTrackName(const juce::String &trackId) const {
   if (trackStateManager)
     return trackStateManager->getTrackName(trackId);
@@ -372,6 +446,30 @@ juce::String ProjectState::createEmptyClip(const juce::String &trackId,
     return clipStateManager->createEmptyClip(trackId, startBeats, lengthBeats,
                                              isMidi, name, actionName);
   return {};
+}
+
+juce::String ProjectState::createAudioClip(const juce::String &trackId,
+                                           double startBeats,
+                                           double lengthBeats,
+                                           const juce::String &audioFilePath,
+                                           const juce::String &name,
+                                           const juce::String &actionName) {
+  // First create an empty audio clip
+  if (!clipStateManager) return {};
+
+  juce::String clipId = clipStateManager->createEmptyClip(trackId, startBeats, lengthBeats,
+                                                          false, name, actionName);
+  if (clipId.isEmpty()) return {};
+
+  // Set the audio file path
+  auto [track, clip] = findClip(clipId);
+  if (clip.isValid()) {
+    clip.setProperty(PROP_AUDIO_FILE, audioFilePath, &undoManager);
+    clip.setProperty(PROP_TYPE, "audio", &undoManager);
+  }
+
+  DBG("ProjectState: Created audio clip " + clipId + " with file " + audioFilePath);
+  return clipId;
 }
 
 bool ProjectState::removeClip(const juce::String &trackId,
@@ -434,6 +532,22 @@ juce::String ProjectState::getClipAudioFile(const juce::String &trackId,
   return {};
 }
 
+juce::String ProjectState::getClipName(const juce::String &clipId) const {
+  auto [track, clip] = findClip(clipId);
+  if (clip.isValid())
+    return clip[PROP_NAME].toString();
+  return {};
+}
+
+void ProjectState::renameClip(const juce::String &clipId,
+                              const juce::String &newName) {
+  auto [track, clip] = findClip(clipId);
+  if (clip.isValid()) {
+    undoManager.beginNewTransaction("Rename Clip");
+    clip.setProperty(PROP_NAME, newName, &undoManager);
+  }
+}
+
 juce::ValueTree ProjectState::getClip(const juce::String &trackId,
                                       const juce::String &clipId) const {
   if (clipStateManager)
@@ -446,6 +560,40 @@ ProjectState::findClip(const juce::String &clipId) const {
   if (clipStateManager)
     return clipStateManager->findClip(clipId);
   return {{}, {}};
+}
+
+void ProjectState::setClipFade(const juce::String &clipId, double fadeInBeats,
+                               double fadeOutBeats,
+                               const juce::String &actionName) {
+  auto [track, clip] = findClip(clipId);
+  if (clip.isValid()) {
+    undoManager.beginNewTransaction(actionName);
+    // Validate range? Max fade = length/2 or length?
+    // Let's clamps to length/2 or just length? 
+    // Logic Pro allows crossing.
+    // We'll trust caller or clamp to 0 min.
+    fadeInBeats = std::max(0.0, fadeInBeats);
+    fadeOutBeats = std::max(0.0, fadeOutBeats);
+    
+    // Check against length?
+    double length = clip[PROP_LENGTH_BEATS];
+    if (fadeInBeats + fadeOutBeats > length) {
+        // Simple clamp if desired, but user might want crossfade logic.
+        // For now, allow but maybe warn or clamp?
+        // Let's not clamp rigidly to prevent stuck UI.
+    }
+
+    clip.setProperty(PROP_FADE_IN, fadeInBeats, &undoManager);
+    clip.setProperty(PROP_FADE_OUT, fadeOutBeats, &undoManager);
+  }
+}
+
+void ProjectState::setClipColor(const juce::String &clipId, const juce::Colour &color) {
+  auto [track, clip] = findClip(clipId);
+  if (clip.isValid()) {
+    undoManager.beginNewTransaction("Set Clip Color");
+    clip.setProperty(PROP_COLOR, color.toString(), &undoManager);
+  }
 }
 
 //==============================================================================
@@ -597,6 +745,7 @@ ProjectState::getMidiNotesForClip(const juce::String &clipId) const {
     note.condition = noteTree.getProperty(PROP_CONDITION).toString();
     note.recurrence = noteTree.getProperty(PROP_RECURRENCE).toString();
     note.articulationId = noteTree.getProperty(PROP_ARTICULATION_ID, 0);
+    note.tension = noteTree.getProperty(PROP_NOTE_TENSION, 0.0f);
 
     notes.add(note);
   }
@@ -648,6 +797,8 @@ juce::String ProjectState::addMidiNote(const juce::String &clipId,
     noteTree.setProperty(PROP_RECURRENCE, note.recurrence, nullptr);
   if (note.articulationId != 0)
     noteTree.setProperty(PROP_ARTICULATION_ID, note.articulationId, nullptr);
+  if (std::abs(note.tension) > 0.001f)
+    noteTree.setProperty(PROP_NOTE_TENSION, note.tension, nullptr);
 
   // Begin transaction
   undoManager.beginNewTransaction(actionName);
@@ -807,15 +958,119 @@ void ProjectState::setMidiNoteProbability(const juce::String &clipId,
       juce::String(probability));
 }
 
+void ProjectState::setMidiNoteTension(const juce::String &clipId,
+                                      const juce::String &noteId,
+                                      float tension,
+                                      const juce::String &actionName) {
+  auto noteTree = findMidiNote(clipId, noteId);
+  if (!noteTree.isValid()) {
+    DBG("ProjectState: Cannot set tension - note not found: " + noteId);
+    return;
+  }
+
+  undoManager.beginNewTransaction(actionName);
+  noteTree.setProperty(PROP_NOTE_TENSION, tension, &undoManager);
+}
+
+void ProjectState::humanizeClip(const juce::String &clipId, double velocityRange,
+                                double timeRangeBeats,
+                                const juce::String &actionName) {
+  auto notes = getMidiNotesForClip(clipId);
+  if (notes.isEmpty())
+    return;
+
+  undoManager.beginNewTransaction(actionName);
+  
+  juce::Random rng;
+  rng.setSeedRandomly();
+
+  for (const auto &note : notes) {
+    auto noteTree = findMidiNote(clipId, note.id);
+    if (!noteTree.isValid())
+      continue;
+      
+    // Humanize Velocity
+    // Use ceil to ensure non-zero range if input > 0 (handle 0.1 test case)
+    int iRange = (int)std::ceil(velocityRange);
+    if (iRange > 0) {
+        int velOffset = rng.nextInt(juce::Range<int>(-iRange, iRange + 1));
+        int newVel = juce::jlimit(1, 127, note.velocity + velOffset);
+        noteTree.setProperty(PROP_VELOCITY, newVel, &undoManager);
+    }
+    
+    // Humanize Time (small random offset)
+    // -timeRangeBeats/2 to +timeRangeBeats/2
+    if (timeRangeBeats > 0.0) {
+        double timeOffset = (rng.nextDouble() - 0.5) * timeRangeBeats;
+        double newStart = juce::jmax(0.0, note.startBeats + timeOffset);
+        noteTree.setProperty(PROP_START_BEATS, newStart, &undoManager);
+    }
+  }
+}
+
+void ProjectState::legatoClip(const juce::String &clipId, bool adjustOverlap,
+                              const juce::String &actionName) {
+  auto notes = getMidiNotesForClip(clipId);
+  if (notes.isEmpty())
+    return;
+    
+  undoManager.beginNewTransaction(actionName);
+  
+  // Sort notes by start time
+  std::sort(notes.begin(), notes.end(), [](const MidiNoteSpec &a, const MidiNoteSpec &b) {
+      if (std::abs(a.startBeats - b.startBeats) < 0.0001)
+          return a.pitch < b.pitch; // Secondary sort by pitch
+      return a.startBeats < b.startBeats;
+  });
+  
+  // We need to group them if we were doing Logic-style legato across voices,
+  // but for basic legato we often just want "monophonic" style or per-voice.
+  // A simple approach: Extend note until the next note starts. 
+  // If polyphonic, this is tricky. Logic has "Legato" which extends until the *very next note event* regardless of pitch.
+  // Let's implement that standard behavior first.
+  
+  for (int i = 0; i < notes.size() - 1; ++i) {
+      const auto& current = notes.getReference(i);
+      const auto& next = notes.getReference(i + 1);
+      
+      double distToNext = next.startBeats - current.startBeats;
+      
+      if (distToNext > 0) {
+          double newLen = distToNext;
+          
+          if (adjustOverlap && current.lengthBeats > newLen) {
+             // Shorten if it overlaps
+             auto noteTree = findMidiNote(clipId, current.id);
+             if (noteTree.isValid())
+                 noteTree.setProperty(PROP_LENGTH_BEATS, newLen, &undoManager);
+          } else if (current.lengthBeats < newLen) {
+             // Extend if gap
+             auto noteTree = findMidiNote(clipId, current.id);
+             if (noteTree.isValid())
+                 noteTree.setProperty(PROP_LENGTH_BEATS, newLen, &undoManager);
+          }
+      }
+  }
+}
+
+
 //==============================================================================
 // Helper Methods
 //==============================================================================
+
+juce::File ProjectState::getAssetDirectory(const juce::String& name) {
+    if (projectFile.exists())
+        return projectFile.getSiblingFile(name);
+    return juce::File::getSpecialLocation(juce::File::userHomeDirectory)
+        .getChildFile("Documents/Zenith/Untitled/" + name);
+}
 
 void ProjectState::createDefaultState() {
   // Create root PROJECT node
   state = juce::ValueTree(ID_PROJECT);
 
   // Set default properties
+  state.setProperty(PROP_ID, "project_root", nullptr);
   state.setProperty(PROP_NAME, "Untitled Project", nullptr);
   state.setProperty(PROP_TEMPO, 120.0, nullptr);
   state.setProperty(PROP_TIME_SIG_NUM, 4, nullptr);
@@ -823,12 +1078,20 @@ void ProjectState::createDefaultState() {
   state.setProperty(PROP_SAMPLE_RATE, 44100.0, nullptr);
 
   // Create TRACKS node
-  state.appendChild(juce::ValueTree(ID_TRACKS), nullptr);
+  juce::ValueTree tracks(ID_TRACKS);
+  tracks.setProperty(PROP_ID, "tracks_list", nullptr);
+  state.appendChild(tracks, nullptr);
 
   // Create MIXER node
   juce::ValueTree mixer(ID_MIXER);
+  mixer.setProperty(PROP_ID, "mixer_node", nullptr);
   mixer.setProperty(PROP_VOLUME, 0.8, nullptr);
   state.appendChild(mixer, nullptr);
+
+  // Create TEMPO_MAP node
+  juce::ValueTree tempoMap(ID_TEMPO_MAP);
+  tempoMap.setProperty(PROP_ID, "tempo_map", nullptr);
+  state.appendChild(tempoMap, nullptr);
 
   DBG("ProjectState: Default state created");
 }
@@ -1456,58 +1719,132 @@ ProjectState::splitClip(const juce::String &trackId, const juce::String &clipId,
   }
 
   // Get original clip properties
-  juce::String clipName = originalClip[PROP_NAME].toString();
-  juce::String clipType = originalClip[PROP_TYPE].toString();
   juce::int64 clipStart = originalClip[PROP_START];
   juce::int64 clipLength = originalClip[PROP_LENGTH];
-  juce::int64 clipOffset = originalClip[PROP_OFFSET];
+  double clipLengthBeats = originalClip[PROP_LENGTH_BEATS];
+  bool isBeatBased = (clipLengthBeats > 0.0);
+
+  // If missing sample properties but has beats, infer them
+  if (clipLength == 0 && isBeatBased) {
+    auto inferred = inferSamplePropertiesFromBeats(originalClip);
+    if (inferred.first < 0) return {};
+    clipStart = inferred.first;
+    clipLength = inferred.second;
+  }
+
   juce::int64 clipEnd = clipStart + clipLength;
 
-  // Validate split position
-  if (splitSamples <= clipStart || splitSamples >= clipEnd) {
-    DBG("ProjectState: Invalid split position");
+  // Validate split position with minimum segment guard (e.g. 10 samples)
+  constexpr juce::int64 minSegmentSamples = 10;
+  if (splitSamples < clipStart + minSegmentSamples || splitSamples > clipEnd - minSegmentSamples) {
+    DBG("ProjectState: Split position too close to edge or invalid: " << splitSamples 
+        << " (Clip: " << clipStart << " to " << clipEnd << ")");
     return {};
   }
 
-  // Calculate left and right clip properties
+  if (isBeatBased) {
+    return splitBeatBasedClip(trackId, originalClip, splitSamples);
+  } else {
+    return splitSampleBasedClip(trackId, originalClip, splitSamples);
+  }
+}
+
+std::pair<juce::int64, juce::int64> ProjectState::inferSamplePropertiesFromBeats(const juce::ValueTree& clip) {
+  if (!state.hasProperty(PROP_SAMPLE_RATE)) {
+    DBG("ProjectState: Cannot split beat-based clip without valid Project Sample Rate.");
+    return {-1, -1};
+  }
+  
+  double bpm = getTempo();
+  double sampleRate = state[PROP_SAMPLE_RATE];
+  if (sampleRate <= 0.0) return {-1, -1};
+  
+  double samplesPerBeat = (60.0 / bpm) * sampleRate;
+  juce::int64 start = (juce::int64)((double)clip[PROP_START_BEATS] * samplesPerBeat);
+  juce::int64 length = (juce::int64)((double)clip[PROP_LENGTH_BEATS] * samplesPerBeat);
+  
+  return {start, length};
+}
+
+std::pair<juce::String, juce::String> ProjectState::splitBeatBasedClip(const juce::String &trackId, juce::ValueTree originalClip, juce::int64 splitSamples) {
+  juce::String clipId = originalClip[PROP_ID];
+  juce::int64 clipStart = originalClip[PROP_START];
+  if (clipStart == 0 && (double)originalClip[PROP_LENGTH_BEATS] > 0) {
+      auto inferred = inferSamplePropertiesFromBeats(originalClip);
+      clipStart = inferred.first;
+  }
+  
   juce::int64 leftLength = splitSamples - clipStart;
-  juce::int64 rightLength = clipEnd - splitSamples;
-  juce::int64 rightOffset = clipOffset + leftLength;
+  juce::int64 clipLength = originalClip[PROP_LENGTH];
+  if (clipLength == 0) {
+      clipLength = inferSamplePropertiesFromBeats(originalClip).second;
+  }
+  
+  double splitRatio = (clipLength > 0) ? (double)leftLength / (double)clipLength : 0.0;
+  double clipLengthBeats = originalClip[PROP_LENGTH_BEATS];
+  double leftBeats = clipLengthBeats * splitRatio;
+  
+  // Reuse sample-based split but update beats
+  auto ids = splitSampleBasedClip(trackId, originalClip, splitSamples);
+  
+  auto leftClip = getClip(trackId, ids.first);
+  auto rightClip = getClip(trackId, ids.second);
+  
+  if (leftClip.isValid()) {
+    leftClip.setProperty(PROP_LENGTH_BEATS, leftBeats, &undoManager);
+  }
+  if (rightClip.isValid()) {
+    rightClip.setProperty(PROP_START_BEATS, (double)originalClip[PROP_START_BEATS] + leftBeats, &undoManager);
+    rightClip.setProperty(PROP_LENGTH_BEATS, clipLengthBeats - leftBeats, &undoManager);
+  }
+  
+  return ids;
+}
 
-  // Create left clip
-  juce::String leftClipId = createClip(trackId, clipType, clipStart, leftLength,
-                                       clipName + " (L)", "");
+std::pair<juce::String, juce::String> ProjectState::splitSampleBasedClip(const juce::String &trackId, juce::ValueTree originalClip, juce::int64 splitSamples) {
+  juce::String clipId = originalClip[PROP_ID];
+  juce::String clipType = originalClip[PROP_TYPE];
+  juce::String clipName = originalClip[PROP_NAME];
+  juce::int64 clipStart = originalClip[PROP_START];
+  juce::int64 clipLength = originalClip[PROP_LENGTH];
+  juce::int64 clipOffset = originalClip[PROP_OFFSET];
+  
+  juce::int64 leftLength = splitSamples - clipStart;
+  juce::int64 rightLength = clipLength - leftLength;
 
-  // Create right clip
-  juce::String rightClipId = createClip(trackId, clipType, splitSamples,
-                                        rightLength, clipName + " (R)", "");
+  juce::String leftId = createClip(trackId, clipType, clipStart, leftLength, clipName + " (L)", "");
+  juce::String rightId = createClip(trackId, clipType, splitSamples, rightLength, clipName + " (R)", "");
 
-  // Set offsets
-  auto leftClip = getClip(trackId, leftClipId);
-  auto rightClip = getClip(trackId, rightClipId);
+  auto leftClip = getClip(trackId, leftId);
+  auto rightClip = getClip(trackId, rightId);
 
-  if (leftClip.isValid())
+  if (leftClip.isValid()) {
     leftClip.setProperty(PROP_OFFSET, clipOffset, &undoManager);
-
-  if (rightClip.isValid())
-    rightClip.setProperty(PROP_OFFSET, rightOffset, &undoManager);
-
-  // Copy audio file property if present
-  if (originalClip.hasProperty(PROP_AUDIO_FILE)) {
-    juce::String audioFile = originalClip[PROP_AUDIO_FILE].toString();
-    if (leftClip.isValid())
-      leftClip.setProperty(PROP_AUDIO_FILE, audioFile, &undoManager);
-    if (rightClip.isValid())
-      rightClip.setProperty(PROP_AUDIO_FILE, audioFile, &undoManager);
+    migrateProperties(originalClip, leftClip);
+  }
+  if (rightClip.isValid()) {
+    rightClip.setProperty(PROP_OFFSET, clipOffset + leftLength, &undoManager);
+    migrateProperties(originalClip, rightClip);
   }
 
-  // Delete original clip
   deleteClip(trackId, clipId, "");
+  return {leftId, rightId};
+}
 
-  DBG("ProjectState: Split clip " + clipId + " into " + leftClipId + " and " +
-      rightClipId);
-
-  return {leftClipId, rightClipId};
+void ProjectState::migrateProperties(const juce::ValueTree& source, juce::ValueTree& dest) {
+    // Copy all properties except core identity ones which are already set
+    for (int i = 0; i < source.getNumProperties(); ++i) {
+        auto prop = source.getPropertyName(i);
+        if (prop != PROP_ID && prop != PROP_START && prop != PROP_LENGTH && prop != PROP_NAME && 
+            prop != PROP_START_BEATS && prop != PROP_LENGTH_BEATS && prop != PROP_OFFSET) {
+            dest.setProperty(prop, source.getProperty(prop), &undoManager);
+        }
+    }
+    
+    // Copy children (Automation, MIDI notes, etc.)
+    for (int i = 0; i < source.getNumChildren(); ++i) {
+        dest.addChild(source.getChild(i).createCopy(), -1, &undoManager);
+    }
 }
 
 //==============================================================================
@@ -1553,6 +1890,62 @@ juce::String ProjectState::addTempoChange(double beatPosition, double bpm,
   DBG("ProjectState: Added tempo change at " + juce::String(beatPosition) +
       " beats: " + juce::String(bpm) + " BPM");
   return pointId;
+}
+
+bool ProjectState::deleteTempoChange(const juce::String &pointId,
+                                     const juce::String &actionName) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  auto tempoMap = getTempoMap();
+  if (!tempoMap.isValid())
+    return false;
+
+  for (int i = 0; i < tempoMap.getNumChildren(); ++i) {
+    if (tempoMap.getChild(i)[PROP_ID].toString() == pointId) {
+      undoManager.beginNewTransaction(actionName);
+      tempoMap.removeChild(i, &undoManager);
+      DBG("ProjectState: Deleted tempo change " + pointId);
+      return true;
+    }
+  }
+  return false;
+}
+
+void ProjectState::moveTempoChange(const juce::String &pointId,
+                                   double newBeats, double newBpm,
+                                   const juce::String &actionName) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  auto tempoMap = getTempoMap();
+  if (!tempoMap.isValid())
+    return;
+
+  for (int i = 0; i < tempoMap.getNumChildren(); ++i) {
+    auto point = tempoMap.getChild(i);
+    if (point[PROP_ID].toString() == pointId) {
+      undoManager.beginNewTransaction(actionName);
+      
+      // Update properties
+      point.setProperty(PROP_TIME_BEATS, newBeats, &undoManager);
+      point.setProperty(PROP_BPM, newBpm, &undoManager);
+
+      // Re-sort
+      tempoMap.removeChild(i, &undoManager);
+      
+      int insertIndex = 0;
+      for (int j = 0; j < tempoMap.getNumChildren(); ++j) {
+        if ((double)tempoMap.getChild(j)[PROP_TIME_BEATS] > newBeats) {
+          insertIndex = j;
+          break;
+        }
+        insertIndex = j + 1;
+      }
+      tempoMap.addChild(point, insertIndex, &undoManager);
+
+      DBG("ProjectState: Moved tempo point " + pointId);
+      return;
+    }
+  }
 }
 
 juce::ValueTree ProjectState::getTempoMap() const {
@@ -2005,6 +2398,165 @@ void ProjectState::moveSectionContent(const juce::String &sectionId,
       }
     }
   }
+}
+
+//==========================================================================
+// Take Folder Management
+//==========================================================================
+
+juce::String ProjectState::createTakeFolder(const juce::String &trackId,
+                                            double startBeats,
+                                            double lengthBeats,
+                                            const juce::String &actionName) {
+  auto track = findTrack(trackId);
+  if (!track.isValid())
+    return {};
+
+  auto clipsNode = track.getOrCreateChildWithName(ID_CLIPS, nullptr);
+
+  undoManager.beginNewTransaction(actionName);
+
+  juce::String folderId = generateUniqueId("folder");
+  juce::ValueTree folder(ID_TAKE_FOLDER);
+  folder.setProperty(PROP_ID, folderId, nullptr);
+  folder.setProperty(PROP_START_BEATS, startBeats, nullptr);
+  folder.setProperty(PROP_LENGTH_BEATS, lengthBeats, nullptr);
+  folder.setProperty(PROP_ACTIVE_TAKE, -1, nullptr); // -1 = comp mode
+  folder.setProperty(PROP_EXPANDED, true, nullptr);
+
+  clipsNode.addChild(folder, -1, &undoManager);
+
+  DBG("ProjectState: Created Take Folder " + folderId + " on track " + trackId);
+  return folderId;
+}
+
+void ProjectState::addTakeToFolder(const juce::String &folderId,
+                                   const juce::String &clipId) {
+  auto [oldTrack, clip] = findClip(clipId);
+  if (!clip.isValid())
+    return;
+
+  // Find folder
+  auto tracksNode = state.getChildWithName(ID_TRACKS);
+  juce::ValueTree folder;
+  for (auto t : tracksNode) {
+    auto clips = t.getChildWithName(ID_CLIPS);
+    folder = clips.getChildWithProperty(PROP_ID, folderId);
+    if (folder.isValid())
+      break;
+  }
+
+  if (!folder.isValid())
+    return;
+
+  undoManager.beginNewTransaction("Add take to folder");
+
+  // Move clip to folder
+  auto parent = clip.getParent();
+  parent.removeChild(clip, &undoManager);
+  folder.addChild(clip, -1, &undoManager);
+
+  DBG("ProjectState: Added clip " + clipId + " to folder " + folderId);
+}
+
+void ProjectState::removeTakeFromFolder(const juce::String &folderId,
+                                        const juce::String &clipId) {
+  auto tracksNode = state.getChildWithName(ID_TRACKS);
+  juce::ValueTree folder;
+  juce::ValueTree track;
+  for (auto t : tracksNode) {
+    auto clips = t.getChildWithName(ID_CLIPS);
+    folder = clips.getChildWithProperty(PROP_ID, folderId);
+    if (folder.isValid()) {
+      track = t;
+      break;
+    }
+  }
+
+  if (!folder.isValid())
+    return;
+
+  auto clip = folder.getChildWithProperty(PROP_ID, clipId);
+  if (!clip.isValid())
+    return;
+
+  undoManager.beginNewTransaction("Remove take from folder");
+
+  folder.removeChild(clip, &undoManager);
+  track.getOrCreateChildWithName(ID_CLIPS, nullptr)
+      .addChild(clip, -1, &undoManager);
+
+  DBG("ProjectState: Removed clip " + clipId + " from folder " + folderId);
+}
+
+void ProjectState::setCompRegion(const juce::String &folderId, double startBeats,
+                                 double lengthBeats, int takeIndex,
+                                 const juce::String &actionName) {
+  // Find folder
+  auto tracksNode = state.getChildWithName(ID_TRACKS);
+  juce::ValueTree folder;
+  for (auto t : tracksNode) {
+    auto clips = t.getChildWithName(ID_CLIPS);
+    folder = clips.getChildWithProperty(PROP_ID, folderId);
+    if (folder.isValid())
+      break;
+  }
+
+  if (!folder.isValid())
+    return;
+
+  undoManager.beginNewTransaction(actionName);
+
+  // Simple implementation: Add a new region.
+  // Real implementation in TakeFolder.cpp handles overlaps.
+  // Here we just update the model; the engine implementation is primary truth.
+  // But for UI/Persistence, we need something.
+
+  juce::ValueTree region(ID_COMP_REGION);
+  region.setProperty(PROP_ID, generateUniqueId("region"), nullptr);
+  region.setProperty(PROP_START_BEATS, startBeats, nullptr);
+  region.setProperty(PROP_LENGTH_BEATS, lengthBeats, nullptr);
+  region.setProperty(PROP_TAKE_INDEX, takeIndex, nullptr);
+
+  folder.addChild(region, -1, &undoManager);
+}
+
+void ProjectState::setTakeFolderExpanded(const juce::String &folderId,
+                                         bool expanded) {
+  auto tracksNode = state.getChildWithName(ID_TRACKS);
+  juce::ValueTree folder;
+  for (auto t : tracksNode) {
+    auto clips = t.getChildWithName(ID_CLIPS);
+    folder = clips.getChildWithProperty(PROP_ID, folderId);
+    if (folder.isValid())
+      break;
+  }
+
+  if (folder.isValid()) {
+    folder.setProperty(PROP_EXPANDED, expanded, &undoManager);
+  }
+}
+
+void ProjectState::setActiveTake(const juce::String &folderId, int takeIndex) {
+  auto tracksNode = state.getChildWithName(ID_TRACKS);
+  juce::ValueTree folder;
+  for (auto t : tracksNode) {
+    auto clips = t.getChildWithName(ID_CLIPS);
+    folder = clips.getChildWithProperty(PROP_ID, folderId);
+    if (folder.isValid())
+      break;
+  }
+
+  if (folder.isValid()) {
+    folder.setProperty(PROP_ACTIVE_TAKE, takeIndex, &undoManager);
+  }
+}
+
+juce::File ProjectState::getAssetDirectory(const juce::String &subfolder) const {
+    auto assetsDir = projectFile.getParentDirectory().getChildFile("Assets");
+    if (subfolder.isNotEmpty())
+        return assetsDir.getChildFile(subfolder);
+    return assetsDir;
 }
 
 } // namespace zenith
