@@ -13,9 +13,7 @@
 #include "ZenithTooltipOverlay.h"
 
 #ifdef ZENITH_USE_SKIA
-#include <core/SkBlurTypes.h>
-#include <core/SkFont.h>
-#include <core/SkRRect.h>
+#include "ZenithSkia.h"
 #endif
 
 namespace zenith {

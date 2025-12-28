@@ -40,11 +40,20 @@
 //==============================================================================
 namespace zenith {
 
+Engine* Engine::getInstance() noexcept {
+  return instance_.load();
+}
+
 Engine::Engine() {
   DBG("Engine: Constructor");
+  
+  // Set singleton instance for safe async callback access
+  instance_.store(this);
 
   // Initialize Modular Components
   audioRenderer_ = std::make_unique<AudioRenderer>();
+  renderContext_ = std::make_unique<AudioRenderContext>();
+  liveContext_ = std::make_unique<AudioRenderContext>();
   recordingManager_ = std::make_unique<RecordingManager>();
   transportController_ = std::make_unique<TransportController>();
   metronome_ = std::make_unique<Metronome>();
@@ -116,6 +125,9 @@ Engine::Engine() {
 Engine::~Engine() {
   ZENITH_LOG_INFO("Engine: Destructor STARTED");
   DBG("Engine: Destructor");
+
+  // Clear singleton instance FIRST to prevent new async callbacks
+  instance_.store(nullptr);
 
   // Set shutdown flag to prevent async callbacks during destruction
   isShuttingDown_.store(true);
@@ -430,7 +442,12 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice *device) {
   }
 
   // Prepare AudioRenderer (Handles buffers, PDC, metering, limiter)
-  // REMOVED: renderContext_.prepare() - AudioRenderer now manages its own internal state
+  // Prepare AudioRenderer Context
+  if (renderContext_) {
+      renderContext_->prepare(device->getCurrentSampleRate(), device->getCurrentBufferSizeSamples(), 
+                             getNumTracks() + 8, auxBuses_.size() + 8); // +8 buffer
+  }
+
 
   // Prepare MasterLimiter (owned by Engine, used by AudioRenderer via ref)
   masterLimiter_.prepare(currentSampleRate.load(), currentBufferSize.load());
@@ -517,9 +534,12 @@ void Engine::audioDeviceIOCallbackWithContext(
 
       if (audioRenderer_) {
         audioRenderer_->renderAudioGraph(
+            *renderContext_,
+
             buffer1, samplesBeforeLoop, currentPos, snapshot->tracks,
             snapshot->auxBuses, routingGraph_, masterLimiter_, masterPlugins,
             tempoMap_.get(), &midi1, inputChannelData, numInputChannels);
+
 
         // Mix Metronome (Pass 1)
         if (metronome_) {
@@ -549,10 +569,12 @@ void Engine::audioDeviceIOCallbackWithContext(
 
         if (audioRenderer_) {
           audioRenderer_->renderAudioGraph(
+              *renderContext_,
               buffer2, samplesAfter, loopStart, snapshot->tracks,
               snapshot->auxBuses, routingGraph_, masterLimiter_, masterPlugins,
               tempoMap_.get(), &emptyMidi, offsets,
               safeNumChannels); // Using offset inputs
+
 
           // Mix Metronome (Pass 2)
           if (metronome_) {

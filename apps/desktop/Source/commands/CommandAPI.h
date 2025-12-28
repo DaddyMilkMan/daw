@@ -70,6 +70,11 @@ public:
   void undo() { projectState.getUndoManager().undo(); }
   void redo() { projectState.getUndoManager().redo(); }
 
+  bool performAction(std::unique_ptr<juce::UndoableAction> action) {
+      if (action == nullptr) return false;
+      return projectState.getUndoManager().perform(action.release());
+  }
+
   //==========================================================================
   CommandAPI(ProjectState &projectState, Engine &engine);
   ~CommandAPI();

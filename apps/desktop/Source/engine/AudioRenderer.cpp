@@ -82,8 +82,9 @@ void AudioRenderer::renderAudioGraph(
       // Handle frozen tracks - play back their freeze buffer (RT-safe)
       if (track->isFrozen()) {
         auto freezeBuffer = track->getFreezeBuffer();
-        if (freezeBuffer != nullptr && trackIdx >= 0 && trackIdx < (int)trackBuffers_.size()) {
-          auto &trackBuffer = trackBuffers_[trackIdx];
+        if (freezeBuffer != nullptr && trackIdx >= 0 && trackIdx < (int)context.trackBuffers.size()) {
+          auto &trackBuffer = context.trackBuffers[trackIdx];
+
           trackBuffer.clear();
 
           const juce::int64 readPos = playheadPosition;
@@ -122,10 +123,10 @@ void AudioRenderer::renderAudioGraph(
         continue;
       }
 
-      if (trackIdx < 0 || trackIdx >= (int)trackBuffers_.size())
+      if (trackIdx < 0 || trackIdx >= (int)context.trackBuffers.size())
         continue;
 
-      auto &trackBuffer = trackBuffers_[trackIdx];
+      auto &trackBuffer = context.trackBuffers[trackIdx];
       trackBuffer.clear();
 
       // Skip processing if track is currently being frozen (prevent race condition)
@@ -142,10 +143,11 @@ void AudioRenderer::renderAudioGraph(
       const juce::AudioBuffer<float>* sidechainBuffer = nullptr;
       if (auto* sourceTrack = track->getSidechainSource()) {
           int sourceIdx = sourceTrack->getTrackIndex();
-          if (sourceIdx >= 0 && sourceIdx < (int)trackBuffers_.size()) {
-              sidechainBuffer = &trackBuffers_[sourceIdx];
+          if (sourceIdx >= 0 && sourceIdx < (int)context.trackBuffers.size()) {
+              sidechainBuffer = &context.trackBuffers[sourceIdx];
           }
       }
+
 
       track->getNextAudioBlock(trackInfo, playheadPosition, trackMidiInput,
                                 context.auxBufferPtrsVector, tempoMap, sidechainBuffer);
@@ -185,8 +187,9 @@ void AudioRenderer::renderAudioGraph(
            }
        }
 
-       if (found && busIdx < auxBusBuffers_.size()) {
-        auto &busBuffer = auxBusBuffers_[busIdx];
+       if (found && busIdx < context.auxBusBuffers.size()) {
+        auto &busBuffer = context.auxBusBuffers[busIdx];
+
         juce::AudioSourceChannelInfo auxInfo(&busBuffer, 0, numSamples);
         bus->getNextAudioBlock(auxInfo);
 

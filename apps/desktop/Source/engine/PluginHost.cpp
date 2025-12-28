@@ -20,8 +20,10 @@ PluginHost::PluginHost() {
   DBG("PluginHost: Initializing...");
 
   // Add VST3 format
-  formatManager.addDefaultFormats();
-  formatManager.addFormat(new InternalPluginFormat());
+  // Add VST3 format explicitly (addDefaultFormats is deleted in headless/strict builds)
+  // formatManager.addFormat(std::make_unique<juce::VST3PluginFormat>());
+
+  formatManager.addFormat(std::make_unique<InternalPluginFormat>());
 
   // Get VST3 format pointer for later use
   for (int i = 0; i < formatManager.getNumFormats(); ++i) {

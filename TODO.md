@@ -9,143 +9,27 @@ This document tracks planned work organized by priority and timeline.
 
 ## 🔥 Critical - Do This Week
 
-### 1. Fix Debug Build Compilation ⏱️ 30 min
+### 1. Fix Debug Build Compilation ✅
 **File**: `apps/desktop/Source/engine/Track.h`  
-**Line**: 426
-
-**Problem**: `ActiveNote` struct declared after use.
-
-**Fix**:
-```cpp
-// Move this struct BEFORE line 400 (before it's used in std::vector)
-struct ActiveNote {
-    int pitch;
-    int channel;
-    juce::String noteId;
-};
-```
-
-**Steps**:
-1. Open `Track.h`
-2. Find `struct ActiveNote` (currently around line 426)
-3. Cut entire struct definition
-4. Paste it around line 420 (in private section, before `activeNotes` declaration)
-5. Test debug build: `build.bat --debug`
+**Status**: Fixed by refactoring and cleanup.
 
 ---
 
-### 2. Add One Real Test ⏱️ 2 hours
+### 2. Add One Real Test ✅
 **File**: `apps/desktop/Source/tests/AudioEngineTests.cpp`
-
-**Current State**: Tests exist but don't assert anything.
-
-**Goal**: Add one test that validates actual behavior.
-
-**Example Test to Implement**:
-```cpp
-#include <JuceHeader.h>
-#include "../../include/Engine.h"
-#include "../../include/ProjectState.h"
-
-class BasicAudioTest : public juce::UnitTest
-{
-public:
-    BasicAudioTest() : juce::UnitTest("Basic Audio Processing") {}
-    
-    void runTest() override
-    {
-        beginTest("Track processes audio without NaN/Inf");
-        
-        // Setup
-        zenith::Engine engine;
-        zenith::ProjectState state;
-        engine.setProjectState(&state);
-        engine.prepareToPlay(512, 48000.0);
-        
-        // Create a track
-        auto trackTree = state.addTrack("Test Track", "audio");
-        
-        // Process one block
-        juce::AudioBuffer<float> buffer(2, 512);
-        buffer.clear();
-        
-        juce::AudioSourceChannelInfo info;
-        info.buffer = &buffer;
-        info.startSample = 0;
-        info.numSamples = 512;
-        
-        engine.processBlock(buffer, juce::MidiBuffer());
-        
-        // ACTUAL ASSERTION - check output is valid
-        for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
-        {
-            const float* samples = buffer.getReadPointer(ch);
-            for (int i = 0; i < buffer.getNumSamples(); ++i)
-            {
-                expect(!std::isnan(samples[i]), "Output contains NaN");
-                expect(!std::isinf(samples[i]), "Output contains Inf");
-            }
-        }
-        
-        engine.releaseResources();
-    }
-};
-
-static BasicAudioTest basicAudioTest;
-```
-
-**Steps**:
-1. Copy above code to new file: `apps/desktop/Source/tests/BasicAudioTest.cpp`
-2. Add to CMakeLists.txt test sources
-3. Compile and run: Tests should FAIL initially (good! means they're checking something)
-4. Fix any bugs the test reveals
-5. Get test passing
+**Status**: Added `BasicAudioTest` with real assertions.
 
 ---
 
-### 3. Enable Sanitizers in Debug Builds ⏱️ 30 min
+### 3. Enable Sanitizers in Debug Builds ✅
 **File**: `CMakeLists.txt`
-
-**Current State**: All safety features disabled by default.
-
-**Fix**:
-```cmake
-# Around line 35 - Modify options to auto-enable in Debug
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" ON)
-    option(ENABLE_HARDENING "Enable Security Hardening Flags" ON)
-else()
-    option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" OFF)
-    option(ENABLE_HARDENING "Enable Security Hardening Flags" OFF)
-endif()
-
-# Add sanitizer flags if enabled
-if(ENABLE_SANITIZERS AND MSVC)
-    # MSVC AddressSanitizer
-    add_compile_options(/fsanitize=address)
-    add_link_options(/INCREMENTAL:NO)
-endif()
-```
-
-**Steps**:
-1. Open `CMakeLists.txt`
-2. Find the `option(ENABLE_SANITIZERS ...)` lines
-3. Replace with above code
-4. Rebuild debug: `build.bat --debug --clean`
-5. Run and fix any ASAN reports
+**Status**: Sanitizer flags added to CMake configuration.
 
 ---
 
-### 4. Update README to Match Reality ⏱️ 10 min
+### 4. Update README to Match Reality ✅
 **Files**: `README.md`, `docs/KNOWN_ISSUES.md`
-
-**Done** ✅ (just completed above)
-
-**Verify**:
-1. README says "alpha" not "passing"
-2. Known issues documented
-3. AI marked as "mocked"
-4. Stem separation marked as "disabled"
+**Status**: Updated to reflect alpha status, mocked AI, and current focus.
 
 ---
 

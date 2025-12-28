@@ -187,7 +187,7 @@ set(ZENITH_COMMON_SOURCES
     # Dependencies for tests
     apps/desktop/Source/ui/mixer/MixerChannelComponent.cpp
     apps/desktop/Source/ui/mixer/MixerComponent.cpp
-    apps/desktop/Source/ui/mixer/MixerView.cpp
+    apps/desktop/Source/ui/views/MixerView.cpp
     apps/desktop/Source/ui/mixer/PluginBrowser.cpp
     apps/desktop/Source/network/AudioAnalysisService.cpp
     apps/desktop/Source/ui/framework/ConfigurationManager.cpp
@@ -220,16 +220,16 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/ui/arranger/TimelineRuler.cpp
 
     # Browser
-    apps/desktop/Source/ui/browser/BrowserFilterBar.cpp
-    apps/desktop/Source/ui/browser/BrowserListView.cpp
-    apps/desktop/Source/ui/browser/BrowserPreviewPanel.cpp
-    apps/desktop/Source/ui/browser/BrowserSearchBar.cpp
-    apps/desktop/Source/ui/browser/BrowserHoverPreview.cpp
-    apps/desktop/Source/ui/browser/BrowserPanel.cpp
-    apps/desktop/Source/ui/browser/BrowserRecentSidebar.cpp
-    apps/desktop/Source/ui/browser/BrowserWaveformLoader.cpp
-    apps/desktop/Source/ui/browser/InstrumentBrowserPanel.cpp
-    apps/desktop/Source/ui/browser/PluginBrowserComponent.cpp
+    apps/desktop/Source/ui/panels/BrowserFilterBar.cpp
+    apps/desktop/Source/ui/panels/BrowserListView.cpp
+    apps/desktop/Source/ui/panels/BrowserPreviewPanel.cpp
+    apps/desktop/Source/ui/panels/BrowserSearchBar.cpp
+    apps/desktop/Source/ui/panels/BrowserHoverPreview.cpp
+    apps/desktop/Source/ui/panels/BrowserPanel.cpp
+    apps/desktop/Source/ui/panels/BrowserRecentSidebar.cpp
+    apps/desktop/Source/ui/panels/BrowserWaveformLoader.cpp
+    apps/desktop/Source/ui/panels/InstrumentBrowserPanel.cpp
+    apps/desktop/Source/ui/panels/PluginBrowserComponent.cpp
 
     # Dialogs
     apps/desktop/Source/ui/dialogs/AdaptiveUISettings.cpp
@@ -260,10 +260,8 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/browser/BrowserModel.cpp
     apps/desktop/Source/browser/BrowserPreviewEngine.cpp
     apps/desktop/Source/browser/BrowserScanner.cpp
-    apps/desktop/Source/browser/BrowserScanner.cpp
-    apps/desktop/Source/browser/BrowserPreviewEngine.cpp
-    apps/desktop/Source/ui/session/SessionViewComponent.cpp
     apps/desktop/Source/network/GrokDAWController.cpp
+
     apps/desktop/Source/ui/controls/ZenithButton.cpp
     apps/desktop/Source/ui/controls/ZenithSlider.cpp
     apps/desktop/Source/ui/controls/ZenithToggle.cpp
@@ -296,7 +294,8 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/ai/ZenithStyleApplicator.cpp
     apps/desktop/Source/network/SecureKeyStore.cpp
     apps/desktop/Source/platform/linux/network/SecureKeyStore_Linux.cpp
-    apps/desktop/Source/ui/browser/PresetBrowserComponent.cpp
+    apps/desktop/Source/ui/panels/PresetBrowserComponent.cpp
+
     apps/desktop/Source/effects/ConsoleEmulation.cpp
     apps/desktop/Source/plugins/InternalPluginFormat.cpp
     apps/desktop/Source/effects/ZenithChannelStrip.cpp
@@ -318,8 +317,8 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/ai/AIStatusManager.cpp
     apps/desktop/Source/ai/AudioFitnessEvaluator.cpp
     apps/desktop/Source/platform/linux/engine/PlatformAudioUtils_Linux.cpp
-    apps/desktop/Source/platform/linux/dsp/PlatformModelUtils_Linux.cpp
     apps/desktop/Source/network/GrokUtils.cpp
+
     apps/desktop/Source/network/GrokDAWController.cpp
     apps/desktop/Source/network/GrokDAWClient.cpp
     apps/desktop/Source/network/CollaborationManager.cpp
@@ -364,10 +363,8 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/ui/controls/ExportProgressBar.cpp
     apps/desktop/Source/ui/controls/FreezeProgressOverlay.cpp
     apps/desktop/Source/platform/linux/window/PlatformWindowUtils_Linux.cpp
-    apps/desktop/Source/platform/linux/ui/PlatformDisplayUtils_Linux.cpp
-    apps/desktop/Source/platform/linux/system/PlatformSystemUtils_Linux.cpp
-    apps/desktop/Source/platform/linux/config/PlatformPathUtils_Linux.cpp
 )
+
 
 # Combine sources for the main app
 list(APPEND ZENITH_SOURCES ${ZENITH_COMMON_SOURCES})
@@ -521,19 +518,8 @@ elseif(UNIX AND NOT APPLE)
     endif()
 endif()
 
-# Skia Integration (Manual) - option defined earlier
-if(ZENITH_ENABLE_SKIA)
-    # Anti-Gravity Rule: Skia acts weird with debug builds (DLL issues).
-    # if(CMAKE_BUILD_TYPE MATCHES "^Debug$")
-    #    message(FATAL_ERROR "Anti-Gravity Agent Violation: Skia cannot be built in Debug mode due to ABI incompatibilities. Please switch to Release mode or disable ZENITH_ENABLE_SKIA.")
-    # endif()
+# Selective RTTI disabling removed in favor of LinkerFix.cpp
 
-    include(apps/desktop/cmake/SkiaManualIntegration.cmake)
-    target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_SKIA=1)
-    message(STATUS "Zenith DAW: Skia rendering ENABLED")
-else()
-    message(STATUS "Zenith DAW: Skia rendering DISABLED")
-endif()
 
 # ==============================================================================
 # Build Optimization Integration
@@ -721,10 +707,20 @@ if(BUILD_TESTS)
     target_compile_features(ZenithDAWTests PRIVATE cxx_std_20)
 
     if(ZENITH_ENABLE_SKIA)
-        target_include_directories(ZenithDAWTests PRIVATE ${SKIA_ROOT}/include ${SKIA_INCLUDE_DIR})
-        target_link_libraries(ZenithDAWTests PRIVATE ${SKIA_LIBRARIES} ${SKIA_LIBRARY})
-        target_compile_definitions(ZenithDAWTests PRIVATE ZENITH_USE_SKIA=1)
+        # The SkiaManualIntegration.cmake script handles target_link_libraries
+        # and target_include_directories for BOTH ZenithDAW and ZenithDAWTests
+        # as long as they are defined before it is included.
+        include(apps/desktop/cmake/SkiaManualIntegration.cmake)
+        # target_compile_definitions(ZenithDAWTests PRIVATE ZENITH_USE_SKIA=1) - now handled by script
     endif()
+endif()
+
+# Final Target Configuration (Skia, etc.)
+if(ZENITH_ENABLE_SKIA)
+    # The SkiaManualIntegration.cmake script handles target_link_libraries
+    # and target_include_directories for BOTH ZenithDAW and ZenithDAWTests.
+    # We include it here to ensure both targets are defined if they exist.
+    include(apps/desktop/cmake/SkiaManualIntegration.cmake)
 endif()
 
 # Installation

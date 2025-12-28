@@ -1,1 +1,2 @@
-target_sources(ZenithDAW PRIVATE PlatformModelUtils_Windows.cpp)
+file(GLOB DSP_SOURCES *.cpp *.h *.mm)
+target_sources(ZenithDAW PRIVATE ${DSP_SOURCES})

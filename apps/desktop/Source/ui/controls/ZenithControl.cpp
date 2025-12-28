@@ -244,4 +244,11 @@ void ZenithControl::notifyValueChange() {
   }
 }
 
+void ZenithControl::updateFromParameter() {
+  if (parameter_ != nullptr) {
+    float val = parameter_->convertFrom0to1(parameter_->getValue());
+    setValue(val, false);
+  }
+}
+
 } // namespace zenith

@@ -46,6 +46,8 @@ namespace zenith {
 
 // Forward declaration
 class PluginHost;
+class TakeFolder; // Forward declare TakeFolder
+
 
 //==============================================================================
 /**
@@ -254,6 +256,14 @@ public:
   virtual Clip *getClip(int index) const { return nullptr; }
   virtual void addClip(Clip *clip) { juce::ignoreUnused(clip); }
   virtual void addClip(std::unique_ptr<Clip> clip);
+  
+  // Take Folder Management
+  virtual int getNumTakeFolders() const { return 0; }
+  virtual TakeFolder *getTakeFolder(int index) const { return nullptr; }
+  virtual TakeFolder *getTakeFolderAt(int64_t position) const { return nullptr; }
+  virtual void addTakeFolder(std::shared_ptr<TakeFolder> folder) { juce::ignoreUnused(folder); }
+  virtual void removeTakeFolder(TakeFolder *folder) { juce::ignoreUnused(folder); }
+
   virtual Instrument *getInstrument() const { return nullptr; }
   virtual bool hasInstrument() const { return getInstrument() != nullptr; }
 

@@ -151,7 +151,8 @@ void ArrangerClipManager::rebuildTrackComponents() {
         };
 
         comp->onSeparateStems = [this](const juce::String& trackId) {
-            TrackCommands trackCmds(owner_.engine_, projectState_);
+            TrackCommands trackCmds(owner_.engine_, projectState_, owner_.getCommandAPI());
+
             auto* paramsObj = new juce::DynamicObject();
             paramsObj->setProperty("trackId", trackId);
             juce::var params(paramsObj);

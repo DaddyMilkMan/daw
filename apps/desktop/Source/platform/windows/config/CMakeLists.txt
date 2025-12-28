@@ -1,1 +1,2 @@
-target_sources(ZenithDAW PRIVATE PlatformPathUtils_Windows.cpp)
+file(GLOB CONFIG_SOURCES *.cpp *.h *.mm)
+target_sources(ZenithDAW PRIVATE ${CONFIG_SOURCES})
