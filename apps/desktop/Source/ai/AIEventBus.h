@@ -165,7 +165,7 @@ struct AIEventSubscription {
       // Later: unsubscribe
       AIEventBus::getInstance().unsubscribe(subId);
 */
-class AIEventBus {
+class AIEventBus : public juce::WeakReference::Target {
 public:
   //============================================================================
   // Singleton Access
