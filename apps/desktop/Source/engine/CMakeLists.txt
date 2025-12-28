@@ -7,8 +7,6 @@ target_sources(ZenithDAW PRIVATE
     EngineRecording.cpp
     EngineExport.cpp
     EngineMIDI.cpp
-    EngineSync.cpp
-    EnginePlugins.cpp
     ProjectState.cpp
     Track.cpp
     Clip.cpp
@@ -23,6 +21,7 @@ target_sources(ZenithDAW PRIVATE
     MixerController.cpp
     AudioFilePool.cpp
     PluginHost.cpp
+    ../plugins/InternalPluginFormat.cpp
     AuxBus.cpp
     ZenithLogger.cpp
     TrackPluginState.cpp

@@ -274,8 +274,24 @@ private:
                         int numSamples);
   void updateSampleRate(); // Propagate currentSampleRate to sub-components
 
-  std::unique_ptr<juce::dsp::Oversampling<float>> oversampler_;
-  juce::CriticalSection oversamplerLock_;
+  struct OversamplerSnapshot {
+      std::unique_ptr<juce::dsp::Oversampling<float>> oversampler;
+      int factor = 1;
+      
+      OversamplerSnapshot(int f) : factor(f) {
+          if (f > 1) {
+              oversampler = std::make_unique<juce::dsp::Oversampling<float>>(
+                  2, (int)std::log2(f),
+                  juce::dsp::Oversampling<float>::filter_half_band_polyphase_iir,
+                  true);
+          }
+      }
+  };
+
+  std::atomic<OversamplerSnapshot*> activeOversampler_{nullptr};
+  std::shared_ptr<OversamplerSnapshot> currentOversamplerHolder_;
+  std::vector<std::shared_ptr<OversamplerSnapshot>> oversamplerTrash_;
+
   juce::AudioBuffer<float>
       oversamplingBuffer_; // Pre-allocated upsampled buffer
   juce::AudioBuffer<float> downsamplingBuffer_; // Pre-allocated temp buffer
