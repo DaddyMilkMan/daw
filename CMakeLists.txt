@@ -293,7 +293,6 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/ui/common/ZenithHubComponent.cpp
     apps/desktop/Source/ai/ZenithStyleApplicator.cpp
     apps/desktop/Source/network/SecureKeyStore.cpp
-    apps/desktop/Source/platform/linux/network/SecureKeyStore_Linux.cpp
     apps/desktop/Source/ui/panels/PresetBrowserComponent.cpp
 
     apps/desktop/Source/effects/ConsoleEmulation.cpp
