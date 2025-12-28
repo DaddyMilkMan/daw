@@ -74,9 +74,10 @@ void SkiaOpenGLRenderer::scheduleAttachmentCheck() {
   juce::Component* comp = targetComponent_;
   juce::OpenGLContext* ctx = &openGLContext_;
   
-  juce::MessageManager::callAsync([this, comp, ctx]() {
+  juce::WeakReference<SkiaOpenGLRenderer> safeThis(this);
+  juce::MessageManager::callAsync([safeThis, comp, ctx]() {
     // Safety check - make sure objects are still valid
-    if (!comp || !ctx) return;
+    if (!safeThis || !comp || !ctx) return;
     
     std::cerr << "[ASYNC] Checking peer, peer=" 
               << (comp->getPeer() ? "valid" : "null")
@@ -85,11 +86,11 @@ void SkiaOpenGLRenderer::scheduleAttachmentCheck() {
     if (comp->getPeer() != nullptr && !ctx->isAttached()) {
       std::cerr << "[ASYNC] Peer available! Attaching context now..." << std::endl;
       ZENITH_LOG_INFO("SkiaOpenGLRenderer: Async check found peer, attaching context...");
-      attachContextNow();
+      safeThis->attachContextNow();
     } else if (!ctx->isAttached()) {
       // No peer yet, schedule another check in 100ms
-      juce::Timer::callAfterDelay(100, [this]() {
-        scheduleAttachmentCheck();
+      juce::Timer::callAfterDelay(100, [safeThis]() {
+        if (safeThis) safeThis->scheduleAttachmentCheck();
       });
     }
   });

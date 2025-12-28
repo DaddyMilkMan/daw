@@ -15,14 +15,15 @@
 #include "../../instruments/InstrumentRegistry.h"
 #include "../arranger/ArrangerComponent.h"
 #include "../arranger/ArrangerClipManager.h"
-#include "../browser/BrowserPanel.h"
+#include "../panels/BrowserPanel.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../framework/GlassmorphicPanel.h"
 #include "../framework/LayoutManager.h"
 #include "../framework/SkiaMainWindowIntegration.h"
 #include "../piano-roll/PianoRollComponent.h"
 #include "../sample-editor/SampleEditorComponent.h"
-#include "../session/SessionViewComponent.h"
+#include "../views/SessionViewComponent.h"
+
 #include "../ui/common/RemoteCursorOverlay.h"
 #include <memory>
 #include <utility>
@@ -79,11 +80,7 @@ public:
   }
 
   void drawSkia(SkCanvas *canvas) override {
-    if (auto *view = getView(activeIndex_)) {
-      if (auto *sc = dynamic_cast<SkiaComponent *>(view)) {
-        sc->drawSkia(canvas);
-      }
-    }
+    drawChildren(canvas);
   }
 
 private:
@@ -95,8 +92,10 @@ private:
 // MainLayoutComponent
 //==============================================================================
 
-MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state)
-    : engine_(engine), projectState_(state) {
+
+MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state, CommandAPI &api)
+    : engine_(engine), projectState_(state), api_(api) {
+
 
   // 1. Initialize Browser Model
   browserModel_ = std::make_unique<BrowserModel>(
@@ -123,7 +122,8 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state)
         auto switcher = std::make_unique<ViewSwitcher>();
         // Add Arranger
         auto arranger =
-            std::make_unique<ArrangerComponent>(engine_, projectState_);
+            std::make_unique<ArrangerComponent>(engine_, projectState_, api_);
+
         arranger->onClipDoubleClicked = [this](const juce::String &trackId,
                                                const juce::String &clipId) {
           // Check clip type
@@ -234,7 +234,8 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state)
   auto switcher = std::make_unique<ViewSwitcher>();
   viewSwitcher_ = switcher.get();
 
-  auto arranger = std::make_unique<ArrangerComponent>(engine_, projectState_);
+  auto arranger = std::make_unique<ArrangerComponent>(engine_, projectState_, api_);
+
   arranger->onClipDoubleClicked = [this](const juce::String &trackId,
                                          const juce::String &clipId) {
     // Check clip type

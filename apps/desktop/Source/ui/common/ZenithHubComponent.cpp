@@ -184,19 +184,25 @@ SkColor ZenithHubComponent::getAccentColorForGenre(const juce::String &genre) {
 void ZenithHubComponent::refreshProjects() { loadFromManager(); }
 
 void ZenithHubComponent::recentProjectsChanged() {
-  juce::MessageManager::callAsync([this]() { loadFromManager(); });
+  juce::Component::SafePointer<ZenithHubComponent> safeThis(this);
+  juce::MessageManager::callAsync([safeThis]() { 
+      if (safeThis) safeThis->loadFromManager(); 
+  });
 }
 
 void ZenithHubComponent::authStateChanged(bool isLoggedIn, const AuthUser& user) {
-  juce::MessageManager::callAsync([this, isLoggedIn, user]() {
-    currentUser_ = user;
-    if (isLoggedIn && user.isValid()) {
-      greetingText_ = "Welcome back, " + user.displayName;
-      hideLoginComponent();
-    } else {
-      greetingText_ = "Welcome to Zenith";
+  juce::Component::SafePointer<ZenithHubComponent> safeThis(this);
+  juce::MessageManager::callAsync([safeThis, isLoggedIn, user]() {
+    if (auto* self = safeThis.getComponent()) {
+        self->currentUser_ = user;
+        if (isLoggedIn && user.isValid()) {
+            self->greetingText_ = "Welcome back, " + user.displayName;
+            self->hideLoginComponent();
+        } else {
+            self->greetingText_ = "Welcome to Zenith";
+        }
+        self->repaint();
     }
-    repaint();
   });
 }
 
@@ -498,7 +504,7 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
   icons::drawIconCentered(canvas, icons::Edit(), greetingEditIconBounds_,
                           kGreetingIconSize, iconStyle);
 
-  drawRecentProjects(canvas);
+  drawProjectList(canvas);
   drawAccount(canvas);
   drawNewProjectButton(canvas);
   drawTemplates(canvas);
@@ -518,7 +524,7 @@ void ZenithHubComponent::drawBackground(SkCanvas *canvas) {
   canvas->drawRect(SkRect::MakeWH(getWidth(), getHeight()), bgPaint);
 }
 
-void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
+void ZenithHubComponent::drawProjectList(SkCanvas *canvas) {
   textPaint_.setColor(colors::TEXT_PRIMARY);
   drawText(canvas, "Recent Projects", recentHeaderBounds_, headerFont_, textPaint_, true);
 

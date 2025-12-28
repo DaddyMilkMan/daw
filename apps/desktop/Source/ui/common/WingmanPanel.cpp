@@ -288,47 +288,58 @@ void WingmanPanel::sendCommand() {
       command, currentMode,
       [this](juce::String response) {
         // Success
-        juce::MessageManager::callAsync([this, response]() {
-          appendToConversation("Wingman", response);
-          setStatus("Ready", design::toJuceColour(design::colors::SUCCESS));
-          isProcessing = false;
-          sendButton->setEnabled(true);
+        juce::Component::SafePointer<WingmanPanel> safeThis(this);
+        juce::MessageManager::callAsync([safeThis, response]() {
+          if (auto* self = safeThis.getComponent()) {
+              self->appendToConversation("Wingman", response);
+              self->setStatus("Ready", design::toJuceColour(design::colors::SUCCESS));
+              self->isProcessing = false;
+              self->sendButton->setEnabled(true);
+          }
         });
       },
       [this](juce::String error) {
         // Error
-        juce::MessageManager::callAsync([this, error]() {
-          juce::String friendlyError = error;
-          juce::String suggestedAction = "";
-          
-          if (error.contains("401")) {
-            friendlyError = "Authentication failed.";
-            suggestedAction = "Please check your API key in Settings";
-          } else if (error.contains("429")) {
-            friendlyError = "Rate limit exceeded.";
-            suggestedAction = "Please wait a moment before trying again.";
-          } else if (error.contains("timed out") || error.contains("connection")) {
-            friendlyError = "Connection issue.";
-            suggestedAction = "Please check your internet connection.";
-          } else if (error.contains("quota")) {
-             friendlyError = "API Quota Exceeded.";
-             suggestedAction = "Please check your usage limits at console.x.ai";
-          }
+        juce::Component::SafePointer<WingmanPanel> safeThis(this);
+        juce::MessageManager::callAsync([safeThis, error]() {
+          if (auto* self = safeThis.getComponent()) {
+              juce::String friendlyError = error;
+              juce::String suggestedAction = "";
+              
+              if (error.contains("401")) {
+                friendlyError = "Authentication failed.";
+                suggestedAction = "Please check your API key in Settings";
+              } else if (error.contains("429")) {
+                friendlyError = "Rate limit exceeded.";
+                suggestedAction = "Please wait a moment before trying again.";
+              } else if (error.contains("timed out") || error.contains("connection")) {
+                friendlyError = "Connection issue.";
+                suggestedAction = "Please check your internet connection.";
+              } else if (error.contains("quota")) {
+                 friendlyError = "API Quota Exceeded.";
+                 suggestedAction = "Please check your usage limits at console.x.ai";
+              }
 
-          appendToConversation("Error", friendlyError);
-          if (suggestedAction.isNotEmpty()) {
-             appendToConversation("Wingman", "**" + suggestedAction + "**");
+              self->appendToConversation("Error", friendlyError);
+              if (suggestedAction.isNotEmpty()) {
+                 self->appendToConversation("Wingman", "**" + suggestedAction + "**");
+              }
+              
+              self->setStatus("Error", design::toJuceColour(design::colors::DANGER));
+              self->isProcessing = false;
+              self->sendButton->setEnabled(true);
           }
-          
-          setStatus("Error", design::toJuceColour(design::colors::DANGER));
-          isProcessing = false;
-          sendButton->setEnabled(true);
         });
       },
       [this](juce::String status) {
         // Progress
+        juce::Component::SafePointer<WingmanPanel> safeThis(this);
         juce::MessageManager::callAsync(
-            [this, status]() { setStatus(status, design::toJuceColour(design::colors::WARNING)); });
+            [safeThis, status]() { 
+                if (auto* self = safeThis.getComponent()) {
+                    self->setStatus(status, design::toJuceColour(design::colors::WARNING)); 
+                }
+            });
       });
 }
 
@@ -369,44 +380,59 @@ void WingmanPanel::showSettings() {
 //==============================================================================
 
 void WingmanPanel::sampleDownloaded(const zenith::ai::FoundSample &sample) {
-  juce::MessageManager::callAsync([this, sample]() {
-    appendToConversation("Wingman", "Downloaded sample: " +
-                                        sample.localFile.getFileName());
+  juce::Component::SafePointer<WingmanPanel> safeThis(this);
+  juce::MessageManager::callAsync([safeThis, sample]() {
+    if (auto* self = safeThis.getComponent()) {
+        self->appendToConversation("Wingman", "Downloaded sample: " +
+                                            sample.localFile.getFileName());
+    }
   });
 }
 
 void WingmanPanel::sampleAnalyzed(const zenith::ai::FoundSample &sample) {
-  juce::MessageManager::callAsync([this, sample]() {
-    // Optional: Show analysis details
+  juce::Component::SafePointer<WingmanPanel> safeThis(this);
+  juce::MessageManager::callAsync([safeThis, sample]() {
+    if (auto* self = safeThis.getComponent()) {
+        // self->showAnalysis(sample);
+    }
   });
 }
 
 void WingmanPanel::sampleImported(const juce::File &file) {
-  juce::MessageManager::callAsync([this, file]() {
-    appendToConversation("Wingman",
-                         "Imported sample to project: " + file.getFileName());
+  juce::Component::SafePointer<WingmanPanel> safeThis(this);
+  juce::MessageManager::callAsync([safeThis, file]() {
+    if (auto* self = safeThis.getComponent()) {
+        self->appendToConversation("Wingman",
+                            "Imported sample to project: " + file.getFileName());
+    }
   });
 }
 
 void WingmanPanel::huntingProgressChanged(float progress,
                                           const juce::String &status) {
-  juce::MessageManager::callAsync([this, progress, status]() {
-    setStatus(status, design::toJuceColour(design::colors::INFO));
+  juce::Component::SafePointer<WingmanPanel> safeThis(this);
+  juce::MessageManager::callAsync([safeThis, progress, status]() {
+    if (auto* self = safeThis.getComponent()) {
+        self->setStatus(status, design::toJuceColour(design::colors::INFO));
+    }
   });
 }
 
 void WingmanPanel::huntingComplete(const zenith::ai::HuntingStats &stats,
                                    bool success) {
-  juce::MessageManager::callAsync([this, stats, success]() {
-    if (success) {
-      appendToConversation("Wingman", "Sample hunting complete! Found " +
-                                          juce::String(stats.samplesFound) +
-                                          " samples.");
-      setStatus("Ready", design::toJuceColour(design::colors::SUCCESS));
-    } else {
-      appendToConversation("Wingman",
-                           "Sample hunting failed or was cancelled.");
-      setStatus("Failed", design::toJuceColour(design::colors::DANGER));
+  juce::Component::SafePointer<WingmanPanel> safeThis(this);
+  juce::MessageManager::callAsync([safeThis, stats, success]() {
+    if (auto* self = safeThis.getComponent()) {
+        if (success) {
+        self->appendToConversation("Wingman", "Sample hunting complete! Found " +
+                                            juce::String(stats.samplesFound) +
+                                            " samples.");
+        self->setStatus("Ready", design::toJuceColour(design::colors::SUCCESS));
+        } else {
+        self->appendToConversation("Wingman",
+                            "Sample hunting failed or was cancelled.");
+        self->setStatus("Failed", design::toJuceColour(design::colors::DANGER));
+        }
     }
   });
 }

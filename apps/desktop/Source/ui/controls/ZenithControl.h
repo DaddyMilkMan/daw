@@ -41,6 +41,7 @@ public:
   void setDefaultValue(float defaultVal) { defaultValue_ = defaultVal; }
   float getDefaultValue() const { return defaultValue_; }
   void resetToDefault();
+  void updateFromParameter();
 
   // ----- Range -----
   void setRange(float min, float max, float interval = 0.0f);

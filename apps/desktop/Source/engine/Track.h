@@ -46,6 +46,8 @@ namespace zenith {
 
 // Forward declaration
 class PluginHost;
+class TakeFolder; // Forward declare TakeFolder
+
 
 //==============================================================================
 /**
@@ -148,23 +150,20 @@ public:
 
   //==============================================================================
   // Mixer controls (thread-safe using atomics)
-  // Mixer controls (thread-safe using atomics)
-  void setVolume(float newVolume) { mixerChannel.setVolume(newVolume); }
-  float getVolume() const { return mixerChannel.getVolume(); }
+  void setVolume(float newVolume);
+  float getVolume() const;
 
-  void setPan(float newPan) { mixerChannel.setPan(newPan); }
-  float getPan() const { return mixerChannel.getPan(); }
+  void setPan(float newPan);
+  float getPan() const;
 
-  void setMuted(bool shouldBeMuted) { mixerChannel.setMuted(shouldBeMuted); }
-  bool isMuted() const { return mixerChannel.isMuted(); }
+  void setMuted(bool shouldBeMuted);
+  bool isMuted() const;
 
-  void setSolo(bool shouldBeSolo) { mixerChannel.setSolo(shouldBeSolo); }
-  bool isSolo() const { return mixerChannel.isSolo(); }
+  void setSolo(bool shouldBeSolo);
+  bool isSolo() const;
 
-  void setSilencedBySolo(bool silenced) {
-    mixerChannel.setSilencedBySolo(silenced);
-  }
-  bool isSilencedBySolo() const { return mixerChannel.isSilencedBySolo(); }
+  void setSilencedBySolo(bool silenced);
+  bool isSilencedBySolo() const;
 
   void setArmed(bool shouldBeArmed); // For recording
   bool isArmed() const { return armed.load(); }
@@ -254,6 +253,14 @@ public:
   virtual Clip *getClip(int index) const { return nullptr; }
   virtual void addClip(Clip *clip) { juce::ignoreUnused(clip); }
   virtual void addClip(std::unique_ptr<Clip> clip);
+  
+  // Take Folder Management
+  virtual int getNumTakeFolders() const { return 0; }
+  virtual TakeFolder *getTakeFolder(int index) const { return nullptr; }
+  virtual TakeFolder *getTakeFolderAt(int64_t position) const { return nullptr; }
+  virtual void addTakeFolder(std::shared_ptr<TakeFolder> folder) { juce::ignoreUnused(folder); }
+  virtual void removeTakeFolder(TakeFolder *folder) { juce::ignoreUnused(folder); }
+
   virtual Instrument *getInstrument() const { return nullptr; }
   virtual bool hasInstrument() const { return getInstrument() != nullptr; }
 
@@ -273,10 +280,9 @@ public:
 
   //==============================================================================
   // Monitoring
-  // Monitoring
-  float getCurrentLevel() const { return mixerChannel.getOutputLevel(); }
-  float getPeakLevel() const { return mixerChannel.getOutputPeak(); }
-  void resetPeakLevel() { mixerChannel.resetPeaks(); }
+  float getCurrentLevel() const;
+  float getPeakLevel() const;
+  void resetPeakLevel();
 
   //==============================================================================
   // State management

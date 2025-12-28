@@ -166,7 +166,13 @@ private:
     int peakHoldCounter_{0};
     int peakHoldCounterL_{0};
     int peakHoldCounterR_{0};
+
+    float velocity_{0.0f};
+    float velocityL_{0.0f};
+    float velocityR_{0.0f};
     bool stereo_{false};
+
+
   };
 
   //==========================================================================

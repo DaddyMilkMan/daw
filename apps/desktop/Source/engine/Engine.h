@@ -137,6 +137,10 @@ public:
    */
   juce::AudioDeviceManager &getDeviceManager() { return deviceManager; }
 
+  // New accessors
+  MixerController& getMixerController();
+  Midi2DiscoveryService* getMidi2DiscoveryService() const { return midi2DiscoveryService_.get(); }
+
   //==========================================================================
   // Global Access (Safety for Async Callbacks)
   //==========================================================================
@@ -1101,6 +1105,7 @@ private:
   std::unique_ptr<TransportController> transportController_;
   std::unique_ptr<MeteringSystem> meteringSystem_;
   std::unique_ptr<MixerController> mixerController_;
+  std::unique_ptr<Midi2DiscoveryService> midi2DiscoveryService_;
   std::unique_ptr<zenith::TempoMap>
       tempoMap_; // Kept for now, shared with controllers
 

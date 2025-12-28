@@ -61,6 +61,9 @@ const juce::Identifier ProjectState::ID_TAKE_FOLDER("TAKE_FOLDER");
 const juce::Identifier ProjectState::ID_COMP_REGIONS("COMP_REGIONS");
 const juce::Identifier ProjectState::ID_COMP_REGION("COMP_REGION");
 
+// Retained IDs
+
+
 const juce::Identifier ProjectState::PROP_NAME("name");
 const juce::Identifier ProjectState::PROP_TEMPO("tempo");
 const juce::Identifier
@@ -127,6 +130,9 @@ const juce::Identifier ProjectState::PROP_MANUALLY_COLORED("manuallyColored");
 const juce::Identifier ProjectState::PROP_IS_QUARANTINE("isQuarantine");
 
 const juce::Identifier ProjectState::PROP_SELECTED_TRACK_ID("selectedTrackId");
+
+// Retained props
+
 
 //==============================================================================
 ProjectState::ProjectState() : state(Zenith::IDs::PROJECT) {

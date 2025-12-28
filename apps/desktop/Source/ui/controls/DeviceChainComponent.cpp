@@ -18,7 +18,6 @@
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
 
-
 namespace zenith {
 
 //==============================================================================
@@ -97,11 +96,13 @@ private:
 //==============================================================================
 
 DeviceChainComponent::DeviceChainComponent(Engine &engine, ProjectState &state)
-    : engine_(engine),
-      projectState_(state),
-      viewport_("DeviceChainViewport"), // Initialize viewport_ in the initializer list
-      contentContainer_(std::make_unique<juce::Component>()) // Initialize unique_ptr member
+    : engine_(engine), projectState_(state),
+      viewport_("DeviceChainViewport"), // Initialize viewport_ in the
+                                        // initializer list
+      contentContainer_(
+          std::make_unique<juce::Component>()) // Initialize unique_ptr member
 {
+  // Listen to state changes
   projectState_.getState().addListener(this);
 
   viewport_.setViewedComponent(contentContainer_.get(), false);

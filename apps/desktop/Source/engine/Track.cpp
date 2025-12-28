@@ -317,4 +317,9 @@ void Track::updateClipPositions(juce::int64 playheadPosition) {
   }
 }
 
+//==============================================================================
+float Track::getCurrentLevel() const { return mixerChannel.getOutputLevel(); }
+float Track::getPeakLevel() const { return mixerChannel.getOutputPeak(); }
+void Track::resetPeakLevel() { mixerChannel.resetPeaks(); }
+
 } // namespace zenith

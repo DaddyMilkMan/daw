@@ -53,12 +53,21 @@ void AIEventBus::publish(const AIEvent &event) {
 
   // Invoke callbacks asynchronously on message thread (outside lock)
   if (!callbacksToInvoke.empty()) {
-    juce::MessageManager::callAsync([callbacksToInvoke, event, this]() {
-      for (const auto &callback : callbacksToInvoke) {
-        if (callback) {
-          callback(event);
-          juce::ScopedLock sl(lock_);
-          stats_.totalDelivered++;
+    // Use a weak reference pattern for safety during async execution
+    juce::WeakReference<AIEventBus> weakRef(this);
+    juce::MessageManager::callAsync([callbacksToInvoke, event, weakRef]() {
+      if (auto strongRef = weakRef.get()) {
+        int delivered = 0;
+        for (const auto &callback : callbacksToInvoke) {
+          if (callback) {
+            callback(event);
+            delivered++;
+          }
+        }
+        
+        if (delivered > 0) {
+          juce::ScopedLock sl(strongRef->lock_);
+          strongRef->stats_.totalDelivered += delivered;
         }
       }
     });

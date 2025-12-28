@@ -15,18 +15,16 @@
 
 #include "../design-system/InteractionHelper.h"
 #include "SkiaComponent.h"
+#include <functional>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <memory>
 
 #ifdef ZENITH_USE_SKIA
-#include <core/SkCanvas.h>
-#include <core/SkColor.h>
-#include <core/SkFont.h>
-#include <core/SkPaint.h>
+#include "ZenithSkia.h"
 #include <core/SkPath.h>
-#include <core/SkRRect.h>
 
 #endif
 
@@ -141,6 +139,27 @@ private:
   ::SkRect cachedBounds_;
 
   void updateCachedPaints(const ::SkRect &bounds);
+};
+
+#else // ZENITH_USE_SKIA
+
+class TransportBar : public juce::Component {
+public:
+    TransportBar() {}
+    ~TransportBar() override = default;
+    void paint(juce::Graphics& g) override { g.fillAll(juce::Colours::black); }
+    void setPlaying(bool) {}
+    void setRecording(bool) {}
+    void setTempo(double) {}
+    void setCPU(float) {}
+    void setPosition(double) {}
+    void setProjectName(const juce::String&) {}
+    void setTimeSignature(int, int) {}
+    std::function<void()> onPlayClicked;
+    std::function<void()> onStopClicked;
+    std::function<void()> onRecordClicked;
+    std::function<void()> onViewToggleClicked;
+    std::function<void()> onSettingsClicked;
 };
 
 #endif // ZENITH_USE_SKIA

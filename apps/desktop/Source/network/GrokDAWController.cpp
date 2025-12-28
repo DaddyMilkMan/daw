@@ -59,15 +59,21 @@ public:
     if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
       task();
     } else {
-      juce::MessageManager::callAsync(task);
+      // Use WeakReference to prevent UAF if controller is deleted before callback runs
+      juce::WeakReference<Impl> safeThis(this);
+      juce::MessageManager::callAsync([safeThis, task]() {
+        if (safeThis)
+            task();
+      });
     }
   }
 
   // NEW: Execute blocking operations on background thread
   void executeOnBackgroundThread(std::function<void()> task) {
     if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
-      // If we're on message thread, launch on background thread
-      juce::Thread::launch(task);
+      // If we're on message thread, use ThreadPool instead of detach to ensure lifetime safety
+      // threadPool destructor will wait for jobs to finish
+      threadPool.addJob(task);
     } else {
       // We're already on background thread, execute directly
       task();
@@ -385,7 +391,10 @@ public:
           }
         }
     });
+    });
   }
+
+  JUCE_DECLARE_WEAK_REFERENCEABLE(Impl)
 };
 
 //==============================================================================

@@ -28,8 +28,10 @@ public:
 
   // Message thread
   float getLevel(MeterMode mode) const;
+  float getMasterLevel() const { return rmsLevel.load(); }
+  float getMasterPeak() const { return masterPeak.load(); }
+  void resetMasterPeak() { masterPeak.store(0.0f); }
   float getPeak() const { return masterPeak.load(); }
-  void resetPeak() { masterPeak.store(0.0f); }
 
   StereoAudioFifo &getAnalysisFifo() { return *analysisFifo; }
 

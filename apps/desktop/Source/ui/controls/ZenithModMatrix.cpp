@@ -13,8 +13,7 @@
 #include "ZenithModMatrix.h"
 
 #ifdef ZENITH_USE_SKIA
-#include <core/SkBlurTypes.h>
-#include <core/SkFont.h>
+#include "ZenithSkia.h"
 #endif
 
 namespace zenith {
@@ -179,6 +178,7 @@ void ZenithModMatrix::drawCell(SkCanvas *canvas, int row, int col, float x,
 
     // Glow
     paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 5.0f));
+
     canvas->drawCircle(cx, cy, radius * amount + 2.0f, paint);
     paint.setMaskFilter(nullptr);
   }

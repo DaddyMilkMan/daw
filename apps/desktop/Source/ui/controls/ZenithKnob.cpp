@@ -12,16 +12,20 @@
 
 #include "ZenithKnob.h"
 
+#include "ZenithKnob.h"
+#include <algorithm>
+#include <cmath>
+#include <string>
+
 #ifdef ZENITH_USE_SKIA
-#include <core/SkBlurTypes.h>
-#include <core/SkRRect.h>
+#include "ZenithSkia.h"
 #include <utils/SkTextUtils.h>
 #endif
 
 namespace zenith {
 
 ZenithKnob::ZenithKnob() : ZenithControl("") {
-  accentColor_ = SkColorSetRGB(0, 255, 255);
+  accentColor_ = design::colors::CYAN;
 }
 
 ZenithKnob::ZenithKnob(const juce::String &name, SkColor color)
@@ -31,14 +35,12 @@ ZenithKnob::ZenithKnob(const juce::String &name, SkColor color)
 
 ZenithKnob::ZenithKnob(juce::Value valueToControl)
     : ZenithControl(""), value(valueToControl) {
-    value.addListener(this);
-    // Initial sync
-    setValue(value.getValue(), false);
+  value.addListener(this);
+  // Initial sync
+  setValue(value.getValue(), false);
 }
 
-ZenithKnob::~ZenithKnob() {
-    value.removeListener(this);
-}
+ZenithKnob::~ZenithKnob() { value.removeListener(this); }
 
 void ZenithKnob::mouseDrag(const juce::MouseEvent &e) {
   if (!isDragging_ || !isEnabled())
@@ -66,11 +68,11 @@ void ZenithKnob::mouseDrag(const juce::MouseEvent &e) {
   }
 
   float newValue = range_.start + newNormValue * (range_.end - range_.start);
-  
+
   if (!value.getValue().isVoid()) {
-      value.setValue(newValue);
+    value.setValue(newValue);
   } else {
-      setValue(newValue, true);
+    setValue(newValue, true);
   }
 
   // Trigger animation
@@ -148,7 +150,7 @@ void ZenithKnob::drawTrack(SkCanvas *canvas, float cx, float cy, float radius) {
   paint.setStrokeCap(SkPaint::kRound_Cap);
 
   // Deep dark track
-  paint.setColor(SkColorSetARGB(255, 20, 20, 25));
+  paint.setColor(design::colors::BG_DARKEST);
 
   SkRect arcRect =
       SkRect::MakeXYWH(cx - radius, cy - radius, radius * 2, radius * 2);
@@ -156,7 +158,7 @@ void ZenithKnob::drawTrack(SkCanvas *canvas, float cx, float cy, float radius) {
 
   // Inner shadow simulation
   paint.setStrokeWidth(1.0f);
-  paint.setColor(SkColorSetARGB(50, 0, 0, 0));
+  paint.setColor(design::withAlpha(SK_ColorBLACK, 0.3f));
   canvas->drawArc(arcRect, startAngle_, sweepRange_, false, paint);
 }
 
@@ -191,7 +193,7 @@ void ZenithKnob::drawTickMarks(SkCanvas *canvas, float cx, float cy,
     if (std::abs(normalizedPos - normValue) < tickTolerance) {
       paint.setColor(accentColor_);
     } else {
-      paint.setColor(SkColorSetARGB(100, 200, 200, 220));
+      paint.setColor(design::colors::TEXT_TERTIARY);
     }
 
     canvas->drawLine(x1, y1, x2, y2, paint);
@@ -233,7 +235,8 @@ void ZenithKnob::drawValueArc(SkCanvas *canvas, float cx, float cy,
 
   // Glow effect
   float glowAmount =
-      (glowIntensity_ + animatedGlow_ * 0.5f) * (isHovered_ ? 6.0f : 3.0f);
+      (glowIntensity_ + animatedGlow_ * 0.5f) *
+      (isHovered_ ? design::glow::GLOW_STRONG : design::glow::GLOW_SUBTLE);
   if (glowAmount > 0.0f) {
     paint.setMaskFilter(
         SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, glowAmount));
@@ -289,13 +292,13 @@ void ZenithKnob::drawCenterCap(SkCanvas *canvas, float cx, float cy,
   // Drop shadow
   SkPaint shadowPaint;
   shadowPaint.setAntiAlias(true);
-  shadowPaint.setColor(SkColorSetARGB(100, 0, 0, 0));
-  shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
+  shadowPaint.setColor(design::colors::GLASS_SHADOW);
+  shadowPaint.setMaskFilter(
+      SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, design::glow::GLOW_MEDIUM));
   canvas->drawCircle(cx, cy + 2.0f, capRadius, shadowPaint);
 
   // Cap gradient (subtle convex look)
-  SkColor capColors[2] = {SkColorSetARGB(255, 40, 40, 45),
-                          SkColorSetARGB(255, 25, 25, 30)};
+  SkColor capColors[2] = {design::colors::BG_MEDIUM, design::colors::BG_DARKER};
   SkPoint capPts[2] = {{cx, cy - capRadius}, {cx, cy + capRadius}};
   paint.setShader(SkGradientShader::MakeLinear(capPts, capColors, nullptr, 2,
                                                SkTileMode::kClamp));
@@ -306,7 +309,7 @@ void ZenithKnob::drawCenterCap(SkCanvas *canvas, float cx, float cy,
   // Cap rim highlight
   paint.setStyle(SkPaint::kStroke_Style);
   paint.setStrokeWidth(1.0f);
-  paint.setColor(SkColorSetARGB(30, 255, 255, 255));
+  paint.setColor(design::colors::GLASS_HIGHLIGHT);
   canvas->drawCircle(cx, cy, capRadius, paint);
 }
 
@@ -318,7 +321,7 @@ void ZenithKnob::drawIndicator(SkCanvas *canvas, float cx, float cy,
 
   SkPaint paint;
   paint.setAntiAlias(true);
-  paint.setColor(SK_ColorWHITE);
+  paint.setColor(design::colors::TEXT_PRIMARY);
   paint.setStyle(SkPaint::kStroke_Style);
   paint.setStrokeWidth(2.0f);
   paint.setStrokeCap(SkPaint::kRound_Cap);
@@ -334,8 +337,7 @@ void ZenithKnob::drawValueTooltip(SkCanvas *canvas, float cx, float cy,
   juce::String valueText = getValueAsText();
   std::string str = valueText.toStdString();
 
-  SkFont font;
-  font.setSize(11.0f);
+  SkFont font = design::getMonoFont(design::typography::FONT_XS);
   font.setSubpixel(true);
 
   float textWidth =
@@ -353,19 +355,19 @@ void ZenithKnob::drawValueTooltip(SkCanvas *canvas, float cx, float cy,
 
   SkPaint bgPaint;
   bgPaint.setAntiAlias(true);
-  bgPaint.setColor(SkColorSetARGB(200, 20, 20, 25));
+  bgPaint.setColor(design::withAlpha(design::colors::BG_DARKEST, 0.8f));
   canvas->drawRRect(bgRRect, bgPaint);
 
   // Border
   bgPaint.setStyle(SkPaint::kStroke_Style);
   bgPaint.setStrokeWidth(1.0f);
-  bgPaint.setColor(SkColorSetARGB(100, 255, 255, 255));
+  bgPaint.setColor(design::colors::BORDER_DEFAULT);
   canvas->drawRRect(bgRRect, bgPaint);
 
   // Text
   SkPaint textPaint;
   textPaint.setAntiAlias(true);
-  textPaint.setColor(SK_ColorWHITE);
+  textPaint.setColor(design::colors::TEXT_PRIMARY);
   canvas->drawSimpleText(str.c_str(), str.length(), SkTextEncoding::kUTF8,
                          tooltipX, tooltipY, font, textPaint);
 }
@@ -374,13 +376,12 @@ void ZenithKnob::drawLabel(SkCanvas *canvas, float cx, float cy, float radius) {
   if (name_.isEmpty())
     return;
 
-  SkFont font;
-  font.setSize(11.0f);
+  SkFont font = design::getSkFont(design::typography::FONT_XS);
   font.setSubpixel(true);
 
   SkPaint paint;
   paint.setAntiAlias(true);
-  paint.setColor(SkColorSetARGB(180, 200, 200, 220));
+  paint.setColor(design::colors::TEXT_SECONDARY);
 
   std::string labelStr = name_.toStdString();
   float textWidth = font.measureText(labelStr.c_str(), labelStr.length(),
@@ -397,19 +398,19 @@ float ZenithKnob::getAngleForValue(float normalizedValue) const {
 
 sk_sp<SkShader> ZenithKnob::createArcGradient(float cx, float cy,
                                               float radius) const {
-  // Sweep gradient following the arc
-  SkColor colors[3] = {
-      SkColorSetRGB(0, 200, 255),    // Start: bright cyan
-      accentColor_,                  // Middle: accent color
-      SkColorSetA(accentColor_, 200) // End: slightly faded accent
-  };
-  float positions[3] = {0.0f, 0.5f, 1.0f};
+  // Sweep gradient following the arc for that "Neon Glow" look
+  SkColor colors[4] = {accentColor_, design::colors::MAGENTA,
+                       design::colors::CYAN, accentColor_};
 
-  // Create a linear gradient across the arc for visual depth
-  SkPoint pts[2] = {{cx - radius, cy - radius}, {cx + radius, cy + radius}};
+  // Conical/Sweep gradient setup
+  // Note: Skia angles are in degrees, 0 is at 3 o'clock.
+  // We need to rotate the sweep to match our startAngle_
+  SkMatrix matrix;
+  matrix.setRotate(startAngle_, cx, cy);
 
-  return SkGradientShader::MakeLinear(pts, colors, positions, 3,
-                                      SkTileMode::kClamp);
+  return SkGradientShader::MakeSweep(cx, cy, colors, nullptr, 4,
+                                     SkTileMode::kClamp, 0, sweepRange_, 0,
+                                     &matrix);
 }
 
 #endif // ZENITH_USE_SKIA

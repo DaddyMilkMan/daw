@@ -14,10 +14,7 @@
 #pragma once
 
 #ifdef ZENITH_USE_SKIA
-#include <core/SkCanvas.h>
-#include <core/SkColor.h>
-#include <core/SkPaint.h>
-#include <core/SkRect.h>
+#include "ZenithSkia.h"
 #include <core/SkShader.h>
 #include <effects/SkGradientShader.h>
 #include <effects/SkRuntimeEffect.h>

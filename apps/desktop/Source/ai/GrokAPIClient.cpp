@@ -92,32 +92,47 @@ void GrokAPIClient::analyzeAudioAsync(const AnalysisRequest& request,
     // Queue for background analysis
     {
         std::lock_guard<std::mutex> lock(analysisQueueMutex);
+        // Store callbacks in the request (assuming AnalysisRequest has std::function members or similar mechanism)
+        // Since AnalysisRequest structure isn't visible, I'll assume we need to wrap this logic.
+        // However, looking at analysisWorker, it processes 'request' and caches result.
+        // It doesn't seem to have a callback mechanism built-in.
+        // We need to modify how analysis is handled.
+        
+        // A better approach without changing the struct definition (if we can't see it):
+        // Use a separate map for pending callbacks or lambda capture if the queue supported it.
+        // Assuming we can't easily change the struct here, we will launch a detached thread 
+        // that waits for the result (simulating async without blocking the main thread).
+        
+        // BETTER FIX: Modify the worker to handle completion or use a future/promise pattern if possible.
+        // Given constraints, let's spawn a thread that waits on the cache condition.
+        
         analysisQueue.push(request);
     }
     
     analysisCondition.notify_one();
     
-    // Poll for completion (simplified - in production would use callbacks)
-    auto startTime = std::chrono::steady_clock::now();
-    const auto timeout = std::chrono::seconds(30);  // 30 second timeout
-    
-    while (std::chrono::steady_clock::now() - startTime < timeout) {
-        if (getCachedAnalysis(cacheKey, cachedResult)) {
-            juce::MessageManager::callAsync([onComplete, cachedResult]() {
-                onComplete(cachedResult);
-            });
-            return;
+    // Launch a watcher thread that waits for the result without blocking the caller
+    std::thread([this, cacheKey, onComplete, onError]() {
+        auto startTime = std::chrono::steady_clock::now();
+        const auto timeout = std::chrono::seconds(30);
+        
+        while (std::chrono::steady_clock::now() - startTime < timeout) {
+            AnalysisResult result;
+            if (getCachedAnalysis(cacheKey, result)) {
+                juce::MessageManager::callAsync([onComplete, result]() {
+                    onComplete(result);
+                });
+                return;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
         
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-    
-    // Timeout
-    if (onError) {
-        juce::MessageManager::callAsync([onError]() {
-            onError("Analysis timeout");
-        });
-    }
+        if (onError) {
+            juce::MessageManager::callAsync([onError]() {
+                onError("Analysis timeout");
+            });
+        }
+    }).detach();
 }
 
 GrokAPIClient::AnalysisResult GrokAPIClient::getAnalysis(const juce::String& trackName, 
@@ -500,12 +515,14 @@ bool GrokAPIClient::deleteAPIKey() {
 }
 
 juce::String GrokAPIClient::encryptKey(const juce::String& key) {
-    // Simple XOR with a fixed key (better than plain text)
-    const char* xorKey = "ZenithDAW_Secure_2024";
-    juce::String encrypted;
+    // Generate machine-specific salt
+    juce::String salt = juce::SystemStats::getComputerName() + 
+                       juce::SystemStats::getUserId() + 
+                       "Zenith_Secure_Salt";
     
+    juce::String encrypted;
     for (int i = 0; i < key.length(); ++i) {
-        char encryptedChar = key[i] ^ xorKey[i % strlen(xorKey)];
+        char encryptedChar = key[i] ^ salt[i % salt.length()];
         encrypted += juce::String::formatted("%02X", static_cast<unsigned char>(encryptedChar));
     }
     
@@ -513,13 +530,16 @@ juce::String GrokAPIClient::encryptKey(const juce::String& key) {
 }
 
 juce::String GrokAPIClient::decryptKey(const juce::String& encrypted) {
-    const char* xorKey = "ZenithDAW_Secure_2024";
+    juce::String salt = juce::SystemStats::getComputerName() + 
+                       juce::SystemStats::getUserId() + 
+                       "Zenith_Secure_Salt";
+                       
     juce::String decrypted;
     
     for (int i = 0; i < encrypted.length(); i += 2) {
         juce::String hexByte = encrypted.substring(i, i + 2);
         char encryptedChar = static_cast<char>(std::strtol(hexByte.toUTF8(), nullptr, 16));
-        char decryptedChar = encryptedChar ^ xorKey[(i / 2) % strlen(xorKey)];
+        char decryptedChar = encryptedChar ^ salt[(i / 2) % salt.length()];
         decrypted += decryptedChar;
     }
     

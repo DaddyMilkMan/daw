@@ -1,35 +1,4 @@
 /*
-  ==============================================================================
-
-    AudioRenderer.cpp
-    Created: 2025-12-09
-    Author:  Zenith DAW
-
-    Audio graph rendering implementation.
-
-  ==============================================================================
-*/
-
-#include "AudioRenderer.h"
-#include "../dsp/MasterLimiter.h"
-#include "../dsp/SIMDHelpers.h"
-#include "AuxBus.h"
-#include "TempoMap.h"
-#include "Track.h"
-
-namespace zenith {
-
-// NOTE: AudioRenderer is now stateless. Prepare/reset are on AudioRenderContext.
-
-//==============================================================================
-void AudioRenderer::renderAudioGraph(
-    AudioRenderContext& context,
-    juce::AudioBuffer<float> &outputBuffer, int numSamples,
-    juce::int64 playheadPosition,
-    std::span<Track* const> tracks,
-    std::span<AuxBus* const> auxBuses,
-    const RoutingGraph &routingGraph, MasterLimiter &masterLimiter,
-    std::span<const std::shared_ptr<juce::AudioPluginInstance>> masterPlugins,
     const TempoMap *tempoMap, const juce::MidiBuffer *incomingMidi,
     const float *const *inputChannelData,
     int numInputChannels) noexcept {
@@ -64,8 +33,9 @@ void AudioRenderer::renderAudioGraph(
     }
   }
 
-  // Build aux buffer pointers for tracks (RT-safe stack allocation or fixed member)
-  // We'll use a local array for safety since it's small (max 16 aux buses usually)
+  // Build aux buffer pointers for tracks (RT-safe stack allocation or fixed
+  // member) We'll use a local array for safety since it's small (max 16 aux
+  // buses usually)
   static constexpr int kMaxAuxBuses = 32;
   std::array<juce::AudioBuffer<float> *, kMaxAuxBuses> auxBufferPtrs;
   size_t actualAuxCount = 0;
@@ -200,8 +170,34 @@ void AudioRenderer::renderAudioGraph(
           }
       }
 
+
       track->getNextAudioBlock(trackInfo, playheadPosition, trackMidiInput,
-                                context.auxBufferPtrsVector, tempoMap, sidechainBuffer);
+                               auxBufferPtrsVector_, tempoMap);
+
+
+      // Input Monitoring Logic
+      if (inputChannelData != nullptr && track->isInputMonitorEnabled()) {
+        const int inputChIndex = track->getInputChannel();
+        // Assuming stereo tracks: Map Input N -> Left, Input N+1 -> Right
+        // If mono input selected for stereo track, map Input N to both.
+        // For simplicity: Map Input N to Left, Input N+1 to Right if available.
+
+        for (int ch = 0; ch < trackBuffer.getNumChannels(); ++ch) {
+          const int sourceCh = inputChIndex + ch;
+          if (sourceCh < numInputChannels &&
+              inputChannelData[sourceCh] != nullptr) {
+            // Add input signal (mix with existing clip audio)
+            trackBuffer.addFrom(ch, 0, inputChannelData[sourceCh], numSamples);
+          } else if (ch > 0 && inputChIndex < numInputChannels &&
+                     inputChannelData[inputChIndex] != nullptr) {
+            // Fallback: If Right input missing but Left exists, map Left to
+            // Right (Mono -> Stereo) Simple heuristic for now.
+            trackBuffer.addFrom(ch, 0, inputChannelData[inputChIndex],
+                                numSamples);
+          }
+        }
+      }
+
 
       if (pdcEnabled_.load()) {
         applyPDCDelay(context, trackBuffer, static_cast<int>(trackIdx), numSamples);
@@ -286,161 +282,5 @@ void AudioRenderer::renderAudioGraph(
   updateMasterMeters(outputBuffer);
 }
 
-//==============================================================================
-int AudioRenderer::calculatePDC(AudioRenderContext& context, std::span<Track *const> tracks) {
-  int maxLatency = 0;
-
-  for (size_t i = 0; i < tracks.size() && i < context.trackLatencies.size(); ++i) {
-    if (tracks[i]) {
-      int trackLatency = 0;
-
-      // Sum latency from all plugins
-      for (int p = 0; p < tracks[i]->getNumPlugins(); ++p) {
-        auto *plugin = tracks[i]->getPlugin(p);
-        if (plugin != nullptr) {
-          trackLatency += plugin->getLatencySamples();
-        }
-      }
-
-      context.trackLatencies[i] = trackLatency;
-      maxLatency = juce::jmax(maxLatency, trackLatency);
-    }
-  }
-
-  context.maxTrackLatency = maxLatency;
-  return maxLatency;
-}
-
-//==============================================================================
-void AudioRenderer::applyPDCDelay(AudioRenderContext& context, juce::AudioBuffer<float> &buffer,
-                                  int trackIndex, int numSamples) {
-  if (trackIndex < 0 ||
-      trackIndex >= static_cast<int>(context.trackLatencies.size())) {
-    return;
-  }
-
-  const int trackLatency = context.trackLatencies[trackIndex];
-  const int maxLatency = context.maxTrackLatency;
-  const int delayNeeded = maxLatency - trackLatency;
-
-  // No delay needed if track already has max latency, or delay exceeds buffer
-  // capacity Note: Use > (not >=) because delay buffer can handle up to
-  // kMaxPDCLatencySamples-1
-  if (delayNeeded <= 0 || delayNeeded > constants::kMaxPDCLatencySamples - 1) {
-    return;
-  }
-
-  if (trackIndex < 0 || trackIndex >= (int)context.pdcDelayBuffers.size()) {
-    return;
-  }
-
-  auto &delayBuffer = context.pdcDelayBuffers[trackIndex];
-  int &writePos = context.pdcDelayWritePos[trackIndex];
-
-  // Cache channel pointers and counts for real-time performance
-  auto *const *channelData = buffer.getArrayOfWritePointers();
-  const int numBufferChannels = buffer.getNumChannels();
-  const int numDelayBufferChannels = delayBuffer.getNumChannels();
-
-  // Calculate initial read position
-  const int initialReadPos =
-      (writePos - delayNeeded + constants::kMaxPDCLatencySamples) %
-      constants::kMaxPDCLatencySamples;
-
-  // Process channel-by-channel for better cache locality
-  // JUCE's AudioBuffer stores each channel's data in a contiguous memory block
-  for (int ch = 0; ch < numBufferChannels && ch < numDelayBufferChannels; ++ch) {
-    float* channelPtr = channelData[ch];
-    float* delayChannelPtr = delayBuffer.getWritePointer(ch);
-    
-    int readPos = initialReadPos;
-    int localWritePos = writePos;
-    
-    for (int i = 0; i < numSamples; ++i) {
-      // Read the delayed sample from the circular buffer
-      const float delayedSample = delayChannelPtr[readPos];
-
-      // Store the incoming sample into the circular buffer
-      delayChannelPtr[localWritePos] = channelPtr[i];
-
-      // Replace the current sample with the delayed one
-      channelPtr[i] = delayedSample;
-      
-      // Advance positions
-      readPos = (readPos + 1) % constants::kMaxPDCLatencySamples;
-      localWritePos = (localWritePos + 1) % constants::kMaxPDCLatencySamples;
-    }
-  }
-
-  // Increment write position by numSamples after processing all channels
-  writePos = (writePos + numSamples) % constants::kMaxPDCLatencySamples;
-}
-
-//==============================================================================
-void AudioRenderer::processMasterPlugins(
-    juce::AudioBuffer<float> &buffer,
-    std::span<const std::shared_ptr<juce::AudioPluginInstance>> plugins) {
-
-  if (plugins.empty()) {
-    return;
-  }
-
-  juce::MidiBuffer midi; // Master bus doesn't handle MIDI
-
-  for (auto &plugin : plugins) {
-    if (plugin != nullptr && !plugin->isSuspended()) {
-      plugin->processBlock(buffer, midi);
-    }
-  }
-}
-
-//==============================================================================
-void AudioRenderer::updateMasterMeters(const juce::AudioBuffer<float> &buffer) {
-  // Find peak level using SIMD helper
-  float peak = simd::findPeak(buffer);
-
-  // Smooth the level for display
-  float currentLevel = masterLevel_.load();
-  currentLevel = currentLevel * constants::kMeterSmoothingFactor +
-                 peak * (1.0f - constants::kMeterSmoothingFactor);
-  masterLevel_.store(currentLevel);
-
-  // Update peak hold
-  float currentPeak = masterPeakLevel_.load();
-  if (peak > currentPeak) {
-    masterPeakLevel_.store(peak);
-  } else {
-    // Decay peak
-    masterPeakLevel_.store(currentPeak * constants::kPeakMeterDecay);
-  }
-}
-
-
-
-
-int AudioRenderer::getMasterLatency() const {
-  return masterLatency_.load();
-}
-
-void AudioRenderer::updateMasterLatency(
-    std::span<const std::shared_ptr<juce::AudioPluginInstance>> masterPlugins,
-    int limiterLatency) {
-  int totalLatency = limiterLatency;
-  
-  for (const auto& plugin : masterPlugins) {
-    if (plugin != nullptr) {
-      totalLatency += plugin->getLatencySamples();
-    }
-  }
-  
-  masterLatency_.store(totalLatency);
-}
-
-void AudioRenderer::updateClipPositions(std::span<Track* const> tracks, 
-                                        juce::int64 playheadPosition) noexcept {
-    // Method used to update clips when not playing, or for UI sync.
-    // For now, no-op as implicit updates happen during processing.
-    juce::ignoreUnused(tracks, playheadPosition);
-}
 
 } // namespace zenith

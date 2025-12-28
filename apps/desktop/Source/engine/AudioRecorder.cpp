@@ -1,245 +1,73 @@
 /*
-  ==============================================================================
-
-    AudioRecorder.cpp
-    Created: 2025-12-09
-    Author:  Zenith DAW
-
-    Implementation of RT-safe multi-track audio recording using RCU pattern.
-
-  ==============================================================================
-*/
-
-#include "AudioRecorder.h"
-#include "Track.h"
-#include <juce_audio_formats/juce_audio_formats.h>
-#include "RealTimeGarbageCollector.h"
-
-namespace zenith {
-
-//==============================================================================
-// AudioRingBuffer Implementation
-//==============================================================================
-
-AudioRingBuffer::AudioRingBuffer(int numChannels, int bufferSizeFrames)
-    : fifo_(bufferSizeFrames), buffer_(numChannels, bufferSizeFrames),
-      numChannels_(numChannels), bufferSizeFrames_(bufferSizeFrames) {
-  buffer_.clear();
 }
 
-int AudioRingBuffer::write(const float *const *data, int numChannels,
-                           int numSamples) {
-  int start1, size1, start2, size2;
-  fifo_.prepareToWrite(numSamples, start1, size1, start2, size2);
-
-  const int totalAvailable = size1 + size2;
-  if (totalAvailable < numSamples) {
-    overflowed_.store(true);
-  }
-
-  const int channelsToCopy = std::min(numChannels, numChannels_);
-
-  if (size1 > 0) {
-    for (int ch = 0; ch < channelsToCopy; ++ch) {
-      if (data[ch] != nullptr) {
-        juce::FloatVectorOperations::copy(buffer_.getWritePointer(ch, start1),
-                                          data[ch], size1);
-      } else {
-        juce::FloatVectorOperations::clear(buffer_.getWritePointer(ch, start1),
-                                           size1);
-      }
-    }
-  }
-
-  if (size2 > 0) {
-    for (int ch = 0; ch < channelsToCopy; ++ch) {
-      if (data[ch] != nullptr) {
-        juce::FloatVectorOperations::copy(buffer_.getWritePointer(ch, start2),
-                                          data[ch] + size1, size2);
-      } else {
-        juce::FloatVectorOperations::clear(buffer_.getWritePointer(ch, start2),
-                                           size2);
-      }
-    }
-  }
-
-  fifo_.finishedWrite(totalAvailable);
-  return totalAvailable;
-}
-
-int AudioRingBuffer::read(juce::AudioBuffer<float> &output, int numSamples) {
-  const int availableToRead = std::min(numSamples, fifo_.getNumReady());
-  if (availableToRead == 0)
-    return 0;
-
-  int start1, size1, start2, size2;
-  fifo_.prepareToRead(availableToRead, start1, size1, start2, size2);
-
-  const int channelsToCopy = std::min(output.getNumChannels(), numChannels_);
-
-  if (output.getNumSamples() < availableToRead) {
-    output.setSize(output.getNumChannels(), availableToRead, false, false,
-                   true);
-  }
-
-  if (size1 > 0) {
-    for (int ch = 0; ch < channelsToCopy; ++ch) {
-      juce::FloatVectorOperations::copy(output.getWritePointer(ch),
-                                        buffer_.getReadPointer(ch, start1),
-                                        size1);
-    }
-  }
-
-  if (size2 > 0) {
-    for (int ch = 0; ch < channelsToCopy; ++ch) {
-      juce::FloatVectorOperations::copy(output.getWritePointer(ch, size1),
-                                        buffer_.getReadPointer(ch, start2),
-                                        size2);
-    }
-  }
-
-  fifo_.finishedRead(availableToRead);
-  return availableToRead;
-}
-
-bool AudioRingBuffer::hasOverflowed(bool reset) {
-  if (reset)
-    return overflowed_.exchange(false);
-  return overflowed_.load();
-}
-
-void AudioRingBuffer::reset() {
-  fifo_.reset();
-  buffer_.clear();
-  overflowed_.store(false);
-}
-
-//==============================================================================
-// RecordingSession Move Operators
-//==============================================================================
-
-RecordingSession::RecordingSession(RecordingSession &&other) noexcept
-    : ringBuffer(std::move(other.ringBuffer)), writer(std::move(other.writer)),
-      file(std::move(other.file)), trackId(std::move(other.trackId)),
-      trackIndex(other.trackIndex), inputChannelStart(other.inputChannelStart),
-      numChannels(other.numChannels),
-      startSamplePosition(other.startSamplePosition),
-      samplesRecorded(other.samplesRecorded.load()),
-      sampleRate(other.sampleRate), isActive(other.isActive.load()) {}
-
-RecordingSession &
-RecordingSession::operator=(RecordingSession &&other) noexcept {
-  if (this != &other) {
-    ringBuffer = std::move(other.ringBuffer);
-    writer = std::move(other.writer);
-    file = std::move(other.file);
-    trackId = std::move(other.trackId);
-    trackIndex = other.trackIndex;
-    inputChannelStart = other.inputChannelStart;
-    numChannels = other.numChannels;
-    startSamplePosition = other.startSamplePosition;
-    samplesRecorded.store(other.samplesRecorded.load());
-    sampleRate = other.sampleRate;
-    isActive.store(other.isActive.load());
-  }
-  return *this;
-}
-
-//==============================================================================
-// AudioRecorder Implementation
-//==============================================================================
-
-AudioRecorder::AudioRecorder() {
-  writerThread_ =
-      std::make_unique<juce::TimeSliceThread>("Audio Recorder Thread");
-  writerThread_->startThread(juce::Thread::Priority::high);
-
-  tempReadBuffer_.setSize(2, kFlushBlockSize);
-
-  // Initialize RCU snapshot
-  updateSessionSnapshot();
-}
-
-AudioRecorder::~AudioRecorder() {
-  // Owner is responsible for stopping recording on message thread before
-  // destruction. We cannot safely call stopRecording (which asserts message
-  // thread) here.
-
-  if (writerThread_) {
-    writerThread_->removeTimeSliceClient(this);
-    writerThread_->stopThread(2000);
-  }
-}
-
-void AudioRecorder::prepare(double sampleRate) { sampleRate_ = sampleRate; }
-
-void AudioRecorder::startRecording(
-    const std::vector<std::shared_ptr<Track>> &tracks,
-    const juce::AudioDeviceManager &deviceManager, juce::int64 startSample,
-    const juce::File &recordingsDir) {
+void AudioRecorder::onLoopCycle() {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-  if (state_.load() != RecordingState::Idle) {
-    DBG("AudioRecorder: Not idle, ignoring start request");
+  if (!isRecording_.load() || !loopRecordingEnabled_.load())
     return;
-  }
 
-  auto *device = deviceManager.getCurrentAudioDevice();
-  const int numInputChannels =
-      device ? device->getActiveInputChannels().countNumberOfSetBits() : 2;
-  const double deviceSampleRate =
-      device ? device->getCurrentSampleRate() : sampleRate_;
+  DBG("AudioRecorder: Loop cycle detected, creating new takes (take " +
+      juce::String(currentTakeNumber_.load() + 1) + ")");
 
-  if (!recordingsDir.exists()) {
-    recordingsDir.createDirectory();
-  }
-
-  sessions_.clear();
-
-  for (size_t i = 0; i < tracks.size(); ++i) {
-    auto &track = tracks[i];
-    if (!track || !track->isArmed())
+  // Finalize current sessions and save results as completed takes
+  for (auto &session : sessions_) {
+    if (!session->isActive.load())
       continue;
 
-    if (track->getType() != Track::Type::Audio &&
-        track->getType() != Track::Type::Instrument) {
-      continue;
+    // Flush remaining data
+    while (session->ringBuffer->getNumReady() > 0) {
+      const int numRead =
+          session->ringBuffer->read(tempReadBuffer_, kFlushBlockSize);
+      if (numRead > 0) {
+        const float *channels[2] = {tempReadBuffer_.getReadPointer(0),
+                                    session->numChannels > 1
+                                        ? tempReadBuffer_.getReadPointer(1)
+                                        : tempReadBuffer_.getReadPointer(0)};
+        session->writer->write(channels, numRead);
+      }
     }
 
-    int inputChannel = track->getInputChannel();
-    int sessionNumChannels = 2;
-    int inputChannelStart = 0;
+    // Finalize writer
+    session->writer.reset();
 
-    if (inputChannel >= 0 && inputChannel < numInputChannels) {
-      sessionNumChannels = 1;
-      inputChannelStart = inputChannel;
-    } else {
-      sessionNumChannels = std::min(2, numInputChannels);
-      inputChannelStart = 0;
-    }
+    // Store as completed take
+    RecordingResult result;
+    result.file = session->file;
+    result.trackIndex = session->trackIndex;
+    result.trackId = session->trackId;
+    result.startSamplePosition = loopStart_.load();
+    result.samplesRecorded = session->samplesRecorded.load();
+    result.sampleRate = session->sampleRate;
+    completedTakes_.push_back(result);
+  }
 
-    juce::File recordFile =
-        createRecordingFile(recordingsDir, track->getName());
+  // Increment take number
+  currentTakeNumber_.fetch_add(1);
+
+  // Create new sessions for next take
+  std::vector<std::shared_ptr<RecordingSession>> newSessions;
+
+  for (auto &oldSession : sessions_) {
+    // Create new file for this take
+    juce::String trackName = "Track_" + juce::String(oldSession->trackIndex);
+    juce::File recordFile = createRecordingFile(
+        recordingsDir_,
+        trackName + "_Take" + juce::String(currentTakeNumber_.load()));
     auto fileStream = std::make_unique<juce::FileOutputStream>(recordFile);
 
     if (!fileStream->openedOk()) {
-      DBG("AudioRecorder: Failed to create file: " +
+      DBG("AudioRecorder: Failed to create file for new take: " +
           recordFile.getFullPathName());
       continue;
     }
 
     juce::WavAudioFormat wavFormat;
-
-    // Move to generic OutputStream unique_ptr for the new API
-    std::unique_ptr<juce::OutputStream> outputStream = std::move(fileStream);
-
-    auto writerOptions = juce::AudioFormatWriter::Options()
-        .withSampleRate(deviceSampleRate)
-        .withNumChannels(static_cast<int>(sessionNumChannels))
-        .withBitsPerSample(constants::kRecordingBitDepth);
-
-    std::unique_ptr<juce::AudioFormatWriter> baseWriter = 
-        wavFormat.createWriterFor(outputStream, writerOptions);
+    std::unique_ptr<juce::AudioFormatWriter> baseWriter(
+        wavFormat.createWriterFor(
+            fileStream.release(), oldSession->sampleRate,
+            static_cast<unsigned int>(oldSession->numChannels),
+            constants::kRecordingBitDepth, {}, 0));
 
     if (!baseWriter)
       continue;
@@ -250,49 +78,25 @@ void AudioRecorder::startRecording(
             constants::kAudioWriterFifoSize);
 
     auto session = std::make_shared<RecordingSession>();
-    session->ringBuffer = std::make_unique<AudioRingBuffer>(sessionNumChannels);
+    session->ringBuffer =
+        std::make_unique<AudioRingBuffer>(oldSession->numChannels);
     session->writer = std::move(threadedWriter);
     session->file = recordFile;
-    session->trackId = track->getTrackId();
-    session->trackIndex = static_cast<int>(i);
-    session->inputChannelStart = inputChannelStart;
-    session->numChannels = sessionNumChannels;
-    session->startSamplePosition = startSample;
+    session->trackId = oldSession->trackId;
+    session->trackIndex = oldSession->trackIndex;
+    session->inputChannelStart = oldSession->inputChannelStart;
+    session->numChannels = oldSession->numChannels;
+    session->startSamplePosition = loopStart_.load();
     session->samplesRecorded.store(0);
-    session->sampleRate = deviceSampleRate;
+    session->sampleRate = oldSession->sampleRate;
     session->isActive.store(true);
 
-    sessions_.push_back(session);
-
-    DBG("AudioRecorder: Started recording for track '" + track->getName() +
-        "'");
+    newSessions.push_back(session);
   }
 
-  // Update snapshot for audio thread
+  // Replace sessions
+  sessions_ = std::move(newSessions);
   updateSessionSnapshot();
-
-  if (!sessions_.empty()) {
-    writerThread_->addTimeSliceClient(this);
-    state_.store(RecordingState::Recording);
-  }
-}
-
-void AudioRecorder::stopRecording(std::function<void(std::vector<RecordingResult>)> completionCallback) {
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-
-  if (state_.load() != RecordingState::Recording) {
-    if (completionCallback)
-      completionCallback({});
-    return;
-  }
-
-  completionCallback_ = std::move(completionCallback);
-  state_.store(RecordingState::Finalizing);
-
-  // Notify writer thread to finalize
-  if (writerThread_) {
-    writerThread_->notify();
-  }
 }
 
 void AudioRecorder::updateSessionSnapshot() {
