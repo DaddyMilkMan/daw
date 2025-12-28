@@ -85,6 +85,13 @@ target_sources(ZenithDAW PRIVATE
 )
 
 # -----------------------------------------------------------------------------
+# AI Views
+# -----------------------------------------------------------------------------
+target_sources(ZenithDAW PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/views/AIMixAssistantView.cpp
+)
+
+# -----------------------------------------------------------------------------
 # Browser Panel
 # -----------------------------------------------------------------------------
 target_sources(ZenithDAW PRIVATE
@@ -121,6 +128,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/common/MenuBar.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/ZenithHubComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/WingmanPanel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/AIAssistantPanel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/MacroToolbar.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/AudioFeedback.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/dialogs/SettingsComponent.cpp

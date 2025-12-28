@@ -610,7 +610,9 @@ private:
   //==========================================================================
 
   // Moved to public
+  void createDefaultState();
   juce::ValueTree findTrackInternal(const juce::String &trackId) const;
+
 
   juce::ValueTree findNote(const juce::String &trackId,
                            const juce::String &clipId,
