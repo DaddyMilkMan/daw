@@ -144,11 +144,8 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/engine/Metronome.cpp
     apps/desktop/Source/engine/AudioTrack.cpp
     apps/desktop/Source/engine/MIDITrack.cpp
-<<<<<<< HEAD
-=======
     apps/desktop/Source/engine/InstrumentTrack.cpp
     apps/desktop/Source/plugins/modulation/ZenithTremolo.cpp
->>>>>>> origin/master
     # Instruments
     apps/desktop/Source/instruments/Instrument.cpp
     apps/desktop/Source/instruments/InstrumentRegistry.cpp
@@ -173,10 +170,6 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/ai/UXDirectorAgent.cpp
     apps/desktop/Source/ai/ProjectRefactorerAgent.cpp
     apps/desktop/Source/ai/PresetGeneticistAgent.cpp
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/master
     apps/desktop/Source/engine/ClipTrack.cpp
     apps/desktop/Source/engine/AuxBusTrack.cpp
     apps/desktop/Source/engine/ClipStateManager.cpp

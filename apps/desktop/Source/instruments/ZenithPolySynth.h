@@ -172,7 +172,6 @@ public:
 
 private:
   juce::SpinLock voiceLock_;
-  mutable juce::SpinLock modMatrixLock_;
   juce::MPESynthesiser synthesiser_;
   std::atomic<double> currentBpm_{120.0};
   juce::AudioProcessorValueTreeState parameters_;
@@ -185,6 +184,7 @@ private:
 
   // Modulation Matrix Storage (Global for UI, applied to voices)
   std::array<ModulationSlot, 64> globalModMatrix_;
+  mutable juce::SpinLock modMatrixLock_;
 
   // Visualizer Buffer
   juce::AbstractFifo visualizerFifo_{4096};
