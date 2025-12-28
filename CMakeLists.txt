@@ -313,9 +313,12 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/ui/common/ZenithHubComponent.cpp
     apps/desktop/Source/ai/ZenithStyleApplicator.cpp
     apps/desktop/Source/network/SecureKeyStore.cpp
+<<<<<<< HEAD
+=======
     apps/desktop/Source/network/AuthenticationService.cpp
     apps/desktop/Source/ui/common/LoginComponent.cpp
     apps/desktop/Source/platform/linux/network/SecureKeyStore_Linux.cpp
+>>>>>>> origin/master
     apps/desktop/Source/ui/panels/PresetBrowserComponent.cpp
 
     apps/desktop/Source/effects/ConsoleEmulation.cpp
@@ -358,6 +361,7 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/ai/AIStatusManager.cpp
     apps/desktop/Source/ai/AudioFitnessEvaluator.cpp
     apps/desktop/Source/platform/linux/engine/PlatformAudioUtils_Linux.cpp
+    apps/desktop/Source/platform/linux/network/SecureKeyStore_Linux.cpp
     apps/desktop/Source/network/GrokUtils.cpp
 
     apps/desktop/Source/network/GrokDAWController.cpp

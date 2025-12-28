@@ -28,6 +28,69 @@ Clip::Clip() : midiSequence_(std::make_shared<juce::MidiMessageSequence>()), fad
 
 Clip::~Clip() { releaseResources(); }
 
+// Move Constructor
+Clip::Clip(Clip &&other) noexcept
+    : clipName(std::move(other.clipName)),
+      clipType(other.clipType),
+      startPosition(other.startPosition.load()),
+      clipLength(other.clipLength.load()),
+      clipOffset(other.clipOffset.load()),
+      transportPosition(other.transportPosition.load()),
+      fadeInLength(other.fadeInLength.load()),
+      fadeOutLength(other.fadeOutLength.load()),
+      gain(other.gain.load()),
+      playing(other.playing.load()),
+      looping(other.looping.load()),
+      mute(other.mute.load()),
+      solo(other.solo.load()),
+      clipColor(other.clipColor),
+      audioFile(std::move(other.audioFile)),
+      audioBuffer(std::move(other.audioBuffer)),
+      audioSource(std::move(other.audioSource)),
+      audioFileHandle_(std::move(other.audioFileHandle_)),
+      midiSequence_(std::move(other.midiSequence_)),
+      playbackRate_(other.playbackRate_.load()),
+      preservePitch_(other.preservePitch_.load()),
+      wsolaWindow_(std::move(other.wsolaWindow_)),
+      wsolaOutputBuffer_(std::move(other.wsolaOutputBuffer_)) {
+}
+
+// Move Assignment Operator
+Clip &Clip::operator=(Clip &&other) noexcept {
+  if (this == &other)
+    return *this;
+
+  clipName = std::move(other.clipName);
+  clipType = other.clipType;
+  startPosition.store(other.startPosition.load());
+  clipLength.store(other.clipLength.load());
+  clipOffset.store(other.clipOffset.load());
+  transportPosition.store(other.transportPosition.load());
+  fadeInLength.store(other.fadeInLength.load());
+  fadeOutLength.store(other.fadeOutLength.load());
+  gain.store(other.gain.load());
+  playing.store(other.playing.load());
+  looping.store(other.looping.load());
+  mute.store(other.mute.load());
+  solo.store(other.solo.load());
+  clipColor = other.clipColor;
+
+  audioFile = std::move(other.audioFile);
+  audioFileHandle_ = std::move(other.audioFileHandle_);
+  midiSequence_ = std::move(other.midiSequence_);
+
+  // Handover audio buffer (Efficient move)
+  audioBuffer = std::move(other.audioBuffer);
+  audioSource = std::move(other.audioSource);
+
+  playbackRate_.store(other.playbackRate_.load());
+  preservePitch_.store(other.preservePitch_.load());
+  wsolaWindow_ = std::move(other.wsolaWindow_);
+  wsolaOutputBuffer_ = std::move(other.wsolaOutputBuffer_);
+
+  return *this;
+}
+
 //==============================================================================
 void Clip::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
   // Roast Fix #5: Validate buffer size parameters
