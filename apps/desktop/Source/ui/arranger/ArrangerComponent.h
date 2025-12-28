@@ -37,8 +37,10 @@ class BrowserDragData;
 }
 
 namespace zenith {
+class CommandAPI;
 
 // Forward declarations for helper classes
+
 class ArrangerGridUtils;
 class ArrangerClipManager;
 class ArrangerInputHandler;
@@ -73,9 +75,12 @@ public:
   /**
    * @brief Construct arranger component
    * @param engine Reference to the audio engine
+   * @param engine Reference to the audio engine
    * @param ps Reference to the project state
+   * @param api Reference to the command API
    */
-  ArrangerComponent(Engine &engine, ProjectState &ps);
+  ArrangerComponent(Engine &engine, ProjectState &ps, CommandAPI &api);
+
 
   ~ArrangerComponent() override;
 
@@ -161,7 +166,10 @@ public:
 
   void timerCallback() override;
 
+  CommandAPI& getCommandAPI() { return commandAPI; }
+
 private:
+
   // Allow helper classes to access private members
   friend class ArrangerGridUtils;
   friend class ArrangerClipManager;
@@ -175,8 +183,11 @@ private:
   //==========================================================================
 
   std::unique_ptr<GridResolutionDropdown> gridDropdown;
+
   Engine &engine_;
   ProjectState &projectState;
+  CommandAPI &commandAPI;
+
 
   //==========================================================================
   // Helper Module Objects

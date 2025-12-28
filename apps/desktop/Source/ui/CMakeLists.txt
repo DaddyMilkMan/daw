@@ -56,8 +56,8 @@ target_sources(ZenithDAW PRIVATE
 target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/mixer/MixerComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/mixer/MixerChannelComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/mixer/MixerView.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/mixer/PluginBrowser.cpp
+
 )
 
 # -----------------------------------------------------------------------------
@@ -80,7 +80,7 @@ target_sources(ZenithDAW PRIVATE
 # Session View
 # -----------------------------------------------------------------------------
 target_sources(ZenithDAW PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/session/SessionViewComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/views/SessionViewComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/session/DrumPadComponent.cpp
 )
 
@@ -88,17 +88,17 @@ target_sources(ZenithDAW PRIVATE
 # Browser Panel
 # -----------------------------------------------------------------------------
 target_sources(ZenithDAW PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/browser/BrowserPanel.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/browser/BrowserWaveformLoader.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/browser/BrowserFilterBar.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/browser/BrowserSearchBar.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/browser/BrowserListView.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/browser/BrowserPreviewPanel.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/browser/BrowserHoverPreview.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/browser/BrowserRecentSidebar.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/browser/PluginBrowserComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/browser/PresetBrowserComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/browser/InstrumentBrowserPanel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/BrowserPanel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/BrowserWaveformLoader.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/BrowserFilterBar.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/BrowserSearchBar.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/BrowserListView.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/BrowserPreviewPanel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/BrowserHoverPreview.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/BrowserRecentSidebar.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/PluginBrowserComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/PresetBrowserComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/InstrumentBrowserPanel.cpp
 )
 
 # -----------------------------------------------------------------------------

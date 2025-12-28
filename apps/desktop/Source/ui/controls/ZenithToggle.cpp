@@ -13,10 +13,8 @@
 #include "ZenithToggle.h"
 
 #ifdef ZENITH_USE_SKIA
-#include <core/SkBlurTypes.h>
-#include <core/SkFont.h>
+#include "ZenithSkia.h"
 #include <core/SkPath.h>
-#include <core/SkRRect.h>
 #endif
 
 namespace zenith {

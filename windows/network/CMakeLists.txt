@@ -1,0 +1,1 @@
+target_sources(ZenithDAW PRIVATE SecureKeyStore_Windows.cpp)

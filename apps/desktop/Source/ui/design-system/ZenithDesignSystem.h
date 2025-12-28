@@ -552,6 +552,7 @@ constexpr int DURATION_NORMAL = 200;
 constexpr int DURATION_SLOW = 300;
 constexpr int DURATION_SLOWER = 500;
 
+
 // Easing curves (for reference, actual implementation in animation system)
 // - ease-in: slow start, fast end
 // - ease-out: fast start, slow end
@@ -564,7 +565,164 @@ constexpr int FPS_HIGH = 120;
 constexpr float FRAME_TIME_60FPS = 16.67f; // milliseconds
 constexpr float FRAME_TIME_120FPS = 8.33f; // milliseconds
 
+enum class Curve {
+  Linear,
+  EaseInQuad,
+  EaseOutQuad,
+  EaseInOutQuad,
+  EaseInCubic,
+  EaseOutCubic,
+  EaseInOutCubic,
+  Spring
+};
+
+class Animator : private juce::Timer {
+public:
+  static Animator& getInstance() {
+      static Animator instance;
+      return instance;
+  }
+
+  using UpdateCallback = std::function<void(float)>;
+  using CompleteCallback = std::function<void()>;
+
+  struct Animation {
+      juce::Identifier id;
+      float startValue;
+      float endValue;
+      float durationMs;
+      float startTimeMs;
+      Curve curve;
+      UpdateCallback onUpdate;
+      CompleteCallback onComplete;
+      bool isRunning = true;
+  };
+
+  void animate(const juce::String& idStr, float start, float end, float durationMs, Curve curve, UpdateCallback update, CompleteCallback complete = nullptr) {
+      juce::Identifier id(idStr);
+      juce::ScopedLock lock(mutex_);
+      
+      // Remove existing animation with same ID
+      // Optimization: No string allocations here
+      activeAnimations_.erase(std::remove_if(activeAnimations_.begin(), activeAnimations_.end(),
+          [&](const Animation& a) { return a.id == id; }), activeAnimations_.end());
+
+      Animation anim;
+      anim.id = id;
+      anim.startValue = start;
+      anim.endValue = end;
+      anim.durationMs = durationMs;
+      anim.startTimeMs = (float)juce::Time::getMillisecondCounterHiRes();
+      anim.curve = curve;
+      anim.onUpdate = update;
+      anim.onComplete = complete;
+
+      activeAnimations_.push_back(std::move(anim));
+      
+      // Trigger first frame immediately
+      // Note: We deliberately call this under lock to ensure state consistency 
+      // for the initial value, matching previous behavior but aware of the risk.
+      // For the first frame, it's safer than deferring.
+      if (update) update(start);
+
+      if (!isTimerRunning()) startTimerHz(60); // Target 60 FPS
+  }
+
+  void cancel(const juce::String& idStr) {
+      juce::Identifier id(idStr);
+      juce::ScopedLock lock(mutex_);
+      activeAnimations_.erase(std::remove_if(activeAnimations_.begin(), activeAnimations_.end(),
+          [&](const Animation& a) { return a.id == id; }), activeAnimations_.end());
+      
+      if (activeAnimations_.empty()) stopTimer();
+  }
+
+  // Easing Functions
+  static float applyCurve(float t, Curve curve) {
+      t = juce::jlimit(0.0f, 1.0f, t);
+      switch (curve) {
+          case Curve::Linear: return t;
+          case Curve::EaseInQuad: return t * t;
+          case Curve::EaseOutQuad: return t * (2.0f - t);
+          case Curve::EaseInOutQuad: return t < 0.5f ? 2.0f * t * t : -1.0f + (4.0f - 2.0f * t) * t;
+          case Curve::EaseInCubic: return t * t * t;
+          case Curve::EaseOutCubic: return (--t) * t * t + 1.0f;
+          case Curve::EaseInOutCubic: return t < 0.5f ? 4.0f * t * t * t : (t - 1.0f) * (2.0f * t - 2.0f) * (2.0f * t - 2.0f) + 1.0f;
+          case Curve::Spring: {
+              // Simple spring-like overshoot
+              const float c4 = (2.0f * juce::MathConstants<float>::pi) / 3.0f;
+              return t == 0.0f ? 0.0f : t == 1.0f ? 1.0f : std::pow(2.0f, -10.0f * t) * std::sin((t * 10.0f - 0.75f) * c4) + 1.0f;
+          }
+          default: return t;
+      }
+  }
+
+private:
+  Animator() {}
+  
+  // Timer callback
+  void timerCallback() override {
+      std::vector<Animation> processingList;
+      
+      // 1. Snapshot active animations
+      {
+          juce::ScopedLock lock(mutex_);
+          if (activeAnimations_.empty()) {
+              stopTimer();
+              return;
+          }
+          processingList = activeAnimations_;
+      }
+
+      float currentTime = (float)juce::Time::getMillisecondCounterHiRes();
+      std::vector<juce::Identifier> finishedIds;
+
+      // 2. Process updates without holding the lock
+      for (auto& anim : processingList) {
+          float elapsed = currentTime - anim.startTimeMs;
+          float t = elapsed / anim.durationMs;
+          bool finished = t >= 1.0f;
+
+          if (finished) t = 1.0f;
+
+          float curvedT = applyCurve(t, anim.curve);
+          float currentValue = anim.startValue + (anim.endValue - anim.startValue) * curvedT;
+
+          if (anim.onUpdate) anim.onUpdate(currentValue);
+
+          if (finished) {
+              if (anim.onComplete) anim.onComplete();
+              finishedIds.push_back(anim.id);
+          }
+      }
+
+      // 3. Cleanup finished animations
+      if (!finishedIds.empty()) {
+          juce::ScopedLock lock(mutex_);
+          activeAnimations_.erase(std::remove_if(activeAnimations_.begin(), activeAnimations_.end(),
+              [&](const Animation& a) {
+                  for (const auto& id : finishedIds) {
+                      if (a.id == id) {
+                          // Double check if time also matches to ensure we don't delete re-triggered animation
+                          // This is a heuristic: if start time is significantly different, it's a new one.
+                          // But 'a' in activeAnimations_ might be the *same* instance copy if not re-triggered.
+                          // If re-triggered, 'a' would have a newer startTime.
+                          return a.startTimeMs < currentTime; 
+                      }
+                  }
+                  return false;
+              }), activeAnimations_.end());
+          
+          if (activeAnimations_.empty()) stopTimer();
+      }
+  }
+
+  std::vector<Animation> activeAnimations_;
+  juce::CriticalSection mutex_;
+};
+
 } // namespace animation
+
 
 // ============================================================================
 // Z-INDEX - "Layering System"

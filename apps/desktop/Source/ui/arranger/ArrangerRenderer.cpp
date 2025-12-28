@@ -16,14 +16,8 @@
 #include "ZenithDesignSystem.h"
 
 // Skia Includes
-#include <core/SkBlurTypes.h>
-#include <core/SkCanvas.h>
-#include <core/SkColor.h>
-#include <core/SkFont.h>
+#include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
-#include <core/SkPaint.h>
-#include <core/SkRRect.h>
-#include <core/SkRect.h>
 #include <core/SkSpan.h>
 #include <effects/SkDashPathEffect.h>
 #include <effects/SkGradientShader.h>
@@ -75,8 +69,8 @@ void ArrangerRenderer::drawSkia(SkCanvas* canvas) {
     float width = static_cast<float>(bounds.getWidth());
     float height = static_cast<float>(bounds.getHeight());
 
-    // 1. Background
-    drawBackground(canvas, width, height);
+    // 1. Background (handled by ArrangerComponent now to ensure proper layering)
+    // drawBackground(canvas, width, height);
     
     // 2. Grid & Timeline
     drawGrid(canvas, width, height);

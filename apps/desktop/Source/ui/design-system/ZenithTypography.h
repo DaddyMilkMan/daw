@@ -11,7 +11,8 @@ public:
     }
     
     static juce::Font getBodyFont() { 
-        return juce::Font(14.0f); 
+        return juce::Font(14.0f, juce::Font::plain); 
+
     }
 };
 } // namespace zenith

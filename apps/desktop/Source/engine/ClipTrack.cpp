@@ -42,7 +42,8 @@ void ClipTrack::updateClipSnapshot() {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     
     // Create new snapshot
-    auto newSnapshot = std::make_shared<ClipSnapshot>(clipsOwned_);
+    auto newSnapshot = std::make_shared<ClipSnapshot>(clipsOwned_, takeFoldersOwned_);
+
     
     // Swap atomically
     activeClipSnapshot_.store(newSnapshot.get(), std::memory_order_release);

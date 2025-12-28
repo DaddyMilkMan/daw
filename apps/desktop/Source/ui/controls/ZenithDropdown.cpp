@@ -14,11 +14,9 @@
 #include "SkiaPopupMenu.h"
 
 #ifdef ZENITH_USE_SKIA
-#include <core/SkBlurTypes.h>
-#include <core/SkFont.h>
+#include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
 #include <core/SkPath.h>
-#include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
 #endif
 

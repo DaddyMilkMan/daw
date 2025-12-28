@@ -18,10 +18,7 @@
 #include "SkiaComponent.h"
 
 #ifdef ZENITH_USE_SKIA
-#include <core/SkCanvas.h>
-#include <core/SkPaint.h>
-#include <core/SkRRect.h>
-#include <core/SkColor.h>
+#include "ZenithSkia.h"
 #endif
 
 namespace zenith {
