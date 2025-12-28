@@ -51,7 +51,7 @@ void GrokAPIClient::analysisWorker() {
             auto result = performAnalysis(request);
             
             // Cache result
-            cacheAnalysis(generateCacheKey(request.trackName, request.audio, request.sampleRate), result);
+            cacheAnalysis(generateCacheKey(request.trackName, *request.audio, request.sampleRate), result);
             
         } catch (const std::exception& e) {
             DBG("Analysis failed: " << e.what());
@@ -79,7 +79,7 @@ void GrokAPIClient::analyzeAudioAsync(const AnalysisRequest& request,
                                      std::function<void(AnalysisResult)> onComplete,
                                      std::function<void(juce::String)> onError) {
     // Check cache first
-    juce::String cacheKey = generateCacheKey(request.trackName, request.audio, request.sampleRate);
+    juce::String cacheKey = generateCacheKey(request.trackName, *request.audio, request.sampleRate);
     AnalysisResult cachedResult;
     
     if (!request.forceReanalysis && getCachedAnalysis(cacheKey, cachedResult)) {
@@ -124,7 +124,7 @@ GrokAPIClient::AnalysisResult GrokAPIClient::getAnalysis(const juce::String& tra
                                         const juce::AudioBuffer<float>& audio,
                                         double sampleRate) {
     AnalysisRequest request;
-    request.audio = audio;
+    request.audio = std::make_shared<juce::AudioBuffer<float>>(audio);
     request.sampleRate = sampleRate;
     request.trackName = trackName;
     request.forceReanalysis = false;
@@ -145,10 +145,10 @@ GrokAPIClient::AnalysisResult GrokAPIClient::performAnalysis(const AnalysisReque
     
     try {
         // Visual analysis
-        result.visualAnalysis = visualAnalyzer->analyzeAudio(request.audio, request.sampleRate);
+        result.visualAnalysis = visualAnalyzer->analyzeAudio(*request.audio, request.sampleRate);
         
         // Genre detection
-        result.genrePrediction = genreDetector->detectGenre(request.audio, request.sampleRate);
+        result.genrePrediction = genreDetector->detectGenre(*request.audio, request.sampleRate);
         
         // Project context (if available)
         if (projectContext) {
@@ -156,7 +156,7 @@ GrokAPIClient::AnalysisResult GrokAPIClient::performAnalysis(const AnalysisReque
             
             // Creative analysis
             result.creativeInsight = creativePartner->analyzeCreatively(
-                request.audio, *projectContext, result.genrePrediction);
+                *request.audio, *projectContext, result.genrePrediction);
             
             // Generate contextual description
             result.contextualDescription = "Track: " + request.trackName + "\n";
@@ -293,18 +293,19 @@ void GrokAPIClient::cleanupCache() {
 juce::String GrokAPIClient::generateCacheKey(const juce::String& trackName, 
                                             const juce::AudioBuffer<float>& audio,
                                             double sampleRate) {
-    // Create hash from track name, audio hash, and sample rate
+    // Create hash from track name, audio content hash, and sample rate
     juce::String key = trackName;
     
-    // Simple audio hash (sum of samples)
-    float audioHash = 0.0f;
+    // Robust audio hashing using SHA256
+    juce::MemoryBlock audioData;
     for (int ch = 0; ch < audio.getNumChannels(); ++ch) {
-        for (int i = 0; i < audio.getNumSamples(); ++i) {
-            audioHash += audio.getSample(ch, i);
-        }
+        audioData.append(audio.getReadPointer(ch), static_cast<size_t>(audio.getNumSamples()) * sizeof(float));
     }
     
-    key += "_" + juce::String(audioHash, 0) + "_" + juce::String(sampleRate, 0);
+    juce::SHA256 audioHasher(audioData.getData(), audioData.getSize());
+    juce::String audioHash = audioHasher.toHexString();
+    
+    key += "_" + audioHash + "_" + juce::String(sampleRate, 0);
     return key;
 }
 

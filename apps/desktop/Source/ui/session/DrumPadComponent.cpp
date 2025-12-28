@@ -17,25 +17,27 @@ namespace zenith {
 DrumPadComponent::DrumPadComponent(zenith::Engine &eng,
                                    zenith::ProjectState &state)
     : projectState(state), engine(eng) {
+  setAccessible(true);
+  font = design::getSkFont(kPadFontSize, design::FontWeight::Medium);
+
   pads.resize(kNumPads);
+  const std::array<uint32_t, 4> padColors = {
+      design::colors::NEON_PINK,   // Kicks/Bases
+      design::colors::CYAN,        // Snares/Claps
+      design::colors::NEON_YELLOW, // Hats
+      design::colors::NEON_PURPLE  // Percs
+  };
+
   for (int i = 0; i < kNumPads; ++i) {
     pads[i].noteNumber = baseNote + i;
     pads[i].name =
         juce::MidiMessage::getMidiNoteName(pads[i].noteNumber, true, true, 3);
     pads[i].steps.resize(kSequencerSteps, false);
-
-    // Cycle colors for visual distinctness
-    if (i % 4 == 0)
-      pads[i].color = juce::Colour(design::colors::NEON_PINK); // Kicks/Bases
-    else if (i % 4 == 1)
-      pads[i].color = juce::Colour(design::colors::NEON_CYAN); // Snares/Claps
-    else if (i % 4 == 2)
-      pads[i].color = juce::Colour(design::colors::NEON_YELLOW); // Hats
-    else
-      pads[i].color = juce::Colour(design::colors::NEON_PURPLE); // Percs
+    pads[i].color = juce::Colour(padColors[i % 4]);
   }
 
-  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60); // Animation loop at 60fps
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr)
+    startTimerHz(60); // Animation loop at 60fps (will auto-stop when idle)
 }
 
 DrumPadComponent::~DrumPadComponent() {
@@ -120,11 +122,9 @@ void DrumPadComponent::resized() {
 
 void DrumPadComponent::updatePadLayout() {
   auto b = getLocalBounds().toFloat();
-  float margin = 10.0f;
-  float gap = 8.0f;
 
-  float availableWidth = b.getWidth() - 2 * margin - (kCols - 1) * gap;
-  float availableHeight = b.getHeight() - 2 * margin - (kRows - 1) * gap;
+  float availableWidth = b.getWidth() - 2 * kMargin - (kCols - 1) * kGap;
+  float availableHeight = b.getHeight() - 2 * kMargin - (kRows - 1) * kGap;
 
   float padWidth = availableWidth / kCols;
   float padHeight = availableHeight / kRows;
@@ -135,17 +135,16 @@ void DrumPadComponent::updatePadLayout() {
       if (i >= kNumPads)
         break;
 
-      float x = margin + col * (padWidth + gap);
-      float y = margin + row * (padHeight + gap);
+      float x = kMargin + col * (padWidth + kGap);
+      float y = kMargin + row * (padHeight + kGap);
 
-      // The main pad takes upper 80% of the cell
-      float mainPadH = padHeight * 0.75f;
-      float seqH = padHeight * 0.20f;
-      // 5% gap internal
+      // The main pad takes upper portion of the cell
+      float mainPadH = padHeight * kPadHeightRatio;
+      float seqH = padHeight * kSequencerHeightRatio;
 
       pads[i].padBounds = juce::Rectangle<float>(x, y, padWidth, mainPadH);
       pads[i].sequencerBounds = juce::Rectangle<float>(
-          x, y + mainPadH + (padHeight * 0.05f), padWidth, seqH);
+          x, y + mainPadH + (padHeight * kInternalGapRatio), padWidth, seqH);
 
       // Calculate step bounds
       pads[i].stepBounds.resize(kSequencerSteps);
@@ -168,7 +167,10 @@ void DrumPadComponent::drawSkia(SkCanvas *canvas) {
   SkPaint paint;
   paint.setAntiAlias(true);
 
-  for (const auto &pad : pads) {
+  const bool hasFocus = hasKeyboardFocus(true);
+
+  for (size_t padIdx = 0; padIdx < pads.size(); ++padIdx) {
+    const auto &pad = pads[padIdx];
     // --- Draw Pad ---
     SkRect padRect =
         SkRect::MakeXYWH(pad.padBounds.getX(), pad.padBounds.getY(),
@@ -193,7 +195,8 @@ void DrumPadComponent::drawSkia(SkCanvas *canvas) {
     // Pad body
     paint.setStyle(SkPaint::kFill_Style);
     paint.setColor(SkColorSetA(baseColor, 100)); // Semi-transparent body
-    canvas->drawRoundRect(padRect, 8.0f, 8.0f, paint);
+    canvas->drawRoundRect(padRect, kDefaultCornerRadius, kDefaultCornerRadius,
+                          paint);
 
     // Border / Glow
     paint.setStyle(SkPaint::kStroke_Style);
@@ -204,17 +207,26 @@ void DrumPadComponent::drawSkia(SkCanvas *canvas) {
     if (pad.flashLevel > 0.1f) {
       paint.setMaskFilter(
           SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 10.0f * pad.flashLevel));
-      canvas->drawRoundRect(padRect, 8.0f, 8.0f, paint);
+      canvas->drawRoundRect(padRect, kDefaultCornerRadius, kDefaultCornerRadius,
+                            paint);
       paint.setMaskFilter(nullptr); // clear filter
     }
-    canvas->drawRoundRect(padRect, 8.0f, 8.0f, paint);
+    canvas->drawRoundRect(padRect, kDefaultCornerRadius, kDefaultCornerRadius,
+                          paint);
+
+    // Focus Indicator (WCAG 2.1 AA - 2px minimum, 3:1 contrast)
+    if (hasFocus && static_cast<int>(padIdx) == focusedPadIndex) {
+      SkPaint focusPaint;
+      focusPaint.setAntiAlias(true);
+      focusPaint.setStyle(SkPaint::kStroke_Style);
+      focusPaint.setStrokeWidth(3.0f); // WCAG: minimum 2px, using 3px for visibility
+      focusPaint.setColor(design::colors::NEON_GREEN); // High contrast focus color
+      SkRect focusRect = padRect.makeInset(-2.0f, -2.0f); // Outset for focus ring
+      canvas->drawRoundRect(focusRect, kDefaultCornerRadius + 2.0f,
+                            kDefaultCornerRadius + 2.0f, focusPaint);
+    }
 
     // Text Label
-    // Using built-in font for now, ideally use Zenith typography
-    SkFont font;
-    font.setSize(16.0f);
-    font.setSubpixel(true);
-
     paint.setStyle(SkPaint::kFill_Style);
     paint.setColor(SK_ColorWHITE);
 
@@ -256,7 +268,8 @@ void DrumPadComponent::drawSkia(SkCanvas *canvas) {
           paint.setColor(SkColorSetA(SK_ColorWHITE, 50));
       }
 
-      canvas->drawRoundRect(stepRect, 2.0f, 2.0f, paint);
+      canvas->drawRoundRect(stepRect, kStepCornerRadius, kStepCornerRadius,
+                            paint);
     }
   }
 }
@@ -291,11 +304,18 @@ void DrumPadComponent::mouseDrag(const juce::MouseEvent &e) {
 
 //==============================================================================
 void DrumPadComponent::hitPad(int index, float velocity) {
+  // Ensure UI thread access for track lookup
+  jassert(juce::MessageManager::getInstanceWithoutCreating()->isThisTheMessageThread());
+
   if (index < 0 || index >= kNumPads)
     return;
 
   // Animation
   pads[index].flashLevel = 1.0f;
+
+  // Restart timer if it was stopped (optimization)
+  if (!isTimerRunning())
+    startTimerHz(60);
 
   // Calculate MIDI velocity (0-127) from 0.0-1.0 hit intensity
   const int midiVelocity = juce::jlimit(0, 127, static_cast<int>(velocity * 127.0f));
@@ -490,11 +510,104 @@ void DrumPadComponent::updateAnimations() {
 
   if (needsUpdate)
     repaint();
+  else
+    stopTimer(); // Stop timer when all animations are complete (optimization)
 }
 
 void DrumPadComponent::timerCallback() {
   SkiaComponent::timerCallback();
   updateAnimations();
+}
+
+//==============================================================================
+// Keyboard Navigation & Focus
+//==============================================================================
+
+bool DrumPadComponent::keyPressed(const juce::KeyPress &key) {
+  // Arrow key navigation
+  if (key == juce::KeyPress::leftKey) {
+    focusedPadIndex = (focusedPadIndex - 1 + kNumPads) % kNumPads;
+    repaint();
+    return true;
+  }
+  if (key == juce::KeyPress::rightKey) {
+    focusedPadIndex = (focusedPadIndex + 1) % kNumPads;
+    repaint();
+    return true;
+  }
+  if (key == juce::KeyPress::upKey) {
+    focusedPadIndex = (focusedPadIndex - kCols + kNumPads) % kNumPads;
+    repaint();
+    return true;
+  }
+  if (key == juce::KeyPress::downKey) {
+    focusedPadIndex = (focusedPadIndex + kCols) % kNumPads;
+    repaint();
+    return true;
+  }
+
+  // Enter/Space to trigger focused pad
+  if (key == juce::KeyPress::returnKey || key == juce::KeyPress::spaceKey) {
+    hitPad(focusedPadIndex, 1.0f);
+    return true;
+  }
+
+  // Number keys 1-9, 0 for pads 1-10
+  if (key.getTextCharacter() >= '1' && key.getTextCharacter() <= '9') {
+    int padIdx = key.getTextCharacter() - '1';
+    if (padIdx < kNumPads) {
+      focusedPadIndex = padIdx;
+      hitPad(padIdx, 1.0f);
+      return true;
+    }
+  }
+  if (key.getTextCharacter() == '0') {
+    focusedPadIndex = 9;
+    hitPad(9, 1.0f);
+    return true;
+  }
+
+  return false;
+}
+
+void DrumPadComponent::focusGained(FocusChangeType cause) {
+  juce::ignoreUnused(cause);
+  repaint(); // Redraw to show focus indicator
+}
+
+void DrumPadComponent::focusLost(FocusChangeType cause) {
+  juce::ignoreUnused(cause);
+  repaint(); // Redraw to hide focus indicator
+}
+
+//==============================================================================
+// Accessibility Handler
+//==============================================================================
+
+class DrumPadAccessibilityHandler : public juce::AccessibilityHandler {
+public:
+  DrumPadAccessibilityHandler(DrumPadComponent &c)
+      : juce::AccessibilityHandler(
+            c, juce::AccessibilityRole::group,
+            juce::AccessibilityActions{}
+                .addAction(juce::AccessibilityActionType::focus,
+                           [&c] { c.grabKeyboardFocus(); })),
+        component(c) {}
+
+  juce::String getTitle() const override { return "Drum Pads"; }
+
+  juce::String getHelp() const override {
+    return "16 velocity-sensitive pads. Use arrow keys to navigate, "
+           "Enter/Space to trigger.";
+  }
+
+private:
+  DrumPadComponent &component;
+};
+
+std::unique_ptr<juce::AccessibilityHandler>
+DrumPadComponent::createAccessibilityHandler() {
+  return std::make_unique<DrumPadAccessibilityHandler>(*this);
 }
 
 } // namespace zenith

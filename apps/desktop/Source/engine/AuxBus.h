@@ -75,9 +75,14 @@ public:
   // Direct buffer access for send accumulation
   juce::AudioBuffer<float> &getInputBuffer() { return inputBuffer_; }
 
+  // Index cache for rendering efficiency
+  void setBusIndex(int index) { busIndex_ = index; }
+  [[nodiscard]] int getBusIndex() const { return busIndex_; }
+
 private:
   juce::String name_;
   juce::String id_;
+  int busIndex_ = -1;
   MixerChannel mixerChannel;
 
   // Input buffer for accumulating sends from tracks

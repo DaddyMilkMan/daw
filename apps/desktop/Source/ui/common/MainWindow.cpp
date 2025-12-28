@@ -555,9 +555,10 @@ void MainWindow::closeButtonPressed() {
     fprintf(stderr, "[MainWindow] AlertWindow callback result=%d\n", result);
     // 0 = Save, 1 = Don't Save, 2 = Cancel
     if (result == 0) {
-      saveProject();
-      juce::Timer::callAfterDelay(100, []() {
-        juce::JUCEApplication::getInstance()->systemRequestedQuit();
+      saveProject([this](bool success) {
+        if (success) {
+          juce::JUCEApplication::getInstance()->systemRequestedQuit();
+        }
       });
     } else if (result == 1) {
       juce::JUCEApplication::getInstance()->systemRequestedQuit();
@@ -660,20 +661,21 @@ void MainWindow::newProject() {
   repaint();
 }
 
-void MainWindow::saveProject() {
+void MainWindow::saveProject(std::function<void(bool)> onComplete) {
   juce::File projectFile = fileIO_->getCurrentProjectFile();
 
   if (!projectFile.existsAsFile()) {
-    saveProjectAs();
+    saveProjectAs(onComplete);
     return;
   }
 
   // Use async save to keep UI responsive
-  fileIO_->saveToFileAsync(projectFile, {}, [this, projectFile](bool success, juce::String error) {
+  fileIO_->saveToFileAsync(projectFile, {}, [this, projectFile, onComplete](bool success, juce::String error) {
     if (!success) {
         juce::NativeMessageBox::showMessageBoxAsync(
             juce::AlertWindow::WarningIcon, "Save Failed",
             "Failed to save project: " + error);
+        if (onComplete) onComplete(false);
         return;
     }
 
@@ -683,10 +685,11 @@ void MainWindow::saveProject() {
                                         projectState->getProjectName());
       recentProjectManager_->save();
     }
+    if (onComplete) onComplete(true);
   });
 }
 
-void MainWindow::saveProjectAs() {
+void MainWindow::saveProjectAs(std::function<void(bool)> onComplete) {
   auto chooser = std::make_shared<::juce::FileChooser>(
       "Save Project As...",
       ::juce::File::getSpecialLocation(::juce::File::userDocumentsDirectory),
@@ -694,10 +697,28 @@ void MainWindow::saveProjectAs() {
   auto chooserFlags = ::juce::FileBrowserComponent::saveMode |
                       ::juce::FileBrowserComponent::canSelectFiles;
 
-  chooser->launchAsync(chooserFlags, [this,
-                                       chooser](const ::juce::FileChooser &fc) {
+  chooser->launchAsync(chooserFlags, [this, chooser, onComplete](const ::juce::FileChooser &fc) {
     auto file = fc.getResult();
-    if (file == juce::File{})
+    if (file == juce::File{}) {
+        if (onComplete) onComplete(false);
+        return;
+    }
+    
+    fileIO_->saveToFileAsync(file, {}, [this, file, onComplete](bool success, juce::String error) {
+        if (success) {
+            updateWindowTitle();
+            if (recentProjectManager_) {
+                recentProjectManager_->addProject(file, projectState->getProjectName());
+                recentProjectManager_->save();
+            }
+            if (onComplete) onComplete(true);
+        } else {
+            juce::NativeMessageBox::showMessageBoxAsync(juce::AlertWindow::WarningIcon, "Save Failed", error);
+            if (onComplete) onComplete(false);
+        }
+    });
+  });
+}
       return;
     if (!file.hasFileExtension(".zth"))
       file = file.withFileExtension(".zth");

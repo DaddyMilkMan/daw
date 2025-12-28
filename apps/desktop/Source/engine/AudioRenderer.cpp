@@ -62,13 +62,7 @@ void AudioRenderer::renderAudioGraph(
     auxBufferPtrs[actualAuxCount++] = &context.auxBusBuffers[i];
   }
   
-  // Wrap in a vector-like view for getNextAudioBlock compatibility
-  // Note: Track::getNextAudioBlock takes std::vector<juce::AudioBuffer<float> *>.
-  // This is a violation of RT-safety if we create the vector here, but if we pass 
-  // a pre-allocated one, it's fine. However, the signature expects std::vector.
-  // We'll have to use the context's vector to avoid allocation.
-  context.auxBufferPtrsVector.clear();
-  for(size_t i = 0; i < actualAuxCount; ++i) context.auxBufferPtrsVector.push_back(auxBufferPtrs[i]);
+  std::span<juce::AudioBuffer<float> * const> auxBuffersSpan(auxBufferPtrs.data(), actualAuxCount);
 
   // Process nodes in topological order using FAST LOOKUP
   for (const auto &nodeId : snapshot->topology->processingOrder) {

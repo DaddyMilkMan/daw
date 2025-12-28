@@ -21,7 +21,7 @@ struct lua_State;
 
 namespace zenith {
 
-class AudioEngine;
+class Engine;
 
 /**
  * Lua scripting engine
@@ -29,7 +29,7 @@ class AudioEngine;
 class ScriptEngine
 {
 public:
-    explicit ScriptEngine(AudioEngine* audioEngine);
+    explicit ScriptEngine(Engine* engine);
     ~ScriptEngine();
 
     // ========================================================================
