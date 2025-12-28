@@ -85,9 +85,12 @@ private:
     
     // Platform specific implementations are now handled in separate files
 
-    
     // Service name for keychain/credential manager
     static juce::String getServiceName();
+    
+    // Fallback encryption for platforms without secure storage
+    static juce::String encryptValue(const juce::String& value);
+    static juce::String decryptValue(const juce::String& encrypted);
     
     JUCE_DECLARE_NON_COPYABLE(SecureKeyStore)
 };
