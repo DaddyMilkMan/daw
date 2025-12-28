@@ -184,7 +184,7 @@ private:
   ZenithEffects effects_;
 
   // Modulation Matrix Storage (Global for UI, applied to voices)
-  juce::SpinLock modMatrixLock_;
+  // Modulation Matrix Storage (Global for UI, applied to voices)
   std::array<ModulationSlot, 64> globalModMatrix_;
 
   // Visualizer Buffer
