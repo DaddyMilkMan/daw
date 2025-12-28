@@ -28,13 +28,10 @@ public:
 
   // Message thread
   float getLevel(MeterMode mode) const;
+  float getMasterLevel() const { return rmsLevel.load(); }
+  float getMasterPeak() const { return masterPeak.load(); }
+  void resetMasterPeak() { masterPeak.store(0.0f); }
   float getPeak() const { return masterPeak.load(); }
-  void resetPeak() { masterPeak.store(0.0f); }
-
-  // Aliases for compatibility
-  float getMasterLevel() const { return getLevel(MeterMode::Peak); }
-  float getMasterPeak() const { return getPeak(); }
-  void resetMasterPeak() { resetPeak(); }
 
   StereoAudioFifo &getAnalysisFifo() { return *analysisFifo; }
 
@@ -62,6 +59,9 @@ private:
   static constexpr float VU_FALL_TIME = 0.300f;
   static constexpr float PPM_RISE_TIME = 0.010f; // 10ms
   static constexpr float PPM_FALL_TIME = 1.500f; // Slow fallback
+
+  // Scratch buffer for LUFS processing (RT-safe)
+  juce::AudioBuffer<float> scratchBuffer_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MeteringSystem)
 };

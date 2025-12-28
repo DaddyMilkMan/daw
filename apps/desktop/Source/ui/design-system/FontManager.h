@@ -19,49 +19,10 @@
 #pragma once
 
 #include <array>
-#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
+#include <include/core/SkRefCnt.h>
 #include <include/core/SkFont.h>
 #include <include/core/SkFontMgr.h>
 #include <include/core/SkTypeface.h>
-#else
-#include <memory>
-#ifndef SK_SP_DEFINED
-#define SK_SP_DEFINED
-template <typename T> using sk_sp = std::shared_ptr<T>;
-#endif
-
-// Forward declare for SkFont methods
-#ifndef SK_TEXT_ENCODING_DEFINED
-#define SK_TEXT_ENCODING_DEFINED
-enum class SkTextEncoding { kUTF8 };
-#endif
-
-class SkTypeface { public: virtual ~SkTypeface() = default; };
-
-class SkFont { 
-public: 
-    enum class Edging { kSubpixelAntiAlias };
-    
-    SkFont() = default; 
-    SkFont(sk_sp<SkTypeface>, float) {}
-    
-    void setTypeface(sk_sp<SkTypeface>) {}
-    void setSize(float) {}
-    float measureText(const void*, size_t, SkTextEncoding) const { return 0.0f; }
-    void setEdging(Edging) {}
-    void setSubpixel(bool) {}
-    void setHinting(int) {}
-    void setLinearMetrics(bool) {}
-    void setBaselineSnap(bool) {}
-    void setEmbolden(bool) {}
-};
-
-class SkFontMgr { 
-public: 
-    virtual ~SkFontMgr() = default;
-    virtual sk_sp<SkTypeface> makeFromData(sk_sp<void>, int) { return nullptr; } 
-};
-#endif
 #include <juce_core/juce_core.h>
 #include <mutex>
 

@@ -31,6 +31,8 @@ enum class DragMode {
     MoveClips,       ///< Dragging selected clips
     ResizeClipLeft,  ///< Resizing clip from left edge
     ResizeClipRight, ///< Resizing clip from right edge
+    ResizeFadeIn,    ///< Resizing fade-in handle
+    ResizeFadeOut,   ///< Resizing fade-out handle
     Marquee          ///< Marquee selection in progress
 };
 
@@ -139,6 +141,13 @@ public:
      * @return Tooltip string, or empty if no tooltip needed
      */
     juce::String getTooltip();
+
+    /**
+     * @brief Trigger AI stem separation for a clip
+     * @param clipId ID of the clip to separate
+     */
+    void ripAudioToStems(const juce::String& clipId);
+
 
     //==========================================================================
     // State Accessors

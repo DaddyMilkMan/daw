@@ -16,10 +16,13 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <core/SkCanvas.h>
-#include <core/SkPaint.h>
-#include <core/SkRRect.h>
 #include "ZenithDesignSystem.h"
+
+#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
+#include "ZenithSkia.h"
+#else
+// SkColor, SkRect, SkPaint, SkCanvas are defined in ZenithDesignSystem.h
+#endif
 
 namespace zenith {
 

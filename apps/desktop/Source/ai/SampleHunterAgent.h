@@ -30,7 +30,7 @@
 #pragma once
 
 #include "../network/AudioAnalysisService.h"
-#include "../network/GrokAPIClient.h"
+#include "GrokAPIClient.h"
 #include "Engine.h"
 #include "ProjectState.h"
 #include <atomic>

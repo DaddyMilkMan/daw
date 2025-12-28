@@ -17,12 +17,13 @@ void AuxBus::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
   // Prepare mixer channel
   mixerChannel.prepareToPlay(samplesPerBlockExpected, sampleRate);
 
-  // Prepare plugin chain
+  // Prepare all plugins
   pluginChain.prepareToPlay(sampleRate, samplesPerBlockExpected);
 }
 
 void AuxBus::releaseResources() {
   mixerChannel.releaseResources();
+
   pluginChain.releaseResources();
 }
 
@@ -34,7 +35,7 @@ void AuxBus::getNextAudioBlock(
   // Clear output first
   bufferToFill.clearActiveBufferRegion();
 
-  // Process through plugin chain (effect processors) - RT-safe snapshot
+  // Process through plugin chain (effect processors)
   juce::MidiBuffer emptyMidi; // Aux buses don't process MIDI
   pluginChain.process(inputBuffer_, emptyMidi);
 
@@ -60,20 +61,17 @@ void AuxBus::getNextAudioBlock(
 //==============================================================================
 
 void AuxBus::addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin) {
-  pluginChain.addPlugin(std::move(plugin), currentSampleRate_, currentBlockSize_);
+  pluginChain.addPlugin(std::move(plugin), currentSampleRate_,
+                        currentBlockSize_);
 }
 
 void AuxBus::removePlugin(int pluginIndex) {
   pluginChain.removePlugin(pluginIndex);
 }
 
-void AuxBus::clearPlugins() {
-  pluginChain.clearPlugins();
-}
+void AuxBus::clearPlugins() { pluginChain.clearPlugins(); }
 
-int AuxBus::getNumPlugins() const {
-  return pluginChain.getNumPlugins();
-}
+int AuxBus::getNumPlugins() const { return pluginChain.getNumPlugins(); }
 
 juce::AudioPluginInstance *AuxBus::getPlugin(int index) const {
   return pluginChain.getPlugin(index);

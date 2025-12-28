@@ -5,92 +5,72 @@
     Created: 2025-12-23
     Author:  Zenith DAW
 
-    Standalone subprocess for safe plugin scanning.
-    Takes a plugin path as an argument and outputs its description as JSON.
+    Standalone utility for out-of-process plugin scanning.
+    Takes a plugin path and outputs the PluginDescription as XML to stdout.
 
   ==============================================================================
 */
 
-#include <juce_audio_processors/juce_audio_processors.h>
-#include <juce_core/juce_core.h>
 #include <iostream>
+#include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 
-/**
- * @brief Simple JSON serializer for PluginDescription
- */
-juce::String descriptionToJSON(const juce::PluginDescription& desc)
-{
-    auto obj = new juce::DynamicObject();
-    
-    obj->setProperty("name", desc.name);
-    obj->setProperty("descriptiveName", desc.descriptiveName);
-    obj->setProperty("manufacturerName", desc.manufacturerName);
-    obj->setProperty("version", desc.version);
-    obj->setProperty("file", desc.fileOrIdentifier);
-    obj->setProperty("lastFileModTime", desc.lastFileModTime.toMilliseconds());
-    obj->setProperty("lastKnownEditTime", desc.lastKnownEditTime.toMilliseconds());
-    obj->setProperty("isInstrument", desc.isInstrument);
-    obj->setProperty("pluginFormatName", desc.pluginFormatName);
-    obj->setProperty("category", desc.category);
-    obj->setProperty("numInputChannels", desc.numInputChannels);
-    obj->setProperty("numOutputChannels", desc.numOutputChannels);
-    obj->setProperty("hasSharedContainer", desc.hasSharedContainer);
-    obj->setProperty("uniqueId", desc.uniqueId);
-    obj->setProperty("identifier", desc.createIdentifierString());
-    
-    return juce::JSON::toString(juce::var(obj));
-}
+int main(int argc, char *argv[]) {
+  // Use ScopedJuceInitialiser_GUI for messaging and other essentials
+  juce::ScopedJuceInitialiser_GUI initialiser;
 
-int main(int argc, char* argv[])
-{
-    // Minimal JUCE environment
-    juce::ScopedJuceInitialiser_GUI initialiser;
-    
-    if (argc < 2)
-    {
-        std::cerr << "Usage: PluginScanner <plugin_path>" << std::endl;
-        return 1;
-    }
-    
-    juce::String pluginPath = argv[1];
-    juce::File pluginFile(pluginPath);
-    
-    if (!pluginFile.exists())
-    {
-        std::cerr << "Error: File does not exist: " << pluginPath.toStdString() << std::endl;
-        return 1;
-    }
-    
-    juce::AudioPluginFormatManager formatManager;
-    formatManager.addDefaultFormats();
-    
-    juce::OwnedArray<juce::PluginDescription> foundTypes;
-    
-    // We try to scan with each format
-    for (int i = 0; i < formatManager.getNumFormats(); ++i)
-    {
-        auto* format = formatManager.getFormat(i);
-        
-        // Skip formats that don't match the file extension if possible
-        if (!format->canHandleFile(pluginFile))
-            continue;
-            
-        if (format->findAllTypesForFile(foundTypes, pluginFile))
-        {
-            // If we found any types, output them as JSON (one per line)
-            for (auto* desc : foundTypes)
-            {
-                if (desc != nullptr)
-                {
-                    std::cout << "ZENITH_PLUGIN_START" << std::endl;
-                    std::cout << descriptionToJSON(*desc).toStdString() << std::endl;
-                    std::cout << "ZENITH_PLUGIN_END" << std::endl;
-                }
-            }
-            return 0;
-        }
-    }
-    
-    std::cerr << "Error: No plugin found in: " << pluginPath.toStdString() << std::endl;
+  if (argc < 2) {
+    std::cerr << "Usage: PluginScanner <plugin_path>" << std::endl;
     return 1;
+  }
+
+  juce::String path = argv[1];
+  juce::File file(path);
+
+  if (!file.exists()) {
+    std::cerr << "Error: Plugin file does not exist: " << path.toStdString()
+              << std::endl;
+    return 2;
+  }
+
+  juce::AudioPluginFormatManager formatManager;
+  formatManager.addDefaultFormats();
+
+  // Attempt to identify the plugin format
+  juce::AudioPluginFormat *formatToUse = nullptr;
+  for (int i = 0; i < formatManager.getNumFormats(); ++i) {
+    auto *format = formatManager.getFormat(i);
+    if (format->fileMightContainThisPluginType(file.getFullPathName())) {
+      formatToUse = format;
+      break;
+    }
+  }
+
+  if (formatToUse == nullptr) {
+    std::cerr << "Error: No suitable plugin format found for "
+              << path.toStdString() << std::endl;
+    return 3;
+  }
+
+  juce::OwnedArray<juce::PluginDescription> descriptions;
+  formatToUse->findAllTypesForFile(descriptions, file.getFullPathName());
+
+  if (descriptions.size() == 0) {
+    std::cerr << "Error: No plugin types found in " << path.toStdString()
+              << std::endl;
+    return 4;
+  }
+
+  // Success! Output descriptions as XML
+  juce::XmlElement results("PLUGINS");
+  for (auto *desc : descriptions) {
+    results.addChildElement(desc->createXml().release());
+  }
+
+  std::cout << results.toString(juce::XmlElement::TextFormat().withoutHeader())
+                   .toStdString()
+            << std::endl;
+
+  return 0;
 }

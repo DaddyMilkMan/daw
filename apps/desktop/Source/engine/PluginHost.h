@@ -63,7 +63,7 @@ public:
      * - macOS: ~/Library/Audio/Plug-Ins/VST3, /Library/Audio/Plug-Ins/VST3
      * - Linux: ~/.vst3, /usr/lib/vst3, /usr/local/lib/vst3
      *
-     * @param async If true, scan asynchronously (not implemented in MVP)
+     * @param async If true, scan asynchronously (use scanAsync() for progress callbacks)
      * @return Number of plugins found
      */
     int scanDefaultLocations(bool async = false);
@@ -176,20 +176,14 @@ public:
      */
     int scanAll(bool async = false);
 
-    // Blacklist management
-    void addToBlacklist(const juce::String& pluginFileOrIdentifier);
-    bool isBlacklisted(const juce::String& pluginFileOrIdentifier) const;
-    void clearBlacklist();
-    juce::StringArray getBlacklist() const;
-
 private:
+    // Internal scanning logic
     // Internal scanning logic
     int scanInternal(std::function<void(const juce::String&)> onProgress);
     
-    /**
-     * @brief Run the PluginScanner subprocess for a single file
-     */
-    bool scanPluginSafely(const juce::File& file, juce::Array<juce::PluginDescription>& found);
+    // Out-of-process helper
+    // Returns true if plugin was successfully scanned and added
+    bool scanFileOutProcess(const juce::File& file, juce::PluginDescription& result);
 
     //==============================================================================
     // Member Variables
@@ -200,9 +194,6 @@ private:
 
     // Known plugins list (populated by scanning)
     juce::KnownPluginList knownPlugins;
-    
-    // Blacklist of problematic plugins
-    juce::StringArray blacklist;
 
     // VST3 format (raw pointer owned by formatManager)
     juce::AudioPluginFormat* vst3Format = nullptr;

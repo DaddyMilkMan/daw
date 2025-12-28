@@ -10,36 +10,45 @@
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
 #include <core/SkFont.h>
+#include <core/SkMaskFilter.h>
 #include <core/SkPaint.h>
 #include <core/SkPath.h>
-#include <core/SkRect.h>
 #include <core/SkRRect.h>
+#include <core/SkRect.h>
 #include <core/SkShader.h>
 #include <core/SkSurface.h>
-#include <core/SkTextBlob.h>
-#include <core/SkImage.h>
-#include <core/SkMaskFilter.h>
-#include <core/SkBlurTypes.h>
-#include <effects/SkGradientShader.h>
+#include <include/core/SkBlurTypes.h>
 #else
 #include "design-system/ZenithDesignSystem.h"
-
-// Additional mocks
-class SkPath { public: void reset() {} };
-class SkShader;
-class SkMaskFilter {
+// Additional mocks if needed
+class SkPath {
 public:
-    static sk_sp<SkMaskFilter> MakeBlur(enum SkBlurStyle, float) { return nullptr; }
+  void reset() {}
+};
+class SkShader;
+enum SkBlurStyle {
+  kNormal_SkBlurStyle,
+  kSolid_SkBlurStyle,
+  kOuter_SkBlurStyle,
+  kInner_SkBlurStyle
 };
 
-struct SkPoint { float fX, fY; };
+class SkMaskFilter {
+public:
+  static sk_sp<SkMaskFilter> MakeBlur(SkBlurStyle, float) { return nullptr; }
+};
+
+struct SkPoint {
+  float fX, fY;
+};
 struct SkSamplingOptions {};
 enum class SkTileMode { kClamp };
 
 class SkGradientShader {
 public:
-    static sk_sp<SkShader> MakeLinear(const SkPoint*, const SkColor*, const float*, int, SkTileMode) { return nullptr; }
+  static sk_sp<SkShader> MakeLinear(const SkPoint *, const SkColor *,
+                                    const float *, int, SkTileMode) {
+    return nullptr;
+  }
 };
-
-enum SkBlurStyle { kNormal_SkBlurStyle };
 #endif

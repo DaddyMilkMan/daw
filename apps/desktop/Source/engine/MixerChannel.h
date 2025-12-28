@@ -3,14 +3,14 @@
 
     MixerChannel.h
     Ported from: ZenithDAW-Native/Source/Audio/MixerChannel.h (2025-11-11)
-    Author:  Zenith DAW ΓåÆ Zenith DAW
+    Author:  Zenith DAW
 
     Mixer channel strip with EQ, dynamics, and send/return processing
 
     JUCE 8 / C++20 adaptations:
     - Wrapped in namespace zenith
     - Professional-grade compressor with RMS detection & lookahead
-    - Pre-calculated filter coefficients (RT-safe)
+    - Pre-calculated filter coefficients (RT-safe ReferenceCountedObject)
 
   ==============================================================================
 */
@@ -29,7 +29,9 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "../effects/ConsoleEmulation.h"
 #include "AudioConstants.h"
+#include "MeteringSystem.h"
 
 namespace zenith {
 
@@ -54,15 +56,15 @@ public:
 
     // Lookahead buffer (5ms - use constant)
     lookaheadSamples_ =
-        static_cast<int>(sampleRate * constants::kCompLookaheadMs / 1000.0);
-    lookaheadBuffer_.setSize(2, lookaheadSamples_ + maxBlockSize);
+        static_cast<int>(sampleRate * ::zenith::constants::kCompLookaheadMs / 1000.0);
+    lookaheadBuffer_.setSize(2, std::max(1, lookaheadSamples_ + maxBlockSize));
     lookaheadBuffer_.clear();
     lookaheadWritePos_ = 0;
 
     // RMS buffer (10ms window - use constant)
     rmsWindowSamples_ =
-        static_cast<int>(sampleRate * constants::kCompRmsWindowMs / 1000.0);
-    rmsBuffer_.resize(rmsWindowSamples_, 0.0f);
+        std::max(1, static_cast<int>(sampleRate * ::zenith::constants::kCompRmsWindowMs / 1000.0));
+    rmsBuffer_.assign(rmsWindowSamples_, 0.0f);
     rmsWritePos_ = 0;
     rmsSum_ = 0.0f;
 
@@ -208,13 +210,13 @@ public:
   }
 
 private:
-  double sampleRate_ = constants::kDefaultSampleRate;
+  double sampleRate_ = ::zenith::constants::kDefaultSampleRate;
 
   // Parameters (initialized from EngineConstants)
-  float threshold_ = constants::kDefaultCompThresholdDb;
-  float ratio_ = constants::kDefaultCompRatio;
-  float attackMs_ = constants::kDefaultCompAttackMs;
-  float releaseMs_ = constants::kDefaultCompReleaseMs;
+  float threshold_ = ::zenith::constants::kDefaultCompThresholdDb;
+  float ratio_ = ::zenith::constants::kDefaultCompRatio;
+  float attackMs_ = ::zenith::constants::kDefaultCompAttackMs;
+  float releaseMs_ = ::zenith::constants::kDefaultCompReleaseMs;
   float makeup_ = 0.0f;
   float knee_ = 6.0f; // Soft knee width in dB
   float autoMakeup_ = 0.0f;
@@ -274,8 +276,9 @@ private:
       output = threshold_ + (inputDb - threshold_) / ratio_;
     } else {
       // In knee region - smooth transition
-      float x = inputDb - threshold_ + halfKnee;
-      float kneeGain = (1.0f / ratio_ - 1.0f) / (2.0f * knee_);
+      float safeKnee = std::max(0.1f, knee_);
+      float x = inputDb - threshold_ + safeKnee * 0.5f;
+      float kneeGain = (1.0f / ratio_ - 1.0f) / (2.0f * safeKnee);
       output = inputDb + kneeGain * x * x;
     }
 
@@ -288,7 +291,9 @@ private:
 /**
     Pre-calculated filter coefficients for RT-safe coefficient swapping.
 */
-struct FilterCoefficients {
+struct FilterCoefficients : public juce::ReferenceCountedObject {
+  using Ptr = juce::ReferenceCountedObjectPtr<FilterCoefficients>;
+
   std::array<double, 6> hpf = {1.0, 0.0, 0.0,
                                1.0, 0.0, 0.0}; // b0,b1,b2,a0,a1,a2
   std::array<std::array<double, 6>, 4> eq;     // 4 EQ bands
@@ -316,6 +321,7 @@ struct FilterCoefficients {
     All processing is lock-free and real-time safe.
 */
 class MixerChannel : public juce::AudioSource, public juce::ChangeBroadcaster {
+  friend class Track; // Allow Track to call updateMeters
 public:
   //==============================================================================
   MixerChannel();
@@ -360,7 +366,7 @@ public:
     std::atomic<bool> enabled{false};
     std::atomic<float> frequency{1000.0f};
     std::atomic<float> gain{0.0f}; // In dB
-    std::atomic<float> q{constants::kDefaultEQQ};
+    std::atomic<float> q{::zenith::constants::kDefaultEQQ};
 
     enum class Type { LowShelf, Peak, HighShelf };
     Type type = Type::Peak;
@@ -371,6 +377,17 @@ public:
 
   // Mark EQ as needing coefficient recalculation (message thread safe)
   void markEQDirty(int bandIndex);
+
+  //==============================================================================
+  // Console Emulation
+  void setConsoleMode(zenith::effects::ConsoleEmulation::Mode mode);
+  zenith::effects::ConsoleEmulation::Mode getConsoleMode() const;
+
+  void setConsoleDrive(float drive);
+  float getConsoleDrive() const;
+
+  void setConsoleCharacter(float character);
+  float getConsoleCharacter() const;
 
   //==============================================================================
   // Dynamics (Compressor) - Now uses ProCompressor
@@ -426,15 +443,29 @@ public:
   bool isSilencedBySolo() const { return silencedBySolo.load(); }
 
   //==============================================================================
-  // Metering
-  float getInputLevel() const { return inputLevel.load(); }
-  float getOutputLevel() const { return outputLevel.load(); }
-  float getInputPeak() const { return inputPeak.load(); }
-  float getOutputPeak() const { return outputPeak.load(); }
+  // Level metering
+  void setMeterMode(MeteringSystem::MeterMode mode) { meterMode.store(mode); }
+  MeteringSystem::MeterMode getMeterMode() const { return meterMode.load(); }
 
-  void resetPeaks();
+  float getInputLevel() const { return inputMeter.getLevel(meterMode.load()); }
+  float getInputPeak() const { return inputMeter.getPeak(); }
+  void resetInputPeak() { inputMeter.resetPeak(); }
 
-  //==============================================================================
+  float getOutputLevel() const {
+    return outputMeter.getLevel(meterMode.load());
+  }
+  float getOutputPeak() const { return outputMeter.getPeak(); }
+  void resetOutputPeak() { outputMeter.resetPeak(); }
+
+  // Direct access for visualizers
+  MeteringSystem &getInputMeter() { return inputMeter; }
+  MeteringSystem &getOutputMeter() { return outputMeter; }
+
+  void resetPeaks() {
+    inputMeter.resetPeak();
+    outputMeter.resetPeak();
+  }
+
   // State management
   juce::ValueTree getState() const;
   void loadState(const juce::ValueTree &state);
@@ -444,6 +475,16 @@ private:
   // Input section
   std::atomic<float> inputGain{0.0f}; // In dB
   std::atomic<bool> phaseInvert{false};
+
+  // Console Emulation
+  std::unique_ptr<zenith::effects::ConsoleEmulation> consoleEmulation;
+  std::atomic<zenith::effects::ConsoleEmulation::Mode> consoleMode{
+      zenith::effects::ConsoleEmulation::Mode::Vintage};
+  std::atomic<float> consoleDrive{0.1f};
+  std::atomic<float> consoleCharacter{0.0f};
+
+  // Output Gain
+  juce::dsp::Gain<float> gain;
 
   std::atomic<AudioFifo *> spectrumFifo_{nullptr};
 
@@ -455,35 +496,32 @@ private:
 
   //==============================================================================
   // EQ section
-  static constexpr int numEQBands = constants::kNumEQBands;
+  static constexpr int numEQBands = ::zenith::constants::kNumEQBands;
   EQBand eqBands[numEQBands];
   juce::IIRFilter eqFiltersL[numEQBands];
   juce::IIRFilter eqFiltersR[numEQBands];
 
-  // RT-safe coefficient swapping
-  std::atomic<FilterCoefficients *> activeCoeffs_{nullptr};
-  std::unique_ptr<FilterCoefficients> coeffsA_;
-  std::unique_ptr<FilterCoefficients> coeffsB_;
-  std::atomic<bool> useCoeffsA_{true};
-  std::atomic<bool> coeffsDirty_{true};
+  // RT-safe coefficient swapping using ReferenceCountedObject
+  FilterCoefficients::Ptr activeCoeffs_;
+  juce::SpinLock coeffLock_; // Protects the pointer swap
 
   // Pre-calculate coefficients on message thread
   void recalculateCoefficients();
-  void applyCoefficients(); // Called from audio thread
+  void updateFiltersFromCoefficients(); // Called from audio thread
 
   //==============================================================================
   // Dynamics section - Now using ProCompressor
   ProCompressor compressor_;
   std::atomic<bool> compressorEnabled{false};
-  std::atomic<float> compThreshold{constants::kDefaultCompThresholdDb};
-  std::atomic<float> compRatio{constants::kDefaultCompRatio};
-  std::atomic<float> compAttack{constants::kDefaultCompAttackMs};
-  std::atomic<float> compRelease{constants::kDefaultCompReleaseMs};
+  std::atomic<float> compThreshold{::zenith::constants::kDefaultCompThresholdDb};
+  std::atomic<float> compRatio{::zenith::constants::kDefaultCompRatio};
+  std::atomic<float> compAttack{::zenith::constants::kDefaultCompAttackMs};
+  std::atomic<float> compRelease{::zenith::constants::kDefaultCompReleaseMs};
   std::atomic<float> compMakeup{0.0f};
 
   //==============================================================================
   // Send effects
-  static constexpr int numSends = constants::kNumSends;
+  static constexpr int numSends = ::zenith::constants::kNumSends;
   std::atomic<float> sendLevels[numSends];
   std::atomic<bool> sendPreFader[numSends];
 
@@ -497,6 +535,12 @@ private:
 
   //==============================================================================
   // Metering
+  MeteringSystem inputMeter;
+  MeteringSystem outputMeter;
+  std::atomic<MeteringSystem::MeterMode> meterMode{
+      MeteringSystem::MeterMode::Peak};
+
+  // Legacy (kept to compile, but likely unused by getters)
   std::atomic<float> inputLevel{0.0f};
   std::atomic<float> outputLevel{0.0f};
   std::atomic<float> inputPeak{0.0f};
@@ -504,8 +548,8 @@ private:
 
   //==============================================================================
   // Processing state
-  double currentSampleRate = constants::kDefaultSampleRate;
-  int currentBlockSize = constants::kDefaultBufferSize;
+  double currentSampleRate = ::zenith::constants::kDefaultSampleRate;
+  int currentBlockSize = ::zenith::constants::kDefaultBufferSize;
 
   //==============================================================================
   // Helper methods
@@ -517,7 +561,6 @@ private:
                     const std::vector<juce::AudioBuffer<float> *> &sendBuffers,
                     bool matchPreFader);
   void processOutput(juce::AudioBuffer<float> &buffer);
-public:
   void updateMeters(const juce::AudioBuffer<float> &buffer, bool isInput);
 
   float dbToGain(float db) const { return juce::Decibels::decibelsToGain(db); }

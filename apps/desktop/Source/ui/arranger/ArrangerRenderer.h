@@ -13,8 +13,7 @@
 
 #ifdef ZENITH_USE_SKIA
 
-#include <core/SkCanvas.h>
-#include <core/SkRect.h>
+#include "ZenithSkia.h"
 
 namespace zenith {
 
@@ -149,6 +148,14 @@ private:
      * @param height Component height
      */
     void drawPlayhead(SkCanvas* canvas, float width, float height);
+    
+    /**
+     * @brief Draw loop region with bracket markers and highlight
+     * @param canvas Skia canvas
+     * @param width Component width
+     * @param height Component height
+     */
+    void drawLoopRegion(SkCanvas* canvas, float width, float height);
     
     /**
      * @brief Draw insertion guide for Ripple/Insert edit modes

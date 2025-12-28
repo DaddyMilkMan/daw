@@ -57,6 +57,7 @@ void AIEventBus::publish(const AIEvent &event) {
       for (const auto &callback : callbacksToInvoke) {
         if (callback) {
           callback(event);
+          juce::ScopedLock sl(lock_);
           stats_.totalDelivered++;
         }
       }

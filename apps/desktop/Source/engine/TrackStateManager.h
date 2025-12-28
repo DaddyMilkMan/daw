@@ -161,6 +161,28 @@ public:
   duplicateTrack(const juce::String &trackId,
                  const juce::String &actionName = "Duplicate Track");
 
+  /**
+   * @brief Insert a new track above an existing one
+   * @param targetTrackId ID of the track to insert above
+   * @param type Track type
+   * @param actionName Undo action name
+   * @return New track ID
+   */
+  juce::String insertTrackAbove(const juce::String &targetTrackId,
+                                const juce::String &type,
+                                const juce::String &actionName = "Insert Track Above");
+
+  /**
+   * @brief Insert a new track below an existing one
+   * @param targetTrackId ID of the track to insert below
+   * @param type Track type
+   * @param actionName Undo action name
+   * @return New track ID
+   */
+  juce::String insertTrackBelow(const juce::String &targetTrackId,
+                                const juce::String &type,
+                                const juce::String &actionName = "Insert Track Below");
+
 private:
   //==========================================================================
   // Internal Helpers
@@ -177,6 +199,11 @@ private:
 
   /** Assign automatic color based on track index */
   juce::Colour getAutoColor(int trackIndex) const;
+
+  /** Internal helper to insert a track at a specific index */
+  juce::String insertTrackAt(int index, const juce::String &name,
+                             const juce::String &type,
+                             const juce::String &actionName);
 
   //==========================================================================
   // References

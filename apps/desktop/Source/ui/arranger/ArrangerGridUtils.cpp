@@ -90,6 +90,23 @@ double ArrangerGridUtils::samplesToBeats(juce::int64 samples) const {
     return seconds * beatsPerSecond;
 }
 
+juce::int64 ArrangerGridUtils::beatsToSamples(double beats) const {
+    double sampleRate = engine_.getSampleRate();
+    if (sampleRate <= 0.0)
+        sampleRate = 44100.0;
+
+    double tempo = projectState_.getTempo();
+    if (tempo <= 0.0)
+        tempo = 120.0;
+
+    double beatsPerSecond = tempo / 60.0;
+    if (beatsPerSecond <= 0.0)
+        return 0;
+
+    double seconds = beats / beatsPerSecond;
+    return static_cast<juce::int64>(seconds * sampleRate);
+}
+
 int ArrangerGridUtils::getBeatsPerBar() const {
     return projectState_.getTimeSignatureNumerator();
 }
@@ -115,44 +132,22 @@ juce::String ArrangerGridUtils::formatBarBeatTick(double beats) const {
 // Waveform Cache Management
 //==============================================================================
 
-void ArrangerGridUtils::buildWaveformCache(const juce::String& audioFilePath) {
-    // Check if already cached
-    if (waveformCache_.find(audioFilePath) != waveformCache_.end()) {
-        return;
-    }
-
-    // Get audio file from pool
-    auto& pool = engine_.getAudioFilePool();
-    juce::File file(audioFilePath);
-
-    auto handle = pool.getFile(file);
-    if (!handle || !handle->isValid()) {
-        // File not loaded, try to load it
-        juce::String error;
-        handle = pool.loadFile(file, error);
-        if (!handle || !handle->isValid()) {
-            return; // Failed to load
-        }
-    }
-
-    // Build waveform cache
+// Helper for background processing
+static WaveformCache calculatePeaks(const AudioFilePool::AudioFileHandle& handle, const juce::String& audioFilePath) {
     WaveformCache cache;
     cache.audioFilePath = audioFilePath;
-    cache.samplesPerPixel = 512; // Resolution for thumbnail
+    cache.samplesPerPixel = 512;
 
-    const juce::AudioBuffer<float>& buffer = handle->buffer;
-    int numSamples = static_cast<int>(handle->lengthInSamples);
-    int numChannels = handle->numChannels;
+    const auto& buffer = handle.buffer;
+    int numSamples = static_cast<int>(handle.lengthInSamples);
+    int numChannels = handle.numChannels;
 
-    if (numSamples <= 0 || numChannels <= 0) {
-        return;
-    }
+    if (numSamples <= 0 || numChannels <= 0) return cache;
 
     int numPeaks = (numSamples + cache.samplesPerPixel - 1) / cache.samplesPerPixel;
     cache.minPeaks.resize(numPeaks, 0.0f);
     cache.maxPeaks.resize(numPeaks, 0.0f);
 
-    // Mix down to mono and compute peaks
     for (int peakIdx = 0; peakIdx < numPeaks; ++peakIdx) {
         int startSample = peakIdx * cache.samplesPerPixel;
         int endSample = juce::jmin(startSample + cache.samplesPerPixel, numSamples);
@@ -176,7 +171,44 @@ void ArrangerGridUtils::buildWaveformCache(const juce::String& audioFilePath) {
     }
 
     cache.isValid = true;
-    waveformCache_[audioFilePath] = std::move(cache);
+    return cache;
+}
+
+void ArrangerGridUtils::buildWaveformCache(const juce::String& audioFilePath) {
+    // Check if already cached
+    if (waveformCache_.find(audioFilePath) != waveformCache_.end()) {
+        return;
+    }
+
+    // Get audio file from pool
+    auto& pool = engine_.getAudioFilePool();
+    juce::File file(audioFilePath);
+
+    auto handle = pool.getFile(file);
+    if (handle && handle->isValid()) {
+        // If already loaded, calculate immediately (or spawn thread)
+        // For UI responsiveness, we spawn thread even for loaded files if they are large
+        juce::Thread::launch([this, handle, audioFilePath]() {
+            auto cache = calculatePeaks(*handle, audioFilePath);
+            juce::MessageManager::callAsync([this, cache = std::move(cache), audioFilePath]() mutable {
+                waveformCache_[audioFilePath] = std::move(cache);
+                owner_.repaint();
+            });
+        });
+    } else {
+        // Async load
+        pool.loadFileAsync(file, [this, audioFilePath](AudioFilePool::HandlePtr loadedHandle, juce::String error) {
+            if (loadedHandle && loadedHandle->isValid()) {
+                juce::Thread::launch([this, loadedHandle, audioFilePath]() {
+                    auto cache = calculatePeaks(*loadedHandle, audioFilePath);
+                    juce::MessageManager::callAsync([this, cache = std::move(cache), audioFilePath]() mutable {
+                        waveformCache_[audioFilePath] = std::move(cache);
+                        owner_.repaint();
+                    });
+                });
+            }
+        });
+    }
 }
 
 const WaveformCache* ArrangerGridUtils::getWaveformCache(const juce::String& audioFilePath) const {

@@ -12,18 +12,22 @@
 
 #pragma once
 
-#include "MixerComponent.h"
+#include <memory>
+#include <vector>
+
 #include "../../engine/EngineConstants.h"
-#include "SkiaComponent.h"
+#include "../mixer/MixerComponent.h"
 #include "PianoKeyboardViewSkia.h"
-#include <juce_audio_basics/juce_audio_basics.h>
-#include <juce_core/juce_core.h>
-#include <juce_graphics/juce_graphics.h>
-#include <juce_gui_basics/juce_gui_basics.h>
+#include "SkiaComponent.h"
+
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
 #include <core/SkRect.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_core/juce_core.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace zenith {
 class Engine;
@@ -36,6 +40,7 @@ namespace ai {
 class SessionDebuggerAgent;
 }
 class DebugConsoleComponent;
+class AutoSaveIndicator;
 
 #ifdef ZENITH_USE_SKIA
 
@@ -65,6 +70,7 @@ private:
   std::unique_ptr<DebugConsoleComponent> debugConsole_;
   std::unique_ptr<DeviceChainComponent> deviceChain_;
   std::unique_ptr<MixerComponent> mixerComponent_;
+  std::unique_ptr<AutoSaveIndicator> autoSaveIndicator_;
 
   bool keyboardVisible_ = false;
   bool deviceChainVisible_ = true;  // Show device chain by default

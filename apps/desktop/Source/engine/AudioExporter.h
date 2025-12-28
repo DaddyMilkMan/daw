@@ -2,86 +2,129 @@
   ==============================================================================
 
     AudioExporter.h
-    Created: 2025-12-23
+    Created: 2025-12-20
     Author:  Zenith DAW
 
-    High-quality offline project renderer.
-    Supports bouncing projects to disk in non-realtime with normalization,
-    stem export, and multiple formats.
+    Handles offline bouncing/rendering of the project.
+    Features:
+    - 2-Pass Normalization (Analyze peaks → Apply gain)
+    - Professional TPDF Dithering with optional noise shaping
+    - Multi-format support (WAV, FLAC, OGG, AIFF)
+    - Asynchronous multi-file stem export
 
   ==============================================================================
 */
 
 #pragma once
 
-#include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_core/juce_core.h>
-#include <memory>
-#include <vector>
+#include "../dsp/Dither.h"
 #include <functional>
+#include <vector>
+#include <atomic>
+#include <memory>
 
 namespace zenith {
 
 class Engine;
-class ProjectState;
-class AudioRenderer;
+
+/// Export format enumeration
+enum class ExportFormat { WAV, FLAC, OGG, AIFF };
+
+/// Progress callback type for export operations
+using ExportProgressCallback = std::function<void(float progress, const juce::String& status)>;
+
+/// Export options for offline audio rendering
+struct ExportOptions {
+  juce::File outputFile;
+  double sampleRate = 44100.0;
+  int bitDepth = 24; // 8, 16, 24, 32
+  ExportFormat format = ExportFormat::WAV;
+  
+  // Dithering options
+  bool enableDither = true;
+  dsp::DitherType ditherType = dsp::DitherType::ShapedTPDF;
+  
+  // Normalization options
+  bool normalize = false;
+  double normalizeDb = -0.1;
+  
+  // Time range
+  double startTime = 0.0;
+  double duration = 0.0;  // 0 = auto-detect
+  
+  // Stem export options
+  bool exportStems = false;
+  bool exportStemsAsync = true;  // Use thread pool for parallel stem export
+  std::vector<int> stemTrackIndices; // Empty = all tracks
+  
+  // Progress callback (optional)
+  ExportProgressCallback progressCallback = nullptr;
+};
+
+/// Progress tracking for individual stem exports
+struct StemExportProgress {
+  int trackIndex = -1;
+  juce::String trackName;
+  float progress = 0.0f;
+  bool completed = false;
+  bool success = false;
+};
 
 /**
-    Handles high-quality offline rendering of Zenith projects.
-*/
-class AudioExporter
-{
+ * @class AudioExporter
+ * @brief Professional audio export engine with normalization, dithering, and stem export
+ */
+class AudioExporter {
 public:
-    enum class Format { WAV, AIFF, FLAC, MP3, OGG };
+  AudioExporter(Engine &engine);
+  ~AudioExporter();
 
-    struct ExportSettings {
-        juce::File outputFile;
-        double sampleRate = 44100.0;
-        int bitDepth = 24;
-        Format format = Format::WAV;
-        bool normalize = false;
-        float normalizeDb = -0.1f;
-        bool exportStems = false;
-        double startTimeSeconds = 0.0;
-        double endTimeSeconds = -1.0; // -1 = end of project
-        bool useDither = true;
-    };
+  /// Perform project export (blocking unless async stems)
+  bool exportProject(const ExportOptions &options);
 
-    explicit AudioExporter(Engine& engine);
-    ~AudioExporter();
+  /// Cancel any ongoing export
+  void cancelExport();
 
-    /**
-     * @brief Render the project to disk based on settings.
-     * @param settings Configuration for the export
-     * @param progressCallback Progress updates (0.0 to 1.0)
-     * @return true if successful, false otherwise
-     */
-    bool renderProject(const ExportSettings& settings, 
-                      std::function<void(float progress, const juce::String& status)> progressCallback);
+  /// Check if export is in progress
+  bool isExporting() const { return isExporting_.load(); }
 
-    /**
-     * @brief Cancel an active export operation.
-     */
-    void cancel();
+  /// Get stem progress (for async exports)
+  std::vector<StemExportProgress> getStemProgress() const;
 
-    /**
-     * @brief Check if an export is currently running.
-     */
-    bool isExporting() const { return isExporting_.load(); }
+  /// Export a single track as a stem file (uses outputFile from options)
+  bool exportSingleStem(int trackIndex, const ExportOptions &options);
 
 private:
-    bool renderMixdown(const ExportSettings& settings, 
-                      std::function<void(float, const juce::String&)> progressCallback);
-    
-    bool renderStems(const ExportSettings& settings, 
-                    std::function<void(float, const juce::String&)> progressCallback);
+  Engine &engine_;
+  juce::AudioFormatManager formatManager_;
+  
+  std::atomic<bool> shouldCancel_{false};
+  std::atomic<bool> isExporting_{false};
+  
+  mutable juce::CriticalSection stemProgressLock_;
+  std::vector<StemExportProgress> stemProgress_;
+  std::atomic<int> completedStemCount_{0};
 
-    Engine& engine_;
-    std::atomic<bool> isExporting_{ false };
-    std::atomic<bool> shouldCancel_{ false };
+  void registerFormats();
+  juce::AudioFormat* getFormatForType(ExportFormat format);
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioExporter)
+  bool renderToTempFile(const juce::File &tempFile, double duration,
+                        double sampleRate, double startTime, float &outMaxPeak);
+  bool analyzeProjectPeak(double duration, double sampleRate, double startTime, float &outMaxPeak);
+  bool writeFinalFile(const juce::File &tempFile, const ExportOptions &options,
+                      float maxPeak);
+
+  bool exportStems(const ExportOptions &options);
+  bool exportStemsAsync(const ExportOptions &options);
+  bool exportSingleStemInternal(int trackIndex, const ExportOptions &options, const juce::File& stemOutputFile, float normalizationGain = 1.0f);
+
+  void updateStemProgress(int trackIndex, float progress);
+  void markStemComplete(int trackIndex, bool success);
+  void reportAggregateProgress(const ExportOptions& options);
+
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioExporter)
 };
 
 } // namespace zenith
