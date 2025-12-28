@@ -172,6 +172,7 @@ public:
 
 private:
   juce::SpinLock voiceLock_;
+  mutable juce::SpinLock modMatrixLock_;
   juce::MPESynthesiser synthesiser_;
   std::atomic<double> currentBpm_{120.0};
   juce::AudioProcessorValueTreeState parameters_;
