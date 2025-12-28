@@ -15,7 +15,6 @@
 #include "../../engine/TrackFreeze.h"
 #include "../../engine/AudioExporter.h"
 #include "../../utils/AudioAnalysisUtils.h"
-#include "../design-system/ZenithDesignSystem.h"
 
 #include <juce_events/juce_events.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -25,13 +24,13 @@
 namespace zenith {
 
 //==============================================================================
-// Layout Constants - USE DESIGN SYSTEM (Single Source of Truth)
+// Layout Constants (must match ArrangerComponent.cpp)
 //==============================================================================
-static constexpr float HEADER_WIDTH = zenith::design::dimensions::ARRANGER_HEADER_WIDTH;
-static constexpr float SECTION_HEIGHT = zenith::design::dimensions::ARRANGER_SECTION_HEIGHT;
-static constexpr float RULER_HEIGHT = zenith::design::dimensions::ARRANGER_RULER_HEIGHT;
-static constexpr float TRACK_HEIGHT = zenith::design::dimensions::ARRANGER_TRACK_HEIGHT;
-static constexpr float TOP_MARGIN = zenith::design::dimensions::ARRANGER_TOP_MARGIN;
+static constexpr float HEADER_WIDTH = 220.0f;
+static constexpr float SECTION_HEIGHT = 24.0f;
+static constexpr float RULER_HEIGHT = 30.0f;
+static constexpr float TRACK_HEIGHT = 80.0f;
+static constexpr float TOP_MARGIN = SECTION_HEIGHT + RULER_HEIGHT;
 
 //==============================================================================
 // Constructor
@@ -111,7 +110,7 @@ void ArrangerClipManager::rebuildTrackComponents() {
     while (owner_.trackComponents.size() < required) {
         auto type = ArrangerTrackComponent::TrackType::Audio;
         auto newTrack = std::make_unique<ArrangerTrackComponent>(projectState_, gridUtils_, type);
-        owner_.addAndMakeVisible(newTrack.get());
+        owner_.addChildComponent(newTrack.get());
         owner_.trackComponents.push_back(std::move(newTrack));
     }
     

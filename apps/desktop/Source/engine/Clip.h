@@ -169,9 +169,14 @@ public:
   void setAudioFileFromPool(const juce::File &file,
                             zenith::AudioFilePool &pool);
 
-  juce::File getAudioFile() const;
-  
-  const juce::AudioBuffer<float>* getAudioBuffer() const { return &audioBuffer; }
+  // Legacy method (deprecated - loads file directly without pool)
+  void setAudioFile(const juce::File &file);
+  juce::File getAudioFile() const { return audioFile; }
+
+  void setAudioBuffer(const juce::AudioBuffer<float> &buffer);
+  const juce::AudioBuffer<float> *getAudioBuffer() const {
+    return &audioBuffer;
+  }
 
   /**
    * @brief Extract a range of audio samples from the clip.
@@ -202,7 +207,7 @@ public:
                                   double clipStartBeats, double tempo);
 
   /**
-   * @brief Extract MIDI events for the current playback position into a MIDI buffer.
+   * Extract MIDI events for the current playback position into a MIDI buffer.
    * Used for routing MIDI to instrument plugins.
    *
    * @param midiBuffer The MIDI buffer to add events to
@@ -247,7 +252,7 @@ public:
   //==============================================================================
   // State management
   juce::ValueTree getState() const;
-  void loadState(const juce::ValueTree &state, AudioFilePool* pool = nullptr);
+  void loadState(const juce::ValueTree &state);
 
   //==============================================================================
   // Allow Track to access processing methods
@@ -262,8 +267,6 @@ private:
   Type clipType = Type::Audio;
   juce::String clipName{"Clip"};
   juce::Colour clipColor{juce::Colours::blue};
-  juce::File audioFile;
-  juce::AudioBuffer<float> audioBuffer;
 
   //==============================================================================
   // Timeline position (atomic for lock-free access)
@@ -283,9 +286,14 @@ private:
 
   //==============================================================================
   // Audio data
+  juce::File audioFile;
+  juce::AudioBuffer<float> audioBuffer; // Legacy: for setAudioBuffer()
   // MESSAGE THREAD ONLY - Protects file/buffer swapping on message thread.
   // Audio thread access is through audioFileHandle_ (atomic).
   juce::CriticalSection audioLock;
+
+  // Legacy audio source (required for setAudioFile)
+  std::unique_ptr<juce::AudioFormatReaderSource> audioSource;
 
   // Phase 1.2: AudioFilePool handle (RT-safe shared ownership)
   std::shared_ptr<const void>
@@ -323,6 +331,12 @@ private:
   // Phase 2A: Process MIDI clip with explicit playhead position
   void processMidiClip(juce::MidiBuffer &midiBuffer, int64_t playheadSamples,
                        int numSamples);
+
+  // Legacy overloads (use internal transportPosition)
+  void processAudioClip(const juce::AudioSourceChannelInfo &bufferToFill);
+  void processMidiClip(const juce::AudioSourceChannelInfo &bufferToFill,
+                       int64_t playheadSamples);
+  void processMidiClip(const juce::AudioSourceChannelInfo &bufferToFill);
 
   float calculateFadeMultiplier(int64_t positionInClip) const;
 

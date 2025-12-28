@@ -4,23 +4,15 @@
     SecureKeyStore.cpp
     Created: 2025-11-29
 
-    Platform-specific secure storage implementation.
-    This file routes to platform-specific implementations.
+    Platform-agnostic secure storage implementation.
+    Platform-specific implementations are in platform/
 
   ==============================================================================
 */
 
 #include "SecureKeyStore.h"
 #include "../engine/ZenithLogger.h"
-
-// Include platform-specific implementations
-#if defined(__linux__)
-#include "../platform/linux/network/SecureKeyStore_Linux.cpp"
-#elif defined(JUCE_MAC)
-#include "../platform/mac/network/SecureKeyStore_Mac.mm"
-#elif defined(JUCE_WINDOWS)
-#include "../platform/windows/network/SecureKeyStore_Windows.cpp"
-#endif
+#include <juce_data_structures/juce_data_structures.h>
 
 namespace zenith {
 

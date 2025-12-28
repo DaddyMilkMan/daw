@@ -1,4 +1,25 @@
 /*
+  ==============================================================================
+
+    ZenithHubComponent.h
+    Created: 2025-12-13
+    Author:  Zenith DAW Team
+
+    The premium "Welcome Screen" / Dashboard for Zenith.
+    Displays recent projects, templates, and user profile.
+
+    Pinocchio Protocol: Removed mock data, now uses RecentProjectManager
+    for real persistent project data.
+
+  ==============================================================================
+*/
+
+#pragma once
+
+#include <JuceHeader.h>
+
+#include "../../engine/RecentProjectManager.h"
+#include "../utils/PhysicsSpring.h"
 #include "AuroraBackground.h"
 #include "GlassmorphicPanel.h"
 #include "SkiaComponent.h"
@@ -9,11 +30,8 @@
 
 namespace zenith {
 
-class LoginComponent;  // Forward declaration
-
 class ZenithHubComponent : public SkiaComponent,
-                           public RecentProjectManager::Listener,
-                           public AuthenticationService::Listener {
+                           public RecentProjectManager::Listener {
 public:
   /**
    * @brief Callback type for project loading
@@ -60,9 +78,6 @@ public:
 
   // RecentProjectManager::Listener
   void recentProjectsChanged() override;
-  
-  // AuthenticationService::Listener
-  void authStateChanged(bool isLoggedIn, const AuthUser& user) override;
 
   void show();
   void dismiss();
@@ -147,19 +162,9 @@ private:
   };
   std::vector<TemplateItem> templates_;
 
-  // Profile / Auth State
+  // Profile
   SkRect profileBounds_;
   bool isProfileHovered_ = false;
-  
-  // Login UI
-  AuthUser currentUser_;           // Current authenticated user
-  SkRect signInButtonBounds_;      // "Sign In" button when not logged in
-  bool isSignInHovered_ = false;
-  std::unique_ptr<LoginComponent> loginComponent_;
-  bool showingLogin_ = false;
-  
-  void showLoginComponent();
-  void hideLoginComponent();
 
   // New Project Button
   SkRect newProjectButtonBounds_;

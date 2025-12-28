@@ -31,6 +31,7 @@ public:
   float getMasterLevel() const { return rmsLevel.load(); }
   float getMasterPeak() const { return masterPeak.load(); }
   void resetMasterPeak() { masterPeak.store(0.0f); }
+  void resetPeak() { resetMasterPeak(); }
   float getPeak() const { return masterPeak.load(); }
 
   StereoAudioFifo &getAnalysisFifo() { return *analysisFifo; }

@@ -70,8 +70,6 @@ public:
   void undo() { projectState.getUndoManager().undo(); }
   void redo() { projectState.getUndoManager().redo(); }
 
-  ProjectState& getProjectState() { return projectState; }
-
   bool performAction(std::unique_ptr<juce::UndoableAction> action) {
       if (action == nullptr) return false;
       return projectState.getUndoManager().perform(action.release());

@@ -214,7 +214,6 @@ void AIResponseCache::resetStats() {
 
 void AIResponseCache::evictLRU() {
   // Note: cacheLock_ should already be held by caller
-  jassert(cacheLock_.isLocked()); // Safety check
 
   // Find entries with lowest hit count
   std::vector<std::pair<juce::String, int>> entries;

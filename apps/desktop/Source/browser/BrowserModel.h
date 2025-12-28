@@ -184,9 +184,6 @@ private:
     juce::File getFavoritesFile() const;
     juce::File getTagsFile() const;
 
-    juce::WeakReference<BrowserModel>::Master masterReference;
-    friend class juce::WeakReference<BrowserModel>;
-
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BrowserModel)
 };
 

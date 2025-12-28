@@ -172,8 +172,6 @@ ProjectState::~ProjectState() {
 
 void ProjectState::rebuildTrackMap() {
   trackIdMap_.clear();
-  nodeCache_.clear();
-  
   auto tracksNode = state.getChildWithName(ID_TRACKS);
 
   if (tracksNode.isValid()) {
@@ -185,14 +183,6 @@ void ProjectState::rebuildTrackMap() {
       }
     }
   }
-
-  // RECURSIVE LIGHTNING CACHE (God Mode Optimization)
-  std::function<void(juce::ValueTree)> cacheNode = [&](juce::ValueTree n) {
-      juce::String id = n.getProperty(PROP_ID).toString();
-      if (id.isNotEmpty()) nodeCache_[id] = n;
-      for (int i = 0; i < n.getNumChildren(); ++i) cacheNode(n.getChild(i));
-  };
-  cacheNode(state);
 }
 
 void ProjectState::newProject() {
@@ -259,11 +249,8 @@ void ProjectState::valueTreeChildAdded(juce::ValueTree &parent,
                                        juce::ValueTree &child) {
   isDirty = true;
 
-  // Add to cache
-  juce::String id = child.getProperty(PROP_ID).toString();
-  if (id.isNotEmpty()) nodeCache_[id] = child;
-
   if (child.hasType(ID_TRACK)) {
+    juce::String id = child.getProperty(PROP_ID).toString();
     if (id.isNotEmpty())
       trackIdMap_[id] = child;
   }
@@ -272,10 +259,12 @@ void ProjectState::valueTreeChildAdded(juce::ValueTree &parent,
 void ProjectState::valueTreeChildRemoved(juce::ValueTree &parent,
                                          juce::ValueTree &child, int) {
   isDirty = true;
-  
-  // Remove from cache
-  juce::String id = child.getProperty(PROP_ID).toString();
-  if (id.isNotEmpty()) nodeCache_.erase(id);
+
+  if (child.hasType(ID_TRACK)) {
+    juce::String id = child.getProperty(PROP_ID).toString();
+    if (id.isNotEmpty())
+      trackIdMap_.erase(id);
+  }
 }
 
 //==============================================================================
@@ -2568,67 +2557,6 @@ juce::File ProjectState::getAssetDirectory(const juce::String &subfolder) const 
     if (subfolder.isNotEmpty())
         return assetsDir.getChildFile(subfolder);
     return assetsDir;
-}
-
-
-
-juce::var ProjectState::getProperty(const juce::String& nodeId, const juce::String& propId) const {
-    auto it = nodeCache_.find(nodeId);
-    if (it != nodeCache_.end()) {
-        return it->second.getProperty(propId);
-    }
-    return {};
-}
-
-void ProjectState::setProperty(const juce::String& nodeId, const juce::String& propId, const juce::var& value) {
-    auto it = nodeCache_.find(nodeId);
-    if (it != nodeCache_.end()) {
-        it->second.setProperty(propId, value, &undoManager);
-    }
-}
-
-juce::var ProjectState::getProjectHierarchy() const {
-    auto* rootObj = new juce::DynamicObject();
-    
-    auto buildHierarchy = [&](auto& self, juce::ValueTree node) -> juce::var {
-        auto* obj = new juce::DynamicObject();
-        obj->setProperty("id", node.getProperty(PROP_ID).toString());
-        obj->setProperty("name", node.getProperty(PROP_NAME).toString());
-        obj->setProperty("type", node.getType().toString());
-        
-        juce::Array<juce::var> children;
-        for (int i = 0; i < node.getNumChildren(); ++i) {
-            children.add(self(self, node.getChild(i)));
-        }
-        
-        if (children.size() > 0) obj->setProperty("children", children);
-        return juce::var(obj);
-    };
-    
-    return buildHierarchy(buildHierarchy, state);
-}
-
-juce::StringArray ProjectState::getUndoHistory() const {
-    // JUCE 8 doesn't have getUndoNames(), so we build the list manually
-    juce::StringArray history;
-    
-    // Get current undo description if available
-    auto desc = undoManager.getUndoDescription();
-    if (desc.isNotEmpty()) {
-        history.add(desc);
-    }
-    
-    // Note: JUCE UndoManager doesn't expose full history stack directly
-    // This returns just the current undo action name
-    return history;
-}
-
-void ProjectState::undoTo(int index) {
-    // Undo back to a specific point - since we can't get full stack,
-    // we undo (index+1) times to reach that point
-    for (int i = 0; i <= index && undoManager.canUndo(); ++i) {
-        undoManager.undo();
-    }
 }
 
 } // namespace zenith

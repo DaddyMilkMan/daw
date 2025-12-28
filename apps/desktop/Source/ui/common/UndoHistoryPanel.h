@@ -32,18 +32,14 @@ namespace zenith {
  * - Click any item to jump to that point in history
  * - Keyboard shortcuts display (Ctrl+Z / Ctrl+Shift+Z)
  */
-class UndoHistoryPanel : public SkiaComponent,
-                         public juce::ChangeListener,
-                         public juce::AsyncUpdater {
+class UndoHistoryPanel : public SkiaComponent {
 public:
     explicit UndoHistoryPanel(ProjectState& projectState);
     ~UndoHistoryPanel() override;
 
     void drawSkia(SkCanvas* canvas) override;
     void resized() override;
-    
-    void changeListenerCallback(juce::ChangeBroadcaster* source) override;
-    void handleAsyncUpdate() override;
+    void timerCallback() override;
     
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseMove(const juce::MouseEvent& e) override;
@@ -63,7 +59,6 @@ private:
     };
     std::vector<HistoryItem> historyItems_;
     int currentIndex_ = 0;  // Position of "now" in the history
-    bool needsRebuild_ = true;
     
     // UI State
     float scrollOffset_ = 0.0f;

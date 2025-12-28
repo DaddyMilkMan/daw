@@ -50,8 +50,8 @@ public:
     {
         auto request = new juce::DynamicObject();
         
-        // Model selection - Updated for Grok 4.1
-        request->setProperty("model", mode == GrokMode::Thinking ? "grok-4.1-reasoning" : "grok-4.1");
+        // Model selection
+        request->setProperty("model", "grok-beta");
         
         // Reasoning mode control
         request->setProperty("reasoning", mode == GrokMode::Thinking);
@@ -235,7 +235,7 @@ public:
 GrokDAWClient::GrokDAWClient()
     : pImpl(std::make_unique<Impl>())
 {
-    // Try to load API key from secure storage, otherwise it remains the factory default
+    // Try to load API key from secure storage
     setAPIKey();
 }
 
@@ -268,7 +268,6 @@ bool GrokDAWClient::setAPIKey(const juce::String& apiKey)
         return true;
     }
     
-    // No key found - return false (API client is not configured)
     return false;
 }
 

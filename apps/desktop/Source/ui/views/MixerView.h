@@ -40,7 +40,7 @@ namespace zenith {
      * Updates automatically when tracks are added or removed.
      */
     class MixerView : public juce::Component,
-                      public juce::ValueTree::Listener
+                      private juce::Timer
     {
     public:
         //==========================================================================
@@ -71,15 +71,12 @@ namespace zenith {
      */
     void rebuildChannels();
 
+private:
     //==========================================================================
-    // ValueTree::Listener overrides
+    // Timer interface (for periodic updates)
     //==========================================================================
 
-    void valueTreeChildAdded(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenAdded) override;
-    void valueTreeChildRemoved(juce::ValueTree& parentTree, juce::ValueTree& childWhichHasBeenRemoved, int indexFromWhichChildWasRemoved) override;
-    void valueTreeChildOrderChanged(juce::ValueTree& parentTree, int oldIndex, int newIndex) override;
-    void valueTreeRedirected(juce::ValueTree& treeWhichHasBeenChanged) override;
-    void valueTreePropertyChanged(juce::ValueTree& treeWhosePropertyHasChanged, const juce::Identifier& property) override {}
+    void timerCallback() override;
 
     //==========================================================================
     // Member variables

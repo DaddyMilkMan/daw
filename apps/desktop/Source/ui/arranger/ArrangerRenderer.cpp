@@ -28,22 +28,21 @@
 namespace zenith {
 
 //==============================================================================
-// Layout Constants - USE DESIGN SYSTEM (Single Source of Truth)
+// Layout Constants 
 //==============================================================================
-static constexpr float HEADER_WIDTH = zenith::design::dimensions::ARRANGER_HEADER_WIDTH;
-static constexpr float SECTION_HEIGHT = zenith::design::dimensions::ARRANGER_SECTION_HEIGHT;
-static constexpr float RULER_HEIGHT = zenith::design::dimensions::ARRANGER_RULER_HEIGHT;
-static constexpr float TRACK_HEIGHT = zenith::design::dimensions::ARRANGER_TRACK_HEIGHT;
-static constexpr float TOP_MARGIN = zenith::design::dimensions::ARRANGER_TOP_MARGIN;
+static constexpr float HEADER_WIDTH = 220.0f;
+static constexpr float SECTION_HEIGHT = 24.0f;
+static constexpr float RULER_HEIGHT = 30.0f;
+static constexpr float TRACK_HEIGHT = 80.0f;
+static constexpr float TOP_MARGIN = SECTION_HEIGHT + RULER_HEIGHT;
 
-// Grid Visibility Constants - INCREASED from original pathetic values
-static constexpr SkAlpha kBarHighlightAlphaTop = 25;    // Was 15 (6%) - now visible
-static constexpr SkAlpha kBarHighlightAlphaBottom = 15; // Was 8 (3%) - now visible
-static constexpr SkAlpha kBarLineAlpha = 140;           // Was 100 - now prominent
-static constexpr float kBarLineWidth = zenith::design::dimensions::ARRANGER_BAR_LINE_WIDTH;
-static constexpr SkAlpha kBeatLineAlpha = 70;           // Was 50 - now visible
-static constexpr float kBeatLineWidth = zenith::design::dimensions::ARRANGER_BEAT_LINE_WIDTH;
-static constexpr float kMinGridSpacing = zenith::design::dimensions::ARRANGER_MIN_GRID_SPACING;
+// Grid Visibility Constants
+static constexpr SkAlpha kBarHighlightAlphaTop = 15;
+static constexpr SkAlpha kBarHighlightAlphaBottom = 8;
+static constexpr SkAlpha kBarLineAlpha = 100;
+static constexpr float kBarLineWidth = 1.5f;
+static constexpr SkAlpha kBeatLineAlpha = 50;
+static constexpr float kBeatLineWidth = 1.0f;
 
 //==============================================================================
 // Constructor
@@ -125,9 +124,8 @@ void ArrangerRenderer::drawGrid(SkCanvas* canvas, float width, float height) {
     double gridStep = owner_.gridSnapBeats;
     if (gridStep <= 0.0) gridStep = 1.0;
     
-    // Adaptive density: ensure lines aren't too close to prevent overlap artifacts
-    // FIXED: Increased from 8px to kMinGridSpacing (20px) to eliminate striping
-    while (gridStep * owner_.pixelsPerBeat < kMinGridSpacing) {
+    // Adaptive density: ensure lines aren't too close
+    while (gridStep * owner_.pixelsPerBeat < 8.0) {
         gridStep *= 2.0;
     }
     
@@ -358,7 +356,7 @@ void ArrangerRenderer::drawSingleClip(SkCanvas* canvas, const ClipView& clipView
         glowPaint.setAntiAlias(true);
         glowPaint.setStyle(SkPaint::kStroke_Style);
         glowPaint.setStrokeWidth(3.0f);
-        glowPaint.setColor(withAlpha(colors::CYAN, 0.6f));
+        glowPaint.setColor(withAlpha(colors::NEON_CYAN, 0.6f));
         glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 6.0f));
         canvas->drawRRect(rr, glowPaint);
         
@@ -366,7 +364,7 @@ void ArrangerRenderer::drawSingleClip(SkCanvas* canvas, const ClipView& clipView
         corePaint.setAntiAlias(true);
         corePaint.setStyle(SkPaint::kStroke_Style);
         corePaint.setStrokeWidth(1.5f);
-        corePaint.setColor(colors::CYAN);
+        corePaint.setColor(colors::NEON_CYAN);
         canvas->drawRRect(rr, corePaint);
     }
     

@@ -33,107 +33,35 @@ RoutingGraph::~RoutingGraph() {}
 void RoutingGraph::updateSnapshot() {
   // Called from message thread while holding writeLock_
 
-  // 1. Create a new topology structure
+  // 1. Create a new topology and calculate Processing Order
   auto nextTopology = std::make_shared<Topology>();
   nextTopology->version = nextTopologyVersion_++;
   nextTopology->connections = connections_; // Copy master connections list
 
-  // Reset feedback flags in the topology copy
-  for (auto &c : nextTopology->connections) {
-    c.isFeedback = false;
-  }
-
-  // 2. Build Adjacency List for Cycle Detection
-  // We sort node IDs to ensure deterministic traversal order
-  std::vector<std::string> sortedNodeIds;
-  sortedNodeIds.reserve(nodes_.size());
-  for (const auto &pair : nodes_) {
-    sortedNodeIds.push_back(pair.first);
-  }
-  std::sort(sortedNodeIds.begin(), sortedNodeIds.end());
-
-  std::map<std::string, std::vector<std::string>> adjList;
-  for (const auto &c : nextTopology->connections) {
-    adjList[c.sourceId.toStdString()].push_back(c.destId.toStdString());
-  }
-
-  // Ensure adjacency lists are also sorted for determinism
-  for (auto &pair : adjList) {
-    std::sort(pair.second.begin(), pair.second.end());
-  }
-
-  // 3. DFS for Cycle Detection
-  // 0 = White (Unvisited), 1 = Gray (Visiting), 2 = Black (Visited)
-  std::unordered_map<std::string, int> visitState;
-  
-  // Helper DFS function
-  std::function<void(const std::string&)> dfs = 
-      [&](const std::string& u) {
-    visitState[u] = 1; // Mark Gray
-
-    for (const auto& v : adjList[u]) {
-      int vState = visitState[v];
-      if (vState == 1) {
-        // Gray -> Gray: Back-edge (Cycle) detected!
-        // Mark all connections u->v as feedback
-        for (auto &c : nextTopology->connections) {
-          if (c.sourceId.toStdString() == u && c.destId.toStdString() == v) {
-            c.isFeedback = true;
-          }
-        }
-      } else if (vState == 0) {
-        // White: Recurse
-        dfs(v);
-      }
-    }
-
-    visitState[u] = 2; // Mark Black
-  };
-
-  // Run DFS from each node (if not visited)
-  for (const auto &id : sortedNodeIds) {
-    if (visitState[id] == 0) {
-      dfs(id);
-    }
-  }
-
-  // 4. Robust Topological Sort (Kahn's Algorithm)
-  // Now we treat 'isFeedback' edges as non-existent for the sort
   std::unordered_map<std::string, int> inDegree;
-  std::map<std::string, std::vector<std::string>> dagAdjList; // DAG only
+  std::unordered_map<std::string, std::vector<std::string>> adjList;
 
   // Initialize in-degrees
-  for (const auto &id : sortedNodeIds) {
-    inDegree[id] = 0;
+  for (const auto &pair : nodes_) {
+    inDegree[pair.first] = 0;
   }
 
-  // Build DAG (ignoring feedback edges)
+  // Build graph and calculate in-degrees
   for (const auto &c : nextTopology->connections) {
-    if (!c.isFeedback) {
-      std::string src = c.sourceId.toStdString();
-      std::string dst = c.destId.toStdString();
-      
-      if (nodes_.count(src) && nodes_.count(dst)) {
-        dagAdjList[src].push_back(dst);
-        inDegree[dst]++;
-      }
-    }
-  }
+    std::string src = c.sourceId.toStdString();
+    std::string dst = c.destId.toStdString();
 
-  // Sort adjacency for determinism in queue adds
-  for (auto &pair : dagAdjList) {
-    std::sort(pair.second.begin(), pair.second.end());
+    if (nodes_.count(src) && nodes_.count(dst)) {
+      adjList[src].push_back(dst);
+      inDegree[dst]++;
+    }
   }
 
   // Queue for nodes with 0 in-degree
-  // Use a std::vector as a queue but sort it or process in deterministic order?
-  // Since we iterate sortedNodeIds, the initial fill is deterministic.
   std::vector<std::string> queue;
-  queue.reserve(nodes_.size());
-  
-  for (const auto &id : sortedNodeIds) {
-    if (inDegree[id] == 0) {
-      queue.push_back(id);
+  for (const auto &pair : inDegree) {
+    if (pair.second == 0) {
+      queue.push_back(pair.first);
     }
   }
 
@@ -143,8 +71,7 @@ void RoutingGraph::updateSnapshot() {
     std::string u = queue[queueIndex++];
     nextTopology->processingOrder.push_back(u);
 
-    // Neighbors in the DAG
-    for (const auto &v : dagAdjList[u]) {
+    for (const auto &v : adjList[u]) {
       inDegree[v]--;
       if (inDegree[v] == 0) {
         queue.push_back(v);
@@ -152,19 +79,20 @@ void RoutingGraph::updateSnapshot() {
     }
   }
 
-  // If graph had nodes (disconnected or cycles), they should be covered now 
-  // because we broke all cycles. 
-  // Any remaining nodes not in processingOrder? 
-  // Should not happen if DFS correctly broke all cycles.
-  // But just in case of logic error, append remaining safely.
+  // Handle Cycles
   if (nextTopology->processingOrder.size() < nodes_.size()) {
-     for (const auto &id : sortedNodeIds) {
-        bool found = false;
-        for (const auto &processed : nextTopology->processingOrder) {
-            if (processed == juce::String(id)) { found = true; break; }
+    for (const auto &pair : nodes_) {
+      bool alreadyAdded = false;
+      for (const auto &id : nextTopology->processingOrder) {
+        if (id == pair.second.id) {
+          alreadyAdded = true;
+          break;
         }
-        if (!found) nextTopology->processingOrder.push_back(id);
-     }
+      }
+      if (!alreadyAdded) {
+        nextTopology->processingOrder.push_back(pair.second.id);
+      }
+    }
   }
 
   // Update state
@@ -237,7 +165,7 @@ void RoutingGraph::removeNode(const juce::String &nodeId) {
 
 bool RoutingGraph::connect(const juce::String &sourceId,
                            const juce::String &destId, float gain,
-                           bool isSidechain, bool isFeedback) {
+                           bool isSidechain) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
   const juce::ScopedLock sl(writeLock_);
@@ -260,7 +188,6 @@ bool RoutingGraph::connect(const juce::String &sourceId,
   c.destId = destId;
   c.gain = gain;
   c.isSidechain = isSidechain;
-  c.isFeedback = isFeedback;
   connections_.push_back(c);
 
   updateSnapshot();

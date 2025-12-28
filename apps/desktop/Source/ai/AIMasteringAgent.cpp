@@ -172,9 +172,14 @@ GrokMasteringAI::GrokMasteringAI() {
   grokClient_ = std::make_unique<GrokAPIClient>();
 
   // Attempt to load API key from SecureKeyStore if not already set by env var
-  // API key is loaded automatically in GrokAPIClient constructor
   if (!grokClient_->hasAPIKey()) {
-     DBG("GrokMasteringAI: No API key found in SecureKeyStore or Env Var");
+    juce::String key;
+    if (SecureKeyStore::retrieveKey(SecureKeyStore::GrokAPIKey, key)) {
+      grokClient_->setAPIKey(key);
+      DBG("GrokMasteringAI: API key loaded from SecureKeyStore");
+    } else {
+      DBG("GrokMasteringAI: No API key found in SecureKeyStore or Env Var");
+    }
   }
 
   DBG("GrokMasteringAI initialized with Grok 4.1 reasoning model");

@@ -183,15 +183,17 @@ private:
   ZenithEffects effects_;
 
   // Modulation Matrix Storage (Global for UI, applied to voices)
+  juce::SpinLock modMatrixLock_;
   std::array<ModulationSlot, 64> globalModMatrix_;
-  mutable juce::SpinLock modMatrixLock_;
 
   // Visualizer Buffer
   juce::AbstractFifo visualizerFifo_{4096};
   std::vector<float> visualizerBuffer_{4096};
 
   // Internal state
-  int currentMaxVoices_ = 16;
+  static constexpr int DEFAULT_VOICE_COUNT = 16;
+  int currentMaxVoices_ = DEFAULT_VOICE_COUNT;
+  int currentBlockSize_ = 512;  // Roast Fix #5: Track buffer size for dynamic changes
   int maxActiveVoices_ = 0;
   double maxBlockProcessingTime_ = 0.0;
 

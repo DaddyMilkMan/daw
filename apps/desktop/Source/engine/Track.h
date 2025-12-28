@@ -150,20 +150,23 @@ public:
 
   //==============================================================================
   // Mixer controls (thread-safe using atomics)
-  void setVolume(float newVolume);
-  float getVolume() const;
+  // Mixer controls (thread-safe using atomics)
+  void setVolume(float newVolume) { mixerChannel.setVolume(newVolume); }
+  float getVolume() const { return mixerChannel.getVolume(); }
 
-  void setPan(float newPan);
-  float getPan() const;
+  void setPan(float newPan) { mixerChannel.setPan(newPan); }
+  float getPan() const { return mixerChannel.getPan(); }
 
-  void setMuted(bool shouldBeMuted);
-  bool isMuted() const;
+  void setMuted(bool shouldBeMuted) { mixerChannel.setMuted(shouldBeMuted); }
+  bool isMuted() const { return mixerChannel.isMuted(); }
 
-  void setSolo(bool shouldBeSolo);
-  bool isSolo() const;
+  void setSolo(bool shouldBeSolo) { mixerChannel.setSolo(shouldBeSolo); }
+  bool isSolo() const { return mixerChannel.isSolo(); }
 
-  void setSilencedBySolo(bool silenced);
-  bool isSilencedBySolo() const;
+  void setSilencedBySolo(bool silenced) {
+    mixerChannel.setSilencedBySolo(silenced);
+  }
+  bool isSilencedBySolo() const { return mixerChannel.isSilencedBySolo(); }
 
   void setArmed(bool shouldBeArmed); // For recording
   bool isArmed() const { return armed.load(); }
@@ -280,9 +283,10 @@ public:
 
   //==============================================================================
   // Monitoring
-  float getCurrentLevel() const;
-  float getPeakLevel() const;
-  void resetPeakLevel();
+  // Monitoring
+  float getCurrentLevel() const { return mixerChannel.getOutputLevel(); }
+  float getPeakLevel() const { return mixerChannel.getOutputPeak(); }
+  void resetPeakLevel() { mixerChannel.resetPeaks(); }
 
   //==============================================================================
   // State management

@@ -33,7 +33,7 @@
 #include "../engine/TransportController.h"
 #include "../engine/MeteringSystem.h"
 #include "../engine/Metronome.h"
-#include "../engine/MixerController.h"
+#include "MixerController.h"
 #include "../engine/Midi2DiscoveryService.h"
 
 #include "GrokGodModeHelper.h"

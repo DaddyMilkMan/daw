@@ -103,25 +103,6 @@ public:
         Get conversation history
     */
     juce::Array<juce::var> getHistory() const;
-
-    //==========================================================================
-    // Vibe DAW - Transactional Edits
-    //==========================================================================
-    
-    /**
-        Accept and commit the last batch of changes made by the AI
-    */
-    void acceptLastChanges();
-
-    /**
-        Deny and rollback the last batch of changes made by the AI
-    */
-    void denyLastChanges();
-
-    /**
-        Set a callback for when the AI proposes changes that need confirmation
-    */
-    void setOnChangesPending(std::function<void(bool)> callback);
     
     //==========================================================================
     /**

@@ -11,9 +11,7 @@
 #include "../engine/MixerChannel.h"
 #include "../engine/Track.h"
 #include "../engine/ProjectState.h"
-#include "../engine/AudioFilePool.h"
 #include "Engine.h"
-
 #include "TestUtils.h"
 #include <cmath> // For std::isnan and std::isinf
 #include <juce_audio_basics/juce_audio_basics.h>
@@ -118,12 +116,11 @@ public:
       clip.setStartPosition(kClipStart);
       clip.setLength(kClipLength);
 
-      // Create dummy audio content for the clip
-      juce::File tempFile = createTempWavFile("clip_timing_test_" + juce::Uuid().toString(), kClipLength);
-      
-      AudioFilePool pool;
-      clip.setAudioFileFromPool(tempFile, pool);
-
+      // Create dummy audio content for the clip (1.0f amplitude)
+      juce::AudioBuffer<float> content(1, kClipLength);
+      for (int i = 0; i < kClipLength; ++i)
+        content.setSample(0, i, 1.0f);
+      clip.setAudioBuffer(content);
       clip.setPlaying(true);
 
       // Case 1: Render before clip (samples 0-400) -> Expect Silence
@@ -158,11 +155,6 @@ public:
       // (1.0f)
       expect(buffer.getMagnitude(0, kSamplesPerBlock, kSamplesPerBlock) > 0.0f,
              "Buffer overlapping post-start should contain audio");
-
-      // Cleanup
-      pool.clear();
-      tempFile.deleteFile();
-
     }
 
     beginTest("Clip start/stop");
@@ -170,24 +162,14 @@ public:
       zenith::Clip clip;
       clip.setStartPosition(0);
       clip.setLength(1000);
-      clip.setStartPosition(0);
-      clip.setLength(1000);
-      
-      juce::File tempFile = createTempWavFile("clip_start_stop_" + juce::Uuid().toString(), 1000);
-      AudioFilePool pool;
-      clip.setAudioFileFromPool(tempFile, pool);
-
+      juce::AudioBuffer<float> content(1, 1000);
+      clip.setAudioBuffer(content);
 
       clip.setPlaying(true);
       expect(clip.isPlaying());
 
       clip.setPlaying(false);
-      clip.setPlaying(false);
       expect(!clip.isPlaying());
-
-      pool.clear();
-      tempFile.deleteFile();
-
     }
 
     beginTest("Clip looping");
@@ -197,14 +179,11 @@ public:
       clip.setLength(100); // Short clip
       clip.setLooping(true);
 
-      clip.setLooping(true);
-
-      // Create content with specific pattern (not just DC)
-      // Since createTempWavFile fills with 0.5f, it's sufficient for "sound exists"
-      juce::File tempFile = createTempWavFile("clip_looping_" + juce::Uuid().toString(), 100);
-      AudioFilePool pool;
-      clip.setAudioFileFromPool(tempFile, pool);
-
+      juce::AudioBuffer<float> content(1, 100);
+      // Mark the start of the content to identify loop points
+      content.clear();
+      content.setSample(0, 0, 1.0f); // Sample 0 is 1.0
+      clip.setAudioBuffer(content);
       clip.setPlaying(true);
 
       juce::AudioBuffer<float> buffer(1, 200); // Request 2 loops worth
@@ -215,13 +194,9 @@ public:
       clip.getNextAudioBlock(info);
 
       // Expect signal at index 0 (loop 1 start)
-      expect(buffer.getSample(0, 0) > 0.01f, "Loop 1 start not found");
+      expect(buffer.getSample(0, 0) > 0.5f, "Loop 1 start not found");
       // Expect signal at index 100 (loop 2 start)
-      expect(buffer.getSample(0, 100) > 0.01f, "Loop 2 start not found");
-
-      pool.clear();
-      tempFile.deleteFile();
-
+      expect(buffer.getSample(0, 100) > 0.5f, "Loop 2 start not found");
     }
   }
 };
@@ -492,21 +467,24 @@ public:
       const int sampleRate = 44100;
       const int clipLength = sampleRate * 2; // 2 seconds
       
-      juce::File tempFile = createTempWavFile("basic_audio_test_" + juce::Uuid().toString(), clipLength, 2);
+      juce::AudioBuffer<float> content(2, clipLength);
+      {
+          juce::Random rng;
+          for(int ch=0; ch<2; ++ch) {
+              for(int i=0; i<clipLength; ++i) {
+                  content.setSample(ch, i, rng.nextFloat() * 0.5f + 0.2f);
+              }
+          }
+      }
       
       auto clip = std::make_unique<zenith::Clip>();
-      // Engine likely has its own pool? We should use it?
-      // Engine initializes AudioFilePool internally. Use getAudioFilePool() from engine if available?
-      // Engine::getAudioFilePool() is available.
-      
-      clip->setAudioFileFromPool(tempFile, engine.getAudioFilePool());
+      clip->setAudioBuffer(content);
       clip->setStartPosition(0);
       clip->setLength(clipLength);
       clip->setPlaying(true);
       
       // Add clip to track
       track->addClip(std::move(clip));
-
       
       // 5. Start Playback
       engine.setPlayheadSamples(0);
@@ -565,8 +543,6 @@ public:
       // Cleanup
       engine.audioDeviceStopped();
       mockDevice.close();
-      tempFile.deleteFile();
-
     }
   }
 };

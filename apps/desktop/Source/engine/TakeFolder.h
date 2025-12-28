@@ -209,12 +209,9 @@ public:
   /**
    * @brief Create a new clip that renders the entire comp as audio.
    * @param sampleRate Sample rate for the rendered clip.
-   * @param outputDirectory Directory to save the flattened file.
-   * @param pool AudioFilePool to load the new file into the clip.
    * @return New clip containing the flattened audio.
    */
-  std::unique_ptr<Clip> flatten(double sampleRate, const juce::File& outputDirectory, AudioFilePool& pool);
-
+  std::unique_ptr<Clip> flatten(double sampleRate, const juce::File& outputDirectory);
 
   //==========================================================================
   // Expansion State (for UI)

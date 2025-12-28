@@ -187,7 +187,7 @@ public:
         for (auto& item : flexItems_) {
             if (gap_ > 0.0f && item.margin.left == 0 && item.margin.right == 0 && 
                 item.margin.top == 0 && item.margin.bottom == 0) {
-                 item = item.withMargin(gap_ / 2.0f);
+                 item.withMargin(gap_ / 2.0f);
             }
             flex.items.add(item);
         }
@@ -217,9 +217,7 @@ public:
     float gap_ = 0.0f;
     juce::FlexBox::JustifyContent justify_ =
         juce::FlexBox::JustifyContent::flexStart;
-    // CRITICAL: Default to stretch, not center. Center causes items without explicit
-    // height to collapse to 0px when in row mode.
-    juce::FlexBox::AlignItems align_ = juce::FlexBox::AlignItems::stretch;
+    juce::FlexBox::AlignItems align_ = juce::FlexBox::AlignItems::center;
   };
 
   static Builder begin() { return Builder(); }

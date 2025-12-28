@@ -92,6 +92,8 @@ private:
   std::vector<std::unique_ptr<ArrangerTrackComponent>> trackComponents;
   void rebuildTrackComponents();
 
+  GridResolution gridResolution_ = GridResolution::Bar_1;
+
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArrangerComponent)
 };
 

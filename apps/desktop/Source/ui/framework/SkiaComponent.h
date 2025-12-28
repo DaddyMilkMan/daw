@@ -12,9 +12,6 @@
 #pragma once
 
 extern "C++" {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunknown-warning-option"
-#pragma clang diagnostic ignored "-Wattributes"
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
 #include <core/SkFont.h>
@@ -24,7 +21,6 @@ extern "C++" {
 #include <core/SkRRect.h>
 #include <core/SkRect.h>
 #include <core/SkShader.h>
-#pragma clang diagnostic pop
 }
 #include <juce_gui_basics/juce_gui_basics.h>
 

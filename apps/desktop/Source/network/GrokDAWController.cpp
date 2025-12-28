@@ -42,10 +42,8 @@ public:
   juce::ThreadPool threadPool{1}; // Limit to 1 concurrent analysis job
 
   std::function<juce::var()> contextProvider;
-  std::function<void(bool)> onChangesPending;
 
   bool isInitialized = false;
-  bool changesArePending = false;
 
   // Command Registry
   std::unordered_map<std::string, FunctionHandler> functionRegistry;
@@ -54,38 +52,13 @@ public:
   std::unordered_map<std::string, CommandAPI::CommandID> commandIdMap;
 
   //==========================================================================
-  // Helper for safe threading - FIXED: Never block on message thread
+  // Helper for safe threading
   void executeOnMessageThread(std::function<void()> task) {
     if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
       task();
     } else {
-      // Use WeakReference to prevent UAF if controller is deleted before callback runs
-      juce::WeakReference<Impl> safeThis(this);
-      juce::MessageManager::callAsync([safeThis, task]() {
-        if (safeThis)
-            task();
-      });
+      juce::MessageManager::callAsync(task);
     }
-  }
-
-  // NEW: Execute blocking operations on background thread
-  void executeOnBackgroundThread(std::function<void()> task) {
-    if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
-      // If we're on message thread, use ThreadPool instead of detach to ensure lifetime safety
-      // threadPool destructor will wait for jobs to finish
-      threadPool.addJob(task);
-    } else {
-      // We're already on background thread, execute directly
-      task();
-    }
-  }
-
-  void startVibeTransaction() {
-      executeOnMessageThread([this]() {
-          commandAPI.getProjectState().getUndoManager().beginNewTransaction("Grok Edit");
-          changesArePending = true;
-          if (onChangesPending) onChangesPending(true);
-      });
   }
 
   void registerDefaultHandlers() {
@@ -287,8 +260,8 @@ public:
                       std::function<void(juce::String response)> onComplete,
                       std::function<void(juce::String error)> onError,
                       std::function<void(juce::String status)> onProgress) {
-    // FIXED: Never block on message thread - always use background thread
-    executeOnBackgroundThread([this, call, onComplete, onError, onProgress]() {
+    // Use ThreadPool instead of detached threads
+    threadPool.addJob([this, call, onComplete, onError, onProgress]() {
       // Check if analysis service is available (Python installed?)
       if (!analysisService.isAvailable()) {
         juce::MessageManager::callAsync([onError, this]() {
@@ -310,8 +283,12 @@ public:
       paramsObj->setProperty("durationSeconds", 10.0); // Default 10s
       exportParams = juce::var(paramsObj);
 
-      // FIXED: Use async callback pattern to prevent deadlocks
-      executeOnMessageThread([this, exportParams, tempPath, onComplete,
+      // Use completion callback pattern instead of blocking wait to prevent
+      // deadlocks. The original code used WaitableEvent::wait() which could
+      // deadlock if called from the message thread (callAsync would never
+      // execute). Now we use a fully async chain.
+
+      juce::MessageManager::callAsync([this, exportParams, tempPath, onComplete,
                                        onError, onProgress]() {
         auto *cmdObj = new juce::DynamicObject();
         cmdObj->setProperty("command", "export_audio");
@@ -327,15 +304,19 @@ public:
         }
 
         // Continue analysis on background thread
-        executeOnBackgroundThread([this, tempPath, onComplete, onError, onProgress]() {
+        threadPool.addJob([this, tempPath, onComplete, onError, onProgress]() {
           if (onProgress) {
             juce::MessageManager::callAsync(
                 [onProgress]() { onProgress("Analyzing audio..."); });
           }
 
+          // Capture tempPath by value (String), create File when needed.
+          // This avoids the need for const_cast on captured-by-value
+          // juce::File.
           analysisService.analyzeAudioFile(
               juce::File(tempPath),
               [onComplete, tempPath](AudioAnalysisResults results) {
+                // Clean up temp file (no const_cast needed!)
                 juce::File(tempPath).deleteFile();
                 if (results.success)
                   onComplete(results.toSummary());
@@ -343,6 +324,7 @@ public:
                   onComplete("Analysis failed: " + results.errorMessage);
               },
               [onError, tempPath](juce::String error) {
+                // Clean up temp file (no const_cast needed!)
                 juce::File(tempPath).deleteFile();
                 onError("Analysis error: " + error);
               });
@@ -364,37 +346,33 @@ public:
         onProgress("Executing: " + funcName);
       });
 
-    // RUN ON BACKGROUND THREAD (Complaint #1 Fix: Anti-Deadlock)
-    threadPool.addJob([this, call, onComplete, onError, onProgress]() {
-        std::string funcName = call.functionName.toStdString();
-        auto it = functionRegistry.find(funcName);
+    std::string funcName = call.functionName.toStdString();
+    auto it = functionRegistry.find(funcName);
 
-        if (it != functionRegistry.end()) {
-          it->second(call, onComplete, onError, onProgress);
-        } else {
-          // Fallback: Verify if this is a valid CommandID before trying
-          auto idIt = commandIdMap.find(funcName);
-          if (idIt != commandIdMap.end()) {
-            // Safe dispatch to message thread for the actual COMMAND execution
-            executeOnMessageThread([this, call, onComplete, onError, idIt]() {
-              juce::var result = commandAPI.executeCommand(idIt->second, call.arguments);
+    if (it != functionRegistry.end()) {
+      it->second(call, onComplete, onError, onProgress);
+    } else {
+      // Fallback: Verify if this is a valid CommandID before trying
+      auto idIt = commandIdMap.find(funcName);
+      if (idIt != commandIdMap.end()) {
+        // Valid ID known, dispatch safely using helper
+        executeOnMessageThread([this, call, onComplete, onError, idIt]() {
+          // Typed Dispatch
+          juce::var result =
+              commandAPI.executeCommand(idIt->second, call.arguments);
 
-              if (result.getProperty("success", false)) {
-                grokClient.submitFunctionResult(call, result, onComplete, onError);
-              } else {
-                onError("Function call failed: " +
-                        result.getProperty("error", "Command failed").toString());
-              }
-            });
+          if (result.getProperty("success", false)) {
+            grokClient.submitFunctionResult(call, result, onComplete, onError);
           } else {
-            onError("Unknown function: " + call.functionName);
+            onError("Function call failed: " +
+                    result.getProperty("error", "Command failed").toString());
           }
-        }
-    });
-    });
+        });
+      } else {
+        onError("Unknown function or failed execution: " + call.functionName);
+      }
+    }
   }
-
-  JUCE_DECLARE_WEAK_REFERENCEABLE(Impl)
 };
 
 //==============================================================================
@@ -405,25 +383,6 @@ GrokDAWController::GrokDAWController(CommandAPI &commandAPI)
     : pImpl(std::make_unique<Impl>(commandAPI)) {}
 
 GrokDAWController::~GrokDAWController() = default;
-
-void GrokDAWController::acceptLastChanges() {
-    pImpl->changesArePending = false;
-    if (pImpl->onChangesPending) pImpl->onChangesPending(false);
-}
-
-void GrokDAWController::denyLastChanges() {
-    if (pImpl->changesArePending) {
-        pImpl->executeOnMessageThread([this]() {
-            pImpl->commandAPI.getProjectState().getUndoManager().undo();
-            pImpl->changesArePending = false;
-            if (pImpl->onChangesPending) pImpl->onChangesPending(false);
-        });
-    }
-}
-
-void GrokDAWController::setOnChangesPending(std::function<void(bool)> callback) {
-    pImpl->onChangesPending = callback;
-}
 
 bool GrokDAWController::initialize(const juce::String &apiKey) {
   bool success = pImpl->grokClient.setAPIKey(apiKey);
@@ -447,9 +406,6 @@ void GrokDAWController::executeCommand(
 
   if (onProgress)
     onProgress("Processing command...");
-
-  // Start Transaction for "Vibe" preview (Complaint #5 Fix: Real-time Accept/Deny)
-  pImpl->startVibeTransaction();
 
   // Task 4: Use helper for system prompt
   auto systemPrompt = AIPrompts::buildSystemPrompt(pImpl->contextProvider);

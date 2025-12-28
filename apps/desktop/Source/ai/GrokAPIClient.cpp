@@ -51,7 +51,7 @@ void GrokAPIClient::analysisWorker() {
             auto result = performAnalysis(request);
             
             // Cache result
-            cacheAnalysis(generateCacheKey(request.trackName, request.audio, request.sampleRate), result);
+            cacheAnalysis(generateCacheKey(request.trackName, *request.audio, request.sampleRate), result);
             
         } catch (const std::exception& e) {
             DBG("Analysis failed: " << e.what());
@@ -79,7 +79,7 @@ void GrokAPIClient::analyzeAudioAsync(const AnalysisRequest& request,
                                      std::function<void(AnalysisResult)> onComplete,
                                      std::function<void(juce::String)> onError) {
     // Check cache first
-    juce::String cacheKey = generateCacheKey(request.trackName, request.audio, request.sampleRate);
+    juce::String cacheKey = generateCacheKey(request.trackName, *request.audio, request.sampleRate);
     AnalysisResult cachedResult;
     
     if (!request.forceReanalysis && getCachedAnalysis(cacheKey, cachedResult)) {
@@ -92,54 +92,39 @@ void GrokAPIClient::analyzeAudioAsync(const AnalysisRequest& request,
     // Queue for background analysis
     {
         std::lock_guard<std::mutex> lock(analysisQueueMutex);
-        // Store callbacks in the request (assuming AnalysisRequest has std::function members or similar mechanism)
-        // Since AnalysisRequest structure isn't visible, I'll assume we need to wrap this logic.
-        // However, looking at analysisWorker, it processes 'request' and caches result.
-        // It doesn't seem to have a callback mechanism built-in.
-        // We need to modify how analysis is handled.
-        
-        // A better approach without changing the struct definition (if we can't see it):
-        // Use a separate map for pending callbacks or lambda capture if the queue supported it.
-        // Assuming we can't easily change the struct here, we will launch a detached thread 
-        // that waits for the result (simulating async without blocking the main thread).
-        
-        // BETTER FIX: Modify the worker to handle completion or use a future/promise pattern if possible.
-        // Given constraints, let's spawn a thread that waits on the cache condition.
-        
         analysisQueue.push(request);
     }
     
     analysisCondition.notify_one();
     
-    // Launch a watcher thread that waits for the result without blocking the caller
-    std::thread([this, cacheKey, onComplete, onError]() {
-        auto startTime = std::chrono::steady_clock::now();
-        const auto timeout = std::chrono::seconds(30);
-        
-        while (std::chrono::steady_clock::now() - startTime < timeout) {
-            AnalysisResult result;
-            if (getCachedAnalysis(cacheKey, result)) {
-                juce::MessageManager::callAsync([onComplete, result]() {
-                    onComplete(result);
-                });
-                return;
-            }
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-        
-        if (onError) {
-            juce::MessageManager::callAsync([onError]() {
-                onError("Analysis timeout");
+    // Poll for completion (simplified - in production would use callbacks)
+    auto startTime = std::chrono::steady_clock::now();
+    const auto timeout = std::chrono::seconds(30);  // 30 second timeout
+    
+    while (std::chrono::steady_clock::now() - startTime < timeout) {
+        if (getCachedAnalysis(cacheKey, cachedResult)) {
+            juce::MessageManager::callAsync([onComplete, cachedResult]() {
+                onComplete(cachedResult);
             });
+            return;
         }
-    }).detach();
+        
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    
+    // Timeout
+    if (onError) {
+        juce::MessageManager::callAsync([onError]() {
+            onError("Analysis timeout");
+        });
+    }
 }
 
 GrokAPIClient::AnalysisResult GrokAPIClient::getAnalysis(const juce::String& trackName, 
                                         const juce::AudioBuffer<float>& audio,
                                         double sampleRate) {
     AnalysisRequest request;
-    request.audio = audio;
+    request.audio = std::make_shared<juce::AudioBuffer<float>>(audio);
     request.sampleRate = sampleRate;
     request.trackName = trackName;
     request.forceReanalysis = false;
@@ -160,10 +145,10 @@ GrokAPIClient::AnalysisResult GrokAPIClient::performAnalysis(const AnalysisReque
     
     try {
         // Visual analysis
-        result.visualAnalysis = visualAnalyzer->analyzeAudio(request.audio, request.sampleRate);
+        result.visualAnalysis = visualAnalyzer->analyzeAudio(*request.audio, request.sampleRate);
         
         // Genre detection
-        result.genrePrediction = genreDetector->detectGenre(request.audio, request.sampleRate);
+        result.genrePrediction = genreDetector->detectGenre(*request.audio, request.sampleRate);
         
         // Project context (if available)
         if (projectContext) {
@@ -171,7 +156,7 @@ GrokAPIClient::AnalysisResult GrokAPIClient::performAnalysis(const AnalysisReque
             
             // Creative analysis
             result.creativeInsight = creativePartner->analyzeCreatively(
-                request.audio, *projectContext, result.genrePrediction);
+                *request.audio, *projectContext, result.genrePrediction);
             
             // Generate contextual description
             result.contextualDescription = "Track: " + request.trackName + "\n";
@@ -308,18 +293,19 @@ void GrokAPIClient::cleanupCache() {
 juce::String GrokAPIClient::generateCacheKey(const juce::String& trackName, 
                                             const juce::AudioBuffer<float>& audio,
                                             double sampleRate) {
-    // Create hash from track name, audio hash, and sample rate
+    // Create hash from track name, audio content hash, and sample rate
     juce::String key = trackName;
     
-    // Simple audio hash (sum of samples)
-    float audioHash = 0.0f;
+    // Robust audio hashing using SHA256
+    juce::MemoryBlock audioData;
     for (int ch = 0; ch < audio.getNumChannels(); ++ch) {
-        for (int i = 0; i < audio.getNumSamples(); ++i) {
-            audioHash += audio.getSample(ch, i);
-        }
+        audioData.append(audio.getReadPointer(ch), static_cast<size_t>(audio.getNumSamples()) * sizeof(float));
     }
     
-    key += "_" + juce::String(audioHash, 0) + "_" + juce::String(sampleRate, 0);
+    juce::SHA256 audioHasher(audioData.getData(), audioData.getSize());
+    juce::String audioHash = audioHasher.toHexString();
+    
+    key += "_" + audioHash + "_" + juce::String(sampleRate, 0);
     return key;
 }
 
@@ -515,14 +501,12 @@ bool GrokAPIClient::deleteAPIKey() {
 }
 
 juce::String GrokAPIClient::encryptKey(const juce::String& key) {
-    // Generate machine-specific salt
-    juce::String salt = juce::SystemStats::getComputerName() + 
-                       juce::SystemStats::getUserId() + 
-                       "Zenith_Secure_Salt";
-    
+    // Simple XOR with a fixed key (better than plain text)
+    const char* xorKey = "ZenithDAW_Secure_2024";
     juce::String encrypted;
+    
     for (int i = 0; i < key.length(); ++i) {
-        char encryptedChar = key[i] ^ salt[i % salt.length()];
+        char encryptedChar = key[i] ^ xorKey[i % strlen(xorKey)];
         encrypted += juce::String::formatted("%02X", static_cast<unsigned char>(encryptedChar));
     }
     
@@ -530,16 +514,13 @@ juce::String GrokAPIClient::encryptKey(const juce::String& key) {
 }
 
 juce::String GrokAPIClient::decryptKey(const juce::String& encrypted) {
-    juce::String salt = juce::SystemStats::getComputerName() + 
-                       juce::SystemStats::getUserId() + 
-                       "Zenith_Secure_Salt";
-                       
+    const char* xorKey = "ZenithDAW_Secure_2024";
     juce::String decrypted;
     
     for (int i = 0; i < encrypted.length(); i += 2) {
         juce::String hexByte = encrypted.substring(i, i + 2);
         char encryptedChar = static_cast<char>(std::strtol(hexByte.toUTF8(), nullptr, 16));
-        char decryptedChar = encryptedChar ^ salt[(i / 2) % salt.length()];
+        char decryptedChar = encryptedChar ^ xorKey[(i / 2) % strlen(xorKey)];
         decrypted += decryptedChar;
     }
     

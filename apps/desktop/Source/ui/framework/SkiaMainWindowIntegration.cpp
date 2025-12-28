@@ -33,7 +33,6 @@ SkiaOpenGLRenderer::SkiaOpenGLRenderer(juce::Component *componentToAttach)
   ZENITH_LOG_INFO("SkiaOpenGLRenderer: Constructor called");
   
   if (targetComponent_) {
-    updateDimensions(targetComponent_->getWidth(), targetComponent_->getHeight());
     try {
       // Set up the renderer but DON'T attach yet
       // Attachment will happen when the component gets a peer
@@ -74,10 +73,9 @@ void SkiaOpenGLRenderer::scheduleAttachmentCheck() {
   juce::Component* comp = targetComponent_;
   juce::OpenGLContext* ctx = &openGLContext_;
   
-  juce::WeakReference<SkiaOpenGLRenderer> safeThis(this);
-  juce::MessageManager::callAsync([safeThis, comp, ctx]() {
+  juce::MessageManager::callAsync([this, comp, ctx]() {
     // Safety check - make sure objects are still valid
-    if (!safeThis || !comp || !ctx) return;
+    if (!comp || !ctx) return;
     
     std::cerr << "[ASYNC] Checking peer, peer=" 
               << (comp->getPeer() ? "valid" : "null")
@@ -86,11 +84,11 @@ void SkiaOpenGLRenderer::scheduleAttachmentCheck() {
     if (comp->getPeer() != nullptr && !ctx->isAttached()) {
       std::cerr << "[ASYNC] Peer available! Attaching context now..." << std::endl;
       ZENITH_LOG_INFO("SkiaOpenGLRenderer: Async check found peer, attaching context...");
-      safeThis->attachContextNow();
+      attachContextNow();
     } else if (!ctx->isAttached()) {
       // No peer yet, schedule another check in 100ms
-      juce::Timer::callAfterDelay(100, [safeThis]() {
-        if (safeThis) safeThis->scheduleAttachmentCheck();
+      juce::Timer::callAfterDelay(100, [this]() {
+        scheduleAttachmentCheck();
       });
     }
   });
@@ -188,13 +186,23 @@ void SkiaOpenGLRenderer::renderOpenGL() {
   if (!targetComponent_->isVisible()) {
       return; 
   }
+  
+  // ROBUSTNESS: Check if we are being destroyed or if peer is gone
+  if (targetComponent_ == nullptr || targetComponent_->getPeer() == nullptr) {
+       return;
+  }
 
-  // NOTE: We removed the MessageManagerLock here to prevent DEADLOCKS.
-  // Instead, we use std::atomic metrics updated from the main thread (in resized())
-  // to avoid data races while keeping the render loop lock-free.
+  // Thread safety: try to lock the message manager to safely access component hierarchy.
+  // Use attemptLock to avoid blocking the GL thread if the message thread is busy.
+  juce::MessageManagerLock mmLock(juce::Thread::getCurrentThread());
+  if (!mmLock.lockWasGained()) {
+    // Message thread is busy; skip this frame to avoid blocking.
+    // The next repaint trigger will retry.
+    return;
+  }
 
-  int width = safeWidth_.load();
-  int height = safeHeight_.load();
+  auto width = targetComponent_->getWidth();
+  auto height = targetComponent_->getHeight();
 
   // Only recreate surface if size changed
   if (width != lastWidth_ || height != lastHeight_ || !surface_) {
@@ -300,8 +308,6 @@ void SkiaMainWindowIntegration::paint(juce::Graphics &g) {
 }
 
 void SkiaMainWindowIntegration::resized() {
-  // Update thread-safe dimensions for the render thread
-  updateDimensions(getWidth(), getHeight());
   // Surface will be recreated in renderOpenGL if size changed
 }
 

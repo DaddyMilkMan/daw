@@ -23,14 +23,10 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #ifdef ZENITH_USE_SKIA
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunknown-warning-option"
-#pragma clang diagnostic ignored "-Wattributes"
 #include <core/SkCanvas.h>
 #include <core/SkImage.h>
 #include <core/SkPath.h>
 #include <core/SkTextBlob.h>
-#pragma clang diagnostic pop
 #endif
 
 namespace zenith {
@@ -86,8 +82,8 @@ public:
 
   // ----- Icon -----
 #ifdef ZENITH_USE_SKIA
-  void setIcon(sk_sp<::SkImage> icon);
-  sk_sp<::SkImage> getIcon() const { return icon_; }
+  void setIcon(sk_sp<SkImage> icon);
+  sk_sp<SkImage> getIcon() const { return icon_; }
   void setIconPath(const SkPath& path);
   SkPath getIconPath() const { return iconPath_; }
 #endif
@@ -152,7 +148,7 @@ private:
   juce::String tooltip_;
   juce::String iconText_;
 #ifdef ZENITH_USE_SKIA
-  sk_sp<::SkImage> icon_;
+  sk_sp<SkImage> icon_;
   SkPath iconPath_;
   sk_sp<SkTextBlob> textBlob_;
 #endif

@@ -201,20 +201,7 @@ private:
     // Scanning state
     std::atomic<bool> isScanning_{false};
     std::atomic<bool> shouldCancel_{false};
-    // Managed thread for plugin scanning
-    class ScanThread : public juce::Thread {
-    public:
-        ScanThread(PluginHost& host) : juce::Thread("PluginScanner"), owner(host) {}
-        
-        void run() override {
-            owner.scanInternal([](const juce::String&) {});
-        }
-        
-    private:
-        PluginHost& owner;
-    };
-    
-    std::unique_ptr<ScanThread> scanThread;
+    std::thread scanThread_;
     
     // Custom search paths
     juce::StringArray customSearchPaths;

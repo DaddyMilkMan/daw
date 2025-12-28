@@ -33,8 +33,6 @@
 #include "ResizablePanelContainer.h"
 #include "HelpViewPanel.h"
 
-#include "../../engine/GrokGodModeHelper.h"
-
 namespace zenith {
 
 // Helper class to switch between Arranger and Session views while keeping them
@@ -100,7 +98,6 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state, Co
   // 1. Initialize Browser Model
   browserModel_ = std::make_unique<BrowserModel>(
       engine_.getInstrumentRegistry(), engine_.getPluginHost());
-  GrokGodModeHelper::getInstance().setBrowserModel(browserModel_.get());
 
   auto &layoutMgr = layout::LayoutManager::getInstance();
 
@@ -326,12 +323,7 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state, Co
 
   panelContainer_->addPanel(std::move(centerContainer), centerCfg);
 
-  // 5. Apply Initial Layout from Manager (Complaint #1 Fix: Dynamic Furniture)
-  if (layoutMgr.hasLastLayout()) {
-      layoutMgr.applyLayout(layoutMgr.loadLastLayout(), panelContainer_.get());
-  }
-
-  // 6. Cursor Overlay with ID-to-Rect mapping for collaboration
+  // 5. Cursor Overlay with ID-to-Rect mapping for collaboration
   cursorOverlay_ = std::make_unique<RemoteCursorOverlay>();
   
   // Set up the mapper to convert selection IDs to screen rectangles

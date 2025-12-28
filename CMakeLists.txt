@@ -113,12 +113,6 @@ set(ZENITH_COMMON_SOURCES
     
     # Engine sources
     apps/desktop/Source/engine/Engine.cpp
-    apps/desktop/Source/engine/EngineTransport.cpp
-    apps/desktop/Source/engine/EngineTrackManagement.cpp
-    apps/desktop/Source/engine/EngineMixing.cpp
-    apps/desktop/Source/engine/EngineRecording.cpp
-    apps/desktop/Source/engine/EngineExport.cpp
-    apps/desktop/Source/engine/EngineMIDI.cpp
     apps/desktop/Source/engine/EngineSync.cpp
     apps/desktop/Source/engine/EnginePlugins.cpp
     apps/desktop/Source/engine/ProjectState.cpp
