@@ -222,7 +222,16 @@ public:
     }
     bool getAnimationsEnabled() const { return animationsEnabled_; }
 
-    void setHighContrastMode(bool enabled) { if (highContrastMode_ != enabled) { highContrastMode_ = enabled; save(); sendChangeMessage(); } }
+    void setHighContrastMode(bool enabled) {
+        setWithBroadcast([&]() {
+            if (highContrastMode_ != enabled) {
+                highContrastMode_ = enabled;
+                save();
+                return true;
+            }
+            return false;
+        });
+    }
     bool getHighContrastMode() const { return highContrastMode_; }
 
     //==============================================================================

@@ -26,7 +26,7 @@
 #include "../controls/SkiaPopupMenu.h"
 #include "../controls/ContextMenuManager.h"
 #include "../design-system/ColorBridge.h"
-#include "../design-system/ZenithTypography.h"
+#include "../design-system/ZenithDesignSystem.h"
 #include "PluginBrowser.h"
 #include <JuceHeader.h>
 
@@ -76,7 +76,9 @@ MixerChannelComponent::MixerChannelComponent(Track *track, ProjectState& state, 
   // Track name label
   nameLabel_.setText(track_->getName(), juce::dontSendNotification);
   nameLabel_.setJustificationType(juce::Justification::centred);
-  nameLabel_.setFont(isMaster_ ? ZenithTypography::getHeaderFont().withHeight(16.0f) : ZenithTypography::getHeaderFont().withHeight(14.0f));
+  nameLabel_.setFont(isMaster_ 
+      ? design::typography::getJuceFont(16.0f, design::typography::FontWeight::Bold) 
+      : design::typography::getJuceFont(14.0f, design::typography::FontWeight::Bold));
   nameLabel_.setEditable(true, true, false);
   nameLabel_.onTextChange = [this]() {
     if (track_) {

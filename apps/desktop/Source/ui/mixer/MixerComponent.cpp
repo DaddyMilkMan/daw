@@ -116,11 +116,23 @@ MixerComponent::MixerComponent(Engine &engine, ProjectState &state)
 void MixerComponent::rebuildChannels() {
   trackContainer_->clearChannels();
   
-  auto tracks = engine_.tracks();
-  for (auto& t : tracks) {
-      if (t->getType() != Track::Type::Master) {
-        auto channel = std::make_unique<MixerChannelComponent>(t.get(), projectState_, engine_);
-        trackContainer_->addChannel(std::move(channel));
+  // Iterate ProjectState tracks (Source of Truth)
+  auto tracksNode = projectState_.getState().getChildWithName(ProjectState::ID_TRACKS);
+  if (!tracksNode.isValid()) return;
+
+  for (const auto& trackNode : tracksNode) {
+      juce::String trackId = trackNode[ProjectState::PROP_ID];
+      
+      // Lookup track in engine
+      auto* track = engine_.getTrackById(trackId);
+      
+      if (track) {
+          if (track->getType() != Track::Type::Master) {
+            auto channel = std::make_unique<MixerChannelComponent>(track, projectState_, engine_);
+            trackContainer_->addChannel(std::move(channel));
+          }
+      } else {
+          DBG("MixerComponent: Warning - Track " + trackId + " in ProjectState but not Engine");
       }
   }
 }
@@ -282,13 +294,7 @@ void MixerComponent::updateSelection() {
 }
 
 Track *MixerComponent::findTrackById(const juce::String &trackId) {
-  const auto &tracks = engine_.tracks();
-  for (const auto &track : tracks) {
-    if (track->getTrackId() == trackId) {
-      return track.get();
-    }
-  }
-  return nullptr;
+  return engine_.getTrackById(trackId);
 }
 
 //==============================================================================
@@ -305,7 +311,7 @@ void MixerComponent::valueTreePropertyChanged(
 void MixerComponent::valueTreeChildAdded(juce::ValueTree &parent,
                                          juce::ValueTree &child) {
   if (parent.getType() == ProjectState::ID_TRACKS) {
-    rebuildChannels();
+    juce::MessageManager::callAsync([this]() { rebuildChannels(); });
   }
   juce::ignoreUnused(child);
 }
@@ -313,7 +319,7 @@ void MixerComponent::valueTreeChildAdded(juce::ValueTree &parent,
 void MixerComponent::valueTreeChildRemoved(juce::ValueTree &parent,
                                            juce::ValueTree &child, int index) {
   if (parent.getType() == ProjectState::ID_TRACKS) {
-    rebuildChannels();
+    juce::MessageManager::callAsync([this]() { rebuildChannels(); });
   }
   juce::ignoreUnused(child, index);
 }
@@ -321,7 +327,7 @@ void MixerComponent::valueTreeChildRemoved(juce::ValueTree &parent,
 void MixerComponent::valueTreeChildOrderChanged(juce::ValueTree &parent,
                                                 int oldIndex, int newIndex) {
   if (parent.getType() == ProjectState::ID_TRACKS) {
-    rebuildChannels();
+    juce::MessageManager::callAsync([this]() { rebuildChannels(); });
   }
   juce::ignoreUnused(oldIndex, newIndex);
 }

@@ -113,8 +113,6 @@ set(ZENITH_COMMON_SOURCES
     
     # Engine sources
     apps/desktop/Source/engine/Engine.cpp
-    apps/desktop/Source/engine/EngineSync.cpp
-    apps/desktop/Source/engine/EnginePlugins.cpp
     apps/desktop/Source/engine/ProjectState.cpp
     apps/desktop/Source/engine/PluginChain.cpp
     apps/desktop/Source/engine/PluginAutomationBinding.cpp
@@ -131,8 +129,6 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/engine/RoutingGraph.cpp
     # apps/desktop/Source/engine/ScriptableProcessor.cpp - Missing Lua dependency
     apps/desktop/Source/engine/GrokGodModeHelper.cpp
-    apps/desktop/Source/ai/ReferenceMatcher.cpp
-    apps/desktop/Source/ai/GrokJourney.cpp
 
     # Deprecated synchronizers (for reflog/legacy support)
     apps/desktop/Source/engine/ClipSynchronizer.cpp
@@ -180,7 +176,6 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/ai/UXDirectorAgent.cpp
     apps/desktop/Source/ai/ProjectRefactorerAgent.cpp
     apps/desktop/Source/ai/PresetGeneticistAgent.cpp
-    apps/desktop/Source/ai/GrokJourney.cpp
     
     # Audio Components
     apps/desktop/Source/audio/RealTimeAudioBuffer.cpp

@@ -40,6 +40,10 @@
 #include "ExportJob.h"
 #include "../network/AudioAnalysisService.h"
 
+#include "GrokGodModeHelper.h"
+#include "ExportJob.h"
+#include "../network/AudioAnalysisService.h"
+
 //==============================================================================
 namespace zenith {
 
@@ -773,7 +777,8 @@ juce::AudioPluginFormatManager &Engine::getPluginFormatManager() {
 
 void Engine::registerFormats() {
   // Bug 27: JUCE FormatManager takes ownership of registered formats
-  auto& formatManager = getPluginFormatManager();
+  // Use member formatManager (AudioFormatManager) ensuring it's not the plugin one
+  // formatManager is defined in Engine.h
   formatManager.registerBasicFormats();
   formatManager.registerFormat(new juce::FlacAudioFormat(), false);
   formatManager.registerFormat(new juce::OggVorbisAudioFormat(), false);
@@ -1852,23 +1857,36 @@ void Engine::recalculatePDC() {
 }
 
 void Engine::clearMasterPlugins() {
-  masterPluginChain_.clearPlugins();
+  const juce::ScopedLock lock(masterPluginLock_);
+  masterPlugins_.clear();
 }
 
 int Engine::getNumMasterPlugins() const {
-  return masterPluginChain_.getNumPlugins();
+  const juce::ScopedLock lock(masterPluginLock_);
+  return static_cast<int>(masterPlugins_.size());
 }
 
 juce::AudioPluginInstance* Engine::getMasterPlugin(int index) const {
-  return masterPluginChain_.getPlugin(index);
+  const juce::ScopedLock lock(masterPluginLock_);
+  if (index >= 0 && index < static_cast<int>(masterPlugins_.size())) {
+    return masterPlugins_[index].get();
+  }
+  return nullptr;
 }
 
-void Engine::addMasterPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin) {
-  masterPluginChain_.addPlugin(std::move(plugin), currentSampleRate.load(), currentBufferSize.load());
+void Engine::addMasterPlugin(std::shared_ptr<juce::AudioPluginInstance> plugin) {
+  if (!plugin) return;
+  
+  const juce::ScopedLock lock(masterPluginLock_);
+  plugin->prepareToPlay(currentSampleRate.load(), currentBufferSize.load());
+  masterPlugins_.push_back(std::move(plugin));
 }
 
 void Engine::removeMasterPlugin(int index) {
-  masterPluginChain_.removePlugin(index);
+  const juce::ScopedLock lock(masterPluginLock_);
+  if (index >= 0 && index < static_cast<int>(masterPlugins_.size())) {
+    masterPlugins_.erase(masterPlugins_.begin() + index);
+  }
 }
 
 void Engine::updateSoloState() {

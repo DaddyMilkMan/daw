@@ -74,15 +74,22 @@ void AudioThreadSafeProcessor::performAnalysis(const juce::AudioBuffer<float>& b
     analysis.timestamp = juce::Time::getCurrentTime().toMilliseconds();
     analysis.isValid = true;
     
-    // Push to analysis buffer
+    // 1. Push to analysis buffer
     if (!analysisBuffer.push(analysis)) {
-        // Buffer full, remove oldest
         AudioAnalysisData dropped;
         analysisBuffer.pop(dropped);
         analysisBuffer.push(analysis);
     }
     
+    // 2. Update lastAnalysis using Seqlock (RT-safe)
+    analysisSequence.fetch_add(1, std::memory_order_relaxed);
+    std::atomic_thread_fence(std::memory_order_release);
+    
     lastAnalysis = analysis;
+    
+    std::atomic_thread_fence(std::memory_order_release);
+    analysisSequence.fetch_add(1, std::memory_order_relaxed);
+    
     newAnalysisAvailable.store(true);
 }
 
@@ -179,14 +186,16 @@ float AudioThreadSafeProcessor::calculateFrequencyBalance(const juce::AudioBuffe
 
 AudioAnalysisData AudioThreadSafeProcessor::getLatestAnalysis() const {
     AudioAnalysisData analysis;
+    uint32_t s1, s2;
     
-    // We can't pop in a const context without making the buffer mutable.
-    // However, for real-time safety and convenience, we should provide the latest
-    // known data. A better approach would be an atomic snapshot, but for now
-    // we'll at least return a valid structure if available (hacked via const_cast 
-    // or by returning an empty one if we don't want to change the buffer state).
-    // Given the previous empty return, let's at least document the limitation.
-    return lastAnalysis;
+    // Seqlock read (Lock-free)
+    do {
+        s1 = analysisSequence.load(std::memory_order_acquire);
+        analysis = lastAnalysis;
+        s2 = analysisSequence.load(std::memory_order_acquire);
+    } while ((s1 & 1) != 0 || s1 != s2);
+    
+    return analysis;
 }
 
 bool AudioThreadSafeProcessor::hasNewAnalysis() const {

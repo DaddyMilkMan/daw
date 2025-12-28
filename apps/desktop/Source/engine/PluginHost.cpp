@@ -19,10 +19,10 @@ namespace zenith {
 PluginHost::PluginHost() {
   DBG("PluginHost: Initializing...");
 
-  // Add VST3 format
-  // Add VST3 format explicitly (addDefaultFormats is deleted in headless/strict builds)
-  // formatManager.addFormat(std::make_unique<juce::VST3PluginFormat>());
-
+  // JUCE 8.0.11: Use addHeadlessDefaultFormatsToManager() instead of deleted addDefaultFormats()
+  juce::addHeadlessDefaultFormatsToManager(formatManager);
+  
+  // Add our internal plugin format
   formatManager.addFormat(std::make_unique<InternalPluginFormat>());
 
   // Get VST3 format pointer for later use
@@ -45,8 +45,9 @@ PluginHost::PluginHost() {
 PluginHost::~PluginHost() {
   DBG("PluginHost: Destructor");
   cancelScan();
-  if (scanThread_.joinable())
-    scanThread_.join();
+  if (scanThread && scanThread->isThreadRunning()) {
+    scanThread->stopThread(5000); // Wait up to 5 seconds
+  }
 }
 
 //==============================================================================
@@ -200,23 +201,9 @@ void PluginHost::scanAsync(
   isScanning_ = true;
   shouldCancel_ = false;
 
-  scanThread_ = std::thread([this, progressCallback]() {
-    DBG("PluginHost: Starting async scan...");
-
-    int count = scanInternal([progressCallback](const juce::String &name) {
-      juce::MessageManager::callAsync(
-          [progressCallback, name]() { progressCallback(0, 0, name); });
-    });
-
-    isScanning_ = false;
-
-    juce::MessageManager::callAsync(
-        [progressCallback, count]() { progressCallback(100, count, "Done"); });
-
-    DBG("PluginHost: Async scan complete.");
-  });
-
-  scanThread_.detach();
+  // Use the managed ScanThread class
+  scanThread = std::make_unique<ScanThread>(*this);
+  scanThread->startThread();
 }
 
 void PluginHost::cancelScan() { shouldCancel_ = true; }
