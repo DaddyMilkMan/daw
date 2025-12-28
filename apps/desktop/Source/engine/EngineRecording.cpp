@@ -50,7 +50,7 @@ void Engine::record() {
 
 void Engine::stopRecording() {
   DBG("Engine: Stop recording");
-  recordingManager_->stopRecording(tracks_);
+  recordingManager_->stopRecording(tracks_, getTempoMap());
 }
 
 void Engine::toggleRecording() {

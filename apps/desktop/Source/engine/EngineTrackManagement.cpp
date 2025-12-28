@@ -108,7 +108,7 @@ void Engine::syncWithProjectState() {
         if (audioFilePath.isNotEmpty()) {
           juce::File audioFile(audioFilePath);
           if (audioFile.existsAsFile()) {
-            clip->setAudioFile(audioFile);
+            clip->setAudioFileFromPool(audioFile, getAudioFilePool());
             clip->setType(zenith::Clip::Type::Audio);
             DBG("Engine: Loaded audio file: " + audioFile.getFileName());
           } else {

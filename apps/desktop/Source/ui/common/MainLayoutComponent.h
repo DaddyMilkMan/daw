@@ -43,6 +43,8 @@ public:
 
   SampleEditorComponent *getSampleEditor();
   MidiEditorContainer *getMidiEditor();
+  
+  ResizablePanelContainer* getRootContainer() { return panelContainer_.get(); }
 
 private:
   Engine &engine_;

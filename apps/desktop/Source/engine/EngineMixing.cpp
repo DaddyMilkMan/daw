@@ -154,6 +154,9 @@ int Engine::createAuxBus(const juce::String &name) {
 
   auxBuses_.push_back(bus);
   int index = static_cast<int>(auxBuses_.size()) - 1;
+  
+  // Set index for fast lookup
+  bus->setBusIndex(index);
 
   // Set ID (Use monotonic counter)
   juce::String id = "aux_" + juce::String(auxBusIdCounter.fetch_add(1));
@@ -192,6 +195,13 @@ void Engine::removeAuxBus(int auxIndex) {
     }
 
     auxBuses_.erase(auxBuses_.begin() + auxIndex);
+
+    // Update indices for remaining buses
+    for (int i = auxIndex; i < static_cast<int>(auxBuses_.size()); ++i) {
+        if (auxBuses_[i]) {
+            auxBuses_[i]->setBusIndex(i);
+        }
+    }
 
     updateTrackSnapshot();
   }
@@ -323,7 +333,7 @@ bool Engine::isTrackFrozen(int trackIndex) const {
   return tracks_[trackIndex]->isFrozen();
 }
 
-double Engine::getCpuUsage() const { return deviceManager.getCpuUsage(); }
+double Engine::getCpuUsage() const { return rtProcessor_.getCpuUsage(); }
 
 void Engine::cancelFreeze() {
   if (freezeManager_) {

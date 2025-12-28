@@ -70,6 +70,8 @@ public:
   void undo() { projectState.getUndoManager().undo(); }
   void redo() { projectState.getUndoManager().redo(); }
 
+  ProjectState& getProjectState() { return projectState; }
+
   //==========================================================================
   CommandAPI(ProjectState &projectState, Engine &engine);
   ~CommandAPI();

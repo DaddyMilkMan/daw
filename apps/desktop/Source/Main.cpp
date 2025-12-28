@@ -89,37 +89,15 @@ public:
 
   //==========================================================================
   void systemRequestedQuit() override {
-    if (mainWindow != nullptr) {
-      auto *projectState = mainWindow->getProjectState();
-      if (projectState != nullptr && projectState->hasUnsavedChanges()) {
-        int result = juce::NativeMessageBox::showYesNoCancelBox(
-            juce::AlertWindow::WarningIcon, "Unsaved Changes",
-            "You have unsaved changes. Do you want to save before quitting?",
-            static_cast<juce::Component*>(mainWindow.get()), nullptr);
-
-        // JUCE NativeMessageBox return values:
-        // 1 = Yes, 2 = No, 0 = Cancel
-        const int RESULT_YES = 1;
-        const int RESULT_NO = 2;
-        const int RESULT_CANCEL = 0;
-
-        if (result == RESULT_YES) // Yes
-        {
-          // Save and quit
-          mainWindow->saveProject();
-          quit();
-        } else if (result == RESULT_NO) // No
-        {
-          // User explicitly consented to data loss (discard changes).
-          quit();
-        }
-        // Cancel (result == RESULT_CANCEL) -> do nothing
-      } else {
-        quit();
-      }
-    } else {
-      quit();
-    }
+    // NOTE: MainWindow::closeButtonPressed() already handles the "unsaved changes" dialog
+    // with proper async callbacks. This method is called AFTER the user has already
+    // confirmed they want to quit (or there were no unsaved changes).
+    // 
+    // Previously this had a DUPLICATE synchronous dialog that was broken on Linux
+    // (showYesNoCancelBox returning 0 immediately before user clicked).
+    //
+    // Now we just quit. The save logic is handled by closeButtonPressed().
+    quit();
   }
 
   void anotherInstanceStarted(const juce::String &commandLine) override {

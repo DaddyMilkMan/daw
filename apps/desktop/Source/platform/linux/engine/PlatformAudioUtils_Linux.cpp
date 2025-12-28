@@ -10,30 +10,54 @@
 #include "../../../engine/PlatformAudioUtils.h"
 #include "../../../Settings.h"
 #include <juce_gui_basics/juce_gui_basics.h> // For AlertWindow
-#include <fstream>
-#include <filesystem>
+#include <unistd.h> // For getuid()
+#include <sys/types.h>
 
 namespace zenith {
 
 static bool isPipeWireRunning() {
 #if JUCE_LINUX
-    // Check for PipeWire socket in XDG_RUNTIME_DIR
-    auto xdgRuntimeDir = juce::File::getSpecialLocation(juce::File::userHomeDirectory).getChildFile(".cache"); // Fallback
-    const char* xdg_env = std::getenv("XDG_RUNTIME_DIR");
-    if (xdg_env != nullptr) {
-        juce::File runtimeDir(xdg_env);
-        if (runtimeDir.getChildFile("pipewire-0").exists()) {
-            return true;
-        }
+    static bool hasChecked = false;
+    static bool isRunning = false;
+
+    // Return cached result if we've already checked
+    if (hasChecked)
+        return isRunning;
+
+    // Method 1: Check XDG_RUNTIME_DIR
+    // This is the standard definition for user-specific runtime files.
+    // We utilize juce::SystemStats to get the environment variable robustly.
+    juce::File runtimeDir;
+    auto xdgEnv = juce::SystemStats::getEnvironmentVariable("XDG_RUNTIME_DIR", "");
+    
+    if (xdgEnv.isNotEmpty()) {
+        runtimeDir = juce::File(xdgEnv);
+    } else {
+        // Method 2: Fallback to standard /run/user/<uid>
+        // Use standard systemd location if XDG env var is missing
+        runtimeDir = juce::File("/run/user").getChildFile(juce::String(getuid()));
     }
 
-    // Check processes as fallback
-    juce::ChildProcess pw;
-    if (pw.start("pgrep -x pipewire")) {
-        return pw.readAllProcessOutput().trim().isNotEmpty();
+    // Check for the native PipeWire socket (usually "pipewire-0")
+    // If the socket exists, the daemon is active and accepting connections.
+    if (runtimeDir.exists() && runtimeDir.isDirectory()) {
+         if (runtimeDir.getChildFile("pipewire-0").exists()) {
+             isRunning = true;
+             hasChecked = true;
+             return true;
+         }
     }
-#endif
+
+    // We intentionally avoid 'pgrep' here to ensure non-blocking behavior.
+    // If the socket isn't open, we can't connect anyway, so it doesn't matter 
+    // if the daemon process is technically running.
+    
+    isRunning = false;
+    hasChecked = true;
     return false;
+#else
+    return false;
+#endif
 }
 
 void PlatformAudioUtils::initializeAudioDeviceSetup(
@@ -41,15 +65,17 @@ void PlatformAudioUtils::initializeAudioDeviceSetup(
   auto& settings = Settings::getInstance();
   auto preferredBackend = settings.getLinuxAudioBackend();
 
-  DBG("PlatformAudioUtils (Linux): Initializing audio device setup...");
-  DBG("  Preferred backend (Settings): " + juce::String((int)preferredBackend));
-
+  // Reduced logging to avoid spam during startup.
+  // Using atomic backend switching logic.
+  
   auto currentType = deviceManager.getCurrentAudioDeviceType();
-  DBG("  Current backend: " + (currentType.isEmpty() ? "None" : currentType));
-
-  auto trySwitchTo = [&](const juce::String& typeName, bool silent = false) -> bool {
+  
+  // Helper to switch backend if available
+  auto trySwitchTo = [&](const juce::String& typeName) -> bool {
+      // Already on the desired backend
       if (currentType == typeName) return true;
 
+      // Check availability
       const auto &availableTypes = deviceManager.getAvailableDeviceTypes();
       bool available = false;
       for (auto *type : availableTypes) {
@@ -59,21 +85,13 @@ void PlatformAudioUtils::initializeAudioDeviceSetup(
           }
       }
 
-      if (!available) {
-          if (!silent) DBG("  " + typeName + " backend not available.");
-          return false;
-      }
+      if (!available) return false;
 
-      DBG("  Attempting to switch to " + typeName + "...");
+      DBG("PlatformAudioUtils: Switching to " + typeName + " backend...");
       deviceManager.setCurrentAudioDeviceType(typeName, true);
       
-      if (deviceManager.getCurrentAudioDeviceType() == typeName) {
-          DBG("  Successfully switched to " + typeName + ".");
-          return true;
-      }
-      
-      if (!silent) DBG("  Failed to switch to " + typeName + ".");
-      return false;
+      // confirm switch
+      return deviceManager.getCurrentAudioDeviceType() == typeName;
   };
 
   // 1. Manual Override from Settings
@@ -82,7 +100,8 @@ void PlatformAudioUtils::initializeAudioDeviceSetup(
       if (preferredBackend == Settings::LinuxAudioBackend::JACK) target = "JACK";
       else if (preferredBackend == Settings::LinuxAudioBackend::ALSA) target = "ALSA";
       else if (preferredBackend == Settings::LinuxAudioBackend::PipeWire) {
-          // PipeWire is usually handled via JACK or ALSA, but we prioritize JACK if PipeWire is running
+          // PipeWire often shimmed via JACK, check simple presence.
+          // If PipeWire is preferred, we try JACK if the socket is there, otherwise fallback to ALSA.
           target = isPipeWireRunning() ? "JACK" : "ALSA";
       }
 
@@ -90,27 +109,27 @@ void PlatformAudioUtils::initializeAudioDeviceSetup(
           return;
       }
 
-      // If manual selection failed, show a warning and continue with Auto logic
-      juce::AlertWindow::showMessageBoxAsync(
-          juce::AlertWindow::WarningIcon, "Audio Setup Warning",
-          "Failed to initialize your preferred audio backend (target: " + target + "). Falling back to auto-detection.", "OK");
+      // Warn only if manual selection failed
+      DBG("PlatformAudioUtils: Warning - Preferred backend " + target + " unavailable. Falling back to Auto.");
   }
 
   // 2. Auto-Detection Logic
-  // Priority: JACK (if PipeWire/JACK running) -> ALSA
+  // Priority: JACK (if PipeWire detected or standard JACK) -> ALSA
   
   if (isPipeWireRunning()) {
-      DBG("  PipeWire detected. Prioritizing JACK backend.");
-      if (trySwitchTo("JACK", true)) return;
+      // If PipeWire is confirmed via socket, we aggressively prefer JACK
+      if (trySwitchTo("JACK")) return;
   }
 
-  // Try JACK anyway as it's the pro-audio standard
-  if (trySwitchTo("JACK", true)) return;
+  // Try JACK anyway (e.g., standard JACK2 without PipeWire)
+  if (trySwitchTo("JACK")) return;
 
   // Final Fallback: ALSA
+  // Only try ALSA if we are not already on it or we have no device
   if (deviceManager.getCurrentAudioDevice() == nullptr || currentType != "ALSA") {
-      DBG("  Attempting ALSA fallback...");
-      trySwitchTo("ALSA");
+     if (!trySwitchTo("ALSA")) {
+         DBG("PlatformAudioUtils: Critical - Failed to initialize ALSA fallback.");
+     }
   }
 }
 

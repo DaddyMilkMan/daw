@@ -11,7 +11,9 @@
 */
 
 #include "TakeFolder.h"
+#include <juce_audio_formats/juce_audio_formats.h>
 #include <algorithm>
+
 #include "RealTimeGarbageCollector.h"
 
 namespace zenith {
@@ -281,7 +283,7 @@ void TakeFolder::getNextAudioBlock(juce::AudioBuffer<float> &buffer,
 // Flatten
 //==============================================================================
 
-std::unique_ptr<Clip> TakeFolder::flatten(double sampleRate, const juce::File& outputDirectory) {
+std::unique_ptr<Clip> TakeFolder::flatten(double sampleRate, const juce::File& outputDirectory, AudioFilePool& pool) {
   int64_t totalLength = length_.load();
   if (totalLength <= 0 || takes_.empty())
     return nullptr;
@@ -303,13 +305,15 @@ std::unique_ptr<Clip> TakeFolder::flatten(double sampleRate, const juce::File& o
   }
 
   // Writer takes ownership of stream
+  juce::StringPairArray metadata;
   std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(
-      fileStream.release(), sampleRate, 2, 24, {}, 0));
+      fileStream.release(), sampleRate, 2, 24, metadata, 0));
 
   if (!writer) {
      DBG("TakeFolder: Failed to create WAV writer");
      return nullptr;
   }
+
 
   // 3. Render and write in chunks
   int64_t folderStart = startPosition_.load();
@@ -344,8 +348,8 @@ std::unique_ptr<Clip> TakeFolder::flatten(double sampleRate, const juce::File& o
   flatClip->setStartPosition(folderStart);
   flatClip->setLength(totalLength);
   
-  // Important: set the audio file so calls to prepareToPlay load it safely from pool
-  flatClip->setAudioFile(outputFile);
+  // Important: set the audio file using pool for thread safety
+  flatClip->setAudioFileFromPool(outputFile, pool);
 
   return flatClip;
 }
