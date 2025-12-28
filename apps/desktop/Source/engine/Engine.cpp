@@ -390,6 +390,7 @@ juce::AudioPluginFormatManager &Engine::getPluginFormatManager() {
 
 void Engine::registerFormats() {
   // Bug 27: JUCE FormatManager takes ownership of registered formats
+  auto& formatManager = getPluginFormatManager();
   formatManager.registerBasicFormats();
   formatManager.registerFormat(new juce::FlacAudioFormat(), false);
   formatManager.registerFormat(new juce::OggVorbisAudioFormat(), false);
