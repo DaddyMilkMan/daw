@@ -170,7 +170,6 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/ai/UXDirectorAgent.cpp
     apps/desktop/Source/ai/ProjectRefactorerAgent.cpp
     apps/desktop/Source/ai/PresetGeneticistAgent.cpp
-
     apps/desktop/Source/engine/ClipTrack.cpp
     apps/desktop/Source/engine/AuxBusTrack.cpp
     apps/desktop/Source/engine/ClipStateManager.cpp

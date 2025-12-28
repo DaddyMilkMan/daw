@@ -226,8 +226,27 @@ void ZenithPolySynthVoice::renderNextBlock(
                 upsampledBlock.getChannelPointer(ch));
     }
 
+<<<<<<< HEAD
+    // 1. Render synth logic into upsampled buffer
+    // Note: Internal components (Oscs, Filters) are already configured for
+    // baseRate * factor
+    renderInnerBlock(oversamplingBuffer_, 0, upsampledChunk);
+
+    // 2. Downsample
+    juce::dsp::AudioBlock<float> upBlock(oversamplingBuffer_);
+    // Slice only the valid part
+    juce::dsp::AudioBlock<float> validUpBlock =
+        upBlock.getSubBlock(0, upsampledChunk);
+
+    juce::dsp::AudioBlock<float> downBlock(downsamplingBuffer_);
+    juce::dsp::AudioBlock<float> validDownBlock =
+        downBlock.getSubBlock(0, chunk);
+
+    oversampler_->processSamplesDown(validDownBlock, validUpBlock);
+=======
     // 5. Downsample
     oversampler_->processSamplesDown(subBlock);
+>>>>>>> origin/master
 
     // 3. Mix into output buffer
     for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch) {
@@ -611,6 +630,14 @@ void ZenithPolySynthVoice::setQualityPreset(QualityPreset quality) {
     } else {
       oversampler_ = nullptr;
     }
+<<<<<<< HEAD
+
+    // We must call updateSampleRate to propagate the new rate
+    // Note: This calls updateSampleRate recursively but we released lock?
+    // No, we hold lock. updateSampleRate also takes lock. Recursive lock is
+    // needed? juce::CriticalSection IS recursive.
+=======
+>>>>>>> origin/master
   }
 
   // Call updateSampleRate to propagate the new rate (Bug Fix)

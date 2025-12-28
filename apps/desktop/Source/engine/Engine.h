@@ -441,7 +441,7 @@ public:
   ai::SessionDebuggerAgent *getSessionDebugger() {
     return sessionDebugger_.get();
   }
-  ai::SessionDebuggerAgent *getSessionDebugger() const {
+  const ai::SessionDebuggerAgent *getSessionDebugger() const {
     return sessionDebugger_.get();
   }
 
@@ -962,6 +962,13 @@ private:
                         const std::vector<zenith::Track *> &tracks,
                         const std::vector<zenith::AuxBus *> &auxBuses,
                         const juce::MidiBuffer *incomingMidi = nullptr);
+
+  /**
+   * @brief Render a block for unit testing (offline)
+   */
+  void renderOfflineBlock(juce::AudioBuffer<float> &outputBuffer,
+                          int numSamples, juce::int64 playheadPosition,
+                          const juce::MidiBuffer &midiMessages);
 
   juce::AudioFormatManager formatManager;
   zenith::dsp::Dither dither;

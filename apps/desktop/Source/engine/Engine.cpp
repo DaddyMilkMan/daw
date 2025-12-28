@@ -29,10 +29,12 @@
 
 // Refactor 2025-12-09: Modular Components
 #include "../engine/AudioRenderer.h"
-#include "../engine/MeteringSystem.h"
-#include "../engine/Metronome.h"
 #include "../engine/RecordingManager.h"
 #include "../engine/TransportController.h"
+#include "../engine/MeteringSystem.h"
+#include "../engine/Metronome.h"
+#include "../engine/MixerController.h"
+#include "../engine/Midi2DiscoveryService.h"
 
 //==============================================================================
 namespace zenith {
@@ -1000,6 +1002,181 @@ void Engine::updateTrackSnapshot() {
   currentSnapshotHolder_ = newSnapshot;
 
   // Garbage collection: Keep last 5 snapshots
+  // At 60Hz updates, this gives plenty of margin for the audio thread to finish
+  if (snapshotTrash_.size() > 5) {
+    snapshotTrash_.erase(snapshotTrash_.begin());
+  }
+}
+
+}
+// removeTrack defined in EngineTrackManagement.cpp
+float Engine::getMasterLevel() const {
+  return meteringSystem_ ? meteringSystem_->getMasterLevel() : 0.0f;
+}
+
+float Engine::getMasterPeakLevel() const {
+  return meteringSystem_ ? meteringSystem_->getMasterPeak() : 0.0f;
+}
+
+void Engine::resetPeakMeters() {
+  // Reset master peak
+  if (meteringSystem_) {
+    meteringSystem_->resetMasterPeak();
+  }
+  if (audioRenderer_) {
+    audioRenderer_->resetPeakMeters();
+  }
+  // Reset all track peaks (message thread only)
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  for (auto &track : tracks_) {
+    if (track != nullptr) {
+      track->resetPeakLevel();
+    }
+  }
+}
+
+juce::String Engine::createTrack(const juce::String &name,
+                                 const juce::String &type) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  if (projectState_) {
+    // Add track to ProjectState
+    // This will trigger TrackStateSynchronizer::valueTreeChildAdded,
+    // which will call Engine::addTrack()
+    return projectState_->addTrack(name, type);
+  } else {
+    DBG("Engine: Creating track without ProjectState (fallback)");
+
+    // Fallback: Create track directly in Engine
+    // Use shared_ptr to allow track references to outlive snapshot updates
+    zenith::Track::Type trackType = (type == "midi")
+                                        ? zenith::Track::Type::MIDI
+                                        : zenith::Track::Type::Audio;
+    auto track =
+        std::shared_ptr<zenith::Track>(zenith::Track::create(name, trackType));
+
+    // Use atomic counter for ID generation
+    juce::String trackId = "track_" + juce::String(nextTrackId_++);
+    track->setTrackId(trackId);
+
+    addTrack(track); // No std::move for shared_ptr
+
+    return trackId;
+  }
+}
+
+// Accept shared_ptr for RT-safe snapshot sharing across threads
+void Engine::addTrack(std::shared_ptr<zenith::Track> track) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  jassert(track != nullptr);
+
+  // Prepare the track if audio is already running
+  if (currentSampleRate.load() > 0) {
+    track->prepareToPlay(currentBufferSize.load(), currentSampleRate.load());
+  }
+
+  juce::String name = track->getName();
+  juce::String id = track->getTrackId();
+
+  track->setTrackIndex((int)tracks_.size());
+  tracks_.push_back(track); // Shared_ptr, no move needed
+
+  // Register with RoutingGraph
+  RoutingGraph::Node node;
+  node.id = id;
+  node.name = name;
+  node.type = RoutingGraph::NodeType::Track;
+
+  // Determine proper node type based on track type
+  if (track->getType() == Track::Type::Bus) {
+    node.type = RoutingGraph::NodeType::Bus;
+  } else if (track->getType() == Track::Type::Master) {
+    node.type = RoutingGraph::NodeType::Master;
+  }
+  routingGraph_.addNode(node);
+
+  // Automatically route regular tracks to master bus
+  // Bus and Master tracks handle their own routing
+  if (track->getType() != Track::Type::Bus &&
+      track->getType() != Track::Type::Master) {
+    routingGraph_.connect(id, "master", 1.0f);
+  }
+
+  DBG("Engine: Added track '" + name + "' (ID: " + id + ")");
+
+  // Update Solo State (new track might need to be silenced if others are
+  // soloed)
+  updateSoloState();
+
+  // Update snapshot for audio thread
+  // Snapshot holds shared_ptr, extending track lifetime across thread
+  // boundaries
+  updateTrackSnapshot();
+}
+
+void Engine::removeTrack(int index) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  if (index >= 0 && index < static_cast<int>(tracks_.size())) {
+    juce::String name = tracks_[index]->getName();
+    juce::String id = tracks_[index]->getTrackId();
+
+    // Release resources
+    tracks_[index]->releaseResources();
+
+    // Remove from vector
+    tracks_.erase(tracks_.begin() + index);
+
+    // Remove from RoutingGraph
+    routingGraph_.removeNode(id);
+
+    DBG("Engine: Removed track '" + name + "' at index " + juce::String(index));
+
+    // Update Solo State (removed track might have been the only soloed one)
+    updateSoloState();
+
+    // Update snapshot for audio thread
+    updateTrackSnapshot();
+  }
+}
+
+void Engine::updateTrackSnapshot() {
+  // Create new snapshot
+  // Include Aux Buses in snapshot for consistent audio thread access
+  auto newSnapshot = std::make_shared<TrackSnapshot>(tracks_, auxBuses_);
+
+  // [DSP Optimization] Update routing graph snapshot with direct pointers for
+  // fast lookup
+  {
+    std::unordered_map<juce::String, Track *> trackMap;
+    for (const auto &track : tracks_) {
+      if (track)
+        trackMap[track->getTrackId()] = track.get();
+    }
+
+    std::unordered_map<juce::String, AuxBus *> auxBusMap;
+    for (const auto &bus : auxBuses_) {
+      if (bus)
+        auxBusMap[bus->getId()] = bus.get();
+    }
+
+    routingGraph_.updateSnapshotWithPointers(trackMap, auxBusMap);
+  }
+
+  // Atomic swap (release semantics for the store)
+  // The audio thread will see the new pointer immediately
+  activeSnapshot_.store(newSnapshot.get());
+
+  // Manage lifetime of old snapshots
+  // We keep the previous snapshot alive in snapshotTrash_
+  // because the audio thread might still be reading it.
+  snapshotTrash_.push_back(currentSnapshotHolder_);
+
+  // Update current holder to the new snapshot
+  currentSnapshotHolder_ = newSnapshot;
+
+  // Garbage collection: Keep last 5 snapshots
   // At 60Hz updates, this gives plenty of margin for the audio thread to
   // finish
   if (snapshotTrash_.size() > 5) {
@@ -1119,10 +1296,11 @@ void Engine::audioDeviceIOCallbackWithContext(
         // This is a simplification; ideally we split MIDI events based on
         // timestamp.
         audioRenderer_->renderAudioGraph(
+            *renderContext_,
             buffer1, samplesBeforeLoop, currentPos, snapshot->tracks,
-            snapshot->auxBuses, routingGraph_, masterLimiter_,
-            masterPluginChain_, tempoMap_.get(), &midi1, inputChannelData,
-            numInputChannels);
+            snapshot->auxBuses, routingGraph_, masterLimiter_, masterPlugins,
+            tempoMap_.get(), &midi1, inputChannelData, numInputChannels);
+
 
         // Mix Metronome (Pass 1)
         if (metronome_) {
@@ -1152,9 +1330,10 @@ void Engine::audioDeviceIOCallbackWithContext(
 
         if (audioRenderer_) {
           audioRenderer_->renderAudioGraph(
+              *renderContext_,
               buffer2, samplesAfter, loopStart, snapshot->tracks,
-              snapshot->auxBuses, routingGraph_, masterLimiter_,
-              masterPluginChain_, tempoMap_.get(), &emptyMidi, offsets,
+              snapshot->auxBuses, routingGraph_, masterLimiter_, masterPlugins,
+              tempoMap_.get(), &emptyMidi, offsets,
               safeNumChannels); // Using offset inputs
 
           // Mix Metronome (Pass 2)
@@ -1362,10 +1541,20 @@ void Engine::renderAudioGraph(juce::AudioBuffer<float> &outputBuffer,
                               const std::vector<zenith::AuxBus *> &auxBuses,
                               const juce::MidiBuffer *incomingMidi) {
   if (audioRenderer_) {
-    audioRenderer_->renderAudioGraph(outputBuffer, numSamples, playheadPosition,
+    // Use masterPlugins_ if calling from message thread/export
+    std::vector<std::shared_ptr<juce::AudioPluginInstance>> plugins;
+    {
+        const juce::ScopedLock lock(masterPluginLock_);
+        plugins = masterPlugins_;
+    }
+    
+    // Use liveContext_ if available as AudioRenderer requires a context
+    if (liveContext_) {
+         audioRenderer_->renderAudioGraph(*liveContext_, outputBuffer, numSamples, playheadPosition,
                                      tracks, auxBuses, routingGraph_,
-                                     masterLimiter_, masterPluginChain_,
+                                     masterLimiter_, plugins,
                                      tempoMap_.get(), incomingMidi, nullptr, 0);
+    }
   } else {
     outputBuffer.clear();
   }
@@ -1480,177 +1669,20 @@ void Engine::handleIncomingMidiMessage(juce::MidiInput *source,
 
 //==============================================================================
 
-// Offline Export Implementation
+//==============================================================================
+// Phase 2D: Audio Recording (AUDIO THREAD)
 //==============================================================================
 
-bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
-                                int bitDepth, double durationInSeconds) {
-  DBG("Engine: Starting WAV export to " + outputFile.getFullPathName());
-
-  if (sampleRate <= 0.0)
-    return false;
-  if (bitDepth != 16 && bitDepth != 24 && bitDepth != 32)
-    return false;
-
-  // Auto-detect duration
-  if (durationInSeconds <= 0.0) {
-    double maxEndTime = 0.0;
-    for (const auto &track : tracks_) {
-      if (track) {
-        for (int i = 0; i < track->getNumClips(); ++i) {
-          auto *clip = track->getClip(i);
-          if (clip) {
-            double rate = currentSampleRate.load() > 0
-                              ? currentSampleRate.load()
-                              : 44100.0;
-            double clipEnd = static_cast<double>(clip->getStartPosition() +
-                                                 clip->getLength()) /
-                             rate;
-            maxEndTime = std::max(maxEndTime, clipEnd);
-          }
-        }
-      }
-    }
-    durationInSeconds = std::max(10.0, maxEndTime + 1.0);
-  }
-
-  const juce::int64 totalSamples =
-      static_cast<juce::int64>(durationInSeconds * sampleRate);
-  constexpr int offlineBlockSize = 4096;
-  const int numChannels = 2;
-
-  // Prepare for export - message thread safe here
-  prepareTracks(offlineBlockSize,
-                sampleRate); // Prepare tracks for new rate/size
-  if (audioRenderer_) {
-    audioRenderer_->prepare(sampleRate, offlineBlockSize, tracks_.size(),
-                            auxBuses_.size());
-  }
-
-  juce::WavAudioFormat wavFormat;
-  auto outputStream = std::make_unique<juce::FileOutputStream>(outputFile);
-
-  if (outputStream->failedToOpen())
-    return false;
-
-  juce::AudioFormatWriterOptions options;
-  options = options.withSampleRate(sampleRate)
-                .withNumChannels(static_cast<unsigned int>(numChannels))
-                .withBitsPerSample(bitDepth);
-
-  // Upcast FileOutputStream to OutputStream for createWriterFor
-  std::unique_ptr<juce::OutputStream> baseStream(outputStream.release());
-  std::unique_ptr<juce::AudioFormatWriter> writer(
-      wavFormat.createWriterFor(baseStream, options));
-
-  if (!writer)
-    return false;
-
-  juce::AudioBuffer<float> renderBuffer(numChannels, offlineBlockSize);
-  juce::int64 samplesRendered = 0;
-
-  while (samplesRendered < totalSamples) {
-    const int samplesToRender =
-        static_cast<int>(juce::jmin(static_cast<juce::int64>(offlineBlockSize),
-                                    totalSamples - samplesRendered));
-
-    // Render using AudioRenderer
-    if (audioRenderer_) {
-      juce::MidiBuffer dummyMidi;
-
-      // Build raw pointer vectors for AudioRenderer
-      std::vector<Track *> trackPtrs;
-      trackPtrs.reserve(tracks_.size());
-      for (const auto &t : tracks_)
-        trackPtrs.push_back(t.get());
-
-      std::vector<AuxBus *> auxPtrs;
-      auxPtrs.reserve(auxBuses_.size());
-      for (const auto &a : auxBuses_)
-        auxPtrs.push_back(a.get());
-
-      audioRenderer_->renderAudioGraph(
-          renderBuffer, samplesToRender, samplesRendered, trackPtrs, auxPtrs,
-          routingGraph_, masterLimiter_, masterPluginChain_, tempoMap_.get(),
-          &dummyMidi, nullptr, 0);
-    } else {
-      renderBuffer.clear();
-    }
-
-    if (!writer->writeFromAudioSampleBuffer(renderBuffer, 0, samplesToRender)) {
-      break; // Error
-    }
-
-    samplesRendered += samplesToRender;
-  }
-
-  writer.reset();
-
-  // Restore state
-  double originalRate = currentSampleRate.load();
-  int originalSize = currentBufferSize.load();
-
-  prepareTracks(originalSize, originalRate);
-  if (audioRenderer_) {
-    audioRenderer_->prepare(originalRate, originalSize, tracks_.size(),
-                            auxBuses_.size());
-  }
-
-  return true;
+juce::AudioPluginFormatManager &Engine::getPluginFormatManager() {
+  return pluginHost_->getFormatManager();
 }
 
-//==============================================================================
+/*  */
 
-bool Engine::exportProject(const ExportOptions &options) {
-
-  DBG("Engine: Starting Advanced Export via AudioExporter...");
-
-  
-
-  AudioExporter exporter(*this);
-
-  AudioExporter::ExportSettings settings;
-
-  settings.outputFile = options.outputFile;
-
-  settings.sampleRate = options.sampleRate;
-
-  settings.bitDepth = options.bitDepth;
-
-  settings.useDither = options.enableDither;
-
-  
-
-  // Map formats
-
-  switch(options.format) {
-
-      case ExportFormat::WAV: settings.format = AudioExporter::Format::WAV; break;
-
-      case ExportFormat::FLAC: settings.format = AudioExporter::Format::FLAC; break;
-
-      default: settings.format = AudioExporter::Format::WAV; break;
-
-  }
-
-  
-
-  return exporter.renderProject(settings, [](float p, const juce::String& s) {
-
-      DBG("Export Progress: " + juce::String(p * 100.0f, 1) + "% - " + s);
-
-  });
-
-}
-
-void Engine::applyNormalization(juce::AudioBuffer<float> &buffer, float maxPeak,
-                                float targetDb) {
-  if (maxPeak <= 0.00001f)
-    return;
-
-  float targetLinear = juce::Decibels::decibelsToGain(targetDb);
-  float gain = targetLinear / maxPeak;
-  buffer.applyGain(gain);
+void Engine::registerFormats() {
+  formatManager.registerBasicFormats();
+  formatManager.registerFormat(new juce::FlacAudioFormat(), false);
+  formatManager.registerFormat(new juce::OggVorbisAudioFormat(), false);
 }
 
 //==============================================================================
@@ -1831,6 +1863,19 @@ void Engine::updateSoloState() {
 // Aux Bus Management
 //==============================================================================
 
+// Methods moved to EngineMixing.cpp (Modular Refactor)
+// createAuxBus, removeAuxBus, getNumAuxBuses, getAuxBus, getAuxBusLevel
+// setMasterLimiterEnabled, isMasterLimiterEnabled, setMasterLimiterCeiling
+
+// Track Freeze API (CPU Optimization)
+//==============================================================================
+
+// Methods moved to EngineMixing.cpp (Modular Refactor)
+// freezeTrack, unfreezeTrack, isTrackFrozen, cancelFreeze
+// toggleMetronome, isMetronomeEnabled, setMetronomeLevel
+
+// createAuxBus, removeAuxBus, getNumAuxBuses, getAuxBus, getAuxBusLevel, getAuxBusPeakLevel
+// defined in EngineMixing.cpp
 int Engine::createAuxBus(const juce::String &name) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 

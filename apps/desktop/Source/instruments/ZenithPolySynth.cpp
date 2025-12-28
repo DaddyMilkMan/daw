@@ -177,7 +177,6 @@ ZenithPolySynthProcessor::ZenithPolySynthProcessor()
                   ZenithPolySynthParameterManager::createParameterLayout()),
       paramManager_(parameters_) {
   for (int i = 0; i < currentMaxVoices_; ++i) {
-    // Bug 21: addVoice takes ownership of the voice object
     synthesiser_.addVoice(new ZenithPolySynthVoice());
   }
   // Enable MPE (disable legacy mode)
@@ -190,11 +189,9 @@ ZenithPolySynthProcessor::~ZenithPolySynthProcessor() {}
 
 void ZenithPolySynthProcessor::prepareToPlay(double sampleRate,
                                              int samplesPerBlock) {
-  // Roast Fix #5: Use samplesPerBlock for proper buffer sizing
-  currentBlockSize_ = samplesPerBlock;
+  juce::ignoreUnused(samplesPerBlock);
   synthesiser_.setCurrentPlaybackSampleRate(sampleRate);
   effects_.setSampleRate(sampleRate);
-  effects_.setBlockSize(samplesPerBlock);  // Propagate buffer size to effects
   effects_.reset();
 
   visualizerFifo_.reset();
@@ -219,7 +216,7 @@ void ZenithPolySynthProcessor::processBlock(juce::AudioBuffer<float> &buffer,
   if (auto *ph = getPlayHead()) {
     if (auto pos = ph->getPosition()) {
       if (pos->getBpm())
-        currentBpm_.store(*pos->getBpm());
+        currentBpm_ = *pos->getBpm();
     }
   }
 
@@ -227,12 +224,7 @@ void ZenithPolySynthProcessor::processBlock(juce::AudioBuffer<float> &buffer,
   updateVoiceParameters();
 
   buffer.clear();
-  
-  {
-      // Bug 8 Fix: usage of voiceLock_
-      const juce::SpinLock::ScopedLockType sl(voiceLock_);
-      synthesiser_.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
-  }
+  synthesiser_.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
 
   // Effects
   if (buffer.getNumChannels() == 2) {
@@ -284,14 +276,13 @@ void ZenithPolySynthProcessor::updateVoiceParameters() {
   paramManager_.fetchAllParameters();
 
   // Apply effect parameters
-  paramManager_.applyToEffects(effects_, currentBpm_.load());
+  paramManager_.applyToEffects(effects_, currentBpm_);
 
   // Apply parameters to each voice
   for (int i = 0; i < synthesiser_.getNumVoices(); ++i) {
-    // Bug 75: Use static_cast for performance in audio path (type guaranteed by constructor)
     if (auto *voice =
-            static_cast<ZenithPolySynthVoice *>(synthesiser_.getVoice(i))) {
-      paramManager_.applyToVoice(*voice, currentBpm_.load());
+            dynamic_cast<ZenithPolySynthVoice *>(synthesiser_.getVoice(i))) {
+      paramManager_.applyToVoice(*voice, currentBpm_);
     }
   }
 }
@@ -421,25 +412,16 @@ void ZenithPolySynth::registerPresets() {
     juce::String jsonString = bankFile.loadFileAsString();
     auto result = juce::JSON::parse(jsonString);
 
-    if (!result.isObject()) {
-      DBG("ZenithPolySynth: Warning - failed to parse preset bank: " +
-          bankFile.getFileName());
+    if (!result.isObject())
       continue;
-    }
 
     auto *bankObj = result.getDynamicObject();
-    if (!bankObj) {
-      DBG("ZenithPolySynth: Warning - invalid bank object in: " +
-          bankFile.getFileName());
+    if (!bankObj)
       continue;
-    }
 
     auto presetsVar = bankObj->getProperty("presets");
-    if (!presetsVar.isArray()) {
-      DBG("ZenithPolySynth: Warning - no 'presets' array in: " +
-          bankFile.getFileName());
+    if (!presetsVar.isArray())
       continue;
-    }
 
     auto *presetsArray = presetsVar.getArray();
     for (const auto &presetVar : *presetsArray) {

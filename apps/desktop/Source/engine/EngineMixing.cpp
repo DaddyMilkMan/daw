@@ -4,8 +4,15 @@
  * @note This is a modular component of Engine - declarations remain in Engine.h
  */
 
+<<<<<<< HEAD
+#include "../engine/AuxBus.h"
+#include "Engine.h"
+#include "ProjectState.h"
+#include "../engine/Track.h"
+=======
 #include "../engine/AudioRenderer.h"
 #include "../engine/AuxBus.h"
+>>>>>>> origin/master
 #include "../engine/MeteringSystem.h"
 #include "../engine/Metronome.h"
 #include "../engine/RecordingManager.h"
@@ -110,9 +117,13 @@ float Engine::getTrackPeakLevel(int trackIndex) const {
 }
 
 float Engine::getMasterLevel() const {
+<<<<<<< HEAD
+  return meteringSystem_ ? meteringSystem_->getLevel(MeteringSystem::MeterMode::RMS) : 0.0f;
+=======
   return meteringSystem_
              ? meteringSystem_->getLevel(MeteringSystem::MeterMode::Peak)
              : 0.0f;
+>>>>>>> origin/master
 }
 
 float Engine::getMasterPeakLevel() const {
