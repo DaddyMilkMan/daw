@@ -108,6 +108,13 @@ public:
     double samplesToBeats(juce::int64 samples) const;
     
     /**
+     * @brief Convert beat position to sample position
+     * @param beats Beat position
+     * @return Sample position (accounting for tempo and sample rate)
+     */
+    juce::int64 beatsToSamples(double beats) const;
+    
+    /**
      * @brief Format beat position as Bar.Beat.Tick string
      * @param beats Beat position
      * @return Formatted string (e.g., "1.1.00", "5.3.45")

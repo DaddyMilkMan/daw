@@ -54,12 +54,17 @@ void AIEventBus::publish(const AIEvent &event) {
   // Invoke callbacks asynchronously on message thread (outside lock)
   if (!callbacksToInvoke.empty()) {
     juce::MessageManager::callAsync([callbacksToInvoke, event, this]() {
+      int deliveredCount = 0;
       for (const auto &callback : callbacksToInvoke) {
         if (callback) {
           callback(event);
-          juce::ScopedLock sl(lock_);
-          stats_.totalDelivered++;
+          deliveredCount++;
         }
+      }
+      
+      if (deliveredCount > 0) {
+        juce::ScopedLock sl(lock_);
+        stats_.totalDelivered += deliveredCount;
       }
     });
   }

@@ -14,8 +14,8 @@
 
 #pragma once
 
-#include "PresetBrowserComponent.h"
 #include "InstrumentPreset.h"
+#include "../ui/panels/PresetBrowserComponent.h"
 #include "ZenithPolySynth.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
@@ -26,7 +26,15 @@
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <memory>
+#include <vector>
 
+#include "../ui/controls/SkiaComboBox.h"
+#include "../ui/controls/SkiaLabel.h"
+#include "../ui/controls/ZenithButton.h"
+#include "../ui/controls/ZenithKnob.h"
+#include "../ui/controls/ZenithToggle.h"
+#include "../ui/utils/ZenithParameterAttachment.h"
 
 namespace zenith {
 
@@ -54,7 +62,7 @@ private:
   // Setup Helpers
   //==========================================================================
 
-  void setupSlider(juce::Slider &slider, juce::Label &label,
+  void setupSlider(ZenithKnob &knob, SkiaLabel &label,
                    const juce::String &labelText,
                    const juce::String &tooltip = "");
   void setupOscillatorSection();
@@ -85,7 +93,7 @@ private:
 
   // Preset browser
   std::unique_ptr<PresetBrowserComponent> presetBrowser_;
-  juce::TextButton togglePresetBrowserButton_;
+  ZenithButton togglePresetBrowserButton_{"Hide Presets"};
   bool presetBrowserVisible_ = true;
 
   // Group components for sections
@@ -100,142 +108,140 @@ private:
   //==========================================================================
 
   // Osc 1
-  juce::Slider osc1WaveSlider_;
-  juce::Label osc1WaveLabel_;
-  juce::ComboBox osc1WaveCombo_;
+  ZenithKnob osc1WaveSlider_;
+  SkiaLabel osc1WaveLabel_;
+  SkiaComboBox osc1WaveCombo_;
 
-  juce::Slider osc1DetuneSlider_;
-  juce::Label osc1DetuneLabel_;
+  ZenithKnob osc1DetuneSlider_;
+  SkiaLabel osc1DetuneLabel_;
 
-  juce::Slider osc1LevelSlider_;
-  juce::Label osc1LevelLabel_;
+  ZenithKnob osc1LevelSlider_;
+  SkiaLabel osc1LevelLabel_;
 
   // Osc 2 (ready for processor integration)
-  juce::Slider osc2WaveSlider_;
-  juce::Label osc2WaveLabel_;
-  juce::ComboBox osc2WaveCombo_;
-  juce::Slider osc2DetuneSlider_;
-  juce::Label osc2DetuneLabel_;
-  juce::Slider osc2LevelSlider_;
-  juce::Label osc2LevelLabel_;
+  ZenithKnob osc2WaveSlider_;
+  SkiaLabel osc2WaveLabel_;
+  SkiaComboBox osc2WaveCombo_;
+  ZenithKnob osc2DetuneSlider_;
+  SkiaLabel osc2DetuneLabel_;
+  ZenithKnob osc2LevelSlider_;
+  SkiaLabel osc2LevelLabel_;
 
   // Osc 3 (ready for processor integration)
-  juce::Slider osc3WaveSlider_;
-  juce::Label osc3WaveLabel_;
-  juce::ComboBox osc3WaveCombo_;
-  juce::Slider osc3DetuneSlider_;
-  juce::Label osc3DetuneLabel_;
-  juce::Slider osc3LevelSlider_;
-  juce::Label osc3LevelLabel_;
+  ZenithKnob osc3WaveSlider_;
+  SkiaLabel osc3WaveLabel_;
+  SkiaComboBox osc3WaveCombo_;
+  ZenithKnob osc3DetuneSlider_;
+  SkiaLabel osc3DetuneLabel_;
+  ZenithKnob osc3LevelSlider_;
+  SkiaLabel osc3LevelLabel_;
 
   // Mix/Unison
-  juce::Slider unisonVoicesSlider_;
-  juce::Label unisonVoicesLabel_;
+  ZenithKnob unisonVoicesSlider_;
+  SkiaLabel unisonVoicesLabel_;
 
-  juce::Slider unisonDetuneSlider_;
-  juce::Label unisonDetuneLabel_;
+  ZenithKnob unisonDetuneSlider_;
+  SkiaLabel unisonDetuneLabel_;
 
   //==========================================================================
   // Filter Section
   //==========================================================================
 
-  juce::ComboBox filterTypeCombo_;
-  juce::Label filterTypeLabel_;
+  SkiaComboBox filterTypeCombo_;
+  SkiaLabel filterTypeLabel_;
 
-  juce::Slider filterCutoffSlider_;
-  juce::Label filterCutoffLabel_;
+  ZenithKnob filterCutoffSlider_;
+  SkiaLabel filterCutoffLabel_;
 
-  juce::Slider filterResonanceSlider_;
-  juce::Label filterResonanceLabel_;
+  ZenithKnob filterResonanceSlider_;
+  SkiaLabel filterResonanceLabel_;
 
-  juce::Slider filterDriveSlider_;
-  juce::Label filterDriveLabel_;
+  ZenithKnob filterDriveSlider_;
+  SkiaLabel filterDriveLabel_;
 
   //==========================================================================
   // Envelope Section (2 ADSRs)
   //==========================================================================
 
   // Amp Envelope
-  juce::Label ampEnvLabel_;
-  juce::Slider ampAttackSlider_;
-  juce::Label ampAttackLabel_;
-  juce::Slider ampDecaySlider_;
-  juce::Label ampDecayLabel_;
-  juce::Slider ampSustainSlider_;
-  juce::Label ampSustainLabel_;
-  juce::Slider ampReleaseSlider_;
-  juce::Label ampReleaseLabel_;
+  SkiaLabel ampEnvLabel_;
+  ZenithKnob ampAttackSlider_;
+  SkiaLabel ampAttackLabel_;
+  ZenithKnob ampDecaySlider_;
+  SkiaLabel ampDecayLabel_;
+  ZenithKnob ampSustainSlider_;
+  SkiaLabel ampSustainLabel_;
+  ZenithKnob ampReleaseSlider_;
+  SkiaLabel ampReleaseLabel_;
 
   // Filter Envelope
-  juce::Label filterEnvLabel_;
-  juce::Slider filterEnvAttackSlider_;
-  juce::Label filterEnvAttackLabel_;
-  juce::Slider filterEnvDecaySlider_;
-  juce::Label filterEnvDecayLabel_;
-  juce::Slider filterEnvSustainSlider_;
-  juce::Label filterEnvSustainLabel_;
-  juce::Slider filterEnvReleaseSlider_;
-  juce::Label filterEnvReleaseLabel_;
-  juce::Slider filterEnvAmountSlider_;
-  juce::Label filterEnvAmountLabel_;
+  SkiaLabel filterEnvLabel_;
+  ZenithKnob filterEnvAttackSlider_;
+  SkiaLabel filterEnvAttackLabel_;
+  ZenithKnob filterEnvDecaySlider_;
+  SkiaLabel filterEnvDecayLabel_;
+  ZenithKnob filterEnvSustainSlider_;
+  SkiaLabel filterEnvSustainLabel_;
+  ZenithKnob filterEnvReleaseSlider_;
+  SkiaLabel filterEnvReleaseLabel_;
+  ZenithKnob filterEnvAmountSlider_;
+  SkiaLabel filterEnvAmountLabel_;
 
   //==========================================================================
   // LFO Section (2 LFOs)
   //==========================================================================
 
   // LFO 1
-  juce::Label lfo1Label_;
-  juce::ComboBox lfo1WaveCombo_;
-  juce::Label lfo1WaveLabel_;
-  juce::Slider lfo1RateSlider_;
-  juce::Label lfo1RateLabel_;
-  juce::ComboBox lfo1TargetCombo_;
-  juce::Label lfo1TargetLabel_;
-  juce::Slider lfo1AmountSlider_;
-  juce::Label lfo1AmountLabel_;
+  SkiaLabel lfo1Label_;
+  SkiaComboBox lfo1WaveCombo_;
+  SkiaLabel lfo1WaveLabel_;
+  ZenithKnob lfo1RateSlider_;
+  SkiaLabel lfo1RateLabel_;
+  SkiaComboBox lfo1TargetCombo_;
+  SkiaLabel lfo1TargetLabel_;
+  ZenithKnob lfo1AmountSlider_;
+  SkiaLabel lfo1AmountLabel_;
 
   // LFO 2
-  juce::Label lfo2Label_;
-  juce::ComboBox lfo2WaveCombo_;
-  juce::Label lfo2WaveLabel_;
-  juce::Slider lfo2RateSlider_;
-  juce::Label lfo2RateLabel_;
-  juce::ComboBox lfo2TargetCombo_;
-  juce::Label lfo2TargetLabel_;
-  juce::Slider lfo2AmountSlider_;
-  juce::Label lfo2AmountLabel_;
+  SkiaLabel lfo2Label_;
+  SkiaComboBox lfo2WaveCombo_;
+  SkiaLabel lfo2WaveLabel_;
+  ZenithKnob lfo2RateSlider_;
+  SkiaLabel lfo2RateLabel_;
+  SkiaComboBox lfo2TargetCombo_;
+  SkiaLabel lfo2TargetLabel_;
+  ZenithKnob lfo2AmountSlider_;
+  SkiaLabel lfo2AmountLabel_;
 
   //==========================================================================
   // Global Section
   //==========================================================================
 
-  juce::Slider masterGainSlider_;
-  juce::Label masterGainLabel_;
+  ZenithKnob masterGainSlider_;
+  SkiaLabel masterGainLabel_;
 
-  juce::ToggleButton monoModeButton_;
-  juce::Label monoModeLabel_;
+  ZenithToggle monoModeButton_;
+  SkiaLabel monoModeLabel_;
 
-  juce::Slider glideSlider_;
-  juce::Label glideLabel_;
+  ZenithKnob glideSlider_;
+  SkiaLabel glideLabel_;
 
-  juce::Slider voicesSlider_;
-  juce::Label voicesLabel_;
+  ZenithKnob voicesSlider_;
+  SkiaLabel voicesLabel_;
 
   //==========================================================================
   // Macro Section (Smart Macros)
   //==========================================================================
 
-  juce::Label macroSectionLabel_;
-  std::vector<std::unique_ptr<juce::Slider>> macroKnobs_;
-  std::vector<std::unique_ptr<juce::Label>> macroLabels_;
+  SkiaLabel macroSectionLabel_;
+  std::vector<std::unique_ptr<ZenithKnob>> macroKnobs_;
+  std::vector<std::unique_ptr<SkiaLabel>> macroLabels_;
 
   //==========================================================================
   // Parameter Attachments
   //==========================================================================
 
-  std::vector<
-      std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>>
-      sliderAttachments_;
+  std::vector<std::unique_ptr<ZenithParameterAttachment>> sliderAttachments_;
   std::vector<
       std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>>
       comboAttachments_;

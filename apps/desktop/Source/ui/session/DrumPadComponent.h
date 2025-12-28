@@ -8,8 +8,8 @@
 #include <vector>
 
 namespace zenith {
+
 class Engine;
-}
 
 //==============================================================================
 /**
@@ -113,3 +113,5 @@ private:
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrumPadComponent)
 };
+
+} // namespace zenith

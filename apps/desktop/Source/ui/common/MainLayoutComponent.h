@@ -16,8 +16,11 @@
 namespace zenith {
 
 class Engine;
+class Engine;
 class ProjectState;
+class CommandAPI;
 class BrowserModel;
+
 class ResizablePanelContainer;
 class RemoteCursorOverlay;
 class SampleEditorComponent;
@@ -26,8 +29,9 @@ class MidiEditorContainer;
 
 class MainLayoutComponent : public SkiaComponent {
 public:
-  MainLayoutComponent(Engine &engine, ProjectState &state);
+  MainLayoutComponent(Engine &engine, ProjectState &state, CommandAPI &api);
   ~MainLayoutComponent() override;
+
 
   void resized() override;
   void drawSkia(SkCanvas *canvas) override;
@@ -47,6 +51,8 @@ public:
 private:
   Engine &engine_;
   ProjectState &projectState_;
+  CommandAPI &api_;
+
 
   std::unique_ptr<BrowserModel> browserModel_;
   std::unique_ptr<ResizablePanelContainer> panelContainer_;

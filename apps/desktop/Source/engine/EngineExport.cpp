@@ -60,14 +60,22 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
   prepareTracks(offlineBlockSize,
                 sampleRate); // Prepare tracks for new rate/size
   if (audioRenderer_) {
-    audioRenderer_->prepare(sampleRate, offlineBlockSize, tracks_.size(),
-                            auxBuses_.size());
+    // AudioRenderer is stateless, prepare context instead
+    if (renderContext_)
+        renderContext_->prepare(sampleRate, offlineBlockSize, tracks_.size(), auxBuses_.size());
+
   }
 
   juce::WavAudioFormat wavFormat;
-  std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(
-      new juce::FileOutputStream(outputFile), sampleRate,
-      static_cast<unsigned int>(numChannels), bitDepth, {}, 0));
+  std::unique_ptr<juce::OutputStream> fileStream = std::make_unique<juce::FileOutputStream>(outputFile);
+  if (fileStream == nullptr || static_cast<juce::FileOutputStream*>(fileStream.get())->failedToOpen()) return false;
+
+  auto writerOptions = juce::AudioFormatWriterOptions()
+                           .withSampleRate(sampleRate)
+                           .withNumChannels(static_cast<int>(numChannels))
+                           .withBitsPerSample(bitDepth);
+
+  std::unique_ptr<juce::AudioFormatWriter> writer = wavFormat.createWriterFor(fileStream, writerOptions);
 
   if (!writer)
     return false;
@@ -85,18 +93,28 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
       juce::MidiBuffer dummyMidi;
       
       // Build raw pointer vectors for AudioRenderer
-      std::vector<Track*> trackPtrs;
+      std::vector<Track *> trackPtrs;
       trackPtrs.reserve(tracks_.size());
-      for (const auto& t : tracks_) trackPtrs.push_back(t.get());
-      
-      std::vector<AuxBus*> auxPtrs;
+      for (const auto &t : tracks_)
+        if (t)
+          trackPtrs.push_back(t.get());
+
+      std::vector<AuxBus *> auxPtrs;
       auxPtrs.reserve(auxBuses_.size());
-      for (const auto& a : auxBuses_) auxPtrs.push_back(a.get());
-      
+      for (const auto &a : auxBuses_)
+        if (a)
+          auxPtrs.push_back(a.get());
+
+      // Create temp shared_ptr vector for AudioRenderer compatibility
+      std::vector<std::shared_ptr<juce::AudioPluginInstance>> tmpPlugins;
+      for (const auto &p : masterPlugins_)
+        tmpPlugins.push_back(p);
+
       audioRenderer_->renderAudioGraph(
+          *renderContext_, // Pass context
           renderBuffer, samplesToRender, samplesRendered, trackPtrs, auxPtrs,
-          routingGraph_, masterLimiter_, masterPlugins_, tempoMap_.get(),
-          &dummyMidi);
+          routingGraph_, masterLimiter_, tmpPlugins, tempoMap_.get(),
+          &dummyMidi, nullptr, 0);
     } else {
       renderBuffer.clear();
     }
@@ -116,8 +134,11 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
 
   prepareTracks(originalSize, originalRate);
   if (audioRenderer_) {
-    audioRenderer_->prepare(originalRate, originalSize, tracks_.size(),
+  if (audioRenderer_ && renderContext_) {
+    renderContext_->prepare(originalRate, originalSize, tracks_.size(),
                             auxBuses_.size());
+  }
+
   }
 
   return true;
@@ -146,23 +167,25 @@ bool Engine::exportProject(const ExportOptions &options) {
   case ExportFormat::OGG:
     format = formatManager.findFormatForFileExtension("ogg");
     break;
+  case ExportFormat::AIFF:
+    format = formatManager.findFormatForFileExtension("aiff");
+    break;
   }
 
   if (!format)
     return false;
 
   // Create file stream
-  auto fileStream =
-      std::make_unique<juce::FileOutputStream>(options.outputFile);
-  if (fileStream->failedToOpen())
+  std::unique_ptr<juce::OutputStream> fileStream = std::make_unique<juce::FileOutputStream>(options.outputFile);
+  if (fileStream == nullptr || static_cast<juce::FileOutputStream*>(fileStream.get())->failedToOpen())
     return false;
 
-  std::unique_ptr<juce::AudioFormatWriter> writer(
-      format->createWriterFor(fileStream.release(), options.sampleRate,
-                              2,                    // Stereo
-                              options.bitDepth, {}, // Metadata
-                              0                     // Quality
-                              ));
+  auto writerOptions = juce::AudioFormatWriterOptions()
+                           .withSampleRate(options.sampleRate)
+                           .withNumChannels(2)
+                           .withBitsPerSample(options.bitDepth);
+
+  std::unique_ptr<juce::AudioFormatWriter> writer = format->createWriterFor(fileStream, writerOptions);
 
   if (!writer)
     return false;
@@ -170,8 +193,11 @@ bool Engine::exportProject(const ExportOptions &options) {
   const int blockSize = 4096;
   juce::AudioBuffer<float> renderBuffer(2, blockSize);
   if (audioRenderer_) {
-    audioRenderer_->prepare(options.sampleRate, blockSize, tracks_.size(),
+  if (audioRenderer_ && renderContext_) {
+    renderContext_->prepare(options.sampleRate, blockSize, tracks_.size(),
                             auxBuses_.size());
+  }
+
   }
 
   if (options.enableDither)
@@ -189,14 +215,10 @@ bool Engine::exportProject(const ExportOptions &options) {
     int numSamples =
         (int)juce::jmin((juce::int64)blockSize, totalSamples - samplesWritten);
 
-    // Render Mix - create raw pointer vectors for export
-    std::vector<zenith::Track*> trackPtrs;
-    std::vector<zenith::AuxBus*> auxPtrs;
-    for (const auto& t : tracks_) { if (t) trackPtrs.push_back(t.get()); }
-    for (const auto& a : auxBuses_) { if (a) auxPtrs.push_back(a.get()); }
-    
     // Use Engine's wrapper which handles graph rendering
-    renderAudioGraph(renderBuffer, numSamples, samplesWritten, trackPtrs, auxPtrs, nullptr);
+    if (renderContext_)
+        renderOfflineBlock(*renderContext_, renderBuffer, numSamples, samplesWritten);
+
 
     // Apply Dithering
     if (options.enableDither && options.bitDepth < 32) {
@@ -217,6 +239,16 @@ bool Engine::exportProject(const ExportOptions &options) {
     }
 
     samplesWritten += numSamples;
+    
+    // Report progress
+    if (options.progressCallback) {
+      float progress = static_cast<float>(samplesWritten) / static_cast<float>(totalSamples);
+      options.progressCallback(progress, "Exporting audio...");
+    }
+  }
+
+  if (options.progressCallback) {
+    options.progressCallback(1.0f, "Export complete!");
   }
 
   return true;
@@ -267,4 +299,49 @@ double Engine::autoDetectProjectDuration() const {
   return maxDuration;
 }
 
+// function removed (moved to Engine.cpp with updated signature)
+
+
+//==============================================================================
+// Offline Block Rendering
+//==============================================================================
+
+void Engine::renderOfflineBlock(AudioRenderContext& context, juce::AudioBuffer<float> &buffer, int numSamples,
+                                juce::int64 position) {
+  if (!audioRenderer_) {
+    buffer.clear();
+    return;
+  }
+
+  // 1. Prepare Inputs
+  std::vector<Track *> trackPtrs;
+  trackPtrs.reserve(tracks_.size());
+  for (const auto &t : tracks_) {
+    if (t)
+      trackPtrs.push_back(t.get());
+  }
+
+  std::vector<AuxBus *> auxPtrs;
+  auxPtrs.reserve(auxBuses_.size());
+  for (const auto &a : auxBuses_) {
+    if (a)
+      auxPtrs.push_back(a.get());
+  }
+
+  juce::MidiBuffer midiBuffer;
+
+  std::vector<std::shared_ptr<juce::AudioPluginInstance>> tmpMasterPlugins;
+  {
+      const juce::ScopedLock lock(masterPluginLock_);
+      tmpMasterPlugins = masterPlugins_;
+  }
+
+  audioRenderer_->renderAudioGraph(
+      context,
+      buffer, numSamples, position, trackPtrs, auxPtrs,
+      routingGraph_, masterLimiter_, tmpMasterPlugins,
+      tempoMap_.get(), &midiBuffer);
+}
+
 } // namespace zenith
+

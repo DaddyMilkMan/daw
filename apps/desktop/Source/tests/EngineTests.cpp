@@ -12,46 +12,54 @@
 #include "Engine.h"
 #include "EngineEvent.h"
 
-// Simple test runner
-struct EngineTests
+namespace zenith {
+namespace tests {
+
+class EngineTests : public juce::UnitTest
 {
-    void run()
+public:
+    EngineTests() : juce::UnitTest("Core Engine", "AudioEngine") {}
+
+    void runTest() override
     {
-        testLockFreeQueue();
-        testMidiFifo();
-    }
-    
-    void testLockFreeQueue()
-    {
-        zenith::Engine engine;
+
+        beginTest("Lock-free Event Queue");
+        {
+            zenith::Engine engine;
+            
+            // Queue an event
+            zenith::EngineEvent e(zenith::EngineEvent::Type::SetPluginParam);
+            e.trackIndex = 1;
+            e.pluginIndex = 0;
+            e.paramIndex = 2;
+            e.value = 0.5f;
+            
+            bool success = engine.queueEvent(e);
+            expect(success, "Event queueing should succeed");
+            
+            // We can't easily verify processing here without a full audio callback,
+            // but we've verified the API and thread-safe queueing.
+        }
         
-        // Queue an event
-        zenith::EngineEvent e(zenith::EngineEvent::Type::SetPluginParam);
-        e.trackIndex = 1;
-        e.pluginIndex = 0;
-        e.paramIndex = 2;
-        e.value = 0.5f;
-        
-        bool success = engine.queueEvent(e);
-        jassert(success);
-        
-        // In a real test, we would check if the event was processed, 
-        // but processEvents() consumes it internally.
-        // This just verifies compilation and basic API.
-    }
-    
-    void testMidiFifo()
-    {
-        zenith::MidiFifo fifo;
-        juce::MidiMessage msg = juce::MidiMessage::noteOn(1, 60, 0.8f);
-        
-        fifo.push(msg);
-        
-        juce::MidiMessage popped;
-        bool gotIt = fifo.pop(popped);
-        
-        jassert(gotIt);
-        jassert(popped.isNoteOn());
-        jassert(popped.getNoteNumber() == 60);
+        beginTest("MIDI FIFO");
+        {
+            zenith::MidiFifo fifo;
+            juce::MidiMessage msg = juce::MidiMessage::noteOn(1, 60, 0.8f);
+            
+            fifo.push(msg);
+            
+            juce::MidiMessage popped;
+            bool gotIt = fifo.pop(popped);
+            
+            expect(gotIt, "Popping from FIFO should succeed after push");
+            expect(popped.isNoteOn(), "Popped message should be a Note On");
+            expectEquals(popped.getNoteNumber(), 60, "Popped note number should match");
+            expectWithinAbsoluteError(popped.getFloatVelocity(), 0.8f, 0.01f, "Velocity should match");
+        }
     }
 };
+
+static EngineTests engineTests;
+
+} // namespace tests
+} // namespace zenith

@@ -13,7 +13,7 @@
 #include "../effects/ZenithDeEsser.h"
 #include "../effects/ZenithTransientShaper.h"
 #include "../effects/ZenithVoiceChanger.h"
-#include "../modulation/ZenithTremolo.h"
+#include "modulation/ZenithTremolo.h"
 
 namespace zenith {
 

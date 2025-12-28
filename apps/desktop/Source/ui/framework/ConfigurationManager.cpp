@@ -11,6 +11,7 @@
 */
 
 #include "ConfigurationManager.h"
+#include "PlatformPathUtils.h"
 #include "ZenithDesignSystem.h"
 
 namespace zenith {
@@ -103,7 +104,7 @@ ConfigurationManager &ConfigurationManager::getInstance() {
 }
 
 juce::File ConfigurationManager::getDefaultConfigurationFile() {
-    return PlatformPathUtils::getDefaultConfigurationFile();
+  return PlatformPathUtils::getDefaultConfigurationFile();
 }
 
 void ConfigurationManager::initialize(const juce::File &configFile) {

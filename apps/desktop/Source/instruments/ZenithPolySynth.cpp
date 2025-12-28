@@ -14,11 +14,10 @@
 */
 
 #include "ZenithPolySynth.h"
+#include "../ui/instruments/ZenithPolySynthUI.h"
 #include "ContentPaths.h"
-#include "ZenithPolySynthUI.h"
 #include "ZenithPolySynthVoice.h"
 #include <juce_core/juce_core.h>
-
 
 namespace zenith {
 
@@ -294,6 +293,7 @@ void ZenithPolySynthProcessor::updateVoiceParameters() {
 
 float ZenithPolySynthProcessor::getModulationMatrix(
     ModulationSource src, ModulationDestination dst) const {
+  const juce::SpinLock::ScopedLockType sl(modMatrixLock_);
   for (const auto &slot : globalModMatrix_) {
     if (slot.source == src && slot.destination == dst)
       return slot.amount;
@@ -304,6 +304,7 @@ float ZenithPolySynthProcessor::getModulationMatrix(
 void ZenithPolySynthProcessor::setModulationMatrix(ModulationSource src,
                                                    ModulationDestination dst,
                                                    float amount) {
+  const juce::SpinLock::ScopedLockType sl(modMatrixLock_);
   for (auto &slot : globalModMatrix_) {
     if (slot.source == src && slot.destination == dst) {
       slot.amount = amount;
@@ -362,9 +363,11 @@ void ZenithPolySynthProcessor::pushToVisualizer(const float *buffer,
 void ZenithPolySynthProcessor::updateVoiceCount() {
   int targetVoices = paramManager_.getTargetVoiceCount();
   if (targetVoices != currentMaxVoices_) {
+    const juce::SpinLock::ScopedLockType sl(voiceLock_);
     while (synthesiser_.getNumVoices() > targetVoices)
       synthesiser_.removeVoice(synthesiser_.getNumVoices() - 1);
     while (synthesiser_.getNumVoices() < targetVoices)
+      // Bug 21: addVoice takes ownership
       synthesiser_.addVoice(new ZenithPolySynthVoice());
     currentMaxVoices_ = targetVoices;
   }

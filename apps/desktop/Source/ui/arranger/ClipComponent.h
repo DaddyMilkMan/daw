@@ -11,7 +11,7 @@
  */
 
 // POLISH: spacing normalized to 8px grid (rounded corners 4px)
-// POLISH: typography now uses SkiaTheme::Typography (body)
+// POLISH: typography now uses ZenithDesignSystem
 // POLISH: flattened visuals (track colors, no gradients)
 
 #pragma once
@@ -25,7 +25,6 @@
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
-
 
 #include "SkiaComponent.h"
 

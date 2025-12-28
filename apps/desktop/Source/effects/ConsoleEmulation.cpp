@@ -16,6 +16,7 @@ namespace effects {
 
 void ConsoleEmulation::prepare(juce::dsp::ProcessSpec &spec) {
   sampleRate = (float)spec.sampleRate;
+  lowPass.prepare(spec);
   coefficientsDirty = true;
   reset();
 }
@@ -27,6 +28,14 @@ void ConsoleEmulation::reset() {
 
 void ConsoleEmulation::updateCoefficients() {
   if (!coefficientsDirty)
+    return;
+
+  // Guard: ensure sampleRate is valid before creating coefficients
+  if (sampleRate <= 0.0f)
+    return;
+
+  // Guard: ensure coefficients pointer is valid (prepared)
+  if (lowPass.coefficients == nullptr)
     return;
 
   if (mode == Mode::Vintage) {

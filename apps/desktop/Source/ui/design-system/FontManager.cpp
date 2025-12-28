@@ -32,9 +32,13 @@ static int getWeightIndex(FontWeight weight) {
     return 2;
   case FontWeight::Bold:
     return 3;
+  default:
+    // Unknown weight - fallback to Regular. This handles future weight additions
+    // gracefully without crashing.
+    DBG("[FontManager] Unknown FontWeight value: " + juce::String(static_cast<int>(weight)) +
+        ", falling back to Regular");
+    return 0;
   }
-  jassertfalse;
-  return 0;
 }
 // ============================================================================
 // SINGLETON ACCESS
@@ -120,15 +124,10 @@ void FontManager::initialize() {
   bool interBold = loadFont("Inter-Bold.ttf", FontFamily::UI, FontWeight::Bold);
 
   // Load JetBrains Mono fonts (Mono family)
-  bool monoRegular = loadFont("JetBrainsMono-Regular.ttf", FontFamily::Mono,
-                              FontWeight::Regular);
-  bool monoMedium = loadFont("JetBrainsMono-Medium.ttf", FontFamily::Mono,
-                             FontWeight::Medium);
-  // Try SemiBold first, fallback to Medium if not present
-  bool monoSemiBold = loadFont("JetBrainsMono-SemiBold.ttf", FontFamily::Mono,
-                               FontWeight::SemiBold);
-  bool monoBold =
-      loadFont("JetBrainsMono-Bold.ttf", FontFamily::Mono, FontWeight::Bold);
+  bool monoRegular = loadFont("JetBrainsMono-Regular.ttf", FontFamily::Mono, FontWeight::Regular);
+  bool monoMedium = loadFont("JetBrainsMono-Medium.ttf", FontFamily::Mono, FontWeight::Medium);
+  bool monoSemiBold = loadFont("JetBrainsMono-SemiBold.ttf", FontFamily::Mono, FontWeight::SemiBold);
+  bool monoBold = loadFont("JetBrainsMono-Bold.ttf", FontFamily::Mono, FontWeight::Bold);
 
   // Create synthetic weight fallbacks for missing fonts
   // This ensures getFont() always returns a usable typeface
@@ -249,7 +248,7 @@ void FontManager::configureFont(SkFont &font) const {
 SkFont FontManager::getFont(FontFamily family, FontWeight weight,
                             float size) const {
   std::lock_guard<std::mutex> lock(mutex_);
-
+  
   sk_sp<SkTypeface> typeface = getTypeface(family, weight);
 
   if (!typeface) {

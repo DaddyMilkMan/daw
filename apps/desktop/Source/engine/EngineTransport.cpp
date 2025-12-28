@@ -1,11 +1,12 @@
 /**
  * @file EngineTransport.cpp
- * @brief Transport controls, playhead, looping, and PDC management
+ * @brief Transport controls, playhead, and looping
  * @note This is a modular component of Engine - declarations remain in Engine.h
  */
 
 #include "Engine.h"
 #include "ProjectState.h"
+#include "Metronome.h"
 #include "../engine/TransportController.h"
 #include "../engine/RecordingManager.h"
 #include "../engine/TrackAutomationSynchronizer.h"
@@ -87,30 +88,6 @@ double Engine::getPlaybackPositionBeats() const {
   return 0.0;
 }
 
-void Engine::panic() {
-  DBG("Engine: PANIC triggered!");
-  
-  // 1. Stop Transport
-  stop();
-  
-  // 2. Iterate all tracks (message thread is safe)
-  for (const auto& track : tracks_) {
-    if (track) {
-      // Clear any pending MIDI events in the track
-      // (Track doesn't expose a method for this yet, assuming implementation needed later)
-      
-      // Mute temporarily to stop audio output immediately
-      // track->setMuted(true); // Maybe too aggressive?
-      
-      // Allow reverb tails to fade naturally or kill them?
-      // Panic usually implies immediate silence.
-      // Ideally we would send MIDI CC 123 (All Notes Off) and 120 (All Sound Off)
-      // but we need a mechanism to inject MIDI into the track.
-      // For now, we will rely on stop() stopping the engine processing primarily.
-    }
-  }
-}
-
 //==============================================================================
 // Transport Position & Looping
 //==============================================================================
@@ -146,45 +123,30 @@ juce::int64 Engine::getLoopEnd() const {
 }
 
 //==============================================================================
-// Plugin Delay Compensation (PDC)
+// Metronome
 //==============================================================================
 
-int Engine::getTrackLatency(int trackIndex) const {
-  if (audioRenderer_) {
-    return audioRenderer_->getTrackLatency(trackIndex);
-  }
-  return 0;
-}
-
-int Engine::getMasterLatency() const {
-  if (audioRenderer_) {
-    return audioRenderer_->getMasterLatency();
-  }
-  return 0;
-}
-
-void Engine::setPDCEnabled(bool enabled) {
-  if (audioRenderer_) {
-    audioRenderer_->setPDCEnabled(enabled);
+void Engine::toggleMetronome() {
+  if (transportController_) {
+    bool newState = !transportController_->isMetronomeEnabled();
+    transportController_->setMetronomeEnabled(newState);
+    if (metronome_) {
+      metronome_->setEnabled(newState);
+    }
   }
 }
 
-bool Engine::isPDCEnabled() const {
-  return audioRenderer_ ? audioRenderer_->isPDCEnabled() : false;
+bool Engine::isMetronomeEnabled() const {
+  return transportController_ ? transportController_->isMetronomeEnabled()
+                              : false;
 }
 
-int Engine::getMaxTrackLatency() const {
-  return audioRenderer_ ? audioRenderer_->getMaxTrackLatency() : 0;
-}
-
-void Engine::recalculatePDC() {
-  if (audioRenderer_) {
-    // Build raw pointer vector for AudioRenderer
-    std::vector<Track*> trackPtrs;
-    trackPtrs.reserve(tracks_.size());
-    for (const auto& t : tracks_) trackPtrs.push_back(t.get());
-    
-    audioRenderer_->calculatePDC(trackPtrs);
+void Engine::setMetronomeLevel(float level) {
+  if (transportController_) {
+    transportController_->setMetronomeLevel(level);
+    if (metronome_) {
+      metronome_->setLevel(level);
+    }
   }
 }
 

@@ -56,6 +56,12 @@ public:
      */
     static juce::File findDefaultModel();
 
+    /**
+     * @brief Cleanup static resources (ONNX environment). 
+     * Call on application shutdown to avoid false positive leaks.
+     */
+    static void shutdown();
+
 
 private:
     struct Impl;

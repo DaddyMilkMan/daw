@@ -11,17 +11,20 @@
 
 #pragma once
 
-#include <include/gpu/gl/GrGLInterface.h>
+#include <gpu/ganesh/gl/GrGLInterface.h>
 #include <juce_gui_extra/juce_gui_extra.h>
+#include <juce_opengl/juce_opengl.h>
+#include <juce_opengl/juce_opengl.h>
 
 namespace zenith {
 
 class PlatformWindowUtils {
 public:
-    /**
-     * Creates a Skia GL interface for the current native context.
-     */
-    static sk_sp<const GrGLInterface> createNativeGLInterface(juce::OpenGLContext& context);
+  /**
+   * Creates a Skia GL interface for the current native context.
+   */
+  static sk_sp<const GrGLInterface>
+  createNativeGLInterface(juce::OpenGLContext &context);
 };
 
 } // namespace zenith

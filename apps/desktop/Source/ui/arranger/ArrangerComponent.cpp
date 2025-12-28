@@ -8,6 +8,7 @@
 
 // Skia Includes
 #ifdef ZENITH_USE_SKIA
+<<<<<<< HEAD
 #include "../framework/GlassmorphicPanel.h"
 #include "../framework/NeonGlow.h"
 #include <core/SkBlurTypes.h> // For SkBlurStyle enum
@@ -34,6 +35,15 @@
 #include "../engine/AudioFilePool.h"
 #include "ZenithDesignSystem.h" // Explicitly include to make typography visible
 #include "ZenithUtils.h"
+=======
+#include "ArrangerRenderer.h"
+#endif
+
+// Zenith Includes
+#include "../../browser/BrowserDragSource.h"
+#include "GridResolutionDropdown.h"
+#include "ZenithDesignSystem.h"
+>>>>>>> origin/master
 
 // JUCE Includes
 #include <juce_core/juce_core.h>
@@ -68,9 +78,16 @@ static constexpr float kBeatLineWidth = 1.0f;
 
 //==============================================================================
 
+<<<<<<< HEAD
 ArrangerComponent::ArrangerComponent(Engine &eng, ProjectState &ps)
     : engine_(eng), projectState(ps) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+=======
+ArrangerComponent::ArrangerComponent(Engine& eng, ProjectState& ps, CommandAPI& api)
+    : engine_(eng), projectState(ps), commandAPI(api) {
+
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+>>>>>>> origin/master
 
   setWantsKeyboardFocus(true);
 
@@ -83,14 +100,20 @@ ArrangerComponent::ArrangerComponent(Engine &eng, ProjectState &ps)
   // Start timer for playhead position updates (60Hz for smooth visual feedback)
   startTimerHz(60);
 
+<<<<<<< HEAD
   // Initialize Macro Toolbar
   macroToolbar = std::make_unique<MacroToolbar>(engine_, projectState);
   addChildComponent(macroToolbar.get());
+=======
+    // Start timer for playhead position updates (60Hz for smooth visual feedback)
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60);
+>>>>>>> origin/master
 
   // Initialize MiniMap
   addAndMakeVisible(&miniMap);
   miniMap.setAlwaysOnTop(true);
 
+<<<<<<< HEAD
   macroToolbar->getSelectedClipIds = [this]() { return selectedClipIds; };
   macroToolbar->getSelectedTrackId = [this]() {
     if (selectedClipIds.isEmpty())
@@ -132,6 +155,76 @@ ArrangerComponent::ArrangerComponent(Engine &eng, ProjectState &ps)
   addChildComponent(sectionTrack.get());
 
   DBG("ArrangerComponent: Created");
+=======
+    // Initialize Grid Dropdown
+    gridDropdown = std::make_unique<GridResolutionDropdown>();
+    addAndMakeVisible(gridDropdown.get());
+    gridDropdown->setResolution(gridResolution_);
+    gridDropdown->onResolutionChanged = [this](GridResolution res) {
+        setGridResolution(res);
+    };
+
+    // Initialize MiniMap
+    addAndMakeVisible(&miniMap);
+    miniMap.setAlwaysOnTop(true);
+
+    // Initialize Timeline Ruler
+    addAndMakeVisible(timelineRuler);
+    timelineRuler.onSeek = [this](double beat) {
+        engine_.setPlayheadSamples(gridUtils_->beatsToSamples(beat));
+    };
+    
+    timelineRuler.onLoopChanged = [this](double start, double end) {
+        if (end <= start) end = start + 0.25;
+        juce::int64 startSamples = gridUtils_->beatsToSamples(start);
+        juce::int64 endSamples = gridUtils_->beatsToSamples(end);
+        
+        engine_.setLoopRegion(startSamples, endSamples);
+        if (!engine_.isLooping()) engine_.setLooping(true);
+    };
+
+    macroToolbar->getSelectedClipIds = [this]() { 
+        return clipManager_->getSelectedClipIds(); 
+    };
+    macroToolbar->getSelectedTrackId = [this]() {
+        const auto& selectedIds = clipManager_->getSelectedClipIds();
+        if (selectedIds.isEmpty())
+            return juce::String();
+        auto* view = clipManager_->findClipView(selectedIds[0]);
+        return view ? view->trackId : juce::String();
+    };
+
+    // Setup Freeze Progress Callback
+    macroToolbar->onFreezeProgress = [this](float progress,
+                                            const juce::String &status) {
+      if (!freezeOverlay)
+        return;
+
+      if (!freezeOverlay->isVisible())
+        freezeOverlay->setVisible(true);
+
+      freezeOverlay->setProgress(progress);
+      freezeOverlay->setStatus(status);
+
+      // Hide when done
+      if (progress >= 1.0f) {
+        freezeOverlay->setVisible(false);
+      }
+    };
+
+    // Initialize Freeze Overlay
+    freezeOverlay = std::make_unique<FreezeProgressOverlay>();
+    addAndMakeVisible(freezeOverlay.get());
+    freezeOverlay->setVisible(false);
+    freezeOverlay->onCancel = [this]() { engine_.cancelFreeze(); };
+
+    // Initialize Section Track
+    sectionTrack.reset(new ArrangerTrackComponent(projectState, *gridUtils_,
+                                                  ArrangerTrackComponent::TrackType::Section));
+    addChildComponent(sectionTrack.get());
+
+    DBG("ArrangerComponent: Created");
+>>>>>>> origin/master
 }
 
 ArrangerComponent::~ArrangerComponent() {
@@ -177,6 +270,7 @@ void ArrangerComponent::valueTreeChildOrderChanged(juce::ValueTree &parent,
 }
 
 //==============================================================================
+<<<<<<< HEAD
 // Clip view management
 //==============================================================================
 
@@ -553,6 +647,9 @@ void ArrangerComponent::duplicateSelectedClips() {
 
 //==============================================================================
 // Component interface - Painting (Pure Skia - All rendering in drawSkia())
+=======
+// Component Interface - Layout
+>>>>>>> origin/master
 //==============================================================================
 
 void ArrangerComponent::resized() {
@@ -569,7 +666,23 @@ void ArrangerComponent::resized() {
   // Usually mini-maps are fixed width or fill available width.
   // I will make it fixed width at top right for now, essentially a "Navigator".
 
+<<<<<<< HEAD
   miniMap.setBounds(getWidth() - mapWidth - 10, 5, mapWidth, mapHeight);
+=======
+    if (sectionTrack) {
+        sectionTrack->setBounds(HEADER_WIDTH, 0, getWidth() - HEADER_WIDTH,
+                                static_cast<int>(SECTION_HEIGHT));
+    }
+    
+    if (gridDropdown) {
+        gridDropdown->setBounds(HEADER_WIDTH - 80, SECTION_HEIGHT + 3, 70, RULER_HEIGHT - 6);
+    }
+
+    timelineRuler.setBounds(HEADER_WIDTH, SECTION_HEIGHT, getWidth() - HEADER_WIDTH, RULER_HEIGHT);
+    if (getWidth() > HEADER_WIDTH) {
+        timelineRuler.setVisibleRange(viewStartBeats, (getWidth() - HEADER_WIDTH) / pixelsPerBeat);
+    }
+>>>>>>> origin/master
 
   if (sectionTrack) {
     // Section track sits at the top, above the ruler
@@ -580,6 +693,7 @@ void ArrangerComponent::resized() {
                             (int)SECTION_HEIGHT);
   }
 
+<<<<<<< HEAD
   if (macroToolbar) {
     // Center horizontally, float near top (offset by Ruler + padding)
     float w = 420.0f;
@@ -614,6 +728,24 @@ void ArrangerComponent::resized() {
       trackComponents[i]->setViewContext(pixelsPerBeat, viewStartBeats);
     }
   }
+=======
+    if (freezeOverlay) {
+        freezeOverlay->setBounds(getLocalBounds());
+    }
+
+    // Layout Tracks
+    for (size_t i = 0; i < trackComponents.size(); ++i) {
+        float y = gridUtils_->trackIndexToY(static_cast<int>(i));
+        if (y + TRACK_HEIGHT < TOP_MARGIN || y > getHeight()) {
+            trackComponents[i]->setVisible(false);
+        } else {
+            trackComponents[i]->setVisible(true);
+            trackComponents[i]->setBounds(0, static_cast<int>(y), getWidth(), 
+                                          static_cast<int>(TRACK_HEIGHT));
+            trackComponents[i]->setViewContext(pixelsPerBeat, viewStartBeats);
+        }
+    }
+>>>>>>> origin/master
 }
 
 //==============================================================================
@@ -621,6 +753,7 @@ void ArrangerComponent::resized() {
 //==============================================================================
 
 #ifdef ZENITH_USE_SKIA
+<<<<<<< HEAD
 void ArrangerComponent::drawSkia(SkCanvas *canvas) {
   using namespace zenith::design;
   auto bounds = getLocalBounds();
@@ -1339,6 +1472,25 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
     canvas->drawString(label.toStdString().c_str(), insertionGuideX + 5.0f,
                        RULER_HEIGHT + 20.0f, labelFont, labelPaint);
   }
+=======
+void ArrangerComponent::drawSkia(SkCanvas* canvas) {
+    auto bounds = getLocalBounds().toFloat();
+    SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
+
+    // 1. Draw Background
+    SkPaint bgPaint;
+    bgPaint.setColor(design::colors::BG_DARKEST);
+    canvas->drawRect(skBounds, bgPaint);
+
+    // 2. Draw Child SkiaComponents (Tracks, Ruler, MiniMap, etc.)
+    // Note: Tracks should be behind clips (which are drawn in step 3)
+    drawChildren(canvas);
+
+    // 3. Draw ArrangerRenderer (Grid, Clips, Playhead, etc.)
+    if (renderer_) {
+        renderer_->drawSkia(canvas);
+    }
+>>>>>>> origin/master
 }
 #endif
 
@@ -1348,6 +1500,7 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
 //==============================================================================
 // NOSONAR - Complexity acceptable for rendering logic
 
+<<<<<<< HEAD
 void ArrangerComponent::mouseDown(const juce::MouseEvent &e) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
@@ -1640,6 +1793,11 @@ void ArrangerComponent::mouseDrag(const juce::MouseEvent &e) {
     } // Overwrite mode doesn't show guide
 
     recomputeClipBounds();
+=======
+void ArrangerComponent::setGridResolution(GridResolution res) {
+    gridResolution_ = res;
+    gridSnapBeats = gridResolutionToBeats(res);
+>>>>>>> origin/master
     repaint();
 
   } else if (currentDragMode == DragMode::ResizeClipLeft) {
@@ -1713,6 +1871,7 @@ void ArrangerComponent::mouseUp(const juce::MouseEvent &e) {
             }
           }
         }
+<<<<<<< HEAD
       }
 
       DBG("ArrangerComponent: Committed move for clips (EditMode: " +
@@ -1937,6 +2096,20 @@ bool ArrangerComponent::keyPressed(const juce::KeyPress &key) {
   }
 
   return false;
+=======
+        
+        timelineRuler.setVisibleRange(viewStartBeats, (getWidth() - HEADER_WIDTH) / pixelsPerBeat);
+
+        repaint();
+    }
+
+    if (wasLoopEnabled != loopEnabled_) {
+        repaint();
+    }
+    
+    // Sync loop state to ruler
+    timelineRuler.setLoopRange(loopStartBeats_, loopEndBeats_, loopEnabled_);
+>>>>>>> origin/master
 }
 
 //==============================================================================
@@ -2102,6 +2275,7 @@ void ArrangerComponent::itemDropped(
   repaint();
 }
 
+<<<<<<< HEAD
 //==============================================================================
 // Timer callback - Updates playhead position from Engine
 //==============================================================================
@@ -2468,34 +2642,6 @@ void ArrangerComponent::drawClipWaveform(SkCanvas *canvas, const ClipView &clip,
 }
 #endif
 
+=======
+>>>>>>> origin/master
 } // namespace zenith
-
-bool ArrangerComponent::keyPressed(const juce::KeyPress &key) {
-  // Playhead Lock (Toggle Follow)
-  if (key.getKeyCode() == 'f' || key.getTextCharacter() == 'f' ||
-      key.getTextCharacter() == 'F') {
-    followPlayhead_ = !followPlayhead_;
-    auto &config = config::ConfigurationManager::getInstance();
-    config.setBool(config::keys::ARRANGER_FOLLOW_PLAYHEAD, followPlayhead_);
-    DBG("ArrangerComponent: Playhead Lock "
-        << (followPlayhead_ ? "Enabled" : "Disabled"));
-    return true;
-  }
-
-  // Delete Clips
-  if (key.getKeyCode() == juce::KeyPress::deleteKey ||
-      key.getKeyCode() == juce::KeyPress::backspaceKey) {
-    deleteSelectedClips();
-    return true;
-  }
-
-  // Duplicate Clips (Ctrl+D)
-  if ((key.getKeyCode() == 'd' || key.getTextCharacter() == 'd' ||
-       key.getTextCharacter() == 'D') &&
-      key.getModifiers().isCommandDown()) {
-    duplicateSelectedClips();
-    return true;
-  }
-
-  return false;
-}

@@ -116,3 +116,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+
+// ==============================================================================
+// JUCE Core Headers
+// Note: These are no longer included in the PCH to avoid conflicts with 
+// JUCE's internal module compilation strategy and X11 headers on Linux.
+// Each .cpp file should include the required JUCE modules directly.
+// ==============================================================================

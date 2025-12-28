@@ -1,1 +1,2 @@
-target_sources(ZenithDAW PRIVATE PlatformWindowUtils_Windows.cpp)
+file(GLOB WINDOW_SOURCES *.cpp *.h *.mm)
+target_sources(ZenithDAW PRIVATE ${WINDOW_SOURCES})

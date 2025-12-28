@@ -20,8 +20,10 @@ PluginHost::PluginHost() {
   DBG("PluginHost: Initializing...");
 
   // Add VST3 format
-  formatManager.addDefaultFormats();
-  formatManager.addFormat(new InternalPluginFormat());
+  // Add VST3 format explicitly (addDefaultFormats is deleted in headless/strict builds)
+  // formatManager.addFormat(std::make_unique<juce::VST3PluginFormat>());
+
+  formatManager.addFormat(std::make_unique<InternalPluginFormat>());
 
   // Get VST3 format pointer for later use
   for (int i = 0; i < formatManager.getNumFormats(); ++i) {
@@ -79,26 +81,100 @@ int PluginHost::scanInternal(
     if (!location.exists())
       continue;
 
-    // Use KnownPluginList to scan and add plugins
-    juce::PluginDirectoryScanner scanner(knownPlugins, *vst3Format,
-                                         searchPaths, // Use combined paths
-                                         true,        // Search recursively
-                                         juce::File() // No dead-mans pedal file
-    );
+    // Recursive file find
+    juce::Array<juce::File> filesToScan;
+    location.findChildFiles(filesToScan, 
+                            juce::File::findFiles, 
+                            true, // recursive
+                            "*.vst3"); // VST3 only for now
 
-    juce::String pluginBeingScanned;
+    for (const auto& file : filesToScan) {
+        if (shouldCancel_) break;
+        
+        juce::String pluginName = file.getFileNameWithoutExtension(); // temp name
+        if (onProgress) onProgress("Scanning: " + pluginName);
 
-    while (scanner.scanNextFile(true, pluginBeingScanned)) {
-      if (shouldCancel_)
-        break;
-      if (onProgress)
-        onProgress("Scanning: " + pluginBeingScanned);
+        juce::PluginDescription desc;
+        if (scanFileOutProcess(file, desc)) {
+            // Check if already known
+            if (!knowsAboutPlugin(desc)) {
+                addToKnownPlugins(desc);
+                foundCount++;
+            }
+        }
     }
-
-    foundCount = knownPlugins.getNumTypes();
   }
 
   return foundCount;
+}
+
+bool PluginHost::scanFileOutProcess(const juce::File& file, juce::PluginDescription& result)
+{
+    juce::File currentApp = juce::File::getSpecialLocation(juce::File::currentApplicationFile);
+    juce::File scannerExe = currentApp.getSiblingFile("ZenithPluginScanner");
+    
+    #if JUCE_WINDOWS
+    if (!scannerExe.hasFileExtension("exe")) scannerExe = scannerExe.withFileExtension("exe");
+    #endif
+
+    if (!scannerExe.existsAsFile()) {
+        // Fallback for Debug builds where it might be in same dir
+        DBG("PluginHost: Scanner not found at " + scannerExe.getFullPathName());
+        return false;
+    }
+
+    juce::ChildProcess process;
+    juce::StringArray args;
+    args.add(scannerExe.getFullPathName());
+    args.add("--scan");
+    args.add(file.getFullPathName());
+
+    if (process.start(args))
+    {
+        juce::String output = process.readAllProcessOutput();
+        process.waitForProcessToFinish(5000); // 5 sec timeout
+        
+        if (process.getExitCode() == 0)
+        {
+            // Parse JSON output
+            // Output usually contains JSON on one line, but maybe headers.
+            // We look for the last valid JSON lines or clean output.
+            
+            output = output.trim();
+            int jsonStart = output.indexOf("{");
+            int jsonEnd = output.lastIndexOf("}");
+            
+            if (jsonStart >= 0 && jsonEnd > jsonStart)
+            {
+                juce::String jsonStr = output.substring(jsonStart, jsonEnd + 1);
+                auto json = juce::JSON::parse(jsonStr);
+                
+                if (!json.isVoid() && json.hasProperty("status"))
+                {
+                   juce::String status = json["status"];
+                   if (status == "success") {
+                       result.fileOrIdentifier = file.getFullPathName();
+                       result.name = json["name"];
+                       result.manufacturerName = json["manufacturer"];
+                       result.version = json["version"];
+                       result.uniqueId = json["uid"].toString().getIntValue();
+                       result.pluginFormatName = "VST3";
+                       result.lastInfoUpdateTime = juce::Time::getCurrentTime();
+                       
+                       bool isInst = json["isInstrument"];
+                       result.isInstrument = isInst;
+                       
+                       return true;
+                   }
+                }
+            }
+        }
+        else {
+             DBG("PluginHost: Detailed Crash detected scanning " + file.getFileName());
+        }
+    }
+    
+    return false;
 }
 
 int PluginHost::scanDefaultLocations(bool async) {
@@ -162,21 +238,27 @@ bool PluginHost::scanPath(const juce::File &path) {
 
   DBG("PluginHost: Scanning path: " + path.getFullPathName());
 
-  juce::FileSearchPath searchPath(path.getFullPathName());
-
-  juce::PluginDirectoryScanner scanner(knownPlugins, *vst3Format, searchPath,
-                                       true,        // Search recursively
-                                       juce::File() // No dead-mans pedal file
-  );
-
-  juce::String pluginBeingScanned;
-
-  while (scanner.scanNextFile(true, pluginBeingScanned)) {
-    DBG("PluginHost: Scanning " + pluginBeingScanned);
+  // Use the robust out-of-process logic instead of the in-process juce::PluginDirectoryScanner
+  juce::Array<juce::File> filesToScan;
+  if (path.isDirectory()) {
+      path.findChildFiles(filesToScan, juce::File::findFiles, true, "*.vst3");
+  } else if (path.hasFileExtension(".vst3")) {
+      filesToScan.add(path);
   }
 
-  DBG("PluginHost: Path scan complete - total plugins: " +
-      juce::String(knownPlugins.getNumTypes()));
+  int foundCount = 0;
+  for (const auto& file : filesToScan) {
+      juce::PluginDescription desc;
+      if (scanFileOutProcess(file, desc)) {
+          if (!knowsAboutPlugin(desc)) {
+              addToKnownPlugins(desc);
+              foundCount++;
+          }
+      }
+  }
+
+  DBG("PluginHost: Path scan complete - found " + juce::String(foundCount) + 
+      " new plugins. Total: " + juce::String(knownPlugins.getNumTypes()));
 
   return true;
 }
@@ -293,4 +375,21 @@ juce::StringArray PluginHost::getSearchPaths() const {
 
 int PluginHost::scanAll(bool async) { return scanDefaultLocations(async); }
 
+//==============================================================================
+// Internal Helpers
+//==============================================================================
+
+bool PluginHost::knowsAboutPlugin(const juce::PluginDescription& desc) const {
+    for (const auto& existing : knownPlugins.getTypes()) {
+        if (existing.fileOrIdentifier == desc.fileOrIdentifier && existing.uniqueId == desc.uniqueId)
+            return true;
+    }
+    return false;
+}
+
+void PluginHost::addToKnownPlugins(const juce::PluginDescription& desc) {
+    knownPlugins.addType(desc);
+}
+
 } // namespace zenith
+

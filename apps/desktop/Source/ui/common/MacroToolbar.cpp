@@ -2,15 +2,12 @@
 #include <algorithm>
 #include <cmath>
 
-#include "ArrangerComponent.h" // For context if needed
+#include "../arranger/ArrangerComponent.h" // For context if needed
 
 // Skia Includes
 #ifdef ZENITH_USE_SKIA
 #include "ZenithDesignSystem.h"
-#include <core/SkCanvas.h>
-#include <core/SkColor.h>
-#include <core/SkPaint.h>
-#include <core/SkRRect.h>
+#include "ZenithSkia.h"
 #include <effects/SkRuntimeEffect.h>
 #endif
 
@@ -25,7 +22,7 @@ MacroToolbar::MacroToolbar(Engine &engine, ProjectState &projectState)
   targetOpacity_ = 0.2f;  // Idle state (semi-visible)
 
   rebuildButtons();
-  startTimerHz(60); // Animation loop (SkiaComponent has virtual timerCallback)
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60); // Animation loop (SkiaComponent has virtual timerCallback)
 }
 
 MacroToolbar::~MacroToolbar() = default;
@@ -35,16 +32,16 @@ void MacroToolbar::rebuildButtons() {
   buttons_.clear();
 
   // 1. Heal Splits
-  macros_.push_back({"Heal Splits", "Merge selected adjacent clips", "🧩",
+  macros_.push_back({"Heal Splits", "Merge selected adjacent clips", "[H]",
                      [this](Engine &, ProjectState &) { healSplits(); }});
 
   // 2. Instant Freeze
-  macros_.push_back({"Instant Freeze", "Bounce selected track to audio", "❄️",
+  macros_.push_back({"Instant Freeze", "Bounce selected track to audio", "[F]",
                      [this](Engine &, ProjectState &) { instantFreeze(); }});
 
   // 3. Color by Track
   macros_.push_back({"Color by Track", "Reset clip colors to track default",
-                     "🎨",
+                     "[C]",
                      [this](Engine &, ProjectState &) { colorByTrack(); }});
 
   // Create buttons
@@ -304,31 +301,29 @@ void MacroToolbar::instantFreeze() {
 
   if (trackIndex >= 0) {
     DBG("MacroToolbar: Freezing track " << trackIndex);
-    if (trackIndex >= 0) {
-      DBG("MacroToolbar: Freezing track " << trackIndex);
-      engine_.freezeTrack(trackIndex,
-                          [this](float progress, const juce::String &status) {
-                            if (onFreezeProgress)
-                              onFreezeProgress(progress, status);
-                          });
+    engine_.freezeTrack(trackIndex,
+                        [this](float progress, const juce::String &status) {
+                          if (onFreezeProgress)
+                            onFreezeProgress(progress, status);
+                        });
+  }
+}
+
+void MacroToolbar::colorByTrack() {
+  if (!getSelectedClipIds)
+    return;
+  auto clipIds = getSelectedClipIds();
+
+  projectState_.getUndoManager().beginNewTransaction("Macro: Color by Track");
+
+  for (const auto &id : clipIds) {
+    auto [trackV, clipV] = projectState_.findClip(id);
+    if (clipV.isValid()) {
+      clipV.removeProperty(ProjectState::PROP_MANUALLY_COLORED,
+                           &projectState_.getUndoManager());
+      clipV.removeProperty("color", &projectState_.getUndoManager());
     }
   }
-
-  void MacroToolbar::colorByTrack() {
-    if (!getSelectedClipIds)
-      return;
-    auto clipIds = getSelectedClipIds();
-
-    projectState_.getUndoManager().beginNewTransaction("Macro: Color by Track");
-
-    for (const auto &id : clipIds) {
-      auto [trackV, clipV] = projectState_.findClip(id);
-      if (clipV.isValid()) {
-        clipV.removeProperty(ProjectState::PROP_MANUALLY_COLORED,
-                             &projectState_.getUndoManager());
-        clipV.removeProperty("color", &projectState_.getUndoManager());
-      }
-    }
-  }
+}
 
 } // namespace zenith

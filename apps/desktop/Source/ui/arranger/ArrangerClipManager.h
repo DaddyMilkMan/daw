@@ -45,6 +45,8 @@ struct ClipView {
     int trackIndex = 0;               ///< Cached track index for O(1) lookups
     double startBeats;                ///< Start position in beats
     double lengthBeats;               ///< Duration in beats
+    double fadeInBeats = 0.0;         ///< Fade in length in beats
+    double fadeOutBeats = 0.0;        ///< Fade out length in beats
     bool isMidi;                      ///< True for MIDI, false for audio
     bool isSelected;                  ///< Selection state
     juce::Rectangle<float> bounds;    ///< Screen bounds (updated by recomputeClipBounds)
@@ -190,6 +192,29 @@ public:
      */
     void duplicateSelectedClips();
 
+    /**
+     * @brief Split all selected clips at the current playhead position
+     */
+    void splitSelectedClipsAtPlayhead();
+
+    /**
+     * @brief Consolidate selected clips on a track into a single audio clip
+     * 
+     * Renders the selected time range of the track to a new audio file and 
+     * replaces the selection with a single clip referencing that file.
+     */
+    void consolidateSelectedClips();
+
+    /**
+     * @brief Render selected MIDI clips to audio (Bounce in Place)
+     */
+    void renderSelectedClipsToAudio();
+
+    /**
+     * @brief Detect tempo from the selected audio clip
+     */
+    void detectTempoForSelectedClip();
+
     //==========================================================================
     // Accessors
     //==========================================================================
@@ -201,6 +226,20 @@ public:
     /** @brief Get the array of selected clip IDs */
     juce::StringArray& getSelectedClipIds() { return selectedClipIds_; }
     const juce::StringArray& getSelectedClipIds() const { return selectedClipIds_; }
+    
+    /**
+     * @brief Get the screen bounds of a clip by its ID
+     * @param clipId The clip's unique identifier
+     * @return Screen rectangle, or empty rectangle if not found
+     */
+    juce::Rectangle<float> getClipBounds(const juce::String& clipId) const {
+        for (const auto& clip : clipViews_) {
+            if (clip.clipId == clipId) {
+                return clip.bounds;
+            }
+        }
+        return {};
+    }
 
 private:
     ArrangerComponent& owner_;         ///< Owning component

@@ -17,6 +17,7 @@ namespace zenith {
 
 int SkiaComponent::systemRefreshRate_ = 60;
 int SkiaComponent::targetFPS_ = 60;
+std::function<void(const juce::String &, const juce::String &)> SkiaComponent::globalHelpCallback;
 
 SkiaComponent::SkiaComponent() {
   setOpaque(false);
@@ -27,9 +28,18 @@ SkiaComponent::SkiaComponent() {
   setWantsKeyboardFocus(true);
 
   // Initialize refresh rate if not already done
-  if (systemRefreshRate_ == 60) {
-    getSystemRefreshRate();
+  static bool refreshRateInitialized = false;
+  if (!refreshRateInitialized) {
+    systemRefreshRate_ = PlatformDisplayUtils::getSystemRefreshRate();
+    if (systemRefreshRate_ <= 0) systemRefreshRate_ = 60;
+    refreshRateInitialized = true;
   }
+
+  // Initialize with theme accent
+  glowColor_ = design::colors::ACCENT_PRIMARY;
+
+  // Property to identify SkiaComponent without RTTI
+  getProperties().set("zenith_is_skia", true);
 }
 
 SkiaComponent::~SkiaComponent() { stopAllAnimations(); }
@@ -112,6 +122,11 @@ void SkiaComponent::resized() {
 void SkiaComponent::mouseEnter(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
   isHovered_ = true;
+  
+  if (globalHelpCallback && helpTitle_.isNotEmpty()) {
+      globalHelpCallback(helpTitle_, helpDescription_);
+  }
+  
   onHoverEnter();
   markDirty();
 }
@@ -144,9 +159,16 @@ void SkiaComponent::focusLost(juce::Component::FocusChangeType cause) {
 void SkiaComponent::drawChildren(SkCanvas *canvas) {
   for (auto *child : getChildren()) {
     if (child->isVisible()) {
-      if (auto *skiaChild = dynamic_cast<SkiaComponent *>(child)) {
+      if (child->getProperties().contains("zenith_is_skia")) {
+        auto *skiaChild = static_cast<SkiaComponent *>(child);
         canvas->save();
+        
+        // Translate to child's position
         canvas->translate((float)child->getX(), (float)child->getY());
+        
+        // Clip to child's bounds to prevent bleeding
+        canvas->clipRect(SkRect::MakeWH((float)child->getWidth(), (float)child->getHeight()));
+        
         skiaChild->drawSkia(canvas);
         canvas->restore();
       }
@@ -164,18 +186,15 @@ void SkiaComponent::animateColorChange() {
 // ============================================================================
 
 void SkiaComponent::animateTo(const juce::String &property, float target,
-                              int durationMs) {
+                               int durationMs) {
   auto it = animations_.find(property);
   if (it == animations_.end()) {
-    // Create new animation
     animations_[property] = std::make_unique<AnimatedValue>(0.0f);
     it = animations_.find(property);
   }
 
-  it->second->setTarget(target, durationMs);
-
-  // Start animation timer if not already running
-  startTimer(1000 / targetFPS_); // Use target FPS
+  it->second->setTarget(target, durationMs, ::zenith::animation::Easing::EaseOut);
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(1000 / targetFPS_);
 }
 
 void SkiaComponent::animateWithSpring(const juce::String &property,
@@ -187,27 +206,31 @@ void SkiaComponent::animateWithSpring(const juce::String &property,
     it = animations_.find(property);
   }
 
-  it->second->setSpring(target, stiffness, damping);
-  startTimer(1000 / targetFPS_);
+  ::zenith::animation::SpringConfig config;
+  config.stiffness = stiffness * 1000.0f; // Scale to match new engine range
+  config.damping = damping * 100.0f;     // Scale to match new engine range
+  
+  it->second->setTargetSpring(target, config);
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(1000 / targetFPS_);
 }
 
 void SkiaComponent::stopAnimation(const juce::String &property) {
   auto it = animations_.find(property);
   if (it != animations_.end()) {
-    it->second->stop();
+    it->second->cancel();
   }
 }
 
 void SkiaComponent::stopAllAnimations() {
   for (auto &pair : animations_) {
-    pair.second->stop();
+    pair.second->cancel();
   }
   stopTimer();
 }
 
 float SkiaComponent::getAnimatedValue(const juce::String &property) const {
   auto it = animations_.find(property);
-  return it != animations_.end() ? it->second->getCurrentValue() : 0.0f;
+  return it != animations_.end() ? it->second->get() : 0.0f;
 }
 
 bool SkiaComponent::isAnimating(const juce::String &property) const {
@@ -217,7 +240,7 @@ bool SkiaComponent::isAnimating(const juce::String &property) const {
 
 void SkiaComponent::timerCallback() {
   bool anyAnimating = false;
-  float deltaTimeMs = 1000.0f / targetFPS_;
+  float deltaTimeMs = 1000.0f / (float)targetFPS_;
 
   for (auto &pair : animations_) {
     if (pair.second->isAnimating()) {
@@ -313,96 +336,7 @@ bool SkiaComponent::keyPressed(const juce::KeyPress &key,
     return true;
   }
 
-  // Let parent handle tab navigation if needed, or implement custom tab logic
-  // here
   return false;
-}
-
-// ============================================================================
-// ANIMATED VALUE IMPLEMENTATION
-// ============================================================================
-
-AnimatedValue::AnimatedValue(float initial)
-    : currentValue_(initial), targetValue_(initial), startValue_(initial),
-      velocity_(0.0f), durationMs_(0), elapsedMs_(0),
-      curve_(EasingCurve::EaseOut), isAnimating_(false), springStiffness_(0.5f),
-      springDamping_(0.7f), useSpring_(false) {}
-
-void AnimatedValue::setTarget(float target, int durationMs, EasingCurve curve) {
-  targetValue_ = target;
-  startValue_ = currentValue_;
-  durationMs_ = durationMs;
-  elapsedMs_ = 0;
-  curve_ = curve;
-  isAnimating_ = true;
-  useSpring_ = false;
-}
-
-void AnimatedValue::setSpring(float target, float stiffness, float damping) {
-  targetValue_ = target;
-  springStiffness_ = stiffness;
-  springDamping_ = damping;
-  isAnimating_ = true;
-  useSpring_ = true;
-}
-
-void AnimatedValue::stop() {
-  isAnimating_ = false;
-  velocity_ = 0.0f;
-}
-
-void AnimatedValue::update(float deltaTimeMs) {
-  if (!isAnimating_)
-    return;
-
-  if (useSpring_) {
-    // Spring physics
-    float displacement = currentValue_ - targetValue_;
-    float springForce = -springStiffness_ * displacement;
-    float dampingForce = -springDamping_ * velocity_;
-
-    velocity_ += (springForce + dampingForce) * (deltaTimeMs / 1000.0f);
-    currentValue_ += velocity_ * (deltaTimeMs / 1000.0f);
-
-    // Stop if close enough and slow enough
-    if (std::abs(displacement) < 0.001f && std::abs(velocity_) < 0.001f) {
-      currentValue_ = targetValue_;
-      velocity_ = 0.0f;
-      isAnimating_ = false;
-    }
-  } else {
-    // Easing curve
-    elapsedMs_ += static_cast<int>(deltaTimeMs);
-
-    if (elapsedMs_ >= durationMs_) {
-      currentValue_ = targetValue_;
-      isAnimating_ = false;
-    } else {
-      float t =
-          static_cast<float>(elapsedMs_) / static_cast<float>(durationMs_);
-      float easedT = easeValue(t);
-      currentValue_ = startValue_ + (targetValue_ - startValue_) * easedT;
-    }
-  }
-}
-
-float AnimatedValue::easeValue(float t) const {
-  switch (curve_) {
-  case EasingCurve::Linear:
-    return t;
-
-  case EasingCurve::EaseIn:
-    return t * t;
-
-  case EasingCurve::EaseOut:
-    return t * (2.0f - t);
-
-  case EasingCurve::EaseInOut:
-    return t < 0.5f ? 2.0f * t * t : -1.0f + (4.0f - 2.0f * t) * t;
-
-  default:
-    return t;
-  }
 }
 
 } // namespace zenith

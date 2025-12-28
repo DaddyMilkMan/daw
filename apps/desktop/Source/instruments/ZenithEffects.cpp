@@ -167,7 +167,7 @@ void ZenithEffects::process(float &left, float &right) {
 
   // Reverb
   if (reverbAmount_ > 0.0f) {
-    initReverb(); // Still lazy, but standard for reverb combs
+    // initReverb(); // REMOVED: Must be called in setSampleRate, not process()
     float input = (left + right) * 0.5f * reverbAmount_;
     float combOut = 0.0f;
     for (auto &comb : combs_)
