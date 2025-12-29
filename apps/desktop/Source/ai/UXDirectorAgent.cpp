@@ -49,7 +49,7 @@ void UXDirectorAgent::startMonitoring(int intervalMs) {
   config_.analysisIntervalMs = intervalMs;
   isMonitoring_.store(true);
   if (juce::MessageManager::getInstanceWithoutCreating() != nullptr)
-    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(intervalMs);
+    startTimer(intervalMs);
 
   DBG("UXDirectorAgent: Started monitoring at " + juce::String(intervalMs) +
       "ms intervals");

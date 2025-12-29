@@ -8,7 +8,6 @@ target_sources(ZenithDAW PRIVATE
     AITools.cpp
     AIPrompts.cpp
     CollaborationManager.cpp
-    MCPServer.cpp
     AuthenticationService.cpp
     OAuthRedirectServer.cpp
 )
