@@ -15,9 +15,7 @@
 
 #include "ZenithDesignSystem.h"
 #include <cmath>
-#include <core/SkCanvas.h>
-#include <core/SkPaint.h>
-#include <core/SkRect.h>
+#include "ZenithSkia.h"
 
 namespace zenith {
 

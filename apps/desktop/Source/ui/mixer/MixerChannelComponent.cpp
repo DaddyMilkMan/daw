@@ -11,17 +11,27 @@
  */
 
 #include "MixerChannelComponent.h"
-#include "../../Source/engine/EngineConstants.h"
-#include "../../Source/engine/Track.h"
+#include "../../effects/ConsoleEmulation.h"
+#include "../../engine/EngineConstants.h"
+#include "../common/PluginEditorWindow.h"
+#include "../../engine/Track.h"
+#include "../../engine/Engine.h"
+#include "../../engine/ProjectState.h"
+#include "../../engine/AuxBus.h"
 #include "GlassmorphicPanel.h"
 #include "NeonGlow.h"
-#include "SkiaTheme.h"
 #include "ZenithDesignSystem.h"
+#include "../design-system/ZenithIcons.h"
+// #include "../design-system/ZenithTheme.h" // Deprecated
+#include "../controls/SkiaPopupMenu.h"
+#include "../controls/ContextMenuManager.h"
+#include "../design-system/ColorBridge.h"
+#include "../design-system/ZenithTypography.h"
+#include "PluginBrowser.h"
 #include <JuceHeader.h>
 
-#include <core/SkCanvas.h>
+#include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
-#include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
 
 namespace zenith {
@@ -46,9 +56,16 @@ constexpr int kMaxPluginNameLength = 12;
 // MixerChannelComponent Implementation
 //==============================================================================
 
-MixerChannelComponent::MixerChannelComponent(Track *track, bool isMaster)
-    : track_(track), isMaster_(isMaster), faderSlider_("Vol"), panKnob_("Pan"),
-      muteButton_("M"), soloButton_("S"), armButton_("R") {
+#include "../../engine/Engine.h"
+#include "../../engine/ProjectState.h"
+
+//==============================================================================
+// MixerChannelComponent Implementation
+//==============================================================================
+
+MixerChannelComponent::MixerChannelComponent(Track *track, ProjectState& state, Engine& engine, bool isMaster)
+    : track_(track), projectState_(state), engine_(engine), isMaster_(isMaster), faderSlider_("Vol", design::colors::CYAN), panKnob_("Pan", design::colors::CYAN),
+      muteButton_("Mute"), soloButton_("Solo"), armButton_("Record") {
   jassert(track_ != nullptr);
   track_->addChangeListener(this);
   zenith::design::ThemeManager::getInstance().addChangeListener(this);
@@ -59,8 +76,7 @@ MixerChannelComponent::MixerChannelComponent(Track *track, bool isMaster)
   // Track name label
   nameLabel_.setText(track_->getName(), juce::dontSendNotification);
   nameLabel_.setJustificationType(juce::Justification::centred);
-  nameLabel_.setFont(
-      juce::FontOptions(isMaster_ ? 16.0f : 14.0f, juce::Font::bold));
+  nameLabel_.setFont(isMaster_ ? ZenithTypography::getHeaderFont().withHeight(16.0f) : ZenithTypography::getHeaderFont().withHeight(14.0f));
   nameLabel_.setEditable(true, true, false);
   nameLabel_.onTextChange = [this]() {
     if (track_) {
@@ -70,21 +86,22 @@ MixerChannelComponent::MixerChannelComponent(Track *track, bool isMaster)
   addAndMakeVisible(nameLabel_);
 
   // GPU-accelerated volume fader with spring physics
-  faderSlider_.setOrientation(zenith::SkiaSlider::Orientation::Vertical);
-  faderSlider_.setStyle(zenith::SkiaSlider::Style::Fader);
-  faderSlider_.setDisplayRange(0.0, 1.0);
+  faderSlider_.setOrientation(zenith::ZenithSlider::Vertical);
+  // ZenithSlider uses setRange instead of setStyle/setDisplayRange
+  faderSlider_.setRange(0.0f, 1.0f, 1.0f);
   faderSlider_.setValue(track_->getVolume());
-  faderSlider_.onValueChange = [this](float value) { onFaderChanged(); };
+  faderSlider_.onValueChange = [this](float value) { juce::ignoreUnused(value); onFaderChanged(); };
   addAndMakeVisible(faderSlider_);
 
   // GPU-accelerated pan knob with spring physics
-  panKnob_.setDisplayRange(-1.0, 1.0);
+  panKnob_.setRange(-1.0f, 1.0f, 0.0f);
   panKnob_.setValue(track_->getPan());
-  panKnob_.setDefaultValue(0.0); // Center is default
-  panKnob_.onValueChange = [this](float value) { onPanChanged(); };
+  panKnob_.onValueChange = [this]() { onPanChanged(); };
   addAndMakeVisible(panKnob_);
 
   // Mute button - Red when active
+  muteButton_.setIconPath(zenith::icons::Mute());
+  muteButton_.setIconPosition(ZenithButton::IconPosition::Only);
   muteButton_.setToggleable(true);
   muteButton_.setToggleState(track_->isMuted());
   muteButton_.setStyle(SkiaButton::Style::Secondary);
@@ -92,6 +109,8 @@ MixerChannelComponent::MixerChannelComponent(Track *track, bool isMaster)
   addAndMakeVisible(muteButton_);
 
   // Solo button - Yellow/Amber when active
+  soloButton_.setIconPath(zenith::icons::Solo());
+  soloButton_.setIconPosition(ZenithButton::IconPosition::Only);
   soloButton_.setToggleable(true);
   soloButton_.setToggleState(track_->isSolo());
   soloButton_.setStyle(SkiaButton::Style::Secondary);
@@ -99,6 +118,8 @@ MixerChannelComponent::MixerChannelComponent(Track *track, bool isMaster)
   addAndMakeVisible(soloButton_);
 
   // Record Arm button - Red when armed
+  armButton_.setIconPath(zenith::icons::Arm());
+  armButton_.setIconPosition(ZenithButton::IconPosition::Only);
   armButton_.setToggleable(true);
   armButton_.setToggleState(track_->isArmed());
   armButton_.setStyle(SkiaButton::Style::Danger);
@@ -123,20 +144,20 @@ MixerChannelComponent::MixerChannelComponent(Track *track, bool isMaster)
 
   // Create insert slot indicators
   for (int i = 0; i < kNumInsertSlots; ++i) {
-    auto slot = std::make_unique<InsertSlotIndicator>(i);
+    auto slot = std::make_unique<InsertSlotIndicator>(*this, i);
     addAndMakeVisible(slot.get());
     insertSlots_.push_back(std::move(slot));
   }
 
   // Create send indicators
   for (int i = 0; i < zenith::constants::kNumSends; ++i) {
-    auto send = std::make_unique<SendIndicator>(i);
+    auto send = std::make_unique<SendIndicator>(*this, i);
     addAndMakeVisible(send.get());
     sendIndicators_.push_back(std::move(send));
   }
 
   // Start timer for meter updates (30 Hz)
-  startTimer(33);
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(33);
 
   // Set size based on channel type
   setSize(isMaster_ ? static_cast<int>(kMasterStripWidth)
@@ -162,11 +183,83 @@ void MixerChannelComponent::changeListenerCallback(
 }
 
 void MixerChannelComponent::mouseDown(const juce::MouseEvent &e) {
+  if (e.mods.isRightButtonDown()) {
+    auto menu = ContextMenuManager::createMenu();
+    juce::String trackId = track_ ? track_->getTrackId() : "";
+    
+    menu->addSectionHeader("Channel");
+    
+    menu->addItem(1, "Rename...", true, false, [this]() {
+      nameLabel_.showEditor();
+    });
+    
+    menu->addItem(2, "Duplicate Channel", !isMaster_, false, [this]() {
+      if (track_) {
+        projectState_.duplicateTrack(track_->getTrackId(), "Duplicate Track");
+      }
+    });
+    
+    menu->addSeparator();
+    
+    // Color submenu
+    auto colorMenu = ContextMenuManager::createMenu();
+    // Using simple names, but ideally these would set actual Zenith colors
+    colorMenu->addItem(100, "Red", true, false, [this]() { track_->setColor(juce::Colour(0xFFFF4444)); });
+    colorMenu->addItem(101, "Orange", true, false, [this]() { track_->setColor(juce::Colour(0xFFFF8844)); });
+    colorMenu->addItem(102, "Yellow", true, false, [this]() { track_->setColor(juce::Colour(0xFFFFDD44)); });
+    colorMenu->addItem(103, "Green", true, false, [this]() { track_->setColor(juce::Colour(0xFF44FF88)); });
+    colorMenu->addItem(104, "Cyan", true, false, [this]() { track_->setColor(juce::Colour(0xFF44DDFF)); });
+    colorMenu->addItem(105, "Blue", true, false, [this]() { track_->setColor(juce::Colour(0xFF4488FF)); });
+    menu->addSubMenu("Change Color", std::move(colorMenu));
+    
+    menu->addSeparator();
+    
+    menu->addSectionHeader("Routing");
+    
+    auto routeMenu = ContextMenuManager::createMenu();
+    routeMenu->addItem(200, "Master", true, track_->getOutputId() == "master", [this]() {
+      track_->setOutputId("master");
+    });
+    // Dynamic list of aux buses
+    int numAux = engine_.getNumAuxBuses();
+    for (int auxIdx = 0; auxIdx < numAux; ++auxIdx) {
+      if (auto* bus = engine_.getAuxBus(auxIdx)) {
+        juce::String busId = bus->getName();
+        bool isCurrent = (track_->getOutputId() == busId);
+        routeMenu->addItem(201 + auxIdx, bus->getName(), true, isCurrent, [this, busId]() {
+          track_->setOutputId(busId);
+        });
+      }
+    }
+    menu->addSubMenu("Route To", std::move(routeMenu));
+    
+    menu->addSeparator();
+    
+    menu->addItem(3, "Reset Channel", true, false, [this]() {
+      faderSlider_.setValue(1.0f);
+      panKnob_.setValue(0.0f);
+      muteButton_.setToggleState(false);
+      soloButton_.setToggleState(false);
+      onFaderChanged();
+      onPanChanged();
+      onMuteClicked();
+      onSoloClicked();
+    });
+    
+    menu->addSeparator();
+    menu->addItemComplete(99, "Delete Channel", SkPath(), "Del", !isMaster_, false, true, [this]() {
+      if (track_) {
+        projectState_.removeTrack(track_->getTrackId(), "Delete Track");
+      }
+    });
+    
+    ContextMenuManager::getInstance().showMenuAt(std::move(menu), this, e.x, e.y);
+    return;
+  }
+
   if (onClick) {
     onClick();
   }
-  // Don't consume event so children can receive it if needed (though they
-  // usually handle their own mouse events)
   SkiaComponent::mouseDown(e);
 }
 
@@ -194,7 +287,8 @@ void MixerChannelComponent::drawSkia(SkCanvas *canvas) {
     // Selected channel: Use accent glow
     zenith::GlassmorphicPanel::drawWithAccent(
         canvas, skBounds,
-        isMaster_ ? design::colors::MAGENTA : design::colors::CYAN,
+        isMaster_ ? design::colors::ACCENT_SECONDARY
+                  : design::colors::ACCENT_PRIMARY,
         GlassmorphicPanel::Style::ActiveGlow);
   } else {
     // Normal channel: Elevated glass panel
@@ -208,29 +302,36 @@ void MixerChannelComponent::drawSkia(SkCanvas *canvas) {
   drawChildren(canvas);
 
   // Draw insert slots section header
-  float insertSectionY = bounds.getHeight() * 0.55f;
-  SkPaint labelPaint;
-  labelPaint.setColor(design::colors::TEXT_TERTIARY);
-  labelPaint.setAntiAlias(true);
-  SkFont labelFont =
-      design::typography::getSkFont(10.0f, design::FontWeight::Medium);
-  canvas->drawString("INSERTS", 8, insertSectionY - 4, labelFont, labelPaint);
+  if (!insertHeaderBounds_.isEmpty()) {
+    SkPaint labelPaint;
+    labelPaint.setColor(design::colors::TEXT_TERTIARY);
+    labelPaint.setAntiAlias(true);
+    SkFont labelFont =
+        design::typography::getSkFont(10.0f, design::FontWeight::Medium);
+    canvas->drawString("INSERTS", insertHeaderBounds_.x(), insertHeaderBounds_.bottom(), labelFont, labelPaint);
+  }
 
   // Draw send section header
-  float sendSectionY = bounds.getHeight() * 0.78f;
-  canvas->drawString("SENDS", 8, sendSectionY - 4, labelFont, labelPaint);
+  if (!sendHeaderBounds_.isEmpty()) {
+    SkPaint labelPaint;
+    labelPaint.setColor(design::colors::TEXT_TERTIARY);
+    labelPaint.setAntiAlias(true);
+    SkFont labelFont =
+        design::typography::getSkFont(10.0f, design::FontWeight::Medium);
+    canvas->drawString("SENDS", sendHeaderBounds_.x(), sendHeaderBounds_.bottom(), labelFont, labelPaint);
+  }
 
   // Master channel: Draw "MASTER" badge
   if (isMaster_) {
     SkPaint badgePaint;
-    badgePaint.setColor(design::withAlpha(design::colors::MAGENTA, 0.3f));
+    badgePaint.setColor(design::withAlpha(design::colors::ACCENT_SECONDARY, 0.3f));
     badgePaint.setAntiAlias(true);
 
     SkRect badgeRect = SkRect::MakeXYWH(bounds.getWidth() / 2 - 30, 4, 60, 18);
-    canvas->drawRoundRect(badgeRect, 4, 4, badgePaint);
+    canvas->drawRoundRect(badgeRect, design::dimensions::RADIUS_SM, design::dimensions::RADIUS_SM, badgePaint);
 
     SkPaint badgeTextPaint;
-    badgeTextPaint.setColor(design::colors::MAGENTA);
+    badgeTextPaint.setColor(design::colors::ACCENT_SECONDARY);
     badgeTextPaint.setAntiAlias(true);
     SkFont badgeFont =
         design::typography::getSkFont(10.0f, design::FontWeight::Bold);
@@ -241,20 +342,15 @@ void MixerChannelComponent::drawSkia(SkCanvas *canvas) {
 
 void MixerChannelComponent::resized() {
   auto bounds = getLocalBounds();
-
-  // Top section: Track name
+  const int totalHeight = bounds.getHeight();
+  const int minFaderHeight = 60; // Absolute minimum for usability
+  
+  // -- 1. High Priority: Track Name (Top) --
   int topHeight = isMaster_ ? kTopHeightMaster : kTopHeightNormal;
   nameLabel_.setBounds(bounds.removeFromTop(topHeight));
   bounds.removeFromTop(4);
 
-  // Spectrum Analyzer
-  if (spectrumAnalyzer_) {
-    spectrumAnalyzer_->setBounds(
-        bounds.removeFromTop(kSpectrumHeight).reduced(2));
-    bounds.removeFromTop(4);
-  }
-
-  // Bottom section: Mute/Solo/Arm buttons
+  // -- 2. High Priority: Buttons (Bottom) --
   auto buttonArea = bounds.removeFromBottom(isMaster_ ? 100 : 80);
 
   // Arm button (only for non-master)
@@ -273,35 +369,95 @@ void MixerChannelComponent::resized() {
   int panSize = isMaster_ ? 70 : 60;
   panKnob_.setBounds(buttonArea.withSizeKeepingCentre(panSize, panSize));
 
-  // Send indicators (above buttons)
+  // Determine available vertical space for optional components
+  int availableHeight = bounds.getHeight();
+  
+  // -- 3. Medium Priority: Spectrum Analyzer (Top) --
+  // Hide spectrum if we are crunched for space (< 450px total, or < 150px remaining)
+  bool showSpectrum = (totalHeight > 450 && availableHeight > 150);
+  
+  if (spectrumAnalyzer_) {
+    spectrumAnalyzer_->setVisible(showSpectrum);
+    if (showSpectrum) {
+      spectrumAnalyzer_->setBounds(
+          bounds.removeFromTop(kSpectrumHeight).reduced(2));
+      bounds.removeFromTop(4);
+    }
+  }
+
+  // Reload available height
+  availableHeight = bounds.getHeight();
+
+  // -- 4. Medium Priority: Sends (Bottom) --
+  // Show sends only if we have space. 
   float sendHeight = kSendIndicatorHeight;
-  auto sendArea = bounds.removeFromBottom(
-      static_cast<int>(sendHeight * zenith::constants::kNumSends + 8));
-  sendArea.removeFromBottom(4);
+  int requiredSendTotal = static_cast<int>(sendHeight * zenith::constants::kNumSends + 8);
+  
+  // Ensure we leave room for fader + inserts
+  // Ensure we leave room for fader + inserts
+  bool showSends = (availableHeight > requiredSendTotal + minFaderHeight + 40);
+  
+  // Reset header bounds
+  sendHeaderBounds_ = SkRect::MakeEmpty();
 
-  for (auto &send : sendIndicators_) {
-    send->setBounds(
-        sendArea.removeFromTop(static_cast<int>(sendHeight)).reduced(2, 1));
+  if (showSends) {
+    // Calculate header position (just above the sends)
+    sendHeaderBounds_ = SkRect::MakeXYWH(8, bounds.getBottom() - requiredSendTotal - 14, 100, 10);
+
+    auto sendArea = bounds.removeFromBottom(requiredSendTotal);
+    sendArea.removeFromBottom(4);
+    for (auto &send : sendIndicators_) {
+        send->setVisible(true);
+        send->setBounds(sendArea.removeFromTop(static_cast<int>(sendHeight)).reduced(2, 1));
+    }
+    bounds.removeFromBottom(8);
+  } else {
+     for (auto &send : sendIndicators_) send->setVisible(false);
   }
-  bounds.removeFromBottom(8);
 
-  // Insert slot indicators
+  // Reload available height
+  availableHeight = bounds.getHeight();
+
+  // -- 5. Low Priority: Insert Slots (Bottom) --
+  // Calculate how many inserts we can fit while keeping minFaderHeight
+  int maxInsertAreaHeight = availableHeight - minFaderHeight - 8; // 8 for spacing
   float insertHeight = kInsertSlotHeight;
-  auto insertArea = bounds.removeFromBottom(
-      static_cast<int>(insertHeight * kNumInsertSlots + 8));
-  insertArea.removeFromBottom(4);
+  
+  // Reset header bounds
+  insertHeaderBounds_ = SkRect::MakeEmpty();
 
-  for (auto &slot : insertSlots_) {
-    slot->setBounds(
-        insertArea.removeFromTop(static_cast<int>(insertHeight)).reduced(2, 0));
+  // Always reserve space for at least 0 inserts. 
+  // If we have space, fill 'er up.
+  if (maxInsertAreaHeight > 0) {
+      int usableInsertHeight = std::min(maxInsertAreaHeight, static_cast<int>(insertHeight * kNumInsertSlots + 8));
+      
+      // Calculate header position (just above the inserts)
+      if (usableInsertHeight >= insertHeight) {
+           insertHeaderBounds_ = SkRect::MakeXYWH(8, bounds.getBottom() - usableInsertHeight - 14, 100, 10);
+      }
+
+      auto insertArea = bounds.removeFromBottom(usableInsertHeight);
+      insertArea.removeFromBottom(4);
+      
+      for (size_t i = 0; i < insertSlots_.size(); ++i) {
+          if (insertArea.getHeight() >= insertHeight) {
+              insertSlots_[i]->setVisible(true);
+              insertSlots_[i]->setBounds(insertArea.removeFromTop(static_cast<int>(insertHeight)).reduced(2, 0));
+          } else {
+              insertSlots_[i]->setVisible(false);
+          }
+      }
+      bounds.removeFromBottom(8);
+  } else {
+      for (auto &slot : insertSlots_) slot->setVisible(false);
   }
-  bounds.removeFromBottom(8);
 
+  // -- 6. Remaining: Meter and Fader --
   // Remaining space: meter and fader side by side
   int meterWidth = isMaster_ ? 24 : 18;
   auto meterBounds = bounds.removeFromLeft(meterWidth);
   meter_.setBounds(meterBounds.reduced(0, 4));
-
+  
   bounds.removeFromLeft(4);
 
   // Fader takes remaining space
@@ -324,6 +480,9 @@ void MixerChannelComponent::timerCallback() {
     }
 
     meter_.repaint();
+
+    // Polling for automation and external changes
+    updateFromTrack();
   }
 }
 
@@ -356,7 +515,7 @@ void MixerChannelComponent::updateFromTrack() {
   }
 
   if (track_->isSolo()) {
-    soloButton_.setStyle(SkiaButton::Style::Warn);
+    soloButton_.setStyle(SkiaButton::Style::Warning);
   } else {
     soloButton_.setStyle(SkiaButton::Style::Secondary);
   }
@@ -440,7 +599,7 @@ void MixerChannelComponent::onSoloClicked() {
   track_->setSolo(newSolo);
 
   if (newSolo) {
-    soloButton_.setStyle(SkiaButton::Style::Warn);
+    soloButton_.setStyle(SkiaButton::Style::Warning);
   } else {
     soloButton_.setStyle(SkiaButton::Style::Secondary);
   }
@@ -458,21 +617,27 @@ void MixerChannelComponent::onArmClicked() {
 // LevelMeter Implementation
 //==============================================================================
 
-MixerChannelComponent::LevelMeter::LevelMeter() { startTimerHz(60); }
+MixerChannelComponent::LevelMeter::LevelMeter() { if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60); }
 
 MixerChannelComponent::LevelMeter::~LevelMeter() { stopTimer(); }
 
 void MixerChannelComponent::LevelMeter::timerCallback() {
-  // Smooth meter ballistics
+  // Smooth meter ballistics with gravity-based falloff
   auto smoothLevel = [](float target, float &current, float &peak,
-                        int &peakHold) {
+                        int &peakHold, float &velocity) {
     const float attackSpeed = 0.8f;
-    const float decaySpeed = 0.05f;
+    const float gravity = 0.002f; // Downward acceleration
 
     if (target > current) {
       current += (target - current) * attackSpeed;
+      velocity = 0.0f; // Reset velocity on upward jump
     } else {
-      current += (target - current) * decaySpeed;
+      velocity += gravity;
+      current -= velocity;
+      if (current < target) {
+        current = target;
+        velocity = 0.0f;
+      }
     }
 
     // Peak hold logic
@@ -487,10 +652,11 @@ void MixerChannelComponent::LevelMeter::timerCallback() {
   };
 
   if (stereo_) {
+    float velocityL = 0.0f, velocityR = 0.0f;
     smoothLevel(targetLevelL_.load(), currentLevelL_, peakLevelL_,
-                peakHoldCounterL_);
+                peakHoldCounterL_, velocityL);
     smoothLevel(targetLevelR_.load(), currentLevelR_, peakLevelR_,
-                peakHoldCounterR_);
+                peakHoldCounterR_, velocityR);
 
     if (std::abs(currentLevelL_ - targetLevelL_.load()) > 0.001f ||
         std::abs(currentLevelR_ - targetLevelR_.load()) > 0.001f ||
@@ -498,8 +664,9 @@ void MixerChannelComponent::LevelMeter::timerCallback() {
       repaint();
     }
   } else {
+    float velocity = 0.0f;
     smoothLevel(targetLevel_.load(), currentLevel_, peakLevel_,
-                peakHoldCounter_);
+                peakHoldCounter_, velocity);
 
     if (std::abs(currentLevel_ - targetLevel_.load()) > 0.001f ||
         peakLevel_ > 0.001f) {
@@ -515,9 +682,9 @@ void MixerChannelComponent::LevelMeter::drawMeterBar(SkCanvas *canvas,
 
   // Draw background
   SkPaint bgPaint;
-  bgPaint.setColor(colors::BG_DARKEST);
+  bgPaint.setColor(design::colors::BG_04);
   bgPaint.setAntiAlias(true);
-  canvas->drawRoundRect(bounds, 2.0f, 2.0f, bgPaint);
+  canvas->drawRoundRect(bounds, design::dimensions::RADIUS_SM, design::dimensions::RADIUS_SM, bgPaint);
 
   if (level < 0.001f && peak < 0.001f)
     return;
@@ -527,6 +694,11 @@ void MixerChannelComponent::LevelMeter::drawMeterBar(SkCanvas *canvas,
   float normalizedLevel = juce::jmap(levelDb, -60.0f, 0.0f, 0.0f, 1.0f);
   normalizedLevel = juce::jlimit(0.0f, 1.0f, normalizedLevel);
 
+  // Define colors at function scope for reuse
+  SkColor cGreen = design::colors::SUCCESS;
+  SkColor cAmber = design::colors::WARNING;
+  SkColor cRed = design::colors::DANGER;
+
   if (normalizedLevel > 0.01f) {
     float barHeight = bounds.height() * normalizedLevel;
     SkRect meterRect =
@@ -534,18 +706,18 @@ void MixerChannelComponent::LevelMeter::drawMeterBar(SkCanvas *canvas,
                          bounds.width() - 4, barHeight);
 
     // Gradient: green -> yellow -> red based on level
-    SkColor topColor = colors::NEON_GREEN;
+    SkColor topColor = cGreen;
     if (normalizedLevel > 0.9f) {
-      topColor = colors::RED;
+      topColor = cRed;
     } else if (normalizedLevel > 0.7f) {
-      topColor = colors::AMBER;
+      topColor = cAmber;
     } else if (normalizedLevel > 0.5f) {
-      topColor = SkColorSetRGB(180, 255, 0); // Yellow-green
+      topColor = design::colors::NEON_YELLOW; // Yellow-green
     }
 
     SkPoint pts[2] = {{meterRect.centerX(), meterRect.bottom()},
                       {meterRect.centerX(), meterRect.top()}};
-    SkColor gradColors[3] = {colors::NEON_GREEN, SkColorSetRGB(200, 255, 0),
+    SkColor gradColors[3] = {cGreen, design::colors::NEON_YELLOW,
                              topColor};
     SkScalar positions[3] = {0.0f, 0.6f, 1.0f};
 
@@ -558,7 +730,7 @@ void MixerChannelComponent::LevelMeter::drawMeterBar(SkCanvas *canvas,
     // Glow effect for high levels
     if (normalizedLevel > 0.7f) {
       SkPaint glowPaint;
-      glowPaint.setColor(withAlpha(topColor, 0.3f));
+      glowPaint.setColor(design::withAlpha(topColor, 0.3f));
       glowPaint.setMaskFilter(
           SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
       glowPaint.setAntiAlias(true);
@@ -574,7 +746,7 @@ void MixerChannelComponent::LevelMeter::drawMeterBar(SkCanvas *canvas,
 
     float peakY = bounds.bottom() - (bounds.height() * normalizedPeak) - 2;
     SkPaint peakPaint;
-    peakPaint.setColor(normalizedPeak > 0.95f ? colors::RED : SK_ColorWHITE);
+    peakPaint.setColor(normalizedPeak > 0.95f ? cRed : SK_ColorWHITE);
     peakPaint.setAntiAlias(true);
     canvas->drawRect(
         SkRect::MakeXYWH(bounds.x() + 2, peakY, bounds.width() - 4, 2.0f),
@@ -600,6 +772,19 @@ void MixerChannelComponent::LevelMeter::drawSkia(SkCanvas *canvas) {
   }
 }
 
+void MixerChannelComponent::LevelMeter::mouseDown(const juce::MouseEvent& e) {
+  if (e.mods.isRightButtonDown()) {
+    auto menu = ContextMenuManager::createMenu();
+    menu->addItem(1, "Reset Peak", true, false, [this]() {
+        peakLevel_ = 0;
+        peakLevelL_ = 0;
+        peakLevelR_ = 0;
+        repaint();
+    });
+    ContextMenuManager::getInstance().showMenuAt(std::move(menu), this, e.x, e.y);
+  }
+}
+
 void MixerChannelComponent::LevelMeter::setLevel(float level) {
   targetLevel_.store(juce::jlimit(0.0f, 1.0f, level));
 }
@@ -608,9 +793,79 @@ void MixerChannelComponent::LevelMeter::setLevel(float level) {
 // InsertSlotIndicator Implementation
 //==============================================================================
 
-MixerChannelComponent::InsertSlotIndicator::InsertSlotIndicator(int slotIndex)
-    : slotIndex_(slotIndex) {
+MixerChannelComponent::InsertSlotIndicator::InsertSlotIndicator(MixerChannelComponent& owner, int slotIndex)
+    : owner_(owner), slotIndex_(slotIndex) {
   setSize(80, static_cast<int>(kInsertSlotHeight));
+}
+
+void MixerChannelComponent::InsertSlotIndicator::mouseDown(const juce::MouseEvent& e) {
+  if (e.mods.isRightButtonDown()) {
+    auto menu = ContextMenuManager::createMenu();
+    
+    if (isOccupied_) {
+      menu->addSectionHeader(pluginName_);
+      
+      menu->addItem(1, "Bypass", true, false, [this]() {
+          if (auto* track = this->owner_.getTrack()) {
+              if (auto* plugin = track->getPlugin(slotIndex_)) {
+                  plugin->suspendProcessing(!plugin->isSuspended());
+                  // Force mismatch-check repaint to show bypass state
+                  owner_.repaint();
+              }
+          }
+      });
+      
+      menu->addItem(2, "Show Editor", true, false, [this]() {
+          if (auto* track = this->owner_.getTrack()) {
+              if (auto* plugin = track->getPlugin(slotIndex_)) {
+                  this->owner_.getEngine().getPluginEditorWindowManager().openEditor(plugin, "", slotIndex_);
+              }
+          }
+      });
+      
+      menu->addSeparator();
+      
+      menu->addItem(3, "Replace Plugin...", true, false, [this]() {
+          auto* engine = &this->owner_.getEngine();
+          auto descArr = engine->getPluginHost().getPluginDescriptions();
+          if (descArr.size() > 0) {
+              if (auto* track = this->owner_.getTrack()) {
+                  if (auto plugin = engine->getPluginHost().createPlugin(descArr[0])) {
+                      track->removePlugin(slotIndex_);
+                      track->addPlugin(std::move(plugin));
+                  }
+              }
+          }
+      });
+      
+      menu->addItemComplete(4, "Remove Plugin", SkPath(), "", true, false, true, [this]() {
+          if (auto* track = this->owner_.getTrack()) {
+              track->removePlugin(slotIndex_);
+          }
+      });
+    } else {
+      menu->addItem(1, "Add Plugin...", true, false, [this]() {
+          auto& engine = this->owner_.getEngine();
+          
+          auto* browser = new PluginBrowser(engine.getPluginHost(), [this](const juce::PluginDescription& desc) {
+              if (auto* track = this->owner_.getTrack()) {
+                  // Load plugin
+                  juce::String error;
+                  // Note: creating instance is blocking for now, ideally async
+                  if (auto plugin = this->owner_.getEngine().getPluginHost().createInstance(desc, 44100, 512, error)) {
+                       track->addPlugin(std::move(plugin));
+                  }
+              }
+          });
+
+          browser->setSize(350, 450);
+          
+          juce::CallOutBox::launchAsynchronously(std::unique_ptr<juce::Component>(browser), this->getScreenBounds(), nullptr);
+      });
+    }
+    
+    ContextMenuManager::getInstance().showMenuAt(std::move(menu), this, e.x, e.y);
+  }
 }
 
 void MixerChannelComponent::InsertSlotIndicator::drawSkia(SkCanvas *canvas) {
@@ -625,21 +880,21 @@ void MixerChannelComponent::InsertSlotIndicator::drawSkia(SkCanvas *canvas) {
 
   if (isOccupied_) {
     // Filled slot: subtle gradient
-    bgPaint.setColor(colors::BG_MEDIUM);
+    bgPaint.setColor(design::colors::BG_02);
   } else {
     // Empty slot: very subtle
-    bgPaint.setColor(colors::BG_DARKER);
+    bgPaint.setColor(design::colors::BG_03);
   }
 
-  canvas->drawRoundRect(skBounds, 2.0f, 2.0f, bgPaint);
+  canvas->drawRoundRect(skBounds, design::dimensions::RADIUS_SM, design::dimensions::RADIUS_SM, bgPaint);
 
   // Border
   SkPaint borderPaint;
   borderPaint.setStyle(SkPaint::kStroke_Style);
   borderPaint.setStrokeWidth(0.5f);
-  borderPaint.setColor(colors::BORDER_SUBTLE);
+  borderPaint.setColor(design::colors::BORDER_SUBTLE);
   borderPaint.setAntiAlias(true);
-  canvas->drawRoundRect(skBounds, 2.0f, 2.0f, borderPaint);
+  canvas->drawRoundRect(skBounds, design::dimensions::RADIUS_SM, design::dimensions::RADIUS_SM, borderPaint);
 
   // Text
   SkPaint textPaint;
@@ -647,7 +902,7 @@ void MixerChannelComponent::InsertSlotIndicator::drawSkia(SkCanvas *canvas) {
   SkFont font = typography::getSkFont(9.0f, design::FontWeight::Regular);
 
   if (isOccupied_) {
-    textPaint.setColor(colors::TEXT_PRIMARY);
+    textPaint.setColor(design::colors::TEXT_PRIMARY);
     // Truncate plugin name if needed
     juce::String displayName = pluginName_.substring(0, kMaxPluginNameLength);
     if (pluginName_.length() > kMaxPluginNameLength)
@@ -655,7 +910,7 @@ void MixerChannelComponent::InsertSlotIndicator::drawSkia(SkCanvas *canvas) {
     canvas->drawString(displayName.toRawUTF8(), 4, skBounds.centerY() + 3, font,
                        textPaint);
   } else {
-    textPaint.setColor(colors::TEXT_TERTIARY);
+    textPaint.setColor(design::colors::TEXT_TERTIARY);
     canvas->drawString(("Slot " + juce::String(slotIndex_ + 1)).toRawUTF8(), 4,
                        skBounds.centerY() + 3, font, textPaint);
   }
@@ -663,7 +918,7 @@ void MixerChannelComponent::InsertSlotIndicator::drawSkia(SkCanvas *canvas) {
   // Occupied indicator dot
   if (isOccupied_) {
     SkPaint dotPaint;
-    dotPaint.setColor(colors::CYAN);
+    dotPaint.setColor(design::colors::ACCENT_PRIMARY);
     dotPaint.setAntiAlias(true);
     canvas->drawCircle(skBounds.right() - 6, skBounds.centerY(), 3, dotPaint);
   }
@@ -682,9 +937,76 @@ void MixerChannelComponent::InsertSlotIndicator::setOccupied(
 // SendIndicator Implementation
 //==============================================================================
 
-MixerChannelComponent::SendIndicator::SendIndicator(int sendIndex)
-    : sendIndex_(sendIndex) {
+MixerChannelComponent::SendIndicator::SendIndicator(MixerChannelComponent& owner, int sendIndex)
+    : owner_(owner), sendIndex_(sendIndex) {
   setSize(80, static_cast<int>(kSendIndicatorHeight));
+}
+
+void MixerChannelComponent::SendIndicator::mouseDown(const juce::MouseEvent& e) {
+  if (e.mods.isRightButtonDown()) {
+    auto menu = ContextMenuManager::createMenu();
+    menu->addSectionHeader("Send " + juce::String(sendIndex_ + 1));
+    
+    bool isPre = false;
+    if (auto* track = this->owner_.getTrack()) {
+        isPre = track->isSendPreFader(sendIndex_);
+    }
+
+    menu->addItem(1, "Pre-Fader", true, isPre, [this]() {
+        if (auto* track = this->owner_.getTrack()) {
+            track->setSendPreFader(sendIndex_, true);
+        }
+    });
+    menu->addItem(2, "Post-Fader", true, !isPre, [this]() {
+        if (auto* track = this->owner_.getTrack()) {
+            track->setSendPreFader(sendIndex_, false);
+        }
+    });
+    
+    menu->addSeparator();
+    
+    auto destMenu = ContextMenuManager::createMenu();
+    destMenu->addItem(100, "None", true, destinationName_.isEmpty(), [this]() {
+        if (auto* track = this->owner_.getTrack()) {
+            track->setSendDestination(sendIndex_, -1); // -1 for none
+        }
+        this->setDestination("");
+        setSendLevel(0.0f);
+    });
+    
+    // Dynamic list of aux buses
+    int numAux = this->owner_.getEngine().getNumAuxBuses();
+    if (numAux > 0) {
+        for (int i = 0; i < numAux; ++i) {
+            if (auto* bus = this->owner_.getEngine().getAuxBus(i)) {
+                 bool isCurrent = destinationName_ == bus->getName();
+                 auto* busPtr = bus;
+                 destMenu->addItem(200 + i, bus->getName(), true, isCurrent, [=, this]() {
+                     if (auto* track = this->owner_.getTrack()) {
+                         track->setSendDestination(sendIndex_, i); 
+                     }
+                     this->setDestination(busPtr->getName());
+                 });
+            }
+        }
+    } else {
+        destMenu->addItem(999, "No Aux Buses", false, false, nullptr);
+    }
+
+    menu->addSubMenu("Set Destination", std::move(destMenu));
+    
+    menu->addSeparator();
+    menu->addItemComplete(3, "Remove Send", SkPath(), "", true, false, true, [this]() {
+         if (auto* track = this->owner_.getTrack()) {
+            track->setSendDestination(sendIndex_, -1);
+            track->setSendLevel(sendIndex_, 0.0f);
+        }
+        setDestination("");
+        setSendLevel(0.0f);
+    });
+    
+    ContextMenuManager::getInstance().showMenuAt(std::move(menu), this, e.x, e.y);
+  }
 }
 
 void MixerChannelComponent::SendIndicator::drawSkia(SkCanvas *canvas) {
@@ -695,9 +1017,9 @@ void MixerChannelComponent::SendIndicator::drawSkia(SkCanvas *canvas) {
 
   // Background
   SkPaint bgPaint;
-  bgPaint.setColor(colors::BG_DARKER);
+  bgPaint.setColor(design::colors::BG_03);
   bgPaint.setAntiAlias(true);
-  canvas->drawRoundRect(skBounds, 2.0f, 2.0f, bgPaint);
+  canvas->drawRoundRect(skBounds, design::dimensions::RADIUS_SM, design::dimensions::RADIUS_SM, bgPaint);
 
   // Send level bar
   if (sendLevel_ > 0.01f) {
@@ -705,7 +1027,7 @@ void MixerChannelComponent::SendIndicator::drawSkia(SkCanvas *canvas) {
     SkRect barRect = SkRect::MakeXYWH(2, skBounds.bottom() - 4, barWidth, 2);
 
     SkPaint barPaint;
-    barPaint.setColor(colors::VIOLET);
+    barPaint.setColor(design::colors::ACCENT_SECONDARY);
     barPaint.setAntiAlias(true);
     canvas->drawRoundRect(barRect, 1.0f, 1.0f, barPaint);
   }
@@ -717,12 +1039,13 @@ void MixerChannelComponent::SendIndicator::drawSkia(SkCanvas *canvas) {
 
   juce::String displayText;
   if (destinationName_.isNotEmpty()) {
-    textPaint.setColor(colors::TEXT_PRIMARY);
+    textPaint.setColor(design::colors::TEXT_PRIMARY);
     displayText = destinationName_.substring(0, 10);
     if (destinationName_.length() > 10)
       displayText += "...";
   } else {
-    textPaint.setColor(colors::TEXT_TERTIARY);
+    juce::Colour txt = ZenithTheme::Colors::text_tertiary;
+    textPaint.setColor(SkColorSetARGB(txt.getAlpha(), txt.getRed(), txt.getGreen(), txt.getBlue()));
     displayText = "Send " + juce::String(sendIndex_ + 1);
   }
 
@@ -736,7 +1059,7 @@ void MixerChannelComponent::SendIndicator::drawSkia(SkCanvas *canvas) {
     SkFont smallFont =
         typography::getMonoFont(8.0f, design::FontWeight::Regular);
     SkPaint levelPaint;
-    levelPaint.setColor(colors::TEXT_SECONDARY);
+    levelPaint.setColor(design::colors::TEXT_SECONDARY);
     levelPaint.setAntiAlias(true);
     canvas->drawString(levelStr.toRawUTF8(), skBounds.right() - 24,
                        skBounds.centerY() + 2, smallFont, levelPaint);

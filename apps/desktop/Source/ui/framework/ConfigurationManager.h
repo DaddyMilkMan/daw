@@ -58,6 +58,12 @@ const juce::String LAYOUT_BOTTOM_PANEL_HEIGHT = "layout.bottomPanel.height";
 const juce::String LAYOUT_MIXER_VISIBLE = "layout.mixer.visible";
 const juce::String LAYOUT_MIXER_HEIGHT = "layout.mixer.height";
 
+// Arranger
+const juce::String ARRANGER_ZOOM = "arranger.zoom";
+const juce::String ARRANGER_SCROLL_X = "arranger.scrollX";
+const juce::String ARRANGER_SCROLL_Y = "arranger.scrollY";
+const juce::String ARRANGER_FOLLOW_PLAYHEAD = "arranger.followPlayhead";
+
 // Audio
 const juce::String AUDIO_DEVICE_TYPE = "audio.deviceType";
 const juce::String AUDIO_OUTPUT_DEVICE = "audio.outputDevice";
@@ -156,7 +162,8 @@ public:
   static ConfigurationManager &getInstance();
 
   // Initialization
-  void initialize(const juce::File &configFile);
+  static juce::File getDefaultConfigurationFile();
+  void initialize(const juce::File &configFile = getDefaultConfigurationFile());
   void shutdown();
   bool isInitialized() const { return initialized_; }
 
@@ -256,8 +263,9 @@ private:
   // Internal methods
   void loadDefaults();
   juce::var getNestedValue(const juce::String &key) const;
-  juce::var getNestedValueFromObject(const juce::String &key,
-                                     const juce::DynamicObject::Ptr &object) const;
+  juce::var
+  getNestedValueFromObject(const juce::String &key,
+                           const juce::DynamicObject::Ptr &object) const;
   void setNestedValue(const juce::String &key, const juce::var &value);
   void setNestedValueInObject(const juce::String &key, const juce::var &value,
                               const juce::DynamicObject::Ptr &object);

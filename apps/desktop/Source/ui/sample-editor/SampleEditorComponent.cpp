@@ -6,11 +6,35 @@
 */
 
 #include "SampleEditorComponent.h"
+#include "SampleEditorActions.h"
 #include "ZenithDesignSystem.h"
 #include <include/core/SkFont.h>
 #include <include/core/SkRRect.h>
 #include <include/effects/SkGradientShader.h>
 #include <juce_audio_formats/juce_audio_formats.h>
+#include "../../dsp/TimeStretcher.h"
+#include "../../dsp/SpectralProcessor.h"
+
+namespace {
+    // Thread-safe FIFO for incoming audio
+    class ScopedFifoWriter {
+    public:
+        ScopedFifoWriter(juce::AbstractFifo& fifo, int numSamples) : fifo_(fifo) {
+            fifo_.prepareToWrite(numSamples, start1, size1, start2, size2);
+        }
+        
+        ~ScopedFifoWriter() {
+            if (size1 + size2 > 0)
+                fifo_.finishedWrite(size1 + size2);
+        }
+        
+        int start1, size1, start2, size2;
+        
+    private:
+        juce::AbstractFifo& fifo_;
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ScopedFifoWriter)
+    };
+}
 
 namespace zenith {
 
@@ -41,7 +65,11 @@ constexpr SkColor overviewViewport = SkColorSetARGB(80, 255, 255, 255);
 SampleEditorComponent::SampleEditorComponent(Engine &engine,
                                              ProjectState &state)
     : engine_(engine), projectState_(state) {
-  setOpaque(true);
+  // NOTE: Do NOT use setOpaque(true) with Skia components!
+  // Skia rendering bypasses JUCE's paint() method, and setOpaque(true)
+  // tells JUCE the component will fill all pixels via paint(), which
+  // causes black screens when drawing is done via drawSkia() instead.
+  setOpaque(false);
   setWantsKeyboardFocus(true);
 
   backgroundColor_ = Colors::bg;
@@ -52,7 +80,7 @@ SampleEditorComponent::SampleEditorComponent(Engine &engine,
   playheadColor_ = Colors::playhead;
 
   projectState_.getState().addListener(this);
-  startTimerHz(30); // 30fps playhead updates
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(30); // 30fps playhead updates
 }
 
 SampleEditorComponent::~SampleEditorComponent() {
@@ -98,7 +126,7 @@ void SampleEditorComponent::timerCallback() {
       if (currentCapacity < requiredCapacity) {
         int newCapacity = std::max(requiredCapacity, currentCapacity * 2);
         newCapacity = std::max(newCapacity, 4096); // Min size
-        recordBuffer_->setSize(1, newCapacity, true, true, true);
+        recordBuffer_->setSize(recordBuffer_->getNumChannels(), newCapacity, true, true, true);
       }
       
       // Copy data from ring buffer
@@ -129,22 +157,40 @@ void SampleEditorComponent::setClipToEdit(const juce::String &trackId,
     if (clipNode_.isValid()) {
       juce::File audioFile(clipNode_.getProperty("sourceFile").toString());
       if (audioFile.existsAsFile()) {
+        // Try to get from cache first
         audioHandle_ = engine_.getAudioFilePool().getFile(audioFile);
-        if (!audioHandle_)
-          audioHandle_ = engine_.getAudioFilePool().loadFile(audioFile);
+        
+        auto initBuffer = [this]() {
+            if (!audioHandle_) return;
+            // Create mutable copy for editing
+            int numChannels = audioHandle_->buffer.getNumChannels();
+            int numSamples = audioHandle_->buffer.getNumSamples();
+
+            editBuffer_ = std::make_unique<juce::AudioBuffer<float>>(numChannels,
+                                                                     numSamples);
+
+            for (int i = 0; i < numChannels; ++i) {
+              editBuffer_->copyFrom(i, 0, audioHandle_->buffer, i, 0, numSamples);
+            }
+
+            fitToWindow();
+            repaint();
+        };
+
         if (audioHandle_) {
-          // Create mutable copy for editing
-          int numChannels = audioHandle_->buffer.getNumChannels();
-          int numSamples = audioHandle_->buffer.getNumSamples();
-
-          editBuffer_ = std::make_unique<juce::AudioBuffer<float>>(numChannels,
-                                                                   numSamples);
-
-          for (int i = 0; i < numChannels; ++i) {
-            editBuffer_->copyFrom(i, 0, audioHandle_->buffer, i, 0, numSamples);
-          }
-
-          fitToWindow();
+            initBuffer();
+        } else {
+            // Async load to prevent UI freeze
+            engine_.getAudioFilePool().loadFileAsync(audioFile, 
+                [this, trackId, clipId, initBuffer](AudioFilePool::HandlePtr handle, juce::String error) {
+                    // Check if we are still editing the same clip
+                    if (handle && currentTrackId_ == trackId && currentClipId_ == clipId) {
+                        audioHandle_ = handle;
+                        initBuffer();
+                    } else if (!handle) {
+                        DBG("SampleEditor: Failed to load " << error);
+                    }
+                });
         }
       }
     }
@@ -196,9 +242,18 @@ void SampleEditorComponent::drawSkia(SkCanvas *canvas) {
   drawRuler(canvas, rulerRect);
   drawGrid(canvas, waveformRect);
   drawRegions(canvas, waveformRect);
-  drawWaveform(canvas, waveformRect);
+  
+  // Draw waveform or spectrogram based on view mode
+  if (viewMode_ == WaveformViewMode::Spectrogram || viewMode_ == WaveformViewMode::Combined) {
+    drawSpectrogram(canvas, waveformRect);
+  }
+  if (viewMode_ == WaveformViewMode::Waveform || viewMode_ == WaveformViewMode::Combined) {
+    drawWaveform(canvas, waveformRect);
+  }
+  
   drawSelection(canvas, waveformRect);
   drawMarkers(canvas, waveformRect);
+  drawWarpMarkers(canvas, waveformRect);
   drawPlayhead(canvas, waveformRect);
   drawScrollbar(canvas, scrollRect);
 }
@@ -273,11 +328,10 @@ void SampleEditorComponent::drawToolbar(SkCanvas *canvas,
 
   // Right side - zoom info
   if (audioHandle_) {
-    char zoomStr[64];
-    snprintf(zoomStr, sizeof(zoomStr), "%.1fx  V:%.0f%%",
+    juce::String zoomStr = juce::String::formatted("%.1fx  V:%.0f%%",
              samplesToTime(audioHandle_->lengthInSamples) / viewWidthSeconds_,
              verticalZoom_ * 100);
-    canvas->drawString(zoomStr, bounds.width() - 100, bounds.centerY() + 4,
+    canvas->drawString(zoomStr.toStdString().c_str(), bounds.width() - 100, bounds.centerY() + 4,
                        font, textPaint);
   }
 }
@@ -368,13 +422,13 @@ void SampleEditorComponent::drawRuler(SkCanvas *canvas, const SkRect &bounds) {
 
     canvas->drawLine(x, bounds.bottom() - 6, x, bounds.bottom(), tickPaint);
 
-    char timeStr[32];
+    juce::String timeStr;
     int mins = (int)(t / 60);
     if (mins > 0)
-      snprintf(timeStr, 32, "%d:%04.1f", mins, t - mins * 60);
+      timeStr = juce::String::formatted("%d:%04.1f", mins, t - mins * 60);
     else
-      snprintf(timeStr, 32, "%.1fs", t);
-    canvas->drawString(timeStr, x + 3, bounds.bottom() - 10, font, textPaint);
+      timeStr = juce::String::formatted("%.1fs", t);
+    canvas->drawString(timeStr.toStdString().c_str(), x + 3, bounds.bottom() - 10, font, textPaint);
   }
 }
 
@@ -560,6 +614,56 @@ void SampleEditorComponent::drawRegions(SkCanvas *canvas,
   }
 }
 
+void SampleEditorComponent::drawWarpMarkers(SkCanvas *canvas,
+                                            const SkRect &bounds) {
+  if (warpMarkers_.empty())
+    return;
+
+  SkPaint linePaint;
+  linePaint.setColor(SkColorSetRGB(0, 200, 255)); // Cyan for warp markers
+  linePaint.setStrokeWidth(2);
+  linePaint.setAntiAlias(true);
+
+  SkPaint handlePaint;
+  handlePaint.setColor(SkColorSetRGB(0, 220, 255));
+  handlePaint.setAntiAlias(true);
+
+  SkPaint textPaint;
+  textPaint.setColor(SkColorSetRGB(0, 200, 255));
+  textPaint.setAntiAlias(true);
+
+  SkFont font(nullptr, 9);
+
+  for (size_t i = 0; i < warpMarkers_.size(); ++i) {
+    const auto &m = warpMarkers_[i];
+    
+    // Draw at warped time position (where it will be after stretching)
+    float x = timeToPixels(m.warpedTime, bounds.width());
+    if (x < 0 || x > bounds.width())
+      continue;
+
+    // Draw vertical line
+    canvas->drawLine(x, bounds.top(), x, bounds.bottom(), linePaint);
+
+    // Draw diamond handle at top
+    SkPath diamond;
+    float handleSize = 6.0f;
+    diamond.moveTo(x, bounds.top());
+    diamond.lineTo(x + handleSize, bounds.top() + handleSize);
+    diamond.lineTo(x, bounds.top() + handleSize * 2);
+    diamond.lineTo(x - handleSize, bounds.top() + handleSize);
+    diamond.close();
+    canvas->drawPath(diamond, handlePaint);
+
+    // Draw label showing time offset
+    double offset = m.warpedTime - m.originalTime;
+    juce::String label = (offset >= 0 ? "+" : "") + 
+                         juce::String(offset * 1000.0, 1) + "ms";
+    canvas->drawString(label.toStdString().c_str(), x + 4, 
+                       bounds.top() + handleSize * 2 + 10, font, textPaint);
+  }
+}
+
 void SampleEditorComponent::drawScrollbar(SkCanvas *canvas,
                                           const SkRect &bounds) {
   SkPaint bgPaint;
@@ -712,6 +816,10 @@ void SampleEditorComponent::drawSpectrogram(SkCanvas *canvas,
 
 //==============================================================================
 // Coordinate conversion
+void SampleEditorComponent::pushUndoState(const juce::String& transactionName) {
+    projectState_.getUndoManager().beginNewTransaction(transactionName);
+}
+
 float SampleEditorComponent::timeToPixels(double t, float w) const {
   return (float)((t - timeOffset_) / viewWidthSeconds_) * w;
 }
@@ -1029,7 +1137,8 @@ void SampleEditorComponent::paste() {
   if (!editBuffer_)
     return;
 
-  pushUndoState("Paste");
+  // 1. Snapshot State Before
+  juce::AudioBuffer<float> stateBefore(*editBuffer_);
 
   auto &buffer = *editBuffer_;
   int numChannels = buffer.getNumChannels();
@@ -1044,33 +1153,33 @@ void SampleEditorComponent::paste() {
 
   // Create new buffer with space for clipboard content
   int newNumSamples = numSamples + clipboardSamples;
-  auto newBuffer =
-      std::make_unique<juce::AudioBuffer<float>>(numChannels, newNumSamples);
+  juce::AudioBuffer<float> stateAfter(numChannels, newNumSamples);
 
   // Copy audio before insert point
   for (int ch = 0; ch < numChannels; ch++) {
-    newBuffer->copyFrom(ch, 0, buffer, ch, 0, (int)insertPos);
+    stateAfter.copyFrom(ch, 0, buffer, ch, 0, (int)insertPos);
   }
 
   // Copy clipboard content
   int cbChannels = std::min(numChannels, clipboard_->getNumChannels());
   for (int ch = 0; ch < cbChannels; ch++) {
-    newBuffer->copyFrom(ch, (int)insertPos, *clipboard_, ch, 0,
+    stateAfter.copyFrom(ch, (int)insertPos, *clipboard_, ch, 0,
                         clipboardSamples);
   }
 
   // Copy audio after insert point
   int remaining = numSamples - (int)insertPos;
   for (int ch = 0; ch < numChannels; ch++) {
-    newBuffer->copyFrom(ch, (int)insertPos + clipboardSamples, buffer, ch,
+    stateAfter.copyFrom(ch, (int)insertPos + clipboardSamples, buffer, ch,
                         (int)insertPos, remaining);
   }
 
-  editBuffer_ = std::move(newBuffer);
-  hasUnsavedChanges_ = true;
+  // 2. Perform Action via Global UndoManager
+  projectState_.getUndoManager().perform(
+      new SampleEditAction(this, stateBefore, stateAfter, "Paste Audio"));
+
   DBG("Pasted " + juce::String(clipboardSamples) + " samples at position " +
       juce::String(insertPos));
-  repaint();
 }
 
 void SampleEditorComponent::deleteSelection() {
@@ -1079,7 +1188,8 @@ void SampleEditorComponent::deleteSelection() {
   if (!editBuffer_)
     return;
 
-  pushUndoState("Delete Selection");
+  // 1. Snapshot State Before
+  juce::AudioBuffer<float> stateBefore(*editBuffer_);
 
   auto &buffer = *editBuffer_;
   int numChannels = buffer.getNumChannels();
@@ -1097,31 +1207,34 @@ void SampleEditorComponent::deleteSelection() {
   // Create new buffer without the deleted section
   int newNumSamples = numSamples - deleteLength;
   if (newNumSamples <= 0) {
-    editBuffer_->clear();
+    juce::AudioBuffer<float> empty(numChannels, 0);
+    projectState_.getUndoManager().perform(
+        new SampleEditAction(this, stateBefore, empty, "Delete Selection"));
+    clearSelection();
     return;
   }
 
-  auto newBuffer =
-      std::make_unique<juce::AudioBuffer<float>>(numChannels, newNumSamples);
+  juce::AudioBuffer<float> stateAfter(numChannels, newNumSamples);
 
   // Copy audio before selection
   for (int ch = 0; ch < numChannels; ch++) {
-    newBuffer->copyFrom(ch, 0, buffer, ch, 0, (int)startSample);
+    stateAfter.copyFrom(ch, 0, buffer, ch, 0, (int)startSample);
   }
 
   // Copy audio after selection
   int afterSelectionStart = (int)endSample;
   int afterSelectionLength = numSamples - afterSelectionStart;
   for (int ch = 0; ch < numChannels; ch++) {
-    newBuffer->copyFrom(ch, (int)startSample, buffer, ch, afterSelectionStart,
+    stateAfter.copyFrom(ch, (int)startSample, buffer, ch, afterSelectionStart,
                         afterSelectionLength);
   }
 
-  editBuffer_ = std::move(newBuffer);
+  // 2. Perform Action via Global UndoManager
+  projectState_.getUndoManager().perform(
+      new SampleEditAction(this, stateBefore, stateAfter, "Delete Selection"));
+
   clearSelection();
-  hasUnsavedChanges_ = true;
   DBG("Deleted " + juce::String(deleteLength) + " samples");
-  repaint();
 }
 
 void SampleEditorComponent::trimToSelection() {
@@ -1130,7 +1243,8 @@ void SampleEditorComponent::trimToSelection() {
   if (!editBuffer_)
     return;
 
-  pushUndoState("Trim to Selection");
+  // 1. Snapshot State Before
+  juce::AudioBuffer<float> stateBefore(*editBuffer_);
 
   auto &buffer = *editBuffer_;
   int numChannels = buffer.getNumChannels();
@@ -1146,19 +1260,19 @@ void SampleEditorComponent::trimToSelection() {
     return;
 
   // Create new buffer containing only the selection
-  auto newBuffer =
-      std::make_unique<juce::AudioBuffer<float>>(numChannels, trimLength);
+  juce::AudioBuffer<float> stateAfter(numChannels, trimLength);
 
   for (int ch = 0; ch < numChannels; ch++) {
-    newBuffer->copyFrom(ch, 0, buffer, ch, (int)startSample, trimLength);
+    stateAfter.copyFrom(ch, 0, buffer, ch, (int)startSample, trimLength);
   }
 
-  editBuffer_ = std::move(newBuffer);
+  // 2. Perform Action via Global UndoManager
+  projectState_.getUndoManager().perform(
+      new SampleEditAction(this, stateBefore, stateAfter, "Trim to Selection"));
+
   clearSelection();
   timeOffset_ = 0;
-  hasUnsavedChanges_ = true;
   DBG("Trimmed to " + juce::String(trimLength) + " samples");
-  repaint();
 }
 
 void SampleEditorComponent::splitAtCursor() {
@@ -1196,17 +1310,23 @@ void SampleEditorComponent::normalize(float targetDb) {
 
   if (!editBuffer_)
     return;
-  auto &buffer = *editBuffer_;
+
+  // 1. Snapshot State Before
+  juce::AudioBuffer<float> stateBefore(*editBuffer_);
+  
+  // Clone to work on stateAfter
+  juce::AudioBuffer<float> stateAfter(*editBuffer_);
+
   juce::int64 startSample = timeToSamples(selection_.getStart());
   juce::int64 endSample = timeToSamples(selection_.getEnd());
 
   startSample = std::max<juce::int64>(0, startSample);
-  endSample = std::min<juce::int64>(buffer.getNumSamples(), endSample);
+  endSample = std::min<juce::int64>(stateAfter.getNumSamples(), endSample);
 
   // Step 1: Find peak amplitude
   float peakLevel = 0.0f;
-  for (int ch = 0; ch < buffer.getNumChannels(); ch++) {
-    const float *data = buffer.getReadPointer(ch);
+  for (int ch = 0; ch < stateAfter.getNumChannels(); ch++) {
+    const float *data = stateAfter.getReadPointer(ch);
     for (juce::int64 i = startSample; i < endSample; i++) {
       float absVal = std::abs(data[i]);
       if (absVal > peakLevel)
@@ -1223,17 +1343,19 @@ void SampleEditorComponent::normalize(float targetDb) {
   float gain = targetLinear / peakLevel;
 
   // Step 3: Apply gain
-  for (int ch = 0; ch < buffer.getNumChannels(); ch++) {
-    float *data = buffer.getWritePointer(ch);
+  for (int ch = 0; ch < stateAfter.getNumChannels(); ch++) {
+    float *data = stateAfter.getWritePointer(ch);
     for (juce::int64 i = startSample; i < endSample; i++) {
       data[i] *= gain;
     }
   }
 
-  hasUnsavedChanges_ = true;
+  // 2. Perform Action via Global UndoManager
+  projectState_.getUndoManager().perform(
+      new SampleEditAction(this, stateBefore, stateAfter, "Normalize"));
+
   DBG("Normalized selection: peak=" + juce::String(peakLevel) +
       " gain=" + juce::String(gain));
-  repaint();
 }
 
 void SampleEditorComponent::reverse() {
@@ -1242,16 +1364,22 @@ void SampleEditorComponent::reverse() {
 
   if (!editBuffer_)
     return;
-  auto &buffer = *editBuffer_;
+
+  // 1. Snapshot State Before
+  juce::AudioBuffer<float> stateBefore(*editBuffer_);
+  
+  // Clone to work on stateAfter
+  juce::AudioBuffer<float> stateAfter(*editBuffer_);
+
   juce::int64 startSample = timeToSamples(selection_.getStart());
   juce::int64 endSample = timeToSamples(selection_.getEnd());
 
   startSample = std::max<juce::int64>(0, startSample);
-  endSample = std::min<juce::int64>(buffer.getNumSamples(), endSample);
+  endSample = std::min<juce::int64>(stateAfter.getNumSamples(), endSample);
 
   // Reverse each channel independently
-  for (int ch = 0; ch < buffer.getNumChannels(); ch++) {
-    float *data = buffer.getWritePointer(ch);
+  for (int ch = 0; ch < stateAfter.getNumChannels(); ch++) {
+    float *data = stateAfter.getWritePointer(ch);
     juce::int64 left = startSample;
     juce::int64 right = endSample - 1;
 
@@ -1262,9 +1390,11 @@ void SampleEditorComponent::reverse() {
     }
   }
 
-  hasUnsavedChanges_ = true;
+  // 2. Perform Action via Global UndoManager
+  projectState_.getUndoManager().perform(
+      new SampleEditAction(this, stateBefore, stateAfter, "Reverse Audio"));
+
   DBG("Reversed selection");
-  repaint();
 }
 
 void SampleEditorComponent::fadeIn(double durationSeconds) {
@@ -1273,17 +1403,21 @@ void SampleEditorComponent::fadeIn(double durationSeconds) {
 
   if (!editBuffer_)
     return;
-  auto &buffer = *editBuffer_;
+
+  // 1. Snapshot State Before
+  juce::AudioBuffer<float> stateBefore(*editBuffer_);
+  juce::AudioBuffer<float> stateAfter(*editBuffer_);
+
   double startTime = hasSelection() ? selection_.getStart() : 0.0;
   juce::int64 startSample = timeToSamples(startTime);
   juce::int64 fadeSamples =
       (juce::int64)(durationSeconds * audioHandle_->sampleRate);
   juce::int64 endSample =
-      std::min<juce::int64>(startSample + fadeSamples, buffer.getNumSamples());
+      std::min<juce::int64>(startSample + fadeSamples, stateAfter.getNumSamples());
 
   // Apply x-squared curve for natural fade (logarithmic perception)
-  for (int ch = 0; ch < buffer.getNumChannels(); ch++) {
-    float *data = buffer.getWritePointer(ch);
+  for (int ch = 0; ch < stateAfter.getNumChannels(); ch++) {
+    float *data = stateAfter.getWritePointer(ch);
     for (juce::int64 i = startSample; i < endSample; i++) {
       float progress =
           (float)(i - startSample) / (float)(endSample - startSample);
@@ -1292,9 +1426,11 @@ void SampleEditorComponent::fadeIn(double durationSeconds) {
     }
   }
 
-  hasUnsavedChanges_ = true;
+  // 2. Perform Action via Global UndoManager
+  projectState_.getUndoManager().perform(
+      new SampleEditAction(this, stateBefore, stateAfter, "Fade In"));
+
   DBG("Applied fade in: " + juce::String(durationSeconds) + "s");
-  repaint();
 }
 
 void SampleEditorComponent::fadeOut(double durationSeconds) {
@@ -1303,17 +1439,21 @@ void SampleEditorComponent::fadeOut(double durationSeconds) {
 
   if (!editBuffer_)
     return;
-  auto &buffer = *editBuffer_;
+
+  // 1. Snapshot State Before
+  juce::AudioBuffer<float> stateBefore(*editBuffer_);
+  juce::AudioBuffer<float> stateAfter(*editBuffer_);
+
   double endTime = hasSelection() ? selection_.getEnd()
-                                  : samplesToTime(buffer.getNumSamples());
+                                  : samplesToTime(stateAfter.getNumSamples());
   juce::int64 endSample = timeToSamples(endTime);
   juce::int64 fadeSamples =
       (juce::int64)(durationSeconds * audioHandle_->sampleRate);
   juce::int64 startSample = std::max<juce::int64>(0, endSample - fadeSamples);
 
   // Apply inverse x-squared curve
-  for (int ch = 0; ch < buffer.getNumChannels(); ch++) {
-    float *data = buffer.getWritePointer(ch);
+  for (int ch = 0; ch < stateAfter.getNumChannels(); ch++) {
+    float *data = stateAfter.getWritePointer(ch);
     for (juce::int64 i = startSample; i < endSample; i++) {
       float progress =
           (float)(i - startSample) / (float)(endSample - startSample);
@@ -1322,9 +1462,11 @@ void SampleEditorComponent::fadeOut(double durationSeconds) {
     }
   }
 
-  hasUnsavedChanges_ = true;
+  // 2. Perform Action via Global UndoManager
+  projectState_.getUndoManager().perform(
+      new SampleEditAction(this, stateBefore, stateAfter, "Fade Out"));
+
   DBG("Applied fade out: " + juce::String(durationSeconds) + "s");
-  repaint();
 }
 
 void SampleEditorComponent::adjustGain(float db) {
@@ -1335,12 +1477,15 @@ void SampleEditorComponent::adjustGain(float db) {
 
   if (!editBuffer_)
     return;
-  auto &buffer = *editBuffer_;
+
+  juce::AudioBuffer<float> stateBefore(*editBuffer_);
+  juce::AudioBuffer<float> stateAfter(*editBuffer_);
+
   juce::int64 startSample = timeToSamples(selection_.getStart());
   juce::int64 endSample = timeToSamples(selection_.getEnd());
 
-  for (int ch = 0; ch < buffer.getNumChannels(); ch++) {
-    float *data = buffer.getWritePointer(ch);
+  for (int ch = 0; ch < stateAfter.getNumChannels(); ch++) {
+    float *data = stateAfter.getWritePointer(ch);
     for (juce::int64 i = startSample; i < endSample; i++) {
       data[i] *= gain;
       // Soft clip to prevent harsh distortion
@@ -1351,9 +1496,10 @@ void SampleEditorComponent::adjustGain(float db) {
     }
   }
 
-  hasUnsavedChanges_ = true;
+  projectState_.getUndoManager().perform(
+      new SampleEditAction(this, stateBefore, stateAfter, "Adjust Gain"));
+
   DBG("Adjusted gain: " + juce::String(db) + "dB");
-  repaint();
 }
 
 void SampleEditorComponent::silenceSelection() {
@@ -1362,20 +1508,24 @@ void SampleEditorComponent::silenceSelection() {
 
   if (!editBuffer_)
     return;
-  auto &buffer = *editBuffer_;
+
+  juce::AudioBuffer<float> stateBefore(*editBuffer_);
+  juce::AudioBuffer<float> stateAfter(*editBuffer_);
+
   juce::int64 startSample = timeToSamples(selection_.getStart());
   juce::int64 endSample = timeToSamples(selection_.getEnd());
 
-  for (int ch = 0; ch < buffer.getNumChannels(); ch++) {
-    float *data = buffer.getWritePointer(ch);
+  for (int ch = 0; ch < stateAfter.getNumChannels(); ch++) {
+    float *data = stateAfter.getWritePointer(ch);
     for (juce::int64 i = startSample; i < endSample; i++) {
       data[i] = 0.0f;
     }
   }
 
-  hasUnsavedChanges_ = true;
+  projectState_.getUndoManager().perform(
+      new SampleEditAction(this, stateBefore, stateAfter, "Silence Selection"));
+
   DBG("Silenced selection");
-  repaint();
 }
 
 void SampleEditorComponent::removeOffset() {
@@ -1384,13 +1534,16 @@ void SampleEditorComponent::removeOffset() {
 
   if (!editBuffer_)
     return;
-  auto &buffer = *editBuffer_;
+
+  juce::AudioBuffer<float> stateBefore(*editBuffer_);
+  juce::AudioBuffer<float> stateAfter(*editBuffer_);
+
   juce::int64 startSample = timeToSamples(selection_.getStart());
   juce::int64 endSample = timeToSamples(selection_.getEnd());
 
   // Calculate DC offset (average of all samples)
-  for (int ch = 0; ch < buffer.getNumChannels(); ch++) {
-    float *data = buffer.getWritePointer(ch);
+  for (int ch = 0; ch < stateAfter.getNumChannels(); ch++) {
+    float *data = stateAfter.getWritePointer(ch);
     double sum = 0.0;
     for (juce::int64 i = startSample; i < endSample; i++) {
       sum += data[i];
@@ -1406,8 +1559,8 @@ void SampleEditorComponent::removeOffset() {
         juce::String(dcOffset));
   }
 
-  hasUnsavedChanges_ = true;
-  repaint();
+  projectState_.getUndoManager().perform(
+      new SampleEditAction(this, stateBefore, stateAfter, "Remove DC Offset"));
 }
 
 //==============================================================================
@@ -1420,7 +1573,8 @@ void SampleEditorComponent::timeStretch(float ratio) {
   if (!editBuffer_)
     return;
 
-  pushUndoState("Time Stretch");
+  // 1. Snapshot State Before
+  juce::AudioBuffer<float> stateBefore(*editBuffer_);
 
   auto &buffer = *editBuffer_;
   int numChannels = buffer.getNumChannels();
@@ -1435,66 +1589,45 @@ void SampleEditorComponent::timeStretch(float ratio) {
   if (selectionLength <= 0)
     return;
 
-  // Calculate new length
-  int newSelectionLength = (int)(selectionLength * ratio);
-  if (newSelectionLength <= 0)
-    return;
-
-  // Create temporary buffer for stretched selection
-  juce::AudioBuffer<float> stretchedSelection(numChannels, newSelectionLength);
-
-  // Simple linear interpolation resampling (not phase-vocoder quality, but
-  // functional) For production, integrate with Rubber Band or SoundTouch
-  for (int ch = 0; ch < numChannels; ch++) {
-    const float *srcData = buffer.getReadPointer(ch);
-    float *dstData = stretchedSelection.getWritePointer(ch);
-
-    for (int i = 0; i < newSelectionLength; i++) {
-      // Calculate source position
-      float srcPos = (float)i / ratio + (float)startSample;
-      int srcIdx = (int)srcPos;
-      float frac = srcPos - srcIdx;
-
-      // Linear interpolation
-      if (srcIdx >= 0 && srcIdx < numSamples - 1) {
-        dstData[i] =
-            srcData[srcIdx] * (1.0f - frac) + srcData[srcIdx + 1] * frac;
-      } else if (srcIdx >= 0 && srcIdx < numSamples) {
-        dstData[i] = srcData[srcIdx];
-      } else {
-        dstData[i] = 0.0f;
-      }
-    }
+  // Extract selection
+  juce::AudioBuffer<float> selectionBuffer(numChannels, selectionLength);
+  for (int ch = 0; ch < numChannels; ++ch) {
+      selectionBuffer.copyFrom(ch, 0, buffer, ch, (int)startSample, selectionLength);
   }
+
+  // Process with Phase Vocoder (Pitch-Invariant)
+  zenith::dsp::TimeStretcher stretcher;
+  juce::AudioBuffer<float> stretchedSelection = stretcher.process(selectionBuffer, ratio);
+  
+  int newSelectionLength = stretchedSelection.getNumSamples();
 
   // Create new buffer with stretched selection
   int newTotalLength = numSamples - selectionLength + newSelectionLength;
-  auto newBuffer =
-      std::make_unique<juce::AudioBuffer<float>>(numChannels, newTotalLength);
+  juce::AudioBuffer<float> stateAfter(numChannels, newTotalLength);
 
   // Copy before selection
   for (int ch = 0; ch < numChannels; ch++) {
-    newBuffer->copyFrom(ch, 0, buffer, ch, 0, (int)startSample);
+    stateAfter.copyFrom(ch, 0, buffer, ch, 0, (int)startSample);
   }
 
   // Copy stretched selection
   for (int ch = 0; ch < numChannels; ch++) {
-    newBuffer->copyFrom(ch, (int)startSample, stretchedSelection, ch, 0,
+    stateAfter.copyFrom(ch, (int)startSample, stretchedSelection, ch, 0,
                         newSelectionLength);
   }
 
   // Copy after selection
   int afterLen = numSamples - (int)endSample;
   for (int ch = 0; ch < numChannels; ch++) {
-    newBuffer->copyFrom(ch, (int)startSample + newSelectionLength, buffer, ch,
+    stateAfter.copyFrom(ch, (int)startSample + newSelectionLength, buffer, ch,
                         (int)endSample, afterLen);
   }
 
-  editBuffer_ = std::move(newBuffer);
-  hasUnsavedChanges_ = true;
+  // 2. Perform Action via Global UndoManager
+  projectState_.getUndoManager().perform(
+      new SampleEditAction(this, stateBefore, stateAfter, "Time Stretch"));
 
-  DBG("Time stretch ratio: " + juce::String(ratio) + " (linear interpolation)");
-  repaint();
+  DBG("Time stretch ratio: " + juce::String(ratio) + " (Phase Vocoder)");
 }
 
 void SampleEditorComponent::pitchShift(int semitones) {
@@ -1503,11 +1636,8 @@ void SampleEditorComponent::pitchShift(int semitones) {
   if (!editBuffer_)
     return;
 
-  pushUndoState("Pitch Shift");
-
-  // Basic pitch shifting via resampling (changes tempo too)
-  // For proper pitch shift without tempo change, use a phase vocoder (Rubber
-  // Band)
+  // 1. Snapshot State Before
+  juce::AudioBuffer<float> stateBefore(*editBuffer_);
 
   // Calculate the ratio: down = slower playback = higher pitch when played at
   // normal speed Each semitone is 2^(1/12) ratio
@@ -1555,23 +1685,22 @@ void SampleEditorComponent::pitchShift(int semitones) {
 
   // Create new buffer with pitch-shifted selection
   int newTotalLength = numSamples - selectionLength + newSelectionLength;
-  auto newBuffer =
-      std::make_unique<juce::AudioBuffer<float>>(numChannels, newTotalLength);
+  juce::AudioBuffer<float> stateAfter(numChannels, newTotalLength);
 
   for (int ch = 0; ch < numChannels; ch++) {
-    newBuffer->copyFrom(ch, 0, buffer, ch, 0, (int)startSample);
-    newBuffer->copyFrom(ch, (int)startSample, resampledSelection, ch, 0,
+    stateAfter.copyFrom(ch, 0, buffer, ch, 0, (int)startSample);
+    stateAfter.copyFrom(ch, (int)startSample, resampledSelection, ch, 0,
                         newSelectionLength);
-    newBuffer->copyFrom(ch, (int)startSample + newSelectionLength, buffer, ch,
+    stateAfter.copyFrom(ch, (int)startSample + newSelectionLength, buffer, ch,
                         (int)endSample, numSamples - (int)endSample);
   }
 
-  editBuffer_ = std::move(newBuffer);
-  hasUnsavedChanges_ = true;
+  // 2. Perform Action via Global UndoManager
+  projectState_.getUndoManager().perform(
+      new SampleEditAction(this, stateBefore, stateAfter, "Pitch Shift"));
 
   DBG("Pitch shift: " + juce::String(semitones) +
       " semitones (resampling method - changes tempo)");
-  repaint();
 }
 
 void SampleEditorComponent::detectTransients(float sensitivity) {
@@ -1639,9 +1768,102 @@ void SampleEditorComponent::autoSlice(float sensitivity) {
 }
 
 void SampleEditorComponent::sliceToMidi() {
-  // Export slices as MIDI notes (would create a new MIDI clip)
-  DBG("Slice to MIDI - " + juce::String(regions_.size()) +
-      " regions would be exported");
+    if (regions_.empty() || !audioHandle_) {
+        DBG("[SampleEditor] No slices to export - run autoSlice first");
+        return;
+    }
+    
+    // Find the track that owns this clip
+    auto trackNode = projectState_.getTrack(currentTrackId_);
+    if (!trackNode.isValid()) {
+        DBG("[SampleEditor] Invalid track for MIDI export");
+        return;
+    }
+    
+    // Get audio data for energy calculation
+    const juce::AudioBuffer<float>* bufferPtr = &audioHandle_->buffer;
+    if (editBuffer_)
+        bufferPtr = editBuffer_.get();
+    
+    // Create a new MIDI clip in the same track
+    juce::String midiClipId = juce::Uuid().toString();
+    
+    // Build MIDI notes from slices
+    // Map slices to MIDI notes starting at C1 (MIDI note 36)
+    int baseNote = 36;
+    
+    DBG("[SampleEditor] Creating MIDI clip from " + juce::String(regions_.size()) + " slices");
+    
+    // Calculate total duration
+    double totalDuration = samplesToTime(audioHandle_->lengthInSamples);
+    
+    // Create MIDI clip in project state
+    auto clipsNode = trackNode.getChildWithName("CLIPS");
+    if (!clipsNode.isValid()) {
+        clipsNode = juce::ValueTree("CLIPS");
+        trackNode.addChild(clipsNode, -1, nullptr);
+    }
+    
+    // Create the MIDI clip
+    juce::ValueTree midiClip("CLIP");
+    midiClip.setProperty("id", midiClipId, nullptr);
+    midiClip.setProperty("name", "Sliced MIDI", nullptr);
+    midiClip.setProperty("type", "midi", nullptr);
+    midiClip.setProperty("position", 0.0, nullptr);
+    midiClip.setProperty("length", totalDuration, nullptr);
+    
+    // Add MIDI notes container
+    juce::ValueTree notesNode("NOTES");
+    
+    int noteNumber = baseNote;
+    for (size_t i = 0; i < regions_.size() && noteNumber < 128; ++i) {
+        const auto& region = regions_[i];
+        double startTime = region.startTime;
+        double duration = region.endTime - region.startTime;
+        
+        // Calculate velocity from slice energy (RMS)
+        juce::int64 startSample = timeToSamples(startTime);
+        juce::int64 endSample = timeToSamples(region.endTime);
+        float rms = 0.0f;
+        int count = 0;
+        
+        for (int ch = 0; ch < bufferPtr->getNumChannels(); ++ch) {
+            const float* data = bufferPtr->getReadPointer(ch);
+            for (juce::int64 s = startSample; s < endSample && s < bufferPtr->getNumSamples(); ++s) {
+                rms += data[s] * data[s];
+                count++;
+            }
+        }
+        
+        if (count > 0) {
+            rms = std::sqrt(rms / count);
+        }
+        
+        // Map RMS (0-0.5 typical) to velocity (40-127)
+        int velocity = static_cast<int>(juce::jlimit(40.0f, 127.0f, 40.0f + rms * 200.0f));
+        
+        // Create MIDI note
+        juce::ValueTree noteNode("NOTE");
+        noteNode.setProperty("id", juce::Uuid().toString(), nullptr);
+        noteNode.setProperty("note", noteNumber, nullptr);
+        noteNode.setProperty("start", startTime, nullptr);
+        noteNode.setProperty("length", duration, nullptr);
+        noteNode.setProperty("velocity", velocity, nullptr);
+        
+        notesNode.addChild(noteNode, -1, nullptr);
+        
+        DBG("[SampleEditor] Slice " + juce::String(i) + 
+            " -> MIDI note " + juce::String(noteNumber) + 
+            " vel=" + juce::String(velocity));
+        
+        noteNumber++;
+    }
+    
+    midiClip.addChild(notesNode, -1, nullptr);
+    clipsNode.addChild(midiClip, -1, nullptr);
+    
+    DBG("[SampleEditor] Created MIDI clip '" + midiClipId + 
+        "' with " + juce::String(regions_.size()) + " notes");
 }
 
 //==============================================================================
@@ -1775,85 +1997,14 @@ void SampleEditorComponent::valueTreePropertyChanged(
     setClipToEdit(currentTrackId_, currentClipId_);
 }
 
-void SampleEditorComponent::pushUndoState(const juce::String &description) {
-  if (editBuffer_ == nullptr && !audioHandle_)
-    return;
-
-  UndoState state;
-  state.description = description;
-
-  if (editBuffer_) {
-    state.buffer = std::make_unique<juce::AudioBuffer<float>>(*editBuffer_);
-  } else if (audioHandle_) {
-    state.buffer =
-        std::make_unique<juce::AudioBuffer<float>>(audioHandle_->buffer);
-  }
-
-  undoStack_.push_back(std::move(state));
-
-  if (undoStack_.size() > maxUndoLevels_) {
-    undoStack_.erase(undoStack_.begin());
-  }
-
-  redoStack_.clear();
-}
-
-void SampleEditorComponent::undo() {
-  if (undoStack_.empty())
-    return;
-
-  if (editBuffer_ || audioHandle_) {
-    UndoState redoState;
-    redoState.description = "Redo " + undoStack_.back().description;
-    if (editBuffer_) {
-      redoState.buffer =
-          std::make_unique<juce::AudioBuffer<float>>(*editBuffer_);
-    } else if (audioHandle_) {
-      redoState.buffer =
-          std::make_unique<juce::AudioBuffer<float>>(audioHandle_->buffer);
-    }
-    redoStack_.push_back(std::move(redoState));
-  }
-
-  auto &state = undoStack_.back();
-  if (state.buffer) {
-    editBuffer_ = std::make_unique<juce::AudioBuffer<float>>(*state.buffer);
-  }
-
-  undoStack_.pop_back();
-  hasUnsavedChanges_ = true;
-  repaint();
-}
-
-void SampleEditorComponent::redo() {
-  if (redoStack_.empty())
-    return;
-
-  if (editBuffer_ || audioHandle_) {
-    UndoState undoState;
-    undoState.description = "Undo " + redoStack_.back().description;
-    if (editBuffer_) {
-      undoState.buffer =
-          std::make_unique<juce::AudioBuffer<float>>(*editBuffer_);
-    } else if (audioHandle_) {
-      undoState.buffer =
-          std::make_unique<juce::AudioBuffer<float>>(audioHandle_->buffer);
-    }
-    undoStack_.push_back(std::move(undoState));
-  }
-
-  auto &state = redoStack_.back();
-  if (state.buffer) {
-    editBuffer_ = std::make_unique<juce::AudioBuffer<float>>(*state.buffer);
-  }
-
-  redoStack_.pop_back();
-  hasUnsavedChanges_ = true;
-  repaint();
+void SampleEditorComponent::setEditBuffer(const juce::AudioBuffer<float>& newBuffer) {
+    editBuffer_ = std::make_unique<juce::AudioBuffer<float>>(newBuffer);
+    hasUnsavedChanges_ = true;
+    repaint();
 }
 
 //==============================================================================
-// Missing Implementation Stubs (Fixed for Linker)
+// Additional Implementations (UI Helpers and Feature Functions)
 //==============================================================================
 
 void SampleEditorComponent::drawToolbarButton(SkCanvas *canvas,
@@ -1910,7 +2061,15 @@ void SampleEditorComponent::startRecording() {
   recordBuffer_->clear();
   recordWritePos_ = 0;
 
+  // Ensure FIFO is initialized even without a device (for testing/manual callback injection)
+  if (!incomingFifo_) {
+      int ringBufferSize = (int)(sampleRate * 5.0);
+      incomingBuffer_.setSize(numChans, ringBufferSize);
+      incomingFifo_ = std::make_unique<juce::AbstractFifo>(ringBufferSize);
+  }
+
   isRecording_ = true;
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(50); // Start timer to drain FIFO
   repaint();
 }
 
@@ -1919,6 +2078,33 @@ void SampleEditorComponent::stopRecording() {
 
   engine_.getDeviceManager().removeAudioCallback(this);
   isRecording_ = false;
+  
+  // Drain any remaining samples from FIFO
+  if (incomingFifo_ && recordBuffer_) {
+      int numReady = incomingFifo_->getNumReady();
+      if (numReady > 0) {
+          int start1, size1, start2, size2;
+          incomingFifo_->prepareToRead(numReady, start1, size1, start2, size2);
+
+          // Append to recordBuffer_
+          int currentCapacity = recordBuffer_->getNumSamples();
+          int requiredCapacity = recordWritePos_ + size1 + size2;
+          
+          if (currentCapacity < requiredCapacity) {
+            int newCapacity = std::max(requiredCapacity, currentCapacity * 2);
+            newCapacity = std::max(newCapacity, 4096); 
+            recordBuffer_->setSize(recordBuffer_->getNumChannels(), newCapacity, true, true, true);
+          }
+          
+          if (size1 > 0)
+            recordBuffer_->copyFrom(0, recordWritePos_, incomingBuffer_, 0, start1, size1);
+          if (size2 > 0)
+            recordBuffer_->copyFrom(0, recordWritePos_ + size1, incomingBuffer_, 0, start2, size2);
+
+          incomingFifo_->finishedRead(size1 + size2);
+          recordWritePos_ += (size1 + size2);
+      }
+  }
   
   // Trim and finalize
   if (recordBuffer_ && recordWritePos_ > 0) {
@@ -1940,7 +2126,6 @@ void SampleEditorComponent::stopRecording() {
       }
   }
 
-
   repaint();
 }
 
@@ -1961,15 +2146,23 @@ void SampleEditorComponent::saveAsNewFile(const juce::File &targetFile) {
 
   targetFile.deleteFile();
   juce::WavAudioFormat format;
-  std::unique_ptr<juce::AudioFormatWriter> writer(format.createWriterFor(
-      new juce::FileOutputStream(targetFile), sampleRate,
-      (unsigned int)bufferToSave->getNumChannels(), 24, {}, 0));
+  
+  std::unique_ptr<juce::FileOutputStream> stream(new juce::FileOutputStream(targetFile));
+  if (!stream->openedOk()) {
+    DBG("[SampleEditor] Failed to open file for writing: " + targetFile.getFullPathName());
+    return;
+  }
+  
+  std::unique_ptr<juce::AudioFormatWriter> writer(
+      format.createWriterFor(stream.release(), sampleRate, (int)bufferToSave->getNumChannels(), 24, {}, 0));
 
   if (writer) {
     writer->writeFromAudioSampleBuffer(*bufferToSave, 0,
                                        bufferToSave->getNumSamples());
-    if (targetFile == audioHandle_->sourceFile)
+    if (audioHandle_ && targetFile == audioHandle_->sourceFile)
       hasUnsavedChanges_ = false;
+  } else {
+    DBG("[SampleEditor] Failed to create audio format writer");
   }
 }
 
@@ -1990,53 +2183,475 @@ void SampleEditorComponent::exportSelection(const juce::File &targetFile) {
 
   targetFile.deleteFile();
   juce::WavAudioFormat format;
-  std::unique_ptr<juce::AudioFormatWriter> writer(format.createWriterFor(
-      new juce::FileOutputStream(targetFile), sampleRate,
-      (unsigned int)bufferToSave->getNumChannels(), 24, {}, 0));
+  
+  std::unique_ptr<juce::OutputStream> fileStream(new juce::FileOutputStream(targetFile));
+  std::unique_ptr<juce::AudioFormatWriter> writer(
+      format.createWriterFor(fileStream.release(), sampleRate, (int)bufferToSave->getNumChannels(), 24, {}, 0));
 
   if (writer) {
     writer->writeFromAudioSampleBuffer(*bufferToSave, startSample, numSamples);
   }
 }
 
-// Warp Markers
+// Warp Markers - Advanced time-stretching with beat preservation
 void SampleEditorComponent::addWarpMarker(double originalTime,
-                                          double warpedTime) {}
-void SampleEditorComponent::removeWarpMarker(int index) {}
-void SampleEditorComponent::clearWarpMarkers() {}
-void SampleEditorComponent::quantizeToGrid(double gridSize) {}
-
-// Pencil Tool
-void SampleEditorComponent::enablePencilTool(bool enable) {
-  pencilToolEnabled_ = enable;
+                                          double warpedTime) {
+    WarpMarker marker;
+    marker.originalTime = originalTime;
+    marker.warpedTime = warpedTime;
+    
+    // Insert in sorted order by original time
+    auto it = std::lower_bound(warpMarkers_.begin(), warpMarkers_.end(), marker,
+        [](const WarpMarker& a, const WarpMarker& b) {
+            return a.originalTime < b.originalTime;
+        });
+    
+    warpMarkers_.insert(it, marker);
+    
+    DBG("[SampleEditor] Added warp marker: original=" + juce::String(originalTime) + 
+        "s, warped=" + juce::String(warpedTime) + "s");
+    repaint();
 }
-void SampleEditorComponent::pencilDraw(float x, float y) {}
-void SampleEditorComponent::smoothSelection(int windowSize) {}
 
-// Envelopes
-void SampleEditorComponent::addVolumeEnvelopePoint(double time, float volume) {}
-void SampleEditorComponent::addPanEnvelopePoint(double time, float pan) {}
-void SampleEditorComponent::applyVolumeEnvelope() {}
-void SampleEditorComponent::applyPanEnvelope() {}
-void SampleEditorComponent::clearEnvelopes() {}
+void SampleEditorComponent::removeWarpMarker(int index) {
+    if (index >= 0 && index < static_cast<int>(warpMarkers_.size())) {
+        warpMarkers_.erase(warpMarkers_.begin() + index);
+        DBG("[SampleEditor] Removed warp marker at index " + juce::String(index));
+        repaint();
+    }
+}
 
-// Noise Reduction
-void SampleEditorComponent::captureNoiseProfile() {}
-void SampleEditorComponent::applyNoiseReduction(float strength) {}
+void SampleEditorComponent::clearWarpMarkers() {
+    warpMarkers_.clear();
+    DBG("[SampleEditor] Cleared all warp markers");
+    repaint();
+}
 
-// EQ & Filters
+void SampleEditorComponent::quantizeToGrid(double gridSize) {
+    if (!audioHandle_ || markers_.empty())
+        return;
+    
+    // Convert transient markers to warp markers quantized to grid
+    clearWarpMarkers();
+    
+    for (const auto& marker : markers_) {
+        double originalTime = marker.timeSeconds;
+        // Quantize to nearest grid position
+        double quantizedTime = std::round(originalTime / gridSize) * gridSize;
+        
+        if (std::abs(quantizedTime - originalTime) > 0.001) {
+            addWarpMarker(originalTime, quantizedTime);
+        }
+    }
+    
+    DBG("[SampleEditor] Quantized " + juce::String(warpMarkers_.size()) + 
+        " transients to grid (size=" + juce::String(gridSize) + "s)");
+}
+
+// Pencil Tool - Direct waveform drawing
+void SampleEditorComponent::enablePencilTool(bool enable) {
+    pencilToolEnabled_ = enable;
+    if (enable) {
+        setTool(SampleEditorTool::Pencil);
+    }
+}
+
+void SampleEditorComponent::pencilDraw(float x, float y) {
+    if (!pencilToolEnabled_ || !editBuffer_ || !audioHandle_)
+        return;
+    
+    float waveformTop = toolbarHeight_ + overviewHeight_ + rulerHeight_;
+    float waveformHeight = getHeight() - waveformTop - scrollbarHeight_;
+    
+    // Convert x position to sample index
+    double time = pixelsToTime(x, static_cast<float>(getWidth()));
+    juce::int64 sampleIdx = timeToSamples(time);
+    
+    if (sampleIdx < 0 || sampleIdx >= editBuffer_->getNumSamples())
+        return;
+    
+    // Convert y position to amplitude (-1 to 1)
+    float relativeY = (y - waveformTop) / waveformHeight;
+    float numChannels = static_cast<float>(editBuffer_->getNumChannels());
+    int channel = std::min(static_cast<int>(relativeY * numChannels), 
+                           editBuffer_->getNumChannels() - 1);
+    
+    float channelHeight = waveformHeight / numChannels;
+    float channelTop = waveformTop + channel * channelHeight;
+    float channelCenter = channelTop + channelHeight / 2.0f;
+    
+    // Calculate amplitude from y position
+    float amplitude = (channelCenter - y) / (channelHeight / 2.0f * verticalZoom_);
+    amplitude = juce::jlimit(-1.0f, 1.0f, amplitude);
+    
+    // Write sample
+    editBuffer_->setSample(channel, static_cast<int>(sampleIdx), amplitude);
+    hasUnsavedChanges_ = true;
+    
+    repaint();
+}
+
+void SampleEditorComponent::smoothSelection(int windowSize) {
+    if (!hasSelection() || !editBuffer_)
+        return;
+    
+    pushUndoState("Smooth Selection");
+    
+    windowSize = std::max(3, windowSize | 1); // Ensure odd and at least 3
+    int halfWindow = windowSize / 2;
+    
+    juce::int64 startSample = timeToSamples(selection_.getStart());
+    juce::int64 endSample = timeToSamples(selection_.getEnd());
+    startSample = std::max<juce::int64>(halfWindow, startSample);
+    endSample = std::min<juce::int64>(editBuffer_->getNumSamples() - halfWindow, endSample);
+    
+    // Apply moving average filter to each channel
+    for (int ch = 0; ch < editBuffer_->getNumChannels(); ++ch) {
+        const float* src = editBuffer_->getReadPointer(ch);
+        
+        // Create temporary buffer for smoothed values
+        std::vector<float> smoothed(static_cast<size_t>(endSample - startSample));
+        
+        for (juce::int64 i = startSample; i < endSample; ++i) {
+            float sum = 0.0f;
+            for (int j = -halfWindow; j <= halfWindow; ++j) {
+                sum += src[i + j];
+            }
+            smoothed[static_cast<size_t>(i - startSample)] = sum / static_cast<float>(windowSize);
+        }
+        
+        // Copy back
+        float* dst = editBuffer_->getWritePointer(ch);
+        for (juce::int64 i = startSample; i < endSample; ++i) {
+            dst[i] = smoothed[static_cast<size_t>(i - startSample)];
+        }
+    }
+    
+    hasUnsavedChanges_ = true;
+    DBG("[SampleEditor] Smoothed selection with window size " + juce::String(windowSize));
+    repaint();
+}
+
+// Envelopes - Automation within sample editor
+void SampleEditorComponent::addVolumeEnvelopePoint(double time, float volume) {
+    DBG("[SampleEditor] Volume envelope: Feature planned for v1.1");
+}
+void SampleEditorComponent::addPanEnvelopePoint(double time, float pan) {
+    DBG("[SampleEditor] Pan envelope: Feature planned for v1.1");
+}
+void SampleEditorComponent::applyVolumeEnvelope() {
+    DBG("[SampleEditor] Apply volume envelope: Feature planned for v1.1");
+}
+void SampleEditorComponent::applyPanEnvelope() {
+    DBG("[SampleEditor] Apply pan envelope: Feature planned for v1.1");
+}
+void SampleEditorComponent::clearEnvelopes() {
+    DBG("[SampleEditor] Clear envelopes: Feature planned for v1.1");
+}
+
+// Noise Reduction - Spectral processing
+bool SampleEditorComponent::hasNoiseProfile() const {
+    return spectralProcessor_ && spectralProcessor_->hasNoiseProfile();
+}
+
+void SampleEditorComponent::captureNoiseProfile() {
+    if (!hasSelection() || !audioHandle_) {
+        DBG("[SampleEditor] No selection for noise profile capture");
+        return;
+    }
+    
+    if (!editBuffer_)
+        return;
+    
+    // Create spectral processor if needed
+    if (!spectralProcessor_) {
+        spectralProcessor_ = std::make_unique<dsp::SpectralProcessor>();
+    }
+    
+    juce::int64 startSample = timeToSamples(selection_.getStart());
+    juce::int64 endSample = timeToSamples(selection_.getEnd());
+    
+    spectralProcessor_->captureNoiseProfile(*editBuffer_, 
+                                           static_cast<int>(startSample),
+                                           static_cast<int>(endSample),
+                                           audioHandle_->sampleRate);
+    
+    DBG("[SampleEditor] Noise profile captured from selection");
+    repaint();
+}
+
+void SampleEditorComponent::applyNoiseReduction(float strength) {
+    if (!spectralProcessor_ || !spectralProcessor_->hasNoiseProfile()) {
+        DBG("[SampleEditor] No noise profile captured - select noise region first");
+        return;
+    }
+    
+    if (!hasSelection() || !editBuffer_)
+        return;
+    
+    pushUndoState("Noise Reduction");
+    
+    juce::int64 startSample = timeToSamples(selection_.getStart());
+    juce::int64 endSample = timeToSamples(selection_.getEnd());
+    
+    spectralProcessor_->applyNoiseReduction(*editBuffer_,
+                                           static_cast<int>(startSample),
+                                           static_cast<int>(endSample),
+                                           strength);
+    
+    hasUnsavedChanges_ = true;
+    DBG("[SampleEditor] Applied noise reduction (strength=" + juce::String(strength) + ")");
+    repaint();
+}
+
+// EQ & Filters - In-editor processing using SpectralProcessor
 void SampleEditorComponent::applyEQ(
-    const std::vector<std::pair<float, float>> &bands) {}
-void SampleEditorComponent::applyHighPassFilter(float cutoffHz) {}
-void SampleEditorComponent::applyLowPassFilter(float cutoffHz) {}
-void SampleEditorComponent::applyBandPassFilter(float lowHz, float highHz) {}
+    const std::vector<std::pair<float, float>> &bands) {
+    if (!hasSelection() || !editBuffer_ || !audioHandle_)
+        return;
+    
+    if (!spectralProcessor_) {
+        spectralProcessor_ = std::make_unique<dsp::SpectralProcessor>();
+    }
+    
+    pushUndoState("Apply EQ");
+    
+    juce::int64 startSample = timeToSamples(selection_.getStart());
+    juce::int64 endSample = timeToSamples(selection_.getEnd());
+    
+    // Apply each band as frequency gain adjustment
+    for (const auto& band : bands) {
+        float frequency = band.first;
+        float gainDb = band.second;
+        
+        // Apply a narrow band around the frequency (1/3 octave)
+        float lowHz = frequency / 1.26f;  // ~1/3 octave below
+        float highHz = frequency * 1.26f; // ~1/3 octave above
+        
+        spectralProcessor_->applyFrequencyGain(*editBuffer_,
+                                              static_cast<int>(startSample),
+                                              static_cast<int>(endSample),
+                                              lowHz, highHz, gainDb,
+                                              audioHandle_->sampleRate);
+    }
+    
+    hasUnsavedChanges_ = true;
+    DBG("[SampleEditor] Applied EQ with " + juce::String((int)bands.size()) + " bands");
+    repaint();
+}
 
-// Effects
+void SampleEditorComponent::applyHighPassFilter(float cutoffHz) {
+    if (!hasSelection() || !editBuffer_ || !audioHandle_)
+        return;
+    
+    if (!spectralProcessor_) {
+        spectralProcessor_ = std::make_unique<dsp::SpectralProcessor>();
+    }
+    
+    pushUndoState("High-Pass Filter");
+    
+    juce::int64 startSample = timeToSamples(selection_.getStart());
+    juce::int64 endSample = timeToSamples(selection_.getEnd());
+    
+    spectralProcessor_->applyHighPassFilter(*editBuffer_,
+                                           static_cast<int>(startSample),
+                                           static_cast<int>(endSample),
+                                           cutoffHz,
+                                           audioHandle_->sampleRate);
+    
+    hasUnsavedChanges_ = true;
+    DBG("[SampleEditor] Applied high-pass filter at " + juce::String(cutoffHz) + "Hz");
+    repaint();
+}
+
+void SampleEditorComponent::applyLowPassFilter(float cutoffHz) {
+    if (!hasSelection() || !editBuffer_ || !audioHandle_)
+        return;
+    
+    if (!spectralProcessor_) {
+        spectralProcessor_ = std::make_unique<dsp::SpectralProcessor>();
+    }
+    
+    pushUndoState("Low-Pass Filter");
+    
+    juce::int64 startSample = timeToSamples(selection_.getStart());
+    juce::int64 endSample = timeToSamples(selection_.getEnd());
+    
+    spectralProcessor_->applyLowPassFilter(*editBuffer_,
+                                          static_cast<int>(startSample),
+                                          static_cast<int>(endSample),
+                                          cutoffHz,
+                                          audioHandle_->sampleRate);
+    
+    hasUnsavedChanges_ = true;
+    DBG("[SampleEditor] Applied low-pass filter at " + juce::String(cutoffHz) + "Hz");
+    repaint();
+}
+
+void SampleEditorComponent::applyBandPassFilter(float lowHz, float highHz) {
+    if (!hasSelection() || !editBuffer_ || !audioHandle_)
+        return;
+    
+    if (!spectralProcessor_) {
+        spectralProcessor_ = std::make_unique<dsp::SpectralProcessor>();
+    }
+    
+    pushUndoState("Band-Pass Filter");
+    
+    juce::int64 startSample = timeToSamples(selection_.getStart());
+    juce::int64 endSample = timeToSamples(selection_.getEnd());
+    
+    spectralProcessor_->applyBandPassFilter(*editBuffer_,
+                                           static_cast<int>(startSample),
+                                           static_cast<int>(endSample),
+                                           lowHz, highHz,
+                                           audioHandle_->sampleRate);
+    
+    hasUnsavedChanges_ = true;
+    DBG("[SampleEditor] Applied band-pass filter " + juce::String(lowHz) + "-" + juce::String(highHz) + "Hz");
+    repaint();
+}
+
+// Effects - Destructive processing
 void SampleEditorComponent::applyConvolutionReverb(
-    const juce::File &impulseResponse) {}
+    const juce::File &impulseResponse) {
+    if (!impulseResponse.existsAsFile()) {
+        DBG("[SampleEditor] IR file not found: " + impulseResponse.getFullPathName());
+        return;
+    }
+    
+    if (!hasSelection() || !editBuffer_ || !audioHandle_)
+        return;
+    
+    pushUndoState("Convolution Reverb");
+    
+    // Load impulse response
+    juce::AudioFormatManager formatManager;
+    formatManager.registerBasicFormats();
+    
+    std::unique_ptr<juce::AudioFormatReader> irReader(
+        formatManager.createReaderFor(impulseResponse));
+    
+    if (!irReader) {
+        DBG("[SampleEditor] Could not read IR file");
+        return;
+    }
+    
+    juce::AudioBuffer<float> irBuffer(static_cast<int>(irReader->numChannels),
+                                      static_cast<int>(irReader->lengthInSamples));
+    irReader->read(&irBuffer, 0, static_cast<int>(irReader->lengthInSamples), 0, true, true);
+    
+    // Use JUCE Convolution processor
+    juce::dsp::Convolution convolution;
+    convolution.loadImpulseResponse(std::move(irBuffer),
+                                   irReader->sampleRate,
+                                   juce::dsp::Convolution::Stereo::yes,
+                                   juce::dsp::Convolution::Trim::yes,
+                                   juce::dsp::Convolution::Normalise::yes);
+    
+    // Process the selection
+    juce::dsp::ProcessSpec spec;
+    spec.sampleRate = audioHandle_->sampleRate;
+    spec.maximumBlockSize = 512;
+    spec.numChannels = static_cast<uint32_t>(editBuffer_->getNumChannels());
+    convolution.prepare(spec);
+    
+    juce::int64 startSample = timeToSamples(selection_.getStart());
+    juce::int64 endSample = timeToSamples(selection_.getEnd());
+    int numSamples = static_cast<int>(endSample - startSample);
+    
+    // Create temp buffer for processing
+    juce::AudioBuffer<float> processBuffer(editBuffer_->getNumChannels(), numSamples);
+    for (int ch = 0; ch < editBuffer_->getNumChannels(); ++ch) {
+        processBuffer.copyFrom(ch, 0, *editBuffer_, ch, static_cast<int>(startSample), numSamples);
+    }
+    
+    // Process in blocks
+    for (int pos = 0; pos < numSamples; pos += 512) {
+        int blockSize = std::min(512, numSamples - pos);
+        juce::dsp::AudioBlock<float> block(processBuffer.getArrayOfWritePointers(),
+                                          static_cast<size_t>(processBuffer.getNumChannels()),
+                                          static_cast<size_t>(pos),
+                                          static_cast<size_t>(blockSize));
+        juce::dsp::ProcessContextReplacing<float> context(block);
+        convolution.process(context);
+    }
+    
+    // Copy back
+    for (int ch = 0; ch < editBuffer_->getNumChannels(); ++ch) {
+        editBuffer_->copyFrom(ch, static_cast<int>(startSample), processBuffer, ch, 0, numSamples);
+    }
+    
+    hasUnsavedChanges_ = true;
+    DBG("[SampleEditor] Applied convolution reverb with " + impulseResponse.getFileName());
+    repaint();
+}
+
 void SampleEditorComponent::applySimpleReverb(float roomSize, float damping,
-                                              float wetLevel) {}
-void SampleEditorComponent::applyBlur(float amount) {}
+                                              float wetLevel) {
+    if (!hasSelection() || !editBuffer_ || !audioHandle_)
+        return;
+    
+    pushUndoState("Simple Reverb");
+    
+    // Use JUCE Reverb
+    juce::Reverb reverb;
+    juce::Reverb::Parameters params;
+    params.roomSize = roomSize;
+    params.damping = damping;
+    params.wetLevel = wetLevel;
+    params.dryLevel = 1.0f - wetLevel;
+    params.width = 1.0f;
+    reverb.setParameters(params);
+    reverb.setSampleRate(audioHandle_->sampleRate);
+    
+    juce::int64 startSample = timeToSamples(selection_.getStart());
+    juce::int64 endSample = timeToSamples(selection_.getEnd());
+    int numSamples = static_cast<int>(endSample - startSample);
+    
+    // Process blocks
+    int blockSize = 512;
+    for (int pos = 0; pos < numSamples; pos += blockSize) {
+        int remaining = std::min(blockSize, numSamples - pos);
+        int bufPos = static_cast<int>(startSample) + pos;
+        
+        if (editBuffer_->getNumChannels() >= 2) {
+            reverb.processStereo(editBuffer_->getWritePointer(0, bufPos),
+                                editBuffer_->getWritePointer(1, bufPos),
+                                remaining);
+        } else {
+            reverb.processMono(editBuffer_->getWritePointer(0, bufPos), remaining);
+        }
+    }
+    
+    hasUnsavedChanges_ = true;
+    DBG("[SampleEditor] Applied simple reverb (room=" + juce::String(roomSize) + 
+        ", damp=" + juce::String(damping) + ", wet=" + juce::String(wetLevel) + ")");
+    repaint();
+}
+
+void SampleEditorComponent::applyBlur(float amount) {
+    if (!hasSelection() || !editBuffer_ || !audioHandle_)
+        return;
+    
+    if (!spectralProcessor_) {
+        spectralProcessor_ = std::make_unique<dsp::SpectralProcessor>();
+    }
+    
+    pushUndoState("Spectral Blur");
+    
+    juce::int64 startSample = timeToSamples(selection_.getStart());
+    juce::int64 endSample = timeToSamples(selection_.getEnd());
+    
+    spectralProcessor_->applySpectralBlur(*editBuffer_,
+                                         static_cast<int>(startSample),
+                                         static_cast<int>(endSample),
+                                         amount);
+    
+    hasUnsavedChanges_ = true;
+    DBG("[SampleEditor] Applied spectral blur (amount=" + juce::String(amount) + ")");
+    repaint();
+}
 
 // Stereo Tools
 void SampleEditorComponent::convertToMono() {
@@ -2065,11 +2680,66 @@ void SampleEditorComponent::convertToMono() {
   hasUnsavedChanges_ = true;
   repaint();
 }
-void SampleEditorComponent::convertToStereo() {}
-void SampleEditorComponent::swapChannels() {}
-void SampleEditorComponent::adjustStereoWidth(float width) {}
-void SampleEditorComponent::extractCenter() {}
-void SampleEditorComponent::extractSides() {}
+void SampleEditorComponent::convertToStereo() {
+    if (!editBuffer_ && !audioHandle_)
+        return;
+    
+    const juce::AudioBuffer<float> *src =
+        editBuffer_ ? editBuffer_.get() : &audioHandle_->buffer;
+    if (src->getNumChannels() >= 2) {
+        DBG("[SampleEditor] Already stereo");
+        return;
+    }
+    
+    pushUndoState("Convert to Stereo");
+    
+    auto newBuffer = std::make_unique<juce::AudioBuffer<float>>(2, src->getNumSamples());
+    const float *mono = src->getReadPointer(0);
+    
+    // Duplicate mono to both channels
+    for (int i = 0; i < src->getNumSamples(); ++i) {
+        newBuffer->setSample(0, i, mono[i]);
+        newBuffer->setSample(1, i, mono[i]);
+    }
+    
+    editBuffer_ = std::move(newBuffer);
+    hasUnsavedChanges_ = true;
+    repaint();
+}
+void SampleEditorComponent::swapChannels() {
+    if (!editBuffer_ && !audioHandle_)
+        return;
+    
+    juce::AudioBuffer<float> *buf = editBuffer_ ? editBuffer_.get() : nullptr;
+    if (!buf || buf->getNumChannels() < 2) {
+        DBG("[SampleEditor] Need stereo audio to swap channels");
+        return;
+    }
+    
+    pushUndoState("Swap Channels");
+    
+    for (int i = 0; i < buf->getNumSamples(); ++i) {
+        float L = buf->getSample(0, i);
+        float R = buf->getSample(1, i);
+        buf->setSample(0, i, R);
+        buf->setSample(1, i, L);
+    }
+    
+    hasUnsavedChanges_ = true;
+    repaint();
+}
+void SampleEditorComponent::adjustStereoWidth(float width) {
+    DBG("[SampleEditor] Stereo width adjustment (width=" + juce::String(width) + 
+        "): Feature planned. Requires M/S encoding.");
+}
+void SampleEditorComponent::extractCenter() {
+    DBG("[SampleEditor] Extract center: Feature planned. Requires M/S decoding with "
+        "phase cancellation - keep Mid, discard Side.");
+}
+void SampleEditorComponent::extractSides() {
+    DBG("[SampleEditor] Extract sides: Feature planned. Requires M/S decoding - "
+        "keep Side, discard Mid.");
+}
 
 //==============================================================================
 // Audio Device Callbacks
@@ -2106,23 +2776,22 @@ void SampleEditorComponent::audioDeviceIOCallbackWithContext(const float* const*
     int internalChans = incomingBuffer_.getNumChannels();
     int minChans = std::min(numInputChannels, internalChans);
     
-    int start1, size1, start2, size2;
-    incomingFifo_->prepareToWrite(numSamples, start1, size1, start2, size2);
+    // RAII managed write - finishedWrite() called automatically in destructor
+    ScopedFifoWriter writer(*incomingFifo_, numSamples);
     
-    if (size1 > 0) {
+    if (writer.size1 > 0) {
         for (int ch = 0; ch < minChans; ++ch) {
             if (inputChannelData[ch])
-                incomingBuffer_.copyFrom(ch, start1, inputChannelData[ch], size1);
-        }
-    }
-    if (size2 > 0) {
-        for (int ch = 0; ch < minChans; ++ch) {
-            if (inputChannelData[ch])
-                incomingBuffer_.copyFrom(ch, start2, inputChannelData[ch] + size1, size2);
+                incomingBuffer_.copyFrom(ch, writer.start1, inputChannelData[ch], writer.size1);
         }
     }
     
-    incomingFifo_->finishedWrite(size1 + size2);
+    if (writer.size2 > 0) {
+        for (int ch = 0; ch < minChans; ++ch) {
+            if (inputChannelData[ch])
+                incomingBuffer_.copyFrom(ch, writer.start2, inputChannelData[ch] + writer.size1, writer.size2);
+        }
+    }
 }
 
 } // namespace zenith
