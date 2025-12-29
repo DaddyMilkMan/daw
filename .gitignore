@@ -50,6 +50,10 @@ cmake_error*.log
 msbuild_*.log
 *.log
 debug_log.txt
+daw_gui_log*.txt
+build_tree.txt
+unicode_chars.txt
+COMPLETION_SUMMARY.txt
 
 # 7. Backup Files
 *.bak
