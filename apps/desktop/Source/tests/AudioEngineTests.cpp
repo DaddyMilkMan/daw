@@ -10,6 +10,7 @@
 #include "../engine/Clip.h"
 #include "../engine/MixerChannel.h"
 #include "../engine/Track.h"
+#include "../engine/ProjectState.h"
 #include "Engine.h"
 #include "TestUtils.h"
 #include <cmath> // For std::isnan and std::isinf
@@ -262,22 +263,118 @@ public:
   MixerChannelTests() : juce::UnitTest("Mixer Channel", "AudioEngine") {}
 
   void runTest() override {
-    beginTest("EQ processing");
+    beginTest("EQ processing applies gain");
     {
-      // Test EQ band manipulation
-      // Verify frequency response changes
+      zenith::MixerChannel channel;
+      channel.prepareToPlay(512, 48000.0);
+
+      // Enable EQ band 1 (Peak filter) with +6dB gain
+      auto& band = channel.getEQBand(1);
+      band.enabled.store(true);
+      band.frequency.store(1000.0f);
+      band.gain.store(6.0f);  // +6dB boost
+      band.q.store(1.0f);
+      channel.markEQDirty(1);
+
+      // Process multiple blocks to allow filter detailed state to settle (transient response)
+      float inputRMS = 0.0f;
+      float outputRMS = 0.0f;
+      float phase = 0.0f;
+      float phaseIncrement = 2.0f * juce::MathConstants<float>::pi * 1000.0f / 48000.0f;
+      
+      juce::AudioBuffer<float> buffer(2, 512);
+      juce::AudioSourceChannelInfo info(&buffer, 0, 512);
+
+      for (int k = 0; k < 10; ++k) {
+          // Fill buffer with sine wave (continuous phase)
+          buffer.clear();
+          for (int i = 0; i < 512; ++i) {
+            float sample = std::sin(phase) * 0.5f;
+            phase += phaseIncrement;
+            buffer.setSample(0, i, sample);
+            buffer.setSample(1, i, sample);
+          }
+          
+          inputRMS = buffer.getRMSLevel(0, 0, 512); // Recalculate input RMS for this block
+          channel.getNextAudioBlock(info);
+          outputRMS = buffer.getRMSLevel(0, 0, 512);
+
+          // If we reached target gain, break early
+          if (outputRMS > inputRMS * 1.9f) // Theoretical is ~1.995, allow 1.9
+             break;
+      }
+      
+      expect(outputRMS > inputRMS * 1.3f, "EQ boost should increase signal level (~2.0x)");
     }
 
-    beginTest("Compression");
+    beginTest("Compression reduces gain above threshold");
     {
-      // Test compressor threshold
-      // Verify gain reduction
+      zenith::MixerChannel channel;
+      channel.prepareToPlay(512, 48000.0);
+
+      // Configure compressor: -20dB threshold, 4:1 ratio
+      channel.setCompressorEnabled(true);
+      channel.setCompressorThreshold(-20.0f);
+      channel.setCompressorRatio(4.0f);
+      channel.setCompressorAttack(1.0f);   // Fast attack
+      channel.setCompressorRelease(50.0f);
+
+      // Create loud test signal (above threshold)
+      juce::AudioBuffer<float> buffer(2, 512);
+      buffer.clear();
+      for (int i = 0; i < 512; ++i) {
+        float sample = 0.8f;  // Approximately -2dB, well above -20dB threshold
+        buffer.setSample(0, i, sample);
+        buffer.setSample(1, i, sample);
+      }
+      float inputPeak = buffer.getMagnitude(0, 0, 512);
+
+      // Process through channel
+      juce::AudioSourceChannelInfo info(&buffer, 0, 512);
+      channel.getNextAudioBlock(info);
+
+      // After compressor settles, gain reduction should be reported
+      float gainReduction = channel.getGainReduction();
+      expect(gainReduction > 0.0f, "Compressor should report gain reduction for loud signals");
+
+      // Output should be reduced
+      float outputPeak = buffer.getMagnitude(0, 0, 512);
+      expect(outputPeak < inputPeak, "Compression should reduce signal level");
     }
 
-    beginTest("Send/return routing");
+    beginTest("Send levels route signal to aux buffers");
     {
-      // Test aux send levels
-      // Verify signal routing to returns
+      zenith::MixerChannel channel;
+      channel.prepareToPlay(512, 48000.0);
+
+      // Configure send 0 at -6dB (0.5 linear)
+      channel.setSendLevel(0, 0.5f);
+      channel.setSendPreFader(0, false);  // Post-fader
+
+      // Create source signal
+      juce::AudioBuffer<float> sourceBuffer(2, 512);
+      sourceBuffer.clear();
+      for (int i = 0; i < 512; ++i) {
+        sourceBuffer.setSample(0, i, 0.5f);
+        sourceBuffer.setSample(1, i, 0.5f);
+      }
+
+      // Create aux buffer to receive send
+      juce::AudioBuffer<float> auxBuffer(2, 512);
+      auxBuffer.clear();
+
+      // Process with aux sends
+      std::vector<juce::AudioBuffer<float>*> auxBuffers = { &auxBuffer, nullptr, nullptr, nullptr };
+      juce::AudioSourceChannelInfo info(&sourceBuffer, 0, 512);
+      channel.getNextAudioBlock(info, auxBuffers);
+
+      // Verify send buffer received signal
+      float auxLevel = auxBuffer.getRMSLevel(0, 0, 512);
+      expect(auxLevel > 0.0f, "Aux send should contain signal when send level is non-zero");
+
+      // Verify level is attenuated by send amount
+      float sourceLevel = sourceBuffer.getRMSLevel(0, 0, 512);
+      expect(auxLevel < sourceLevel, "Aux send level should be attenuated");
     }
   }
 };
@@ -325,66 +422,127 @@ public:
 
 /**
  * @class BasicAudioTest
- * @brief Tests that validate actual audio engine behavior
+ * @brief Tests that validate actual audio engine behavior (Real Integration Test)
  */
 class BasicAudioTest : public juce::UnitTest {
 public:
-  BasicAudioTest() : juce::UnitTest("Basic Audio Processing") {}
+  BasicAudioTest() : juce::UnitTest("Basic Audio Processing", "AudioEngine") {}
 
   void runTest() override {
-    beginTest("Track processes audio without NaN/Inf");
+    beginTest("Engine processes audio graph");
     {
-      // Setup
+      // 1. Setup Project State
+      zenith::ProjectState projectState;
+      projectState.newProject();
+
+      // 2. Setup Engine
       zenith::Engine engine;
-      // Note: We can't fully initialize the engine without a proper setup
-      // This is a simplified test that checks basic audio buffer validation
+      engine.setProjectState(&projectState);
+      
+      // 2b. Setup Mock Device (Bypass Real Device)
+      MockAudioIODevice mockDevice("Mock Device");
+      // Use empty BigInteger for channels since we simulate callbacks
+      mockDevice.open({}, {}, 44100.0, 512); 
+      
+      // Manually trigger preparation
+      engine.audioDeviceAboutToStart(&mockDevice); 
 
-      // Create test buffer
-      const int numChannels = 2;
-      const int numSamples = 512;
-      juce::AudioBuffer<float> buffer(numChannels, numSamples);
-      buffer.clear();
+      // 3. Create a Track via ProjectState (ensures correct model sync)
+      // "audio" type corresponds to AudioTrack
+      juce::String trackId = projectState.addTrack("Test Track", "audio");
+      
+      // Sync engine to pick up the new track
+      engine.syncWithProjectState();
 
-      // Fill with some test data (simulate processed audio)
-      for (int ch = 0; ch < numChannels; ++ch) {
-        float *samples = buffer.getWritePointer(ch);
-        for (int i = 0; i < numSamples; ++i) {
-          // Generate a simple sine wave to simulate valid audio output
-          float phase = (float)i / (float)numSamples * 2.0f * juce::MathConstants<float>::pi;
-          samples[i] =
-              std::sin(phase) * 0.1f; // Low amplitude to avoid clipping
-        }
+      // Verify track was created in engine
+      expectEquals(engine.getNumTracks(), 1);
+      if (engine.getNumTracks() == 0) return; // Fail fast
+      
+      auto track = engine.tracks()[0];
+      expect(track != nullptr);
+      expectEquals(track->getName(), juce::String("Test Track"));
+
+      // 4. Create Audio Content (Manual Clip Injection)
+      // Create a clip with some noise content
+      const int sampleRate = 44100;
+      const int clipLength = sampleRate * 2; // 2 seconds
+      
+      juce::AudioBuffer<float> content(2, clipLength);
+      {
+          juce::Random rng;
+          for(int ch=0; ch<2; ++ch) {
+              for(int i=0; i<clipLength; ++i) {
+                  content.setSample(ch, i, rng.nextFloat() * 0.5f + 0.2f);
+              }
+          }
       }
+      
+      auto clip = std::make_unique<zenith::Clip>();
+      clip->setAudioBuffer(content);
+      clip->setStartPosition(0);
+      clip->setLength(clipLength);
+      clip->setPlaying(true);
+      
+      // Add clip to track
+      track->addClip(std::move(clip));
+      
+      // 5. Start Playback
+      engine.setPlayheadSamples(0);
+      engine.setLooping(false);
+      engine.play();
+      expect(engine.isPlaying());
 
-      // ACTUAL ASSERTION - check output is valid
-      for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
-        const float *samples = buffer.getReadPointer(ch);
-        for (int i = 0; i < buffer.getNumSamples(); ++i) {
-          expect(!std::isnan(samples[i]), "Output contains NaN");
-          expect(!std::isinf(samples[i]), "Output contains Inf");
-          // Also check reasonable range (should be between -1 and 1 for
-          // normalized audio)
-          expect(samples[i] >= -1.0f && samples[i] <= 1.0f,
-                 "Output out of valid range");
-        }
+      // 6. Simulate Audio Callback
+      const int blockSize = 512;
+      juce::AudioBuffer<float> inBuffer(2, blockSize);
+      juce::AudioBuffer<float> outBuffer(2, blockSize);
+      inBuffer.clear();
+      outBuffer.clear();
+      
+      float* inChans[] = { inBuffer.getWritePointer(0), inBuffer.getWritePointer(1) };
+      float* outChans[] = { outBuffer.getWritePointer(0), outBuffer.getWritePointer(1) };
+      
+      // Construct dummy context
+      juce::AudioIODeviceCallbackContext context{}; 
+      
+      // 7. Verify Results
+      
+      // A. Playhead should advance
+      
+      // Run block 1
+      engine.audioDeviceIOCallbackWithContext(
+          (const float* const*)inChans, 2,
+          outChans, 2, blockSize,
+          context
+      );
+      
+      expectEquals(engine.getPlayheadSamples(), (juce::int64)blockSize);
+      
+      // B. Audio should be present (not silent)
+      float magnitude = outBuffer.getMagnitude(0, blockSize);
+      expect(magnitude > 0.001f, "Output buffer should contain audio signal");
+      
+      // Run block 2
+      outBuffer.clear();
+      engine.audioDeviceIOCallbackWithContext(
+          (const float* const*)inChans, 2,
+          outChans, 2, blockSize,
+          context
+      );
+      
+      expectEquals(engine.getPlayheadSamples(), (juce::int64)(blockSize * 2));
+      float max0 = 0.0f;
+      float max1 = 0.0f;
+      for (int i = 0; i < blockSize; ++i) {
+        max0 = std::max(max0, std::abs(outBuffer.getSample(0, i)));
+        max1 = std::max(max1, std::abs(outBuffer.getSample(1, i)));
       }
-    }
+      expect(max0 > 0.001f, "Output buffer 1 should contain signal");
+      expect(max1 > 0.001f, "Output buffer 2 should contain signal");
 
-    beginTest("Audio buffer operations are safe");
-    {
-      juce::AudioBuffer<float> buffer(2, 1024);
-      buffer.clear();
-
-      // Test basic buffer operations
-      expect(buffer.getNumChannels() == 2);
-      expect(buffer.getNumSamples() == 1024);
-
-      // Fill with valid data
-      buffer.setSample(0, 100, 0.5f);
-      buffer.setSample(1, 200, -0.3f);
-
-      expectEquals(buffer.getSample(0, 100), 0.5f);
-      expectEquals(buffer.getSample(1, 200), -0.3f);
+      // Cleanup
+      engine.audioDeviceStopped();
+      mockDevice.close();
     }
   }
 };
@@ -396,6 +554,68 @@ static MIDIRoutingTests midiRoutingTests;
 static MixerChannelTests mixerChannelTests;
 static PluginHostingTests pluginHostingTests;
 static BasicAudioTest basicAudioTest;
+
+/**
+ * @class AudioStabilityTest
+ * @brief Tests that audio processing does not produce NaN or Inf values
+ */
+class AudioStabilityTest : public juce::UnitTest {
+public:
+  AudioStabilityTest() : juce::UnitTest("Audio Stability (NaN/Inf)", "Stability") {}
+
+  void runTest() override {
+    beginTest("Track processes audio without NaN/Inf");
+
+    // 1. Setup Engine and Project
+    zenith::ProjectState projectState;
+    zenith::Engine engine;
+    engine.setProjectState(&projectState);
+
+    // Mock device setup
+    MockAudioIODevice mockDevice("Mock Device");
+    mockDevice.open({}, {}, 48000.0, 512);
+    engine.audioDeviceAboutToStart(&mockDevice);
+
+    // 2. Create a track
+    projectState.addTrack("Stability Test Track", "audio");
+    engine.syncWithProjectState();
+
+    // 3. Process a block of audio
+    const int numSamples = 512;
+    juce::AudioBuffer<float> inBuffer(2, numSamples);
+    juce::AudioBuffer<float> outBuffer(2, numSamples);
+    
+    // Fill input with some valid data (silence or noise)
+    inBuffer.clear(); // Silence input
+
+    float* inChans[] = { inBuffer.getWritePointer(0), inBuffer.getWritePointer(1) };
+    float* outChans[] = { outBuffer.getWritePointer(0), outBuffer.getWritePointer(1) };
+    
+    juce::AudioIODeviceCallbackContext context{}; 
+
+    // Run the engine callback
+    engine.audioDeviceIOCallbackWithContext(
+        (const float* const*)inChans, 2,
+        outChans, 2, numSamples,
+        context
+    );
+
+    // 4. Check for NaN/Inf in output
+    for (int ch = 0; ch < 2; ++ch) {
+        const float* samples = outBuffer.getReadPointer(ch);
+        for (int i = 0; i < numSamples; ++i) {
+            expect(!std::isnan(samples[i]), "Output sample is NaN at index " + juce::String(i));
+            expect(!std::isinf(samples[i]), "Output sample is Inf at index " + juce::String(i));
+        }
+    }
+
+    // Cleanup
+    engine.audioDeviceStopped();
+    mockDevice.close();
+  }
+};
+
+static AudioStabilityTest audioStabilityTest;
 
 } // namespace tests
 } // namespace zenith
