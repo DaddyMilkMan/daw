@@ -10,13 +10,10 @@
 #include "SkiaComponent.h"
 #include "ZenithDesignSystem.h"
 #include <JuceHeader.h>
-#include <core/SkCanvas.h>
-#include <core/SkFont.h>
+#include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
-#include <core/SkPaint.h>
 #include <core/SkPath.h>
 #include <core/SkPoint.h>
-#include <core/SkRect.h>
 #include <map>
 #include <string>
 
@@ -28,7 +25,7 @@ public:
     setInterceptsMouseClicks(false, false); // Pass clicks through
     CollaborationManager::getInstance().addChangeListener(this);
     setWantsKeyboardFocus(false);
-    startTimerHz(60); // 60 FPS for smooth interpolation
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60); // 60 FPS for smooth interpolation
   }
 
   ~RemoteCursorOverlay() override {
@@ -37,6 +34,14 @@ public:
 
   void changeListenerCallback(juce::ChangeBroadcaster *) override {
     // Network updates happen here, but we pull data in timer/paint
+  }
+
+  /**
+   * @brief Set the callback to map selection IDs to screen rectangles
+   * @param mapper Function that takes a selection ID and returns its bounds
+   */
+  void setIdToRectMapper(std::function<juce::Rectangle<float>(const juce::String&)> mapper) {
+    idToRectMapper_ = std::move(mapper);
   }
 
   void timerCallback() override {
@@ -103,7 +108,50 @@ public:
                                user.color.getBlue())
               : SkColorSetRGB(255, 0, 100); // Fallback Red
 
-      // --- 1. Cursor Arrow ---
+      // --- 0. Remote Selections ---
+      // Draw selection boxes for remote user's selected items
+      if (idToRectMapper_) {
+        paint.setStyle(::SkPaint::kFill_Style);
+        
+        for (const auto& selId : user.selectedIds) {
+          auto rect = idToRectMapper_(selId);
+          if (!rect.isEmpty()) {
+            // Semi-transparent fill
+            paint.setColor(userColor);
+            paint.setAlphaf(0.15f);
+            ::SkRect skRect = ::SkRect::MakeLTRB(rect.getX(), rect.getY(), 
+                                                  rect.getRight(), rect.getBottom());
+            canvas->drawRoundRect(skRect, 4.0f, 4.0f, paint);
+            
+            // User-colored border
+            paint.setStyle(::SkPaint::kStroke_Style);
+            paint.setStrokeWidth(2.0f);
+            paint.setAlphaf(0.8f);
+            canvas->drawRoundRect(skRect, 4.0f, 4.0f, paint);
+            
+            // Reset for next iteration
+            paint.setStyle(::SkPaint::kFill_Style);
+          }
+        }
+        
+        // Draw selection count badge if multiple items selected
+        if (user.selectedIds.size() > 1) {
+          paint.setAlphaf(1.0f);
+          ::SkFont badgeFont = zenith::design::getSkFont(10.0f, zenith::design::FontWeight::Bold);
+          juce::String countStr = juce::String((int)user.selectedIds.size());
+          float badgeX = pos.fX + 30.0f;
+          float badgeY = pos.fY - 5.0f;
+          
+          // Badge background
+          paint.setColor(userColor);
+          canvas->drawCircle(badgeX, badgeY, 8.0f, paint);
+          
+          // Badge text
+          paint.setColor(SK_ColorWHITE);
+          float textWidth = badgeFont.measureText(countStr.toRawUTF8(), countStr.length(), SkTextEncoding::kUTF8);
+          canvas->drawString(countStr.toRawUTF8(), badgeX - textWidth / 2.0f, badgeY + 3.5f, badgeFont, paint);
+        }
+      }
       ::SkPath cursorPath;
       cursorPath.moveTo(pos.fX, pos.fY);
       cursorPath.lineTo(pos.fX + 8, pos.fY + 24);
@@ -167,6 +215,9 @@ private:
   // Using std::map instead of unordered_map to avoid hash compilation issues
   // with juce::String
   std::map<juce::String, ::SkPoint> smoothPositions;
+  
+  // Callback to map selection IDs to screen rectangles
+  std::function<juce::Rectangle<float>(const juce::String&)> idToRectMapper_;
 };
 
 } // namespace zenith

@@ -29,8 +29,10 @@ public:
     juce::File bass;
     juce::File other;
     bool success = false;
+    bool usedNeuralEngine = false;
     juce::String error;
   };
+
 
   using CompletionCallback = std::function<void(const StemFiles &)>;
 

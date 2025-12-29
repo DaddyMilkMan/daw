@@ -6,6 +6,7 @@
 
 #pragma once
 #include "ZenithTheme.h"
+#include "ColorBridge.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 namespace zenith {

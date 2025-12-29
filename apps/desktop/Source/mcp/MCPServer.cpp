@@ -95,13 +95,20 @@ void MCPServer::startBackground() {
     }
   });
 
-  backgroundThread_.detach(); // We manage lifetime via running_ flag
+  // We keep the thread joinable to manage its lifetime, 
+  // though we may have to detach in stop() if we can't unblock it.
 }
 
 void MCPServer::stop() {
   running_ = false;
   // Note: std::getline is blocking, so we can't easily interrupt it
   // without platform-specific tricks or closing stdin.
+  
+  // To avoid a crash on destruction (std::terminate), we must handle the thread.
+  // Since we can't join (it would hang), we detach here if still running.
+  if (backgroundThread_.joinable()) {
+      backgroundThread_.detach();
+  }
 }
 
 //==============================================================================

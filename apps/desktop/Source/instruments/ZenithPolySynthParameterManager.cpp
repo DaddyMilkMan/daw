@@ -13,6 +13,7 @@
 #include "ZenithPolySynthParameterManager.h"
 #include "ZenithEffects.h"
 #include "ZenithPolySynthVoice.h"
+// Forced compilation check
 
 namespace zenith {
 

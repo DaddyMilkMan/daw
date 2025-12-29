@@ -45,7 +45,8 @@ juce::String RecentProjectEntry::getRelativeTimeString() const {
 }
 
 juce::var RecentProjectEntry::toJson() const {
-  auto *obj = new juce::DynamicObject();
+  // Bug 28: Use DynamicObject::Ptr to prevent leaks if not immediately wrapped
+  juce::DynamicObject::Ptr obj = new juce::DynamicObject();
 
   obj->setProperty("name", name);
   obj->setProperty("path", path.getFullPathName());

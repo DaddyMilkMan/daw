@@ -1,6 +1,6 @@
 /**
  * AudioEngineBindings.h
- * C++ to Lua bindings for AudioEngine functions
+ * C++ to Lua bindings for zenith::Engine functions
  */
 
 #pragma once
@@ -9,12 +9,11 @@ struct lua_State;
 
 namespace zenith {
 
-class AudioEngine;
+class Engine; // Use the actual Engine class
 
 /**
- * Register AudioEngine API to Lua
- * Makes engine functions callable from Lua scripts
+ * Register Engine API to Lua
  */
-void registerAudioEngine(lua_State* L, AudioEngine* engine);
+void registerAudioEngine(lua_State* L, Engine* engine);
 
 } // namespace zenith

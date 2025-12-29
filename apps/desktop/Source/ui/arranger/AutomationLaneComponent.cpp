@@ -10,7 +10,6 @@
 
 #ifdef ZENITH_USE_SKIA
 #include "ZenithDesignSystem.h"
-#include "SkiaTheme.h"
 #include <include/core/SkFont.h>
 #include <include/core/SkImageInfo.h>
 #include <include/core/SkPaint.h>
@@ -104,207 +103,195 @@ AutomationLaneComponent::getDefaultVolumeInfo() {
 // Component Overrides - Rendering
 //==============================================================================
 
-void AutomationLaneComponent::paint(juce::Graphics &g) {
-#ifdef ZENITH_USE_SKIA
+void AutomationLaneComponent::drawSkia(SkCanvas *canvas) {
   // Use Skia rendering for automation lanes
   using namespace zenith::design;
-  
-  // Get theme colors and typography
-  const auto& colors = zenith::SkiaTheme::getInstance().getColors();
-  const auto& typo = zenith::SkiaTheme::getInstance().getTypography();
 
-  // Get Skia canvas by wrapping JUCE Graphics in a temporary surface
-  juce::Image tempImage(juce::Image::ARGB, std::max(1, getWidth()),
-                        std::max(1, getHeight()), true);
+  // Background with subtle tint
+  SkPaint bgPaint;
+  bgPaint.setColor(zenith::design::colors::BG_DARKER);
+  bgPaint.setAntiAlias(true);
+  canvas->drawRect(SkRect::MakeWH(getWidth(), getHeight()), bgPaint);
+
+  // Draw grid (re-implemented in Skia)
   {
-    juce::Image::BitmapData bitmapData(tempImage,
-                                       juce::Image::BitmapData::readWrite);
-    SkImageInfo info =
-        SkImageInfo::MakeN32Premul(tempImage.getWidth(), tempImage.getHeight());
-    auto skSurface = SkSurfaces::WrapPixels(info, bitmapData.getLinePointer(0),
-                                            bitmapData.lineStride);
+      SkPaint gridPaint;
+      gridPaint.setColor(SkColorSetARGB(50, 255, 255, 255));
+      gridPaint.setStrokeWidth(1.0f);
+      
+      const int width = getWidth();
+      const int height = getHeight();
 
-    if (skSurface) {
-      SkCanvas &canvas = *skSurface->getCanvas();
-      canvas.clear(SK_ColorTRANSPARENT);
-
-      // Background with subtle tint
-      SkPaint bgPaint;
-      bgPaint.setColor(zenith::design::colors::BG_DARKER);
-      bgPaint.setAntiAlias(true);
-      canvas.drawRect(SkRect::MakeWH(getWidth(), getHeight()), bgPaint);
-
-      // Draw components
-      drawGrid(g); // Keep JUCE grid for now (lighter weight)
-
-      // Draw envelope curve with Skia (smooth)
-      rebuildPointHandles();
-
-      if (!pointHandles.empty()) {
-        SkPath path;
-        std::vector<PointHandle> sortedHandles = pointHandles;
-        std::sort(sortedHandles.begin(), sortedHandles.end(),
-                  [](const PointHandle &a, const PointHandle &b) {
-                    return a.screenPos.x < b.screenPos.x;
-                  });
-
-        // Start from left edge
-        path.moveTo(0, sortedHandles[0].screenPos.y);
-        path.lineTo(sortedHandles[0].screenPos.x, sortedHandles[0].screenPos.y);
-
-        // Draw smooth curve through points
-        for (size_t i = 0; i < sortedHandles.size() - 1; ++i) {
-          const auto &p1 = sortedHandles[i];
-          const auto &p2 = sortedHandles[i + 1];
-
-          if (std::abs(p1.tension) < 0.01f) {
-            path.lineTo(p2.screenPos.x, p2.screenPos.y);
-          } else {
-            float midX = (p1.screenPos.x + p2.screenPos.x) * 0.5f;
-            float midY = (p1.screenPos.y + p2.screenPos.y) * 0.5f;
-            float width = p2.screenPos.x - p1.screenPos.x;
-            // Vertical offset based on tension and width
-            float cpY = midY - (p1.tension * width * 0.5f);
-
-            // Limit vertical excursion to keep it reasonable
-            // cpY = juce::jlimit(midY - width, midY + width, cpY);
-
-            path.quadTo(midX, cpY, p2.screenPos.x, p2.screenPos.y);
-          }
-        }
-
-        // Extend to right edge
-        if (!sortedHandles.empty())
-          path.lineTo(getWidth(), sortedHandles.back().screenPos.y);
-
-        // Draw curve
-        SkPaint curvePaint;
-        curvePaint.setColor(colors::VIOLET);
-        curvePaint.setStyle(SkPaint::kStroke_Style);
-        curvePaint.setStrokeWidth(2.5f);
-        curvePaint.setAntiAlias(true);
-        canvas.drawPath(path, curvePaint);
+      // Horizontal lines
+      const int numHLines = 5;
+      for (int i = 0; i <= numHLines; ++i) {
+        float y = i * height / static_cast<float>(numHLines);
+        canvas->drawLine(0.0f, y, static_cast<float>(width), y, gridPaint);
       }
 
-      // Draw control points with selection highlighting
-      SkColor selectionColor = colors::CYAN;
-      for (const auto &handle : pointHandles) {
-        bool isSelected = (handle.pointId == draggedPointId);
-        bool isHovered = (handle.pointId == hoveredPointId);
+      // Vertical lines (beat grid)
+      double beatStart = std::floor(scrollOffsetBeats);
+      double beatEnd = scrollOffsetBeats + (width / pixelsPerBeat);
 
-        // Selection background (if selected)
-        if (isSelected) {
-          SkPaint selBgPaint;
-          selBgPaint.setColor(selectionColor);
-          selBgPaint.setAntiAlias(true);
-          float expandedRadius = handle.radius + 4.0f;
-          canvas.drawCircle(handle.screenPos.x, handle.screenPos.y,
-                            expandedRadius, selBgPaint);
-        }
+      for (double beat = beatStart; beat <= beatEnd; beat += 1.0) {
+        float x = beatsToPixels(beat);
+        if (x >= 0.0f && x <= width) {
+          if (static_cast<int>(beat) % 4 == 0)
+             gridPaint.setColor(SkColorSetARGB(80, 255, 255, 255));
+          else
+             gridPaint.setColor(SkColorSetARGB(40, 255, 255, 255));
 
-        // Control point fill
-        SkPaint fillPaint;
-        fillPaint.setColor(isSelected  ? colors::VIOLET
-                           : isHovered ? colors::VIOLET
-                                       : colors::VIOLET);
-        fillPaint.setAntiAlias(true);
-        canvas.drawCircle(handle.screenPos.x, handle.screenPos.y, handle.radius,
-                          fillPaint);
-
-        // Control point border
-        SkPaint borderPaint;
-        borderPaint.setColor(isSelected ? selectionColor : colors::TEXT_PRIMARY);
-        borderPaint.setStyle(SkPaint::kStroke_Style);
-        borderPaint.setStrokeWidth(isSelected ? 2.5f : 1.5f);
-        borderPaint.setAntiAlias(true);
-        canvas.drawCircle(handle.screenPos.x, handle.screenPos.y, handle.radius,
-                          borderPaint);
-
-        // Hover glow
-        if (isHovered && !isSelected) {
-          SkPaint glowPaint;
-          glowPaint.setColor(SkColorSetARGB(40, 0, 212, 170));
-          glowPaint.setAntiAlias(true);
-          canvas.drawCircle(handle.screenPos.x, handle.screenPos.y,
-                            handle.radius + 3.0f, glowPaint);
+          canvas->drawLine(x, 0.0f, x, static_cast<float>(height), gridPaint);
         }
       }
+  }
 
-      // Draw hover tooltip
-      if (hoveredPointId.isNotEmpty()) {
-        juce::String tooltipText = paramInfo.valueToString(hoveredPointValue) +
-                                   " @ " + juce::String(hoveredPointTime, 2) +
-                                   " beats";
+  // Draw envelope curve with Skia (smooth)
+  rebuildPointHandles();
 
-        SkFont font = zenith::design::typography::getMonoFont(typography::FONT_XS);
+  if (!pointHandles.empty()) {
+    SkPath path;
+    std::vector<PointHandle> sortedHandles = pointHandles;
+    std::sort(sortedHandles.begin(), sortedHandles.end(),
+              [](const PointHandle &a, const PointHandle &b) {
+                return a.screenPos.x < b.screenPos.x;
+              });
 
-        auto textStr = tooltipText.toStdString();
-        SkRect textBounds;
-        font.measureText(textStr.c_str(), textStr.length(),
-                         SkTextEncoding::kUTF8, &textBounds);
+    // Start from left edge
+    path.moveTo(0, sortedHandles[0].screenPos.y);
+    path.lineTo(sortedHandles[0].screenPos.x, sortedHandles[0].screenPos.y);
 
-        float tooltipWidth = textBounds.width() + 12.0f;
-        float tooltipHeight = 20.0f;
-        float tooltipX = hoveredPointScreenPos.x - tooltipWidth / 2.0f;
-        float tooltipY = hoveredPointScreenPos.y - tooltipHeight - 10.0f;
+    // Draw smooth curve through points
+    for (size_t i = 0; i < sortedHandles.size() - 1; ++i) {
+      const auto &p1 = sortedHandles[i];
+      const auto &p2 = sortedHandles[i + 1];
 
-        // Clamp to screen
-        tooltipX = juce::jlimit(4.0f, (float)getWidth() - tooltipWidth - 4.0f,
-                                tooltipX);
-        tooltipY = juce::jmax(4.0f, tooltipY);
+      if (std::abs(p1.tension) < 0.01f) {
+        path.lineTo(p2.screenPos.x, p2.screenPos.y);
+      } else {
+        float midX = (p1.screenPos.x + p2.screenPos.x) * 0.5f;
+        float midY = (p1.screenPos.y + p2.screenPos.y) * 0.5f;
+        float width = p2.screenPos.x - p1.screenPos.x;
+        // Vertical offset based on tension and width
+        float cpY = midY - (p1.tension * width * 0.5f);
 
-        // Tooltip background
-        SkPaint tooltipBg;
-        tooltipBg.setColor(colors::BG_DARK);
-        tooltipBg.setAntiAlias(true);
-        SkRRect tooltipRect = SkRRect::MakeRectXY(
-            SkRect::MakeXYWH(tooltipX, tooltipY, tooltipWidth, tooltipHeight),
-            4.0f, 4.0f);
-        canvas.drawRRect(tooltipRect, tooltipBg);
-
-        // Tooltip border
-        SkPaint tooltipBorder;
-        tooltipBorder.setColor(colors::BORDER_SUBTLE);
-        tooltipBorder.setStyle(SkPaint::kStroke_Style);
-        tooltipBorder.setStrokeWidth(1.0f);
-        tooltipBorder.setAntiAlias(true);
-        canvas.drawRRect(tooltipRect, tooltipBorder);
-
-        // Tooltip text
-        SkPaint textPaint;
-        textPaint.setColor(colors::TEXT_PRIMARY);
-        textPaint.setAntiAlias(true);
-        auto blob = SkTextBlob::MakeFromString(textStr.c_str(), font);
-        canvas.drawTextBlob(blob, tooltipX + 6.0f, tooltipY + 14.0f, textPaint);
+        path.quadTo(midX, cpY, p2.screenPos.x, p2.screenPos.y);
       }
+    }
 
-      // Draw parameter name
-      SkFont nameFont = zenith::design::typography::getSkFont(typography::FONT_MD);
+    // Extend to right edge
+    if (!sortedHandles.empty())
+      path.lineTo(getWidth(), sortedHandles.back().screenPos.y);
 
-      SkPaint namePaint;
-      namePaint.setColor(colors::TEXT_SECONDARY);
-      namePaint.setAntiAlias(true);
+    // Draw curve
+    SkPaint curvePaint;
+    curvePaint.setColor(colors::CYAN);
+    curvePaint.setStyle(SkPaint::kStroke_Style);
+    curvePaint.setStrokeWidth(2.5f);
+    curvePaint.setAntiAlias(true);
+    canvas->drawPath(path, curvePaint);
+  }
 
-      auto nameStr = paramInfo.displayName.toStdString();
-      auto nameBlob = SkTextBlob::MakeFromString(nameStr.c_str(), nameFont);
-      canvas.drawTextBlob(nameBlob, 8.0f, 18.0f, namePaint);
+  // Draw control points with selection highlighting
+  SkColor selectionColor = colors::CYAN;
+  for (const auto &handle : pointHandles) {
+    bool isSelected = (handle.pointId == draggedPointId);
+    bool isHovered = (handle.pointId == hoveredPointId);
+
+    // Selection background (if selected)
+    if (isSelected) {
+      SkPaint selBgPaint;
+      selBgPaint.setColor(selectionColor);
+      selBgPaint.setAntiAlias(true);
+      float expandedRadius = handle.radius + 4.0f;
+      canvas->drawCircle(handle.screenPos.x, handle.screenPos.y,
+                        expandedRadius, selBgPaint);
+    }
+
+    // Control point fill
+    SkPaint fillPaint;
+    fillPaint.setColor(colors::CYAN);
+    fillPaint.setAntiAlias(true);
+    canvas->drawCircle(handle.screenPos.x, handle.screenPos.y, handle.radius,
+                      fillPaint);
+
+    // Control point border
+    SkPaint borderPaint;
+    borderPaint.setColor(colors::TEXT_PRIMARY);
+    borderPaint.setStyle(SkPaint::kStroke_Style);
+    borderPaint.setStrokeWidth(isSelected ? 2.5f : 1.5f);
+    borderPaint.setAntiAlias(true);
+    canvas->drawCircle(handle.screenPos.x, handle.screenPos.y, handle.radius,
+                      borderPaint);
+
+    // Hover glow
+    if (isHovered && !isSelected) {
+      SkPaint glowPaint;
+      glowPaint.setColor(SkColorSetARGB(40, 0, 212, 170));
+      glowPaint.setAntiAlias(true);
+      canvas->drawCircle(handle.screenPos.x, handle.screenPos.y,
+                        handle.radius + 3.0f, glowPaint);
     }
   }
 
-  // Draw the rendered image
-  g.drawImageAt(tempImage, 0, 0);
-#else
-  // Fallback: Original JUCE rendering
-  g.fillAll(juce::Colour(0xff2a2a2a));
-  drawGrid(g);
-  drawEnvelopeCurve(g);
-  rebuildPointHandles();
-  drawControlPoints(g);
-  g.setColour(juce::Colours::white.withAlpha(0.7f));
-  g.setFont(14.0f);
-  g.drawText(paramInfo.displayName, 5, 5, 100, 20,
-             juce::Justification::centredLeft);
-#endif
+  // Draw hover tooltip
+  if (hoveredPointId.isNotEmpty()) {
+    juce::String tooltipText = paramInfo.valueToString(hoveredPointValue) +
+                               " @ " + juce::String(hoveredPointTime, 2) +
+                               " beats";
+
+    SkFont font = zenith::design::typography::getMonoFont(10.0f);
+
+    auto textStr = tooltipText.toStdString();
+    SkRect textBounds;
+    font.measureText(textStr.c_str(), textStr.length(),
+                     SkTextEncoding::kUTF8, &textBounds);
+
+    float tooltipWidth = textBounds.width() + 12.0f;
+    float tooltipHeight = 20.0f;
+    float tooltipX = hoveredPointScreenPos.x - tooltipWidth / 2.0f;
+    float tooltipY = hoveredPointScreenPos.y - tooltipHeight - 10.0f;
+
+    // Clamp to screen
+    tooltipX = juce::jlimit(4.0f, (float)getWidth() - tooltipWidth - 4.0f,
+                            tooltipX);
+    tooltipY = juce::jmax(4.0f, tooltipY);
+
+    // Tooltip background
+    SkPaint tooltipBg;
+    tooltipBg.setColor(colors::BG_MEDIUM);
+    tooltipBg.setAntiAlias(true);
+    SkRRect tooltipRect = SkRRect::MakeRectXY(
+        SkRect::MakeXYWH(tooltipX, tooltipY, tooltipWidth, tooltipHeight),
+        4.0f, 4.0f);
+    canvas->drawRRect(tooltipRect, tooltipBg);
+
+    // Tooltip border
+    SkPaint tooltipBorder;
+    tooltipBorder.setColor(colors::BORDER_SUBTLE);
+    tooltipBorder.setStyle(SkPaint::kStroke_Style);
+    tooltipBorder.setStrokeWidth(1.0f);
+    tooltipBorder.setAntiAlias(true);
+    canvas->drawRRect(tooltipRect, tooltipBorder);
+
+    // Tooltip text
+    SkPaint textPaint;
+    textPaint.setColor(colors::TEXT_PRIMARY);
+    textPaint.setAntiAlias(true);
+    auto blob = SkTextBlob::MakeFromString(textStr.c_str(), font);
+    canvas->drawTextBlob(blob, tooltipX + 6.0f, tooltipY + 14.0f, textPaint);
+  }
+
+  // Draw parameter name
+  SkFont nameFont = zenith::design::typography::getSkFont(14.0f);
+
+  SkPaint namePaint;
+  namePaint.setColor(colors::TEXT_TERTIARY);
+  namePaint.setAntiAlias(true);
+
+  auto nameStr = paramInfo.displayName.toStdString();
+  auto nameBlob = SkTextBlob::MakeFromString(nameStr.c_str(), nameFont);
+  canvas->drawTextBlob(nameBlob, 8.0f, 18.0f, namePaint);
 }
 
 void AutomationLaneComponent::resized() { repaint(); }

@@ -9,13 +9,13 @@
 
   ==============================================================================
 */
-
+#include <memory>
 #pragma once
 
-#include "SkiaButton.h"
-#include "SkiaComponent.h"
-#include "../widgets/SkiaComboBox.h"
-#include "../widgets/SkiaLabel.h"
+#include "../controls/SkiaButton.h"
+#include "../controls/SkiaComboBox.h"
+#include "../controls/SkiaLabel.h"
+#include "../framework/SkiaComponent.h"
 
 namespace zenith {
 namespace settings {

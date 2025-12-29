@@ -12,21 +12,28 @@
     - Hardware-accelerated controls
     - Legacy audio integration wrapped in modern UI
 
+    Implementation in SettingsComponent.cpp
+
   ==============================================================================
 */
 
 #pragma once
 
-#include "Engine.h"
-#include "Settings.h"
+#include "../controls/SkiaButton.h"
+#include "../controls/SkiaSlider.h"
 #include "../engine/PluginHost.h"
-#include "SkiaButton.h"
+#include "../controls/SkiaComboBox.h"
+#include "../controls/SkiaLabel.h"
+#include "Settings.h"
 #include "SkiaComponent.h"
-#include "SkiaSlider.h"
-#include "ZenithDesignSystem.h"
+#include "../design-system/ZenithDesignSystem.h"
+#include "../design-system/ZenithTheme.h"
 #include <include/core/SkColor.h>
+#include "HardwareControlPanel.h"
 
 #include <juce_audio_utils/juce_audio_utils.h>
+#include "../../network/SecureKeyStore.h"
+#include "../../network/GrokDAWClient.h"
 
 namespace zenith {
 
@@ -35,13 +42,9 @@ namespace zenith {
 //==============================================================================
 class SettingsTab : public SkiaComponent {
 public:
-  SettingsTab() = default;
-  ~SettingsTab() override = default;
-
-  void drawSkia(SkCanvas *canvas) override {
-    // Default background for content area
-    canvas->clear(SK_ColorTRANSPARENT);
-  }
+    SettingsTab() = default;
+    ~SettingsTab() override = default;
+    void drawSkia(SkCanvas* canvas) override;
 };
 
 //==============================================================================
@@ -49,93 +52,23 @@ public:
 //==============================================================================
 class AudioSettingsTab : public SettingsTab {
 public:
-  AudioSettingsTab(Engine &engine) : engine_(engine) {
-    // Setup Button
-    setupButton_ = std::make_unique<SkiaButton>("Configure Audio Device...");
-    setupButton_->setStyle(SkiaButton::Style::Primary);
-    setupButton_->onClick = [this]() { showDeviceSelector(); };
-    addAndMakeVisible(setupButton_.get());
-
-    // Refresh timer for status
-    startTimer(500);
-  }
-
-  void resized() override {
-    if (setupButton_) {
-      setupButton_->setBounds(20, 180, 200, 36);
-    }
-  }
-
-  void timerCallback() override { markDirty(); }
-
-  void drawSkia(SkCanvas *canvas) override {
-    auto *device = engine_.getDeviceManager().getCurrentAudioDevice();
-
-    SkPaint textPaint;
-    textPaint.setColor(SK_ColorWHITE);
-    textPaint.setAntiAlias(true);
-
-    SkFont headerFont;
-    headerFont.setSize(24.0f);
-    headerFont.setEmbolden(true);
-
-    SkFont labelFont;
-    labelFont.setSize(14.0f);
-    labelFont.setEmbolden(true);
-
-    SkFont valueFont;
-    valueFont.setSize(14.0f);
-
-    // Header
-    canvas->drawString("Audio Settings", 20, 40, headerFont, textPaint);
-
-    if (device) {
-      float y = 80;
-      float labelX = 20;
-      float valueX = 140;
-      float rowH = 30;
-
-      auto drawRow = [&](const char *label, juce::String value) {
-        textPaint.setColor(SkColorSetARGB(180, 255, 255, 255));
-        canvas->drawString(label, labelX, y, labelFont, textPaint);
-
-        textPaint.setColor(SK_ColorWHITE);
-        canvas->drawString(value.toStdString().c_str(), valueX, y, valueFont,
-                           textPaint);
-        y += rowH;
-      };
-
-      drawRow("Device Type:", device->getTypeName());
-      drawRow("Device Name:", device->getName());
-      drawRow("Sample Rate:",
-              juce::String(device->getCurrentSampleRate()) + " Hz");
-      drawRow("Buffer Size:",
-              juce::String(device->getCurrentBufferSizeSamples()) + " samples");
-    } else {
-      textPaint.setColor(SkColorSetARGB(255, 255, 100, 100)); // Red
-      canvas->drawString("No Audio Device Selected", 20, 80, valueFont,
-                         textPaint);
-    }
-  }
+    explicit AudioSettingsTab(Engine& engine);
+    void resized() override;
+    void timerCallback() override;
+    void drawSkia(SkCanvas* canvas) override;
 
 private:
-  void showDeviceSelector() {
-    juce::DialogWindow::LaunchOptions options;
-    auto *content = new juce::AudioDeviceSelectorComponent(
-        engine_.getDeviceManager(), 0, 256, 0, 256, false, false, false, false);
-    content->setSize(500, 450);
+    void showDeviceSelector();
 
-    options.content.setOwned(content);
-    options.dialogTitle = "Audio Device Configuration";
-    options.dialogBackgroundColour = juce::Colours::black;
-    options.escapeKeyTriggersCloseButton = true;
-    options.useNativeTitleBar = true;
-    options.resizable = false;
-    options.launchAsync();
-  }
-
-  Engine &engine_;
-  std::unique_ptr<SkiaButton> setupButton_;
+    Engine& engine_;
+    std::unique_ptr<SkiaButton> setupButton_;
+    std::unique_ptr<SkiaComboBox> backendSelector_;
+    std::unique_ptr<SkiaLabel> backendLabel_;
+    std::unique_ptr<SkiaComboBox> bufferSizeSelector_;
+    std::unique_ptr<SkiaLabel> bufferLabel_;
+    std::unique_ptr<SkiaButton> pdcToggle_;
+    std::unique_ptr<SkiaButton> monitoringToggle_;
+    std::unique_ptr<SkiaSlider> monitoringVolumeSlider_;
 };
 
 //==============================================================================
@@ -143,54 +76,83 @@ private:
 //==============================================================================
 class DisplaySettingsTab : public SettingsTab {
 public:
-  DisplaySettingsTab() {
-    // FPS Slider
-    fpsSlider_ = std::make_unique<SkiaSlider>("Target FPS");
-    fpsSlider_->setStyle(SkiaSlider::Style::Bar);
-    fpsSlider_->setDisplayRange(30, 240);
-    fpsSlider_->setValue((float)Settings::getInstance().getTargetFPS());
-    fpsSlider_->onValueChange = [](float v) {
-      Settings::getInstance().setTargetFPS((int)v);
-    };
-    addAndMakeVisible(fpsSlider_.get());
-
-    // Glow Slider
-    glowSlider_ = std::make_unique<SkiaSlider>("Glow Intensity");
-    glowSlider_->setStyle(SkiaSlider::Style::Bar);
-    glowSlider_->setDisplayRange(0.0f, 2.0f);
-    glowSlider_->setValue(Settings::getInstance().getGlowIntensity());
-    glowSlider_->onValueChange = [](float v) {
-      Settings::getInstance().setGlowIntensity(v);
-    };
-    addAndMakeVisible(glowSlider_.get());
-  }
-
-  void resized() override {
-    fpsSlider_->setBounds(20, 80, 300, 30);
-    glowSlider_->setBounds(20, 150, 300, 30);
-  }
-
-  void drawSkia(SkCanvas *canvas) override {
-    SkPaint textPaint;
-    textPaint.setColor(SK_ColorWHITE);
-    textPaint.setAntiAlias(true);
-
-    SkFont headerFont;
-    headerFont.setSize(24.0f);
-    headerFont.setEmbolden(true);
-
-    SkFont labelFont;
-    labelFont.setSize(14.0f);
-
-    canvas->drawString("Display Settings", 20, 40, headerFont, textPaint);
-
-    canvas->drawString("Target FPS", 20, 70, labelFont, textPaint);
-    canvas->drawString("Neon Glow Intensity", 20, 140, labelFont, textPaint);
-  }
+    DisplaySettingsTab();
+    void resized() override;
+    void drawSkia(SkCanvas* canvas) override;
 
 private:
-  std::unique_ptr<SkiaSlider> fpsSlider_;
-  std::unique_ptr<SkiaSlider> glowSlider_;
+    std::unique_ptr<SkiaSlider> fpsSlider_;
+    std::unique_ptr<SkiaSlider> glowSlider_;
+    std::unique_ptr<SkiaComboBox> themeSelector_;
+    std::unique_ptr<SkiaButton> animationsToggle_;
+    std::unique_ptr<SkiaButton> highContrastToggle_;
+    std::unique_ptr<SkiaComboBox> meterBallisticsSelector_;
+    std::unique_ptr<SkiaSlider> peakHoldSlider_;
+};
+
+//==============================================================================
+// Recording Settings Tab
+//==============================================================================
+class RecordingSettingsTab : public SettingsTab {
+public:
+    RecordingSettingsTab();
+    void resized() override;
+    void drawSkia(SkCanvas* canvas) override;
+
+private:
+    std::unique_ptr<SkiaSlider> countInSlider_;
+    std::unique_ptr<SkiaButton> metronomeCountInToggle_;
+    std::unique_ptr<SkiaComboBox> bitDepthSelector_;
+    std::unique_ptr<SkiaComboBox> fileTypeSelector_;
+    std::unique_ptr<SkiaButton> tempoLockToggle_;
+};
+
+//==============================================================================
+// MIDI Settings Tab
+//==============================================================================
+class MIDISettingsTab : public SettingsTab {
+public:
+    MIDISettingsTab();
+    void resized() override;
+    void drawSkia(SkCanvas* canvas) override;
+
+private:
+    std::unique_ptr<SkiaButton> midiThroughToggle_;
+    std::unique_ptr<SkiaButton> midiClockOutToggle_;
+    std::unique_ptr<SkiaButton> mtcInToggle_;
+    std::unique_ptr<SkiaSlider> latencyCompSlider_;
+};
+
+//==============================================================================
+// Editing Settings Tab
+//==============================================================================
+class EditingSettingsTab : public SettingsTab {
+public:
+    EditingSettingsTab();
+    void resized() override;
+    void drawSkia(SkCanvas* canvas) override;
+
+private:
+    std::unique_ptr<SkiaSlider> crossfadeSlider_;
+    std::unique_ptr<SkiaButton> snapToggle_;
+    std::unique_ptr<SkiaButton> linkSelectionToggle_;
+};
+
+//==============================================================================
+// Project Settings Tab
+//==============================================================================
+class ProjectSettingsTab : public SettingsTab {
+public:
+    ProjectSettingsTab();
+    void resized() override;
+    void drawSkia(SkCanvas* canvas) override;
+
+private:
+    std::unique_ptr<SkiaButton> autoSaveToggle_;
+    std::unique_ptr<SkiaSlider> autoSaveIntervalSlider_;
+    std::unique_ptr<SkiaSlider> undoHistorySlider_;
+    std::unique_ptr<SkiaButton> projectFolderButton_;
+    juce::String currentProjectFolder_;
 };
 
 //==============================================================================
@@ -198,66 +160,46 @@ private:
 //==============================================================================
 class PluginSettingsTab : public SettingsTab {
 public:
-  PluginSettingsTab(PluginHost &host) : host_(host) {
-    scanButton_ = std::make_unique<SkiaButton>("Scan Plugins");
-    scanButton_->setStyle(SkiaButton::Style::Success);
-    scanButton_->onClick = [this]() { startScan(); };
-    addAndMakeVisible(scanButton_.get());
-
-    // Simple text editor for paths (standard JUCE for now, styled later)
-    pathList_.setMultiLine(true);
-    pathList_.setReadOnly(true);
-    pathList_.setColour(juce::TextEditor::backgroundColourId,
-                        juce::Colours::transparentBlack);
-    pathList_.setColour(juce::TextEditor::outlineColourId,
-                        juce::Colours::white.withAlpha(0.2f));
-    addAndMakeVisible(pathList_);
-
-    updateList();
-  }
-
-  void resized() override {
-    pathList_.setBounds(20, 80, getWidth() - 40, getHeight() - 140);
-    scanButton_->setBounds(getWidth() - 140, getHeight() - 50, 120, 36);
-  }
-
-  void drawSkia(SkCanvas *canvas) override {
-    SkPaint textPaint;
-    textPaint.setColor(SK_ColorWHITE);
-    textPaint.setAntiAlias(true);
-
-    SkFont headerFont;
-    headerFont.setSize(24.0f);
-    headerFont.setEmbolden(true);
-
-    SkFont labelFont;
-    labelFont.setSize(14.0f);
-
-    canvas->drawString("Plugin Management", 20, 40, headerFont, textPaint);
-    canvas->drawString("Search Paths:", 20, 70, labelFont, textPaint);
-  }
+    explicit PluginSettingsTab(PluginHost& host);
+    void resized() override;
+    void drawSkia(SkCanvas* canvas) override;
 
 private:
-  void startScan() {
-    scanButton_->setText("Scanning...");
-    // Fake async scan call for UI update
-    host_.scanAsync([this](int p, int c, const juce::String &m) {
-      if (p >= 100)
-        scanButton_->setText("Scan Plugins");
-    });
-  }
+    void startScan();
+    void updateList();
 
-  void updateList() {
-    juce::String text;
-    for (const auto &path : host_.getSearchPaths()) {
-      text += path + "\n";
-    }
-    pathList_.setText(text);
-  }
+    PluginHost& host_;
+    std::unique_ptr<SkiaButton> scanButton_;
+    juce::TextEditor pathList_;
+};
 
-  PluginHost &host_;
-  std::unique_ptr<SkiaButton> scanButton_;
-  juce::TextEditor pathList_;
+//==============================================================================
+// AI Settings Tab
+//==============================================================================
+class AISettingsTab : public SettingsTab {
+public:
+    AISettingsTab();
+    void resized() override;
+    void drawSkia(SkCanvas* canvas) override;
+
+private:
+    void validateKey();
+
+    std::unique_ptr<juce::TextEditor> apiKeyEditor_;
+    std::unique_ptr<SkiaButton> validateButton_;
+    std::unique_ptr<SkiaLabel> helpLabel_;
+    std::unique_ptr<SkiaLabel> statusLabel_;
+    std::unique_ptr<GrokDAWClient> testClient_;
+};
+
+//==============================================================================
+// About Tab
+//==============================================================================
+class AboutTab : public SettingsTab {
+public:
+    AboutTab();
+    void resized() override;
+    void drawSkia(SkCanvas* canvas) override;
 };
 
 //==============================================================================
@@ -265,117 +207,33 @@ private:
 //==============================================================================
 class SettingsComponent : public SkiaComponent {
 public:
-  SettingsComponent(Engine &engine) : engine_(engine) {
-    setSize(800, 600);
+    explicit SettingsComponent(Engine& engine);
+    ~SettingsComponent() override;
 
-    // Create Tabs
-    audioTab_ = std::make_unique<AudioSettingsTab>(engine);
-    addChildComponent(audioTab_.get());
-
-    displayTab_ = std::make_unique<DisplaySettingsTab>();
-    addChildComponent(displayTab_.get());
-
-    pluginTab_ = std::make_unique<PluginSettingsTab>(engine.getPluginHost());
-    addChildComponent(pluginTab_.get());
-
-    // Create Sidebar Buttons
-    createNavButton("Audio", 0);
-    createNavButton("Display", 1);
-    createNavButton("Plugins", 2);
-
-    setActiveTab(0);
-  }
-
-  ~SettingsComponent() override = default;
-
-  void resized() override {
-    int sidebarWidth = 200;
-    int btnHeight = 40;
-    int y = 20;
-
-    for (auto *btn : navButtons_) {
-      btn->setBounds(10, y, sidebarWidth - 20, btnHeight);
-      y += btnHeight + 5;
-    }
-
-    auto contentArea =
-        getLocalBounds().removeFromRight(getWidth() - sidebarWidth);
-    if (currentTab_)
-      currentTab_->setBounds(contentArea);
-  }
-
-  void drawSkia(SkCanvas *canvas) override {
-    auto bounds = getLocalBounds();
-    int sidebarWidth = 200;
-
-    // Background
-    canvas->clear(SkColorSetRGB(20, 20, 25));
-
-    // Sidebar Background
-    SkPaint sidebarPaint;
-    sidebarPaint.setColor(SkColorSetRGB(30, 30, 35));
-    canvas->drawRect(
-        SkRect::MakeWH((float)sidebarWidth, (float)bounds.getHeight()),
-        sidebarPaint);
-
-    // Vertical Divider
-    SkPaint linePaint;
-    linePaint.setColor(SkColorSetARGB(50, 255, 255, 255));
-    canvas->drawLine((float)sidebarWidth, 0, (float)sidebarWidth,
-                     (float)bounds.getHeight(), linePaint);
-  }
+    void resized() override;
+    void drawSkia(SkCanvas* canvas) override;
 
 private:
-  void createNavButton(const juce::String &name, int index) {
-    auto btn = std::make_unique<SkiaButton>(name);
-    btn->setStyle(SkiaButton::Style::Ghost);
-    btn->setToggleable(true);
-    btn->onClick = [this, index]() { setActiveTab(index); };
-    addAndMakeVisible(btn.get());
-    navButtons_.add(btn.release());
-  }
+    void createNavButton(const juce::String& name, int index);
+    void setActiveTab(int index);
 
-  void setActiveTab(int index) {
-    // Update Buttons
-    for (int i = 0; i < navButtons_.size(); ++i) {
-      navButtons_[i]->setToggleState(i == index);
-      // Highlight active
-      navButtons_[i]->setStyle(i == index ? SkiaButton::Style::Secondary
-                                          : SkiaButton::Style::Ghost);
-    }
+    Engine& engine_;
+    juce::OwnedArray<SkiaButton> navButtons_;
 
-    // Switch Content
-    if (currentTab_)
-      currentTab_->setVisible(false);
+    std::unique_ptr<AudioSettingsTab> audioTab_;
+    std::unique_ptr<DisplaySettingsTab> displayTab_;
+    std::unique_ptr<RecordingSettingsTab> recordingTab_;
+    std::unique_ptr<MIDISettingsTab> midiTab_;
+    std::unique_ptr<EditingSettingsTab> editingTab_;
+    std::unique_ptr<ProjectSettingsTab> projectTab_;
+    std::unique_ptr<PluginSettingsTab> pluginTab_;
+    std::unique_ptr<AISettingsTab> aiTab_;
+    std::unique_ptr<HardwareControlPanel> hardwareTab_;
+    std::unique_ptr<AboutTab> aboutTab_;
 
-    switch (index) {
-    case 0:
-      currentTab_ = audioTab_.get();
-      break;
-    case 1:
-      currentTab_ = displayTab_.get();
-      break;
-    case 2:
-      currentTab_ = pluginTab_.get();
-      break;
-    }
+    SkiaComponent* currentTab_ = nullptr;
 
-    if (currentTab_) {
-      currentTab_->setVisible(true);
-      resized(); // Re-layout content
-    }
-  }
-
-  Engine &engine_;
-  juce::OwnedArray<SkiaButton> navButtons_;
-
-  std::unique_ptr<AudioSettingsTab> audioTab_;
-  std::unique_ptr<DisplaySettingsTab> displayTab_;
-  std::unique_ptr<PluginSettingsTab> pluginTab_;
-
-  SkiaComponent *currentTab_ = nullptr;
-
-  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SettingsComponent)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SettingsComponent)
 };
 
 } // namespace zenith

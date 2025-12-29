@@ -1,4 +1,5 @@
 #include "ClipTrack.h"
+#include "RealTimeGarbageCollector.h"
 
 namespace zenith {
 
@@ -41,20 +42,17 @@ void ClipTrack::updateClipSnapshot() {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     
     // Create new snapshot
-    auto newSnapshot = std::make_shared<ClipSnapshot>(clipsOwned_);
+    auto newSnapshot = std::make_shared<ClipSnapshot>(clipsOwned_, takeFoldersOwned_);
+
     
     // Swap atomically
     activeClipSnapshot_.store(newSnapshot.get(), std::memory_order_release);
     
     // Keep reference alive
     if (currentClipSnapshot_)
-        clipSnapshotTrash_.push_back(currentClipSnapshot_);
+        RealTimeGarbageCollector::getInstance().deferDelete(currentClipSnapshot_);
         
     currentClipSnapshot_ = newSnapshot;
-    
-    // Cleanup trash (limit size or clean based on some heuristic)
-    if (clipSnapshotTrash_.size() > 5)
-        clipSnapshotTrash_.erase(clipSnapshotTrash_.begin());
 }
 
 } // namespace zenith

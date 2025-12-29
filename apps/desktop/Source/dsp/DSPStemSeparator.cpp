@@ -27,23 +27,28 @@ DSPStemSeparator::~DSPStemSeparator() {}
 void DSPStemSeparator::prepare(const juce::dsp::ProcessSpec& spec) {
     sampleRate_ = spec.sampleRate;
     
-    // Setup Linkwitz-Riley 4th order crossover at 200Hz (Bass/Mid split)
+    // Setup Linkwitz-Riley split filters
     auto lpCoeffs = juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate_, 200.0f);
     auto hpCoeffs = juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate_, 200.0f);
 
-    // Apply coefficients to filter chains (4th order = 2x 2nd order cascaded)
-    lowPassFilter_.get<0>().coefficients = lpCoeffs;
-    lowPassFilter_.get<1>().coefficients = lpCoeffs;
-    lowPassFilter_.get<2>().coefficients = lpCoeffs;
-    lowPassFilter_.get<3>().coefficients = lpCoeffs;
+    // Apply coefficients to filter chains (4 biquads = 8th order, but we use them in pairs usually)
+    for (int i = 0; i < 4; ++i) {
+        lowPassFilter_.get<0>().coefficients = lpCoeffs;
+        lowPassFilter_.get<1>().coefficients = lpCoeffs;
+        lowPassFilter_.get<2>().coefficients = lpCoeffs;
+        lowPassFilter_.get<3>().coefficients = lpCoeffs;
+        
+        highPassFilter_.get<0>().coefficients = hpCoeffs;
+        highPassFilter_.get<1>().coefficients = hpCoeffs;
+        highPassFilter_.get<2>().coefficients = hpCoeffs;
+        highPassFilter_.get<3>().coefficients = hpCoeffs;
+    }
 
-    highPassFilter_.get<0>().coefficients = hpCoeffs;
-    highPassFilter_.get<1>().coefficients = hpCoeffs;
-    highPassFilter_.get<2>().coefficients = hpCoeffs;
-    highPassFilter_.get<3>().coefficients = hpCoeffs;
-
-    lowPassFilter_.prepare(spec);
-    highPassFilter_.prepare(spec);
+    juce::dsp::ProcessSpec monoSpec = spec;
+    monoSpec.numChannels = 1;
+    
+    lowPassFilter_.prepare(monoSpec);
+    highPassFilter_.prepare(monoSpec);
 }
 
 void DSPStemSeparator::reset() {

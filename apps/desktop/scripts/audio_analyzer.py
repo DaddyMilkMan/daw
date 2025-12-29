@@ -207,24 +207,25 @@ def analyze_audio(audio_path):
 
 
 def main():
-    """Main entry point"""
-    if len(sys.argv) < 2:
-        print(json.dumps({
-            "error": "Usage: python audio_analyzer.py <audio_file>",
-            "success": False
-        }))
-        sys.exit(1)
-    
-    audio_path = sys.argv[1]
-    
-    # Analyze audio
-    results = analyze_audio(audio_path)
-    
-    # Output as JSON
-    print(json.dumps(results, indent=2))
-    
-    # Exit with appropriate code
-    sys.exit(0 if results["success"] else 1)
+    """Main entry point - persistent worker mode"""
+    # Print a "ready" marker to indicate initialization is complete
+    print(json.dumps({"status": "ready"}))
+    sys.stdout.flush()
+
+    for line in sys.stdin:
+        path = line.strip()
+        if not path:
+            continue
+            
+        if path.lower() == "quit":
+            break
+            
+        # Analyze audio
+        results = analyze_audio(path)
+        
+        # Output as JSON on a single line
+        print(json.dumps(results))
+        sys.stdout.flush()
 
 
 if __name__ == "__main__":

@@ -1,0 +1,12 @@
+--- a/apps/scanner/Source/Main.cpp
++++ b/apps/scanner/Source/Main.cpp
+@@ -14,7 +14,8 @@ void scanPlugin(const juce::File& path)
+ {
+     juce::AudioPluginFormatManager formatManager;
+     
+-    formatManager.addDefaultFormats();
++    // JUCE 8.0.11: Use addHeadlessDefaultFormatsToManager() instead of deleted addDefaultFormats()
++    juce::addHeadlessDefaultFormatsToManager(formatManager);
+     
+     // Try each format until one accepts the plugin
+     for (auto* format : formatManager.getFormats())
