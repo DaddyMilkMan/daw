@@ -1,6 +1,7 @@
 #include "DrumPadComponent.h"
-#include "ZenithDesignSystem.h"
 #include "Engine.h"
+#include "../../engine/Track.h"
+#include "ZenithDesignSystem.h"
 #include <core/SkCanvas.h>
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
@@ -10,7 +11,8 @@
 
 using namespace zenith;
 
-//==============================================================================
+namespace zenith {
+
 //==============================================================================
 DrumPadComponent::DrumPadComponent(zenith::Engine &eng,
                                    zenith::ProjectState &state)
@@ -33,7 +35,7 @@ DrumPadComponent::DrumPadComponent(zenith::Engine &eng,
       pads[i].color = juce::Colour(design::colors::NEON_PURPLE); // Percs
   }
 
-  startTimerHz(60); // Animation loop at 60fps
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60); // Animation loop at 60fps
 }
 
 DrumPadComponent::~DrumPadComponent() {
@@ -175,9 +177,7 @@ void DrumPadComponent::drawSkia(SkCanvas *canvas) {
     // Dynamic color based on flash
     SkColor baseColor = pad.color.getARGB();
     if (pad.flashLevel > 0.0f) {
-      // Interpolate towards white
-      SkColor flashColor = SK_ColorWHITE;
-      // Simple manual lerp
+      // Interpolate towards white (lerp baseColor toward white by flashLevel)
       uint8_t r =
           static_cast<uint8_t>(SkColorGetR(baseColor) +
                                (255 - SkColorGetR(baseColor)) * pad.flashLevel);
@@ -296,33 +296,75 @@ void DrumPadComponent::hitPad(int index, float velocity) {
 
   // Animation
   pads[index].flashLevel = 1.0f;
-  repaint();
 
-  // Trigger Audio - Placeholder for future implementation
-  // Currently Engine does not expose direct note injection from UI.
-  // This will be connected when MIDI routing via EngineEvent is supported.
-  DBG("DrumPad hit: " + juce::String(index) +
-      " Velocity: " + juce::String(velocity));
+  // Calculate MIDI velocity (0-127) from 0.0-1.0 hit intensity
+  const int midiVelocity = juce::jlimit(0, 127, static_cast<int>(velocity * 127.0f));
+  const int noteNumber = pads[index].noteNumber;
+
+  // Audio Triggering: Find the associated track in the engine and inject MIDI
+  if (currentClipId.isNotEmpty()) {
+    auto [trackNode, clipNode] = projectState.findClip(currentClipId);
+    if (trackNode.isValid()) {
+      const juce::String trackId = trackNode[zenith::ProjectState::PROP_ID].toString();
+
+      // Look up the engine track by ID to find the active Track object
+      std::shared_ptr<zenith::Track> targetTrack;
+      for (const auto &t : engine.tracks()) {
+        if (t && t->getTrackId() == trackId) {
+          targetTrack = t;
+          break;
+        }
+      }
+
+      if (targetTrack) {
+        // Inject MIDI Note On event
+        targetTrack->injectLiveMidiMessage(
+            juce::MidiMessage::noteOn(1, noteNumber, (juce::uint8)midiVelocity));
+
+        // Schedule Note Off after 150ms for proper instrument envelope release
+        // Use weak_ptr to safely handle case where track is deleted before timer fires
+        std::weak_ptr<zenith::Track> weakTrack = targetTrack;
+        juce::Timer::callAfterDelay(150, [weakTrack, noteNumber]() {
+          if (auto track = weakTrack.lock()) {
+            track->injectLiveMidiMessage(
+                juce::MidiMessage::noteOff(1, noteNumber));
+          }
+        });
+      }
+    }
+  }
+
+  // Trigger preview callback if still needed for other UI feedback
+  if (notePreviewCallback) {
+    notePreviewCallback(noteNumber, midiVelocity, true);
+    // Capture callback by value to avoid dangling 'this' pointer
+    auto callback = notePreviewCallback;
+    juce::Timer::callAfterDelay(150, [callback, noteNumber]() {
+      if (callback)
+        callback(noteNumber, 0, false);
+    });
+  }
 
   // If we were recording, we would add the note to ProjectState here.
   if (engine.isRecording() && currentClipId.isNotEmpty()) {
     auto [track, clip] = projectState.findClip(currentClipId);
     if (!clip.isValid())
-        return;
+      return;
 
     double position = engine.getPlaybackPositionBeats();
-    double clipStart = static_cast<double>(clip.getProperty(zenith::ProjectState::PROP_START));
-    double clipLength = static_cast<double>(clip.getProperty(zenith::ProjectState::PROP_LENGTH));
-    double clipOffset = static_cast<double>(clip.getProperty(zenith::ProjectState::PROP_OFFSET));
+    double clipStart =
+        static_cast<double>(clip.getProperty(zenith::ProjectState::PROP_START));
+    double clipLength = static_cast<double>(
+        clip.getProperty(zenith::ProjectState::PROP_LENGTH));
+    double clipOffset = static_cast<double>(
+        clip.getProperty(zenith::ProjectState::PROP_OFFSET));
     // Fallback to a default length if clipLength is invalid or unset
     if (clipLength <= 0.001)
-        clipLength = 4.0; // Default to 4 beats (e.g., a bar)
+      clipLength = 4.0; // Default to 4 beats (e.g., a bar)
 
     // Calculate relative position with loop wrapping
-    // Calculate relative position with loop wrapping
-
     double relativeStart = position - clipStart + clipOffset;
-    
+
     // For a drum pad component, recording should always wrap within the clip's
     // length, regardless of the global transport's loop state.
     if (clipLength > 0.0) {
@@ -455,3 +497,4 @@ void DrumPadComponent::timerCallback() {
   updateAnimations();
 }
 
+} // namespace zenith

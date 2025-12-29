@@ -123,7 +123,7 @@ void SampleGenerator::generateMissingSamples() {
 void SampleGenerator::createWavFile(const juce::File &file, float freq,
                                     float durationSecs, bool isNoise) {
   juce::WavAudioFormat wavFormat;
-  std::unique_ptr<juce::FileOutputStream> outStream(file.createOutputStream());
+  std::unique_ptr<juce::OutputStream> outStream(file.createOutputStream());
   if (!outStream)
     return;
 

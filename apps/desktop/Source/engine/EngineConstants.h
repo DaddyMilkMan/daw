@@ -217,6 +217,11 @@ constexpr double kDefaultExportDuration = 10.0;
 /// Maximum plugin latency to compensate (in samples at 44.1kHz)
 constexpr int kMaxPDCLatencySamples = 44100; // ~1 second
 
+/// Maximum sample position (prevents integer overflow in sample calculations)
+/// ~24 hours at 192kHz = 192000 * 60 * 60 * 24 = 16,588,800,000
+/// We use a slightly lower value for safety margin
+constexpr int64_t kMaxSamplePosition = 16'000'000'000LL;
+
 //==============================================================================
 // Oversampling Constants
 //==============================================================================

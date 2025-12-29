@@ -1,0 +1,126 @@
+apps/desktop/Source/commands/INSTALL.vcxproj.filters:﻿<?xml version="1.0" encoding="utf-8"?>
+apps/desktop/Source/ai/AIMasteringAgent.cpp:═══════════════════════════════════════════════════════════════
+apps/desktop/Source/ai/AIMasteringAgent.cpp:─────────────────────────────────────────────────────────────
+apps/desktop/Source/ai/AIMasteringAgent.cpp:─────────────────────────────────────────────────────────────
+apps/desktop/Source/ai/AIMasteringAgent.cpp:═══════════════════════════════════════════════════════════════
+apps/desktop/Source/ai/AIMasteringAgent.cpp:─────────────────────────────────────────────────────────────
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("╔════════════════════════════════════════════════════════════╗");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("║            GROK AI MASTERING DECISION                      ║");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("╠════════════════════════════════════════════════════════════╣");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("║ EQ Settings:                                               ║");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("║   Low Shelf:  " + juce::String(decision.eq.lowShelfGain, 1) + " dB");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("║   Mid Cut:    " + juce::String(decision.eq.midCutGain, 1) + " dB");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("║   Presence:   " + juce::String(decision.eq.presenceGain, 1) + " dB");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("║   Air:        " + juce::String(decision.eq.airGain, 1) + " dB");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("║                                                            ║");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("║ Compression:                                               ║");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("║   Threshold:  " + juce::String(decision.compression.threshold, 1) + " dB");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("║   Ratio:      " + juce::String(decision.compression.ratio, 1) + ":1");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("║   Attack:     " + juce::String(decision.compression.attack, 0) + " ms");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("║   Release:    " + juce::String(decision.compression.release, 0) + " ms");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("║                                                            ║");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("║ Limiter:      " + juce::String(decision.limiterCeiling, 2) + " dB ceiling");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("╠════════════════════════════════════════════════════════════╣");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("║ AI Reasoning:                                              ║");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("║ " + decision.reasoning);
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("╚════════════════════════════════════════════════════════════╝");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("═══════════════════════════════════════════════════════════════");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("═══════════════════════════════════════════════════════════════");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("╔════════════════════════════════════════════════════════════╗");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("║          AI MASTERING ANALYSIS STARTING...                 ║");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("╚════════════════════════════════════════════════════════════╝");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("╔════════════════════════════════════════════════════════════╗");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("║          AI MASTERING ANALYSIS COMPLETE                    ║");
+apps/desktop/Source/ai/AIMasteringAgent.cpp:    DBG("╚════════════════════════════════════════════════════════════╝");
+apps/desktop/Source/ai/PresetGeneticistAgent.h:  float mutationStrength = 0.2f; // Max mutation deviation (±20%)
+apps/desktop/Source/ai/PresetGeneticistAgent.cpp:  // Check for clipping (samples at or near ±1.0)
+apps/desktop/Source/ai/INSTALL.vcxproj.filters:﻿<?xml version="1.0" encoding="utf-8"?>
+apps/desktop/Source/ai/ProjectRefactorerAgent.cpp:                               "• " +
+apps/desktop/Source/ai/ProjectRefactorerAgent.cpp:                               "• " +
+apps/desktop/Source/ai/ProjectRefactorerAgent.cpp:                               "• " +
+apps/desktop/Source/ai/ProjectRefactorerAgent.cpp:                               "• " +
+apps/desktop/Source/ai/ProjectRefactorerAgent.h:        lines.add("  • " + r.oldName + " → " + r.newName);
+apps/desktop/Source/ai/ProjectRefactorerAgent.h:        lines.add("  • " + g.name + " (" + juce::String(g.trackIds.size()) +
+apps/desktop/Source/ai/ProjectRefactorerAgent.h:        lines.add("  • " + c.reason + " (Moving to Quarantine)");
+apps/desktop/Source/ai/ProjectRefactorerAgent.h:    bool renameGenericTracks = true; // Rename "Audio 1" → "Kick"
+apps/desktop/Source/engine/MixerChannel.cpp:    Author:  Zenith DAW → Zenith DAW
+apps/desktop/Source/engine/ClipSynchronizer.cpp:  // This method implements Engine→ProjectState sync for recorded clips.
+apps/desktop/Source/engine/Engine.h:   * ⚠️ CRITICAL: This runs on the AUDIO THREAD!
+apps/desktop/Source/engine/Track.h:    Author:  Zenith DAW → Zenith DAW
+apps/desktop/Source/engine/Track.h:    - OwnedArray<Clip> → std::vector<std::unique_ptr<Clip>>
+apps/desktop/Source/engine/AudioFilePool.h:    // File cache: path → audio handle
+apps/desktop/Source/engine/Clip.cpp:    Author:  Zenith DAW → Zenith DAW
+apps/desktop/Source/engine/AuxBus.h: * - Reverb send (multiple tracks → reverb → master)
+apps/desktop/Source/engine/AuxBus.h: * - Delay send (drum tracks → delay → master)
+apps/desktop/Source/engine/AuxBus.h: * - Parallel compression (all tracks → compressor → master)
+apps/desktop/Source/engine/Clip.h:    Author:  Zenith DAW → Zenith DAW
+apps/desktop/Source/engine/ProjectEngineBridge.h:    - Explicit commit calls for Engine → ProjectState direction
+apps/desktop/Source/engine/ProjectEngineBridge.h:    // Explicit Commits (Engine → ProjectState)
+apps/desktop/Source/engine/EngineConstants.h:/// Constant power pan coefficient (π/4)
+apps/desktop/Source/engine/EngineConstants.h:constexpr float kConstantPowerPanCoeff = 0.7853981633974483f; // π/4
+apps/desktop/Source/engine/EngineConstants.h:  // Taylor series: e^x = 1 + x + x²/2! + x³/3! + x⁴/4! + x⁵/5! + ...
+apps/desktop/Source/engine/EngineConstants.h:  // ln(10) / 20 ≈ 0.115129254649702
+apps/desktop/Source/engine/INSTALL.vcxproj.filters:﻿<?xml version="1.0" encoding="utf-8"?>
+apps/desktop/Source/engine/TempoMap.h: * Provides beat↔time/sample conversions using a variable tempo map.
+apps/desktop/Source/engine/TempoMap.h: * This class provides beat↔time/sample conversions based on a variable tempo map.
+apps/desktop/Source/engine/MixerChannel.h_utf8:﻿/*
+apps/desktop/Source/engine/MixerChannel.h_utf8:    Author:  Zenith DAW ΓåÆ Zenith DAW
+apps/desktop/Source/engine/TrackAutomationSynchronizer.cpp:    // Phase 15: Use TempoMap for samples → beats conversion (handles variable tempo)
+apps/desktop/Source/engine/AudioFilePool.cpp:  // ⚠️ MESSAGE THREAD ONLY - Does file I/O!
+apps/desktop/Source/engine/ProjectEngineBridge.cpp:// Explicit Commits (Engine → ProjectState)
+apps/desktop/Source/engine/TrackStateSynchronizer.h: * Phase 11: Mixer → Engine Wiring
+apps/desktop/Source/rendering/SkiaRenderer.h: * - JUCE Component → Provides window handle and events
+apps/desktop/Source/rendering/SkiaRenderer.h: * - SkiaRenderer → Manages Skia context and surfaces
+apps/desktop/Source/rendering/SkiaRenderer.h: * - SkiaCanvas → High-level drawing API
+apps/desktop/Source/rendering/SkiaRenderer.h: * - Skia → GPU-accelerated graphics (Metal/D3D/Vulkan)
+apps/desktop/Source/rendering/INSTALL.vcxproj.filters:﻿<?xml version="1.0" encoding="utf-8"?>
+apps/desktop/Source/ui/sample-editor/SampleEditorComponent.cpp:      float gain = progress * progress; // x² curve
+apps/desktop/Source/ui/sample-editor/SampleEditorComponent.cpp:      float gain = (1.0f - progress) * (1.0f - progress); // inverse x² curve
+apps/desktop/Source/ui/common/MacroToolbar.cpp:  macros_.push_back({"Heal Splits", "Merge selected adjacent clips", "🧩",
+apps/desktop/Source/ui/common/MacroToolbar.cpp:  macros_.push_back({"Instant Freeze", "Bounce selected track to audio", "❄️",
+apps/desktop/Source/ui/common/MacroToolbar.cpp:                     "🎨",
+apps/desktop/Source/ui/common/AIAssistantPanel.cpp:  canvas->drawString("🤖 AI Assistant", 16.0f, 30.0f, titleFont, textPaint);
+apps/desktop/Source/ui/common/MainWindow.cpp:  aboutMessage << "• docs/README.md\n";
+apps/desktop/Source/ui/common/MainWindow.cpp:  aboutMessage << "• docs/INSTALL_WINDOWS.md";
+apps/desktop/Source/ui/common/WingmanPanel.cpp:  modeSelector->addItem("⚡ Fast (Quick responses)", 1);
+apps/desktop/Source/ui/common/WingmanPanel.cpp:  modeSelector->addItem("🧠 Thinking (Deep analysis)", 2);
+apps/desktop/Source/ui/common/WingmanPanel.cpp:  settingsButton->setButtonText("⚙");
+apps/desktop/Source/ui/common/WingmanPanel.cpp:                         "Grok API key not configured. Click ⚙ to set it up.");
+apps/desktop/Source/ui/common/RefactorPanel.h:          juce::String line = "  • " + rename.oldName + " → " + rename.newName;
+apps/desktop/Source/ui/common/RefactorPanel.h:    Click → Analyze → Review Plan → Execute
+apps/desktop/Source/ui/common/ZenithHubComponent.cpp:  drawText(canvas, "● Online", SkRect::MakeXYWH(profileBounds_.fLeft + 90, (profileBounds_.fTop + profileBounds_.height() * 0.5f) + 4, 100, 20), 
+apps/desktop/Source/ui/widgets/SkiaAlertWindow.cpp:      iconText = "❓";
+apps/desktop/Source/ui/widgets/SkiaAlertWindow.cpp:      iconText = "⚠️";
+apps/desktop/Source/ui/widgets/SkiaAlertWindow.cpp:      iconText = "ℹ️";
+apps/desktop/Source/ui/widgets/SkiaFileChooser.cpp:  upButton_->setText("↑");
+apps/desktop/Source/ui/widgets/SkiaFileChooser.cpp:  const char *icon = isDirectory ? "📁" : "📄";
+apps/desktop/Source/ui/widgets/CollabPanel.h:    canvas->drawString("P2P • UDP Hole Punching • Global", 20.0f, 52.0f,
+apps/desktop/Source/ui/mixer/MixerChannelComponent.h: * - Peak meter with gradient (green→yellow→red)
+apps/desktop/Source/ui/INSTALL.vcxproj.filters:﻿<?xml version="1.0" encoding="utf-8"?>
+apps/desktop/Source/ui/arranger/ArrangerView.h: * 3. User double-clicks MIDI clip → calls openPianoRoll callback
+apps/desktop/Source/ui/arranger/ArrangerView.h: * 4. User toggles "Show Automation" → displays AutomationLaneComponent
+apps/desktop/Source/ui/arranger/ArrangerView.h: * 5. User edits clips → updates ProjectState (triggers ClipSynchronizer)
+apps/desktop/Source/ui/arranger/AutomationLaneComponent.cpp:          // Quadratic bezier: B(t) = (1-t)²P0 + 2(1-t)tP1 + t²P2
+apps/desktop/Source/ui/arranger/TrackHeaderComponent.h: * ┌─┬──────────────────────┬───┬───┬───┐
+apps/desktop/Source/ui/arranger/TrackHeaderComponent.h: * │C│ Track Name           │ M │ S │ R │
+apps/desktop/Source/ui/arranger/TrackHeaderComponent.h: * └─┴──────────────────────┴───┴───┴───┘
+apps/desktop/Source/ui/piano-roll/PianoRollComponent.h: * ✅ Core Editing: Create, move, delete, resize notes
+apps/desktop/Source/ui/piano-roll/PianoRollComponent.h: * ✅ Multi-Selection: Ctrl-click, marquee, batch operations
+apps/desktop/Source/ui/piano-roll/PianoRollComponent.h: * ✅ Velocity Editing: Lane + gradient visualization
+apps/desktop/Source/ui/piano-roll/PianoRollComponent.h: * ✅ Copy/Paste: Full clipboard support
+apps/desktop/Source/ui/piano-roll/PianoRollComponent.h: * ✅ Quantize: With strength & swing
+apps/desktop/Source/ui/piano-roll/PianoRollComponent.h: * ✅ Smart Duplicate: Pattern-aware duplication
+apps/desktop/Source/ui/piano-roll/PianoRollComponent.h: * ✅ Velocity Curves: Ramp, compress, humanize
+apps/desktop/Source/ui/piano-roll/PianoRollComponent.h: * ✅ Chord Detection: Real-time chord naming
+apps/desktop/Source/ui/piano-roll/PianoRollComponent.h: * ✅ Scale Highlighting: Visual scale guide
+apps/desktop/Source/ui/piano-roll/PianoRollComponent.h: * ✅ Note Muting: Per-note mute toggle
+apps/desktop/Source/ui/piano-roll/PianoRollComponent.h: * ✅ Batched Undo: Proper multi-operation undo/redo
+apps/desktop/Source/ui/piano-roll/PianoRollComponent.h: * ✅ Cursor Feedback: Context-aware cursors
+apps/desktop/Source/ui/piano-roll/PianoRollComponent.h: * ✅ Note Color by Velocity: Visual dynamics
+apps/desktop/Source/ui/piano-roll/PianoRollComponent.cpp:  // O(n²) collision detection - acceptable for typical note counts
+apps/desktop/Source/instruments/ZenithPolySynthVoice.h:  int pitchBendRange_ = 2;     // Semitones (standard is ±2)
+apps/desktop/Source/instruments/INSTALL.vcxproj.filters:﻿<?xml version="1.0" encoding="utf-8"?>
+apps/desktop/Source/network/INSTALL.vcxproj.filters:﻿<?xml version="1.0" encoding="utf-8"?>
+apps/desktop/Source/dsp/SIMDHelpers.h:            // tanh(x) ≈ x / (1 + abs(x))^0.5 for |x| < 3
+apps/desktop/Source/dsp/INSTALL.vcxproj.filters:﻿<?xml version="1.0" encoding="utf-8"?>
+apps/desktop/Source/browser/INSTALL.vcxproj.filters:﻿<?xml version="1.0" encoding="utf-8"?>

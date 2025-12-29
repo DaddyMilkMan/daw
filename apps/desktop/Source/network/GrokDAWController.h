@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "GrokAPIClient.h"
+#include "GrokDAWClient.h"
 #include "AudioAnalysisService.h"
 #include "../commands/CommandAPI.h"
 #include <juce_core/juce_core.h>
@@ -30,8 +30,9 @@ namespace zenith {
     - Converts natural language to DAW commands
     - Provides DAW context to Grok
     - Handles function calling workflow
-    - Manages preset generation
+    - Manage preset generation
 */
+
 class GrokDAWController
 {
 public:

@@ -6,6 +6,7 @@
 #include <juce_core/juce_core.h>
 #include <memory>
 #include <vector>
+#include "PluginChain.h"
 
 
 namespace zenith {
@@ -82,8 +83,8 @@ private:
   juce::AudioBuffer<float> inputBuffer_;
 
   // Plugin chain (effect processors)
-  std::vector<std::unique_ptr<juce::AudioPluginInstance>> plugins_;
-  juce::CriticalSection pluginLock_;
+  PluginChain pluginChain;
+  // pluginLock_ is handled inside PluginChain
 
   // Processing state
   double currentSampleRate_ = 44100.0;

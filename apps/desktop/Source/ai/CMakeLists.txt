@@ -6,7 +6,7 @@ target_sources(ZenithDAW PRIVATE
     AIEventBus.h
     AIEventBus.cpp
     AIResponseCache.h
-    AIResponseCache.cpp
+    # AIResponseCache.cpp
     GrokAPIClient.h
 
     # Style & UI
@@ -30,4 +30,6 @@ target_sources(ZenithDAW PRIVATE
     SampleHunterAgent.cpp
     PresetGeneticistAgent.h
     PresetGeneticistAgent.cpp
+    PresetSuggestionService.h
+    PresetSuggestionService.cpp
 )

@@ -1,127 +1,164 @@
 #include "PresetBrowserComponent.h"
 
 PresetBrowserComponent::PresetBrowserComponent() {
-    addAndMakeVisible(presetList);
-    presetList.setModel(this);
-    presetList.setColour(juce::ListBox::backgroundColourId, juce::Colour(0xff1e1e1e));
-    presetList.setRowHeight(30);
+  addAndMakeVisible(presetList);
+  presetList.setModel(this);
+  // presetList.setColour(juce::ListBox::backgroundColourId,
+  // juce::Colour(0xff1e1e1e)); // SkiaListBox uses setColour via SkColor?
+  // Checking header it has setColour(SkColor)
+  presetList.setRowHeight(30);
 
-    addAndMakeVisible(loadButton);
-    addAndMakeVisible(saveButton);
-    addAndMakeVisible(deleteButton);
-    addAndMakeVisible(refreshButton);
+  addAndMakeVisible(loadButton);
+  addAndMakeVisible(saveButton);
+  addAndMakeVisible(deleteButton);
+  addAndMakeVisible(refreshButton);
 
-    loadButton.onClick = [this] { loadSelectedPreset(); };
-    saveButton.onClick = [this] { saveCurrentPreset(); };
-    deleteButton.onClick = [this] { deleteSelectedPreset(); };
-    refreshButton.onClick = [this] { refreshPresets(); };
+  loadButton.onClick = [this] { loadSelectedPreset(); };
+  saveButton.onClick = [this] { saveCurrentPreset(); };
+  deleteButton.onClick = [this] { deleteSelectedPreset(); };
+  refreshButton.onClick = [this] { refreshPresets(); };
 
-    // Initial refresh
-    // Note: In a real app, we might want to delay this or do it async
-    // refreshPresets(); 
+  // Initial refresh
+  // Note: In a real app, we might want to delay this or do it async
+  // refreshPresets();
 }
 
 PresetBrowserComponent::~PresetBrowserComponent() {}
 
-void PresetBrowserComponent::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colour(0xff2a2a2a)); // Dark background
-    
-    // Draw a border
-    g.setColour(juce::Colours::black);
-    g.drawRect(getLocalBounds(), 1);
+void PresetBrowserComponent::paint(juce::Graphics &g) {
+  g.fillAll(juce::Colour(0xff2a2a2a)); // Dark background
+
+  // Draw a border
+  g.setColour(juce::Colours::black);
+  g.drawRect(getLocalBounds(), 1);
 }
 
 void PresetBrowserComponent::resized() {
-    auto area = getLocalBounds().reduced(10);
-    auto buttonArea = area.removeFromBottom(40);
-    
-    int buttonWidth = buttonArea.getWidth() / 4;
-    loadButton.setBounds(buttonArea.removeFromLeft(buttonWidth).reduced(2));
-    saveButton.setBounds(buttonArea.removeFromLeft(buttonWidth).reduced(2));
-    deleteButton.setBounds(buttonArea.removeFromLeft(buttonWidth).reduced(2));
-    refreshButton.setBounds(buttonArea.removeFromLeft(buttonWidth).reduced(2));
-    
-    area.removeFromBottom(10);
-    presetList.setBounds(area);
+  auto area = getLocalBounds().reduced(10);
+  auto buttonArea = area.removeFromBottom(40);
+
+  int buttonWidth = buttonArea.getWidth() / 4;
+  loadButton.setBounds(buttonArea.removeFromLeft(buttonWidth).reduced(2));
+  saveButton.setBounds(buttonArea.removeFromLeft(buttonWidth).reduced(2));
+  deleteButton.setBounds(buttonArea.removeFromLeft(buttonWidth).reduced(2));
+  refreshButton.setBounds(buttonArea.removeFromLeft(buttonWidth).reduced(2));
+
+  area.removeFromBottom(10);
+  presetList.setBounds(area);
 }
 
 int PresetBrowserComponent::getNumRows() {
-    return static_cast<int>(presets.size());
+  return static_cast<int>(presets.size());
 }
 
-void PresetBrowserComponent::paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) {
-    if (rowNumber >= static_cast<int>(presets.size())) return;
+void PresetBrowserComponent::paintListBoxItem(int rowNumber, SkCanvas &canvas,
+                                              int width, int height,
+                                              bool rowIsSelected) {
+  if (rowNumber >= static_cast<int>(presets.size()))
+    return;
 
-    if (rowIsSelected) {
-        g.fillAll(juce::Colours::cyan.withAlpha(0.2f));
-    }
+  SkPaint paint;
+  if (rowIsSelected) {
+    paint.setColor(SkColorSetARGB(51, 0, 255, 255)); // Cyan with alpha ~0.2
+  } else {
+    paint.setColor(SK_ColorTRANSPARENT);
+  }
+  canvas.drawRect(SkRect::MakeWH(width, height), paint);
 
-    g.setColour(juce::Colours::white);
-    g.setFont(14.0f);
-    g.drawText(presets[rowNumber].name, 5, 0, width - 10, height, juce::Justification::centredLeft, true);
-    
-    g.setColour(juce::Colours::grey);
-    g.setFont(12.0f);
-    g.drawText(presets[rowNumber].category, width - 100, 0, 90, height, juce::Justification::centredRight, true);
+  // Text Name
+  SkFont font;
+  font.setSize(14.0f);
+  paint.setColor(SK_ColorWHITE);
+
+  // Simple draw text (Skia doesn't have easy justification helper without
+  // custom logic or SkParagraph/TextBlob, using simple x,y) Centered Left
+  // usually means x=5, y=baseline (approx height/2 + size/2)
+  canvas.drawString(presets[rowNumber].name.getCharPointer(), 5, height / 2 + 5,
+                    font, paint);
+
+  // Category
+  font.setSize(12.0f);
+  paint.setColor(SkColorSetRGB(128, 128, 128));
+  // Right align approx
+  float catWidth = font.measureText(
+      presets[rowNumber].category.getCharPointer(),
+      presets[rowNumber].category.length(), SkTextEncoding::kUTF8);
+  canvas.drawString(presets[rowNumber].category.getCharPointer(),
+                    width - catWidth - 10, height / 2 + 5, font, paint);
 }
 
-void PresetBrowserComponent::selectedRowsChanged(int lastRowSelected) {
-    // Optional: preview?
-}
+// void PresetBrowserComponent::selectedRowsChanged(int lastRowSelected) {} //
+// Removed as SkiaListBox doesn't use this override
 
-void PresetBrowserComponent::listBoxItemClicked(int row, const juce::MouseEvent& e) {
-    if (e.getNumberOfClicks() == 2) {
-        loadSelectedPreset();
-    }
+void PresetBrowserComponent::listBoxItemClicked(int row,
+                                                const juce::MouseEvent &e) {
+  if (e.getNumberOfClicks() == 2) {
+    loadSelectedPreset();
+  }
 }
 
 void PresetBrowserComponent::refreshPresets() {
-    presets = zenith::ZenithPresetManager::getInstance().getPresetList(currentInstrumentId);
-    presetList.updateContent();
-    repaint();
+  presets = zenith::ZenithPresetManager::getInstance().getPresetList(
+      currentInstrumentId);
+  presetList.updateContent();
+  repaint();
 }
 
-void PresetBrowserComponent::setInstrumentId(const juce::String& instrumentId) {
-    currentInstrumentId = instrumentId;
-    refreshPresets();
+void PresetBrowserComponent::setInstrumentId(const juce::String &instrumentId) {
+  currentInstrumentId = instrumentId;
+  refreshPresets();
 }
 
 void PresetBrowserComponent::loadSelectedPreset() {
-    int row = presetList.getSelectedRow();
-    if (row >= 0 && row < static_cast<int>(presets.size())) {
-        auto preset = zenith::ZenithPresetManager::getInstance().loadPreset(currentInstrumentId, presets[row].id);
-        if (loadCallback) {
-            loadCallback(preset);
-        }
-        DBG("Loaded preset: " + preset.name);
+  int row = presetList.getSelectedRow();
+  if (row >= 0 && row < static_cast<int>(presets.size())) {
+    auto preset = zenith::ZenithPresetManager::getInstance().loadPreset(
+        currentInstrumentId, presets[row].id);
+    if (loadCallback) {
+      loadCallback(preset);
     }
+    DBG("Loaded preset: " + preset.name);
+  }
 }
 
 void PresetBrowserComponent::saveCurrentPreset() {
-    if (captureCallback) {
-        auto preset = captureCallback();
-        
-        // Create dialog for text input
-        auto* window = new juce::AlertWindow("Save Preset", "Enter a name for your preset:", juce::AlertWindow::QuestionIcon, this);
-        window->addTextEditor("presetName", preset.name, "Preset Name:");
-        window->addButton("Save", 1, juce::KeyPress(juce::KeyPress::returnKey, 0, 0));
-        window->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey, 0, 0));
-        
-        window->enterModalState(true, juce::ModalCallbackFunction::create([this, window, preset](int result) mutable {
-            if (result == 1) {
-                preset.name = window->getTextEditorContents("presetName");
-                zenith::ZenithPresetManager::getInstance().savePreset(preset, true);
-                refreshPresets();
-            }
-            delete window;
+  if (captureCallback) {
+    auto preset = captureCallback();
+
+    // TODO: Replace with ZenithDialog (Skia-based)
+    // auto *window = new juce::AlertWindow(...);
+    // For now, just log that save is not implemented in UI
+    DBG("Save Preset requested (Dialog TODO)");
+
+    /*
+    auto *window = new juce::AlertWindow(
+        "Save Preset",
+        "Enter a name for your preset:", juce::AlertWindow::QuestionIcon, this);
+    window->addTextEditor("presetName", preset.name, "Preset Name:");
+    window->addButton("Save", 1,
+                      juce::KeyPress(juce::KeyPress::returnKey, 0, 0));
+    window->addButton("Cancel", 0,
+                      juce::KeyPress(juce::KeyPress::escapeKey, 0, 0));
+
+    window->enterModalState(
+        true, juce::ModalCallbackFunction::create([this, window,
+                                                   preset](int result) mutable {
+          if (result == 1) {
+            preset.name = window->getTextEditorContents("presetName");
+            zenith::ZenithPresetManager::getInstance().savePreset(preset, true);
+            refreshPresets();
+          }
+          delete window;
         }));
-    }
+    */
+  }
 }
 
 void PresetBrowserComponent::deleteSelectedPreset() {
-    int row = presetList.getSelectedRow();
-    if (row >= 0 && row < static_cast<int>(presets.size())) {
-        zenith::ZenithPresetManager::getInstance().deletePreset(currentInstrumentId, presets[row].id, true); // User preset
-        refreshPresets();
-    }
+  int row = presetList.getSelectedRow();
+  if (row >= 0 && row < static_cast<int>(presets.size())) {
+    zenith::ZenithPresetManager::getInstance().deletePreset(
+        currentInstrumentId, presets[row].id, true); // User preset
+    refreshPresets();
+  }
 }

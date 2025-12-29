@@ -132,13 +132,13 @@ ZenithStyleApplicator::styleButton(juce::Button *button) {
 
   // Set Zenith design system colors
   button->setColour(juce::TextButton::buttonColourId,
-                    juce::Colour(design::colors::SURFACE_ELEVATED));
+                    juce::Colour(design::colors::BG_DARK));
   button->setColour(juce::TextButton::buttonOnColourId,
                     juce::Colour(design::colors::NEON_GREEN));
   button->setColour(juce::TextButton::textColourOffId,
                     juce::Colour(design::colors::TEXT_PRIMARY));
   button->setColour(juce::TextButton::textColourOnId,
-                    juce::Colour(design::colors::SURFACE_BASE));
+                    juce::Colour(design::colors::BG_DARKER));
 
   button->repaint();
 
@@ -155,7 +155,7 @@ ZenithStyleApplicator::styleSlider(juce::Slider *slider) {
 
   // Set Zenith design system colors
   slider->setColour(juce::Slider::backgroundColourId,
-                    juce::Colour(design::colors::SURFACE_BASE));
+                    juce::Colour(design::colors::BG_DARKER));
   slider->setColour(juce::Slider::trackColourId,
                     juce::Colour(design::colors::NEON_GREEN));
   slider->setColour(juce::Slider::thumbColourId,
@@ -176,7 +176,7 @@ ZenithStyleApplicator::styleTextEditor(juce::TextEditor *editor) {
 
   // Set Zenith design system colors
   editor->setColour(juce::TextEditor::backgroundColourId,
-                    juce::Colour(design::colors::SURFACE_BASE));
+                    juce::Colour(design::colors::BG_DARKER));
   editor->setColour(juce::TextEditor::textColourId,
                     juce::Colour(design::colors::TEXT_PRIMARY));
   editor->setColour(juce::TextEditor::highlightColourId,
@@ -200,7 +200,7 @@ ZenithStyleApplicator::styleComboBox(juce::ComboBox *comboBox) {
   comboBox->setLookAndFeel(&getGlobalZenithLAF());
 
   comboBox->setColour(juce::ComboBox::backgroundColourId,
-                      juce::Colour(design::colors::SURFACE_ELEVATED));
+                      juce::Colour(design::colors::BG_DARK));
   comboBox->setColour(juce::ComboBox::textColourId,
                       juce::Colour(design::colors::TEXT_PRIMARY));
   comboBox->setColour(juce::ComboBox::outlineColourId,

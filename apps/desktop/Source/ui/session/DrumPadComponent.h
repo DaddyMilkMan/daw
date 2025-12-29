@@ -1,15 +1,15 @@
 #pragma once
 
-#include "SkiaComponent.h"
-#include "ProjectState.h"
+#include "../../engine/ProjectState.h"
+#include "../framework/SkiaComponent.h"
 #include <juce_core/juce_core.h>
 #include <juce_events/juce_events.h>
 #include <map>
 #include <vector>
 
 namespace zenith {
+
 class Engine;
-}
 
 //==============================================================================
 /**
@@ -73,6 +73,11 @@ public:
   // External trigger (e.g. from MIDI input or playback)
   void triggerPad(int noteNumber, float velocity);
 
+  // Callback for audio engine to trigger note preview
+  void setNotePreviewCallback(std::function<void(int, int, bool)> callback) {
+    notePreviewCallback = callback;
+  }
+
 private:
   //==============================================================================
   zenith::Engine &engine;
@@ -100,9 +105,13 @@ private:
   std::pair<int, int>
   getSequencerStepAt(float x, float y) const; // returns {padIndex, stepIndex}
 
+  std::function<void(int pitch, int velocity, bool noteOn)> notePreviewCallback;
+
   // Animation
   void updateAnimations();
   void timerCallback() override;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrumPadComponent)
 };
+
+} // namespace zenith

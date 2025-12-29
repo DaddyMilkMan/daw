@@ -29,7 +29,7 @@ AIAssistantPanel::AIAssistantPanel() {
   ai::AIStatusManager::getInstance().addListener(this);
 
   // Start animation timer
-  startTimer(50); // 20 FPS for pulse animation
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(50); // 20 FPS for pulse animation
 }
 
 AIAssistantPanel::~AIAssistantPanel() {
@@ -82,11 +82,22 @@ void AIAssistantPanel::drawSkia(SkCanvas *canvas) {
   drawActionButtons(canvas, yOffset);
   drawStats(canvas, yOffset);
 
-  // Update pulse animation
+  // Update pulse animation moved to timerCallback for consistency
+  // pulsePhase_ += 0.1f;
+  // if (pulsePhase_ > 6.28f)
+  //   pulsePhase_ -= 6.28f;
+}
+
+void AIAssistantPanel::timerCallback() {
   pulsePhase_ += 0.1f;
   if (pulsePhase_ > 6.28f)
     pulsePhase_ -= 6.28f;
+
+  if (!activeOps_.empty()) {
+    markDirty();
+  }
 }
+
 
 void AIAssistantPanel::drawHeader(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
@@ -98,7 +109,7 @@ void AIAssistantPanel::drawHeader(SkCanvas *canvas) {
 
   SkFont titleFont =
       design::typography::getSkFont(16.0f, design::FontWeight::SemiBold);
-  canvas->drawString("🤖 AI Assistant", 16.0f, 30.0f, titleFont, textPaint);
+  canvas->drawString("[AI] Assistant", 16.0f, 30.0f, titleFont, textPaint);
 
   // Status indicator
   float indicatorX = bounds.getWidth() - 30.0f;
@@ -225,10 +236,10 @@ void AIAssistantPanel::drawRecentOperations(SkCanvas *canvas, float &yOffset) {
     }
 
     juce::String statusIcon =
-        op.status == ai::AIOperationStatus::Success   ? "✓ "
-        : op.status == ai::AIOperationStatus::Warning ? "⚠ "
-        : op.status == ai::AIOperationStatus::Error   ? "✗ "
-                                                      : "○ ";
+        op.status == ai::AIOperationStatus::Success   ? "[OK] "
+        : op.status == ai::AIOperationStatus::Warning ? "[!] "
+        : op.status == ai::AIOperationStatus::Error   ? "[X] "
+                                                      : "[ ] ";
 
     juce::String displayText = statusIcon + op.agentName;
     canvas->drawString(displayText.toStdString().c_str(), 16.0f,

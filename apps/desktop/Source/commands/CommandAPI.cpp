@@ -11,22 +11,23 @@
 */
 
 #include "CommandAPI.h"
-#include "Engine.h"
-#include "ProjectState.h"
-#include "TempoMap.h"
 #include "../engine/AuxBus.h"
 #include "../engine/Clip.h"
 #include "../engine/PluginHost.h"
 #include "../engine/Track.h"
 #include "../instruments/InstrumentRegistry.h"
-#include "SkiaComponent.h"
 #include "ClipCommands.h"
 #include "CommandUtils.h"
+#include "Engine.h"
+#include "ProjectState.h"
 #include "SessionGraph.h"
+#include "SkiaComponent.h"
+#include "TempoMap.h"
 #include "TrackCommands.h"
 #include "TransportCommands.h"
+#include <memory>
 
-#include "../ai/AIMasteringAgent.h"
+// #include "../ai/AIMasteringAgent.h"
 #include "../ai/PresetGeneticistAgent.h"
 #include "../ai/UXDirectorAgent.h"
 #include "../dsp/ONNXStemSeparator.h"
@@ -38,7 +39,7 @@ CommandAPI::CommandAPI(ProjectState &state, Engine &eng)
     : projectState(state), engine(eng) {
   trackCommands = std::make_unique<TrackCommands>(engine, projectState);
   clipCommands = std::make_unique<ClipCommands>(engine, projectState);
-  transportCommands = std::make_unique<TransportCommands>(engine, projectState);
+  transportCommands = std::make_unique<TransportCommands>(engine, projectState, *this);
 
   DBG("CommandAPI: Initialized");
   initializeCommandMap();
@@ -54,6 +55,8 @@ void CommandAPI::initializeCommandMap() {
   commandMap["export_audio"] = CommandID::ExportAudio;
   commandMap["export_project_advanced"] = CommandID::ExportProjectAdvanced;
   commandMap["separate_track"] = CommandID::SeparateTrack;
+  commandMap["freeze_track"] = CommandID::FreezeTrack;
+  commandMap["unfreeze_track"] = CommandID::UnfreezeTrack;
 
   commandMap["list_clips"] = CommandID::ListClips;
   commandMap["create_clip"] =
@@ -165,6 +168,15 @@ void CommandAPI::initializeCommandMap() {
   registerCommand("set_track_pan", [this](const juce::var &p) {
     return trackCommands->setTrackPan(p);
   });
+  registerCommand("separate_track", [this](const juce::var &p) {
+    return trackCommands->separateTrack(p);
+  });
+  registerCommand("freeze_track", [this](const juce::var &p) {
+    return trackCommands->freezeTrack(p);
+  });
+  registerCommand("unfreeze_track", [this](const juce::var &p) {
+    return trackCommands->unfreezeTrack(p);
+  });
 
   registerCommand("export_audio",
                   [this](const juce::var &p) { return exportAudio(p); });
@@ -264,9 +276,8 @@ void CommandAPI::initializeCommandMap() {
                   [this](const juce::var &p) { return startEvolution(p); });
   registerCommand("stop_evolution",
                   [this](const juce::var &p) { return stopEvolution(p); });
-  registerCommand("get_evolution_stats", [this](const juce::var &p) {
-    return getEvolutionStats(p);
-  });
+  registerCommand("get_evolution_stats",
+                  [this](const juce::var &p) { return getEvolutionStats(p); });
   registerCommand("set_note_velocity",
                   [this](const juce::var &p) { return setNoteVelocity(p); });
   registerCommand("set_note_length",
@@ -318,6 +329,14 @@ void CommandAPI::registerCommand(const juce::String &commandName,
 CommandAPI::~CommandAPI() {}
 
 //==============================================================================
+bool CommandAPI::performAction(std::unique_ptr<juce::UndoableAction> action) {
+  if (action) {
+    return projectState.getUndoManager().perform(action.get());
+  }
+  return false;
+}
+
+//==============================================================================
 juce::var CommandAPI::executeCommand(const juce::var &request) {
   // Validate request structure
   if (!request.isObject())
@@ -337,7 +356,8 @@ juce::var CommandAPI::executeCommand(const juce::var &request) {
     return commandHandlers[commandStr](params);
   }
 
-  return createErrorResponse("Unknown command or handler not registered: " + commandStr);
+  return createErrorResponse("Unknown command or handler not registered: " +
+                             commandStr);
 }
 
 juce::String CommandAPI::executeCommandString(const juce::String &jsonRequest) {
@@ -383,7 +403,7 @@ juce::var CommandAPI::executeBatch(const juce::Array<juce::var> &commands,
       errorObj->setProperty("failedCommand", cmdVar);
       errorObj->setProperty("successCount", successCount);
 
-      return juce::var(errorObj);
+      return juce::var(static_cast<juce::ReferenceCountedObject *>(errorObj));
     }
 
     if (!cmdVar.hasProperty("command")) {
@@ -395,7 +415,7 @@ juce::var CommandAPI::executeBatch(const juce::Array<juce::var> &commands,
       errorObj->setProperty("failedCommand", cmdVar);
       errorObj->setProperty("successCount", successCount);
 
-      return juce::var(errorObj);
+      return juce::var(static_cast<juce::ReferenceCountedObject *>(errorObj));
     }
 
     // Execute command
@@ -421,7 +441,7 @@ juce::var CommandAPI::executeBatch(const juce::Array<juce::var> &commands,
       DBG("CommandAPI: Batch failed at command " + juce::String(i) + ": " +
           error);
 
-      return juce::var(errorObj);
+      return juce::var(static_cast<juce::ReferenceCountedObject *>(errorObj));
     }
 
     successCount++;
@@ -434,7 +454,8 @@ juce::var CommandAPI::executeBatch(const juce::Array<juce::var> &commands,
   DBG("CommandAPI: Batch completed successfully (" +
       juce::String(successCount) + " commands)");
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 //==============================================================================
@@ -480,7 +501,8 @@ juce::var CommandAPI::exportAudio(const juce::var &params) {
 
   DBG("CommandAPI: Exported audio to " + outputPath);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::getSessionGraph(const juce::var &params) {
@@ -548,34 +570,60 @@ juce::var CommandAPI::undo(const juce::var &params) {
 
   auto *resultObj = new juce::DynamicObject();
   resultObj->setProperty("undone", true);
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
+}
+
+juce::var CommandAPI::getUIHealth(const juce::var &params) {
+  juce::ignoreUnused(params);
+
+  if (uxDirector_) {
+    auto *resultObj = new juce::DynamicObject();
+    resultObj->setProperty("healthScore", uxDirector_->getUIHealthScore());
+    resultObj->setProperty("summary", uxDirector_->getIssueSummary());
+
+    // Add breakdown
+    auto breakdown = uxDirector_->getHealthBreakdown();
+    auto *breakdownObj = new juce::DynamicObject();
+    breakdownObj->setProperty("styleConsistency", breakdown.styleConsistency);
+    breakdownObj->setProperty("dataBindingHealth", breakdown.dataBindingHealth);
+    breakdownObj->setProperty("layoutHealth", breakdown.layoutHealth);
+    breakdownObj->setProperty("dataFreshness", breakdown.dataFreshness);
+    resultObj->setProperty("breakdown", juce::var(breakdownObj));
+
+    return createSuccessResponse(
+        juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
+  }
+
+  return createErrorResponse("Visual Intelligence Agent not active");
 }
 
 juce::var CommandAPI::getUIState(const juce::var &params) {
   juce::ignoreUnused(params);
-  
+
   auto *resultObj = new juce::DynamicObject();
-  
+
   if (uxDirector_) {
     resultObj->setProperty("healthScore", uxDirector_->getUIHealthScore());
     resultObj->setProperty("summary", uxDirector_->getIssueSummary());
-    
+
     juce::var issuesArray;
     for (const auto &issue : uxDirector_->getIssues()) {
-        if (!issue.isFixed) {
-            auto *issueObj = new juce::DynamicObject();
-            issueObj->setProperty("type", (int)issue.type);
-            issueObj->setProperty("severity", (int)issue.severity);
-            issueObj->setProperty("description", issue.description);
-            issueObj->setProperty("componentName", issue.componentName);
-            issueObj->setProperty("componentType", issue.componentType);
-            issueObj->setProperty("suggestedFix", issue.suggestedFix);
-            issuesArray.append(juce::var(issueObj));
-        }
+      if (!issue.isFixed) {
+        auto *issueObj = new juce::DynamicObject();
+        issueObj->setProperty("type", (int)issue.type);
+        issueObj->setProperty("severity", (int)issue.severity);
+        issueObj->setProperty("description", issue.description);
+        issueObj->setProperty("componentName", issue.componentName);
+        issueObj->setProperty("componentType", issue.componentType);
+        issueObj->setProperty("suggestedFix", issue.suggestedFix);
+        issuesArray.append(juce::var(issueObj));
+      }
     }
     resultObj->setProperty("unresolvedIssues", issuesArray);
-    resultObj->setProperty("issueCount", uxDirector_->getUnresolvedIssueCount());
-    
+    resultObj->setProperty("issueCount",
+                           uxDirector_->getUnresolvedIssueCount());
+
     // Add health breakdown
     auto breakdown = uxDirector_->getHealthBreakdown();
     auto *breakdownObj = new juce::DynamicObject();
@@ -588,7 +636,8 @@ juce::var CommandAPI::getUIState(const juce::var &params) {
     resultObj->setProperty("error", "UXDirectorAgent not available");
   }
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::redo(const juce::var &params) {
@@ -609,7 +658,8 @@ juce::var CommandAPI::redo(const juce::var &params) {
 
   DBG("CommandAPI: History query");
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::history(const juce::var &params) {
@@ -635,7 +685,8 @@ juce::var CommandAPI::history(const juce::var &params) {
   resultObj->setProperty("undoStack", undoStack);
   resultObj->setProperty("redoStack", redoStack);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::describeInstrument(const juce::var &params) {
@@ -694,7 +745,8 @@ juce::var CommandAPI::listPlugins(const juce::var &params) {
   resultObj->setProperty("plugins", pluginsArray);
   resultObj->setProperty("count", knownPlugins.getNumTypes());
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::searchPlugins(const juce::var &params) {
@@ -709,11 +761,11 @@ juce::var CommandAPI::searchPlugins(const juce::var &params) {
 
   for (int i = 0; i < knownPlugins.getNumTypes(); ++i) {
     auto desc = knownPlugins.getTypes()[i];
-    
+
     bool match = desc.name.toLowerCase().contains(query) ||
                  desc.manufacturerName.toLowerCase().contains(query) ||
                  desc.category.toLowerCase().contains(query);
-                 
+
     if (match) {
       auto *pluginObj = new juce::DynamicObject();
       pluginObj->setProperty("id", juce::var(desc.createIdentifierString()));
@@ -729,7 +781,8 @@ juce::var CommandAPI::searchPlugins(const juce::var &params) {
   resultObj->setProperty("results", resultsArray);
   resultObj->setProperty("count", resultsArray.size());
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::addPlugin(const juce::var &params) {
@@ -764,7 +817,8 @@ juce::var CommandAPI::addPlugin(const juce::var &params) {
 
   DBG("CommandAPI: Added plugin " + pluginName + " to " + trackId);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::removePlugin(const juce::var &params) {
@@ -793,7 +847,8 @@ juce::var CommandAPI::removePlugin(const juce::var &params) {
   DBG("CommandAPI: Removed plugin " + juce::String(pluginIndex) + " from " +
       trackId);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::setPluginParam(const juce::var &params) {
@@ -842,7 +897,8 @@ juce::var CommandAPI::setPluginParam(const juce::var &params) {
       resultObj->setProperty("value", value);
       resultObj->setProperty("success", true);
       resultObj->setProperty("mode", "realtime");
-      return createSuccessResponse(juce::var(resultObj));
+      return createSuccessResponse(
+          juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
     }
   }
 
@@ -869,7 +925,8 @@ juce::var CommandAPI::setPluginParam(const juce::var &params) {
   resultObj->setProperty("success", true);
   resultObj->setProperty("mode", "fallback");
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::getPluginParams(const juce::var &params) {
@@ -915,7 +972,8 @@ juce::var CommandAPI::getPluginParams(const juce::var &params) {
   resultObj->setProperty("parameters", paramsArray);
   resultObj->setProperty("count", parameters.size());
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 //==============================================================================
@@ -952,7 +1010,8 @@ juce::var CommandAPI::addAutomationPoint(const juce::var &params) {
   resultObj->setProperty("pointId", pointId);
   resultObj->setProperty("success", true);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::clearAutomation(const juce::var &params) {
@@ -970,7 +1029,8 @@ juce::var CommandAPI::clearAutomation(const juce::var &params) {
   auto *resultObj = new juce::DynamicObject();
   resultObj->setProperty("success", success);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::getAutomation(const juce::var &params) {
@@ -988,8 +1048,8 @@ juce::var CommandAPI::getAutomation(const juce::var &params) {
   auto *pointsArrayPtr = pointsArray.getArray();
 
   if (envelope.isValid()) {
-    // The envelope contains a POINTS container (ID_POINT) which contains the
-    // actual points (ID_POINT) See ProjectState structure discussion
+    // The envelope contains a POINTS container (ID_POINT) which contains
+    // the actual points (ID_POINT) See ProjectState structure discussion
     auto pointsContainer = envelope.getChildWithName(ProjectState::ID_POINT);
 
     if (pointsContainer.isValid()) {
@@ -1014,7 +1074,8 @@ juce::var CommandAPI::getAutomation(const juce::var &params) {
   resultObj->setProperty("points", pointsArray);
   resultObj->setProperty("count", pointsArray.size());
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 //==============================================================================
@@ -1039,7 +1100,8 @@ juce::var CommandAPI::addMarker(const juce::var &params) {
   resultObj->setProperty("markerId", markerId);
   resultObj->setProperty("success", true);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::getMarkers(const juce::var &params) {
@@ -1068,7 +1130,8 @@ juce::var CommandAPI::getMarkers(const juce::var &params) {
   auto *resultObj = new juce::DynamicObject();
   resultObj->setProperty("markers", markersArray);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::deleteMarker(const juce::var &params) {
@@ -1081,7 +1144,8 @@ juce::var CommandAPI::deleteMarker(const juce::var &params) {
   auto *resultObj = new juce::DynamicObject();
   resultObj->setProperty("success", success);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::gotoMarker(const juce::var &params) {
@@ -1107,7 +1171,8 @@ juce::var CommandAPI::gotoMarker(const juce::var &params) {
         auto *resultObj = new juce::DynamicObject();
         resultObj->setProperty("timeBeats", timeBeats);
         resultObj->setProperty("success", true);
-        return createSuccessResponse(juce::var(resultObj));
+        return createSuccessResponse(
+            juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
       }
     }
   }
@@ -1149,7 +1214,8 @@ juce::var CommandAPI::addNote(const juce::var &params) {
   resultObj->setProperty("noteId", noteId);
   resultObj->setProperty("success", true);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::moveNote(const juce::var &params) {
@@ -1173,7 +1239,8 @@ juce::var CommandAPI::moveNote(const juce::var &params) {
   auto *resultObj = new juce::DynamicObject();
   resultObj->setProperty("success", true);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::deleteNote(const juce::var &params) {
@@ -1190,7 +1257,8 @@ juce::var CommandAPI::deleteNote(const juce::var &params) {
   auto *resultObj = new juce::DynamicObject();
   resultObj->setProperty("success", true);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::getNotes(const juce::var &params) {
@@ -1220,7 +1288,8 @@ juce::var CommandAPI::getNotes(const juce::var &params) {
   resultObj->setProperty("notes", notesArray);
   resultObj->setProperty("count", notes.size());
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::setNoteVelocity(const juce::var &params) {
@@ -1241,7 +1310,8 @@ juce::var CommandAPI::setNoteVelocity(const juce::var &params) {
   auto *resultObj = new juce::DynamicObject();
   resultObj->setProperty("success", true);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::setNoteLength(const juce::var &params) {
@@ -1262,7 +1332,8 @@ juce::var CommandAPI::setNoteLength(const juce::var &params) {
   auto *resultObj = new juce::DynamicObject();
   resultObj->setProperty("success", true);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::getMidiData(const juce::var &params) {
@@ -1355,7 +1426,8 @@ juce::var CommandAPI::getMidiData(const juce::var &params) {
   resultObj->setProperty("tracks", tracksVar);
   resultObj->setProperty("trackCount", tracksVar.getArray()->size());
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 //==============================================================================
@@ -1403,7 +1475,8 @@ juce::var CommandAPI::listPresets(const juce::var &params) {
   DBG("CommandAPI: Listed " + juce::String(presets.size()) + " presets for " +
       instrumentId);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::loadPreset(const juce::var &params) {
@@ -1464,7 +1537,8 @@ juce::var CommandAPI::loadPreset(const juce::var &params) {
   resultObj->setProperty("presetName", presetName);
   resultObj->setProperty("loaded", true);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::savePreset(const juce::var &params) {
@@ -1520,7 +1594,8 @@ juce::var CommandAPI::savePreset(const juce::var &params) {
   resultObj->setProperty("presetName", presetName);
   resultObj->setProperty("saved", true);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::createPreset(const juce::var &params) {
@@ -1567,8 +1642,8 @@ juce::var CommandAPI::createPreset(const juce::var &params) {
   for (auto &prop : parameters.getDynamicObject()->getProperties()) {
     if (prop.value.isDouble() || prop.value.isInt()) {
       float val = static_cast<float>(prop.value);
-      // Most params are normalized 0-1, but some (like detune) might not be.
-      // For now, we just warn if values are extreme.
+      // Most params are normalized 0-1, but some (like detune) might not
+      // be. For now, we just warn if values are extreme.
       if (std::abs(val) > 10000.0f) {
         return createErrorResponse("Parameter value out of reasonable range: " +
                                    prop.name.toString());
@@ -1587,7 +1662,8 @@ juce::var CommandAPI::createPreset(const juce::var &params) {
   resultObj->setProperty("category", category);
   resultObj->setProperty("created", true);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::deletePreset(const juce::var &params) {
@@ -1617,7 +1693,8 @@ juce::var CommandAPI::deletePreset(const juce::var &params) {
   resultObj->setProperty("presetName", presetName);
   resultObj->setProperty("deleted", true);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 //==============================================================================
@@ -1659,7 +1736,8 @@ juce::var CommandAPI::getInstrumentParameters(const juce::var &params) {
   resultObj->setProperty("instrumentId", instrumentId);
   resultObj->setProperty("parameters", parameters);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::setInstrumentParameter(const juce::var &params) {
@@ -1700,7 +1778,8 @@ juce::var CommandAPI::setInstrumentParameter(const juce::var &params) {
   resultObj->setProperty("value", value);
   resultObj->setProperty("set", true);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::getInstrumentParameterSchema(const juce::var &params) {
@@ -1727,7 +1806,8 @@ juce::var CommandAPI::getInstrumentParameterSchema(const juce::var &params) {
   resultObj->setProperty("instrumentId", instrumentId);
   resultObj->setProperty("schema", schema);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 //==============================================================================
@@ -1838,7 +1918,8 @@ juce::var CommandAPI::generatePreset(const juce::var &params) {
   resultObj->setProperty("parameters", generatedParams);
   resultObj->setProperty("generated", true);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::exportProjectAdvanced(const juce::var &params) {
@@ -1924,8 +2005,8 @@ juce::var CommandAPI::createAuxBus(const juce::var &params) {
   juce::String name = params["name"].toString();
 
   // Check for message thread
-  // CommandAPI is usually called from message thread, but Engine methods assert
-  // it.
+  // CommandAPI is usually called from message thread, but Engine methods
+  // assert it.
 
   int index = engine.createAuxBus(name);
   auto *bus = engine.getAuxBus(index);
@@ -1937,7 +2018,8 @@ juce::var CommandAPI::createAuxBus(const juce::var &params) {
   }
   resultObj->setProperty("success", true);
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::removeAuxBus(const juce::var &params) {
@@ -1950,7 +2032,8 @@ juce::var CommandAPI::removeAuxBus(const juce::var &params) {
 
   auto *resultObj = new juce::DynamicObject();
   resultObj->setProperty("success", true);
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::setAuxBusVolume(const juce::var &params) {
@@ -2024,7 +2107,8 @@ juce::var CommandAPI::getAuxBuses(const juce::var &params) {
 
   auto *resultObj = new juce::DynamicObject();
   resultObj->setProperty("buses", buses);
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 //==============================================================================
@@ -2079,7 +2163,8 @@ juce::var CommandAPI::startEvolution(const juce::var &params) {
   auto *resultObj = new juce::DynamicObject();
   resultObj->setProperty("success", true);
   resultObj->setProperty("message", "Evolution started");
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::stopEvolution(const juce::var &params) {
@@ -2092,7 +2177,8 @@ juce::var CommandAPI::stopEvolution(const juce::var &params) {
   auto *resultObj = new juce::DynamicObject();
   resultObj->setProperty("success", true);
   resultObj->setProperty("message", "Evolution stopped");
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::getEvolutionStats(const juce::var &params) {
@@ -2111,18 +2197,19 @@ juce::var CommandAPI::getEvolutionStats(const juce::var &params) {
   resultObj->setProperty("isRunning", presetGeneticist_->isRunning());
   resultObj->setProperty("isPaused", presetGeneticist_->isPaused());
 
-  return createSuccessResponse(juce::var(resultObj));
+  return createSuccessResponse(
+      juce::var(static_cast<juce::ReferenceCountedObject *>(resultObj)));
 }
 
 juce::var CommandAPI::executeCommand(CommandID id, const juce::var &params) {
   // Find the command string for this ID (reverse lookup or switch)
   // For efficiency, we should probably have a map ID -> Handler
-  // But since we register by string, let's reverse lookup or assume the caller
-  // knows what they are doing.
+  // But since we register by string, let's reverse lookup or assume the
+  // caller knows what they are doing.
 
   // Better approach: Since we have commandHandlers map which is string ->
-  // handler, we need ID -> handler. Let's iterate commandMap to find the string
-  // for this ID. This is slow O(N), but safe for now.
+  // handler, we need ID -> handler. Let's iterate commandMap to find the
+  // string for this ID. This is slow O(N), but safe for now.
 
   juce::String commandName;
   for (const auto &pair : commandMap) {
@@ -2143,3 +2230,4 @@ juce::var CommandAPI::executeCommand(CommandID id, const juce::var &params) {
 }
 
 } // namespace zenith
+//==============================================================================

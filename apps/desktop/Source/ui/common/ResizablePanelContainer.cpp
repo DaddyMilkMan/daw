@@ -9,6 +9,7 @@
 */
 
 #include "ResizablePanelContainer.h"
+#include "../../engine/ZenithLogger.h"
 #include "GlassmorphicPanel.h"
 #include <effects/SkGradientShader.h>
 
@@ -269,7 +270,7 @@ void PanelWrapper::setCollapsed(bool collapsed, bool animate) {
   if (animate) {
     animationStartTime_ = juce::Time::getMillisecondCounter();
     animationProgress_ = 0.0f;
-    startTimer(16); // ~60fps animation
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(16); // ~60fps animation
   } else {
     currentSize_ = targetSize_;
     animationProgress_ = 1.0f;
@@ -417,11 +418,12 @@ void PanelDivider::setPositionConstraints(float minRatio, float maxRatio) {
 std::unique_ptr<juce::AccessibilityHandler>
 PanelDivider::createAccessibilityHandler() {
   // Role: Splitter (using unspecified since JUCE lacks splitter role)
-  setHelpText("Drag to resize");
+  setHelpText("Panel Divider", "Drag to resize");
   setDescription(isHorizontal_ ? "Horizontal splitter" : "Vertical splitter");
   return std::make_unique<juce::AccessibilityHandler>(
       *this, juce::AccessibilityRole::unspecified);
 }
+
 
 //==============================================================================
 // TabGroup Implementation
@@ -929,6 +931,23 @@ void ResizablePanelContainer::recalculateLayout() {
       currentPos += PanelDivider::dividerSize;
       ++dividerIdx;
     }
+  }
+
+  // Debug Log Layout (limited to first 3 calls to avoid lag)
+  static int layoutLogLimit = 0;
+  if (layoutLogLimit < 3) {
+    ZENITH_LOG_INFO(
+        juce::String("ResizablePanelContainer::recalculateLayout (") +
+        (isHorizontal ? "Horizontal" : "Vertical") + ")");
+    ZENITH_LOG_INFO("  Bounds: " + bounds.toString());
+    for (size_t i = 0; i < panels_.size(); ++i) {
+      auto &slot = panels_[i];
+      ZENITH_LOG_INFO("  Panel " + juce::String(i) + " (" +
+                      slot.wrapper->getPanelId() +
+                      "): " + slot.wrapper->getBounds().toString() +
+                      (slot.wrapper->isVisible() ? " [Visible]" : " [Hidden]"));
+    }
+    layoutLogLimit++;
   }
 }
 

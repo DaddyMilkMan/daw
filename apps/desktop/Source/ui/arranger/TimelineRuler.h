@@ -4,7 +4,7 @@
  */
 
 // POLISH: spacing normalized to 8px grid (labels at Typography.small)
-// POLISH: typography now uses SkiaTheme::Typography (small)
+// POLISH: typography now uses ZenithDesignSystem
 // POLISH: flattened background (bg2, no gradients)
 
 #pragma once
@@ -19,14 +19,14 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-
 #ifdef ZENITH_USE_SKIA
-#include "SkiaComponent.h"
-#include "SkiaTheme.h"
+#include "../framework/SkiaComponent.h"
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
 #endif
+
+namespace zenith {
 
 /**
  * @class TimelineRuler
@@ -38,7 +38,7 @@
  * animations.
  */
 #ifdef ZENITH_USE_SKIA
-class TimelineRuler : public zenith::SkiaComponent
+class TimelineRuler : public SkiaComponent
 #else
 class TimelineRuler : public juce::Component,
                       public juce::Timer
@@ -79,12 +79,22 @@ public:
    */
   std::function<void(double)> onSeek;
 
+  /**
+   * @brief Set loop region
+   */
+  void setLoopRange(double startBeat, double endBeat, bool enabled);
+
+  /**
+   * @brief Callback when loop region is changed by user
+   */
+  std::function<void(double start, double end)> onLoopChanged;
+
   //==========================================================================
   // Component interface
   //==========================================================================
 
 #ifdef ZENITH_USE_SKIA
-  void drawSkia(SkCanvas* canvas) override;
+  void drawSkia(SkCanvas *canvas) override;
 #else
   void paint(juce::Graphics &g) override;
 #endif
@@ -93,6 +103,8 @@ public:
   void mouseEnter(const juce::MouseEvent &event) override;
   void mouseExit(const juce::MouseEvent &event) override;
   void mouseDown(const juce::MouseEvent &event) override;
+  void mouseDrag(const juce::MouseEvent &event) override;
+  void mouseUp(const juce::MouseEvent &event) override;
   void timerCallback() override;
 
 private:
@@ -101,11 +113,22 @@ private:
   double viewLengthBeats = 32.0;
   double pixelsPerBeat = 20.0;
 
+  // Loop state
+  double loopStartBeat = 0.0;
+  double loopEndBeat = 4.0;
+  bool loopEnabled = false;
+
   // Hover state
   bool isHovered = false;
   int hoveredMeasure = -1;
   juce::Point<int> mousePosition;
   float hoverAnimation = 0.0f;
+
+  enum class DragMode { None, Seek, MoveLoopStart, MoveLoopEnd, MoveLoopRegion };
+  DragMode currentDragMode = DragMode::None;
+  double dragStartBeat = 0.0;
+  double initialLoopStart = 0.0;
+  double initialLoopEnd = 0.0;
 
   // Helper methods
   void drawBackground(juce::Graphics &g, const juce::Rectangle<int> &bounds);
@@ -116,3 +139,5 @@ private:
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TimelineRuler)
 };
+
+} // namespace zenith

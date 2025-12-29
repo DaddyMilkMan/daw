@@ -16,12 +16,10 @@
 
 #pragma once
 
-#include <core/SkBlurTypes.h>
-#include <core/SkCanvas.h>
-#include <core/SkColor.h>
-#include <core/SkMaskFilter.h>
-#include <core/SkPaint.h>
+#include "ZenithSkia.h"
 #include <core/SkPath.h>
+#include <core/SkPaint.h>
+#include <core/SkMaskFilter.h>
 
 namespace zenith {
 namespace icons {
@@ -35,6 +33,7 @@ constexpr float ICON_VIEWPORT = 24.0f;
 
 // Default stroke widths for different icon sizes
 constexpr float STROKE_THIN = 1.5f;
+constexpr float STROKE_LIGHT = 1.75f;
 constexpr float STROKE_REGULAR = 2.0f;
 constexpr float STROKE_BOLD = 2.5f;
 
@@ -875,6 +874,36 @@ inline SkPath MusicNote() {
 
 /** Microphone alias (with strict signature) */
 inline SkPath Microphone() { return Arm(); }
+
+/** Info - Circle with "i" */
+inline SkPath Info() {
+  SkPath path;
+  // Circle outline
+  path.addCircle(12.0f, 12.0f, 9.0f);
+  // Dot
+  path.addCircle(12.0f, 7.0f, 1.5f);
+  // Line
+  path.moveTo(12.0f, 11.0f);
+  path.lineTo(12.0f, 17.0f);
+  return path;
+}
+
+/** Users - Two people silhouettes */
+inline SkPath Users() {
+  SkPath path;
+  // Front person - head
+  path.addCircle(10.0f, 8.0f, 3.0f);
+  // Front person - body
+  path.moveTo(4.0f, 20.0f);
+  path.cubicTo(4.0f, 15.0f, 7.0f, 13.0f, 10.0f, 13.0f);
+  path.cubicTo(13.0f, 13.0f, 16.0f, 15.0f, 16.0f, 20.0f);
+  // Back person - head (offset right)
+  path.addCircle(16.0f, 7.0f, 2.5f);
+  // Back person - body (partial, behind first)
+  path.moveTo(19.0f, 18.0f);
+  path.cubicTo(19.0f, 14.0f, 17.0f, 12.0f, 15.0f, 11.5f);
+  return path;
+}
 
 /** Waveform alias */
 inline SkPath Waveform() { return Audio(); }

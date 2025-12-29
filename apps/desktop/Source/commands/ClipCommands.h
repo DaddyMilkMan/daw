@@ -6,6 +6,7 @@ namespace zenith {
 // Forward declarations
 class Engine;
 class ProjectState;
+class CommandAPI;
 
 class ClipCommands {
 public:
