@@ -1,16 +1,14 @@
 /*
   ==============================================================================
 
-    GrokAPIClient.cpp
+    GrokDAWClient.cpp
     Created: 2025-11-29
-
-
-    Full implementation of Grok API client
+    (Renamed from GrokAPIClient.cpp)
 
   ==============================================================================
 */
 
-#include "GrokAPIClient.h"
+#include "GrokDAWClient.h"
 #include "SecureKeyStore.h"
 #include <juce_core/juce_core.h>
 
@@ -20,7 +18,7 @@ namespace zenith {
 // Implementation class (Pimpl pattern for clean interface)
 //==============================================================================
 
-class GrokAPIClient::Impl
+class GrokDAWClient::Impl
 {
 public:
     Impl() = default;
@@ -117,10 +115,6 @@ public:
         std::function<void(juce::var response)> onSuccess,
         std::function<void(juce::String error)> onError)
     {
-        // Cancel any active request
-        if (activeRequest != nullptr)
-            activeRequest.reset();
-        
         // Build URL
         juce::URL url(juce::String(API_BASE_URL) + CHAT_ENDPOINT);
         
@@ -128,79 +122,39 @@ public:
         juce::String jsonRequest = juce::JSON::toString(requestBody);
         url = url.withPOSTData(jsonRequest);
         
-        // Create POST request
+        // Headers
         juce::String headersStr = "Authorization: Bearer " + apiKey + "\n" +
                                   "Content-Type: application/json";
-        
-        // Send async request
-        activeRequest = url.downloadToFile(
-            juce::File::createTempFile("grok_response"),
-            juce::URL::DownloadTaskOptions()
+
+        // Launch thread
+        juce::Thread::launch([url, headersStr, onSuccess, onError]() {
+            juce::StringPairArray responseHeaders;
+            int statusCode = 0;
+            auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
                 .withExtraHeaders(headersStr)
-        );
-        
-        if (activeRequest == nullptr)
-        {
-            onError("Failed to create HTTP request");
-            return;
-        }
-        
-        // Poll for completion (JUCE async pattern)
-        juce::Timer::callAfterDelay(100, [this, onSuccess, onError]()
-        {
-            checkRequestCompletion(onSuccess, onError);
+                .withConnectionTimeoutMs(15000)
+                .withStatusCode(&statusCode)
+                .withResponseHeaders(&responseHeaders);
+                
+            std::unique_ptr<juce::InputStream> stream = url.createInputStream(options);
+            
+            if (stream != nullptr) {
+                juce::String responseText = stream->readEntireStreamAsString();
+                
+                // Post back to message thread
+                juce::MessageManager::callAsync([statusCode, responseText, onSuccess, onError]() {
+                    if (statusCode == 200) {
+                        auto json = juce::JSON::parse(responseText);
+                        if (json.isObject()) onSuccess(json);
+                        else onError("Invalid JSON response");
+                    } else {
+                        onError("HTTP error: " + juce::String(statusCode));
+                    }
+                });
+            } else {
+                juce::MessageManager::callAsync([onError]() { onError("Failed to connect to Grok API"); });
+            }
         });
-    }
-    
-    //==========================================================================
-    /**
-        Check if request is complete and process response
-    */
-    void checkRequestCompletion(
-        std::function<void(juce::var response)> onSuccess,
-        std::function<void(juce::String error)> onError)
-    {
-        if (activeRequest == nullptr)
-            return;
-        
-        if (activeRequest->isFinished())
-        {
-            // Check for HTTP errors
-            int statusCode = activeRequest->statusCode();
-            if (statusCode != 200)
-            {
-                onError("HTTP error: " + juce::String(statusCode));
-                activeRequest.reset();
-                return;
-            }
-            
-            // Read response
-            auto responseFile = activeRequest->getTargetLocation();
-            auto responseText = responseFile.loadFileAsString();
-            responseFile.deleteFile();
-            
-            // Parse JSON
-            auto responseJson = juce::JSON::parse(responseText);
-            
-            if (!responseJson.isObject())
-            {
-                onError("Invalid JSON response");
-                activeRequest.reset();
-                return;
-            }
-            
-            // Success!
-            onSuccess(responseJson);
-            activeRequest.reset();
-        }
-        else
-        {
-            // Still downloading, check again
-            juce::Timer::callAfterDelay(100, [this, onSuccess, onError]()
-            {
-                checkRequestCompletion(onSuccess, onError);
-            });
-        }
     }
     
     //==========================================================================
@@ -275,19 +229,19 @@ public:
 };
 
 //==============================================================================
-// GrokAPIClient public interface
+// GrokDAWClient public interface
 //==============================================================================
 
-GrokAPIClient::GrokAPIClient()
+GrokDAWClient::GrokDAWClient()
     : pImpl(std::make_unique<Impl>())
 {
     // Try to load API key from secure storage
     setAPIKey();
 }
 
-GrokAPIClient::~GrokAPIClient() = default;
+GrokDAWClient::~GrokDAWClient() = default;
 
-bool GrokAPIClient::setAPIKey(const juce::String& apiKey)
+bool GrokDAWClient::setAPIKey(const juce::String& apiKey)
 {
     if (apiKey.isNotEmpty())
     {
@@ -295,7 +249,18 @@ bool GrokAPIClient::setAPIKey(const juce::String& apiKey)
         return true;
     }
     
-    // Try to retrieve from secure storage
+    // 1. Try environment variables
+    juce::String envKey = juce::SystemStats::getEnvironmentVariable("GROK_API_KEY", "");
+    if (envKey.isEmpty())
+        envKey = juce::SystemStats::getEnvironmentVariable("XAI_API_KEY", "");
+
+    if (envKey.isNotEmpty())
+    {
+        pImpl->apiKey = envKey;
+        return true;
+    }
+
+    // 2. Try to retrieve from secure storage
     juce::String storedKey;
     if (SecureKeyStore::retrieveKey(SecureKeyStore::GrokAPIKey, storedKey))
     {
@@ -306,12 +271,12 @@ bool GrokAPIClient::setAPIKey(const juce::String& apiKey)
     return false;
 }
 
-bool GrokAPIClient::hasAPIKey() const
+bool GrokDAWClient::hasAPIKey() const
 {
     return pImpl->apiKey.isNotEmpty();
 }
 
-void GrokAPIClient::sendChat(
+void GrokDAWClient::sendChat(
     const juce::String& userMessage,
     GrokMode mode,
     const juce::Array<GrokFunction>& availableFunctions,
@@ -366,7 +331,7 @@ void GrokAPIClient::sendChat(
     );
 }
 
-void GrokAPIClient::submitFunctionResult(
+void GrokDAWClient::submitFunctionResult(
     const GrokFunctionCall& functionCall,
     const juce::var& result,
     std::function<void(juce::String response)> onResponse,
@@ -385,28 +350,58 @@ void GrokAPIClient::submitFunctionResult(
         [](GrokFunctionCall) {}, onError);
 }
 
-void GrokAPIClient::cancelRequest()
+void GrokDAWClient::cancelRequest()
 {
     if (pImpl->activeRequest != nullptr)
         pImpl->activeRequest.reset();
 }
 
-juce::Array<juce::var> GrokAPIClient::getConversationHistory() const
+juce::Array<juce::var> GrokDAWClient::getConversationHistory() const
 {
     return pImpl->conversationHistory;
 }
 
-void GrokAPIClient::clearHistory()
+void GrokDAWClient::clearHistory()
 {
     pImpl->conversationHistory.clear();
 }
 
-void GrokAPIClient::addToHistory(const juce::String& role, const juce::String& content)
+void GrokDAWClient::addToHistory(const juce::String& role, const juce::String& content)
 {
     auto msg = new juce::DynamicObject();
     msg->setProperty("role", role);
     msg->setProperty("content", content);
     pImpl->conversationHistory.add(juce::var(msg));
+}
+
+juce::String GrokDAWClient::callGrok(const juce::String& prompt, const juce::String& systemPrompt)
+{
+    if (!hasAPIKey())
+        return "Error: No API key configured";
+        
+    // Build standard request
+    auto request = pImpl->buildChatRequest(prompt, GrokMode::Fast, {}, systemPrompt);
+    
+    // Synchronous execution using juce::URL
+    juce::URL url(juce::String(Impl::API_BASE_URL) + Impl::CHAT_ENDPOINT);
+    url = url.withPOSTData(juce::JSON::toString(request));
+    
+    juce::String headersStr = "Authorization: Bearer " + pImpl->apiKey + "\n" +
+                              "Content-Type: application/json";
+                              
+    auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
+        .withExtraHeaders(headersStr)
+        .withConnectionTimeoutMs(20000);
+        
+    std::unique_ptr<juce::InputStream> stream = url.createInputStream(options);
+    if (stream)
+    {
+        auto responseText = stream->readEntireStreamAsString();
+        // Return raw response for AIMasteringAgent to parse
+        return responseText;
+    }
+    
+    return "Error: Connection failed";
 }
 
 } // namespace zenith

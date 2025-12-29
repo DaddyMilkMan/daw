@@ -27,7 +27,6 @@ juce::Array<GrokFunction> AITools::getAvailableFunctions()
     juce::Array<GrokFunction> myFunctions;
     
     // Track functions
-    // Use simple string concatenation to avoid raw string literal issues with some compilers/settings
     juce::String trackSchema = "{";
     trackSchema += "\"type\": \"object\",";
     trackSchema += "\"properties\": {";

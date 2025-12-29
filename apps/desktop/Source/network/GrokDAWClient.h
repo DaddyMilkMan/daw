@@ -1,9 +1,9 @@
 /*
   ==============================================================================
 
-    GrokAPIClient.h
+    GrokDAWClient.h
     Created: 2025-11-29
-
+    (Renamed from GrokAPIClient.h to avoid collision)
 
     Grok API client with function calling support
     Implements xAI Grok API v1 with chat completions and tool use
@@ -73,7 +73,7 @@ struct GrokFunctionCall
 
 //==============================================================================
 /**
-    Grok API Client
+    Grok DAW Client
     
     Handles communication with xAI Grok API including:
     - Chat completions
@@ -81,12 +81,12 @@ struct GrokFunctionCall
     - Streaming responses
     - Both Fast and Thinking modes
 */
-class GrokAPIClient
+class GrokDAWClient
 {
 public:
     //==========================================================================
-    GrokAPIClient();
-    ~GrokAPIClient();
+    GrokDAWClient();
+    ~GrokDAWClient();
     
     //==========================================================================
     /**
@@ -159,13 +159,22 @@ public:
         Add a message to conversation history
     */
     void addToHistory(const juce::String& role, const juce::String& content);
+
+    /**
+        Synchronous call to Grok (Blocking)
+        
+        @param prompt User prompt
+        @param systemPrompt System prompt
+        @return Raw JSON response string
+    */
+    juce::String callGrok(const juce::String& prompt, const juce::String& systemPrompt);
     
 private:
     //==========================================================================
     class Impl;
     std::unique_ptr<Impl> pImpl;
     
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GrokAPIClient)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GrokDAWClient)
 };
 
 } // namespace zenith
