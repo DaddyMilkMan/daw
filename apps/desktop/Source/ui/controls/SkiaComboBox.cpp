@@ -123,6 +123,13 @@ juce::String SkiaComboBox::getText() const {
   return {};
 }
 
+juce::String SkiaComboBox::getItemText(int index) const {
+  if (index >= 0 && index < items_.size()) {
+    return items_[index].text;
+  }
+  return {};
+}
+
 void SkiaComboBox::setTextWhenNothingSelected(const juce::String &text) {
   textWhenNothingSelected_ = text;
   updateTriggerButtonText();

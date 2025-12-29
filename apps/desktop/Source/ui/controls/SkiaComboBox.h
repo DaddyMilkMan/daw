@@ -40,6 +40,7 @@ public:
   int getSelectedItemIndex() const { return selectedItemIndex_; }
 
   juce::String getText() const;
+  juce::String getItemText(int index) const;
 
   // Appearance
   void setTextWhenNothingSelected(const juce::String &text);

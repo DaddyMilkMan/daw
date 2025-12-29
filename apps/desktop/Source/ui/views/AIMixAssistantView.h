@@ -14,7 +14,7 @@
 
 #include "../../ai/AIMasteringAgent.h"
 #include "../framework/GlassmorphicPanel.h"
-#include "../framework/ZenithControls.h"
+#include "../controls/ZenithUIComponents.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 
@@ -37,17 +37,17 @@ private:
   // will add getMasteringAgent() to Engine.
 
   // UI Controls
-  zenith::ui::TextButton analyzeButton{"Analyze & Auto-Level Mix"};
-  zenith::ui::TextButton applyMasteringButton{"Apply Mastering Chain"};
+  juce::TextButton analyzeButton{"Analyze & Auto-Level Mix"};
+  juce::TextButton applyMasteringButton{"Apply Mastering Chain"};
 
-  zenith::ui::Slider targetLufsSlider;
+  juce::Slider targetLufsSlider;
   juce::Label targetLufsLabel;
 
   juce::ToggleButton enableEq{"Adaptive EQ"};
   juce::ToggleButton enableComp{"Glue Compressor"};
   juce::ToggleButton enableLimit{"Brickwall Limiter"};
 
-  zenith::ui::Slider compAmountSlider;
+  juce::Slider compAmountSlider;
   juce::Label compAmountLabel;
 
   // Visuals
