@@ -41,3 +41,8 @@
 
 ## 8. Continuous Integration (CI)
 - For robust build verification, a CI/CD system should be used to automatically build and test changes. This helps catch build issues early and ensures build reliability.
+
+## 9. Anti-Gravity Agent Rules (Performance & Stability)
+- Refer to `.agent/rules/antigravity.md` for strict constraints regarding Real-Time Safety, Skia Build Configurations (Release Only), and UI Responsiveness.
+- **Skia Launch Rule:** The DAW MUST always be launched with Skia enabled for production/release use. Debug builds with Skia are prohibited.
+- These rules are enforced to prevent crashes and ensure a professional-grade user experience.
