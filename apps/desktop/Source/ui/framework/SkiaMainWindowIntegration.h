@@ -4,9 +4,10 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
-#include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_opengl/juce_opengl.h>
+#include <atomic>
 
 #ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
@@ -34,7 +35,8 @@ namespace zenith {
  * NOTE: Renamed from SkiaRenderer to SkiaOpenGLRenderer to avoid conflict
  * with the standalone SkiaRenderer class in rendering/SkiaRenderer.h
  */
-class SkiaOpenGLRenderer : public juce::OpenGLRenderer {
+class SkiaOpenGLRenderer : public juce::OpenGLRenderer, 
+                           private juce::Timer {
 public:
   explicit SkiaOpenGLRenderer(juce::Component *componentToAttach);
   virtual ~SkiaOpenGLRenderer();
@@ -46,6 +48,34 @@ public:
   void newOpenGLContextCreated() override;
   void renderOpenGL() override;
   void openGLContextClosing() override;
+  
+  // Timer callback for deferred attachment
+  void timerCallback() override;
+  
+  /**
+   * @brief Attach the OpenGL context to the target component.
+   * Call this when the component has a valid peer (window handle).
+   */
+  void attachContextNow();
+  
+  /**
+   * @brief Schedule a check for peer availability and attach context when ready.
+   */
+  /**
+   * @brief Schedule a check for peer availability and attach context when ready.
+   */
+  void scheduleAttachmentCheck();
+
+  /**
+   * @brief Check if the Skia context has been successfully initialized.
+   */
+  bool isContextInitialized() const { return contextInitialized_; }
+
+  /**
+   * @brief Request a repaint. Use this instead of relying on continuous repainting.
+   * Thread-safe: can be called from any thread.
+   */
+  void triggerRepaint();
 
 protected:
   /**
@@ -60,17 +90,29 @@ protected:
   SkCanvas *getSkiaCanvas() { return skiaCanvas_; }
 
   juce::OpenGLContext openGLContext_;
+  sk_sp<const GrGLInterface> interface_;
   sk_sp<GrDirectContext> grContext_;
   sk_sp<SkSurface> surface_;
   SkCanvas *skiaCanvas_ = nullptr;
+  bool contextInitialized_ = false;
+  juce::Component *targetComponent_ = nullptr;
 
 private:
-  juce::Component *targetComponent_ = nullptr;
-  bool contextInitialized_ = false;
   int lastWidth_ = 0;
   int lastHeight_ = 0;
+  
+  // Thread-safe dimensions (Atomic for lock-free read/write)
+  std::atomic<int> safeWidth_{0};
+  std::atomic<int> safeHeight_{0};
 
   void recreateSurface();
+public:
+  void updateDimensions(int width, int height) {
+      safeWidth_.store(width);
+      safeHeight_.store(height);
+  }
+
+  JUCE_DECLARE_WEAK_REFERENCEABLE(SkiaOpenGLRenderer)
 };
 
 /**
@@ -87,6 +129,8 @@ public:
   // Component overrides
   void paint(juce::Graphics &g) override;
   void resized() override;
+  void parentHierarchyChanged() override;
+  void visibilityChanged() override;
 
   SkiaMainWindowIntegration(const SkiaMainWindowIntegration &) = delete;
   SkiaMainWindowIntegration &

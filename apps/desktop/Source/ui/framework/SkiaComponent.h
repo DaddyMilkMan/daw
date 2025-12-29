@@ -12,6 +12,9 @@
 #pragma once
 
 extern "C++" {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunknown-warning-option"
+#pragma clang diagnostic ignored "-Wattributes"
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
 #include <core/SkFont.h>
@@ -21,19 +24,23 @@ extern "C++" {
 #include <core/SkRRect.h>
 #include <core/SkRect.h>
 #include <core/SkShader.h>
+#pragma clang diagnostic pop
 }
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include "SkiaAccessibility.h"
 #include "ZenithDesignSystem.h"
+#include "../design-system/ZenithTheme.h"
 #include <functional>
 #include <map>
 #include <memory>
 #include <vector>
 
+#include "Animation.h"
+
 namespace zenith {
 
-  class AnimatedValue;
+  using AnimatedValue = animation::AnimatedValue<float>;
 
   template <typename T> class ValueHistory {
   public:
@@ -198,6 +205,15 @@ namespace zenith {
     static void setTargetFPS(int fps);
     static int getTargetFPS();
 
+    void setHelpText(const juce::String &title, const juce::String &description) {
+      helpTitle_ = title;
+      helpDescription_ = description;
+    }
+
+    // Global callback for "Info View" style help (Ableton-like)
+    static std::function<void(const juce::String &, const juce::String &)>
+        globalHelpCallback;
+
   protected:
     void drawChildren(SkCanvas *canvas); // Helper to draw child components
     SkCanvas *getSkiaCanvas(juce::Graphics &g);
@@ -207,8 +223,10 @@ namespace zenith {
 
   private:
     bool isHovered_ = false;
+    juce::String helpTitle_;
+    juce::String helpDescription_;
     bool needsRepaint_ = true;
-    SkColor glowColor_ = design::colors::NEON_GREEN;
+    SkColor glowColor_ = SkColorSetRGB(0, 255, 255);
     float glowRadius_ = 0.0f;
     bool glowEnabled_ = false;
     bool isMIDILearning_ = false;
@@ -219,41 +237,6 @@ namespace zenith {
 
     std::map<juce::String, std::unique_ptr<AnimatedValue>> animations_;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SkiaComponent)
-  };
-
-  class AnimatedValue {
-  public:
-    enum class EasingCurve { Linear, EaseIn, EaseOut, EaseInOut, Spring };
-
-    AnimatedValue(float initial = 0.0f);
-
-    void setTarget(float target, int durationMs,
-                   EasingCurve curve = EasingCurve::EaseOut);
-    void setSpring(float target, float stiffness, float damping);
-    void stop();
-
-    float getCurrentValue() const { return currentValue_; }
-    bool isAnimating() const { return isAnimating_; }
-
-    void update(float deltaTimeMs);
-
-  private:
-    float currentValue_;
-    float targetValue_;
-    float startValue_;
-    float velocity_;
-
-    int durationMs_;
-    int elapsedMs_;
-
-    EasingCurve curve_;
-    bool isAnimating_;
-
-    float springStiffness_;
-    float springDamping_;
-    bool useSpring_;
-
-    float easeValue(float t) const;
   };
 
 } // namespace zenith

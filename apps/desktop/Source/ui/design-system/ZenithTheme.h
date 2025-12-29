@@ -10,6 +10,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "ZenithDesignSystem.h"
 
 namespace zenith {
 
@@ -21,50 +22,54 @@ class ZenithTheme {
 public:
   //==========================================================================
   // Modern Color System - Layered Backgrounds
+  // Refactored to static inline for dynamic runtime modification (God Mode)
   //==========================================================================
   struct Colors {
     // Background layers (deepest to most elevated)
-    static const juce::Colour bg_00; // #0a0a0a - Deepest layer
-    static const juce::Colour bg_01; // #121212 - Canvas/main background
-    static const juce::Colour bg_02; // #1a1a1a - Panels
-    static const juce::Colour bg_03; // #242424 - Elevated surfaces
-    static const juce::Colour bg_04; // #2e2e2e - Highest elevation
+    static inline juce::Colour bg_00 = juce::Colour(0xff0a0a0a);
+    static inline juce::Colour bg_01 = juce::Colour(0xff121212);
+    static inline juce::Colour bg_02 = juce::Colour(0xff1a1a1a);
+    static inline juce::Colour bg_03 = juce::Colour(0xff242424);
+    static inline juce::Colour bg_04 = juce::Colour(0xff2e2e2e);
 
     // Borders with proper opacity for depth
-    static const juce::Colour
-        border_subtle; // White 6% - Barely visible dividers
-    static const juce::Colour border_default; // White 12% - Standard borders
-    static const juce::Colour border_strong;  // White 20% - Emphasized borders
-    static const juce::Colour border_focus;   // Accent color for focus states
+    static inline juce::Colour border_subtle = juce::Colours::white.withAlpha(0.06f);
+    static inline juce::Colour border_default = juce::Colours::white.withAlpha(0.12f);
+    static inline juce::Colour border_strong = juce::Colours::white.withAlpha(0.20f);
+    static inline juce::Colour border_focus = juce::Colour(0xff3b82f6);
 
     // Text hierarchy (proper contrast ratios)
-    static const juce::Colour text_primary;   // White 95% - Main text
-    static const juce::Colour text_secondary; // White 60% - Secondary text
-    static const juce::Colour text_tertiary;  // White 35% - Disabled/hint text
-    static const juce::Colour text_inverse; // Black 90% - On accent backgrounds
+    static inline juce::Colour text_primary = juce::Colours::white.withAlpha(0.95f);
+    static inline juce::Colour text_secondary = juce::Colours::white.withAlpha(0.60f);
+    static inline juce::Colour text_tertiary = juce::Colours::white.withAlpha(0.35f);
+    static inline juce::Colour text_inverse = juce::Colours::black.withAlpha(0.90f);
 
-    // Primary accent (professional blue instead of garish cyan)
-    static const juce::Colour accent_primary; // #3b82f6 - Primary brand color
-    static const juce::Colour accent_hover;   // #60a5fa - Hover state
-    static const juce::Colour accent_pressed; // #2563eb - Pressed/active state
-    static const juce::Colour
-        accent_subtle; // Accent with 10% opacity - Backgrounds
+    // Primary accent
+    static inline juce::Colour accent_primary = juce::Colour(0xff3b82f6);
+    static inline juce::Colour accent_secondary = juce::Colour(0xff8b5cf6);
+    static inline juce::Colour accent_hover = juce::Colour(0xff60a5fa);
+    static inline juce::Colour accent_pressed = juce::Colour(0xff2563eb);
+    static inline juce::Colour accent_subtle = juce::Colour(0xff3b82f6).withAlpha(0.10f);
+    static inline juce::Colour hover_overlay = juce::Colours::white.withAlpha(0.08f);
 
-    // Semantic colors (status indicators)
-    static const juce::Colour success; // #10b981 - Success states
-    static const juce::Colour warning; // #f59e0b - Warning states
-    static const juce::Colour error;   // #ef4444 - Error states
-    static const juce::Colour info;    // #06b6d4 - Info states
+    // Semantic colors
+    static inline juce::Colour success = juce::Colour(0xff10b981);
+    static inline juce::Colour warning = juce::Colour(0xfff59e0b);
+    static inline juce::Colour error = juce::Colour(0xffef4444);
+    static inline juce::Colour info = juce::Colour(0xff06b6d4);
 
-    // Audio-specific colors (adjusted for better harmony)
-    static const juce::Colour waveform_audio; // #3b82f6 - Audio waveforms
-    static const juce::Colour waveform_midi;  // #8b5cf6 - MIDI notes
-    static const juce::Colour automation;     // #ec4899 - Automation curves
-    static const juce::Colour playhead;       // #f97316 - Playhead indicator
+    // Audio-specific colors
+    static inline juce::Colour waveform_audio = juce::Colour(0xff3b82f6);
+    static inline juce::Colour waveform_midi = juce::Colour(0xff8b5cf6);
+    static inline juce::Colour automation = juce::Colour(0xffec4899);
+    static inline juce::Colour playhead = juce::Colour(0xfff97316);
 
     // Track colors (HSL-based for consistency)
     static juce::Colour getTrackColor(int index, float saturation = 0.65f,
                                       float brightness = 0.75f);
+
+    // Dynamic Theme Modification
+    static void setColor(const juce::String& colorId, const juce::Colour& color);
 
     // Utility functions
     static juce::Colour withAlpha(const juce::Colour &color, float alpha);
@@ -78,8 +83,7 @@ public:
   struct Typography {
     // Font sizes (8px base scale)
     static constexpr float tiny = 10.0f; // Labels, hints
-    static constexpr float sm = 12.0f;   // Secondary text (renamed from 'small'
-                                         // due to Windows macro conflict)
+    static constexpr float sm = 12.0f;   // Secondary text
     static constexpr float body = 14.0f; // Body text (default)
     static constexpr float heading = 16.0f; // Section headers
     static constexpr float large = 20.0f;   // Large headers
@@ -107,33 +111,36 @@ public:
   // Spacing System (4px base grid)
   //==========================================================================
   struct Spacing {
-    static constexpr int xs = 4;    // Extra small
-    static constexpr int sm = 8;    // Small
-    static constexpr int md = 16;   // Medium (default)
-    static constexpr int lg = 24;   // Large
-    static constexpr int xl = 32;   // Extra large
-    static constexpr int xxl = 48;  // 2x Extra large
-    static constexpr int xxxl = 64; // 3x Extra large
+    static inline int xs = 4;    // Extra small
+    static inline int sm = 8;    // Small
+    static inline int md = 16;   // Medium (default)
+    static inline int lg = 24;   // Large
+    static inline int xl = 32;   // Extra large
+    static inline int xxl = 48;  // 2x Extra large
+    static inline int xxxl = 64; // 3x Extra large
 
     // Component-specific spacing
-    static constexpr int trackHeight = 64;       // Minimum track height
-    static constexpr int trackHeaderWidth = 240; // Track header panel width
-    static constexpr int mixerWidth = 80;        // Mixer channel width
-    static constexpr int sidebarWidth = 240;     // Sidebar panel width
-    static constexpr int toolbarHeight = 48;     // Toolbar/transport height
-    static constexpr int statusBarHeight = 24;   // Status bar at bottom
+    static inline int trackHeight = 64;       // Minimum track height
+    static inline int trackHeaderWidth = 240; // Track header panel width
+    static inline int mixerWidth = 80;        // Mixer channel width
+    static inline int sidebarWidth = 240;     // Sidebar panel width
+    static inline int toolbarHeight = 48;     // Toolbar/transport height
+    static inline int statusBarHeight = 24;   // Status bar at bottom
   };
+
+  // Dynamic Layout Modification
+  static void setSpacing(const juce::String& key, int value);
 
   //==========================================================================
   // Border Radius System
   //==========================================================================
   struct Radius {
-    static constexpr float none = 0.0f;
-    static constexpr float sm = 4.0f;      // Buttons, small controls
-    static constexpr float md = 6.0f;      // Cards, panels
-    static constexpr float lg = 8.0f;      // Modals, large panels
-    static constexpr float xl = 12.0f;     // Special elements
-    static constexpr float full = 9999.0f; // Pills, circular
+    static constexpr float none = design::dimensions::RADIUS_NONE;
+    static constexpr float sm = design::dimensions::RADIUS_SM;      // Buttons, small controls
+    static constexpr float md = design::dimensions::RADIUS_SM;      // Cards, panels
+    static constexpr float lg = design::dimensions::RADIUS_LG;      // Modals, large panels
+    static constexpr float xl = design::dimensions::RADIUS_LG;     // Special elements
+    static constexpr float full = design::dimensions::RADIUS_FULL; // Pills, circular
   };
 
   //==========================================================================
@@ -170,19 +177,14 @@ public:
   // Component Dimensions
   //==========================================================================
   struct Components {
-    // Button sizes
     static constexpr int buttonHeightSm = 28;
     static constexpr int buttonHeightMd = 36;
     static constexpr int buttonHeightLg = 44;
     static constexpr int buttonMinWidth = 80;
-
-    // Input controls
     static constexpr int inputHeight = 36;
     static constexpr int knobSize = 64;
     static constexpr int faderWidth = 32;
     static constexpr int faderHeight = 120;
-
-    // Icons
     static constexpr int iconSm = 16;
     static constexpr int iconMd = 20;
     static constexpr int iconLg = 24;

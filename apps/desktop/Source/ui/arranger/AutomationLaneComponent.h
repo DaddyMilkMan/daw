@@ -17,6 +17,7 @@
 #pragma once
 
 #include "ProjectState.h"
+#include "../framework/SkiaComponent.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -27,11 +28,7 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#ifdef ZENITH_USE_SKIA
-#include "SkiaTheme.h"
-#include <include/core/SkCanvas.h>
-
-#endif
+#include <core/SkCanvas.h>
 
 //==============================================================================
 /**
@@ -48,7 +45,7 @@
  * - No audio thread interaction
  * - TrackAutomationSynchronizer independently updates audio engine atomics
  */
-class AutomationLaneComponent : public juce::Component,
+class AutomationLaneComponent : public zenith::SkiaComponent,
                                 public juce::ValueTree::Listener {
 public:
   //==========================================================================
@@ -124,7 +121,7 @@ public:
   // Component Overrides
   //==========================================================================
 
-  void paint(juce::Graphics &g) override;
+  void drawSkia(SkCanvas *canvas) override;
   void resized() override;
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseDrag(const juce::MouseEvent &e) override;

@@ -25,6 +25,7 @@
 #pragma once
 
 #include "Track.h"
+#include <atomic>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -34,9 +35,8 @@
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <memory>
 #include <vector>
-#include <atomic>
-
 
 namespace zenith {
 
@@ -53,11 +53,11 @@ struct MidiNoteSpec {
   int pitch;          // MIDI note number (0-127)
   double startBeats;  // Start time in beats (relative to clip start)
   double lengthBeats; // Duration in beats
-  int velocity;       // Note velocity (0-127)
+  uint16_t velocity;  // Note velocity (High-res 0-65535)
   bool muted;         // Muted flag
 
   MidiNoteSpec()
-      : pitch(60), startBeats(0.0), lengthBeats(1.0), velocity(100),
+      : pitch(60), startBeats(0.0), lengthBeats(1.0), velocity(51400),
         muted(false) {}
 };
 
@@ -71,11 +71,28 @@ struct MidiNoteSpec {
 
     Thread-safe design allows clips to be modified from the UI thread while
     playing back on the audio thread.
+
+    ## Ownership Model (to prevent shared_ptr cycles):
+
+    **ClipTrack -> Clip:** ClipTrack owns Clip via std::unique_ptr
+    **Clip -> Track:** No back-reference stored (track passed by parameter when
+   needed)
+    **Clip -> AudioFilePool:** Uses shared_ptr<const void> for RT-safe handle
+   (no cycle)
+
+    @note Clip should NEVER hold std::shared_ptr<Track> or
+   std::shared_ptr<ClipTrack>
 */
 class Clip : public juce::AudioSource {
 public:
   //==============================================================================
-  enum class Type { Audio, MIDI };
+  /**
+   * @brief Enumeration of clip types.
+   */
+  enum class Type {
+    Audio, /**< Audio clip containing waveform data */
+    MIDI   /**< MIDI clip containing note data */
+  };
 
   //==============================================================================
   Clip();
@@ -98,7 +115,16 @@ public:
 
   //==============================================================================
   // Timeline position (in samples)
+  /**
+   * @brief Sets the start position of the clip on the timeline.
+   * @param position Position in samples.
+   */
   void setStartPosition(int64_t position);
+
+  /**
+   * @brief Gets the start position of the clip.
+   * @return Position in samples.
+   */
   int64_t getStartPosition() const { return startPosition.load(); }
 
   void setLength(int64_t lengthInSamples);
@@ -131,17 +157,29 @@ public:
   // Audio clip specific
 
   // Phase 1.2: Use AudioFilePool for RT-safe file access
+  /**
+   * @brief Sets the audio file for this clip using the AudioFilePool.
+   *
+   * This is the preferred method for loading audio files as it ensures
+   * thread-safe access to the file handle.
+   *
+   * @param file The audio file to load.
+   * @param pool Reference to the AudioFilePool to use for loading.
+   */
   void setAudioFileFromPool(const juce::File &file,
                             zenith::AudioFilePool &pool);
 
-  // Legacy method (deprecated - loads file directly without pool)
-  void setAudioFile(const juce::File &file);
-  juce::File getAudioFile() const { return audioFile; }
+  juce::File getAudioFile() const;
+  
+  const juce::AudioBuffer<float>* getAudioBuffer() const { return &audioBuffer; }
 
-  void setAudioBuffer(const juce::AudioBuffer<float> &buffer);
-  const juce::AudioBuffer<float> *getAudioBuffer() const {
-    return &audioBuffer;
-  }
+  /**
+   * @brief Extract a range of audio samples from the clip.
+   * @param destBuffer Buffer to fill.
+   * @param startSampleInClip Start position relative to clip start (0 = clip start).
+   * @param numSamples Number of samples to extract.
+   */
+  void getAudioSamples(juce::AudioBuffer<float>& destBuffer, int64_t startSampleInClip, int numSamples) const;
 
   //==============================================================================
   // MIDI clip specific
@@ -164,7 +202,7 @@ public:
                                   double clipStartBeats, double tempo);
 
   /**
-   * Extract MIDI events for the current playback position into a MIDI buffer.
+   * @brief Extract MIDI events for the current playback position into a MIDI buffer.
    * Used for routing MIDI to instrument plugins.
    *
    * @param midiBuffer The MIDI buffer to add events to
@@ -179,7 +217,7 @@ public:
 
   void setFadeOut(int64_t fadeOutSamples);
   int64_t getFadeOut() const { return fadeOutLength.load(); }
-  
+
   void setFadeCurve(float curve) { fadeCurve.store(curve); }
   float getFadeCurve() const { return fadeCurve.load(); }
 
@@ -202,20 +240,21 @@ public:
   // Time Stretching
   void setPlaybackRate(double rate);
   double getPlaybackRate() const;
-  
+
   void setPreservePitch(bool preserve);
   bool isPreservingPitch() const;
 
   //==============================================================================
   // State management
   juce::ValueTree getState() const;
-  void loadState(const juce::ValueTree &state);
+  void loadState(const juce::ValueTree &state, AudioFilePool* pool = nullptr);
 
   //==============================================================================
   // Allow Track to access processing methods
   //==============================================================================
   friend class Track;
   friend class AudioTrack;
+  friend class InstrumentTrack;
 
 private:
   //==============================================================================
@@ -223,6 +262,8 @@ private:
   Type clipType = Type::Audio;
   juce::String clipName{"Clip"};
   juce::Colour clipColor{juce::Colours::blue};
+  juce::File audioFile;
+  juce::AudioBuffer<float> audioBuffer;
 
   //==============================================================================
   // Timeline position (atomic for lock-free access)
@@ -242,12 +283,9 @@ private:
 
   //==============================================================================
   // Audio data
-  juce::File audioFile;
-  juce::AudioBuffer<float> audioBuffer; // Legacy: for setAudioBuffer()
+  // MESSAGE THREAD ONLY - Protects file/buffer swapping on message thread.
+  // Audio thread access is through audioFileHandle_ (atomic).
   juce::CriticalSection audioLock;
-
-  // Legacy audio source (required for setAudioFile)
-  std::unique_ptr<juce::AudioFormatReaderSource> audioSource;
 
   // Phase 1.2: AudioFilePool handle (RT-safe shared ownership)
   std::shared_ptr<const void>
@@ -256,13 +294,15 @@ private:
   //==============================================================================
   // MIDI data
   std::atomic<std::shared_ptr<const juce::MidiMessageSequence>> midiSequence_;
+  // MESSAGE THREAD ONLY - Protects MIDI sequence updates.
+  // Audio thread access is through midiSequence_ (atomic).
   juce::CriticalSection midiLock;
 
   //==============================================================================
   // Time Stretching State
   std::atomic<double> playbackRate_{1.0};
   std::atomic<bool> preservePitch_{false};
-  
+
   // WSOLA State
   static constexpr int kWsolaWindowSize = 1024;
   std::vector<float> wsolaWindow_;
@@ -284,17 +324,11 @@ private:
   void processMidiClip(juce::MidiBuffer &midiBuffer, int64_t playheadSamples,
                        int numSamples);
 
-  // Legacy overloads (use internal transportPosition)
-  void processAudioClip(const juce::AudioSourceChannelInfo &bufferToFill);
-  void processMidiClip(const juce::AudioSourceChannelInfo &bufferToFill,
-                       int64_t playheadSamples);
-  void processMidiClip(const juce::AudioSourceChannelInfo &bufferToFill);
-
   float calculateFadeMultiplier(int64_t positionInClip) const;
 
-  void applyFadesSIMD(const juce::AudioSourceChannelInfo& bufferToFill, 
-                      int64_t startPositionInClip, 
-                      int numSamples);
+  void applyFadesSIMD(const juce::AudioSourceChannelInfo &bufferToFill,
+                      int destOffset,
+                      int64_t startPositionInClip, int numSamples);
 
   //==============================================================================
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Clip)

@@ -11,6 +11,7 @@
 */
 
 #include "TrackFreeze.h"
+#include "../instruments/Instrument.h"
 #include "Track.h"
 #include "Clip.h"
 #include "Engine.h"
@@ -32,7 +33,10 @@ bool TrackFreezeManager::freezeTrack(Track& track,
                                      Engine& engine,
                                      const juce::File& outputDir,
                                      ProgressCallback progress) {
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    if (!juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+        jassertfalse;
+        return false;
+    }
     
     // Check if already frozen
     if (isFrozen(track)) {
@@ -71,16 +75,20 @@ bool TrackFreezeManager::freezeTrack(Track& track,
     // Save instrument state if present
     if (track.hasInstrument()) {
         auto* instrument = track.getInstrument();
-        if (instrument != nullptr) {
-            // Save instrument state to memory block
-            // Note: This depends on instrument interface - placeholder for now
-            DBG("TrackFreeze: Saving instrument state");
+        if (instrument != nullptr && instrument->getAudioProcessor() != nullptr) {
+            // Save instrument state using JUCE's AudioProcessor state mechanism
+            instrument->getAudioProcessor()->getStateInformation(state.instrumentState);
+            DBG("TrackFreeze: Saved instrument state (" + 
+                juce::String(state.instrumentState.getSize()) + " bytes)");
         }
     }
     
     // Mark as freezing
     isFreezing_.store(true);
     shouldCancel_.store(false);
+
+    // Set track internal flag for audio thread safety
+    track.setBeingFrozen(true);
     
     // Start background render thread
     freezeThread_ = std::make_unique<FreezeRenderThread>(
@@ -93,7 +101,10 @@ bool TrackFreezeManager::freezeTrack(Track& track,
 
 //==============================================================================
 bool TrackFreezeManager::unfreezeTrack(Track& track) {
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    if (!juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+        jassertfalse;
+        return false;
+    }
     
     juce::String trackId = track.getTrackId();
     auto it = freezeStates_.find(trackId);
@@ -225,21 +236,22 @@ void FreezeRenderThread::run() {
     
     // Create output file
     juce::WavAudioFormat wavFormat;
-    std::unique_ptr<juce::FileOutputStream> outputStream(
-        new juce::FileOutputStream(outputFile_));
+    auto fileStream = std::make_unique<juce::FileOutputStream>(outputFile_);
     
-    if (!outputStream->openedOk()) {
+    if (!fileStream->openedOk()) {
         DBG("FreezeRenderThread: Failed to create output file");
         return;
     }
+
+    std::unique_ptr<juce::OutputStream> outputStream = std::move(fileStream);
     
-    std::unique_ptr<juce::AudioFormatWriter> writer(
-        wavFormat.createWriterFor(outputStream.release(),
-                                  sampleRate,
-                                  2,  // Stereo
-                                  constants::kFreezeBitDepth,
-                                  {},
-                                  0));
+    auto writerOptions = juce::AudioFormatWriter::Options()
+        .withSampleRate(sampleRate)
+        .withNumChannels(2)
+        .withBitsPerSample(constants::kFreezeBitDepth);
+
+    std::unique_ptr<juce::AudioFormatWriter> writer = 
+        wavFormat.createWriterFor(outputStream, writerOptions);
     
     if (writer == nullptr) {
         DBG("FreezeRenderThread: Failed to create audio writer");
@@ -298,33 +310,52 @@ void FreezeRenderThread::run() {
     if (shouldCancel_.load()) {
         DBG("FreezeRenderThread: Cancelled");
         outputFile_.deleteFile();
+        
+        // THREAD SAFETY FIX: Use Engine::getInstance() for safe async access
+        const juce::String cancelledTrackId = track_.getTrackId();
+        juce::MessageManager::callAsync([cancelledTrackId]() {
+            if (auto* engine = Engine::getInstance()) {
+                if (auto* track = engine->getTrackById(cancelledTrackId)) {
+                    track->setBeingFrozen(false);
+                }
+            }
+        });
         return;
     }
     
     // Success - finalize freeze on message thread
-    // LIFETIME SAFETY FIX: Capture by value, not by reference to avoid dangling refs
-    // We capture trackId to look up the track later, rather than holding a reference
+    // THREAD SAFETY FIX: Use Engine::getInstance() for safe async access
     const juce::String trackId = track_.getTrackId();
     const juce::String trackName = track_.getName();
     auto progressCopy = progress_; // Copy the callback
     
-    juce::MessageManager::callAsync([trackId, trackName, progressCopy, &track = track_]() {
-        // The track reference should still be valid as the Engine owns tracks
-        // and freeze operations are message-thread only
+    juce::MessageManager::callAsync([trackId, trackName, progressCopy]() {
+        // SAFE: Look up engine via singleton, check for null
+        auto* engine = Engine::getInstance();
+        if (engine == nullptr || engine->isShuttingDown()) {
+            DBG("FreezeRenderThread: Engine shutting down, skipping finalize");
+            return;
+        }
+        auto* track = engine->getTrackById(trackId);
+        if (track == nullptr) {
+            DBG("FreezeRenderThread: Track was deleted during freeze: " + trackName);
+            return; // Track was deleted - nothing to do
+        }
         
         // Disable all plugins on the track
-        for (int i = 0; i < track.getNumPlugins(); ++i) {
-            auto* plugin = track.getPlugin(i);
+        for (int i = 0; i < track->getNumPlugins(); ++i) {
+            auto* plugin = track->getPlugin(i);
             if (plugin != nullptr) {
                 plugin->suspendProcessing(true);
             }
         }
         
         // Mark track as frozen
-        track.setFrozen(true);
+        track->setFrozen(true);
+        track->setBeingFrozen(false); // Enable access again
         
         // Disable arming
-        track.setArmed(false);
+        track->setArmed(false);
         
         DBG("FreezeRenderThread: Freeze complete for " + trackName);
         

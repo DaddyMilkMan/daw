@@ -51,8 +51,10 @@
 #include "../Source/engine/EngineConstants.h"
 #include "../Source/engine/MacroControl.h"
 #include "../Source/engine/RoutingGraph.h"
+#include "AudioRenderer.h"
 #include "EngineEvent.h"
-
+#include "ExportCommon.h"
+#include "../audio/RealTimeAudioBuffer.h"
 
 // Forward declarations
 namespace zenith {
@@ -73,10 +75,16 @@ class AudioRenderer;
 class RecordingManager;
 class TransportController;
 class MeteringSystem;
+class MixerController;
+class Midi2DiscoveryService;
+class PropertyExchangeManager;
+class AudioAnalysisService;
 
 namespace ai {
 class SessionDebuggerAgent;
-}
+class AIMasteringAgent;
+} // namespace ai
+
 
 //==============================================================================
 /**
@@ -90,13 +98,48 @@ class SessionDebuggerAgent;
  * 4. MIDI input routing
  * 5. Audio input recording
  * 6. CPU usage monitoring
+ *
+ * ## Ownership Model (to prevent shared_ptr cycles):
+ *
+ * **Parent -> Child (shared_ptr/unique_ptr):**
+ * - Engine owns Tracks via std::vector<std::shared_ptr<Track>>
+ * - Engine owns AuxBuses via std::vector<std::shared_ptr<AuxBus>>
+ * - Engine owns subsystems via std::unique_ptr (AudioRenderer, RecordingManager, etc.)
+ *
+ * **Child -> Parent (raw pointer/reference):**
+ * - Subsystems hold Engine& references (TrackStateSynchronizer, RecordingManager, etc.)
+ * - No child component holds std::shared_ptr<Engine>
+ *
+ * **RT-safe snapshots:**
+ * - TrackSnapshot uses shared_ptr only for lifetime management (lifecycle vector)
+ * - Audio thread accesses raw pointers extracted from the snapshot
+ *
+ * @note To avoid memory leaks: NEVER store std::shared_ptr<Engine> in child components.
+ *       Use Engine& or Engine* for back-references.
  */
+class ExportJob;
+
 class Engine : public juce::AudioIODeviceCallback,
-               public juce::MidiInputCallback {
+               public juce::MidiInputCallback,
+               public juce::ChangeListener {
 public:
   //==========================================================================
   Engine();
   ~Engine() override;
+
+  /**
+   * @brief Get the singleton instance of the Engine
+   * @return Pointer to the Engine instance, or nullptr if not created or shutting down
+   * @note Thread-safe; used for safe async callback access
+   */
+  static Engine* getInstance() noexcept;
+
+  /**
+   * @brief Check if the engine is shutting down
+   * @return true if shutdown is in progress
+   * @note Thread-safe; used to prevent async callbacks during destruction
+   */
+  bool isShuttingDown() const noexcept { return isShuttingDown_.load(); }
 
   /**
    * @brief Get the plugin format manager
@@ -107,6 +150,23 @@ public:
    * @brief Get the audio device manager
    */
   juce::AudioDeviceManager &getDeviceManager() { return deviceManager; }
+
+  //==========================================================================
+  // Global Access (Safety for Async Callbacks)
+  //==========================================================================
+
+  /**
+   * @brief Get the global Engine instance (if valid)
+   * @return Pointer to the engine, or nullptr if shutting down/not created
+   * @note Use this in loose async callbacks to avoid dangling references
+   */
+  static Engine* getInstance();
+
+  /**
+   * @brief Cancel current offline export
+   */
+  void cancelExport();
+
 
   //==========================================================================
   // Initialization / Shutdown
@@ -210,9 +270,22 @@ public:
 
   /**
    * @brief Panic - Stop all sound immediately
-   * @note Stops transport, sends All Notes Off to all tracks, and clears buffers.
+   * @note Stops transport, sends All Notes Off to all tracks, and clears
+   * buffers.
    */
   void panic();
+
+  /**
+   * @brief Suspend audio processing (e.g. for offline export)
+   * @param shouldSuspend True to silence audio output/input
+   * @note Real-time safe (sets atomic flag)
+   */
+  void suspendProcessing(bool shouldSuspend) { isSuspended_.store(shouldSuspend); }
+
+  /**
+   * @brief Check if processing is suspended
+   */
+  bool isSuspended() const { return isSuspended_.load(); }
 
   /**
    * @brief Set sidechain source for a specific plugin on a track
@@ -220,7 +293,8 @@ public:
    * @param pluginIndex Index of the plugin to receive sidechain
    * @param sourceTrackIndex Index of the source track
    */
-  void setSidechainSource(int destTrackIndex, int pluginIndex, int sourceTrackIndex);
+  void setSidechainSource(int destTrackIndex, int pluginIndex,
+                          int sourceTrackIndex);
 
   //==========================================================================
   // Real-time Event Queue
@@ -233,6 +307,13 @@ public:
    * @note Lock-free, safe to call from any thread
    */
   bool queueEvent(const zenith::EngineEvent &e);
+
+  //==========================================================================
+  // Render Context (Live)
+  //==========================================================================
+
+  // REMOVED: getLiveContext() - AudioRenderer now manages its own internal state
+  // The AudioRenderContext is owned by AudioRenderer, not Engine. 
 
   //==========================================================================
   // Transport Position & Looping
@@ -383,9 +464,14 @@ public:
   ai::SessionDebuggerAgent *getSessionDebugger() {
     return sessionDebugger_.get();
   }
-  const ai::SessionDebuggerAgent *getSessionDebugger() const {
+  ai::SessionDebuggerAgent *getSessionDebugger() const {
     return sessionDebugger_.get();
   }
+
+  /**
+   * @brief Get the AI Mastering Agent
+   */
+  ai::AIMasteringAgent *getMasteringAgent() const;
 
   //==========================================================================
   // Analysis (Visualizers)
@@ -418,6 +504,15 @@ public:
   const std::vector<std::shared_ptr<Track>> &tracks() const noexcept;
 
   /**
+   * @brief Get a thread-safe snapshot of tracks (copy of shared_ptrs)
+   * @note Safe to iterate on any thread while tracks are being added/removed
+   */
+  std::vector<std::shared_ptr<Track>> getTracksSnapshot() const {
+      const juce::ScopedReadLock lock(tracksLock_);
+      return tracks_; // Implicit copy of shared_ptrs
+  }
+
+  /**
    * @brief Debug helper to create test tracks (message thread only)
    * @param count Number of tracks to create
    * @note Does NOT attach tracks to audio graph; for compile/UI testing only
@@ -447,6 +542,14 @@ public:
    * @note Message thread only; used by TrackStateSynchronizer
    */
   void removeTrack(int index);
+
+  /**
+   * @brief Get a track by its unique ID
+   * @param trackId The unique track ID string
+   * @return Pointer to the track, or nullptr if not found
+   * @note Message thread only
+   */
+  Track* getTrackById(const juce::String& trackId);
 
   //==========================================================================
   // Aux Bus Management (MESSAGE THREAD ONLY)
@@ -556,6 +659,18 @@ public:
   void setMasterLimiterEnabled(bool enabled);
 
   /**
+   * @brief Add a plugin to the master bus
+   * @param plugin Shared pointer to the plugin instance
+   */
+  void addMasterPlugin(std::shared_ptr<juce::AudioPluginInstance> plugin);
+
+  /**
+   * @brief Remove a plugin from the master bus
+   * @param index Index of the plugin to remove
+   */
+  void removeMasterPlugin(int index);
+
+  /**
    * @brief Check if master limiter is enabled
    */
   bool isMasterLimiterEnabled() const;
@@ -577,6 +692,12 @@ public:
    * @return Latency in samples (includes lookahead and oversampling)
    */
   int getMasterLimiterLatency() const;
+
+  /**
+   * @brief Get the mixer controller
+   */
+  MixerController& getMixerController();
+  TrackFreezeManager& getTrackFreezeManager() { return *freezeManager_; }
 
   //==========================================================================
   // Track Freeze (CPU optimization)
@@ -608,6 +729,12 @@ public:
    * @note Thread-safe
    */
   bool isTrackFrozen(int trackIndex) const;
+
+  /**
+   * @brief Cancel any active freeze operation
+   * @note MESSAGE THREAD ONLY
+   */
+  void cancelFreeze();
 
   //==========================================================================
   // Audio File Pool
@@ -711,38 +838,69 @@ public:
                                  const juce::MidiMessage &message) override;
 
   //==========================================================================
+  // ChangeListener interface
+  //==========================================================================
+
+  /**
+   * @brief Handle callbacks from Track changes (e.g. plugin latency change)
+   */
+  void changeListenerCallback(juce::ChangeBroadcaster* source) override;
+
+  //==========================================================================
   // Project Export
   //==========================================================================
+  
+  friend class AudioExporter;
+  friend class AudioRecorder;
+  friend class ExportJob;
+
+
+  /**
+   * @brief Render a specific block of audio for offline export
+   * @param buffer Buffer to fill (must be sized correctly)
+   * @param numSamples Number of samples to render
+   * @param position Sample position in the project
+   * @note Message thread only
+   */
+  void renderOfflineBlock(AudioRenderContext& context, juce::AudioBuffer<float>& buffer, int numSamples, juce::int64 position);
+
+
+  using ExportFormat = zenith::ExportFormat;
+
+  /// Progress callback type for export operations
+  using ExportProgressCallback = zenith::ExportProgressCallback;
 
   /**
    * @brief Export project to WAV file
    * @param outputFile Output file path
    * @param sampleRate Sample rate for export
    * @param bitDepth Bit depth (16, 24, or 32)
-   * @param durationInSeconds Duration to export
+   * @param durationInSeconds Duration to export (0 = auto-detect)
+   * @param startTimeSeconds Start time in seconds (default 0.0)
+   * @param progressCallback Optional callback for progress updates
    * @return true if successful
    */
   bool exportProjectToWav(const juce::File &outputFile, double sampleRate,
-                          int bitDepth, double durationInSeconds);
+                          int bitDepth, double durationInSeconds = 0.0,
+                          double startTimeSeconds = 0.0,
+                          ExportProgressCallback progressCallback = nullptr);
 
-  enum class ExportFormat { WAV, FLAC, OGG };
+  /**
+   * @brief Synchronous version of project export for background threads (AI)
+   */
+  bool exportProjectToWavSync(const juce::File &outputFile, double sampleRate,
+                              int bitDepth, double durationInSeconds = 0.0,
+                              double startTimeSeconds = 0.0);
 
-  struct ExportOptions {
-    juce::File outputFile;
-    double sampleRate = 44100.0;
-    int bitDepth = 24; // 8, 16, 24, 32
-    ExportFormat format = ExportFormat::WAV;
-    bool enableDither = true;
-    bool normalize = false;
-    double normalizeDb = -0.1;
-    double duration = 0.0;
-  };
+using ExportOptions = zenith::ExportOptions;
 
   /**
    * @brief Advanced Project Export
-   * Supports WAV/FLAC/OGG, Dithering, Normalization, and 8-bit.
+   * Supports WAV/FLAC/OGG/AIFF, Dithering, Normalization, and 8-bit.
    */
   bool exportProject(const ExportOptions &options);
+
+
 
   //==========================================================================
   // Metronome
@@ -752,15 +910,24 @@ public:
   bool isMetronomeEnabled() const;
   void setMetronomeLevel(float level);
 
+  //==========================================================================
+  // Application Thread Pool (Background Tasks)
+  //==========================================================================
+
+  /**
+   * @brief Get the shared thread pool for background tasks
+   */
+  juce::ThreadPool &getThreadPool();
+
+  Midi2DiscoveryService* getMidi2DiscoveryService() const { return midi2DiscoveryService_.get(); }
+  AudioAnalysisService* getAnalysisService() const { return analysisService_.get(); }
+
+
 private:
   //==========================================================================
   // Audio Processing (AUDIO THREAD)
   //==========================================================================
 
-  /**
-   * @brief Process audio when playing
-   * @note AUDIO THREAD - real-time safe!
-   */
   /**
    * @brief Process audio when playing
    * @note AUDIO THREAD - real-time safe!
@@ -847,6 +1014,7 @@ private:
 
   // Track container (message thread for modification)
   // Use shared_ptr instead of unique_ptr to enable RT-safe snapshot sharing
+  mutable juce::ReadWriteLock tracksLock_;
   std::vector<std::shared_ptr<zenith::Track>> tracks_;
 
   // Routing Graph (Source of Truth for connections and processing order)
@@ -870,12 +1038,13 @@ private:
         lifecycleAux; // Keeps buses alive
 
     // Fast lookup maps (ID -> Pointer)
-    // Audio thread usage: Read-only access to find tracks by ID from RoutingGraph
+    // Audio thread usage: Read-only access to find tracks by ID from
+    // RoutingGraph
     std::unordered_map<std::string, zenith::Track *> trackMap;
     std::unordered_map<std::string, zenith::AuxBus *> auxBusMap;
 
     TrackSnapshot() = default;
-    
+
     // Constructor defined in .cpp to avoid circular includes
     TrackSnapshot(
         const std::vector<std::shared_ptr<zenith::Track>> &ownedTracks,
@@ -887,12 +1056,22 @@ private:
   // Main thread manages lifetime via currentSnapshotHolder_ and snapshotTrash_
   std::atomic<TrackSnapshot *> activeSnapshot_{nullptr};
   std::shared_ptr<TrackSnapshot> currentSnapshotHolder_;
-  std::vector<std::shared_ptr<TrackSnapshot>> snapshotTrash_;
 
   void updateTrackSnapshot();
 
   // RT-safe event applicator to deduplicate processEvents logic
-  void applyEvent(const zenith::EngineEvent& e, TrackSnapshot* snapshot) noexcept;
+  void applyEvent(const zenith::EngineEvent &e,
+                  TrackSnapshot *snapshot) noexcept;
+
+  // Master Plugin RCU
+  struct MasterPluginSnapshot {
+    std::vector<std::shared_ptr<juce::AudioPluginInstance>> plugins;
+  };
+
+  std::atomic<MasterPluginSnapshot *> activeMasterPluginsSnapshot_{nullptr};
+  std::shared_ptr<MasterPluginSnapshot> currentMasterPluginsSnapshotHolder_;
+
+  void updateMasterPluginSnapshot();
 
   // Phase 1.2: Audio file pool
   std::unique_ptr<zenith::AudioFilePool> audioFilePool_;
@@ -906,7 +1085,10 @@ private:
 
   // Session Debugger Agent
   std::unique_ptr<ai::SessionDebuggerAgent> sessionDebugger_;
+  std::unique_ptr<ai::AIMasteringAgent> masteringAgent_;
+  std::unique_ptr<AudioAnalysisService> analysisService_;
   std::unique_ptr<Metronome> metronome_;
+  std::unique_ptr<Midi2DiscoveryService> midi2DiscoveryService_;
 
   // Analysis FIFO (Stereo)
   std::unique_ptr<zenith::StereoAudioFifo> analysisFifo_;
@@ -917,14 +1099,23 @@ private:
   // Automation synchronizer
   std::unique_ptr<TrackAutomationSynchronizer> automationSynchronizer;
 
+  // Thread Pool (Shared)
+  juce::ThreadPool threadPool{
+      1}; // Start with 1 thread to be safe, or default constructor
+
   //==========================================================================
   // Modular Engine Components (Refactor 2025-12-09)
   //==========================================================================
 
   std::unique_ptr<AudioRenderer> audioRenderer_;
+  // Re-added renderContext_ as AudioRenderer is stateless (unique_ptr to avoid header cycling)
+  std::unique_ptr<AudioRenderContext> renderContext_;  // For offline export
+  std::unique_ptr<AudioRenderContext> liveContext_;    // For live audio callback
+  std::atomic<bool> isSuspended_{false}; // Suspend flag
   std::unique_ptr<RecordingManager> recordingManager_;
   std::unique_ptr<TransportController> transportController_;
   std::unique_ptr<MeteringSystem> meteringSystem_;
+  std::unique_ptr<MixerController> mixerController_;
   std::unique_ptr<zenith::TempoMap>
       tempoMap_; // Kept for now, shared with controllers
 
@@ -932,7 +1123,7 @@ private:
   std::vector<std::shared_ptr<zenith::AuxBus>> auxBuses_;
 
   // Master bus plugins (Managed by Engine, rendered by AudioRenderer)
-  std::vector<std::unique_ptr<juce::AudioPluginInstance>> masterPlugins_;
+  std::vector<std::shared_ptr<juce::AudioPluginInstance>> masterPlugins_;
   juce::CriticalSection masterPluginLock_;
 
   // Master Limiter (Used by AudioRenderer)
@@ -940,6 +1131,9 @@ private:
 
   // Track Freeze Manager
   std::unique_ptr<TrackFreezeManager> freezeManager_;
+
+  // Real-time audio processor (Real-time safety and monitoring)
+  audio::RealTimeAudioProcessor rtProcessor_;
 
   // MIDI input handling
   std::vector<std::unique_ptr<juce::MidiInput>> midiInputs_;
@@ -964,6 +1158,21 @@ private:
 
   // Macro Bank
   MacroBank macroBank_;
+
+  // Async Export Job Tracking
+  std::atomic<ExportJob*> currentExportJob_{nullptr};
+
+  // Weak reference support for God Mode
+  juce::WeakReference<Engine>::Master masterReference;
+  friend class juce::WeakReference<Engine>;
+
+  // Export Job (Async Legacy)
+  std::unique_ptr<juce::Thread> exportThread_;
+
+  friend class LegacyExportThread;
+
+  // Static instance for safe async access (set in constructor, cleared in destructor)
+  static inline std::atomic<Engine*> instance_{nullptr};
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

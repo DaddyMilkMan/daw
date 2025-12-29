@@ -50,7 +50,6 @@ set(ZENITH_ENGINE_SOURCES
     apps/desktop/Source/engine/AuxBusTrack.cpp
     apps/desktop/Source/engine/AutomationManager.cpp
     apps/desktop/Source/engine/TempoMap.cpp
-    apps/desktop/Source/engine/TempoMap.cpp
     apps/desktop/Source/engine/RecentProjectManager.cpp
     apps/desktop/Source/engine/MidiNoteStateManager.cpp
     apps/desktop/Source/engine/PlatformAudioUtils.cpp
@@ -72,7 +71,6 @@ set(ZENITH_UI_FRAMEWORK_SOURCES
     apps/desktop/Source/ui/framework/AuroraBackground.cpp
     apps/desktop/Source/ui/framework/SkiaComponent.cpp
     apps/desktop/Source/ui/framework/SkiaLayout.cpp
-    apps/desktop/Source/ui/framework/PlatformWindowUtils.cpp
     apps/desktop/Source/ui/framework/PlatformWindowUtils.cpp
     apps/desktop/Source/ui/framework/PlatformPathUtils.cpp
     apps/desktop/Source/ui/framework/PlatformDisplayUtils.cpp
