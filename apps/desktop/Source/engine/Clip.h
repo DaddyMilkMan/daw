@@ -37,7 +37,6 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
 #include <vector>
-#include "MidiNote.h"
 
 namespace zenith {
 
@@ -45,7 +44,22 @@ namespace zenith {
 class AudioFilePool;
 
 //==============================================================================
-using MidiNoteSpec = zenith::MidiNote;
+/**
+ * @brief MIDI note specification (Phase 8)
+ * Matches ProjectState::MidiNoteSpec for compatibility
+ */
+struct MidiNoteSpec {
+  juce::String id;    // Unique note ID
+  int pitch;          // MIDI note number (0-127)
+  double startBeats;  // Start time in beats (relative to clip start)
+  double lengthBeats; // Duration in beats
+  uint16_t velocity;  // Note velocity (High-res 0-65535)
+  bool muted;         // Muted flag
+
+  MidiNoteSpec()
+      : pitch(60), startBeats(0.0), lengthBeats(1.0), velocity(51400),
+        muted(false) {}
+};
 
 //==============================================================================
 /**
@@ -155,14 +169,9 @@ public:
   void setAudioFileFromPool(const juce::File &file,
                             zenith::AudioFilePool &pool);
 
-  // Legacy method (deprecated - loads file directly without pool)
-  void setAudioFile(const juce::File &file);
-  juce::File getAudioFile() const { return audioFile; }
-
-  void setAudioBuffer(const juce::AudioBuffer<float> &buffer);
-  const juce::AudioBuffer<float> *getAudioBuffer() const {
-    return &audioBuffer;
-  }
+  juce::File getAudioFile() const;
+  
+  const juce::AudioBuffer<float>* getAudioBuffer() const { return &audioBuffer; }
 
   /**
    * @brief Extract a range of audio samples from the clip.
@@ -193,7 +202,7 @@ public:
                                   double clipStartBeats, double tempo);
 
   /**
-   * Extract MIDI events for the current playback position into a MIDI buffer.
+   * @brief Extract MIDI events for the current playback position into a MIDI buffer.
    * Used for routing MIDI to instrument plugins.
    *
    * @param midiBuffer The MIDI buffer to add events to
@@ -238,7 +247,7 @@ public:
   //==============================================================================
   // State management
   juce::ValueTree getState() const;
-  void loadState(const juce::ValueTree &state);
+  void loadState(const juce::ValueTree &state, AudioFilePool* pool = nullptr);
 
   //==============================================================================
   // Allow Track to access processing methods
@@ -253,6 +262,8 @@ private:
   Type clipType = Type::Audio;
   juce::String clipName{"Clip"};
   juce::Colour clipColor{juce::Colours::blue};
+  juce::File audioFile;
+  juce::AudioBuffer<float> audioBuffer;
 
   //==============================================================================
   // Timeline position (atomic for lock-free access)
@@ -272,14 +283,9 @@ private:
 
   //==============================================================================
   // Audio data
-  juce::File audioFile;
-  juce::AudioBuffer<float> audioBuffer; // Legacy: for setAudioBuffer()
   // MESSAGE THREAD ONLY - Protects file/buffer swapping on message thread.
   // Audio thread access is through audioFileHandle_ (atomic).
   juce::CriticalSection audioLock;
-
-  // Legacy audio source (required for setAudioFile)
-  std::unique_ptr<juce::AudioFormatReaderSource> audioSource;
 
   // Phase 1.2: AudioFilePool handle (RT-safe shared ownership)
   std::shared_ptr<const void>
@@ -317,12 +323,6 @@ private:
   // Phase 2A: Process MIDI clip with explicit playhead position
   void processMidiClip(juce::MidiBuffer &midiBuffer, int64_t playheadSamples,
                        int numSamples);
-
-  // Legacy overloads (use internal transportPosition)
-  void processAudioClip(const juce::AudioSourceChannelInfo &bufferToFill);
-  void processMidiClip(const juce::AudioSourceChannelInfo &bufferToFill,
-                       int64_t playheadSamples);
-  void processMidiClip(const juce::AudioSourceChannelInfo &bufferToFill);
 
   float calculateFadeMultiplier(int64_t positionInClip) const;
 

@@ -1,14 +1,12 @@
 target_sources(ZenithDAW PRIVATE
     Engine.cpp
     # Modular Engine split files
-    EngineTransport.cpp
-    EngineTrackManagement.cpp
-    EngineMixing.cpp
-    EngineRecording.cpp
-    EngineExport.cpp
-    EngineMIDI.cpp
-    EngineSync.cpp
-    EnginePlugins.cpp
+    # EngineTransport.cpp
+    # EngineTrackManagement.cpp
+    # EngineMixing.cpp
+    # EngineRecording.cpp
+    # EngineExport.cpp
+    # EngineMIDI.cpp
     ProjectState.cpp
     Track.cpp
     Clip.cpp
@@ -23,6 +21,7 @@ target_sources(ZenithDAW PRIVATE
     MixerController.cpp
     AudioFilePool.cpp
     PluginHost.cpp
+    ../plugins/InternalPluginFormat.cpp
     AuxBus.cpp
     ZenithLogger.cpp
     TrackPluginState.cpp
@@ -41,9 +40,12 @@ target_sources(ZenithDAW PRIVATE
     PropertyExchangeManager.cpp
     RealTimeGarbageCollector.cpp
     
+    # Audio Components
+    ../audio/RealTimeAudioBuffer.cpp
     # Modular Engine Components (2025-12-11 Refactor)
     AudioRenderer.cpp
     AudioExporter.cpp
+    ExportJob.cpp
     RecordingManager.cpp
     TransportController.cpp
     ProjectEngineBridge.cpp

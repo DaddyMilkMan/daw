@@ -1,5 +1,6 @@
 target_sources(ZenithDAW PRIVATE
-    GrokAPIClient.cpp
+
+    GrokDAWClient.cpp
     GrokDAWController.cpp
     GrokUtils.cpp
     SecureKeyStore.cpp
@@ -7,5 +8,9 @@ target_sources(ZenithDAW PRIVATE
     AITools.cpp
     AIPrompts.cpp
     CollaborationManager.cpp
+    AuthenticationService.cpp
+    OAuthRedirectServer.cpp
 )
+
+# Platform-specific sources are handled via Source/platform/[os]/master
 

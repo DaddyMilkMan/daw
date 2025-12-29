@@ -15,6 +15,8 @@
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include "rendering/SkiaRenderer.h"
+#include <mutex>
+#include <functional>
 
 namespace zenith {
 
@@ -30,6 +32,26 @@ public:
     static Settings& getInstance() {
         static Settings instance;
         return instance;
+    }
+
+    // Thread-safe accessors - CRITICAL: sendChangeMessage() outside lock to prevent deadlock!
+    template<typename Func>
+    auto withLock(Func&& func) -> decltype(func()) {
+        std::lock_guard<std::mutex> lock(settingsMutex);
+        return func();
+    }
+    
+    // Thread-safe setter that broadcasts outside lock
+    template<typename SetValueFunc>
+    void setWithBroadcast(SetValueFunc&& setValueFunc) {
+        bool shouldBroadcast = false;
+        {
+            std::lock_guard<std::mutex> lock(settingsMutex);
+            shouldBroadcast = setValueFunc();
+        }
+        if (shouldBroadcast) {
+            sendChangeMessage();
+        }
     }
 
     //==============================================================================
@@ -156,25 +178,60 @@ public:
     //==============================================================================
     // Display Settings
     //==============================================================================
-    void setRenderBackend(SkiaRenderer::Backend backend) { if (renderBackend_ != backend) { renderBackend_ = backend; save(); sendChangeMessage(); } }
-    SkiaRenderer::Backend getRenderBackend() const { return renderBackend_; }
+    void setRenderBackend(SkiaRenderer::Backend backend) {
+        setWithBroadcast([&]() { if (renderBackend_ != backend) { renderBackend_ = backend; save(); return true; } return false; });
+    }
+    SkiaRenderer::Backend getRenderBackend() const { std::lock_guard<std::mutex> lock(settingsMutex); return renderBackend_; }
 
-    void setTargetFPS(int fps) { if (targetFPS_ != fps) { targetFPS_ = fps; save(); sendChangeMessage(); } }
-    int getTargetFPS() const { return targetFPS_; }
+    void setTargetFPS(int fps) {
+        setWithBroadcast([&]() { if (targetFPS_ != fps) { targetFPS_ = fps; save(); return true; } return false; });
+    }
+    int getTargetFPS() const { std::lock_guard<std::mutex> lock(settingsMutex); return targetFPS_; }
 
-    void setGlobalScale(float scale) { if (globalScale_ != scale) { globalScale_ = scale; save(); sendChangeMessage(); } }
-    float getGlobalScale() const { return globalScale_; }
+    void setGlobalScale(float scale) {
+        setWithBroadcast([&]() { if (globalScale_ != scale) { globalScale_ = scale; save(); return true; } return false; });
+    }
+    float getGlobalScale() const { std::lock_guard<std::mutex> lock(settingsMutex); return globalScale_; }
 
-    void setGlowIntensity(float intensity) { if (glowIntensity_ != intensity) { glowIntensity_ = intensity; save(); sendChangeMessage(); } }
-    float getGlowIntensity() const { return glowIntensity_; }
+    void setGlowIntensity(float intensity) {
+        setWithBroadcast([&]() { if (glowIntensity_ != intensity) { glowIntensity_ = intensity; save(); return true; } return false; });
+    }
+    float getGlowIntensity() const { std::lock_guard<std::mutex> lock(settingsMutex); return glowIntensity_; }
 
-    void setTheme(UITheme theme) { if (theme_ != theme) { theme_ = theme; save(); sendChangeMessage(); } }
+    void setTheme(UITheme theme) {
+        setWithBroadcast([&]() {
+            if (theme_ != theme) {
+                theme_ = theme;
+                save();
+                return true;
+            }
+            return false;
+        });
+    }
     UITheme getTheme() const { return theme_; }
 
-    void setAnimationsEnabled(bool enabled) { if (animationsEnabled_ != enabled) { animationsEnabled_ = enabled; save(); sendChangeMessage(); } }
+    void setAnimationsEnabled(bool enabled) {
+        setWithBroadcast([&]() {
+            if (animationsEnabled_ != enabled) {
+                animationsEnabled_ = enabled;
+                save();
+                return true;
+            }
+            return false;
+        });
+    }
     bool getAnimationsEnabled() const { return animationsEnabled_; }
 
-    void setHighContrastMode(bool enabled) { if (highContrastMode_ != enabled) { highContrastMode_ = enabled; save(); sendChangeMessage(); } }
+    void setHighContrastMode(bool enabled) {
+        setWithBroadcast([&]() {
+            if (highContrastMode_ != enabled) {
+                highContrastMode_ = enabled;
+                save();
+                return true;
+            }
+            return false;
+        });
+    }
     bool getHighContrastMode() const { return highContrastMode_; }
 
     //==============================================================================
@@ -273,6 +330,10 @@ public:
     // Managed by PluginHost
 
 private:
+    // Thread safety
+    mutable std::mutex settingsMutex;
+    
+    // Data members
     Settings() = default;
     void sendChangeMessage() { juce::ChangeBroadcaster::sendChangeMessage(); }
 

@@ -17,6 +17,7 @@
 #include "../dsp/Dither.h"
 #include "AudioRenderer.h"
 #include "Engine.h"
+#include "ExportJob.h"
 #include "Track.h"
 #include "TempoMap.h"
 
@@ -154,30 +155,35 @@ bool AudioExporter::exportProject(const ExportOptions &options) {
     return false;
   }
 
+  auto writerOptions = juce::AudioFormatWriterOptions()
+      .withSampleRate(options.sampleRate)
+      .withNumChannels(2)
+      .withBitsPerSample(options.bitDepth);
+
   std::unique_ptr<juce::OutputStream> streamPtr(std::move(fileStream));
-  std::unique_ptr<juce::AudioFormatWriter> writer(
-      format->createWriterFor(streamPtr.release(), options.sampleRate, 2, options.bitDepth, {}, 0));
+  std::unique_ptr<juce::AudioFormatWriter> writer(format->createWriterFor(streamPtr, writerOptions));
 
   if (!writer) {
     isExporting_.store(false);
     return false;
   }
 
-  const int blockSize = 4096;
-  juce::AudioBuffer<float> buffer(2, blockSize);
+  juce::AudioBuffer<float> buffer(2, kExportBlockSize);
 
-  // Note: Engine now manages its own render context internally
-  // No need to create or pass AudioRenderContext
+  // Create local render context
+  AudioRenderContext context;
+  context.prepare(options.sampleRate, blockSize, engine_.getNumTracks(), engine_.getNumAuxBuses());
 
   juce::int64 startSample = static_cast<juce::int64>(options.startTime * options.sampleRate);
   juce::int64 totalSamples = static_cast<juce::int64>(options.sampleRate * duration);
   juce::int64 samplesWritten = 0;
 
   while (samplesWritten < totalSamples && !shouldCancel_.load()) {
-    int numSamples = static_cast<int>(juce::jmin(static_cast<juce::int64>(blockSize), 
+    int numSamples = static_cast<int>(juce::jmin(static_cast<juce::int64>(kExportBlockSize), 
                                                   totalSamples - samplesWritten));
 
-    engine_.renderOfflineBlock(buffer, numSamples, startSample + samplesWritten);
+    engine_.renderOfflineBlock(context, buffer, numSamples, startSample + samplesWritten);
+
 
     if (options.enableDither && options.bitDepth < 32) {
       dither.process(buffer, options.bitDepth);
@@ -211,11 +217,71 @@ bool AudioExporter::exportProject(const ExportOptions &options) {
 }
 
 //==============================================================================
+// Async Export (Non-Blocking)
+//==============================================================================
+
+bool AudioExporter::exportProjectAsync(const ExportOptions& options,
+                                        ExportCompletionCallback completion) {
+  // Reject if already exporting
+  if (isExporting_.load()) {
+    DBG("AudioExporter: Rejecting new export - already exporting");
+    if (completion) {
+      juce::MessageManager::callAsync([completion]() {
+        completion(juce::Result::fail("Export already in progress"));
+      });
+    }
+    return false;
+  }
+  
+  DBG("AudioExporter: Starting async export to " + options.outputFile.getFullPathName());
+  
+  isExporting_.store(true);
+  shouldCancel_.store(false);
+  
+  // Create the export job with callbacks
+  auto* job = new ExportJob(
+      engine_,
+      options,
+      options.progressCallback,  // Progress callback
+      [this, completion](juce::Result result) {
+        // Clear job reference
+        {
+          juce::ScopedLock lock(exportJobLock_);
+          currentExportJob_ = nullptr;
+        }
+        isExporting_.store(false);
+        
+        // Forward to user's completion callback
+        if (completion) {
+          completion(result);
+        }
+      }
+  );
+  
+  // Store reference for cancellation
+  {
+    juce::ScopedLock lock(exportJobLock_);
+    currentExportJob_ = job;
+  }
+  
+  // Submit to thread pool (pool takes ownership)
+  engine_.getThreadPool().addJob(job, true);
+  
+  return true;
+}
+
+//==============================================================================
 // Cancellation
 //==============================================================================
 
 void AudioExporter::cancelExport() {
   shouldCancel_.store(true);
+  
+  // Also cancel the ExportJob if one is running
+  juce::ScopedLock lock(exportJobLock_);
+  if (currentExportJob_) {
+    currentExportJob_->cancel();
+  }
 }
 
 //==============================================================================
@@ -278,9 +344,12 @@ void AudioExporter::reportAggregateProgress(const ExportOptions& options) {
 
 bool AudioExporter::analyzeProjectPeak(double duration, double sampleRate,
                                        double startTime, float &outMaxPeak) {
-  const int blockSize = 4096;
+  const int blockSize = kExportBlockSize;
   juce::AudioBuffer<float> buffer(2, blockSize);
-  // Note: Engine manages render context internally
+  
+  // Create local render context
+  AudioRenderContext context;
+  context.prepare(sampleRate, blockSize, engine_.getNumTracks(), engine_.getNumAuxBuses());
 
   juce::int64 startSample = static_cast<juce::int64>(startTime * sampleRate);
   juce::int64 totalSamples = static_cast<juce::int64>(sampleRate * duration);
@@ -288,9 +357,10 @@ bool AudioExporter::analyzeProjectPeak(double duration, double sampleRate,
   outMaxPeak = 0.0f;
 
   while (samplesProcessed < totalSamples && !shouldCancel_.load()) {
-    int numSamples = static_cast<int>(juce::jmin(static_cast<juce::int64>(blockSize),
+    int numSamples = static_cast<int>(juce::jmin(static_cast<juce::int64>(kExportBlockSize),
                                                   totalSamples - samplesProcessed));
-    engine_.renderOfflineBlock(buffer, numSamples, startSample + samplesProcessed);
+    engine_.renderOfflineBlock(context, buffer, numSamples, startSample + samplesProcessed);
+
 
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
       float channelPeak = buffer.getMagnitude(ch, 0, numSamples);
@@ -311,17 +381,24 @@ bool AudioExporter::renderToTempFile(const juce::File &tempFile,
   if (!stream)
     return false;
 
+  auto writerOptions = juce::AudioFormatWriterOptions()
+      .withSampleRate(sampleRate)
+      .withNumChannels(2)
+      .withBitsPerSample(32);
+
   std::unique_ptr<juce::OutputStream> streamPtr(std::move(stream));
   std::unique_ptr<juce::AudioFormatWriter> writer(
-      wavFormat.createWriterFor(streamPtr.release(), sampleRate, 2, 32, {}, 0));
+      wavFormat.createWriterFor(streamPtr, writerOptions));
 
   if (!writer)
     return false;
 
-  const int blockSize = 4096;
-  juce::AudioBuffer<float> buffer(2, blockSize);
+  juce::AudioBuffer<float> buffer(2, kExportBlockSize);
 
-  // Note: Engine manages render context internally
+  // Create local render context
+  AudioRenderContext context;
+  context.prepare(sampleRate, blockSize, engine_.getNumTracks(), engine_.getNumAuxBuses());
+
 
   // Note: Engine playback should already be suspended here by wrapper
 
@@ -331,10 +408,11 @@ bool AudioExporter::renderToTempFile(const juce::File &tempFile,
   outMaxPeak = 0.0f;
 
   while (samplesProcessed < totalSamples && !shouldCancel_.load()) {
-    int numSamples = static_cast<int>(juce::jmin(static_cast<juce::int64>(blockSize),
+    int numSamples = static_cast<int>(juce::jmin(static_cast<juce::int64>(kExportBlockSize),
                                                   totalSamples - samplesProcessed));
 
-    engine_.renderOfflineBlock(buffer, numSamples, startSample + samplesProcessed);
+    engine_.renderOfflineBlock(context, buffer, numSamples, startSample + samplesProcessed);
+
 
     // Find peak across both channels
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
@@ -385,15 +463,19 @@ bool AudioExporter::writeFinalFile(const juce::File &tempFile,
   if (!outStream)
     return false;
 
+  auto writerOptions = juce::AudioFormatWriterOptions()
+      .withSampleRate(options.sampleRate)
+      .withNumChannels(2)
+      .withBitsPerSample(options.bitDepth);
+
   std::unique_ptr<juce::OutputStream> streamPtr(std::move(outStream));
   std::unique_ptr<juce::AudioFormatWriter> writer(
-      targetFormat->createWriterFor(streamPtr.release(), options.sampleRate, 2, options.bitDepth, {}, 0));
+      targetFormat->createWriterFor(streamPtr, writerOptions));
   if (!writer)
     return false;
 
   // Process with gain and dithering
-  const int blockSize = 4096;
-  juce::AudioBuffer<float> buffer(2, blockSize);
+  juce::AudioBuffer<float> buffer(2, kExportBlockSize);
   
   zenith::dsp::Dither dither;
   if (options.enableDither) {
@@ -405,7 +487,7 @@ bool AudioExporter::writeFinalFile(const juce::File &tempFile,
   juce::int64 samplesWritten = 0;
 
   while (samplesWritten < totalSamples && !shouldCancel_.load()) {
-    int numSamples = static_cast<int>(juce::jmin(static_cast<juce::int64>(blockSize), 
+    int numSamples = static_cast<int>(juce::jmin(static_cast<juce::int64>(kExportBlockSize), 
                                                   totalSamples - samplesWritten));
 
     reader->read(&buffer, 0, numSamples, samplesWritten, true, true);
@@ -438,7 +520,10 @@ bool AudioExporter::writeFinalFile(const juce::File &tempFile,
 //==============================================================================
 
 bool AudioExporter::exportStems(const ExportOptions &options) {
-  DBG("AudioExporter: Starting synchronous stem export...");
+  // WARNING: Synchronous export on the message thread will freeze the UI.
+  // Use exportStemsAsync() (the default) for non-blocking stem exports.
+  DBG("AudioExporter: DEPRECATION WARNING - Synchronous stem export called. "
+      "Consider using exportStemsAsync() to prevent UI freezes.");
 
   const int numTracks = engine_.getNumTracks();
   if (numTracks == 0) {
@@ -468,40 +553,47 @@ bool AudioExporter::exportStems(const ExportOptions &options) {
   juce::File outputDir = options.outputFile.getParentDirectory();
   juce::String baseName = options.outputFile.getFileNameWithoutExtension();
 
-    // Handle normalization gain (2-pass)
-    float normalizationGain = 1.0f;
-    if (options.normalize) {
-        float maxPeak = 0.0f;
-        if (analyzeProjectPeak(options.duration > 0 ? options.duration : engine_.autoDetectProjectDuration(),
-                               options.sampleRate, options.startTime, maxPeak)) {
-            float targetLinear = juce::Decibels::decibelsToGain(static_cast<float>(options.normalizeDb));
-            if (maxPeak > 0.0001f) normalizationGain = targetLinear / maxPeak;
-        }
+  // Handle normalization gain (2-pass)
+  float normalizationGain = 1.0f;
+  if (options.normalize) {
+    float maxPeak = 0.0f;
+    if (analyzeProjectPeak(options.duration > 0 ? options.duration : engine_.autoDetectProjectDuration(),
+                           options.sampleRate, options.startTime, maxPeak)) {
+      float targetLinear = juce::Decibels::decibelsToGain(static_cast<float>(options.normalizeDb));
+      if (maxPeak > 0.0001f) normalizationGain = targetLinear / maxPeak;
+    }
+    
+    // Yield to allow other threads (and potentially UI updates) to run
+    juce::Thread::yield();
+  }
+
+  int successCount = 0;
+  for (size_t i = 0; i < tracksToExport.size() && !shouldCancel_.load(); ++i) {
+    int trackIndex = tracksToExport[i];
+
+    // Get track name for filename
+    juce::String trackName = "Track_" + juce::String(trackIndex + 1);
+    auto tracks = engine_.getTracksSnapshot();
+    if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks.size()) && tracks[trackIndex]) {
+      trackName = tracks[trackIndex]->getName();
+      trackName = trackName.replaceCharacters("/:*?\"<>|\\", "_________");
     }
 
-    int successCount = 0;
-    for (size_t i = 0; i < tracksToExport.size() && !shouldCancel_.load(); ++i) {
-        int trackIndex = tracksToExport[i];
+    juce::File stemFile = outputDir.getChildFile(baseName + "_" + trackName + extension);
 
-        // Get track name for filename
-        juce::String trackName = "Track_" + juce::String(trackIndex + 1);
-        auto tracks = engine_.getTracksSnapshot();
-        if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks.size()) && tracks[trackIndex]) {
-            trackName = tracks[trackIndex]->getName();
-            trackName = trackName.replaceCharacters("/:*?\"<>|\\", "_________");
-        }
-
-        juce::File stemFile = outputDir.getChildFile(baseName + "_" + trackName + extension);
-
-        if (options.progressCallback) {
-            float overallProgress = static_cast<float>(i) / static_cast<float>(tracksToExport.size());
-            options.progressCallback(overallProgress, "Exporting: " + trackName);
-        }
-
-        if (exportSingleStemInternal(trackIndex, options, stemFile, normalizationGain)) {
-            successCount++;
-        }
+    if (options.progressCallback) {
+      float overallProgress = static_cast<float>(i) / static_cast<float>(tracksToExport.size());
+      options.progressCallback(overallProgress, "Exporting: " + trackName);
     }
+
+    if (exportSingleStemInternal(trackIndex, options, stemFile, normalizationGain)) {
+      successCount++;
+    }
+
+    // Yield to allow other threads (and potentially UI updates) to run
+    // Note: For true non-blocking export, use exportStemsAsync() instead
+    juce::Thread::yield();
+  }
 
   if (options.progressCallback && !shouldCancel_.load()) {
     options.progressCallback(1.0f, "Stem export complete!");
@@ -711,18 +803,21 @@ bool AudioExporter::exportSingleStemInternal(int trackIndex, const ExportOptions
     return false;
   }
 
+  auto writerOptions = juce::AudioFormatWriterOptions()
+      .withSampleRate(options.sampleRate)
+      .withNumChannels(2)
+      .withBitsPerSample(options.bitDepth);
+
   std::unique_ptr<juce::OutputStream> streamPtr(std::move(fileStream));
-  std::unique_ptr<juce::AudioFormatWriter> writer(
-      format->createWriterFor(streamPtr.release(), options.sampleRate, 2, options.bitDepth, {}, 0));
+  std::unique_ptr<juce::AudioFormatWriter> writer(format->createWriterFor(streamPtr, writerOptions));
 
   if (!writer) {
     DBG("AudioExporter: Could not create writer");
     return false;
   }
 
-  const int blockSize = 4096;
-  juce::AudioBuffer<float> buffer(2, blockSize);
-  juce::AudioBuffer<float> trackBuffer(2, blockSize);
+  juce::AudioBuffer<float> buffer(2, kExportBlockSize);
+  juce::AudioBuffer<float> trackBuffer(2, kExportBlockSize);
 
   zenith::dsp::Dither dither;
   if (options.enableDither) {
@@ -731,7 +826,7 @@ bool AudioExporter::exportSingleStemInternal(int trackIndex, const ExportOptions
   }
 
   // Prepare track for offline rendering
-  // track->prepareToPlay(blockSize, options.sampleRate); // Track buffers are now in Context!
+  // track->prepareToPlay(kExportBlockSize, options.sampleRate); // Track buffers are now in Context!
 
   // Note: Engine manages render context internally
   juce::int64 startSample = static_cast<juce::int64>(options.startTime * options.sampleRate);
@@ -739,7 +834,7 @@ bool AudioExporter::exportSingleStemInternal(int trackIndex, const ExportOptions
   juce::int64 samplesWritten = 0;
 
   while (samplesWritten < totalSamples && !shouldCancel_.load()) {
-    int numSamples = static_cast<int>(juce::jmin(static_cast<juce::int64>(blockSize),
+    int numSamples = static_cast<int>(juce::jmin(static_cast<juce::int64>(kExportBlockSize),
                                                   totalSamples - samplesWritten));
 
     buffer.clear();

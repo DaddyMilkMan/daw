@@ -6,7 +6,7 @@
 #include "../ui/controls/ZenithKnob.h"
 #include "../ui/utils/ZenithParameterAttachment.h"
 #include "InstrumentPreset.h"
-#include "../ui/browser/PresetBrowserComponent.h"
+#include "panels/PresetBrowserComponent.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
@@ -142,10 +142,7 @@ private:
   SkiaLabel tuneLabel, gainLabel, characterLabel;
   ZenithKnob tuneSlider, gainSlider, characterSlider;
 
-  // Parameter attachments
-  std::unique_ptr<ZenithParameterAttachment> attackAttachment, decayAttachment, sustainAttachment, releaseAttachment;
-  std::unique_ptr<ZenithParameterAttachment> filterCutoffAttachment, filterResonanceAttachment;
-  std::unique_ptr<ZenithParameterAttachment> tuneAttachment, gainAttachment, characterAttachment;
+  std::vector<std::unique_ptr<ZenithParameterAttachment>> attachments_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithSamplerEditor)
 };

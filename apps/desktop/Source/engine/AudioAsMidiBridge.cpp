@@ -11,7 +11,7 @@ AudioAsMidiBridge::AudioAsMidiBridge(double sampleRate)
 
 AudioAsMidiBridge::~AudioAsMidiBridge() = default;
 
-juce::Array<MidiNoteSpec> AudioAsMidiBridge::transcribeTransients(const juce::AudioBuffer<float>& audio, float threshold)
+juce::Array<MidiNoteSpec> AudioAsMidiBridge::transcribeTransients(const juce::AudioBuffer<float>& audio, const TempoMap& tempoMap, float threshold)
 {
     juce::Array<MidiNoteSpec> notes;
     const int numSamples = audio.getNumSamples();
@@ -40,7 +40,7 @@ juce::Array<MidiNoteSpec> AudioAsMidiBridge::transcribeTransients(const juce::Au
             MidiNoteSpec note;
             note.id = "transient_" + juce::String(pos);
             note.pitch = 60; // Default to Middle C for drum-style transients
-            note.startBeats = (double)pos / sampleRate_; // Simplified: 1 beat = 1 sec for this bridge phase
+            note.startBeats = tempoMap.samplesToBeats(pos, sampleRate_);
             note.lengthBeats = 0.25;
             note.velocity = (uint16_t)juce::jlimit(0, 65535, (int)(currentEnergy * 10.0f * 65535.0f));
             notes.add(note);

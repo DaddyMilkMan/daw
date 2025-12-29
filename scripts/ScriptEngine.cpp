@@ -5,7 +5,7 @@
 
 #include "ScriptEngine.h"
 #include "AudioEngineBindings.h"
-#include "../src/audio/AudioEngine.h"
+#include "../apps/desktop/Source/engine/Engine.h"
 
 extern "C" {
 #include <lua.h>
@@ -17,8 +17,8 @@ extern "C" {
 
 namespace zenith {
 
-ScriptEngine::ScriptEngine(AudioEngine* audioEngine)
-    : m_audioEngine(audioEngine)
+ScriptEngine::ScriptEngine(Engine* engine)
+    : m_audioEngine(engine)
 {
     initializeLua();
 }
@@ -87,7 +87,42 @@ void ScriptEngine::registerStandardLibrary()
             return value
         end
 
-        log("Zenith DAW Lua environment loaded")
+        -- MUSIC THEORY LIBRARY (Complaint #4 Fix: Algorithmic Creativity)
+        -- ===============================================================
+        
+        music = {
+            scales = {
+                major = {0, 2, 4, 5, 7, 9, 11},
+                minor = {0, 2, 3, 5, 7, 8, 10},
+                pentatonic_major = {0, 2, 4, 7, 9},
+                pentatonic_minor = {0, 3, 5, 7, 10}
+            },
+            
+            -- Map a 0-based degree to a MIDI note in a key
+            get_note = function(root, scale, degree)
+                local octave = math.floor(degree / #scale)
+                local note_idx = (degree % #scale) + 1
+                return root + (octave * 12) + scale[note_idx]
+            end,
+            
+            -- Euclidean rhythm generator
+            euclidean = function(pulses, steps)
+                local pattern = {}
+                local bucket = 0
+                for i = 1, steps do
+                    bucket = bucket + pulses
+                    if bucket >= steps then
+                        bucket = bucket - steps
+                        table.insert(pattern, true)
+                    else
+                        table.insert(pattern, false)
+                    end
+                end
+                return pattern
+            end
+        }
+
+        log("Zenith DAW Lua environment loaded with Music Theory Lib")
     )";
 
     std::string errorMsg;

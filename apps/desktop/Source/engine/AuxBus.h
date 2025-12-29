@@ -9,6 +9,7 @@
 #include "PluginChain.h"
 
 
+
 namespace zenith {
 
 /**
@@ -74,9 +75,14 @@ public:
   // Direct buffer access for send accumulation
   juce::AudioBuffer<float> &getInputBuffer() { return inputBuffer_; }
 
+  // Index cache for rendering efficiency
+  void setBusIndex(int index) { busIndex_ = index; }
+  [[nodiscard]] int getBusIndex() const { return busIndex_; }
+
 private:
   juce::String name_;
   juce::String id_;
+  int busIndex_ = -1;
   MixerChannel mixerChannel;
 
   // Input buffer for accumulating sends from tracks
@@ -84,11 +90,12 @@ private:
 
   // Plugin chain (effect processors)
   PluginChain pluginChain;
-  // pluginLock_ is handled inside PluginChain
+
 
   // Processing state
   double currentSampleRate_ = 44100.0;
   int currentBlockSize_ = 512;
+
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AuxBus)
 };

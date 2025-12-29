@@ -41,14 +41,9 @@ void ClipTrack::clearClips() {
 void ClipTrack::updateClipSnapshot() {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     
-    // Create new snapshot using the correct constructor
-    std::vector<std::shared_ptr<TakeFolder>> takeFolders;
-    takeFolders.reserve(takeFoldersOwned_.size());
-    for (const auto &folder : takeFoldersOwned_) {
-        takeFolders.push_back(folder);
-    }
-    
-    auto newSnapshot = std::make_shared<ClipSnapshot>(clipsOwned_, takeFolders);
+    // Create new snapshot
+    auto newSnapshot = std::make_shared<ClipSnapshot>(clipsOwned_, takeFoldersOwned_);
+
     
     // Swap atomically
     activeClipSnapshot_.store(newSnapshot.get(), std::memory_order_release);

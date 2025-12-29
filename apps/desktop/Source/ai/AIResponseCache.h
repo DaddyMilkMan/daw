@@ -18,6 +18,7 @@
 #include <juce_cryptography/juce_cryptography.h>
 #include <map>
 #include <optional>
+#include <thread>
 
 namespace zenith {
 namespace ai {
@@ -174,14 +175,16 @@ private:
   void initDatabase();
   void evictLRU();
   void persistCache();
+  void persistCache(const std::map<juce::String, ai::CacheEntry>& snapshot);
   juce::int64 calculateTotalSize() const;
 
   juce::File getCacheFile() const;
 
   mutable juce::CriticalSection cacheLock_;
+  mutable juce::CriticalSection diskLock_;
 
   // In-memory cache (backed by SQLite for persistence)
-  std::map<juce::String, CacheEntry> cache_;
+  std::map<juce::String, ai::CacheEntry> cache_;
 
   // SQLite database handle (using juce::File for now, could use raw SQLite)
   juce::File cacheDir_;

@@ -1,15 +1,15 @@
 #pragma once
 
-#include "SkiaComponent.h"
-#include "ProjectState.h"
+#include "../../engine/ProjectState.h"
+#include "../framework/SkiaComponent.h"
 #include <juce_core/juce_core.h>
 #include <juce_events/juce_events.h>
 #include <map>
 #include <vector>
 
 namespace zenith {
+
 class Engine;
-}
 
 //==============================================================================
 /**
@@ -57,6 +57,10 @@ public:
   void resized() override;
   void drawSkia(SkCanvas *canvas) override;
 
+  // Accessibility
+  std::unique_ptr<juce::AccessibilityHandler>
+  createAccessibilityHandler() override;
+
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
   void mouseDrag(const juce::MouseEvent &e) override;
@@ -72,6 +76,11 @@ public:
 
   // External trigger (e.g. from MIDI input or playback)
   void triggerPad(int noteNumber, float velocity);
+
+  // Callback for audio engine to trigger note preview
+  void setNotePreviewCallback(std::function<void(int, int, bool)> callback) {
+    notePreviewCallback = callback;
+  }
 
 private:
   //==============================================================================
@@ -89,6 +98,20 @@ private:
   // State
   std::vector<PadData> pads;
   int baseNote = 36; // C1
+  int focusedPadIndex = 0; // For keyboard navigation
+
+  // Optimized resources
+  SkFont font;
+
+  // Layout Constants
+  static constexpr float kPadHeightRatio = 0.75f;
+  static constexpr float kSequencerHeightRatio = 0.20f;
+  static constexpr float kInternalGapRatio = 0.05f;
+  static constexpr float kDefaultCornerRadius = 8.0f;
+  static constexpr float kStepCornerRadius = 2.0f;
+  static constexpr float kPadFontSize = 16.0f;
+  static constexpr float kMargin = 10.0f;
+  static constexpr float kGap = 8.0f;
 
   // Internal methods
   void updatePadLayout();
@@ -100,9 +123,20 @@ private:
   std::pair<int, int>
   getSequencerStepAt(float x, float y) const; // returns {padIndex, stepIndex}
 
+  std::function<void(int pitch, int velocity, bool noteOn)> notePreviewCallback;
+
   // Animation
   void updateAnimations();
   void timerCallback() override;
 
+  // Keyboard Navigation
+  bool keyPressed(const juce::KeyPress &key) override;
+  void focusGained(FocusChangeType cause) override;
+  void focusLost(FocusChangeType cause) override;
+
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrumPadComponent)
+
+  friend class DrumPadAccessibilityHandler;
 };
+
+} // namespace zenith

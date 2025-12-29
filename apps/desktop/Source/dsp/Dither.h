@@ -46,7 +46,6 @@ public:
 
     Dither() : ditherType_(DitherType::ShapedTPDF) {
         errorBuffer_.fill(0.0f);
-        previousSample_.fill(0.0f);
     }
 
     /**
@@ -79,7 +78,6 @@ public:
     void reset()
     {
         errorBuffer_.fill(0.0f);
-        previousSample_.fill(0.0f);
     }
 
     /**
@@ -200,7 +198,6 @@ private:
     
     // Per-channel error feedback buffers for noise shaping
     std::array<float, kMaxChannels> errorBuffer_;
-    std::array<float, kMaxChannels> previousSample_;
 };
 
 } // namespace dsp

@@ -5,6 +5,7 @@
     Created: 2025-12-25
     Author:  Zenith DAW
 
+    ACTUAL LOCK-FREE IMPLEMENTATION
   ==============================================================================
 */
 
@@ -26,9 +27,12 @@ void RealTimeGarbageCollector::deleteInstance() {
 }
 
 RealTimeGarbageCollector::RealTimeGarbageCollector() {
-  // Run cleanup every 100ms
+  // Initialize buffer size matching FIFO
+  trashBuffer_.resize(kTrashBufferSize);
+
+  // Run cleanup every 100ms on the Message Thread
   if (juce::MessageManager::getInstanceWithoutCreating() != nullptr)
-    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(100);
+      startTimer(100);
 }
 
 RealTimeGarbageCollector::~RealTimeGarbageCollector() {
@@ -38,59 +42,70 @@ RealTimeGarbageCollector::~RealTimeGarbageCollector() {
 void RealTimeGarbageCollector::deferDelete(std::function<void()> deleter) {
   if (!deleter) return;
 
-  const juce::ScopedLock sl(trashLock_);
-  trash_.push_back({std::move(deleter), juce::Time::getMillisecondCounter()});
+  // Lock-free write to FIFO with SpinLock for MPSC safety
+  const juce::SpinLock::ScopedLockType sl(writeLock);
+  
+  int start1, size1, start2, size2;
+  fifo_.prepareToWrite(1, start1, size1, start2, size2);
+  
+  if (size1 > 0) {
+      trashBuffer_[start1] = std::move(deleter);
+      fifo_.finishedWrite(1);
+  } else {
+      // Buffer full! To preserve RT safety, we cannot wait or allocate.
+      // We log a warning and let the object leak rather than crashing the audio thread.
+      // In a production environment, kTrashBufferSize should be large enough.
+      DBG("RealTimeGarbageCollector: TRASH BUFFER OVERFLOW! Object leaked to preserve RT safety.");
+  }
 }
 
 void RealTimeGarbageCollector::ensureClean() {
   stopTimer();
-  const juce::ScopedLock sl(trashLock_);
-  trash_.clear(); // Destructors run here
+  
+  // Final drain
+  timerCallback();
+  
+  // Force delete everything remaining
+  pendingTrash_.clear();
+  for (auto& slot : trashBuffer_) slot = nullptr;
+  fifo_.reset();
 }
 
 void RealTimeGarbageCollector::timerCallback() {
-  const uint32_t now = juce::Time::getMillisecondCounter();
+  // 1. Drain items from the lock-free FIFO into our pending list
+  int start1, size1, start2, size2;
+  int ready = fifo_.getNumReady();
   
-  // We need to remove items, so we can't iterate simply.
-  // Move items to keep into a new vector? Or just remove_if.
-  // Actually, destructors running inside the lock is fine if they are message thread safe.
-  
-  // Safe extraction to a temp list to destroy OUTSIDE the lock (optional but good practice)
-  std::vector<TrashItem> toDestroy;
+  if (ready > 0) {
+      fifo_.prepareToRead(ready, start1, size1, start2, size2);
+      uint32_t now = juce::Time::getMillisecondCounter();
 
-  {
-    const juce::ScopedLock sl(trashLock_);
-    
-    // Partition items into 'expired' and 'keep'
-    // Items are roughly ordered by time, so we could just pop front.
-    // But let's be robust.
-    
-    auto it = std::remove_if(trash_.begin(), trash_.end(), [&](const TrashItem& item) {
-      // Handle wraparound of tick count (unlikely to matter for 1s difference but strict correctness)
-      return (now >= item.insertionTimeMs + kSafetyDurationMs) || 
-             (now < item.insertionTimeMs && (now + (UINT32_MAX - item.insertionTimeMs)) > kSafetyDurationMs);
-    });
-
-    // Move expired items to toDestroy (manually, since remove_if just shifts)
-    // Actually standard remove_if doesn't move to another container.
-    // Let's just create a new list for kept items, it's easier.
-    
-    std::vector<TrashItem> kept;
-    kept.reserve(trash_.size());
-    
-    for (auto& item : trash_) {
-      if ((now >= item.insertionTimeMs + kSafetyDurationMs) || 
-          (now < item.insertionTimeMs && (now + (UINT32_MAX - item.insertionTimeMs)) > kSafetyDurationMs)) {
-        toDestroy.push_back(std::move(item));
-      } else {
-        kept.push_back(std::move(item));
+      if (size1 > 0) {
+          for (int i = 0; i < size1; ++i) {
+              pendingTrash_.push_back({std::move(trashBuffer_[start1 + i]), now});
+          }
       }
-    }
-    
-    trash_ = std::move(kept);
+      if (size2 > 0) {
+          for (int i = 0; i < size2; ++i) {
+              pendingTrash_.push_back({std::move(trashBuffer_[start2 + i]), now});
+          }
+      }
+      fifo_.finishedRead(size1 + size2);
   }
 
-  // toDestroy goes out of scope here, running destructors (releasing sharedprobs)
+  // 2. Process the pending list and delete objects that have aged past the safety threshold
+  uint32_t now = juce::Time::getMillisecondCounter();
+  
+  auto it = std::remove_if(pendingTrash_.begin(), pendingTrash_.end(), [&](const PendingItem& item) {
+      // Check if safety duration has passed
+      bool expired = (now >= item.insertionTimeMs + kSafetyDurationMs) || 
+                     (now < item.insertionTimeMs && (now + (0xFFFFFFFF - item.insertionTimeMs)) > kSafetyDurationMs);
+      
+      return expired;
+  });
+
+  // Objects are destroyed here as they are removed from the vector
+  pendingTrash_.erase(it, pendingTrash_.end());
 }
 
 } // namespace zenith

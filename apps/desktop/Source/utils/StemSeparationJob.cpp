@@ -59,6 +59,16 @@ juce::ThreadPoolJob::JobStatus StemSeparationJob::runJob() {
   statusMgr.updateProgress(opId, 0.3f, "Initializing Neural Engine...");
   ONNXStemSeparator separator;
 
+  // Check for model file availability (delegated to platform discovery)
+  if (!separator.isAvailable()) {
+    result.error = "ONNX Runtime not available.";
+    if (callback_) {
+      juce::MessageManager::callAsync(
+          [cb = callback_, res = result]() { cb(res); });
+    }
+    return juce::ThreadPoolJob::jobHasFinished;
+  }
+
   // Initialize with default model path
   juce::File modelFile = ONNXStemSeparator::findDefaultModel();
   if (!modelFile.existsAsFile() || !separator.initialize(modelFile)) {
@@ -119,14 +129,17 @@ StemSeparationJob::writeStemToFile(const juce::AudioBuffer<float> &buffer,
   }
 
   juce::WavAudioFormat wavFormat;
-  
+  auto writerOptions = juce::AudioFormatWriterOptions()
+                           .withSampleRate(sampleRate)
+                           .withNumChannels((int)buffer.getNumChannels())
+                           .withBitsPerSample(24);
+
   std::unique_ptr<juce::OutputStream> fileStream(new juce::FileOutputStream(outFile));
   if (static_cast<juce::FileOutputStream*>(fileStream.get())->failedToOpen()) {
       return juce::File(); 
   }
 
-  std::unique_ptr<juce::AudioFormatWriter> writer(
-      wavFormat.createWriterFor(fileStream.release(), sampleRate, (int)buffer.getNumChannels(), 24, {}, 0));
+  std::unique_ptr<juce::AudioFormatWriter> writer = wavFormat.createWriterFor(fileStream, writerOptions);
 
   if (writer) {
     writer->writeFromAudioSampleBuffer(buffer, 0, buffer.getNumSamples());

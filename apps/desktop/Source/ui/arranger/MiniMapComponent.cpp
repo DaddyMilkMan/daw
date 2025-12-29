@@ -8,12 +8,8 @@
 
 // Skia includes (available via SkiaComponent inheritance)
 #include <core/SkBitmap.h> // For fallback rendering
-#include <core/SkCanvas.h>
-#include <core/SkColor.h>
-#include <core/SkImage.h>
+#include "ZenithSkia.h"
 #include <core/SkImageInfo.h>
-#include <core/SkPaint.h>
-#include <core/SkRect.h>
 #include <core/SkSurface.h>
 
 

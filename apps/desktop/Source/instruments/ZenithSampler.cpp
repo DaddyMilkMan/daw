@@ -297,25 +297,32 @@ void ZenithSamplerProcessor::loadBankAsync(const juce::File &bankFile) {
   class LoadingThread : public juce::Thread {
   public:
     LoadingThread(ZenithSamplerProcessor &owner, const juce::File &file)
-        : juce::Thread("BankLoader"), processor(owner), bankFile(file) {}
+        : juce::Thread("BankLoader"), processor(&owner), bankFile(file) {}
 
     void run() override {
       auto bankData = std::make_shared<SampleBankData>();
+      
+      // Capture processor pointer by value for safe async access
+      ZenithSamplerProcessor* procPtr = processor;
 
-      if (processor.parseBankFile(bankFile, *bankData)) {
-        // Apply on message thread
-        juce::MessageManager::callAsync([this, data = bankData]() mutable {
-          processor.applyBankData(std::move(data));
-          processor.isLoadingPatch.store(false);
+      if (procPtr->parseBankFile(bankFile, *bankData)) {
+        // Apply on message thread - capture pointer by VALUE (not this!)
+        // Apply on message thread - use WeakReference for safety
+        juce::WeakReference<ZenithSamplerProcessor> safeProc(procPtr);
+        juce::MessageManager::callAsync([safeProc, data = bankData]() mutable {
+          if (safeProc) {
+              safeProc->applyBankData(std::move(data));
+              safeProc->isLoadingPatch.store(false);
+          }
         });
       } else {
-        processor.isLoadingPatch.store(false);
+        procPtr->isLoadingPatch.store(false);
         DBG("Failed to load bank: " << bankFile.getFullPathName());
       }
     }
 
   private:
-    ZenithSamplerProcessor &processor;
+    ZenithSamplerProcessor* processor;  // Raw pointer - processor outlives thread
     juce::File bankFile;
   };
 
@@ -337,12 +344,15 @@ void ZenithSamplerProcessor::loadBankFromJsonAsync(
   public:
     JsonLoadingThread(ZenithSamplerProcessor &owner, const juce::String &json,
                       const juce::String &name)
-        : juce::Thread("JsonBankLoader"), processor(owner), jsonString(json),
+        : juce::Thread("JsonBankLoader"), processor(&owner), jsonString(json),
           bankName(name) {}
 
     void run() override {
       auto bankData = std::make_shared<SampleBankData>();
       bankData->bankName = bankName;
+      
+      // Capture processor pointer by value for safe async access
+      ZenithSamplerProcessor* procPtr = processor;
 
       auto json = juce::JSON::parse(jsonString);
       if (json.isObject()) {
@@ -350,22 +360,26 @@ void ZenithSamplerProcessor::loadBankFromJsonAsync(
         auto baseDir = ContentPaths::getInstance().getInstrumentTypeDirectory(
             "ZenithSampler");
 
-        if (processor.parseBankJson(json, baseDir, *bankData)) {
-          // Apply on message thread
-          juce::MessageManager::callAsync([this, data = bankData]() mutable {
-            processor.applyBankData(data);
-            processor.isLoadingPatch.store(false);
+        if (procPtr->parseBankJson(json, baseDir, *bankData)) {
+          // Apply on message thread - capture pointer by VALUE (not this!)
+          // Apply on message thread - use WeakReference for safety
+          juce::WeakReference<ZenithSamplerProcessor> safeProc(procPtr);
+          juce::MessageManager::callAsync([safeProc, data = bankData]() mutable {
+            if (safeProc) {
+                safeProc->applyBankData(data);
+                safeProc->isLoadingPatch.store(false);
+            }
           });
           return;
         }
       }
 
-      processor.isLoadingPatch.store(false);
+      procPtr->isLoadingPatch.store(false);
       DBG("Failed to load JSON bank: " << bankName);
     }
 
   private:
-    ZenithSamplerProcessor &processor;
+    ZenithSamplerProcessor* processor;  // Raw pointer - processor outlives thread
     juce::String jsonString;
     juce::String bankName;
   };

@@ -94,18 +94,20 @@ public:
 private:
   void timerCallback() override;
 
-  struct TrashItem {
-    std::function<void()> deleter;
+  struct PendingItem {
+    std::function<void()> item;
     uint32_t insertionTimeMs;
   };
 
-  // Queue of items to delete
-  // Access protected by lock (Message Thread writes, Timer Thread reads/writes)
-  // Since Timer usually runs on Message Thread, this lock might be redundant if single-threaded,
-  // but we enforce safety.
-  std::vector<TrashItem> trash_;
-  juce::CriticalSection trashLock_;
+  // Lock-free FIFO for transferring deleter functors from audio thread to message thread
+  static constexpr int kTrashBufferSize = 4096;
+  juce::AbstractFifo fifo_{kTrashBufferSize};
+  std::vector<std::function<void()>> trashBuffer_;
+  juce::SpinLock writeLock; // Multi-Producer safety (MPSC)
 
+  // Message thread local storage
+  std::vector<PendingItem> pendingTrash_;
+  
   // Safety buffer duration in milliseconds
   static constexpr uint32_t kSafetyDurationMs = 1000;
 };

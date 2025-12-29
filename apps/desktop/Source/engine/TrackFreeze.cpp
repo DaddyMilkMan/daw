@@ -33,7 +33,10 @@ bool TrackFreezeManager::freezeTrack(Track& track,
                                      Engine& engine,
                                      const juce::File& outputDir,
                                      ProgressCallback progress) {
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    if (!juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+        jassertfalse;
+        return false;
+    }
     
     // Check if already frozen
     if (isFrozen(track)) {
@@ -98,7 +101,10 @@ bool TrackFreezeManager::freezeTrack(Track& track,
 
 //==============================================================================
 bool TrackFreezeManager::unfreezeTrack(Track& track) {
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    if (!juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+        jassertfalse;
+        return false;
+    }
     
     juce::String trackId = track.getTrackId();
     auto it = freezeStates_.find(trackId);
@@ -239,9 +245,13 @@ void FreezeRenderThread::run() {
 
     std::unique_ptr<juce::OutputStream> outputStream = std::move(fileStream);
     
-    std::unique_ptr<juce::AudioFormatWriter> writer(
-        wavFormat.createWriterFor(outputStream.get(), sampleRate, 2, 
-                                constants::kFreezeBitDepth, {}, 0));
+    auto writerOptions = juce::AudioFormatWriter::Options()
+        .withSampleRate(sampleRate)
+        .withNumChannels(2)
+        .withBitsPerSample(constants::kFreezeBitDepth);
+
+    std::unique_ptr<juce::AudioFormatWriter> writer = 
+        wavFormat.createWriterFor(outputStream, writerOptions);
     
     if (writer == nullptr) {
         DBG("FreezeRenderThread: Failed to create audio writer");
@@ -301,28 +311,32 @@ void FreezeRenderThread::run() {
         DBG("FreezeRenderThread: Cancelled");
         outputFile_.deleteFile();
         
-        // CRITIC FIX: Look up track by ID on message thread - NEVER capture by reference
+        // THREAD SAFETY FIX: Use Engine::getInstance() for safe async access
         const juce::String cancelledTrackId = track_.getTrackId();
-        Engine& engineRef = engine_; // Engine outlives threads, safe to reference
-        juce::MessageManager::callAsync([cancelledTrackId, &engineRef]() {
-            if (auto* track = engineRef.getTrackById(cancelledTrackId)) {
-                track->setBeingFrozen(false);
+        juce::MessageManager::callAsync([cancelledTrackId]() {
+            if (auto* engine = Engine::getInstance()) {
+                if (auto* track = engine->getTrackById(cancelledTrackId)) {
+                    track->setBeingFrozen(false);
+                }
             }
         });
         return;
     }
     
     // Success - finalize freeze on message thread
-    // CRITIC FIX: Capture ONLY by value. Look up track by ID on message thread.
-    // The comment "track reference should still be valid" was WRONG and dangerous.
+    // THREAD SAFETY FIX: Use Engine::getInstance() for safe async access
     const juce::String trackId = track_.getTrackId();
     const juce::String trackName = track_.getName();
     auto progressCopy = progress_; // Copy the callback
-    Engine& engineRef = engine_; // Engine outlives threads, safe to reference
     
-    juce::MessageManager::callAsync([trackId, trackName, progressCopy, &engineRef]() {
-        // SAFE: Look up track by ID on message thread
-        auto* track = engineRef.getTrackById(trackId);
+    juce::MessageManager::callAsync([trackId, trackName, progressCopy]() {
+        // SAFE: Look up engine via singleton, check for null
+        auto* engine = Engine::getInstance();
+        if (engine == nullptr || engine->isShuttingDown()) {
+            DBG("FreezeRenderThread: Engine shutting down, skipping finalize");
+            return;
+        }
+        auto* track = engine->getTrackById(trackId);
         if (track == nullptr) {
             DBG("FreezeRenderThread: Track was deleted during freeze: " + trackName);
             return; // Track was deleted - nothing to do

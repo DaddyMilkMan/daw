@@ -8,7 +8,6 @@
 #include "ClipStateManager.h"
 #include "ProjectFileIO.h"
 #include "TrackStateManager.h"
-#include "MidiNoteStateManager.h"
 
 #include <functional>
 
@@ -62,10 +61,8 @@ const juce::Identifier ProjectState::ID_TAKE_FOLDER("TAKE_FOLDER");
 const juce::Identifier ProjectState::ID_COMP_REGIONS("COMP_REGIONS");
 const juce::Identifier ProjectState::ID_COMP_REGION("COMP_REGION");
 
-// Take Folder identifiers
-const juce::Identifier ProjectState::ID_TAKE_FOLDERS("TAKE_FOLDERS");
-const juce::Identifier ProjectState::ID_TAKES("TAKES");
-const juce::Identifier ProjectState::ID_TAKE("TAKE");
+// Retained IDs
+
 
 const juce::Identifier ProjectState::PROP_NAME("name");
 const juce::Identifier ProjectState::PROP_TEMPO("tempo");
@@ -134,9 +131,8 @@ const juce::Identifier ProjectState::PROP_IS_QUARANTINE("isQuarantine");
 
 const juce::Identifier ProjectState::PROP_SELECTED_TRACK_ID("selectedTrackId");
 
-// Take Folder properties
-// Take Folder properties: defined above
-// PROP_TAKE_INDEX, PROP_ACTIVE_TAKE, PROP_EXPANDED are already defined
+// Retained props
+
 
 //==============================================================================
 ProjectState::ProjectState() : state(Zenith::IDs::PROJECT) {
@@ -147,7 +143,6 @@ ProjectState::ProjectState() : state(Zenith::IDs::PROJECT) {
 
   trackStateManager = std::make_unique<TrackStateManager>(*this);
   clipStateManager = std::make_unique<ClipStateManager>(*this);
-  midiNoteStateManager = std::make_unique<MidiNoteStateManager>(*this);
   automationStateManager = std::make_unique<AutomationStateManager>(*this);
   projectFileIO = std::make_unique<ProjectFileIO>(*this);
 
@@ -177,6 +172,8 @@ ProjectState::~ProjectState() {
 
 void ProjectState::rebuildTrackMap() {
   trackIdMap_.clear();
+  nodeCache_.clear();
+  
   auto tracksNode = state.getChildWithName(ID_TRACKS);
 
   if (tracksNode.isValid()) {
@@ -188,6 +185,14 @@ void ProjectState::rebuildTrackMap() {
       }
     }
   }
+
+  // RECURSIVE LIGHTNING CACHE (God Mode Optimization)
+  std::function<void(juce::ValueTree)> cacheNode = [&](juce::ValueTree n) {
+      juce::String id = n.getProperty(PROP_ID).toString();
+      if (id.isNotEmpty()) nodeCache_[id] = n;
+      for (int i = 0; i < n.getNumChildren(); ++i) cacheNode(n.getChild(i));
+  };
+  cacheNode(state);
 }
 
 void ProjectState::newProject() {
@@ -254,8 +259,11 @@ void ProjectState::valueTreeChildAdded(juce::ValueTree &parent,
                                        juce::ValueTree &child) {
   isDirty = true;
 
+  // Add to cache
+  juce::String id = child.getProperty(PROP_ID).toString();
+  if (id.isNotEmpty()) nodeCache_[id] = child;
+
   if (child.hasType(ID_TRACK)) {
-    juce::String id = child.getProperty(PROP_ID).toString();
     if (id.isNotEmpty())
       trackIdMap_[id] = child;
   }
@@ -264,12 +272,10 @@ void ProjectState::valueTreeChildAdded(juce::ValueTree &parent,
 void ProjectState::valueTreeChildRemoved(juce::ValueTree &parent,
                                          juce::ValueTree &child, int) {
   isDirty = true;
-
-  if (child.hasType(ID_TRACK)) {
-    juce::String id = child.getProperty(PROP_ID).toString();
-    if (id.isNotEmpty())
-      trackIdMap_.erase(id);
-  }
+  
+  // Remove from cache
+  juce::String id = child.getProperty(PROP_ID).toString();
+  if (id.isNotEmpty()) nodeCache_.erase(id);
 }
 
 //==============================================================================
@@ -290,7 +296,7 @@ double ProjectState::getTempo() const {
 }
 
 void ProjectState::setTempo(double tempo) {
-  tempo = juce::jlimit<double>(20.0, 999.0, tempo);
+  tempo = juce::jlimit(20.0, 999.0, tempo);
   state.setProperty(PROP_TEMPO, tempo, &undoManager);
 }
 
@@ -725,24 +731,110 @@ void ProjectState::redo() {
 
 juce::Array<ProjectState::MidiNoteSpec>
 ProjectState::getMidiNotesForClip(const juce::String &clipId) const {
-  if (midiNoteStateManager)
-    return midiNoteStateManager->getNotesForClip(clipId);
-  return {};
+  juce::Array<MidiNoteSpec> notes;
+
+  auto [track, clip] = findClip(clipId);
+  if (!clip.isValid())
+    return notes;
+
+  auto midiNotesNode = clip.getChildWithName(ID_NOTES);
+  if (!midiNotesNode.isValid())
+    return notes;
+
+  for (const auto &noteTree : midiNotesNode) {
+    if (!noteTree.hasType(ID_NOTE))
+      continue;
+
+    MidiNoteSpec note;
+    note.id = noteTree[PROP_ID].toString();
+    note.pitch = noteTree[PROP_PITCH];
+    note.startBeats = noteTree[PROP_START_BEATS];
+    note.lengthBeats = noteTree[PROP_LENGTH_BEATS];
+    note.velocity = noteTree[PROP_VELOCITY];
+    note.muted = noteTree.getProperty(PROP_MUTE, false);
+    note.probability = noteTree.getProperty(PROP_PROBABILITY, 1.0f);
+    note.condition = noteTree.getProperty(PROP_CONDITION).toString();
+    note.recurrence = noteTree.getProperty(PROP_RECURRENCE).toString();
+    note.articulationId = noteTree.getProperty(PROP_ARTICULATION_ID, 0);
+    note.tension = noteTree.getProperty(PROP_NOTE_TENSION, 0.0f);
+
+    notes.add(note);
+  }
+
+  return notes;
 }
 
 juce::String ProjectState::addMidiNote(const juce::String &clipId,
                                        const MidiNoteSpec &note,
                                        const juce::String &actionName) {
-  if (midiNoteStateManager)
-    return midiNoteStateManager->addNote(clipId, note, actionName);
-  return {};
+  auto [track, clip] = findClip(clipId);
+  if (!clip.isValid()) {
+    DBG("ProjectState: Cannot add MIDI note - clip not found: " + clipId);
+    return {};
+  }
+
+  // Get or create MIDI_NOTES container
+  auto midiNotesNode = clip.getChildWithName(ID_NOTES);
+  if (!midiNotesNode.isValid()) {
+    midiNotesNode = juce::ValueTree(ID_NOTES);
+    clip.appendChild(midiNotesNode, &undoManager);
+  }
+
+  // Generate note ID if not provided
+  juce::String noteId = note.id;
+  if (noteId.isEmpty())
+    noteId = generateUniqueId("note");
+
+  // Validate note properties
+  int pitch = juce::jlimit(0, 127, note.pitch);
+  int velocity = juce::jlimit(0, 127, note.velocity);
+  double startBeats = juce::jmax(0.0, note.startBeats);
+  double lengthBeats = juce::jmax(0.0, note.lengthBeats);
+
+  // Create note tree
+  juce::ValueTree noteTree(ID_NOTE);
+  noteTree.setProperty(PROP_ID, noteId, nullptr);
+  noteTree.setProperty(PROP_PITCH, pitch, nullptr);
+  noteTree.setProperty(PROP_START_BEATS, startBeats, nullptr);
+  noteTree.setProperty(PROP_LENGTH_BEATS, lengthBeats, nullptr);
+  noteTree.setProperty(PROP_VELOCITY, velocity, nullptr);
+  if (note.muted)
+    noteTree.setProperty(PROP_MUTE, true, nullptr);
+  if (note.probability < 1.0f)
+    noteTree.setProperty(PROP_PROBABILITY, note.probability, nullptr);
+  if (note.condition.isNotEmpty())
+    noteTree.setProperty(PROP_CONDITION, note.condition, nullptr);
+  if (note.recurrence.isNotEmpty())
+    noteTree.setProperty(PROP_RECURRENCE, note.recurrence, nullptr);
+  if (note.articulationId != 0)
+    noteTree.setProperty(PROP_ARTICULATION_ID, note.articulationId, nullptr);
+  if (std::abs(note.tension) > 0.001f)
+    noteTree.setProperty(PROP_NOTE_TENSION, note.tension, nullptr);
+
+  // Begin transaction
+  undoManager.beginNewTransaction(actionName);
+  midiNotesNode.appendChild(noteTree, &undoManager);
+
+  DBG("ProjectState: Added MIDI note " + noteId + " to clip " + clipId);
+
+  return noteId;
 }
 
 void ProjectState::removeMidiNote(const juce::String &clipId,
                                   const juce::String &noteId,
                                   const juce::String &actionName) {
-  if (midiNoteStateManager)
-    midiNoteStateManager->deleteNote(clipId, noteId, actionName);
+  auto noteTree = findMidiNote(clipId, noteId);
+  if (!noteTree.isValid()) {
+    DBG("ProjectState: Cannot remove MIDI note - note not found: " + noteId);
+    return;
+  }
+
+  auto parent = noteTree.getParent();
+  if (parent.isValid()) {
+    undoManager.beginNewTransaction(actionName);
+    parent.removeChild(noteTree, &undoManager);
+    DBG("ProjectState: Removed MIDI note " + noteId + " from clip " + clipId);
+  }
 }
 
 void ProjectState::moveMidiNote(const juce::String &clipId,
@@ -756,7 +848,7 @@ void ProjectState::moveMidiNote(const juce::String &clipId,
   }
 
   // Validate new values
-  int pitch = juce::jlimit<int>(0, 127, newPitch);
+  int pitch = juce::jlimit(0, 127, newPitch);
   double startBeats = juce::jmax(0.0, newStartBeats);
 
   undoManager.beginNewTransaction(actionName);
@@ -796,33 +888,64 @@ void ProjectState::quantizeClip(const juce::String &clipId, double gridBeats,
 }
 
 void ProjectState::setMidiNoteVelocity(const juce::String &clipId,
-                                        const juce::String &noteId,
-                                        int newVelocity,
-                                        const juce::String &actionName) {
-  if (midiNoteStateManager)
-    midiNoteStateManager->moveNote(clipId, noteId, -1.0, -1.0, -1,
-                                   MidiNote::fromMidiVelocity(newVelocity), actionName);
+                                       const juce::String &noteId,
+                                       int newVelocity,
+                                       const juce::String &actionName) {
+  auto noteTree = findMidiNote(clipId, noteId);
+  if (!noteTree.isValid()) {
+    DBG("ProjectState: Cannot set velocity - note not found: " + noteId);
+    return;
+  }
+
+  // Clamp velocity (1-127, never 0)
+  int velocity = juce::jlimit(1, 127, newVelocity);
+
+  undoManager.beginNewTransaction(actionName);
+  noteTree.setProperty(PROP_VELOCITY, velocity, &undoManager);
+
+  DBG("ProjectState: Set velocity for note " + noteId + " to " +
+      juce::String(velocity));
 }
 
 void ProjectState::setMidiNoteLength(const juce::String &clipId,
                                      const juce::String &noteId,
                                      double newLengthBeats,
                                      const juce::String &actionName) {
-  if (midiNoteStateManager)
-    midiNoteStateManager->moveNote(clipId, noteId, -1.0, newLengthBeats, -1, -1.0f, actionName);
+  auto noteTree = findMidiNote(clipId, noteId);
+  if (!noteTree.isValid()) {
+    DBG("ProjectState: Cannot set length - note not found: " + noteId);
+    return;
+  }
+
+  // Ensure positive length (minimum 0.01 beats)
+  double lengthBeats = juce::jmax(0.01, newLengthBeats);
+
+  undoManager.beginNewTransaction(actionName);
+  noteTree.setProperty(PROP_LENGTH_BEATS, lengthBeats, &undoManager);
+
+  DBG("ProjectState: Set length for note " + noteId + " to " +
+      juce::String(lengthBeats) + " beats");
 }
 
 void ProjectState::setMidiNoteMuted(const juce::String &clipId,
                                     const juce::String &noteId, bool muted,
                                     const juce::String &actionName) {
   auto noteTree = findMidiNote(clipId, noteId);
-  if (noteTree.isValid()) {
-    undoManager.beginNewTransaction(actionName);
-    if (muted)
-        noteTree.setProperty(PROP_MUTE, true, &undoManager);
-    else
-        noteTree.removeProperty(PROP_MUTE, &undoManager);
+  if (!noteTree.isValid()) {
+    DBG("ProjectState: Cannot set muted - note not found: " + noteId);
+    return;
   }
+
+  undoManager.beginNewTransaction(actionName);
+
+  if (muted)
+    noteTree.setProperty(PROP_MUTE, true, &undoManager);
+  else
+    noteTree.removeProperty(
+        PROP_MUTE, &undoManager); // Remove property when false to save space
+
+  DBG("ProjectState: Set muted for note " + noteId + " to " +
+      juce::String(muted ? "true" : "false"));
 }
 
 void ProjectState::setMidiNoteProbability(const juce::String &clipId,
@@ -830,10 +953,20 @@ void ProjectState::setMidiNoteProbability(const juce::String &clipId,
                                           float probability,
                                           const juce::String &actionName) {
   auto noteTree = findMidiNote(clipId, noteId);
-  if (noteTree.isValid()) {
-    undoManager.beginNewTransaction(actionName);
-    noteTree.setProperty(PROP_PROBABILITY, juce::jlimit<float>(0.0f, 1.0f, probability), &undoManager);
+  if (!noteTree.isValid()) {
+    DBG("ProjectState: Cannot set probability - note not found: " + noteId);
+    return;
   }
+
+  undoManager.beginNewTransaction(actionName);
+
+  // Clamp probability
+  probability = juce::jlimit(0.0f, 1.0f, probability);
+
+  noteTree.setProperty(PROP_PROBABILITY, probability, &undoManager);
+
+  DBG("ProjectState: Set probability for note " + noteId + " to " +
+      juce::String(probability));
 }
 
 void ProjectState::setMidiNoteTension(const juce::String &clipId,
@@ -841,23 +974,94 @@ void ProjectState::setMidiNoteTension(const juce::String &clipId,
                                       float tension,
                                       const juce::String &actionName) {
   auto noteTree = findMidiNote(clipId, noteId);
-  if (noteTree.isValid()) {
-    undoManager.beginNewTransaction(actionName);
-    noteTree.setProperty(PROP_NOTE_TENSION, tension, &undoManager);
+  if (!noteTree.isValid()) {
+    DBG("ProjectState: Cannot set tension - note not found: " + noteId);
+    return;
   }
+
+  undoManager.beginNewTransaction(actionName);
+  noteTree.setProperty(PROP_NOTE_TENSION, tension, &undoManager);
 }
 
 void ProjectState::humanizeClip(const juce::String &clipId, double velocityRange,
                                 double timeRangeBeats,
                                 const juce::String &actionName) {
-  if (midiNoteStateManager)
-    midiNoteStateManager->humanizeNotes(clipId, timeRangeBeats, (int)velocityRange, actionName);
+  auto notes = getMidiNotesForClip(clipId);
+  if (notes.isEmpty())
+    return;
+
+  undoManager.beginNewTransaction(actionName);
+  
+  juce::Random rng;
+  rng.setSeedRandomly();
+
+  for (const auto &note : notes) {
+    auto noteTree = findMidiNote(clipId, note.id);
+    if (!noteTree.isValid())
+      continue;
+      
+    // Humanize Velocity
+    // Use ceil to ensure non-zero range if input > 0 (handle 0.1 test case)
+    int iRange = (int)std::ceil(velocityRange);
+    if (iRange > 0) {
+        int velOffset = rng.nextInt(juce::Range<int>(-iRange, iRange + 1));
+        int newVel = juce::jlimit(1, 127, note.velocity + velOffset);
+        noteTree.setProperty(PROP_VELOCITY, newVel, &undoManager);
+    }
+    
+    // Humanize Time (small random offset)
+    // -timeRangeBeats/2 to +timeRangeBeats/2
+    if (timeRangeBeats > 0.0) {
+        double timeOffset = (rng.nextDouble() - 0.5) * timeRangeBeats;
+        double newStart = juce::jmax(0.0, note.startBeats + timeOffset);
+        noteTree.setProperty(PROP_START_BEATS, newStart, &undoManager);
+    }
+  }
 }
 
 void ProjectState::legatoClip(const juce::String &clipId, bool adjustOverlap,
                               const juce::String &actionName) {
-  if (midiNoteStateManager)
-    midiNoteStateManager->legatoNotes(clipId, adjustOverlap, actionName);
+  auto notes = getMidiNotesForClip(clipId);
+  if (notes.isEmpty())
+    return;
+    
+  undoManager.beginNewTransaction(actionName);
+  
+  // Sort notes by start time
+  std::sort(notes.begin(), notes.end(), [](const MidiNoteSpec &a, const MidiNoteSpec &b) {
+      if (std::abs(a.startBeats - b.startBeats) < 0.0001)
+          return a.pitch < b.pitch; // Secondary sort by pitch
+      return a.startBeats < b.startBeats;
+  });
+  
+  // We need to group them if we were doing Logic-style legato across voices,
+  // but for basic legato we often just want "monophonic" style or per-voice.
+  // A simple approach: Extend note until the next note starts. 
+  // If polyphonic, this is tricky. Logic has "Legato" which extends until the *very next note event* regardless of pitch.
+  // Let's implement that standard behavior first.
+  
+  for (int i = 0; i < notes.size() - 1; ++i) {
+      const auto& current = notes.getReference(i);
+      const auto& next = notes.getReference(i + 1);
+      
+      double distToNext = next.startBeats - current.startBeats;
+      
+      if (distToNext > 0) {
+          double newLen = distToNext;
+          
+          if (adjustOverlap && current.lengthBeats > newLen) {
+             // Shorten if it overlaps
+             auto noteTree = findMidiNote(clipId, current.id);
+             if (noteTree.isValid())
+                 noteTree.setProperty(PROP_LENGTH_BEATS, newLen, &undoManager);
+          } else if (current.lengthBeats < newLen) {
+             // Extend if gap
+             auto noteTree = findMidiNote(clipId, current.id);
+             if (noteTree.isValid())
+                 noteTree.setProperty(PROP_LENGTH_BEATS, newLen, &undoManager);
+          }
+      }
+  }
 }
 
 
@@ -1087,51 +1291,209 @@ bool ProjectState::resizeClip(const juce::String &trackId,
 // U4.1: MIDI Note Management (Matching Header API - clipId-only)
 //==============================================================================
 
+juce::ValueTree
+ProjectState::getOrCreateNotesContainer(const juce::String &clipId) {
+  auto [track, clip] = findClip(clipId);
+  if (!clip.isValid())
+    return {};
+
+  auto notesNode = clip.getChildWithName(ID_NOTES);
+  if (!notesNode.isValid()) {
+    notesNode = juce::ValueTree(ID_NOTES);
+    clip.appendChild(notesNode, &undoManager);
+  }
+
+  return notesNode;
+}
 
 juce::String ProjectState::addNote(const juce::String &clipId,
                                    double startBeats, double lengthBeats,
                                    int pitch, int velocity,
                                    const juce::String &actionName) {
-  if (midiNoteStateManager)
-    return midiNoteStateManager->addNote(clipId, startBeats, lengthBeats, pitch, velocity, actionName);
-  return {};
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  // Validate parameters
+  if (lengthBeats <= 0.0) {
+    DBG("ProjectState: Invalid note length: " + juce::String(lengthBeats));
+    return {};
+  }
+
+  if (startBeats < 0.0)
+    startBeats = 0.0;
+
+  pitch = juce::jlimit(0, 127, pitch);
+  velocity = juce::jlimit(0, 127, velocity);
+
+  auto [track, clip] = findClip(clipId);
+  if (!clip.isValid()) {
+    DBG("ProjectState: Clip not found: " + clipId);
+    return {};
+  }
+
+  // Verify it's a MIDI clip
+  if (clip[PROP_TYPE].toString() != "midi") {
+    DBG("ProjectState: Cannot add note to non-MIDI clip");
+    return {};
+  }
+
+  // Get or create NOTES node
+  auto notesNode = clip.getChildWithName(ID_NOTES);
+  if (!notesNode.isValid()) {
+    notesNode = juce::ValueTree(ID_NOTES);
+    clip.appendChild(notesNode, &undoManager);
+  }
+
+  // Generate unique note ID
+  auto noteId = generateUniqueId("note");
+
+  // Create note ValueTree
+  juce::ValueTree note(ID_NOTE);
+  note.setProperty(PROP_ID, noteId, nullptr);
+  note.setProperty(PROP_START_BEATS, startBeats, nullptr);
+  note.setProperty(PROP_LENGTH_BEATS, lengthBeats, nullptr);
+  note.setProperty(PROP_PITCH, pitch, nullptr);
+  note.setProperty(PROP_VELOCITY, velocity, nullptr);
+
+  // Insert in sorted order by startBeats, then by pitch
+  int insertIndex = 0;
+  for (int i = 0; i < notesNode.getNumChildren(); ++i) {
+    auto existingNote = notesNode.getChild(i);
+    double existingStart = existingNote[PROP_START_BEATS];
+    int existingPitch = existingNote[PROP_PITCH];
+
+    if (startBeats > existingStart ||
+        (startBeats == existingStart && pitch >= existingPitch))
+      insertIndex = i + 1;
+    else
+      break;
+  }
+
+  undoManager.beginNewTransaction(actionName);
+  notesNode.addChild(note, insertIndex, &undoManager);
+
+  DBG("ProjectState: Added note " + noteId + " (pitch=" + juce::String(pitch) +
+      ", start=" + juce::String(startBeats) + " beats)");
+  return noteId;
 }
 
 void ProjectState::addNotes(const juce::String &clipId,
                             const std::vector<MidiNoteSpec> &notes,
                             const juce::String &actionName) {
-  if (midiNoteStateManager)
-    midiNoteStateManager->addNotes(clipId, notes, actionName);
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  auto [track, clip] = findClip(clipId);
+  if (!clip.isValid()) {
+    DBG("ProjectState: Clip not found for addNotes: " + clipId);
+    return;
+  }
+
+  undoManager.beginNewTransaction(actionName);
+
+  for (const auto &noteSpec : notes) {
+    addNote(clipId, noteSpec.startBeats, noteSpec.lengthBeats, noteSpec.pitch,
+            noteSpec.velocity,
+            ""); // Empty action since we already started transaction
+  }
 }
 
 bool ProjectState::moveNote(const juce::String &clipId,
                             const juce::String &noteId, double newStartBeats,
                             double newLengthBeats, int newPitch,
                             int newVelocity, const juce::String &actionName) {
-  if (midiNoteStateManager)
-    return midiNoteStateManager->moveNote(clipId, noteId, newStartBeats, newLengthBeats, newPitch, 
-                                          MidiNote::fromMidiVelocity(newVelocity), actionName);
-  return false;
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  if (newStartBeats < 0.0)
+    newStartBeats = 0.0;
+  if (newLengthBeats <= 0.0)
+    newLengthBeats = 0.1; // Minimum length
+
+  newPitch = juce::jlimit(0, 127, newPitch);
+  newVelocity = juce::jlimit(0, 127, newVelocity);
+
+  auto note = findMidiNote(clipId, noteId);
+  if (!note.isValid())
+    return false;
+
+  undoManager.beginNewTransaction(actionName);
+  note.setProperty(PROP_START_BEATS, newStartBeats, &undoManager);
+  note.setProperty(PROP_LENGTH_BEATS, newLengthBeats, &undoManager);
+  note.setProperty(PROP_PITCH, newPitch, &undoManager);
+  note.setProperty(PROP_VELOCITY, newVelocity, &undoManager);
+
+  // Re-sort the notes in the parent container
+  auto [track, clip] = findClip(clipId);
+  if (clip.isValid()) {
+    auto notesNode = clip.getChildWithName(ID_NOTES);
+    if (notesNode.isValid()) {
+      // Find current index
+      int currentIndex = -1;
+      for (int i = 0; i < notesNode.getNumChildren(); ++i) {
+        if (notesNode.getChild(i)[PROP_ID].toString() == noteId) {
+          currentIndex = i;
+          break;
+        }
+      }
+
+      if (currentIndex >= 0) {
+        // Remove from current position
+        notesNode.removeChild(currentIndex, &undoManager);
+
+        // Find new sorted position
+        int insertIndex = 0;
+        for (int i = 0; i < notesNode.getNumChildren(); ++i) {
+          auto existingNote = notesNode.getChild(i);
+          double existingStart = existingNote[PROP_START_BEATS];
+          int existingPitch = existingNote[PROP_PITCH];
+
+          if (newStartBeats > existingStart ||
+              (newStartBeats == existingStart && newPitch >= existingPitch))
+            insertIndex = i + 1;
+          else
+            break;
+        }
+
+        // Re-insert at new position
+        notesNode.addChild(note, insertIndex, &undoManager);
+      }
+    }
+  }
+
+  DBG("ProjectState: Moved note " + noteId);
+  return true;
 }
 
 bool ProjectState::deleteNote(const juce::String &clipId,
-                               const juce::String &noteId,
-                               const juce::String &actionName) {
-  if (midiNoteStateManager)
-    return midiNoteStateManager->deleteNote(clipId, noteId, actionName);
+                              const juce::String &noteId,
+                              const juce::String &actionName) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  auto [track, clip] = findClip(clipId);
+  if (!clip.isValid())
+    return false;
+
+  auto notesNode = clip.getChildWithName(ID_NOTES);
+  if (!notesNode.isValid())
+    return false;
+
+  for (int i = 0; i < notesNode.getNumChildren(); ++i) {
+    auto note = notesNode.getChild(i);
+    if (note.hasType(ID_NOTE) && note[PROP_ID].toString() == noteId) {
+      undoManager.beginNewTransaction(actionName);
+      notesNode.removeChild(i, &undoManager);
+      DBG("ProjectState: Deleted note " + noteId);
+      return true;
+    }
+  }
+
   return false;
 }
 
 juce::ValueTree ProjectState::getNotes(const juce::String &clipId) const {
-  if (midiNoteStateManager)
-    return midiNoteStateManager->getNotesContainer(clipId);
-  return {};
-}
+  auto [track, clip] = findClip(clipId);
+  if (!clip.isValid())
+    return {};
 
-juce::ValueTree ProjectState::getOrCreateNotesContainer(const juce::String &clipId) {
-  if (midiNoteStateManager)
-    return midiNoteStateManager->getOrCreateNotesContainer(clipId);
-  return {};
+  return clip.getChildWithName(ID_NOTES);
 }
 
 //==============================================================================
@@ -2206,6 +2568,67 @@ juce::File ProjectState::getAssetDirectory(const juce::String &subfolder) const 
     if (subfolder.isNotEmpty())
         return assetsDir.getChildFile(subfolder);
     return assetsDir;
+}
+
+
+
+juce::var ProjectState::getProperty(const juce::String& nodeId, const juce::String& propId) const {
+    auto it = nodeCache_.find(nodeId);
+    if (it != nodeCache_.end()) {
+        return it->second.getProperty(propId);
+    }
+    return {};
+}
+
+void ProjectState::setProperty(const juce::String& nodeId, const juce::String& propId, const juce::var& value) {
+    auto it = nodeCache_.find(nodeId);
+    if (it != nodeCache_.end()) {
+        it->second.setProperty(propId, value, &undoManager);
+    }
+}
+
+juce::var ProjectState::getProjectHierarchy() const {
+    auto* rootObj = new juce::DynamicObject();
+    
+    auto buildHierarchy = [&](auto& self, juce::ValueTree node) -> juce::var {
+        auto* obj = new juce::DynamicObject();
+        obj->setProperty("id", node.getProperty(PROP_ID).toString());
+        obj->setProperty("name", node.getProperty(PROP_NAME).toString());
+        obj->setProperty("type", node.getType().toString());
+        
+        juce::Array<juce::var> children;
+        for (int i = 0; i < node.getNumChildren(); ++i) {
+            children.add(self(self, node.getChild(i)));
+        }
+        
+        if (children.size() > 0) obj->setProperty("children", children);
+        return juce::var(obj);
+    };
+    
+    return buildHierarchy(buildHierarchy, state);
+}
+
+juce::StringArray ProjectState::getUndoHistory() const {
+    // JUCE 8 doesn't have getUndoNames(), so we build the list manually
+    juce::StringArray history;
+    
+    // Get current undo description if available
+    auto desc = undoManager.getUndoDescription();
+    if (desc.isNotEmpty()) {
+        history.add(desc);
+    }
+    
+    // Note: JUCE UndoManager doesn't expose full history stack directly
+    // This returns just the current undo action name
+    return history;
+}
+
+void ProjectState::undoTo(int index) {
+    // Undo back to a specific point - since we can't get full stack,
+    // we undo (index+1) times to reach that point
+    for (int i = 0; i <= index && undoManager.canUndo(); ++i) {
+        undoManager.undo();
+    }
 }
 
 } // namespace zenith
