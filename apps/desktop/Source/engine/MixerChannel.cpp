@@ -24,6 +24,207 @@
 namespace zenith {
 
 //==============================================================================
+// ProCompressor Implementation
+//==============================================================================
+
+void ProCompressor::prepare(double sampleRate, int maxBlockSize) {
+  sampleRate_ = sampleRate;
+
+  // Lookahead buffer (5ms - use constant)
+  lookaheadSamples_ =
+      static_cast<int>(sampleRate * ::zenith::constants::kCompLookaheadMs / 1000.0);
+  lookaheadBuffer_.setSize(2, std::max(1, lookaheadSamples_ + maxBlockSize));
+  lookaheadBuffer_.clear();
+  lookaheadWritePos_ = 0;
+
+  // RMS buffer (10ms window - use constant)
+  rmsWindowSamples_ =
+      std::max(1, static_cast<int>(sampleRate * ::zenith::constants::kCompRmsWindowMs / 1000.0));
+  rmsBuffer_.assign(rmsWindowSamples_, 0.0f);
+  rmsWritePos_ = 0;
+  rmsSum_ = 0.0f;
+
+  // Initialize envelopes
+  envL_ = 0.0f;
+  envR_ = 0.0f;
+  gainSmooth_ = 1.0f;
+
+  updateCoefficients();
+}
+
+void ProCompressor::reset() {
+  lookaheadBuffer_.clear();
+  lookaheadWritePos_ = 0;
+  std::fill(rmsBuffer_.begin(), rmsBuffer_.end(), 0.0f);
+  rmsWritePos_ = 0;
+  rmsSum_ = 0.0f;
+  envL_ = 0.0f;
+  envR_ = 0.0f;
+  gainSmooth_ = 1.0f;
+}
+
+void ProCompressor::setThreshold(float thresholdDb) {
+  threshold_ = thresholdDb;
+  updateAutoMakeup();
+}
+void ProCompressor::setRatio(float ratio) {
+  ratio_ = ratio;
+  updateAutoMakeup();
+}
+void ProCompressor::setAttack(float attackMs) {
+  attackMs_ = attackMs;
+  updateCoefficients();
+}
+void ProCompressor::setRelease(float releaseMs) {
+  releaseMs_ = releaseMs;
+  updateCoefficients();
+}
+void ProCompressor::setMakeup(float makeupDb) {
+  makeup_ = makeupDb;
+  autoMakeupEnabled_ = false;
+}
+void ProCompressor::setKnee(float kneeDb) { knee_ = kneeDb; }
+void ProCompressor::setAutoMakeup(bool enabled) {
+  autoMakeupEnabled_ = enabled;
+  if (enabled)
+    updateAutoMakeup();
+}
+void ProCompressor::setLookaheadEnabled(bool enabled) { lookaheadEnabled_ = enabled; }
+void ProCompressor::setRmsEnabled(bool enabled) { useRms_ = enabled; }
+
+float ProCompressor::getGainReduction() const {
+  return gainReduction_.load();
+}
+
+void ProCompressor::process(juce::AudioBuffer<float> &buffer) {
+  const int numSamples = buffer.getNumSamples();
+  const int numChannels = buffer.getNumChannels();
+
+  if (numChannels < 1)
+    return;
+
+  float maxGR = 0.0f;
+
+  for (int i = 0; i < numSamples; ++i) {
+    // Get input samples
+    float inputL = buffer.getSample(0, i);
+    float inputR = (numChannels >= 2) ? buffer.getSample(1, i) : inputL;
+
+    // Compute detector signal (summed mono)
+    float detector = (std::abs(inputL) + std::abs(inputR)) * 0.5f;
+
+    // RMS or Peak detection
+    float level;
+    if (useRms_) {
+      // Update RMS buffer
+      float oldValue = rmsBuffer_[rmsWritePos_];
+      rmsSum_ -= oldValue * oldValue;
+      rmsSum_ += detector * detector;
+      rmsBuffer_[rmsWritePos_] = detector;
+      rmsWritePos_ = (rmsWritePos_ + 1) % rmsWindowSamples_;
+
+      // RMS value
+      level = std::sqrt(rmsSum_ / static_cast<float>(rmsWindowSamples_));
+    } else {
+      level = detector;
+    }
+
+    // Convert to dB
+    float levelDb = juce::Decibels::gainToDecibels(level, -100.0f);
+
+    // Compute gain reduction with soft knee
+    float gr = computeGainReduction(levelDb);
+
+    // Smooth the gain change (envelope follower)
+    if (gr < gainSmooth_) {
+      gainSmooth_ += attackCoeff_ * (gr - gainSmooth_);
+    } else {
+      gainSmooth_ += releaseCoeff_ * (gr - gainSmooth_);
+    }
+
+    // Track max gain reduction for metering
+    float grDb = juce::Decibels::gainToDecibels(gainSmooth_, -100.0f);
+    if (-grDb > maxGR)
+      maxGR = -grDb;
+
+    // Apply makeup gain
+    float totalGain =
+        gainSmooth_ * juce::Decibels::decibelsToGain(
+                          autoMakeupEnabled_ ? autoMakeup_ : makeup_);
+
+    // Apply with lookahead
+    if (lookaheadEnabled_ && lookaheadSamples_ > 0) {
+      // Write current samples to lookahead buffer
+      lookaheadBuffer_.setSample(0, lookaheadWritePos_, inputL);
+      if (numChannels >= 2) {
+        lookaheadBuffer_.setSample(1, lookaheadWritePos_, inputR);
+      }
+
+      // Read delayed samples
+      int readPos = (lookaheadWritePos_ - lookaheadSamples_ +
+                     lookaheadBuffer_.getNumSamples()) %
+                    lookaheadBuffer_.getNumSamples();
+      float delayedL = lookaheadBuffer_.getSample(0, readPos);
+      float delayedR = (numChannels >= 2)
+                           ? lookaheadBuffer_.getSample(1, readPos)
+                           : delayedL;
+
+      lookaheadWritePos_ =
+          (lookaheadWritePos_ + 1) % lookaheadBuffer_.getNumSamples();
+
+      buffer.setSample(0, i, delayedL * totalGain);
+      if (numChannels >= 2) {
+        buffer.setSample(1, i, delayedR * totalGain);
+      }
+    } else {
+      buffer.setSample(0, i, inputL * totalGain);
+      if (numChannels >= 2) {
+        buffer.setSample(1, i, inputR * totalGain);
+      }
+    }
+  }
+
+  gainReduction_.store(maxGR);
+}
+
+void ProCompressor::updateCoefficients() {
+  if (sampleRate_ <= 0)
+    return;
+  attackCoeff_ = 1.0f - std::exp(-1.0f / (attackMs_ * 0.001f *
+                                          static_cast<float>(sampleRate_)));
+  releaseCoeff_ = 1.0f - std::exp(-1.0f / (releaseMs_ * 0.001f *
+                                           static_cast<float>(sampleRate_)));
+}
+
+void ProCompressor::updateAutoMakeup() {
+  float overshoot = -20.0f - threshold_;
+  if (overshoot > 0.0f && ratio_ > 1.0f) {
+    autoMakeup_ = overshoot * (1.0f - 1.0f / ratio_) * 0.5f;
+  } else {
+    autoMakeup_ = 0.0f;
+  }
+}
+
+float ProCompressor::computeGainReduction(float inputDb) const {
+  float halfKnee = knee_ * 0.5f;
+  float output;
+
+  if (inputDb < threshold_ - halfKnee) {
+    output = inputDb;
+  } else if (inputDb > threshold_ + halfKnee) {
+    output = threshold_ + (inputDb - threshold_) / ratio_;
+  } else {
+    float safeKnee = std::max(0.1f, knee_);
+    float x = inputDb - threshold_ + safeKnee * 0.5f;
+    float kneeGain = (1.0f / ratio_ - 1.0f) / (2.0f * safeKnee);
+    output = inputDb + kneeGain * x * x;
+  }
+
+  float gr = output - inputDb;
+  return juce::Decibels::decibelsToGain(gr);
+}
+
+//==============================================================================
 MixerChannel::MixerChannel() {
   // Initialize send levels to 0 (off)
   for (int i = 0; i < numSends; ++i) {
@@ -49,7 +250,13 @@ MixerChannel::MixerChannel() {
   eqBands[3].frequency.store(8000.0f);
 
   // Initialize coefficient buffers
+<<<<<<< HEAD
+  auto* coeffs = new FilterCoefficients();
+  coeffs->incReferenceCount(); // Held by activeCoeffs_
+  activeCoeffs_.store(coeffs);
+=======
   activeCoeffs_ = new FilterCoefficients();
+>>>>>>> origin/master
 
   consoleEmulation = std::make_unique<zenith::effects::ConsoleEmulation>();
 }
@@ -161,6 +368,22 @@ void MixerChannel::recalculateCoefficients() {
     newCoeffs->eq[i] = {coeffs.coefficients[0], coeffs.coefficients[1],
                         coeffs.coefficients[2], 1.0,
                         coeffs.coefficients[3], coeffs.coefficients[4]};
+<<<<<<< HEAD
+  }
+
+  // Atomically swap pointer - old coefficients will be released by GC
+  // FilterCoefficients uses juce::ReferenceCountedObject for lifetime management.
+  newCoeffs->incReferenceCount(); // Held by activeCoeffs_
+  auto* oldCoeffs = activeCoeffs_.exchange(newCoeffs);
+  
+  if (oldCoeffs)
+  {
+      // Pass the old pointer to GC, it will decrement the refcount when safe
+      juce::ReferenceCountedObjectPtr<FilterCoefficients> ptr(oldCoeffs);
+      oldCoeffs->decReferenceCount(); // Transfer ownership to smart pointer
+      RealTimeGarbageCollector::getInstance().deferDelete(ptr);
+  }
+=======
   }
 
   // Atomically swap pointer - old coefficients will be released when 
@@ -170,10 +393,18 @@ void MixerChannel::recalculateCoefficients() {
     const juce::SpinLock::ScopedLockType sl(coeffLock_);
     activeCoeffs_ = newCoeffs;
   }
+>>>>>>> origin/master
 }
 
 void MixerChannel::updateFiltersFromCoefficients() {
   // Safe atomic retrieval of current coefficients
+<<<<<<< HEAD
+  // We don't increment refcount here as we assume the pointer is valid 
+  // for the duration of this call (GC has 1s safety buffer)
+  auto* localCoeffs = activeCoeffs_.load(std::memory_order_acquire);
+
+  if (localCoeffs == nullptr)
+=======
   FilterCoefficients::Ptr localCoeffs;
   {
     const juce::SpinLock::ScopedLockType sl(coeffLock_);
@@ -181,6 +412,7 @@ void MixerChannel::updateFiltersFromCoefficients() {
   }
 
   if (!localCoeffs)
+>>>>>>> origin/master
     return;
 
   // Apply HPF
@@ -347,15 +579,25 @@ void MixerChannel::setCompressorRatio(float ratio) {
 }
 
 void MixerChannel::setCompressorAttack(float attackMs) {
+<<<<<<< HEAD
+  compAttack.store(juce::jlimit<float>(::zenith::constants::kMinCompAttackMs,
+                                ::zenith::constants::kMaxCompAttackMs, attackMs));
+=======
   compAttack.store(juce::jlimit(constants::kMinCompAttackMs,
                                 constants::kMaxCompAttackMs, attackMs));
+>>>>>>> origin/master
   compressor_.setAttack(attackMs);
   sendChangeMessage();
 }
 
 void MixerChannel::setCompressorRelease(float releaseMs) {
+<<<<<<< HEAD
+  compRelease.store(juce::jlimit<float>(::zenith::constants::kMinCompReleaseMs,
+                                 ::zenith::constants::kMaxCompReleaseMs, releaseMs));
+=======
   compRelease.store(juce::jlimit(constants::kMinCompReleaseMs,
                                  constants::kMaxCompReleaseMs, releaseMs));
+>>>>>>> origin/master
   compressor_.setRelease(releaseMs);
   sendChangeMessage();
 }
