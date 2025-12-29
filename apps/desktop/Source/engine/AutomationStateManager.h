@@ -114,6 +114,44 @@ public:
                                 int curveType,
                                 const juce::String& actionName = "Set Curve Type");
 
+    //==========================================================================
+    // Plugin Parameter Automation
+    //==========================================================================
+
+    /**
+     * @brief Create or get automation envelope for a plugin parameter
+     * @param trackId Track ID
+     * @param pluginIndex Index of the plugin in the track's chain
+     * @param parameterIndex Index of the parameter in the plugin
+     * @param parameterName Human-readable parameter name (for display)
+     * @return Parameter ID string (format: "plugin_X_Y")
+     */
+    juce::String createPluginParameterAutomation(const juce::String& trackId,
+                                                  int pluginIndex,
+                                                  int parameterIndex,
+                                                  const juce::String& parameterName);
+
+    /**
+     * @brief Check if a parameter ID refers to a plugin parameter
+     * @param paramId Parameter ID to check
+     * @return true if it's a plugin parameter (starts with "plugin_")
+     */
+    static bool isPluginParameter(const juce::String& paramId) {
+        return paramId.startsWith("plugin_");
+    }
+
+    /**
+     * @brief Parse plugin parameter ID
+     * @param paramId Parameter ID in format "plugin_X_Y"
+     * @param outPluginIndex Output: plugin index
+     * @param outParamIndex Output: parameter index
+     * @return true if successfully parsed
+     */
+    static bool parsePluginParameterId(const juce::String& paramId,
+                                        int& outPluginIndex,
+                                        int& outParamIndex);
+
+
 private:
     juce::ValueTree findAutomationPoint(const juce::ValueTree& envelope,
                                         const juce::String& pointId) const;

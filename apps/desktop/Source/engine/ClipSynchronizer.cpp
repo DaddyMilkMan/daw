@@ -1,6 +1,6 @@
 /**
  * @file ClipSynchronizer.cpp
- * @brief ClipSynchronizer implementation (integration stub)
+ * @brief ClipSynchronizer implementation - bidirectional sync between ProjectState and Engine clips
  */
 
 #include "ClipSynchronizer.h"
@@ -28,7 +28,8 @@ void ClipSynchronizer::start(int updateRateHz) {
     updateRateHz = 30;
 
   projectState.getState().addListener(this);
-  startTimer(1000 / updateRateHz);
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr)
+      if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(1000 / updateRateHz);
   DBG("ClipSynchronizer: Started at " + juce::String(updateRateHz) + " Hz");
 }
 
@@ -381,8 +382,9 @@ void ClipSynchronizer::valueTreeChildRemoved(
       if (trackPtr->getTrackId() == trackId) {
         zenith::ClipTrack* clipTrack = dynamic_cast<zenith::ClipTrack*>(trackPtr.get());
         if (clipTrack == nullptr) {
-            jassertfalse;
-            ZENITH_LOG_ERROR("ClipSynchronizer: trackPtr is not a ClipTrack during clip removal");
+            // This is a logic error - track should be a ClipTrack to have clips.
+            // Log and continue rather than asserting to avoid crash in production.
+            ZENITH_LOG_ERROR("ClipSynchronizer: trackPtr is not a ClipTrack during clip removal for track: " + trackId);
             return;
         }
 

@@ -28,58 +28,67 @@
 #include <unordered_map>
 #include <vector>
 
-#include "../Source/engine/RoutingGraph.h"
+#include "RoutingGraph.h"
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_graphics/juce_graphics.h>
+#include "MidiNote.h"
 
 //==============================================================================
 //==============================================================================
 namespace Zenith {
-    // Unique identifiers for our data nodes
-    namespace IDs {
-        const juce::Identifier PROJECT { "PROJECT" };
-        const juce::Identifier TRACKS  { "TRACKS" };
-        const juce::Identifier TRACK   { "TRACK" };
-        const juce::Identifier volume  { "volume" };
-        const juce::Identifier name    { "name" };
-        
-        // Extended IDs from existing implementation
-        const juce::Identifier CLIPS   { "CLIPS" };
-        const juce::Identifier CLIP    { "CLIP" };
-        const juce::Identifier MIXER   { "MIXER" };
-    }
-}
+// Unique identifiers for our data nodes
+namespace IDs {
+const juce::Identifier PROJECT{"PROJECT"};
+const juce::Identifier TRACKS{"TRACKS"};
+const juce::Identifier TRACK{"TRACK"};
+const juce::Identifier volume{"volume"};
+const juce::Identifier name{"name"};
+
+// Extended IDs from existing implementation
+const juce::Identifier CLIPS{"CLIPS"};
+const juce::Identifier CLIP{"CLIP"};
+const juce::Identifier MIXER{"MIXER"};
+} // namespace IDs
+} // namespace Zenith
 
 namespace zenith {
 
 class TrackStateManager;
 class ClipStateManager;
+class MidiNoteStateManager;
 class AutomationStateManager;
 class ProjectFileIO;
+class Engine;
 
-class ProjectState : public juce::ValueTree::Listener,
-                     private juce::Timer {
+class ProjectState : public juce::ValueTree::Listener, private juce::Timer {
   friend class ArrangerComponent;
   friend class TrackStateManager;
   friend class ClipStateManager;
   friend class AutomationStateManager;
   friend class ProjectFileIO;
+  friend class Engine;
 
 public:
-    //==========================================================================
-    // Source of Truth Structure (from Step 1)
-    //==========================================================================
-    juce::ValueTree state;
-    juce::UndoManager undoManager;
+  //==========================================================================
+  // Source of Truth Structure (from Step 1)
+  //==========================================================================
+  juce::ValueTree state;
+  juce::UndoManager undoManager;
 
-    // Helper to add a track via state manipulation (as requested in Step 1)
-    void addTrack(const juce::String& trackName) {
-        juce::ValueTree t(Zenith::IDs::TRACK);
-        t.setProperty(Zenith::IDs::name, trackName, nullptr);
-        t.setProperty(Zenith::IDs::volume, 0.75f, nullptr);
-        state.getOrCreateChildWithName(Zenith::IDs::TRACKS, nullptr).addChild(t, -1, &undoManager);
-    }
+  // Helper to add a track via state manipulation (as requested in Step 1)
+  // Helper to add a track via state manipulation (delegates to main impl)
+  juce::String addTrack(const juce::String &trackName) {
+      return addTrack(trackName, ID_TRACK.toString());
+  }
+
+  void addListener(juce::ValueTree::Listener *listener) {
+      state.addListener(listener);
+  }
+
+  void removeListener(juce::ValueTree::Listener *listener) {
+      state.removeListener(listener);
+  }
 
   static const juce::Identifier ID_PROJECT;
   static const juce::Identifier ID_TRACKS;
@@ -91,6 +100,14 @@ public:
   static const juce::Identifier ID_ENVELOPE;
   static const juce::Identifier ID_POINTS;      // Container for points
   static const juce::Identifier ID_POINT;       // Individual point
+
+  // Take Management IDs
+  static const juce::Identifier ID_TAKE_FOLDERS;
+  static const juce::Identifier ID_TAKE_FOLDER; // Singular
+  static const juce::Identifier ID_TAKES;
+  static const juce::Identifier ID_TAKE;
+  static const juce::Identifier ID_COMP_REGIONS;
+  static const juce::Identifier ID_COMP_REGION;
   static const juce::Identifier ID_NOTES;       // MIDI notes container
   static const juce::Identifier ID_NOTE;        // Individual MIDI note
   static const juce::Identifier ID_TEMPO_MAP;   // Container for tempo changes
@@ -113,12 +130,17 @@ public:
   static const juce::Identifier PROP_MUTE;
   static const juce::Identifier PROP_SOLO;
   static const juce::Identifier PROP_ARMED;
+  static const juce::Identifier PROP_INPUT_MONITOR;
+  static const juce::Identifier PROP_ACTIVE_TAKE; // Index of auditioning take
+  static const juce::Identifier PROP_EXPANDED;    // Whether lanes are visible
 
   static const juce::Identifier PROP_START;
   static const juce::Identifier PROP_LENGTH;
   static const juce::Identifier PROP_OFFSET;
   static const juce::Identifier PROP_AUDIO_FILE;
   static const juce::Identifier PROP_LOOP_LENGTH;
+  static const juce::Identifier PROP_FADE_IN;
+  static const juce::Identifier PROP_FADE_OUT;
   static const juce::Identifier PROP_LANE_INDEX;
   static const juce::Identifier PROP_MANUALLY_COLORED;
   static const juce::Identifier PROP_IS_QUARANTINE;
@@ -130,6 +152,13 @@ public:
   static const juce::Identifier PROP_VALUE;
   static const juce::Identifier PROP_CURVE_TYPE;
   static const juce::Identifier PROP_TENSION;
+  static const juce::Identifier PROP_TAKE_INDEX; // Which take for a comp region
+  
+  // Plugin Automation Properties
+  static const juce::Identifier PROP_PLUGIN_INDEX;
+  static const juce::Identifier PROP_PARAM_INDEX;
+  static const juce::Identifier PROP_PARAM_NAME;
+
 
   // MIDI Note properties
   static const juce::Identifier PROP_START_BEATS;  // Note start time in beats
@@ -142,6 +171,7 @@ public:
   static const juce::Identifier PROP_RECURRENCE; // Loop recurrence (e.g. "1:4")
   static const juce::Identifier
       PROP_ARTICULATION_ID; // Articulation/Keyswitch ID
+  static const juce::Identifier PROP_NOTE_TENSION; // Note tension (0.0=linear, +/- for curve)
 
   // Tempo/Marker properties
   static const juce::Identifier PROP_BPM;   // Tempo in BPM
@@ -166,9 +196,21 @@ public:
   bool loadFromFile(const juce::File &file);
   bool saveToFile(const juce::File &file);
   juce::File saveCrashDump();
+  juce::File getAssetDirectory(const juce::String& subfolder) const;
   juce::File getProjectFile() const { return projectFile; }
   void setProjectFile(const juce::File &file) { projectFile = file; }
   bool hasUnsavedChanges() const { return isDirty.load(); }
+
+  /**
+   * @brief Get sample rate
+   */
+  double getSampleRate() const { return sampleRate_; }
+  void setSampleRate(double rate) { sampleRate_ = rate; }
+
+  /**
+   * @brief Mark as dirty (unsaved changes)
+   */
+  void markDirty() { isDirty.store(true); }
 
   //==========================================================================
   // ValueTree::Listener overrides
@@ -210,10 +252,16 @@ public:
   //==========================================================================
 
   juce::String addTrack(const juce::String &name, const juce::String &type);
-  void removeTrack(const juce::String &trackId);
+  void removeTrack(const juce::String &trackId,
+                   const juce::String &actionName = "Delete Track");
+  juce::String duplicateTrack(const juce::String &trackId, const juce::String &actionName = "Duplicate Track");
+  juce::String insertTrackAbove(const juce::String &trackId, const juce::String &type, const juce::String &actionName = "Insert Track Above");
+  juce::String insertTrackBelow(const juce::String &trackId, const juce::String &type, const juce::String &actionName = "Insert Track Below");
   int getNumTracks() const;
+  void moveTrack(const juce::String& trackId, int newIndex, const juce::String& actionName = "Move Track");
   juce::ValueTree getTrack(const juce::String &trackId) const;
   juce::ValueTree getTrackByIndex(int trackIndex);
+  juce::ValueTree findTrack(const juce::String &trackId) const;
 
   //===================================================================
   // Track Mixer API
@@ -239,6 +287,10 @@ public:
   void setTrackArmed(const juce::String &trackId, bool armed,
                      const juce::String &actionName = "Set track armed");
   bool isTrackArmed(const juce::String &trackId) const;
+  void setTrackInputMonitor(
+      const juce::String &trackId, bool monitoring,
+      const juce::String &actionName = "Set track input monitor");
+  bool isTrackInputMonitoring(const juce::String &trackId) const;
   juce::String getTrackName(const juce::String &trackId) const;
   juce::String getTrackType(const juce::String &trackId) const;
 
@@ -254,6 +306,21 @@ public:
 
   juce::String createEmptyClip(const juce::String &trackId, double startBeats,
                                double lengthBeats, bool isMidi,
+                               const juce::String &name,
+                               const juce::String &actionName);
+
+  /**
+   * @brief Create an audio clip with a reference to an audio file
+   * @param trackId Track to add clip to
+   * @param startBeats Start position in beats
+   * @param lengthBeats Clip length in beats
+   * @param audioFilePath Path to the audio file
+   * @param name Clip name
+   * @param actionName Undo action name
+   * @return New clip ID
+   */
+  juce::String createAudioClip(const juce::String &trackId, double startBeats,
+                               double lengthBeats, const juce::String &audioFilePath,
                                const juce::String &name,
                                const juce::String &actionName);
 
@@ -307,8 +374,30 @@ public:
                 double newStartBeats);
   bool resizeClip(const juce::String &trackId, const juce::String &clipId,
                   double newLengthBeats);
+  juce::String getClipName(const juce::String &clipId) const;
+  void renameClip(const juce::String &clipId, const juce::String &newName);
+  void setClipFade(const juce::String &clipId, double fadeInBeats, double fadeOutBeats, const juce::String &actionName);
+  void setClipColor(const juce::String &clipId, const juce::Colour &color);
   juce::ValueTree findClip(const juce::String &trackId,
                            const juce::String &clipId) const;
+
+  //==========================================================================
+  // Take Folder Management
+  //==========================================================================
+
+  juce::String createTakeFolder(const juce::String &trackId, double startBeats,
+                                double lengthBeats,
+                                const juce::String &actionName = "Create Take Folder");
+                                
+  void addTakeToFolder(const juce::String &folderId, const juce::String &clipId);
+  void removeTakeFromFolder(const juce::String &folderId, const juce::String &clipId);
+  
+  void setCompRegion(const juce::String &folderId, double startBeats, 
+                     double lengthBeats, int takeIndex,
+                     const juce::String &actionName = "Set Comp Region");
+
+  void setTakeFolderExpanded(const juce::String &folderId, bool expanded);
+  void setActiveTake(const juce::String &folderId, int takeIndex);
 
   //==========================================================================
   // Automation Management
@@ -361,30 +450,7 @@ public:
                        double lengthBeats, int pitch, int velocity,
                        const juce::String &actionName);
 
-  struct MidiNoteSpec {
-    juce::String id;
-    int pitch;
-    double startBeats;
-    double lengthBeats;
-    int velocity;
-    bool muted;
-
-    float probability = 1.0f; // 0.0 to 1.0
-    juce::String condition;   // e.g., "fill", "not-fill", "pre"
-    juce::String recurrence;  // e.g., "1:4"
-    int articulationId = 0;   // 0 = Default
-
-    MidiNoteSpec()
-        : pitch(60), startBeats(0.0), lengthBeats(1.0), velocity(100),
-          muted(false), probability(1.0f) {}
-
-    MidiNoteSpec(const juce::String &id, int pitch, double startBeats,
-                 double lengthBeats, int velocity, bool muted,
-                 float probability = 1.0f)
-        : id(id), pitch(pitch), startBeats(startBeats),
-          lengthBeats(lengthBeats), velocity(velocity), muted(muted),
-          probability(probability) {}
-  };
+  using MidiNoteSpec = zenith::MidiNote;
 
   void addNotes(const juce::String &clipId,
                 const std::vector<MidiNoteSpec> &notes,
@@ -429,12 +495,27 @@ public:
                               const juce::String &noteId, float probability,
                               const juce::String &actionName);
 
+  void setMidiNoteTension(const juce::String &clipId,
+                            const juce::String &noteId, float tension,
+                            const juce::String &actionName);
+
+  //==========================================================================
+  // MIDI Processing (Humanize, Legato)
+  //==========================================================================
+  
+  void humanizeClip(const juce::String& clipId, double velocityRange, double timeRangeBeats, const juce::String& actionName = "Humanize");
+  void legatoClip(const juce::String& clipId, bool adjustOverlap = true, const juce::String& actionName = "Legato");
+
   //==========================================================================
   // Tempo Map & Markers
   //==========================================================================
 
   juce::String addTempoChange(double beatPosition, double bpm,
                               const juce::String &actionName);
+  bool deleteTempoChange(const juce::String &pointId,
+                         const juce::String &actionName);
+  void moveTempoChange(const juce::String &pointId, double newBeats,
+                       double newBpm, const juce::String &actionName);
   juce::ValueTree getTempoMap() const;
 
   juce::String addMarker(double beatPosition, const juce::String &name,
@@ -497,6 +578,7 @@ public:
 
   juce::ValueTree &getState() { return state; }
   const juce::ValueTree &getState() const { return state; }
+  juce::File getAssetDirectory(const juce::String& name);
 
   //==========================================================================
   // Routing Graph
@@ -523,7 +605,6 @@ private:
   juce::ValueTree findNote(const juce::String &trackId,
                            const juce::String &clipId,
                            const juce::String &noteId);
-  juce::ValueTree findTrack(const juce::String &trackId) const;
   juce::ValueTree findAutomationPoint(const juce::ValueTree &envelope,
                                       const juce::String &pointId) const;
   void rebuildIdCounter();
@@ -542,11 +623,18 @@ private:
   std::atomic<bool> isDirty{false};
   juce::File projectFile;
   zenith::RoutingGraph routingGraph;
+  double sampleRate_ = 44100.0;
 
   std::unique_ptr<TrackStateManager> trackStateManager;
   std::unique_ptr<ClipStateManager> clipStateManager;
+  std::unique_ptr<MidiNoteStateManager> midiNoteStateManager;
   std::unique_ptr<AutomationStateManager> automationStateManager;
   std::unique_ptr<ProjectFileIO> projectFileIO;
+
+  std::pair<juce::String, juce::String> splitBeatBasedClip(const juce::String &trackId, juce::ValueTree originalClip, juce::int64 splitSamples);
+  std::pair<juce::String, juce::String> splitSampleBasedClip(const juce::String &trackId, juce::ValueTree originalClip, juce::int64 splitSamples);
+  void migrateProperties(const juce::ValueTree& source, juce::ValueTree& dest);
+  std::pair<juce::int64, juce::int64> inferSamplePropertiesFromBeats(const juce::ValueTree& clip);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ProjectState)
 };

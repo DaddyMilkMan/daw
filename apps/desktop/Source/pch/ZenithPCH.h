@@ -23,15 +23,7 @@
 
 #pragma once
 
-// ==============================================================================
-// Windows-specific safety (MUST be BEFORE any includes)
-// ==============================================================================
-#ifdef _WIN32
-// NOMINMAX prevents min/max macro conflicts with std::min/std::max
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#endif
+// Platform-specific defines and system headers are now handled in Source/platform/
 
 // ==============================================================================
 // Standard Library Headers (Stable, rarely change)
@@ -124,3 +116,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+
+// ==============================================================================
+// JUCE Core Headers
+// Note: These are no longer included in the PCH to avoid conflicts with 
+// JUCE's internal module compilation strategy and X11 headers on Linux.
+// Each .cpp file should include the required JUCE modules directly.
+// ==============================================================================
