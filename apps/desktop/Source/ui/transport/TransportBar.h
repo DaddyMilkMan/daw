@@ -15,18 +15,16 @@
 
 #include "../design-system/InteractionHelper.h"
 #include "SkiaComponent.h"
+#include <functional>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <memory>
 
 #ifdef ZENITH_USE_SKIA
-#include <core/SkCanvas.h>
-#include <core/SkColor.h>
-#include <core/SkFont.h>
-#include <core/SkPaint.h>
+#include "ZenithSkia.h"
 #include <core/SkPath.h>
-#include <core/SkRRect.h>
 
 #endif
 
@@ -47,6 +45,7 @@ public:
   void mouseExit(const juce::MouseEvent &e) override;
 
   void timerCallback() override;
+  void visibilityChanged() override;
 
   std::unique_ptr<juce::AccessibilityHandler>
   createAccessibilityHandler() override;
@@ -88,8 +87,12 @@ public:
   std::function<void()> onPlayClicked;
   std::function<void()> onStopClicked;
   std::function<void()> onRecordClicked;
+  std::function<void()> onLoopToggled;
+  std::function<void()> onRewind;
   std::function<void()> onViewToggleClicked;
   std::function<void()> onSettingsClicked;
+  std::function<void()> onExportClicked;
+  std::function<void()> onClearAllSolos;
 
 private:
   bool isPlaying_ = false;
@@ -106,6 +109,11 @@ private:
   juce::Rectangle<int> recordButtonBounds_;
   juce::Rectangle<int> viewToggleButtonBounds_;
   juce::Rectangle<int> settingsButtonBounds_;
+  juce::Rectangle<int> exportButtonBounds_;
+
+  // Dynamic layout bounds
+  juce::Rectangle<int> centerInfoBounds_;
+  juce::Rectangle<int> cpuMeterBounds_;
 
   // Interaction states
   InteractionState playState_;
@@ -113,6 +121,7 @@ private:
   InteractionState recordState_;
   InteractionState viewToggleState_;
   InteractionState settingsState_;
+  InteractionState exportState_;
 
   void drawTransportButton(SkCanvas *canvas, const juce::Rectangle<int> &bounds,
                            const SkPath &iconPath, bool isActive,
@@ -130,6 +139,27 @@ private:
   ::SkRect cachedBounds_;
 
   void updateCachedPaints(const ::SkRect &bounds);
+};
+
+#else // ZENITH_USE_SKIA
+
+class TransportBar : public juce::Component {
+public:
+    TransportBar() {}
+    ~TransportBar() override = default;
+    void paint(juce::Graphics& g) override { g.fillAll(juce::Colours::black); }
+    void setPlaying(bool) {}
+    void setRecording(bool) {}
+    void setTempo(double) {}
+    void setCPU(float) {}
+    void setPosition(double) {}
+    void setProjectName(const juce::String&) {}
+    void setTimeSignature(int, int) {}
+    std::function<void()> onPlayClicked;
+    std::function<void()> onStopClicked;
+    std::function<void()> onRecordClicked;
+    std::function<void()> onViewToggleClicked;
+    std::function<void()> onSettingsClicked;
 };
 
 #endif // ZENITH_USE_SKIA

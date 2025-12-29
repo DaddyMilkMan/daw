@@ -311,7 +311,7 @@ struct RefactorPlan {
     }
 
     if (isEmpty()) {
-      lines.add("✓ Project is already clean - no refactoring needed!");
+      lines.add("[OK] Project is already clean - no refactoring needed!");
     }
 
     return lines.joinIntoString("\n");

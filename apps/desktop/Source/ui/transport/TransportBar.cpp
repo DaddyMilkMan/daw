@@ -16,6 +16,7 @@
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
 #include <core/SkFont.h>
+#include <core/SkFontTypes.h>
 #include <core/SkMaskFilter.h>
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
@@ -25,47 +26,89 @@
 #include "../design-system/ZenithIcons.h"
 #include "../framework/GlassmorphicPanel.h"
 #include "../framework/NeonGlow.h"
+#include "../controls/SkiaPopupMenu.h"
+#include "../controls/ContextMenuManager.h"
+#include "../design-system/ColorBridge.h"
+#include "../design-system/ZenithDesignSystem.h"
 #include <effects/SkGradientShader.h>
 
 namespace zenith {
 
 TransportBar::TransportBar() {
   setSize(800, 60);
-  startTimerHz(60); // Animation loop
+}
+
+void TransportBar::visibilityChanged() {
+  // Only start timer when:
+  // 1. Component is visible
+  // 2. Component has a peer (is on desktop) - prevents blocking during construction
+  // 3. Timer isn't already running
+  if (isVisible() && getPeer() != nullptr && !isTimerRunning()) {
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60); // Start animation loop when visible and on desktop
+  }
 }
 
 void TransportBar::resized() {
   using namespace design;
   auto area = getLocalBounds();
+  const int width = getWidth();
+  
+  // Responsive thresholds
+  const bool isCompact = width < 600;
+  const bool isSuperCompact = width < 400;
 
   // Use design tokens
-  int buttonWidth =
-      static_cast<int>(dimensions::BUTTON_HEIGHT_LG + spacing::SM);
+  int buttonWidth = static_cast<int>(dimensions::BUTTON_HEIGHT_LG + spacing::SM);
   int buttonSpacing = static_cast<int>(spacing::SM);
   int buttonPadding = static_cast<int>(spacing::SM);
 
-  auto leftSection = area.removeFromLeft(static_cast<int>(spacing::XXL * 5));
-  playButtonBounds_ =
-      leftSection.removeFromLeft(buttonWidth).reduced(buttonPadding);
-  leftSection.removeFromLeft(buttonSpacing);
-  stopButtonBounds_ =
-      leftSection.removeFromLeft(buttonWidth).reduced(buttonPadding);
-  leftSection.removeFromLeft(buttonSpacing);
-  recordButtonBounds_ =
-      leftSection.removeFromLeft(buttonWidth).reduced(buttonPadding);
+  // 1. Left Section (Transport Controls)
+  // Calculate needed width for left controls
+  int leftWidth = (buttonWidth * 3) + (buttonSpacing * 2) + static_cast<int>(spacing::MD);
+  auto leftSection = area.removeFromLeft(leftWidth);
+  
+  playButtonBounds_ = leftSection.removeFromLeft(buttonWidth).reduced(buttonPadding);
+  leftSection.removeFromLeft(buttonSpacing); // Spacer
+  stopButtonBounds_ = leftSection.removeFromLeft(buttonWidth).reduced(buttonPadding);
+  leftSection.removeFromLeft(buttonSpacing); // Spacer
+  recordButtonBounds_ = leftSection.removeFromLeft(buttonWidth).reduced(buttonPadding);
 
-  // View Toggle Button (Right side)
-  // View Toggle Button (Right side)
-  auto rightSection =
-      area.removeFromRight(static_cast<int>(spacing::XXL * 2.5f));
-  settingsButtonBounds_ =
-      rightSection
-          .removeFromRight(static_cast<int>(dimensions::TRANSPORT_BAR_HEIGHT))
-          .reduced(buttonPadding);
-  viewToggleButtonBounds_ =
-      rightSection
-          .removeFromRight(static_cast<int>(dimensions::TRANSPORT_BAR_HEIGHT))
-          .reduced(buttonPadding);
+  // 2. Right Section (Tools & Settings)
+  // Determine what to show based on width
+  int rightWidth = static_cast<int>(dimensions::TRANSPORT_BAR_HEIGHT) * 3;
+  if (isSuperCompact) rightWidth = static_cast<int>(dimensions::TRANSPORT_BAR_HEIGHT) * 1; // Only Settings
+  else if (isCompact) rightWidth = static_cast<int>(dimensions::TRANSPORT_BAR_HEIGHT) * 2; // Settings + Toggle
+  
+  auto rightSection = area.removeFromRight(rightWidth);
+  
+  // Always show Settings
+  settingsButtonBounds_ = rightSection.removeFromRight(static_cast<int>(dimensions::TRANSPORT_BAR_HEIGHT)).reduced(buttonPadding);
+  
+  // Show Export if space permits
+  if (!isSuperCompact) {
+      exportButtonBounds_ = rightSection.removeFromRight(static_cast<int>(dimensions::TRANSPORT_BAR_HEIGHT)).reduced(buttonPadding);
+  } else {
+      exportButtonBounds_ = juce::Rectangle<int>(); // Hidden
+  }
+  
+  // Show View Toggle if space permits
+  if (!isCompact && !isSuperCompact) {
+      viewToggleButtonBounds_ = rightSection.removeFromRight(static_cast<int>(dimensions::TRANSPORT_BAR_HEIGHT)).reduced(buttonPadding);
+  } else {
+      viewToggleButtonBounds_ = juce::Rectangle<int>(); // Hidden
+  }
+
+  // 3. Center Info Section (Remaining space)
+  centerInfoBounds_ = area;
+  
+  // CPU Meter - hide if extremely small
+  if (centerInfoBounds_.getWidth() > 150) {
+      cpuMeterBounds_ = centerInfoBounds_.removeFromRight(120).withHeight(20);
+      cpuMeterBounds_.setY(area.getCentreY() - 10);
+      centerInfoBounds_.removeFromRight(20); // Spacer
+  } else {
+      cpuMeterBounds_ = juce::Rectangle<int>(); // Hidden
+  }
 
   // Update cached resources on Message Thread (Safe)
   SkRect skBounds = SkRect::MakeWH((float)getWidth(), (float)getHeight());
@@ -97,6 +140,10 @@ void TransportBar::drawSkia(SkCanvas *canvas) {
   drawTransportButton(canvas, viewToggleButtonBounds_, icons::ViewToggle(),
                       false, design::colors::TEXT_PRIMARY, viewToggleState_);
 
+  // Export Button - uses Download/Save icon
+  drawTransportButton(canvas, exportButtonBounds_, icons::Download(), false,
+                      design::colors::TEXT_PRIMARY, exportState_);
+
   // Settings Button - uses Settings gear icon
   drawTransportButton(canvas, settingsButtonBounds_, icons::Settings(), false,
                       design::colors::TEXT_PRIMARY, settingsState_);
@@ -107,28 +154,44 @@ void TransportBar::drawSkia(SkCanvas *canvas) {
   textPaint.setColor(design::colors::TEXT_PRIMARY);
   textPaint.setAntiAlias(true);
 
-  // Tempo with glow
+  // Calculate centered positions
+  float centerX = centerInfoBounds_.getCentreX();
+  float centerY = centerInfoBounds_.getCentreY();
+  
+  // Tempo with glow (centered)
   juce::String tempoStr = juce::String(tempo_, 1) + " BPM";
-  NeonGlow::drawTextGlow(canvas, tempoStr.toStdString().c_str(), 260.0f, 38.0f,
+  
+  // Measure text to center it accurately
+  SkRect textBounds;
+  font_.measureText(tempoStr.toStdString().c_str(), tempoStr.length(), SkTextEncoding::kUTF8, &textBounds);
+  float tempoX = centerX - textBounds.width() / 2.0f;
+  float tempoY = centerY - 5.0f; // Slightly above center
+
+  NeonGlow::drawTextGlow(canvas, tempoStr.toStdString().c_str(), tempoX, tempoY,
                          font_, design::colors::CYAN,
                          NeonGlow::Intensity::Subtle);
 
-  // Project Name (Subtle)
+  // Project Name (Subtle, below Tempo)
   textPaint.setColor(design::colors::TEXT_SECONDARY);
-  canvas->drawString(projectName_.toStdString().c_str(), 380.0f, 37.0f,
+  
+  juce::String projectStr = projectName_;
+  smallFont_.measureText(projectStr.toStdString().c_str(), projectStr.length(), SkTextEncoding::kUTF8, &textBounds);
+  float projX = centerX - textBounds.width() / 2.0f;
+  float projY = centerY + 12.0f; // Below center
+  
+  canvas->drawString(projectStr.toStdString().c_str(), projX, projY,
                      smallFont_, textPaint);
 
   // 5. Draw CPU meter
-  juce::Rectangle<int> cpuBounds((int)bounds.getWidth() - 250, 20, 100, 20);
-  drawMeter(canvas, cpuBounds, cpuUsage_ / 100.0f, "CPU");
+  drawMeter(canvas, cpuMeterBounds_, cpuUsage_ / 100.0f, "CPU");
 }
 
 void TransportBar::updateCachedPaints(const SkRect &bounds) {
   // 1. Background Paint
   bgPaint_.setAntiAlias(true);
   SkPoint pts[2] = {{0, 0}, {0, bounds.height()}};
-  SkColor colors[2] = {SkColorSetARGB(240, 20, 20, 25),
-                       SkColorSetARGB(240, 10, 10, 15)};
+  SkColor colors[2] = {design::withAlpha(design::colors::BG_01, 0.94f),
+                       design::withAlpha(design::colors::BG_00, 0.94f)};
   bgPaint_.setShader(SkGradientShader::MakeLinear(pts, colors, nullptr, 2,
                                                   SkTileMode::kClamp));
   bgPaint_.setStyle(SkPaint::kFill_Style);
@@ -137,12 +200,12 @@ void TransportBar::updateCachedPaints(const SkRect &bounds) {
   borderPaint_.setAntiAlias(true);
   borderPaint_.setStyle(SkPaint::kStroke_Style);
   borderPaint_.setStrokeWidth(1.0f);
-  borderPaint_.setColor(SkColorSetARGB(50, 0, 255, 255)); // Cyan glow
+  borderPaint_.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.2f)); // Themed glow
 
   // 3. Fonts
   // Use Mono font for Tempo/BPM display to avoid jitter
   font_ = design::getMonoFont(18.0f, design::FontWeight::Medium);
-
+  
   // Use UI font for labels
   smallFont_ = design::getSkFont(14.0f, design::FontWeight::Regular);
 }
@@ -226,7 +289,7 @@ void TransportBar::drawMeter(SkCanvas *canvas,
 
   // Background
   SkPaint bgPaint;
-  bgPaint.setColor(SkColorSetARGB(50, 0, 0, 0));
+  bgPaint.setColor(design::withAlpha(design::colors::BG_00, 0.4f));
   bgPaint.setAntiAlias(true);
   canvas->drawRoundRect(rect, 4.0f, 4.0f, bgPaint);
 
@@ -273,39 +336,86 @@ void TransportBar::drawMeter(SkCanvas *canvas,
 }
 
 void TransportBar::mouseDown(const juce::MouseEvent &e) {
+  bool isRightClick = e.mods.isRightButtonDown();
+  
   // Set pressed state
-  playState_.isPressed = playButtonBounds_.contains(e.getPosition());
-  stopState_.isPressed = stopButtonBounds_.contains(e.getPosition());
-  recordState_.isPressed = recordButtonBounds_.contains(e.getPosition());
-  viewToggleState_.isPressed =
-      viewToggleButtonBounds_.contains(e.getPosition());
-  settingsState_.isPressed = settingsButtonBounds_.contains(e.getPosition());
+  playState_.isPressed = playButtonBounds_.contains(e.getPosition()) && !isRightClick;
+  stopState_.isPressed = stopButtonBounds_.contains(e.getPosition()) && !isRightClick;
+  recordState_.isPressed = recordButtonBounds_.contains(e.getPosition()) && !isRightClick;
+  viewToggleState_.isPressed = viewToggleButtonBounds_.contains(e.getPosition()) && !isRightClick;
+  exportState_.isPressed = exportButtonBounds_.contains(e.getPosition()) && !isRightClick;
+  settingsState_.isPressed = settingsButtonBounds_.contains(e.getPosition()) && !isRightClick;
 
   if (playButtonBounds_.contains(e.getPosition())) {
-    if (onPlayClicked)
+    if (isRightClick) {
+      auto menu = ContextMenuManager::createMenu();
+      menu->addItem(1, "Restart Playback", true, false, [this]() {
+          if (onStopClicked) onStopClicked();
+          if (onRewind) onRewind();
+          if (onPlayClicked) onPlayClicked();
+      });
+      menu->addItem(2, "Loop Playback", true, false, [this]() {
+          if (onLoopToggled) onLoopToggled();
+      });
+      ContextMenuManager::getInstance().showMenuAt(std::move(menu), this, e.x, e.y);
+    } else if (onPlayClicked) {
       onPlayClicked();
+    }
   } else if (stopButtonBounds_.contains(e.getPosition())) {
-    if (onStopClicked)
+    if (isRightClick) {
+      auto menu = ContextMenuManager::createMenu();
+      menu->addItem(1, "Stop & Return to 0", true, false, [this]() {
+          if (onStopClicked) onStopClicked();
+          if (onRewind) onRewind();
+      });
+      menu->addItem(2, "Clear All Solo", true, false, [this]() {
+          if (onClearAllSolos) onClearAllSolos();
+      });
+      ContextMenuManager::getInstance().showMenuAt(std::move(menu), this, e.x, e.y);
+    } else if (onStopClicked) {
       onStopClicked();
+    }
   } else if (recordButtonBounds_.contains(e.getPosition())) {
-    if (onRecordClicked)
+    if (!isRightClick && onRecordClicked) {
       onRecordClicked();
-  } else if (viewToggleButtonBounds_.contains(e.getPosition())) {
+    }
+  } else if (viewToggleButtonBounds_.contains(e.getPosition()) && !isRightClick) {
     if (onViewToggleClicked)
       onViewToggleClicked();
-  } else if (settingsButtonBounds_.contains(e.getPosition())) {
+  } else if (exportButtonBounds_.contains(e.getPosition()) && !isRightClick) {
+    if (onExportClicked)
+      onExportClicked();
+  } else if (settingsButtonBounds_.contains(e.getPosition()) && !isRightClick) {
     if (onSettingsClicked)
       onSettingsClicked();
   }
 }
 
 void TransportBar::mouseMove(const juce::MouseEvent &e) {
-  playState_.isHovered = playButtonBounds_.contains(e.getPosition());
-  stopState_.isHovered = stopButtonBounds_.contains(e.getPosition());
-  recordState_.isHovered = recordButtonBounds_.contains(e.getPosition());
+  auto pos = e.getPosition();
+  playState_.isHovered = playButtonBounds_.contains(pos);
+  stopState_.isHovered = stopButtonBounds_.contains(pos);
+  recordState_.isHovered = recordButtonBounds_.contains(pos);
   viewToggleState_.isHovered =
-      viewToggleButtonBounds_.contains(e.getPosition());
-  settingsState_.isHovered = settingsButtonBounds_.contains(e.getPosition());
+      viewToggleButtonBounds_.contains(pos);
+  exportState_.isHovered = exportButtonBounds_.contains(pos);
+  settingsState_.isHovered = settingsButtonBounds_.contains(pos);
+
+  // Trigger Global Help Callbacks
+  if (globalHelpCallback) {
+    if (playState_.isHovered) 
+        globalHelpCallback("Start Playback", "Begins audio and MIDI playback from the current position. Shortcut: Space.");
+    else if (stopState_.isHovered) 
+        globalHelpCallback("Stop Playback", "Stops all rendering and returns playhead to start. Double-click to return to 0.");
+    else if (recordState_.isHovered) 
+        globalHelpCallback("Record", "Begins recording onto armed tracks. Pro Tip: Use 'Count-in' in settings for a lead-in.");
+    else if (viewToggleState_.isHovered) 
+        globalHelpCallback("Switch View", "Toggles between linear Arranger and loop-based Session view. Shortcut: Tab.");
+    else if (exportState_.isHovered) 
+        globalHelpCallback("Export", "Mixes down your project to a high-quality audio file. Support for WAV, MP3, and FLAC.");
+    else if (settingsState_.isHovered) 
+        globalHelpCallback("Audio Settings", "Configure your sound card, buffer size, and MIDI hardware here.");
+  }
 }
 
 void TransportBar::mouseEnter(const juce::MouseEvent &e) { mouseMove(e); }
@@ -317,6 +427,7 @@ void TransportBar::mouseExit(const juce::MouseEvent &e) {
   stopState_.isHovered = false;
   recordState_.isHovered = false;
   viewToggleState_.isHovered = false;
+  exportState_.isHovered = false;
   settingsState_.isHovered = false;
 }
 
@@ -329,12 +440,13 @@ void TransportBar::timerCallback() {
   stopState_.update(dt);
   recordState_.update(dt);
   viewToggleState_.update(dt);
+  exportState_.update(dt);
   settingsState_.update(dt);
 
   // Check if any need repainting
   if (playState_.isAnimating() || stopState_.isAnimating() ||
       recordState_.isAnimating() || viewToggleState_.isAnimating() ||
-      settingsState_.isAnimating()) {
+      exportState_.isAnimating() || settingsState_.isAnimating()) {
     repaint();
   }
 }

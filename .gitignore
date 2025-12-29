@@ -50,6 +50,10 @@ cmake_error*.log
 msbuild_*.log
 *.log
 debug_log.txt
+daw_gui_log*.txt
+build_tree.txt
+unicode_chars.txt
+COMPLETION_SUMMARY.txt
 
 # 7. Backup Files
 *.bak
@@ -69,3 +73,23 @@ __pycache__/
 /*.png
 /*.jpg
 /*.gif
+
+# 10. Zenith DAW Specific transients
+/final_test_results*.txt
+/test_critic_fix.txt
+/test_debug.txt
+/test_final*.txt
+/test_manual.txt
+/test_output*.txt
+/test_results.txt
+/sync_log.txt
+/session_debug_log.txt
+/leak_traces.txt
+/all_linked_objects.txt
+/linked_objects.txt
+/obj_list.txt
+/*.log
+/apps/desktop/Source/zenith_headers.txt
+/find_brace_level.py
+/launch.sh
+/apps/scanner/

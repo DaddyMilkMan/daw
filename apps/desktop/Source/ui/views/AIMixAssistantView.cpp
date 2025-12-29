@@ -105,12 +105,9 @@ void AIMixAssistantView::performAnalysis() {
   mixStatus = "Analysis Complete: Dynamic Range Good, Balance Optimized.";
   repaint();
 
-  // Call engine agent if available
   if (auto *agent = engine_.getMasteringAgent()) {
-    agent->runMasteringPass({}); // Pass default options or gather simple ones
+    agent->runMasteringPass({});
   }
-  // Since we haven't modified Engine.h yet, we leave this commented or
-  // placeholder We will update Engine.h in the next step.
 }
 
 void AIMixAssistantView::applyMastering() {

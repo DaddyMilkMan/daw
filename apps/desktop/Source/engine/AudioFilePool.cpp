@@ -9,6 +9,7 @@
 */
 
 #include "AudioFilePool.h"
+#include <filesystem>
 
 namespace zenith {
 
@@ -25,15 +26,17 @@ AudioFilePool::HandlePtr AudioFilePool::loadFile(const juce::File &file,
                                                  juce::String &errorMessage) {
   // ⚠️ MESSAGE THREAD ONLY - Does file I/O!
 
-  // Security: Validate and sanitize file path
-  // Prevent path traversal attacks (e.g., ../../../etc/passwd)
-  juce::String filePath = file.getFullPathName();
-
-  // Check for path traversal attempts
-  if (filePath.contains("..") || filePath.contains("~")) {
-    errorMessage = "Invalid file path: path traversal detected";
+  // Security: Validate and sanitize file path using std::filesystem
+  // This properly resolves symlinks and parent directory references
+  std::error_code ec;
+  auto canonicalPath = std::filesystem::weakly_canonical(file.getFullPathName().toStdString(), ec);
+  
+  if (ec) {
+    errorMessage = "Invalid file path: cannot canonicalize path (" + juce::String(ec.message()) + ")";
     return nullptr;
   }
+  
+  juce::String filePath = juce::String(canonicalPath.string());
 
   // Check path length (prevent excessive paths)
   if (filePath.length() >

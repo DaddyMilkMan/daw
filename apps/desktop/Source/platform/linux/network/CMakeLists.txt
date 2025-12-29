@@ -1,0 +1,15 @@
+# Find libsecret for Secret Service API integration
+find_package(PkgConfig QUIET)
+if(PKG_CONFIG_FOUND)
+    pkg_check_modules(LIBSECRET libsecret-1)
+    if(LIBSECRET_FOUND)
+        message(STATUS "libsecret-1 found: ${LIBSECRET_VERSION}")
+        target_compile_definitions(ZenithDAW PRIVATE HAVE_LIBSECRET)
+        target_include_directories(ZenithDAW PRIVATE ${LIBSECRET_INCLUDE_DIRS})
+        target_link_libraries(ZenithDAW PRIVATE ${LIBSECRET_LIBRARIES})
+    else()
+        message(STATUS "libsecret-1 not found - using encrypted file fallback")
+    endif()
+endif()
+
+target_sources(ZenithDAW PRIVATE SecureKeyStore_Linux.cpp)

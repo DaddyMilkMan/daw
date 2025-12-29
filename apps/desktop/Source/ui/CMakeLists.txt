@@ -57,6 +57,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/mixer/MixerComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/mixer/MixerChannelComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/mixer/PluginBrowser.cpp
+
 )
 
 # -----------------------------------------------------------------------------
@@ -86,14 +87,26 @@ target_sources(ZenithDAW PRIVATE
 # -----------------------------------------------------------------------------
 # AI Views
 # -----------------------------------------------------------------------------
-# target_sources(ZenithDAW PRIVATE
-#     ${CMAKE_CURRENT_SOURCE_DIR}/views/AIMixAssistantView.cpp
-# )
+target_sources(ZenithDAW PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/views/AIMixAssistantView.cpp
+)
 
 # -----------------------------------------------------------------------------
 # Browser Panel
 # -----------------------------------------------------------------------------
-# Note: Browser components are in apps/desktop/Source/browser/ directory
+target_sources(ZenithDAW PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/BrowserPanel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/BrowserWaveformLoader.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/BrowserFilterBar.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/BrowserSearchBar.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/BrowserListView.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/BrowserPreviewPanel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/BrowserHoverPreview.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/BrowserRecentSidebar.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/PluginBrowserComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/PresetBrowserComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/panels/InstrumentBrowserPanel.cpp
+)
 
 # -----------------------------------------------------------------------------
 # Transport
@@ -113,7 +126,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/common/UndoHistoryPanel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/ResizablePanelContainer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/MenuBar.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/common/ZenithHubComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/ZenithHubComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/WingmanPanel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/AIAssistantPanel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/MacroToolbar.cpp
@@ -139,6 +152,8 @@ target_sources(ZenithDAW PRIVATE
 # -----------------------------------------------------------------------------
 target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/instruments/ZenithPolySynthUI.cpp
+    # TEMPORARILY DISABLED - depends on disabled PresetGeneticistAgent
+    # ${CMAKE_CURRENT_SOURCE_DIR}/instruments/PresetGeneticistView.cpp
 )
 
 # -----------------------------------------------------------------------------

@@ -12,11 +12,8 @@
 #include "PianoKeyboardViewSkia.h"
 
 #ifdef ZENITH_USE_SKIA
-#include <core/SkCanvas.h>
-#include <core/SkPaint.h>
+#include "ZenithSkia.h"
 #include <core/SkPath.h>
-#include <core/SkRect.h>
-#include <core/SkColor.h>
 #include <core/SkPoint.h>
 #include <core/SkTileMode.h>
 #include <effects/SkGradientShader.h>

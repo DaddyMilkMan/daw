@@ -58,7 +58,8 @@ void SessionDebuggerAgent::startMonitoring(int intervalMs) {
     trackCpuMetrics_.push_back(metrics);
   }
 
-  startTimer(intervalMs);
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr)
+    startTimer(intervalMs);
   DBG("SessionDebuggerAgent: Started monitoring (interval: " +
       juce::String(intervalMs) + "ms)");
 }

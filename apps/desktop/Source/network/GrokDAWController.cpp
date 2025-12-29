@@ -35,30 +35,51 @@ public:
 
   //==========================================================================
   CommandAPI &commandAPI;
-  GrokAPIClient grokClient;
+  GrokDAWClient grokClient;
   AudioAnalysisService analysisService;
 
-  // Thread Pool for safe async operations (Complaint #8 Fix)
-  juce::ThreadPool threadPool{1}; // Limit to 1 concurrent analysis job for now
+  // Thread Pool for safe async operations
+  juce::ThreadPool threadPool{1}; // Limit to 1 concurrent analysis job
 
   std::function<juce::var()> contextProvider;
+  std::function<void(bool)> onChangesPending;
 
   bool isInitialized = false;
+  bool changesArePending = false;
 
-  // Command Registry (Critique #1 Fix: Use unordered_map)
+  // Command Registry
   std::unordered_map<std::string, FunctionHandler> functionRegistry;
 
-  // Command ID Mapping (Critique #1 Fix: Strong typing)
+  // Command ID Mapping
   std::unordered_map<std::string, CommandAPI::CommandID> commandIdMap;
 
   //==========================================================================
-  // Helper for safe threading (Critique #4 Fix: No Pyramid of Doom)
+  // Helper for safe threading - FIXED: Never block on message thread
   void executeOnMessageThread(std::function<void()> task) {
     if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
       task();
     } else {
       juce::MessageManager::callAsync(task);
     }
+  }
+
+  // NEW: Execute blocking operations on background thread
+  void executeOnBackgroundThread(std::function<void()> task) {
+    if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+      // If we're on message thread, launch on background thread
+      juce::Thread::launch(task);
+    } else {
+      // We're already on background thread, execute directly
+      task();
+    }
+  }
+
+  void startVibeTransaction() {
+      executeOnMessageThread([this]() {
+          commandAPI.getProjectState().getUndoManager().beginNewTransaction("Grok Edit");
+          changesArePending = true;
+          if (onChangesPending) onChangesPending(true);
+      });
   }
 
   void registerDefaultHandlers() {
@@ -73,7 +94,8 @@ public:
     commandIdMap["generate_midi_pattern"] =
         CommandAPI::CommandID::GetMidiData; // verify mapping
     commandIdMap["generate_lyrics"] =
-        CommandAPI::CommandID::AddMarker; // Mapped to lyrics-aware marker creation
+        CommandAPI::CommandID::AddMarker; // Mapped to lyrics-aware marker
+                                          // creation
     commandIdMap["separate_stems"] = CommandAPI::CommandID::SeparateTrack;
     commandIdMap["analyze_track"] =
         CommandAPI::CommandID::ExportAudio; // uses export
@@ -81,7 +103,8 @@ public:
     commandIdMap["get_routing_graph"] = CommandAPI::CommandID::GetRoutingGraph;
     commandIdMap["start_evolution"] = CommandAPI::CommandID::StartEvolution;
     commandIdMap["stop_evolution"] = CommandAPI::CommandID::StopEvolution;
-    commandIdMap["get_evolution_stats"] = CommandAPI::CommandID::GetEvolutionStats;
+    commandIdMap["get_evolution_stats"] =
+        CommandAPI::CommandID::GetEvolutionStats;
 
     // Handler for audio analysis (special case with side effects)
     functionRegistry["analyze_track"] = [this](const GrokFunctionCall &call,
@@ -96,11 +119,104 @@ public:
                                                 auto onProgress) {
       if (onProgress)
         executeOnMessageThread([onProgress]() {
+          onProgress("Checking AI model availability...");
+        });
+
+      // Task: Verify model path validity before attempting command
+      juce::File defaultModel = ONNXStemSeparator::findDefaultModel();
+      if (!defaultModel.existsAsFile()) {
+        if (onProgress)
+          executeOnMessageThread([onProgress]() {
+            onProgress("Downloading AI Model (htdemucs.onnx)... This may take 1-2 minutes.");
+          });
+
+        // Use ThreadPool for network operation
+        threadPool.addJob([this, call, onComplete, onError, onProgress]() {
+          // Define target path (User local share on Linux/Mac, or AppData on Windows)
+          juce::File targetDir = juce::File::getSpecialLocation(juce::File::userHomeDirectory)
+#if JUCE_LINUX
+                                     .getChildFile(".local/share/zenith/models");
+#elif JUCE_MAC
+                                     .getChildFile("Library/Application Support/ZenithDAW/models");
+#else
+                                     .getChildFile("AppData/Roaming/ZenithDAW/models");
+#endif
+
+          if (!targetDir.createDirectory()) {
+             executeOnMessageThread([onError]() { onError("Failed to create model directory."); });
+             return;
+          }
+
+          juce::File targetFile = targetDir.getChildFile("htdemucs.onnx");
+          juce::URL url("https://huggingface.co/canary-audio/htdemucs-onnx/resolve/main/htdemucs.onnx");
+          
+          // Helper to execute command after success
+          auto runCommand = [this, call, onComplete, onError]() {
+              juce::var result = commandAPI.executeCommand(
+                  CommandAPI::CommandID::SeparateTrack, call.arguments);
+
+              if (result.getProperty("success", false)) {
+                juce::String msg = "Stems separated successfully. Created tracks: ";
+                auto createdTracks = result.getProperty("createdTracks", juce::var());
+                if (createdTracks.isArray())
+                  msg += juce::String(createdTracks.size());
+                onComplete(msg);
+              } else {
+                onError("Separation failed: " +
+                        result.getProperty("error", "Unknown error").toString());
+              }
+          };
+
+          // REAL-TIME PROGRESS: Use streaming instead of simple downloadToFile
+          bool downloadSuccess = false;
+          auto options = juce::URL::InputStreamOptions (juce::URL::ParameterHandling::inPostData);
+          if (std::unique_ptr<juce::InputStream> stream = url.createInputStream (options)) {
+              auto totalLength = stream->getTotalLength();
+              auto targetStream = targetFile.createOutputStream();
+              
+              if (targetStream != nullptr) {
+                  const int bufferSize = 65536; // 64KB
+                  juce::HeapBlock<char> buffer (bufferSize);
+                  int64_t bytesReadTotal = 0;
+                  
+                  while (!stream->isExhausted()) {
+                      int bytesRead = stream->read(buffer, bufferSize);
+                      if (bytesRead <= 0) break;
+                      
+                      targetStream->write(buffer, (size_t)bytesRead);
+                      bytesReadTotal += bytesRead;
+                      
+                      // Report progress if length is known
+                      if (totalLength > 0 && onProgress) {
+                          int progress = (int)((bytesReadTotal * 100) / totalLength);
+                          executeOnMessageThread([onProgress, progress]() {
+                              onProgress("Downloading AI Model... " + juce::String(progress) + "%");
+                          });
+                      }
+                  }
+                  targetStream.reset();
+                  downloadSuccess = bytesReadTotal >= totalLength || totalLength <= 0;
+              }
+          }
+
+          if (downloadSuccess) {
+             executeOnMessageThread([runCommand, onProgress]() {
+                 if (onProgress) onProgress("Model downloaded. Starting separation...");
+                 runCommand();
+             });
+          } else {
+             executeOnMessageThread([onError]() { onError("Failed to download AI model from HuggingFace."); });
+          }
+        });
+        return; 
+      }
+
+      if (onProgress)
+        executeOnMessageThread([onProgress]() {
           onProgress("Separating stems (this may take a moment)...");
         });
 
       executeOnMessageThread([this, call, onComplete, onError]() {
-        // Critique #1 & #2 Fix: Typed Command Execution
         juce::var result = commandAPI.executeCommand(
             CommandAPI::CommandID::SeparateTrack, call.arguments);
 
@@ -117,17 +233,17 @@ public:
       });
     };
 
-    // Default handler for all other CommandAPI commands (Critique #2 Fix:
-    // Thread Safety)
+    // Default handler for standard commands
     auto defaultHandler = [this](const GrokFunctionCall &call, auto onComplete,
                                  auto onError, auto onProgress) {
+      juce::ignoreUnused(onProgress);
       executeOnMessageThread([this, call, onComplete, onError]() {
-        // Try to resolve CommandID (Critique #1 Fix)
+        // Try to resolve CommandID
         auto idIt = commandIdMap.find(call.functionName.toStdString());
         juce::var result;
 
         if (idIt != commandIdMap.end()) {
-          // Safe Path: Direct Enum Dispatch
+          // Direct Enum Dispatch
           result = commandAPI.executeCommand(idIt->second, call.arguments);
         } else {
           // Fallback Path: String Dispatch
@@ -148,8 +264,8 @@ public:
 
     // Register common commands to use the default handler
     const char *standardCommands[] = {
-        "create_track",          "list_tracks",    "delete_track",
-        "list_presets",          "add_note",       "set_tempo",
+        "create_track",          "list_tracks",     "delete_track",
+        "list_presets",          "add_note",        "set_tempo",
         "generate_midi_pattern", "generate_lyrics", "search_plugins",
         "get_routing_graph",     "start_evolution", "stop_evolution",
         "get_evolution_stats"};
@@ -165,8 +281,8 @@ public:
                       std::function<void(juce::String response)> onComplete,
                       std::function<void(juce::String error)> onError,
                       std::function<void(juce::String status)> onProgress) {
-    // Use ThreadPool instead of detached threads (Complaint #8 Fix)
-    threadPool.addJob([this, call, onComplete, onError, onProgress]() {
+    // FIXED: Never block on message thread - always use background thread
+    executeOnBackgroundThread([this, call, onComplete, onError, onProgress]() {
       // Check if analysis service is available (Python installed?)
       if (!analysisService.isAvailable()) {
         juce::MessageManager::callAsync([onError, this]() {
@@ -188,12 +304,8 @@ public:
       paramsObj->setProperty("durationSeconds", 10.0); // Default 10s
       exportParams = juce::var(paramsObj);
 
-      // DEADLOCK FIX: Use completion callback pattern instead of blocking wait.
-      // The original code used WaitableEvent::wait() which could deadlock if
-      // called from the message thread (callAsync would never execute).
-      // Now we use a fully async chain.
-
-      juce::MessageManager::callAsync([this, exportParams, tempPath, onComplete,
+      // FIXED: Use async callback pattern to prevent deadlocks
+      executeOnMessageThread([this, exportParams, tempPath, onComplete,
                                        onError, onProgress]() {
         auto *cmdObj = new juce::DynamicObject();
         cmdObj->setProperty("command", "export_audio");
@@ -209,19 +321,15 @@ public:
         }
 
         // Continue analysis on background thread
-        threadPool.addJob([this, tempPath, onComplete, onError, onProgress]() {
+        executeOnBackgroundThread([this, tempPath, onComplete, onError, onProgress]() {
           if (onProgress) {
             juce::MessageManager::callAsync(
                 [onProgress]() { onProgress("Analyzing audio..."); });
           }
 
-          // CONST_CAST FIX: Capture tempPath by value (String), create File
-          // when needed. This avoids the const_cast hack on captured-by-value
-          // juce::File.
           analysisService.analyzeAudioFile(
               juce::File(tempPath),
               [onComplete, tempPath](AudioAnalysisResults results) {
-                // Clean up temp file (no const_cast needed!)
                 juce::File(tempPath).deleteFile();
                 if (results.success)
                   onComplete(results.toSummary());
@@ -229,7 +337,6 @@ public:
                   onComplete("Analysis failed: " + results.errorMessage);
               },
               [onError, tempPath](juce::String error) {
-                // Clean up temp file (no const_cast needed!)
                 juce::File(tempPath).deleteFile();
                 onError("Analysis error: " + error);
               });
@@ -251,32 +358,33 @@ public:
         onProgress("Executing: " + funcName);
       });
 
-    std::string funcName = call.functionName.toStdString();
-    auto it = functionRegistry.find(funcName);
+    // RUN ON BACKGROUND THREAD (Complaint #1 Fix: Anti-Deadlock)
+    threadPool.addJob([this, call, onComplete, onError, onProgress]() {
+        std::string funcName = call.functionName.toStdString();
+        auto it = functionRegistry.find(funcName);
 
-    if (it != functionRegistry.end()) {
-      it->second(call, onComplete, onError, onProgress);
-    } else {
-      // Fallback: Verify if this is a valid CommandID before trying
-      auto idIt = commandIdMap.find(funcName);
-      if (idIt != commandIdMap.end()) {
-        // Valid ID known, dispatch safely using helper
-        executeOnMessageThread([this, call, onComplete, onError, idIt]() {
-          // Typed Dispatch (Critique #1 Fix)
-          juce::var result =
-              commandAPI.executeCommand(idIt->second, call.arguments);
+        if (it != functionRegistry.end()) {
+          it->second(call, onComplete, onError, onProgress);
+        } else {
+          // Fallback: Verify if this is a valid CommandID before trying
+          auto idIt = commandIdMap.find(funcName);
+          if (idIt != commandIdMap.end()) {
+            // Safe dispatch to message thread for the actual COMMAND execution
+            executeOnMessageThread([this, call, onComplete, onError, idIt]() {
+              juce::var result = commandAPI.executeCommand(idIt->second, call.arguments);
 
-          if (result.getProperty("success", false)) {
-            grokClient.submitFunctionResult(call, result, onComplete, onError);
+              if (result.getProperty("success", false)) {
+                grokClient.submitFunctionResult(call, result, onComplete, onError);
+              } else {
+                onError("Function call failed: " +
+                        result.getProperty("error", "Command failed").toString());
+              }
+            });
           } else {
-            onError("Function call failed: " +
-                    result.getProperty("error", "Command failed").toString());
+            onError("Unknown function: " + call.functionName);
           }
-        });
-      } else {
-        onError("Unknown function or failed execution: " + call.functionName);
-      }
-    }
+        }
+    });
   }
 };
 
@@ -288,6 +396,25 @@ GrokDAWController::GrokDAWController(CommandAPI &commandAPI)
     : pImpl(std::make_unique<Impl>(commandAPI)) {}
 
 GrokDAWController::~GrokDAWController() = default;
+
+void GrokDAWController::acceptLastChanges() {
+    pImpl->changesArePending = false;
+    if (pImpl->onChangesPending) pImpl->onChangesPending(false);
+}
+
+void GrokDAWController::denyLastChanges() {
+    if (pImpl->changesArePending) {
+        pImpl->executeOnMessageThread([this]() {
+            pImpl->commandAPI.getProjectState().getUndoManager().undo();
+            pImpl->changesArePending = false;
+            if (pImpl->onChangesPending) pImpl->onChangesPending(false);
+        });
+    }
+}
+
+void GrokDAWController::setOnChangesPending(std::function<void(bool)> callback) {
+    pImpl->onChangesPending = callback;
+}
 
 bool GrokDAWController::initialize(const juce::String &apiKey) {
   bool success = pImpl->grokClient.setAPIKey(apiKey);
@@ -311,6 +438,9 @@ void GrokDAWController::executeCommand(
 
   if (onProgress)
     onProgress("Processing command...");
+
+  // Start Transaction for "Vibe" preview (Complaint #5 Fix: Real-time Accept/Deny)
+  pImpl->startVibeTransaction();
 
   // Task 4: Use helper for system prompt
   auto systemPrompt = AIPrompts::buildSystemPrompt(pImpl->contextProvider);
@@ -353,7 +483,8 @@ void GrokDAWController::generatePreset(
       "- Oscillators: osc1_waveform, osc1_detune, osc1_mix (same for osc2, "
       "osc3)\n"
       "- Filter: filter_type, filter_cutoff, filter_resonance, filter_drive\n"
-      "- Envelopes: amp_attack, amp_decay, amp_sustain, amp_release (same for "
+      "- Envelopes: amp_attack, amp_decay, amp_sustain, amp_release (same "
+      "for "
       "mod_*)\n"
       "- LFOs: lfo1_rate, lfo1_amount, lfo1_target (same for lfo2)\n"
       "- Effects: distortion, chorus\n"
@@ -364,7 +495,8 @@ void GrokDAWController::generatePreset(
   pImpl->grokClient.sendChat(
       prompt, GrokMode::Thinking,
       {}, // No function calling for preset generation
-      "You are an expert sound designer. Generate synthesizer presets based on "
+      "You are an expert sound designer. Generate synthesizer presets based "
+      "on "
       "descriptions.",
       [this, instrumentId, description, genre, onComplete,
        onError](juce::String response) {

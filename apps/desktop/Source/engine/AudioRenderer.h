@@ -6,9 +6,9 @@
     Author:  Zenith DAW
 
     Handles audio graph rendering and mixing for the engine.
-    
+
     Extracted from Engine.cpp for better modularity.
-    
+
     Thread Safety:
     - renderAudioGraph() is AUDIO THREAD ONLY
     - All methods are RT-safe (no allocations, no locks)
@@ -18,16 +18,17 @@
 
 #pragma once
 
+#include <array>
+#include <atomic>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
-#include <atomic>
-#include <vector>
 #include <memory>
 #include <span>
+#include <vector>
 
+#include "../dsp/Dither.h"
 #include "EngineConstants.h"
 #include "RoutingGraph.h"
-#include "../dsp/Dither.h"
 
 namespace zenith {
 
@@ -39,200 +40,251 @@ class TempoMap;
 
 //==============================================================================
 /**
+ * @struct AudioRenderContext
+ * @brief Holds all mutable buffers and state required for a single render pass.
+ *
+ * This allows AudioRenderer to be stateless and re-entrant (different contexts
+ * for Live Engine vs Offline Export).
+ */
+struct AudioRenderContext {
+  // Buffers
+  std::vector<juce::AudioBuffer<float>> trackBuffers;
+  std::vector<juce::AudioBuffer<float>> auxBusBuffers;
+
+  // Feedback Buffers (for 1-block cycle delay)
+  // These store the output of a node from the previous block, if it's part of a cycle
+  std::vector<juce::AudioBuffer<float>> trackFeedbackBuffers;
+  std::vector<juce::AudioBuffer<float>> auxBusFeedbackBuffers;
+
+  // PDC State
+  std::vector<juce::AudioBuffer<float>> pdcDelayBuffers;
+  std::vector<int> pdcDelayWritePos;
+  std::vector<int> trackLatencies;
+  int maxTrackLatency = 0;
+
+  // Optimizations
+  // Pre-allocated vector for aux buffers to avoid RT allocations
+  std::vector<juce::AudioBuffer<float> *> auxBufferPtrsVector;
+
+  // Configuration
+  double sampleRate = constants::kDefaultSampleRate;
+  int blockSize = constants::kDefaultBufferSize;
+
+  // Helper to resize all buffers
+  void prepare(double newSampleRate, int newBlockSize, size_t numTracks,
+               size_t numAuxBuses) {
+    sampleRate = newSampleRate;
+    blockSize = newBlockSize;
+
+    // Resize track buffers
+    if (trackBuffers.size() != numTracks) {
+      trackBuffers.resize(numTracks);
+      trackFeedbackBuffers.resize(numTracks); // Resize feedback buffers
+    }
+    for (auto &buffer : trackBuffers) {
+      buffer.setSize(2, blockSize);
+      buffer.clear();
+    }
+    for (auto &buffer : trackFeedbackBuffers) {
+      buffer.setSize(2, blockSize);
+      buffer.clear();
+    }
+
+    // Resize aux buffers
+    if (auxBusBuffers.size() != numAuxBuses) {
+      auxBusBuffers.resize(numAuxBuses);
+      auxBusFeedbackBuffers.resize(numAuxBuses); // Resize feedback buffers
+    }
+    for (auto &buffer : auxBusBuffers) {
+      buffer.setSize(2, blockSize);
+      buffer.clear();
+    }
+    for (auto &buffer : auxBusFeedbackBuffers) {
+      buffer.setSize(2, blockSize);
+      buffer.clear();
+    }
+
+    // Resize PDC buffers
+    if (pdcDelayBuffers.size() != numTracks) {
+      pdcDelayBuffers.resize(numTracks);
+      pdcDelayWritePos.resize(numTracks, 0);
+      trackLatencies.resize(numTracks, 0);
+    }
+    for (auto &buffer : pdcDelayBuffers) {
+      buffer.setSize(2, constants::kMaxPDCLatencySamples);
+      // Don't necessarily clear delay buffers, they hold state across blocks!
+      // But if resizing/initializing, we might want to.
+    }
+
+    auxBufferPtrsVector.reserve(numAuxBuses + 8); 
+  }
+
+  void reset() {
+    for (auto &buffer : trackBuffers) buffer.clear();
+    for (auto &buffer : trackFeedbackBuffers) buffer.clear(); // Clear feedback
+    for (auto &buffer : auxBusBuffers) buffer.clear();
+    for (auto &buffer : auxBusFeedbackBuffers) buffer.clear(); // Clear feedback
+    for (auto &buffer : pdcDelayBuffers) buffer.clear();
+    std::fill(pdcDelayWritePos.begin(), pdcDelayWritePos.end(), 0);
+    std::fill(trackLatencies.begin(), trackLatencies.end(), 0);
+    maxTrackLatency = 0;
+  }
+};
+
+//==============================================================================
+/**
     Audio graph renderer for the engine.
-    
+
     Handles the core audio rendering pipeline:
     - Track rendering with plugin processing
     - Aux bus processing and mixing
     - Master bus processing with limiter
     - PDC (plugin delay compensation)
+    
+    Now STATELESS: Requires an AudioRenderContext to operate.
 */
 class AudioRenderer {
 public:
-    //==========================================================================
-    AudioRenderer() = default;
-    ~AudioRenderer() = default;
+  //==========================================================================
+  AudioRenderer() = default;
+  ~AudioRenderer() = default;
 
-    //==========================================================================
-    // Configuration
-    //==========================================================================
+  //==========================================================================
+  // Rendering
+  //==========================================================================
 
-    /**
-     * @brief Prepare renderer for playback
-     * @param sampleRate Current sample rate
-     * @param blockSize Maximum block size
-     * @param numTracks Number of tracks to prepare buffers for
-     * @param numAuxBuses Number of aux buses
-     */
-    void prepare(double sampleRate, int blockSize, 
-                 size_t numTracks, size_t numAuxBuses);
+  /**
+   * @brief Render the audio graph to output buffer
+   * @param context The render context (buffers, PDC state) to use
+   * @param outputBuffer Output buffer to fill
+   * @param numSamples Number of samples to render
+   * @param playheadPosition Current playhead position in samples
+   * @param tracks Vector of tracks to render
+   * @param auxBuses Vector of aux buses
+   * @param routingGraph Routing graph for signal flow
+   * @param masterLimiter Master bus limiter
+   * @param masterPlugins Master bus plugin chain
+   * @param tempoMap Tempo map for automation
+   * @param incomingMidi Optional incoming MIDI buffer
+   * @param inputChannelData Optional input channel data
+   * @param numInputChannels Number of input channels
+   * @note AUDIO THREAD ONLY
+   */
+  void renderAudioGraph(
+      AudioRenderContext& context,
+      juce::AudioBuffer<float> &outputBuffer, int numSamples,
+      juce::int64 playheadPosition, std::span<Track *const> tracks,
+      std::span<AuxBus *const> auxBuses, const RoutingGraph &routingGraph,
+      MasterLimiter &masterLimiter,
+      std::span<const std::shared_ptr<juce::AudioPluginInstance>> masterPlugins,
+      const TempoMap *tempoMap, const juce::MidiBuffer *incomingMidi = nullptr,
+      const float *const *inputChannelData = nullptr,
+      int numInputChannels = 0) noexcept;
 
-    /**
-     * @brief Reset renderer state
-     */
-    void reset();
+  /**
+   * @brief Update playhead position for all clips in all tracks
+   * @param tracks List of tracks to synchronize
+   * @param playheadPosition Current position in samples
+   */
+  void updateClipPositions(std::span<Track *const> tracks,
+                           juce::int64 playheadPosition) noexcept;
 
-    //==========================================================================
-    // Rendering
-    //==========================================================================
+  //==========================================================================
+  // PDC (Plugin Delay Compensation)
+  //==========================================================================
 
-    /**
-     * @brief Render the audio graph to output buffer
-     * @param outputBuffer Output buffer to fill
-     * @param numSamples Number of samples to render
-     * @param playheadPosition Current playhead position in samples
-     * @param tracks Vector of tracks to render
-     * @param auxBuses Vector of aux buses
-     * @param routingGraph Routing graph for signal flow
-     * @param masterLimiter Master bus limiter
-     * @param masterPlugins Master bus plugin chain
-     * @param tempoMap Tempo map for automation
-     * @param incomingMidi Optional incoming MIDI buffer
-     * @note AUDIO THREAD ONLY
-     */
-    void renderAudioGraph(
-        juce::AudioBuffer<float>& outputBuffer,
-        int numSamples,
-        juce::int64 playheadPosition,
-        std::span<Track* const> tracks,
-        std::span<AuxBus* const> auxBuses,
-        const RoutingGraph& routingGraph,
-        MasterLimiter& masterLimiter,
-        std::vector<std::unique_ptr<juce::AudioPluginInstance>>& masterPlugins,
-        const TempoMap* tempoMap,
-        const juce::MidiBuffer* incomingMidi = nullptr) noexcept;
+  /**
+   * @brief Calculate and update PDC for all tracks in the context
+   * @param context Render context
+   * @param tracks Vector of tracks
+   * @return Maximum latency in samples
+   */
+  int calculatePDC(AudioRenderContext& context, std::span<Track *const> tracks);
 
-    /**
-     * @brief Update playhead position for all clips in all tracks
-     * @param tracks List of tracks to synchronize
-     * @param playheadPosition Current position in samples
-     */
-    void updateClipPositions(std::span<Track* const> tracks, 
-                             juce::int64 playheadPosition) noexcept;
+  /**
+   * @brief Enable/disable PDC
+   */
+  void setPDCEnabled(bool enabled) { pdcEnabled_.store(enabled); }
+  bool isPDCEnabled() const { return pdcEnabled_.load(); }
 
-    //==========================================================================
-    // PDC (Plugin Delay Compensation)
-    //==========================================================================
+  //==========================================================================
+  // Metering
+  //==========================================================================
 
-    /**
-     * @brief Calculate and update PDC for all tracks
-     * @param tracks Vector of tracks
-     * @return Maximum latency in samples
-     */
-    int calculatePDC(std::span<Track *const> tracks);
+  /**
+   * @brief Get current master output level
+   */
+  float getMasterLevel() const { return masterLevel_.load(); }
 
-    /**
-     * @brief Enable/disable PDC
-     */
-    void setPDCEnabled(bool enabled) { pdcEnabled_.store(enabled); }
-    bool isPDCEnabled() const { return pdcEnabled_.load(); }
+  /**
+   * @brief Get peak master output level
+   */
+  float getMasterPeakLevel() const { return masterPeakLevel_.load(); }
 
-    /**
-     * @brief Get maximum track latency
-     */
-    int getMaxTrackLatency() const { return maxTrackLatency_.load(); }
+  /**
+   * @brief Reset peak meters
+   */
+  void resetPeakMeters() { masterPeakLevel_.store(0.0f); }
 
-    //==========================================================================
-    // Metering
-    //==========================================================================
+  //==========================================================================
+  // Latency Query
+  //==========================================================================
 
-    /**
-     * @brief Get current master output level
-     */
-    float getMasterLevel() const { return masterLevel_.load(); }
+  /**
+   * @brief Get master bus latency in samples
+   */
+  int getMasterLatency() const;
 
-    /**
-     * @brief Get peak master output level
-     */
-    float getMasterPeakLevel() const { return masterPeakLevel_.load(); }
+  /**
+   * @brief Update cached master latency value
+   * @param masterPlugins List of master plugins
+   * @param limiterLatency Latency of the master limiter
+   */
+  void updateMasterLatency(
+      std::span<const std::shared_ptr<juce::AudioPluginInstance>> masterPlugins,
+      int limiterLatency);
 
-    /**
-     * @brief Reset peak meters
-     */
-    void resetPeakMeters() { masterPeakLevel_.store(0.0f); }
-
-    //==========================================================================
-    // Latency Query
-    //==========================================================================
-
-    /**
-     * @brief Get latency for a specific track in samples
-     */
-    int getTrackLatency(int trackIndex) const;
-
-    /**
-     * @brief Get master bus latency in samples
-     */
-    int getMasterLatency() const;
-
-    /**
-     * @brief Update cached master latency value
-     * @param masterPlugins List of master plugins
-     * @param limiterLatency Latency of the master limiter
-     */
-    void updateMasterLatency(
-        const std::vector<std::unique_ptr<juce::AudioPluginInstance>>& masterPlugins,
-        int limiterLatency);
+  static constexpr int kMaxAuxBuses = 32;
 
 private:
-    //==========================================================================
-    // Internal Methods
-    //==========================================================================
+  //==========================================================================
+  // Internal Methods
+  //==========================================================================
 
-    /**
-     * @brief Apply PDC delay to a buffer
-     */
-    void applyPDCDelay(juce::AudioBuffer<float>& buffer, 
-                       int trackIndex, int numSamples);
+  /**
+   * @brief Apply PDC delay to a buffer
+   */
+  void applyPDCDelay(AudioRenderContext& context, juce::AudioBuffer<float> &buffer, int trackIndex,
+                     int numSamples);
 
-    /**
-     * @brief Process master bus plugins
-     */
-    void processMasterPlugins(
-        juce::AudioBuffer<float>& buffer,
-        std::vector<std::unique_ptr<juce::AudioPluginInstance>>& plugins);
+  /**
+   * @brief Process master bus plugins
+   */
+  void processMasterPlugins(
+      juce::AudioBuffer<float> &buffer,
+      std::span<const std::shared_ptr<juce::AudioPluginInstance>> plugins);
 
-    /**
-     * @brief Update output metering
-     */
-    void updateMasterMeters(const juce::AudioBuffer<float>& buffer);
+  /**
+   * @brief Update output metering
+   */
+  void updateMasterMeters(const juce::AudioBuffer<float> &buffer);
 
-    //==========================================================================
-    // State
-    //==========================================================================
+  //==========================================================================
+  // State
+  //==========================================================================
 
-    double sampleRate_ = constants::kDefaultSampleRate;
-    int blockSize_ = constants::kDefaultBufferSize;
+  // PDC enabled state (global setting)
+  std::atomic<bool> pdcEnabled_{false};
 
-    // Per-track buffers (pre-allocated)
-    std::vector<juce::AudioBuffer<float>> trackBuffers_;
-    
-    // Aux bus buffers
-    std::vector<juce::AudioBuffer<float>> auxBusBuffers_;
+  // Metering (atomic for lock-free GUI access)
+  std::atomic<float> masterLevel_{0.0f};
+  std::atomic<float> masterPeakLevel_{0.0f};
+  std::atomic<int> masterLatency_{0};
 
-    // PDC state
-    // Note: PDC is disabled by default to avoid unexpected latency when adding plugins.
-    // Enable explicitly via setPDCEnabled(true) when latency compensation is needed.
-    std::atomic<bool> pdcEnabled_{false};
-    std::atomic<int> maxTrackLatency_{0};
-    std::vector<int> trackLatencies_;
-    std::vector<juce::AudioBuffer<float>> pdcDelayBuffers_;
-    std::vector<int> pdcDelayWritePos_;
+  // Dither
+  zenith::dsp::Dither dither_;
 
-    // Metering (atomic for lock-free GUI access)
-    std::atomic<float> masterLevel_{0.0f};
-    std::atomic<float> masterPeakLevel_{0.0f};
-    std::atomic<int> masterLatency_{0};
-
-    // Dither
-    zenith::dsp::Dither dither_;
-
-    // [DSP Optimization] Pre-allocated vector for aux buffers to avoid RT allocations
-    std::vector<juce::AudioBuffer<float>*> auxBufferPtrsVector_;
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioRenderer)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioRenderer)
 };
 
-
 } // namespace zenith
-
