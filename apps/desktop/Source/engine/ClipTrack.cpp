@@ -3,13 +3,13 @@
 
 namespace zenith {
 
-void ClipTrack::addClip(std::unique_ptr<Clip> clip) {
+void ClipTrack::addClip(std::shared_ptr<Clip> clip) {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     if (clip != nullptr) {
         if (currentSampleRate > 0)
             clip->prepareToPlay(currentBlockSize, currentSampleRate);
             
-        clipsOwned_.push_back(std::move(clip));
+        clipsOwned_.push_back(clip);
         updateClipSnapshot();
     }
 }
@@ -25,7 +25,7 @@ void ClipTrack::removeClip(int clipIndex) {
 void ClipTrack::removeClip(Clip* clip) {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     auto it = std::find_if(clipsOwned_.begin(), clipsOwned_.end(),
-                           [clip](const std::unique_ptr<Clip>& c) { return c.get() == clip; });
+                           [clip](const std::shared_ptr<Clip>& c) { return c.get() == clip; });
     if (it != clipsOwned_.end()) {
         clipsOwned_.erase(it);
         updateClipSnapshot();

@@ -349,10 +349,16 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state, Co
 MainLayoutComponent::~MainLayoutComponent() = default;
 
 void MainLayoutComponent::drawSkia(SkCanvas *canvas) {
-  // Background
+  // No background fill for white canvas - let it shine through
   auto bounds = getLocalBounds().toFloat();
   SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
-  GlassmorphicPanel::fillBackground(canvas, skBounds);
+
+  // Or use a very subtle glass overlay for "definition"
+  SkPaint borderPaint;
+  borderPaint.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.15f));
+  borderPaint.setStyle(SkPaint::kStroke_Style);
+  borderPaint.setStrokeWidth(1.0f);
+  canvas->drawRect(skBounds, borderPaint);
 
   if (panelContainer_) {
     panelContainer_->drawSkia(canvas);

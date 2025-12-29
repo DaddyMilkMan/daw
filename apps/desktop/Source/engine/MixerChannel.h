@@ -18,6 +18,7 @@
 #pragma once
 
 #include <array>
+#include <span>
 #include <cmath>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
@@ -342,7 +343,7 @@ public:
   // Overload with Aux Sends support
   void
   getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill,
-                    const std::vector<juce::AudioBuffer<float> *> &auxBuffers);
+                    std::span<juce::AudioBuffer<float> * const> auxBuffers);
 
   //==============================================================================
   // Input section
@@ -558,7 +559,7 @@ private:
   void processEQ(juce::AudioBuffer<float> &buffer);
   void processCompressor(juce::AudioBuffer<float> &buffer);
   void processSends(const juce::AudioBuffer<float> &sourceBuffer,
-                    const std::vector<juce::AudioBuffer<float> *> &sendBuffers,
+                    std::span<juce::AudioBuffer<float> * const> sendBuffers,
                     bool matchPreFader);
   void processOutput(juce::AudioBuffer<float> &buffer);
   void updateMeters(const juce::AudioBuffer<float> &buffer, bool isInput);

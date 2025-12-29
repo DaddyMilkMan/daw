@@ -52,14 +52,14 @@ private:
     struct ChannelState {
         std::vector<float> lastInputPhase;
         std::vector<float> lastOutputPhase;
-        std::vector<float> analysisBuffer;
-        std::vector<float> synthesisBuffer;
+        std::vector<std::complex<float>> analysisBuffer;
+        std::vector<std::complex<float>> synthesisBuffer;
         
         ChannelState() {
             lastInputPhase.resize(fftSize / 2 + 1, 0.0f);
             lastOutputPhase.resize(fftSize / 2 + 1, 0.0f);
-            analysisBuffer.resize(fftSize * 2, 0.0f);  // *2 for complex
-            synthesisBuffer.resize(fftSize * 2, 0.0f);
+            analysisBuffer.resize(fftSize, {0.0f, 0.0f});
+            synthesisBuffer.resize(fftSize, {0.0f, 0.0f});
         }
     };
 

@@ -117,8 +117,10 @@ juce::var MCPServer::routeRequest(const juce::String &method,
     return handleResourcesRead(uri);
   }
 
-  if (method == "ping")
-    return juce::var(new juce::DynamicObject());
+  if (method == "ping") {
+    auto pong = std::make_unique<juce::DynamicObject>();
+    return juce::var(pong.release());
+  }
 
   sendError(juce::var(), ErrorCode::MethodNotFound,
             "Method not found: " + method);

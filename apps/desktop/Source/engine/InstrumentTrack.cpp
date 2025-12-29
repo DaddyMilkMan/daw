@@ -3,10 +3,10 @@
 namespace zenith {
 
 void InstrumentTrack::getNextAudioBlock(
-    const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
+    const juce::AudioSourceChannelInfo &bufferToFill, juce::int64 playheadSamples,
     const juce::MidiBuffer *incomingMidi,
     std::span<juce::AudioBuffer<float> * const> auxBuffers,
-    const TempoMap *tempoMap, const juce::AudioBuffer<float> *sidechainBuffer) {
+    const TempoMap *tempoMap, const juce::AudioBuffer<float> *sidechain) {
   juce::ignoreUnused(auxBuffers, tempoMap);
   auto numSamples = bufferToFill.numSamples;
 
@@ -24,7 +24,8 @@ void InstrumentTrack::getNextAudioBlock(
       activeClipSnapshot_.load(std::memory_order_acquire);
 
   if (snapshot != nullptr) {
-    for (auto *clip : snapshot->clips) {
+    for (const auto& clipPtr : snapshot->clips) {
+      auto* clip = clipPtr.get();
       if (clip != nullptr && clip->isPlaying() && clip->getType() == Clip::Type::MIDI) {
         const int64_t clipStart = clip->getStartPosition();
         const int64_t clipEnd = clip->getEndPosition();
@@ -53,7 +54,7 @@ void InstrumentTrack::getNextAudioBlock(
 
   // 4. Process through plugin chain and mixer (delegated to Processor)
   juce::AudioSourceChannelInfo blockInfo(bufferToFill.buffer, bufferToFill.startSample, numSamples);
-  processor->processBlock(blockInfo, midiBuffer, auxBuffers, sidechainBuffer);
+  processor->processBlock(blockInfo, midiBuffer, auxBuffers, sidechain);
 
   // 5. Update Metering
   // TrackProcessor currently doesn't explicitly 'update' meters separate from processBlock, 

@@ -18,6 +18,7 @@
 #include <atomic>
 #include <cmath>
 #include <cstdint>
+#include <random>
 #include <juce_core/juce_core.h>
 
 namespace zenith {
@@ -34,9 +35,9 @@ public:
   };
 
   GlobalLFO() {
-    // Seed RT-safe RNG with address-based entropy
-    rngState_.store(
-        static_cast<uint32_t>(reinterpret_cast<uintptr_t>(this) ^ 0xDEADBEEF));
+    // Seed RT-safe RNG with std::random_device
+    std::random_device rd;
+    rngState_.store(static_cast<uint32_t>(rd()));
   }
 
   //==========================================================================

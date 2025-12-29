@@ -47,39 +47,39 @@ inline void setArrProp(juce::DynamicObject *obj, const char *key,
 }
 
 inline juce::var makeStringProperty(const juce::String &description) {
-  auto *prop = new juce::DynamicObject();
-  setStringProp(prop, "type", "string");
-  setStringProp(prop, "description", description);
-  return juce::var(prop);
+  auto prop = std::make_unique<juce::DynamicObject>();
+  setStringProp(prop.get(), "type", "string");
+  setStringProp(prop.get(), "description", description);
+  return juce::var(prop.release());
 }
 
 inline juce::var makeNumberProperty(const juce::String &description,
                                     bool isInteger = false) {
-  auto *prop = new juce::DynamicObject();
-  setStringProp(prop, "type", isInteger ? "integer" : "number");
-  setStringProp(prop, "description", description);
-  return juce::var(prop);
+  auto prop = std::make_unique<juce::DynamicObject>();
+  setStringProp(prop.get(), "type", isInteger ? "integer" : "number");
+  setStringProp(prop.get(), "description", description);
+  return juce::var(prop.release());
 }
 
 inline juce::var makeBoolProperty(const juce::String &description) {
-  auto *prop = new juce::DynamicObject();
-  setStringProp(prop, "type", "boolean");
-  setStringProp(prop, "description", description);
-  return juce::var(prop);
+  auto prop = std::make_unique<juce::DynamicObject>();
+  setStringProp(prop.get(), "type", "boolean");
+  setStringProp(prop.get(), "description", description);
+  return juce::var(prop.release());
 }
 
 inline juce::var makeEnumProperty(const juce::String &description,
                                   std::initializer_list<const char *> values) {
-  auto *prop = new juce::DynamicObject();
-  setStringProp(prop, "type", "string");
-  setStringProp(prop, "description", description);
+  auto prop = std::make_unique<juce::DynamicObject>();
+  setStringProp(prop.get(), "type", "string");
+  setStringProp(prop.get(), "description", description);
 
   juce::var enumArray;
   for (const char *v : values) {
     enumArray.append(juce::var(juce::String(v)));
   }
-  setArrProp(prop, "enum", enumArray);
-  return juce::var(prop);
+  setArrProp(prop.get(), "enum", enumArray);
+  return juce::var(prop.release());
 }
 
 //==============================================================================
@@ -93,24 +93,24 @@ inline juce::var
 buildToolSchema(const juce::String &name, const juce::String &description,
                 juce::DynamicObject *properties,
                 std::initializer_list<const char *> required = {}) {
-  auto *tool = new juce::DynamicObject();
-  setStringProp(tool, "name", name);
-  setStringProp(tool, "description", description);
+  auto tool = std::make_unique<juce::DynamicObject>();
+  setStringProp(tool.get(), "name", name);
+  setStringProp(tool.get(), "description", description);
 
-  auto *inputSchema = new juce::DynamicObject();
-  setStringProp(inputSchema, "type", "object");
-  setObjProp(inputSchema, "properties", properties);
+  auto inputSchema = std::make_unique<juce::DynamicObject>();
+  setStringProp(inputSchema.get(), "type", "object");
+  setObjProp(inputSchema.get(), "properties", properties);
 
   if (required.size() > 0) {
     juce::var reqArray;
     for (const char *r : required) {
       reqArray.append(juce::var(juce::String(r)));
     }
-    setArrProp(inputSchema, "required", reqArray);
+    setArrProp(inputSchema.get(), "required", reqArray);
   }
 
-  setObjProp(tool, "inputSchema", inputSchema);
-  return juce::var(tool);
+  setObjProp(tool.get(), "inputSchema", inputSchema.release());
+  return juce::var(tool.release());
 }
 
 //==============================================================================
@@ -118,54 +118,54 @@ buildToolSchema(const juce::String &name, const juce::String &description,
 //==============================================================================
 
 inline juce::var playSchema() {
-  auto *props = new juce::DynamicObject();
+  auto props = std::make_unique<juce::DynamicObject>();
   return buildToolSchema("play", "Start playback from the current position",
-                         props);
+                         props.release());
 }
 
 inline juce::var stopSchema() {
-  auto *props = new juce::DynamicObject();
-  return buildToolSchema("stop", "Stop playback and recording", props);
+  auto props = std::make_unique<juce::DynamicObject>();
+  return buildToolSchema("stop", "Stop playback and recording", props.release());
 }
 
 inline juce::var recordSchema() {
-  auto *props = new juce::DynamicObject();
-  return buildToolSchema("record", "Toggle recording on armed tracks", props);
+  auto props = std::make_unique<juce::DynamicObject>();
+  return buildToolSchema("record", "Toggle recording on armed tracks", props.release());
 }
 
 inline juce::var rewindSchema() {
-  auto *props = new juce::DynamicObject();
+  auto props = std::make_unique<juce::DynamicObject>();
   return buildToolSchema(
-      "rewind", "Return playhead to the beginning (position 0)", props);
+      "rewind", "Return playhead to the beginning (position 0)", props.release());
 }
 
 inline juce::var setTempoSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "bpm",
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "bpm",
              makeNumberProperty("Tempo in beats per minute (20-999)"));
-  return buildToolSchema("set_tempo", "Set the project tempo", props, {"bpm"});
+  return buildToolSchema("set_tempo", "Set the project tempo", props.release(), {"bpm"});
 }
 
 inline juce::var setTimeSignatureSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "numerator",
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "numerator",
              makeNumberProperty("Beats per bar (e.g., 4)", true));
-  setArrProp(props, "denominator",
+  setArrProp(props.get(), "denominator",
              makeNumberProperty("Beat unit (e.g., 4 for quarter note)", true));
   return buildToolSchema("set_time_signature", "Set the project time signature",
-                         props, {"numerator", "denominator"});
+                         props.release(), {"numerator", "denominator"});
 }
 
 inline juce::var setLoopSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "enabled", makeBoolProperty("Enable or disable loop mode"));
-  setArrProp(props, "startBar",
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "enabled", makeBoolProperty("Enable or disable loop mode"));
+  setArrProp(props.get(), "startBar",
              makeNumberProperty("Loop start position in bars", true));
-  setArrProp(props, "endBar",
+  setArrProp(props.get(), "endBar",
              makeNumberProperty("Loop end position in bars", true));
   return buildToolSchema("set_loop",
                          "Configure loop region and enable/disable looping",
-                         props, {"enabled"});
+                         props.release(), {"enabled"});
 }
 
 //==============================================================================
@@ -173,56 +173,56 @@ inline juce::var setLoopSchema() {
 //==============================================================================
 
 inline juce::var listTracksSchema() {
-  auto *props = new juce::DynamicObject();
+  auto props = std::make_unique<juce::DynamicObject>();
   return buildToolSchema(
       "list_tracks",
-      "Get a list of all tracks in the project with their properties", props);
+      "Get a list of all tracks in the project with their properties", props.release());
 }
 
 inline juce::var createTrackSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "name", makeStringProperty("Name for the new track"));
-  setArrProp(props, "type",
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "name", makeStringProperty("Name for the new track"));
+  setArrProp(props.get(), "type",
              makeEnumProperty("Track type", {"audio", "midi", "instrument",
                                              "aux", "master"}));
   return buildToolSchema("create_track", "Create a new track in the project",
-                         props, {"name", "type"});
+                         props.release(), {"name", "type"});
 }
 
 inline juce::var deleteTrackSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "trackId", makeStringProperty("ID of the track to delete"));
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "trackId", makeStringProperty("ID of the track to delete"));
   return buildToolSchema("delete_track", "Delete a track from the project",
-                         props, {"trackId"});
+                         props.release(), {"trackId"});
 }
 
 inline juce::var renameTrackSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "trackId", makeStringProperty("ID of the track to rename"));
-  setArrProp(props, "name", makeStringProperty("New name for the track"));
-  return buildToolSchema("rename_track", "Rename an existing track", props,
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "trackId", makeStringProperty("ID of the track to rename"));
+  setArrProp(props.get(), "name", makeStringProperty("New name for the track"));
+  return buildToolSchema("rename_track", "Rename an existing track", props.release(),
                          {"trackId", "name"});
 }
 
 inline juce::var setTrackVolumeSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "trackId", makeStringProperty("ID of the track"));
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "trackId", makeStringProperty("ID of the track"));
   setArrProp(
-      props, "volume",
+      props.get(), "volume",
       makeNumberProperty("Volume level (0.0 to 1.0, where 1.0 is unity gain)"));
   return buildToolSchema("set_track_volume", "Set the volume fader for a track",
-                         props, {"trackId", "volume"});
+                         props.release(), {"trackId", "volume"});
 }
 
 inline juce::var setTrackPanSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "trackId", makeStringProperty("ID of the track"));
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "trackId", makeStringProperty("ID of the track"));
   setArrProp(
-      props, "pan",
+      props.get(), "pan",
       makeNumberProperty(
           "Pan position (-1.0 = full left, 0.0 = center, 1.0 = full right)"));
   return buildToolSchema("set_track_pan", "Set the pan position for a track",
-                         props, {"trackId", "pan"});
+                         props.release(), {"trackId", "pan"});
 }
 
 //==============================================================================
@@ -230,52 +230,52 @@ inline juce::var setTrackPanSchema() {
 //==============================================================================
 
 inline juce::var listClipsSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "trackId",
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "trackId",
              makeStringProperty(
                  "ID of the track (optional, lists all clips if omitted)"));
   return buildToolSchema(
-      "list_clips", "Get a list of clips, optionally filtered by track", props);
+      "list_clips", "Get a list of clips, optionally filtered by track", props.release());
 }
 
 inline juce::var createClipSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "trackId",
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "trackId",
              makeStringProperty("ID of the track to add the clip to"));
-  setArrProp(props, "name", makeStringProperty("Name for the new clip"));
-  setArrProp(props, "startBeat", makeNumberProperty("Start position in beats"));
-  setArrProp(props, "lengthBeats", makeNumberProperty("Length in beats"));
-  setArrProp(props, "type", makeEnumProperty("Clip type", {"audio", "midi"}));
-  return buildToolSchema("create_clip", "Create a new clip on a track", props,
+  setArrProp(props.get(), "name", makeStringProperty("Name for the new clip"));
+  setArrProp(props.get(), "startBeat", makeNumberProperty("Start position in beats"));
+  setArrProp(props.get(), "lengthBeats", makeNumberProperty("Length in beats"));
+  setArrProp(props.get(), "type", makeEnumProperty("Clip type", {"audio", "midi"}));
+  return buildToolSchema("create_clip", "Create a new clip on a track", props.release(),
                          {"trackId", "startBeat", "lengthBeats"});
 }
 
 inline juce::var deleteClipSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "clipId", makeStringProperty("ID of the clip to delete"));
-  return buildToolSchema("delete_clip", "Delete a clip from the project", props,
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "clipId", makeStringProperty("ID of the clip to delete"));
+  return buildToolSchema("delete_clip", "Delete a clip from the project", props.release(),
                          {"clipId"});
 }
 
 inline juce::var moveClipSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "clipId", makeStringProperty("ID of the clip to move"));
-  setArrProp(props, "trackId",
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "clipId", makeStringProperty("ID of the clip to move"));
+  setArrProp(props.get(), "trackId",
              makeStringProperty(
                  "Target track ID (optional, keeps same track if omitted)"));
-  setArrProp(props, "startBeat",
+  setArrProp(props.get(), "startBeat",
              makeNumberProperty("New start position in beats"));
   return buildToolSchema("move_clip", "Move a clip to a new position or track",
-                         props, {"clipId", "startBeat"});
+                         props.release(), {"clipId", "startBeat"});
 }
 
 inline juce::var splitClipSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "clipId", makeStringProperty("ID of the clip to split"));
-  setArrProp(props, "splitBeat",
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "clipId", makeStringProperty("ID of the clip to split"));
+  setArrProp(props.get(), "splitBeat",
              makeNumberProperty("Position in beats where to split"));
   return buildToolSchema("split_clip", "Split a clip at a specific position",
-                         props, {"clipId", "splitBeat"});
+                         props.release(), {"clipId", "splitBeat"});
 }
 
 //==============================================================================
@@ -283,47 +283,47 @@ inline juce::var splitClipSchema() {
 //==============================================================================
 
 inline juce::var addNoteSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "clipId", makeStringProperty("ID of the MIDI clip"));
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "clipId", makeStringProperty("ID of the MIDI clip"));
   setArrProp(
-      props, "pitch",
+      props.get(), "pitch",
       makeNumberProperty("MIDI note number (0-127, 60 = middle C)", true));
   setArrProp(
-      props, "startBeat",
+      props.get(), "startBeat",
       makeNumberProperty("Start position in beats relative to clip start"));
-  setArrProp(props, "lengthBeats",
+  setArrProp(props.get(), "lengthBeats",
              makeNumberProperty("Note duration in beats"));
-  setArrProp(props, "velocity",
+  setArrProp(props.get(), "velocity",
              makeNumberProperty("Note velocity (1-127, default 100)", true));
-  return buildToolSchema("add_note", "Add a MIDI note to a clip", props,
+  return buildToolSchema("add_note", "Add a MIDI note to a clip", props.release(),
                          {"clipId", "pitch", "startBeat", "lengthBeats"});
 }
 
 inline juce::var deleteNoteSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "clipId", makeStringProperty("ID of the MIDI clip"));
-  setArrProp(props, "noteIndex",
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "clipId", makeStringProperty("ID of the MIDI clip"));
+  setArrProp(props.get(), "noteIndex",
              makeNumberProperty("Index of the note to delete", true));
-  return buildToolSchema("delete_note", "Delete a MIDI note from a clip", props,
+  return buildToolSchema("delete_note", "Delete a MIDI note from a clip", props.release(),
                          {"clipId", "noteIndex"});
 }
 
 inline juce::var getNotesSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "clipId", makeStringProperty("ID of the MIDI clip"));
-  return buildToolSchema("get_notes", "Get all MIDI notes in a clip", props,
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "clipId", makeStringProperty("ID of the MIDI clip"));
+  return buildToolSchema("get_notes", "Get all MIDI notes in a clip", props.release(),
                          {"clipId"});
 }
 
 inline juce::var setClipNotesSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "clipId", makeStringProperty("ID of the MIDI clip"));
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "clipId", makeStringProperty("ID of the MIDI clip"));
   setArrProp(
-      props, "notes",
+      props.get(), "notes",
       makeStringProperty(
           "Array of notes with pitch, startBeat, lengthBeats, velocity"));
   return buildToolSchema("set_clip_notes", "Replace all notes in a MIDI clip",
-                         props, {"clipId", "notes"});
+                         props.release(), {"clipId", "notes"});
 }
 
 //==============================================================================
@@ -331,60 +331,60 @@ inline juce::var setClipNotesSchema() {
 //==============================================================================
 
 inline juce::var listPluginsSchema() {
-  auto *props = new juce::DynamicObject();
+  auto props = std::make_unique<juce::DynamicObject>();
   return buildToolSchema("list_plugins", "Get a list of all available plugins",
-                         props);
+                         props.release());
 }
 
 inline juce::var searchPluginsSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "query",
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "query",
              makeStringProperty(
                  "Search term for plugin name, manufacturer, or category"));
   return buildToolSchema(
       "search_plugins", "Search for plugins by name, manufacturer, or category",
-      props, {"query"});
+      props.release(), {"query"});
 }
 
 inline juce::var addPluginSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "trackId",
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "trackId",
              makeStringProperty("ID of the track to add the plugin to"));
-  setArrProp(props, "pluginId", makeStringProperty("Plugin identifier string"));
+  setArrProp(props.get(), "pluginId", makeStringProperty("Plugin identifier string"));
   return buildToolSchema("add_plugin", "Add a plugin to a track's insert chain",
-                         props, {"trackId", "pluginId"});
+                         props.release(), {"trackId", "pluginId"});
 }
 
 inline juce::var removePluginSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "trackId", makeStringProperty("ID of the track"));
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "trackId", makeStringProperty("ID of the track"));
   setArrProp(
-      props, "pluginIndex",
+      props.get(), "pluginIndex",
       makeNumberProperty("Index of the plugin in the insert chain", true));
-  return buildToolSchema("remove_plugin", "Remove a plugin from a track", props,
+  return buildToolSchema("remove_plugin", "Remove a plugin from a track", props.release(),
                          {"trackId", "pluginIndex"});
 }
 
 inline juce::var getPluginParamsSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "trackId", makeStringProperty("ID of the track"));
-  setArrProp(props, "pluginIndex",
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "trackId", makeStringProperty("ID of the track"));
+  setArrProp(props.get(), "pluginIndex",
              makeNumberProperty("Index of the plugin", true));
   return buildToolSchema("get_plugin_params", "Get all parameters of a plugin",
-                         props, {"trackId", "pluginIndex"});
+                         props.release(), {"trackId", "pluginIndex"});
 }
 
 inline juce::var setPluginParamSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "trackId", makeStringProperty("ID of the track"));
-  setArrProp(props, "pluginIndex",
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "trackId", makeStringProperty("ID of the track"));
+  setArrProp(props.get(), "pluginIndex",
              makeNumberProperty("Index of the plugin", true));
-  setArrProp(props, "paramIndex",
+  setArrProp(props.get(), "paramIndex",
              makeNumberProperty("Index of the parameter", true));
-  setArrProp(props, "value",
+  setArrProp(props.get(), "value",
              makeNumberProperty("New parameter value (0.0 to 1.0)"));
   return buildToolSchema("set_plugin_param", "Set a plugin parameter value",
-                         props,
+                         props.release(),
                          {"trackId", "pluginIndex", "paramIndex", "value"});
 }
 
@@ -393,26 +393,26 @@ inline juce::var setPluginParamSchema() {
 //==============================================================================
 
 inline juce::var getSessionGraphSchema() {
-  auto *props = new juce::DynamicObject();
+  auto props = std::make_unique<juce::DynamicObject>();
   return buildToolSchema(
       "get_session_graph",
       "Get the full session graph including all tracks, clips, and routing",
-      props);
+      props.release());
 }
 
 inline juce::var undoSchema() {
-  auto *props = new juce::DynamicObject();
-  return buildToolSchema("undo", "Undo the last action", props);
+  auto props = std::make_unique<juce::DynamicObject>();
+  return buildToolSchema("undo", "Undo the last action", props.release());
 }
 
 inline juce::var redoSchema() {
-  auto *props = new juce::DynamicObject();
-  return buildToolSchema("redo", "Redo the last undone action", props);
+  auto props = std::make_unique<juce::DynamicObject>();
+  return buildToolSchema("redo", "Redo the last undone action", props.release());
 }
 
 inline juce::var historySchema() {
-  auto *props = new juce::DynamicObject();
-  return buildToolSchema("history", "Get the undo/redo history state", props);
+  auto props = std::make_unique<juce::DynamicObject>();
+  return buildToolSchema("history", "Get the undo/redo history state", props.release());
 }
 
 //==============================================================================
@@ -420,17 +420,17 @@ inline juce::var historySchema() {
 //==============================================================================
 
 inline juce::var exportAudioSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "outputPath",
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "outputPath",
              makeStringProperty("Full path for the output file"));
-  setArrProp(props, "sampleRate",
+  setArrProp(props.get(), "sampleRate",
              makeNumberProperty("Sample rate in Hz (default 44100)", true));
-  setArrProp(props, "bitDepth",
+  setArrProp(props.get(), "bitDepth",
              makeNumberProperty("Bit depth (16 or 24, default 24)", true));
-  setArrProp(props, "durationSeconds",
+  setArrProp(props.get(), "durationSeconds",
              makeNumberProperty("Duration to export in seconds"));
   return buildToolSchema("export_audio", "Export the project to an audio file",
-                         props, {"outputPath"});
+                         props.release(), {"outputPath"});
 }
 
 //==============================================================================
@@ -438,17 +438,17 @@ inline juce::var exportAudioSchema() {
 //==============================================================================
 
 inline juce::var createAuxBusSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "name", makeStringProperty("Name for the aux bus"));
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "name", makeStringProperty("Name for the aux bus"));
   return buildToolSchema("create_aux_bus",
                          "Create a new auxiliary bus for parallel processing",
-                         props, {"name"});
+                         props.release(), {"name"});
 }
 
 inline juce::var getAuxBusesSchema() {
-  auto *props = new juce::DynamicObject();
+  auto props = std::make_unique<juce::DynamicObject>();
   return buildToolSchema("get_aux_buses", "Get a list of all auxiliary buses",
-                         props);
+                         props.release());
 }
 
 //==============================================================================
@@ -456,29 +456,29 @@ inline juce::var getAuxBusesSchema() {
 //==============================================================================
 
 inline juce::var getRoutingGraphSchema() {
-  auto *props = new juce::DynamicObject();
+  auto props = std::make_unique<juce::DynamicObject>();
   return buildToolSchema("get_routing_graph",
                          "Get the audio routing graph showing all connections",
-                         props);
+                         props.release());
 }
 
 inline juce::var connectNodesSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "sourceId",
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "sourceId",
              makeStringProperty("ID of the source node (track or aux)"));
-  setArrProp(props, "destId", makeStringProperty("ID of the destination node"));
-  setArrProp(props, "gain",
+  setArrProp(props.get(), "destId", makeStringProperty("ID of the destination node"));
+  setArrProp(props.get(), "gain",
              makeNumberProperty("Connection gain (0.0 to 1.0, default 1.0)"));
   return buildToolSchema("connect_nodes", "Create an audio routing connection",
-                         props, {"sourceId", "destId"});
+                         props.release(), {"sourceId", "destId"});
 }
 
 inline juce::var disconnectNodesSchema() {
-  auto *props = new juce::DynamicObject();
-  setArrProp(props, "sourceId", makeStringProperty("ID of the source node"));
-  setArrProp(props, "destId", makeStringProperty("ID of the destination node"));
+  auto props = std::make_unique<juce::DynamicObject>();
+  setArrProp(props.get(), "sourceId", makeStringProperty("ID of the source node"));
+  setArrProp(props.get(), "destId", makeStringProperty("ID of the destination node"));
   return buildToolSchema("disconnect_nodes",
-                         "Remove an audio routing connection", props,
+                         "Remove an audio routing connection", props.release(),
                          {"sourceId", "destId"});
 }
 
@@ -487,11 +487,11 @@ inline juce::var disconnectNodesSchema() {
 //==============================================================================
 
 inline juce::var getUIStateSchema() {
-  auto *props = new juce::DynamicObject();
+  auto props = std::make_unique<juce::DynamicObject>();
   return buildToolSchema(
       "get_ui_state",
       "Get the current UI state including health metrics and any issues",
-      props);
+      props.release());
 }
 
 //==============================================================================

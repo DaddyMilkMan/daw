@@ -96,8 +96,8 @@ public:
     void updateAnalysisData(const juce::String& analysis);
     
     // Export
-    juce::Image exportWaveform(int width, int height) const;
-    void exportToFile(const juce::File& file, int width, int height) const;
+    juce::Image exportWaveform(int width, int height);
+    void exportToFile(const juce::File& file, int width, int height);
     
     // Component overrides
     void paint(juce::Graphics& g) override;

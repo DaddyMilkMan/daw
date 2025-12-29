@@ -9,8 +9,8 @@
 
 namespace zenith {
 
-TrackCommands::TrackCommands(Engine &eng, ProjectState &state)
-    : engine(eng), projectState(state) {}
+TrackCommands::TrackCommands(Engine &eng, ProjectState &state, CommandAPI &cmdApi)
+    : engine(eng), projectState(state), api(cmdApi) {}
 
 juce::var TrackCommands::listTracks(const juce::var &params) {
   juce::ignoreUnused(params);

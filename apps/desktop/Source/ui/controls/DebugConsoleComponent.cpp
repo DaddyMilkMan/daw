@@ -72,34 +72,37 @@ void DebugConsoleComponent::drawCollapsedView(SkCanvas *canvas,
                                               const SkRect &bounds) {
   float centerY = bounds.height() / 2.0f;
 
-  // Health indicator (pulsing circle)
-  drawHealthIndicator(canvas, kPadding + 8.0f, centerY, 12.0f);
+  // Session Health Orb
+  drawHealthIndicator(canvas, kPadding + 10.0f, centerY, 10.0f);
 
-  // Status text
-  textPaint_.setColor(design::unified::text_primary());
+  // Status text - Premium Typography
+  SkPaint textPaint;
+  textPaint.setAntiAlias(true);
+  textPaint.setColor(design::colors::TEXT_PRIMARY);
+  SkFont statusFont = design::typography::getSkFont(design::typography::FONT_SM, design::typography::FontWeight::Medium);
 
   int issueCount = debugger_.getUnresolvedIssueCount();
   int fixCount = debugger_.getFixCount();
 
   juce::String statusText;
   if (issueCount == 0 && fixCount == 0) {
-    statusText = "Session OK";
+    statusText = "Session Optmized";
   } else if (issueCount == 0 && fixCount > 0) {
     statusText = debugger_.getFixSummary();
   } else {
     statusText = juce::String(issueCount) + " Issue" +
-                 (issueCount != 1 ? "s" : "") + " Detected";
+                 (issueCount != 1 ? "s" : "") + " detected by Brain";
   }
 
-  canvas->drawString(statusText.toStdString().c_str(), kPadding + 28.0f,
-                     centerY + 4.0f, font_, textPaint_);
+  canvas->drawString(statusText.toStdString().c_str(), kPadding + 32.0f,
+                     centerY + 4.0f, statusFont, textPaint_);
 
   // Quick status icons on the right
-  drawStatusIcons(canvas, bounds.width() - kPadding - 80.0f, centerY);
+  drawStatusIcons(canvas, bounds.width() - kPadding - 90.0f, centerY);
 
   // Notification badge if there was a recent fix
   if (showNewFixNotification_) {
-    drawNotificationBadge(canvas, bounds.width() - kPadding - 10.0f, 8.0f);
+    drawNotificationBadge(canvas, bounds.width() - kPadding - 12.0f, 10.0f);
   }
 }
 
@@ -212,31 +215,40 @@ void DebugConsoleComponent::drawExpandedView(SkCanvas *canvas,
 
 void DebugConsoleComponent::drawHealthIndicator(SkCanvas *canvas, float x,
                                                 float y, float size) {
-  SkColor color = getHealthColor(displayedHealthScore_);
+  SkColor baseColor = getHealthColor(displayedHealthScore_);
+  
+  // 1. Pulsing intensity factor (breathing rhythm)
+  float pulse = 0.5f * (1.1f + 0.15f * std::sin(animationProgress_ * 3.5f));
+  
+  // 2. Outer Ambient Glow (The "Aura")
+  SkPaint auraPaint;
+  auraPaint.setAntiAlias(true);
+  auraPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, size * 0.8f));
+  auraPaint.setColor(design::withAlpha(baseColor, 0.4f * pulse));
+  canvas->drawCircle(x, y, size * 1.5f, auraPaint);
 
-  // Pulsing effect
-  float pulse = 1.0f + 0.1f * std::sin(animationProgress_ * 4.0f);
-  float pulseSize = size * pulse;
+  // 3. The Core (Solid energy)
+  SkPaint corePaint;
+  corePaint.setAntiAlias(true);
+  
+  SkPoint center = {x, y};
+  SkColor colors[2] = { baseColor, design::withAlpha(baseColor, 0.6f) };
+  corePaint.setShader(SkGradientShader::MakeRadial(center, size, colors, nullptr, 2, SkTileMode::kClamp));
+  canvas->drawCircle(x, y, size, corePaint);
 
-  // Outer glow
-  SkPaint glowPaint;
-  glowPaint.setAntiAlias(true);
-  glowPaint.setColor(SkColorSetA(color, 60));
-  canvas->drawCircle(x, y, pulseSize + 4.0f, glowPaint);
+  // 4. Glass Layer (Specular highights)
+  SkPaint glassPaint;
+  glassPaint.setAntiAlias(true);
+  glassPaint.setStyle(SkPaint::kStroke_Style);
+  glassPaint.setStrokeWidth(1.0f);
+  glassPaint.setColor(design::withAlpha(design::colors::TEXT_PRIMARY, 0.2f));
+  canvas->drawCircle(x, y, size, glassPaint);
 
-  // Inner solid circle
-  SkPaint solidPaint;
-  solidPaint.setAntiAlias(true);
-  solidPaint.setColor(color);
-  canvas->drawCircle(x, y, pulseSize, solidPaint);
-
-  // Highlight
-  SkPaint highlightPaint;
-  highlightPaint.setAntiAlias(true);
-  highlightPaint.setColor(design::withAlpha(design::colors::TEXT_PRIMARY, 0.3f)); // Fallback from GLASS_HIGHLIGHT
-
-  canvas->drawCircle(x - pulseSize * 0.3f, y - pulseSize * 0.3f,
-                     pulseSize * 0.4f, highlightPaint);
+  // 5. Specular Highlight (The "Shine")
+  SkPaint shinePaint;
+  shinePaint.setAntiAlias(true);
+  shinePaint.setColor(design::withAlpha(juce::Colours::white.getARGB(), 0.6f));
+  canvas->drawCircle(x - size * 0.35f, y - size * 0.35f, size * 0.25f, shinePaint);
 }
 
 void DebugConsoleComponent::drawStatusIcons(SkCanvas *canvas, float x,
@@ -400,58 +412,21 @@ void DebugConsoleComponent::setExpanded(bool expanded) {
 
 //==============================================================================
 void DebugConsoleComponent::updateCachedPaints() {
-  // Background - dark with subtle transparency
+  // Background - Deep Carbon Glass
   bgPaint_.setAntiAlias(true);
-  bgPaint_.setColor(design::withAlpha(design::colors::BG_01, 0.9f));
-
+  bgPaint_.setColor(design::withAlpha(design::colors::BG_02, 0.95f));
   bgPaint_.setStyle(SkPaint::kFill_Style);
 
-  // Border - subtle glow
+  // Border - Subtle cyan/blue glow edge
   borderPaint_.setAntiAlias(true);
-  borderPaint_.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.25f));
-
   borderPaint_.setStyle(SkPaint::kStroke_Style);
   borderPaint_.setStrokeWidth(1.0f);
-
-  // Health colors
-  healthGoodPaint_.setAntiAlias(true);
-  healthGoodPaint_.setColor(design::colors::SUCCESS);
-
-
-  healthWarningPaint_.setAntiAlias(true);
-  healthWarningPaint_.setColor(design::colors::WARNING);
-
-
-  healthCriticalPaint_.setAntiAlias(true);
-  healthCriticalPaint_.setColor(design::colors::DANGER);
-
-
-  // Text
-  textPaint_.setAntiAlias(true);
-  textPaint_.setColor(design::colors::TEXT_PRIMARY);
-
-
-  // Icons
-  iconPaint_.setAntiAlias(true);
-  iconPaint_.setColor(design::colors::TEXT_PRIMARY);
-
-
-  // Notification
-  notificationPaint_.setAntiAlias(true);
-  notificationPaint_.setColor(design::colors::ACCENT_SECONDARY);
-
+  borderPaint_.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.35f));
 
   // Fonts
-  font_.setSize(12.0f);
-  font_.setSubpixel(true);
-
-  boldFont_.setSize(14.0f);
-  boldFont_.setSubpixel(true);
-  // Note: Skia font weight would be set via SkFontStyle in a full
-  // implementation
-
-  smallFont_.setSize(10.0f);
-  smallFont_.setSubpixel(true);
+  font_ = design::typography::getSkFont(design::typography::FONT_MD, design::typography::FontWeight::Regular);
+  boldFont_ = design::typography::getSkFont(design::typography::FONT_MD, design::typography::FontWeight::Bold);
+  smallFont_ = design::typography::getSkFont(design::typography::FONT_XS, design::typography::FontWeight::Regular);
 }
 
 #endif // ZENITH_USE_SKIA

@@ -106,10 +106,10 @@ void BottomBar::drawSkia(SkCanvas *canvas) {
     cachedBounds_ = skBounds;
   }
 
-  // Background
+  // Glassmorphism Background (Frame)
   canvas->drawRect(skBounds, bgPaint_);
 
-  // Top border glow
+  // Top border glow (Premium feel)
   canvas->drawLine(0.0f, 0.0f, skBounds.width(), 0.0f, borderPaint_);
 
   // If keyboard is hidden, show mixer strip OR device chain
@@ -136,44 +136,32 @@ void BottomBar::drawSkia(SkCanvas *canvas) {
 }
 
 void BottomBar::updateCachedPaints(const SkRect &bounds) {
-  // 1. Background Paint
+  // 1. Background Paint - Premium Carbon Glass
   bgPaint_.setAntiAlias(true);
-  bgPaint_.setColor(SkColorSetARGB(255, 20, 20, 20)); // Opaque dark grey
+  bgPaint_.setColor(design::withAlpha(design::colors::BG_01, 0.98f)); // Deep but slightly translucent
   bgPaint_.setStyle(SkPaint::kFill_Style);
 
-  // 2. Border Paint (Gradient)
+  // 2. Border Paint (Radial Glow Gradient)
   borderPaint_.setAntiAlias(true);
   borderPaint_.setStyle(SkPaint::kStroke_Style);
   borderPaint_.setStrokeWidth(1.0f);
 
-  SkPoint points[2] = {SkPoint::Make(0.0f, 0.0f),
-                       SkPoint::Make(bounds.width(), 0.0f)};
-  SkColor colors[3] = {0x0000AAFF, 0xFF00AAFF, 0x0000AAFF};
-  borderPaint_.setShader(SkGradientShader::MakeLinear(points, colors, nullptr,
-                                                      3, SkTileMode::kClamp));
+  SkPoint pts[2] = { {0.0f, 0.0f}, {bounds.width(), 0.0f} };
+  SkColor colors[3] = { 
+      design::withAlpha(design::colors::ACCENT_SECONDARY, 0.0f), 
+      design::withAlpha(design::colors::ACCENT_PRIMARY, 0.4f),
+      design::withAlpha(design::colors::ACCENT_SECONDARY, 0.0f) 
+  };
+  
+  borderPaint_.setShader(SkGradientShader::MakeLinear(pts, colors, nullptr, 3, SkTileMode::kClamp));
 
-  // 3. Channel Background
-  channelBgPaint_.setAntiAlias(true);
-  channelBgPaint_.setColor(SkColorSetARGB(30, 255, 255, 255));
-  channelBgPaint_.setStyle(SkPaint::kFill_Style);
+  // 3. Fonts - Standardized Typography
+  font_ = design::typography::getSkFont(design::typography::FONT_XS, design::typography::FontWeight::Medium);
 
-  // 4. Meter Track
-  meterTrackPaint_.setAntiAlias(true);
-  meterTrackPaint_.setColor(SkColorSetARGB(50, 0, 0, 0));
-  meterTrackPaint_.setStyle(SkPaint::kFill_Style);
-
-  // 5. Meter Fill (Base)
-  meterFillPaint_.setAntiAlias(true);
-  meterFillPaint_.setStyle(SkPaint::kFill_Style);
-
-  // 6. Text Paint
+  // 4. Text Paint
   textPaint_.setAntiAlias(true);
-  textPaint_.setColor(SkColorSetARGB(150, 255, 255, 255));
+  textPaint_.setColor(design::colors::TEXT_SECONDARY);
   textPaint_.setStyle(SkPaint::kFill_Style);
-
-  // 7. Font
-  font_.setSize(10.0f);
-  font_.setSubpixel(true);
 }
 
 void BottomBar::resized() {

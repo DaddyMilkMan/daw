@@ -4,6 +4,7 @@
  */
 
 #include "MainWindow.h"
+#include "../transport/TransportBar.h"
 #include "../../commands/CommandAPI.h"
 #include "../engine/Engine.h"
 #include "../engine/ProjectState.h"
@@ -15,16 +16,13 @@
 #include <vector>
 //
 #include "../../network/MCPServer.h"
+#include "../../network/CollaborationManager.h"
 #include "../../ai/PresetGeneticistAgent.h"
 #include "../engine/ZenithLogger.h"
 #include "../design-system/ZenithDesignSystem.h"
-#include "../design-system/ColorBridge.h"
 #include "MainLayoutComponent.h"
-#include "../transport/TransportBar.h"
-#include "../collaboration/CollaborationPresenceBar.h"
 #include "RightSidePanel.h"
 #include "BottomBar.h"
-#include "../../network/CollaborationManager.h"
 #include "ZenithHubComponent.h"
 #include "../dialogs/SettingsComponent.h"
 #include "../piano-roll/PianoRollComponent.h"
@@ -72,115 +70,74 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   // Skia initialization is handled by SkiaMainWindowIntegration
 
   // ============================================================================
-  // Create Modern DAW Layout Panels
+  // Create Transport Bar - Premium centered controls
   // ============================================================================
-
-  // Top: Transport Bar
-  ZENITH_LOG_INFO("-> Creating TransportBar...");
-  
   transportBar = std::make_unique<zenith::TransportBar>();
   
-  transportBar->setProjectName("Zenith DAW");
-  transportBar->setTempo(120.0);
-  transportBar->setTimeSignature(4, 4);
-
-  // Hook up transport callbacks
-  transportBar->onPlayClicked = [this]() {
-    engine.play();
-    ZENITH_LOG_DEBUG("Play clicked");
-  };
-  transportBar->onStopClicked = [this]() {
-    engine.stop();
-    ZENITH_LOG_DEBUG("Stop clicked");
-  };
-  transportBar->onRecordClicked = [this]() {
-    engine.toggleRecording();
-    bool isRec = engine.isRecording();
-    transportBar->setRecording(isRec);
-    if (isRec) {
-      ZENITH_LOG_DEBUG("Recording started");
+  // Capture transportBar pointer for use in callbacks
+  auto* tbPtr = transportBar.get();
+  
+  transportBar->onPlayClicked = [tbPtr]() {
+    auto* eng = zenith::Engine::getInstance();
+    if (!eng) return;
+    
+    if (eng->isPlaying()) {
+      eng->stop();
     } else {
-      ZENITH_LOG_DEBUG("Recording stopped");
+      eng->play();
     }
+    if (tbPtr) tbPtr->setPlaying(eng->isPlaying());
   };
-
-  transportBar->onLoopToggled = [this]() {
-      bool loop = !engine.isLooping();
-      engine.setLooping(loop);
-      ZENITH_LOG_DEBUG("Looping toggled: " + juce::String(loop ? "ON" : "OFF"));
+  
+  transportBar->onStopClicked = [tbPtr]() {
+    auto* eng = zenith::Engine::getInstance();
+    if (!eng) return;
+    
+    eng->stop();
+    eng->setPlayheadSamples(0);
+    if (tbPtr) tbPtr->setPlaying(false);
   };
-
-  transportBar->onRewind = [this]() {
-      engine.stop();
-      engine.setPlayheadSamples(0);
-      ZENITH_LOG_DEBUG("Rewound to 0");
+  
+  transportBar->onRecordClicked = [tbPtr]() {
+    auto* eng = zenith::Engine::getInstance();
+    if (!eng) return;
+    
+    eng->toggleRecording();
+    if (tbPtr) tbPtr->setRecording(eng->isRecording());
   };
-
-  transportBar->onClearAllSolos = [this]() {
-      engine.getMixerController().clearAllSolos();
-      ZENITH_LOG_DEBUG("Cleared all solos");
+  
+  transportBar->onReturnToStart = [tbPtr]() {
+    auto* eng = zenith::Engine::getInstance();
+    if (!eng) return;
+    
+    eng->setPlayheadSamples(0);
+    if (tbPtr) tbPtr->setPosition(0.0);
   };
-
+  
   addAndMakeVisible(transportBar.get());
-  
-  // Collaboration Presence
-  presenceBar = std::make_unique<zenith::CollaborationPresenceBar>();
-  addAndMakeVisible(presenceBar.get());
-  
-  ZENITH_LOG_INFO("[OK] TransportBar created");
-  DBG("MainComponent: TransportBar created");
 
-  // The "Perfect DAW" Tri-Pane Layout Manager
-  ZENITH_LOG_INFO("-> Creating MainLayoutComponent...");
-  mainLayout =
-      std::make_unique<zenith::MainLayoutComponent>(engine, projectState, api);
-
+  // ============================================================================
+  // Create Main Layout (Arranger/Session/Browser)
+  // ============================================================================
+  mainLayout = std::make_unique<zenith::MainLayoutComponent>(engine, projectState, api);
   addAndMakeVisible(mainLayout.get());
-  ZENITH_LOG_INFO("[OK] MainLayoutComponent created");
 
-  // Right: AI Assistant Panel (Wingman) - Pure Skia
-  ZENITH_LOG_INFO("-> Creating RightSidePanel...");
-  rightSidePanel = std::make_unique<zenith::RightSidePanel>(api, engine, state);
+  // ============================================================================
+  // Create Right Side Panel (Wingman/Analysis)
+  // ============================================================================
+  // Note: RightSidePanel constructor matches usage in RightSidePanel.h
+  rightSidePanel = std::make_unique<zenith::RightSidePanel>(api, engine, projectState);
   addAndMakeVisible(rightSidePanel.get());
-  ZENITH_LOG_INFO("[OK] RightSidePanel created");
 
-  // Bottom: Piano Keyboard + Mixer Strip
-  ZENITH_LOG_INFO("-> Creating BottomBar...");
-  bottomBar = std::make_unique<zenith::BottomBar>(midiKeyboardState, engine,
-                                                  projectState);
-  bottomBar->setKeyboardVisible(false); // Hidden by default
-
-  // Connect Session Debugger
-  if (auto *debugger = engine.getSessionDebugger()) {
-    bottomBar->setDebugger(debugger);
-    ZENITH_LOG_INFO("[OK] Session Debugger connected to BottomBar");
-  }
-
+  // ============================================================================
+  // Create Bottom Bar (Mixer/Devices)
+  // ============================================================================
+  bottomBar = std::make_unique<zenith::BottomBar>(midiKeyboardState, engine, projectState);
   addAndMakeVisible(bottomBar.get());
-  ZENITH_LOG_INFO("[OK] BottomBar created");
 
-  // Connect view toggle callback
-  transportBar->onViewToggleClicked = [this]() {
-    if (mainLayout) {
-      mainLayout->toggleView();
-      DBG("View toggled via MainLayout");
-    }
-  };
-
-  // Connect settings callback
-  transportBar->onSettingsClicked = [this]() {
-    juce::DialogWindow::LaunchOptions options;
-    options.content.setOwned(new zenith::SettingsComponent(engine));
-    options.content->setSize(600, 500);
-    options.dialogTitle = "Zenith DAW Settings";
-    options.dialogBackgroundColour = design::toJuceColour(design::colors::BG_00);
-    options.escapeKeyTriggersCloseButton = true;
-    options.useNativeTitleBar = true;
-    options.resizable = true;
-    options.launchAsync();
-  };
-
-  // Create Zenith Hub with real project manager
+  // ============================================================================
+  // Create Zenith Hub (shown on startup)
+  // ============================================================================
   hubComponent = std::make_unique<zenith::ZenithHubComponent>(
       recentProjectManager_,
       [this](const juce::File &projectPath) {
@@ -229,6 +186,12 @@ bool MainComponent::keyPressed(const juce::KeyPress &key, Component *originating
     projectState.redo();
     return true;
   }
+  if (key == juce::KeyPress::tabKey) {
+    if (mainLayout) {
+      mainLayout->toggleView();
+      return true;
+    }
+  }
   return false;
 }
 
@@ -246,10 +209,15 @@ void MainComponent::paint(juce::Graphics &g) {
 }
 
 void MainComponent::drawSkiaContent(SkCanvas *canvas) {
-  // Amazing Wow Factor: Animated Aurora Background
+  // Amazing Wow Factor: White Canvas
   auto bounds = getLocalBounds().toFloat();
   SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
-  aurora_.draw(canvas, skBounds, animationTime_);
+  
+  SkPaint whitePaint;
+  whitePaint.setColor(SK_ColorWHITE);
+  canvas->drawRect(skBounds, whitePaint);
+  
+  // aurora_.draw(canvas, skBounds, animationTime_); // PURGED
 
   // Get pointer to hubComponent once for comparison
   auto* hub = hubComponent.get();
@@ -313,6 +281,9 @@ void MainComponent::setMainUiVisible(bool shouldBeVisible) {
   if (rightSidePanel) rightSidePanel->setVisible(shouldBeVisible);
   if (bottomBar) bottomBar->setVisible(shouldBeVisible);
   
+  // CRITICAL: Recalculate layout after visibility changes
+  // This ensures components get proper bounds when becoming visible
+  resized();
   repaint();
 }
 
@@ -323,30 +294,31 @@ void MainComponent::visibilityChanged() {
 }
 
 void MainComponent::resized() {
+  // CRITICAL: Call base class to update Skia renderer dimensions
+  SkiaMainWindowIntegration::resized();
+  
   auto bounds = getLocalBounds();
 
-  if (transportBar) {
-    auto tBounds = bounds.removeFromTop(60);
-    transportBar->setBounds(tBounds);
-    if (presenceBar) {
-        presenceBar->setBounds(tBounds.removeFromRight(200).withTrimmedTop(14).withTrimmedBottom(14));
-    }
+  // Hub gets full bounds (it's an overlay)
+  if (hubComponent) {
+    hubComponent->setBounds(getLocalBounds());
   }
 
-  if (bottomBar) {
+  // Transport bar always takes top 56px (even if hidden, for consistent layout)
+  if (transportBar) {
+    transportBar->setBounds(bounds.removeFromTop(56));
+  }
+
+  if (bottomBar && bottomBar->isVisible()) {
     bottomBar->setBounds(bounds.removeFromBottom(128));
   }
 
-  if (rightSidePanel) {
+  if (rightSidePanel && rightSidePanel->isVisible()) {
     rightSidePanel->setBounds(bounds.removeFromRight(400));
   }
 
-  if (mainLayout) {
+  if (mainLayout && mainLayout->isVisible()) {
     mainLayout->setBounds(bounds);
-  }
-
-  if (hubComponent) {
-    hubComponent->setBounds(getLocalBounds());
   }
 }
 
@@ -518,6 +490,24 @@ MainWindow::~MainWindow() {
   setContentOwned(nullptr, true);
   
   ZENITH_LOG_INFO("MainWindow::Destructor COMPLETE");
+}
+
+void MainWindow::resized() {
+  DocumentWindow::resized();
+  
+  // Propagate size changes to the content component
+  // This is necessary because we use setContentOwned(component, false)
+  if (mainComponent) {
+    // Use getLocalBounds() minus the title bar area
+    auto contentArea = getLocalBounds();
+    if (isUsingNativeTitleBar()) {
+      // Native title bar is handled by OS, content gets full local bounds
+      mainComponent->setBounds(contentArea);
+    } else {
+      // Non-native title bar: trim the title bar height from content area
+      mainComponent->setBounds(contentArea.withTrimmedTop(getTitleBarHeight()));
+    }
+  }
 }
 
 void MainWindow::closeButtonPressed() {
@@ -715,26 +705,6 @@ void MainWindow::saveProjectAs(std::function<void(bool)> onComplete) {
         } else {
             juce::NativeMessageBox::showMessageBoxAsync(juce::AlertWindow::WarningIcon, "Save Failed", error);
             if (onComplete) onComplete(false);
-        }
-    });
-  });
-}
-      return;
-    if (!file.hasFileExtension(".zth"))
-      file = file.withFileExtension(".zth");
-
-    fileIO_->saveToFileAsync(file, {}, [this, file](bool success, juce::String error) {
-        if (!success) {
-          juce::NativeMessageBox::showMessageBoxAsync(
-              juce::AlertWindow::WarningIcon, "Save Failed",
-              "Failed to save project: " + error);
-          return;
-        }
-
-        updateWindowTitle();
-        if (recentProjectManager_) {
-          recentProjectManager_->addProject(file, projectState->getProjectName());
-          recentProjectManager_->save();
         }
     });
   });

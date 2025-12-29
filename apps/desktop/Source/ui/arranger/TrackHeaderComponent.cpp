@@ -34,10 +34,9 @@ TrackHeaderComponent::TrackHeaderComponent(ProjectState &projectState,
     trackNode_.addListener(this);
 
   // Setup name label (editable) with Apple styling
-  auto &typo = zenith::SkiaTheme::getInstance().getTypography();
   nameLabel_.setEditable(true);
   nameLabel_.setJustificationType(juce::Justification::centredLeft);
-  nameLabel_.setFont(juce::FontOptions(typo.header.size));
+  nameLabel_.setFont(juce::FontOptions(12.0f));
   nameLabel_.setColour(juce::Label::textColourId,
                        juce::Colours::white.withAlpha(0.95f));
   nameLabel_.setColour(juce::Label::backgroundColourId,
@@ -62,6 +61,7 @@ TrackHeaderComponent::TrackHeaderComponent(ProjectState &projectState,
   muteButton_.setToggleable(true);
   muteButton_.setStyle(zenith::SkiaButton::Style::Secondary);
   muteButton_.setToggleState(isMuted_);
+  // Note: circular style removed - not supported by ZenithButton
   muteButton_.onClick = [this]() { onMuteClicked(); };
   addAndMakeVisible(muteButton_);
 
@@ -78,6 +78,13 @@ TrackHeaderComponent::TrackHeaderComponent(ProjectState &projectState,
   armButton_.setToggleState(isArmed_);
   armButton_.onClick = [this]() { onArmClicked(); };
   addAndMakeVisible(armButton_);
+
+  // Init Volume Fader
+  volumeFader_ = std::make_unique<ZenithSlider>();
+  volumeFader_->setRange(0.0f, 1.0f, 1.0f);  // min, max, default
+  volumeFader_->setValue(1.0f, false);
+  volumeFader_->onValueChange = [this](float /* val */) { onVolumeChanged(); };
+  addAndMakeVisible(volumeFader_.get());
 
   // Load initial state
   updateFromState();
@@ -162,35 +169,55 @@ void TrackHeaderComponent::drawSkia(SkCanvas *canvas) {
     NeonGlow::drawGlowOutline(canvas, focusRect, design::colors::BLUE,
                               NeonGlow::Intensity::Medium, 4.0f);
   }
+
+  // 5. Drag Handle (Left side next to color strip)
+  {
+      SkPaint handlePaint;
+      handlePaint.setColor(SkColorSetARGB(100, 200, 200, 200));
+      handlePaint.setAntiAlias(true);
+      
+      float handleX = 14.0f;
+      float handleY = skBounds.centerY() - 6.0f;
+      
+      for(int i=0; i<3; ++i) {
+          canvas->drawCircle(handleX, handleY + i*6.0f, 1.5f, handlePaint);
+      }
+  }
 }
 
 void TrackHeaderComponent::resized() {
   auto bounds = getLocalBounds();
 
-  // Remove color stripe area
-  bounds.removeFromLeft(8);
+  // Remove color strip area and drag handle area
+  bounds.removeFromLeft(20); 
 
   // Add padding
   bounds.reduce(4, 4);
 
+  // Top Row: Name and Buttons
+  auto topRow = bounds.removeFromTop(24);
+  
   // Buttons on the right (24x24 each)
   const int buttonWidth = 24;
-  const int buttonHeight = 24;
   const int spacing = 4;
-
-  auto buttonArea = bounds.removeFromRight(buttonWidth * 3 + spacing * 2);
-  buttonArea = buttonArea.withSizeKeepingCentre(buttonWidth * 3 + spacing * 2,
-                                                buttonHeight);
-
-  muteButton_.setBounds(buttonArea.removeFromLeft(buttonWidth));
+  
+  auto buttonArea = topRow.removeFromRight(buttonWidth * 3 + spacing * 2);
+  
+  muteButton_.setBounds(buttonArea.removeFromLeft(buttonWidth).withSize(24, 24));
   buttonArea.removeFromLeft(spacing);
-  soloButton_.setBounds(buttonArea.removeFromLeft(buttonWidth));
+  soloButton_.setBounds(buttonArea.removeFromLeft(buttonWidth).withSize(24, 24));
   buttonArea.removeFromLeft(spacing);
-  armButton_.setBounds(buttonArea.removeFromLeft(buttonWidth));
+  armButton_.setBounds(buttonArea.removeFromLeft(buttonWidth).withSize(24, 24));
 
-  // Name label takes remaining space
-  bounds.removeFromRight(spacing); // Spacing between name and buttons
-  nameLabel_.setBounds(bounds);
+  // Name label takes remaining space in top row
+  topRow.removeFromRight(spacing); 
+  nameLabel_.setBounds(topRow);
+  
+  // Bottom Row: Volume Fader
+  bounds.removeFromTop(4); // Spacing
+  if (volumeFader_) {
+      volumeFader_->setBounds(bounds.removeFromTop(20));
+  }
 }
 
 void TrackHeaderComponent::timerCallback() {
@@ -245,6 +272,31 @@ void TrackHeaderComponent::onArmClicked() {
   projectState_.setTrackArmed(trackId_, newArmed, "Toggle Record Arm");
 }
 
+void TrackHeaderComponent::onVolumeChanged() {
+    if (volumeFader_) {
+        float vol = (float)volumeFader_->getValue();
+        projectState_.setTrackVolume(trackId_, vol, "Change Volume");
+    }
+}
+
+// Mouse Interactions for Drag Reordering
+void TrackHeaderComponent::mouseDown(const juce::MouseEvent &e) {
+    SkiaComponent::mouseDown(e);
+}
+
+void TrackHeaderComponent::mouseDrag(const juce::MouseEvent &e) {
+    if (e.mods.isLeftButtonDown()) {
+        // Find parent ArrangerComponent to handle reordering or use DragAndDropContainer
+        if (auto* container = juce::DragAndDropContainer::findParentDragContainerFor(this)) {
+            if (!container->isDragAndDropActive()) {
+                juce::StringArray desc;
+                desc.add("track:" + trackId_);
+                container->startDragging(desc, this);
+            }
+        }
+    }
+}
+
 //==============================================================================
 // Helper Methods
 //==============================================================================
@@ -288,7 +340,7 @@ void TrackHeaderComponent::updateFromState() {
 
   // Soloed: highlight S button with Warning style (orange)
   if (isSoloed_)
-    soloButton_.setStyle(zenith::SkiaButton::Style::Warn);
+    soloButton_.setStyle(zenith::SkiaButton::Style::Warning);
   else
     soloButton_.setStyle(zenith::SkiaButton::Style::Secondary);
 
@@ -297,6 +349,8 @@ void TrackHeaderComponent::updateFromState() {
     armButton_.setStyle(zenith::SkiaButton::Style::Danger);
   else
     armButton_.setStyle(zenith::SkiaButton::Style::Secondary);
+
+  // Update volume\n  if (trackNode_.hasProperty(ProjectState::PROP_VOLUME) && volumeFader_) {\n      volumeFader_->setValue(static_cast<float>(trackNode_[ProjectState::PROP_VOLUME]));\n  }
 
   repaint();
 }

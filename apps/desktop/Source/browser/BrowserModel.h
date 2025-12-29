@@ -34,7 +34,7 @@ namespace zenith {
 class InstrumentRegistry;
 class PluginHost; 
 
-class BrowserModel : public juce::ChangeBroadcaster
+class BrowserModel : public juce::ChangeBroadcaster, private juce::Timer
 {
 public:
     BrowserModel(InstrumentRegistry& instrumentRegistry, PluginHost& pluginHost);
@@ -148,6 +148,16 @@ private:
 
     // Search Cache
     std::vector<std::shared_ptr<BrowserItem>> allIndexableItems_;
+    
+    // Asynchronous Search
+    juce::String lastQuery_;
+    juce::String pendingQuery_;
+    std::vector<std::shared_ptr<BrowserItem>> lastSearchResults_;
+    juce::CriticalSection resultsLock_;
+    std::atomic<bool> isSearching_{false};
+
+    void timerCallback() override;
+    void startAsyncSearch(const juce::String& query);
 
     bool isScanning_ = false;
     juce::StringArray userLibraryPaths_;

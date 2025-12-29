@@ -32,8 +32,14 @@ extern "C" {
 
 namespace zenith {
 
-// Global pointer to engine (accessed by Lua C functions)
-static Engine* g_engine = nullptr;
+// Helper to safely get Engine instance
+static Engine* getEngine(lua_State* L) {
+    if (auto* instance = Engine::getInstance())
+        return instance;
+        
+    luaL_error(L, "Engine instance not found (Audio Engine not initialized)");
+    return nullptr;
+}
 
 // ============================================================================
 // File Discovery & "Ears"
@@ -501,8 +507,10 @@ static int lua_undoTo(lua_State* L) {
 
 // ============================================================================
 
-void registerAudioEngine(lua_State* L, Engine* engine) {
-    g_engine = engine;
+void registerAudioEngine(lua_State* L, Engine* /*engine*/) {
+    // We ignore the passed engine pointer and use the singleton ensure consistency
+    // g_engine = engine; // REMOVED: Using Engine::getInstance() instead
+    
     lua_register(L, "search_samples", lua_searchSamples);
     lua_register(L, "get_library_info", lua_getLibraryInfo);
     lua_register(L, "analyze_audio", lua_analyzeAudio);

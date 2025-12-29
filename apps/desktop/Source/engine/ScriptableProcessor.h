@@ -14,13 +14,15 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_events/juce_events.h>
 #include <lua.hpp>
 #include <atomic>
 #include <string>
 
 namespace zenith {
 
-class ScriptableProcessor : public juce::AudioProcessor {
+class ScriptableProcessor : public juce::AudioProcessor,
+                            public juce::Timer {
 public:
     ScriptableProcessor();
     ~ScriptableProcessor() override;
@@ -29,6 +31,9 @@ public:
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+
+    // Timer callback for incremental GC on message thread
+    void timerCallback() override;
 
     //==============================================================================
     const juce::String getName() const override { return "Scriptable Effect"; }

@@ -111,6 +111,15 @@ public:
     std::unordered_map<juce::String, std::weak_ptr<Track>> trackLookup;
     std::unordered_map<juce::String, std::weak_ptr<AuxBus>> auxBusLookup;
 
+    // OPTIMIZATION: Linear render order (raw pointers for Audio Thread iteration)
+    // Populated by updateSnapshotWithPointers based on topology->processingOrder
+    struct RenderNode {
+        Track* track = nullptr;
+        AuxBus* bus = nullptr;
+        juce::String id; // Keep ID for feedback/connection checks
+    };
+    std::vector<RenderNode> linearRenderOrder;
+
     Snapshot() : topology(std::make_shared<Topology>()) {}
     Snapshot(const std::unordered_map<std::string, Node> &n,
              std::shared_ptr<Topology> t)
@@ -134,6 +143,9 @@ private:
 
   // Helper to update snapshot after modification
   void updateSnapshot();
+  
+  // Helper to detect cycles before connection
+  bool detectCycle(const juce::String& sourceId, const juce::String& destId);
 
 public:
   // Get current snapshot (lock-free)

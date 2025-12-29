@@ -141,18 +141,18 @@ void ArrangerClipManager::rebuildTrackComponents() {
         comp->onFreeze = [this, i](const juce::String& trackId) {
             juce::ignoreUnused(trackId);
             auto outputDir = projectState_.getAssetDirectory("Freeze");
-            owner_.engine_.freezeTrack(i, [this](float progress, const juce::String& status) {
+            owner_.getEngine().freezeTrack(i, [this](float progress, const juce::String& status) {
                 DBG("Freeze progress: " + juce::String(progress * 100, 1) + "% - " + status);
             });
         };
 
         comp->onUnfreeze = [this, i](const juce::String& trackId) {
             juce::ignoreUnused(trackId);
-            owner_.engine_.unfreezeTrack(i);
+            owner_.getEngine().unfreezeTrack(i);
         };
 
         comp->onSeparateStems = [this](const juce::String& trackId) {
-            TrackCommands trackCmds(owner_.engine_, projectState_, owner_.getCommandAPI());
+            TrackCommands trackCmds(owner_.getEngine(), projectState_, owner_.getCommandAPI());
 
             auto* paramsObj = new juce::DynamicObject();
             paramsObj->setProperty("trackId", trackId);
@@ -204,51 +204,62 @@ ClipView* ArrangerClipManager::findClipAtPoint(juce::Point<float> point) {
 }
 
 void ArrangerClipManager::processTrackClips(const juce::ValueTree& track, int trackIndex) {
-    auto trackId = track[zenith::ProjectState::PROP_ID].toString();
-    auto clipsNode = track.getChildWithName(zenith::ProjectState::ID_CLIPS);
+    juce::String trackId = track[ProjectState::PROP_ID].toString();
+    
+    // Get track color
+    juce::Colour trackColor = juce::Colours::grey;
+    if (track.hasProperty(ProjectState::PROP_COLOR)) {
+        trackColor = juce::Colour::fromString(track[ProjectState::PROP_COLOR].toString());
+    }
 
+    auto clipsNode = track.getChildWithName(ProjectState::ID_CLIPS);
+    
     if (clipsNode.isValid()) {
         for (const auto& clip : clipsNode) {
-            // Skip Take Folders (handled by ArrangerTrackComponent)
-            if (clip.hasType(zenith::ProjectState::ID_TAKE_FOLDER))
-                continue;
+            ClipView cv;
+            cv.clipId = clip[ProjectState::PROP_ID].toString();
+            cv.trackId = trackId;
+            cv.trackIndex = trackIndex;
+            cv.startBeats = clip[ProjectState::PROP_START];
+            cv.lengthBeats = clip[ProjectState::PROP_LENGTH];
+            cv.isMidi = (clip[ProjectState::PROP_TYPE].toString() == "midi"); // Fixed property
+            cv.trackColor = trackColor;
+            
+            // Get fade info
+            if (clip.hasProperty(ProjectState::PROP_FADE_IN))
+                cv.fadeInBeats = clip[ProjectState::PROP_FADE_IN];
+            if (clip.hasProperty(ProjectState::PROP_FADE_OUT))
+                cv.fadeOutBeats = clip[ProjectState::PROP_FADE_OUT];
 
-            ClipView view;
-            view.clipId = clip[zenith::ProjectState::PROP_ID].toString();
-            view.trackId = trackId;
-            view.trackIndex = trackIndex;
-            view.startBeats = clip.getProperty(zenith::ProjectState::PROP_START_BEATS);
-            view.lengthBeats = clip.getProperty(zenith::ProjectState::PROP_LENGTH_BEATS);
-            view.fadeInBeats = clip.getProperty(zenith::ProjectState::PROP_FADE_IN, 0.0);
-            view.fadeOutBeats = clip.getProperty(zenith::ProjectState::PROP_FADE_OUT, 0.0);
-
-            auto clipType = clip[zenith::ProjectState::PROP_TYPE].toString();
-            view.isMidi = (clipType == "midi");
-
-            view.isSelected = selectedClipIds_.contains(view.clipId);
-
-            // Populate clip content for thumbnail rendering
-            if (view.isMidi) {
-                // Get MIDI notes for blob preview
-                auto notes = projectState_.getMidiNotesForClip(view.clipId);
-                for (const auto& note : notes) {
-                    MidiNoteBlob blob;
-                    blob.pitch = note.pitch;
-                    blob.startBeats = note.startBeats;
-                    blob.lengthBeats = note.lengthBeats;
-                    view.noteBlobs.push_back(blob);
-                }
+            // Loop and Offset
+            if (clip.hasProperty(ProjectState::PROP_LOOP_LENGTH))
+                cv.loopLengthBeats = clip[ProjectState::PROP_LOOP_LENGTH];
+            if (clip.hasProperty(ProjectState::PROP_OFFSET))
+                cv.offsetBeats = clip[ProjectState::PROP_OFFSET];
+                
+            // Selection state
+            cv.isSelected = selectedClipIds_.contains(cv.clipId);
+            
+            // Content specific data
+            if (cv.isMidi) {
+                 // Load actual MIDI notes from ProjectState
+                 auto midiNotes = projectState_.getMidiNotesForClip(cv.clipId);
+                 for (const auto& note : midiNotes) {
+                     MidiNoteBlob blob;
+                     blob.pitch = note.pitch;
+                     blob.startBeats = note.startBeats;
+                     blob.lengthBeats = note.lengthBeats;
+                     cv.noteBlobs.push_back(blob);
+                 }
             } else {
-                // Get audio file path for waveform preview
-                view.audioFilePath = clip[zenith::ProjectState::PROP_AUDIO_FILE].toString();
-
-                // Trigger waveform cache build if needed
-                if (view.audioFilePath.isNotEmpty()) {
-                    gridUtils_.buildWaveformCache(view.audioFilePath);
+                cv.audioFilePath = clip[ProjectState::PROP_AUDIO_FILE].toString();
+                if (cv.audioFilePath.isNotEmpty()) {
+                    // Trigger waveform cache build (async)
+                    gridUtils_.buildWaveformCache(cv.audioFilePath);
                 }
             }
 
-            clipViews_.add(view);
+            clipViews_.add(cv);
         }
     }
 }
@@ -466,7 +477,7 @@ void ArrangerClipManager::consolidateSelectedClips() {
         double tempo = projectState_.getTempo();
         double startSeconds = (minStart / tempo) * 60.0;
         double durationSeconds = ((maxEnd - minStart) / tempo) * 60.0;
-        double sampleRate = owner_.engine_.getSampleRate();
+        double sampleRate = owner_.getEngine().getSampleRate();
 
         // Get track index for stem export
         int trackIndex = -1;
@@ -504,7 +515,7 @@ void ArrangerClipManager::consolidateSelectedClips() {
         options.stemTrackIndices = {trackIndex};
 
         // Export using AudioExporter
-        zenith::AudioExporter exporter(owner_.engine_);
+        zenith::AudioExporter exporter(owner_.getEngine());
         bool success = exporter.exportProject(options);
 
         if (success) {
@@ -554,7 +565,7 @@ void ArrangerClipManager::renderSelectedClipsToAudio() {
         double tempo = projectState_.getTempo();
         double startSeconds = (view->startBeats / tempo) * 60.0;
         double durationSeconds = (view->lengthBeats / tempo) * 60.0;
-        double sampleRate = owner_.engine_.getSampleRate();
+        double sampleRate = owner_.getEngine().getSampleRate();
 
         // Create output file
         juce::File projectDir = projectState_.getProjectFile().getParentDirectory();
@@ -580,7 +591,7 @@ void ArrangerClipManager::renderSelectedClipsToAudio() {
         options.stemTrackIndices = {trackIndex};
 
         // Export using AudioExporter
-        zenith::AudioExporter exporter(owner_.engine_);
+        zenith::AudioExporter exporter(owner_.getEngine());
         bool success = exporter.exportProject(options);
 
         if (success) {

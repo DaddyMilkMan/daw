@@ -121,6 +121,9 @@ private:
     std::queue<juce::Time> readTimes;
     mutable std::mutex timingMutex;
     
+    // Latency timestamps
+    LockFreeRingBuffer<int64_t, 1024> timestampBuffer;
+    
     void updateLevels(const juce::AudioBuffer<float>& buffer);
     void updateLatency();
     
@@ -227,7 +230,7 @@ private:
                     double ratio);
     
     // Sinc filter
-    std::vector<float> sincKernel;
+    std::shared_ptr<std::vector<float>> sincKernel;
     int kernelSize = 64;
     void buildSincKernel(double cutoff);
     

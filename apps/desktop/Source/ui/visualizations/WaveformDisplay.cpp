@@ -196,7 +196,7 @@ void WaveformDisplay::updateAnalysisData(const juce::String& analysis) {
     repaint();
 }
 
-juce::Image WaveformDisplay::exportWaveform(int width, int height) const {
+juce::Image WaveformDisplay::exportWaveform(int width, int height) {
     juce::Image image(juce::Image::RGB, width, height, true);
     juce::Graphics g(image);
     
@@ -206,20 +206,20 @@ juce::Image WaveformDisplay::exportWaveform(int width, int height) const {
     auto savedScroll = scrollPosition;
     
     // Temporarily set size for export
-    const_cast<WaveformDisplay*>(this)->setSize(width, height);
+    setSize(width, height);
     
     // Draw
     paint(g);
     
     // Restore state
-    const_cast<WaveformDisplay*>(this)->setSize(savedBounds.getWidth(), savedBounds.getHeight());
-    const_cast<WaveformDisplay*>(this)->setZoomLevel(savedZoom);
-    const_cast<WaveformDisplay*>(this)->setScrollPosition(savedScroll);
+    setSize(savedBounds.getWidth(), savedBounds.getHeight());
+    setZoomLevel(savedZoom);
+    setScrollPosition(savedScroll);
     
     return image;
 }
 
-void WaveformDisplay::exportToFile(const juce::File& file, int width, int height) const {
+void WaveformDisplay::exportToFile(const juce::File& file, int width, int height) {
     auto image = exportWaveform(width, height);
     juce::PNGImageFormat format;
     file.createOutputStream()->writeFromInputStream(juce::MemoryInputStream(image.getData(), image.getSize()), image.getSize());

@@ -17,10 +17,19 @@
 
 // Skia Includes
 #include "ZenithSkia.h"
-#include <core/SkMaskFilter.h>
-#include <core/SkSpan.h>
-#include <effects/SkDashPathEffect.h>
+#include <core/SkRect.h>
+#include <core/SkRRect.h>
+#include <core/SkPath.h>
+#include <codec/SkEncodedImageFormat.h>
 #include <effects/SkGradientShader.h>
+#include <core/SkSurface.h>
+#include <core/SkImage.h>
+#include <effects/SkDashPathEffect.h>
+#include <effects/SkImageFilters.h>
+#include <core/SkData.h>
+#include <core/SkStream.h>
+#include <core/SkPixmap.h>
+#include <encode/SkPngEncoder.h>
 
 #include <cmath>
 #include <algorithm>
@@ -181,16 +190,17 @@ void ArrangerRenderer::drawGrid(SkCanvas* canvas, float width, float height) {
         gridPaint.setAntiAlias(true);
         
         if (isBarLine) {
-            gridPaint.setColor(SkColorSetARGB(kBarLineAlpha, 255, 255, 255));
+            // Bar lines: BG_03 (Brighter)
+            gridPaint.setColor(colors::BG_03);
             gridPaint.setStrokeWidth(kBarLineWidth);
         } else if (isBeatLine) {
-            gridPaint.setColor(SkColorSetARGB(kBeatLineAlpha, 255, 255, 255));
+            // Beat lines: BG_02 (Subtle)
+            gridPaint.setColor(colors::BG_02);
             gridPaint.setStrokeWidth(kBeatLineWidth);
         } else {
             // Sub-beat (e.g. 1/4, 1/8)
-            gridPaint.setColor(SkColorSetARGB(kBeatLineAlpha / 2, 255, 255, 255));
+            gridPaint.setColor(withAlpha(colors::BG_02, 0.5f));
             gridPaint.setStrokeWidth(0.5f);
-             // Make them solid but faint for clean look
         }
         
         canvas->drawLine(x, SECTION_HEIGHT, x, height, gridPaint);
@@ -261,23 +271,35 @@ void ArrangerRenderer::drawClips(SkCanvas* canvas, float width, float height) {
         if (clipView.bounds.getRight() < HEADER_WIDTH || clipView.bounds.getX() > width)
             continue;
             
-        drawSingleClip(canvas, clipView);
+        drawSingleClip(canvas, clipView, owner_.pixelsPerBeat, &gridUtils_);
     }
     
     canvas->restore();
 }
 
-void ArrangerRenderer::drawSingleClip(SkCanvas* canvas, const ClipView& clipView) {
+void ArrangerRenderer::drawSingleClip(SkCanvas* canvas, const ClipView& clipView, float pixelsPerBeat, const ArrangerGridUtils* gridUtils) {
     using namespace zenith::design;
     
     SkRect r = SkRect::MakeXYWH(clipView.bounds.getX(), clipView.bounds.getY(),
                                 clipView.bounds.getWidth(), clipView.bounds.getHeight());
     
-    float clipRadius = 6.0f;
+    float clipRadius = 4.0f;  // Per design spec: 4px rounded corners
     SkRRect rr = SkRRect::MakeRectXY(r, clipRadius, clipRadius);
     
-    // Determine base color based on clip type
-    SkColor baseColor = clipView.isMidi ? colors::MAGENTA : colors::CYAN;
+    // Convert juce::Colour trackColor to SkColor
+    SkColor trackSkColor = SkColorSetARGB(
+        clipView.trackColor.getAlpha(),
+        clipView.trackColor.getRed(),
+        clipView.trackColor.getGreen(),
+        clipView.trackColor.getBlue()
+    );
+
+    // Default basic colors if track color is grey/invalid
+    if (clipView.trackColor.isTransparent() || clipView.trackColor == juce::Colours::grey) {
+        trackSkColor = clipView.isMidi ? colors::MAGENTA : colors::CYAN;
+    }
+
+    SkColor baseColor = trackSkColor;
     if (clipView.isSelected) {
         baseColor = lighten(baseColor, 0.15f);
     }
@@ -317,6 +339,14 @@ void ArrangerRenderer::drawSingleClip(SkCanvas* canvas, const ClipView& clipView
         texturePaint.setColor(SkColorSetARGB(8, 255, 255, 255));
         texturePaint.setBlendMode(SkBlendMode::kOverlay);
         canvas->drawRRect(rr, texturePaint);
+    }
+    
+    // 3.5. MUTED STATE OVERLAY
+    if (clipView.isMuted) {
+        SkPaint mutedOverlay;
+        mutedOverlay.setAntiAlias(true);
+        mutedOverlay.setColor(SkColorSetARGB(128, 30, 30, 35)); // 50% dark overlay
+        canvas->drawRRect(rr, mutedOverlay);
     }
     
     // 4. TOP RIM LIGHT
@@ -370,6 +400,27 @@ void ArrangerRenderer::drawSingleClip(SkCanvas* canvas, const ClipView& clipView
         canvas->drawRRect(rr, corePaint);
     }
     
+    // 6.5. RECORDING STATE (Red border + pulsing glow)
+    if (clipView.isArmed) {
+        // Animated pulse (use time-based animation for real pulsing in production)
+        float pulseIntensity = 0.7f; // Static for now, could animate 0.4 -> 1.0
+        
+        SkPaint recGlowPaint;
+        recGlowPaint.setAntiAlias(true);
+        recGlowPaint.setStyle(SkPaint::kStroke_Style);
+        recGlowPaint.setStrokeWidth(4.0f);
+        recGlowPaint.setColor(withAlpha(colors::RED, pulseIntensity * 0.6f));
+        recGlowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 8.0f));
+        canvas->drawRRect(rr, recGlowPaint);
+        
+        SkPaint recBorderPaint;
+        recBorderPaint.setAntiAlias(true);
+        recBorderPaint.setStyle(SkPaint::kStroke_Style);
+        recBorderPaint.setStrokeWidth(2.0f);
+        recBorderPaint.setColor(colors::RED);
+        canvas->drawRRect(rr, recBorderPaint);
+    }
+    
     // 7. CONTENT (Waveform or MIDI)
     {
         SkRect contentRect = r;
@@ -380,9 +431,9 @@ void ArrangerRenderer::drawSingleClip(SkCanvas* canvas, const ClipView& clipView
         canvas->clipRRect(rr, true);
         
         if (clipView.isMidi) {
-            drawClipMidiBlobs(canvas, clipView, contentRect);
+            drawClipMidiBlobs(canvas, clipView, contentRect, pixelsPerBeat);
         } else {
-            drawClipWaveform(canvas, clipView, contentRect);
+            drawClipWaveform(canvas, clipView, contentRect, gridUtils);
         }
         
         canvas->restore();
@@ -391,8 +442,8 @@ void ArrangerRenderer::drawSingleClip(SkCanvas* canvas, const ClipView& clipView
     
     // 7.5. FADE OVERLAY & HANDLES
     {
-        float fadeInPx = static_cast<float>(clipView.fadeInBeats * owner_.pixelsPerBeat);
-        float fadeOutPx = static_cast<float>(clipView.fadeOutBeats * owner_.pixelsPerBeat);
+        float fadeInPx = static_cast<float>(clipView.fadeInBeats * pixelsPerBeat);
+        float fadeOutPx = static_cast<float>(clipView.fadeOutBeats * pixelsPerBeat);
         
         SkPaint fadeCurvePaint;
         fadeCurvePaint.setAntiAlias(true);
@@ -512,16 +563,55 @@ void ArrangerRenderer::drawSingleClip(SkCanvas* canvas, const ClipView& clipView
             canvas->drawLine(cx + 1, cy + 2, cx + 3, cy, iconPaint);
         }
     }
+
+    // 10. LOOP & STRETCH INDICATORS
+    if (clipView.loopLengthBeats > 0.0 && clipView.loopLengthBeats < clipView.lengthBeats) {
+        // Draw vertical dashed lines at loop intervals
+        SkPaint loopPaint;
+        loopPaint.setColor(withAlpha(SK_ColorWHITE, 0.3f));
+        loopPaint.setStyle(SkPaint::kStroke_Style);
+        loopPaint.setStrokeWidth(1.0f);
+        static const SkScalar intervals[] = {4.0f, 4.0f};
+        loopPaint.setPathEffect(SkDashPathEffect::Make(SkSpan<const SkScalar>(intervals, 2), 0.0f));
+
+        double currentBeat = clipView.loopLengthBeats;
+        while (currentBeat < clipView.lengthBeats) {
+            float x = r.left() + static_cast<float>(currentBeat * pixelsPerBeat);
+            if (x < r.right()) {
+                canvas->drawLine(x, r.top(), x, r.bottom(), loopPaint);
+                
+                // Small notched triangle at top
+                SkPath notch;
+                notch.moveTo(x - 3, r.top());
+                notch.lineTo(x + 3, r.top());
+                notch.lineTo(x, r.top() + 4);
+                notch.close();
+                
+                SkPaint notchPaint;
+                notchPaint.setColor(withAlpha(SK_ColorWHITE, 0.5f));
+                notchPaint.setStyle(SkPaint::kFill_Style);
+                canvas->drawPath(notch, notchPaint);
+            }
+            currentBeat += clipView.loopLengthBeats;
+        }
+    }
+    
+    // Stretch Indicator (Placeholder logic - check if manually stretched? 
+    // Usually compares visible length vs source length, but here we assume simpler model for now)
+    // If not MIDI, we can show file info
+    if (!clipView.isMidi && !clipView.audioFilePath.isEmpty()) {
+         // Maybe small text label "Stretched" if we had stretch ratio
+    }
 }
 
 //==============================================================================
 // Waveform Drawing
 //==============================================================================
 
-void ArrangerRenderer::drawClipWaveform(SkCanvas* canvas, const ClipView& clip, const SkRect& clipRect) {
+void ArrangerRenderer::drawClipWaveform(SkCanvas* canvas, const ClipView& clip, const SkRect& clipRect, const ArrangerGridUtils* gridUtils) {
     using namespace zenith::design;
     
-    const WaveformCache* cache = gridUtils_.getWaveformCache(clip.audioFilePath);
+    const WaveformCache* cache = gridUtils ? gridUtils->getWaveformCache(clip.audioFilePath) : nullptr;
     
     if (!cache || !cache->isValid || cache->minPeaks.empty()) {
         // Draw "Loading..." indicator instead of fake waveform
@@ -543,8 +633,18 @@ void ArrangerRenderer::drawClipWaveform(SkCanvas* canvas, const ClipView& clip, 
         return;
     }
     
+    // Use track color for waveform (lighter shade)
+    SkColor waveColor = SkColorSetARGB(
+        clip.trackColor.getAlpha(),
+        clip.trackColor.getRed(),
+        clip.trackColor.getGreen(),
+        clip.trackColor.getBlue()
+    );
+    waveColor = lighten(waveColor, 0.4f);
+    waveColor = withAlpha(waveColor, 0.85f);
+    
     SkPaint wavePaint;
-    wavePaint.setColor(SkColorSetARGB(220, 200, 255, 255));
+    wavePaint.setColor(waveColor);
     wavePaint.setAntiAlias(true);
     
     float midY = clipRect.centerY();
@@ -575,7 +675,7 @@ void ArrangerRenderer::drawClipWaveform(SkCanvas* canvas, const ClipView& clip, 
 // MIDI Blob Drawing
 //==============================================================================
 
-void ArrangerRenderer::drawClipMidiBlobs(SkCanvas* canvas, const ClipView& clip, const SkRect& clipRect) {
+void ArrangerRenderer::drawClipMidiBlobs(SkCanvas* canvas, const ClipView& clip, const SkRect& clipRect, float pixelsPerBeat) {
     using namespace zenith::design;
     
     if (clip.noteBlobs.empty() || clip.lengthBeats <= 0.001) {
@@ -611,7 +711,6 @@ void ArrangerRenderer::drawClipMidiBlobs(SkCanvas* canvas, const ClipView& clip,
     
     float pitchRange = static_cast<float>(maxPitch - minPitch + 2);
     float noteHeight = std::max(2.0f, clipRect.height() / pitchRange);
-    float pixelsPerBeat = owner_.pixelsPerBeat;
     
     SkPaint notePaint;
     notePaint.setAntiAlias(true);
@@ -625,14 +724,21 @@ void ArrangerRenderer::drawClipMidiBlobs(SkCanvas* canvas, const ClipView& clip,
         
         if (x + w < clipRect.left() || x > clipRect.right())
             continue;
-            
-        SkRect noteRect = SkRect::MakeXYWH(x, y - noteHeight * 0.5f, w, noteHeight);
         
-        // Gradient for 3D effect
+        SkRect noteRect = SkRect::MakeXYWH(x, y - noteHeight * 0.5f, w, noteHeight);
+            
+        // Use track color for notes (gradient for 3D effect)
+        SkColor noteBaseColor = SkColorSetARGB(
+            clip.trackColor.getAlpha(),
+            clip.trackColor.getRed(),
+            clip.trackColor.getGreen(),
+            clip.trackColor.getBlue()
+        );
+        
         SkPoint pts[2] = {{noteRect.left(), noteRect.top()}, {noteRect.left(), noteRect.bottom()}};
         SkColor noteColors[2] = {
-            SkColorSetARGB(255, 255, 200, 255),
-            SkColorSetARGB(200, 200, 100, 200)
+            lighten(noteBaseColor, 0.3f),
+            darken(noteBaseColor, 0.1f)
         };
         notePaint.setShader(SkGradientShader::MakeLinear(pts, noteColors, nullptr, 2, SkTileMode::kClamp));
         
@@ -702,7 +808,7 @@ void ArrangerRenderer::drawPlayhead(SkCanvas* canvas, float width, float height)
         return;
         
     SkPaint playheadPaint;
-    playheadPaint.setColor(colors::NEON_RED);
+    playheadPaint.setColor(colors::CYAN);
     playheadPaint.setStrokeWidth(2.0f);
     playheadPaint.setAntiAlias(true);
     
@@ -712,7 +818,7 @@ void ArrangerRenderer::drawPlayhead(SkCanvas* canvas, float width, float height)
     
     // Core Line
     playheadPaint.setMaskFilter(nullptr);
-    playheadPaint.setColor(SK_ColorWHITE);
+    playheadPaint.setColor(SkColorSetARGB(255, 200, 255, 255)); // Slightly brightened cyan for core
     playheadPaint.setStrokeWidth(1.0f);
     canvas->drawLine(playheadX, 0, playheadX, height, playheadPaint);
     
@@ -724,7 +830,7 @@ void ArrangerRenderer::drawPlayhead(SkCanvas* canvas, float width, float height)
     cap.close();
     
     SkPaint capPaint;
-    capPaint.setColor(colors::NEON_RED);
+    capPaint.setColor(colors::CYAN);
     capPaint.setStyle(SkPaint::kFill_Style);
     capPaint.setAntiAlias(true);
     canvas->drawPath(cap, capPaint);
@@ -746,6 +852,9 @@ void ArrangerRenderer::drawLoopRegion(SkCanvas* canvas, float width, float heigh
         
     float loopStartX = gridUtils_.beatsToX(owner_.loopStartBeats_);
     float loopEndX = gridUtils_.beatsToX(owner_.loopEndBeats_);
+
+
+
     
     // Don't draw if loop region is outside visible area
     if (loopEndX < HEADER_WIDTH || loopStartX > width)
@@ -840,6 +949,80 @@ void ArrangerRenderer::drawInsertionGuide(SkCanvas* canvas, float height) {
     juce::String label = (editMode == EditMode::Ripple) ? "RIPPLE" : "INSERT";
     canvas->drawString(label.toStdString().c_str(), insertionGuideX + 5.0f,
                        RULER_HEIGHT + 20.0f, labelFont, labelPaint);
+}
+
+//==============================================================================
+// Test Runner
+//==============================================================================
+void ArrangerRenderer::runRenderTest(const char* outputPath) {
+    DBG("Running Render Test...");
+    int w = 800;
+    int h = 400;
+    
+    // Create raster surface
+    auto surface = SkSurfaces::Raster(SkImageInfo::MakeN32Premul(w, h));
+    if (!surface) {
+        DBG("Failed to create surface!");
+        return;
+    }
+    
+    auto canvas = surface->getCanvas();
+    canvas->clear(SkColorSetRGB(30, 30, 35)); // Background
+
+    float testPixelsPerBeat = 40.0f;
+
+    // 1. Audio Clip (Looped)
+    ClipView audioClip;
+    audioClip.clipId = "Audio Loop.wav";
+    audioClip.bounds = juce::Rectangle<float>(20.0f, 50.0f, 400.0f, 80.0f);
+    audioClip.startBeats = 0.0;
+    audioClip.lengthBeats = 10.0;
+    audioClip.loopLengthBeats = 4.0;
+    audioClip.fadeInBeats = 0.5;
+    audioClip.fadeOutBeats = 0.5;
+    audioClip.isMidi = false;
+    audioClip.trackColor = juce::Colours::cyan;
+    audioClip.audioFilePath = "/test/audio.wav"; 
+
+    // 2. MIDI Clip
+    ClipView midiClip;
+    midiClip.clipId = "Synth Melody";
+    midiClip.bounds = juce::Rectangle<float>(20.0f, 150.0f, 200.0f, 80.0f);
+    midiClip.startBeats = 0.0;
+    midiClip.lengthBeats = 5.0;
+    midiClip.isMidi = true;
+    midiClip.trackColor = juce::Colours::magenta;
+    midiClip.isSelected = true;
+
+    // Mock notes
+    MidiNoteBlob n1; n1.startBeats = 0.0; n1.lengthBeats = 1.0; n1.pitch = 60;
+    MidiNoteBlob n2; n2.startBeats = 1.0; n2.lengthBeats = 0.5; n2.pitch = 64;
+    MidiNoteBlob n3; n3.startBeats = 2.0; n3.lengthBeats = 1.5; n3.pitch = 67;
+    MidiNoteBlob n4; n4.startBeats = 4.0; n4.lengthBeats = 0.5; n4.pitch = 72;
+    midiClip.noteBlobs = {n1, n2, n3, n4};
+
+    DBG("Drawing Audio Clip...");
+    drawSingleClip(canvas, audioClip, testPixelsPerBeat, nullptr);
+
+    DBG("Drawing MIDI Clip...");
+    drawSingleClip(canvas, midiClip, testPixelsPerBeat, nullptr);
+
+    // Save
+    DBG("Saving to: " + juce::String(outputPath));
+    auto image = surface->makeImageSnapshot();
+    if (image) {
+        auto pngData = SkPngEncoder::Encode(nullptr, image.get(), {});
+        if (pngData) {
+            juce::File outFile(juce::String::fromUTF8(outputPath));
+            if (outFile.replaceWithData(pngData->data(), pngData->size())) {
+                DBG("Saved successfully.");
+            } else {
+                DBG("Failed to write file.");
+            }
+        } else {
+            DBG("Failed to encode PNG.");
+        }
+    }
 }
 
 } // namespace zenith

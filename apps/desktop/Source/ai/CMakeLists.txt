@@ -75,7 +75,7 @@ message(STATUS "AI learning using JSON storage fallback")
 
 # Add AI include directories
 target_include_directories(ZenithDAW PRIVATE
-    apps/desktop/Source/ai
+    ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 # AI Compiler Definitions

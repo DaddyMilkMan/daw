@@ -171,7 +171,7 @@ void AudioFeedback::initialize() {
     toneSource.reset();
     feedbackDeviceManager.reset();
   } catch (...) {
-    DBG("AudioFeedback: Unknown exception during initialization");
+    DBG("AudioFeedback: Critical unknown failure during initialization");
     feedbackPlayer.reset();
     toneSource.reset();
     feedbackDeviceManager.reset();

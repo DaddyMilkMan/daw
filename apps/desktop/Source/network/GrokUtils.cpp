@@ -59,7 +59,7 @@ juce::var GrokUtils::parseJSONResponse(const juce::String& response)
         DBG("GrokUtils: Regex error during JSON extraction: " + juce::String(e.what()));
     }
     catch (...) {
-        DBG("GrokUtils: Unknown error during regex-based JSON extraction");
+        DBG("GrokUtils: Critical unknown error during regex-based JSON extraction");
     }
 
     // 3. Last resort: Scan for outer braces if no code blocks found

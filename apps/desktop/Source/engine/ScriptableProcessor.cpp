@@ -35,11 +35,24 @@ ScriptableProcessor::ScriptableProcessor()
                                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true))
 {
     L = luaL_newstate();
-    luaL_openlibs(L);
+    
+    // SANDBOX: Only load safe libraries
+    // luaL_openlibs(L); // <-- UNSAFE: Loads os, io, debug, package
+    
+    luaL_requiref(L, "_G", luaopen_base, 1);
+    lua_pop(L, 1);
+    luaL_requiref(L, "table", luaopen_table, 1);
+    lua_pop(L, 1);
+    luaL_requiref(L, "string", luaopen_string, 1);
+    lua_pop(L, 1);
+    luaL_requiref(L, "math", luaopen_math, 1);
+    lua_pop(L, 1);
+    // Explicitly do NOT load os, io, package, debug
 }
 
 ScriptableProcessor::~ScriptableProcessor() {
     const juce::ScopedLock sl (scriptLock);
+    stopTimer();
     if (L) lua_close(L);
 }
 
@@ -48,6 +61,10 @@ void ScriptableProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     if (!L) return;
     lua_pushnumber(L, sampleRate);
     lua_setglobal(L, "SAMPLE_RATE");
+    
+    // Stop GC in audio thread to prevent jitter
+    lua_gc(L, LUA_GCSTOP, 0);
+    startTimer(100); // Run incremental GC on message thread every 100ms
 }
 
 void ScriptableProcessor::releaseResources() {}
@@ -116,6 +133,20 @@ void ScriptableProcessor::getStateInformation (juce::MemoryBlock& destData) {
 
 void ScriptableProcessor::setStateInformation (const void* data, int sizeInBytes) {
     setScript(juce::String::createStringFromData(data, sizeInBytes));
+}
+
+void ScriptableProcessor::timerCallback() {
+   // Incremental GC on message thread
+   // We try to take the lock to ensure we don't interfere with setScript or heavy ops,
+   // but primarily to ensure L is valid and not being closed.
+   // Note: processBlock also takes this lock. If processBlock holds it, we skip GC step.
+   // This prioritizes audio processing over GC.
+   if (scriptLock.tryEnter()) {
+       if (L && isScriptValid.load()) {
+           lua_gc(L, LUA_GCSTEP, 5); // Perform a small amount of GC work
+       }
+       scriptLock.exit();
+   }
 }
 
 } // namespace zenith

@@ -52,3 +52,34 @@ add_custom_target(ai_performance_tests
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Running AI Performance Benchmarks"
 )
+
+# =============================================================================
+# UI Verification Tests
+# =============================================================================
+
+add_executable(ZenithUITests
+    TestMain.cpp
+    UITests.cpp
+    ArrangerValidationTests.cpp
+)
+
+target_link_libraries(ZenithUITests PRIVATE
+    ZenithDAW
+    juce::juce_recommended_config_flags
+    juce::juce_recommended_lto_flags
+    juce::juce_recommended_warning_flags
+)
+
+target_include_directories(ZenithUITests PRIVATE
+    ${CMAKE_BINARY_DIR}/ZenithDAW_artefacts/JuceLibraryCode
+    ../../Source
+)
+
+target_compile_definitions(ZenithUITests PRIVATE
+    JUCE_WEB_BROWSER=0
+    JUCE_USE_CURL=0
+    ZENITH_TEST_MODE=1
+    ZENITH_USE_SKIA=1
+)
+
+add_test(NAME UITests COMMAND ZenithUITests)

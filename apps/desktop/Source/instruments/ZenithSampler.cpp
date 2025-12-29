@@ -305,7 +305,7 @@ void ZenithSamplerProcessor::loadBankAsync(const juce::File &bankFile) {
       // Capture processor pointer by value for safe async access
       ZenithSamplerProcessor* procPtr = processor;
 
-      if (procPtr->parseBankFile(bankFile, *bankData)) {
+      if (procPtr->parseBankFile(bankFile, *bankData, [this](){ return threadShouldExit(); })) {
         // Apply on message thread - capture pointer by VALUE (not this!)
         // Apply on message thread - use WeakReference for safety
         juce::WeakReference<ZenithSamplerProcessor> safeProc(procPtr);
@@ -360,7 +360,7 @@ void ZenithSamplerProcessor::loadBankFromJsonAsync(
         auto baseDir = ContentPaths::getInstance().getInstrumentTypeDirectory(
             "ZenithSampler");
 
-        if (procPtr->parseBankJson(json, baseDir, *bankData)) {
+        if (procPtr->parseBankJson(json, baseDir, *bankData, [this](){ return threadShouldExit(); })) {
           // Apply on message thread - capture pointer by VALUE (not this!)
           // Apply on message thread - use WeakReference for safety
           juce::WeakReference<ZenithSamplerProcessor> safeProc(procPtr);
@@ -390,7 +390,9 @@ void ZenithSamplerProcessor::loadBankFromJsonAsync(
 }
 
 bool ZenithSamplerProcessor::parseBankFile(const juce::File &bankFile,
-                                           SampleBankData &outData) {
+                                           SampleBankData &outData, std::function<bool()> shouldExit) {
+  if (shouldExit && shouldExit()) return false;
+
   // Parse JSON bank file
   auto jsonText = bankFile.loadFileAsString();
   auto json = juce::JSON::parse(jsonText);
@@ -399,12 +401,14 @@ bool ZenithSamplerProcessor::parseBankFile(const juce::File &bankFile,
     return false;
 
   auto baseDir = bankFile.getParentDirectory();
-  return parseBankJson(json, baseDir, outData);
+  return parseBankJson(json, baseDir, outData, shouldExit);
 }
 
 bool ZenithSamplerProcessor::parseBankJson(const juce::var &json,
                                            const juce::File &baseDir,
-                                           SampleBankData &outData) {
+                                           SampleBankData &outData, std::function<bool()> shouldExit) {
+  if (shouldExit && shouldExit()) return false;
+
   auto *obj = json.getDynamicObject();
   if (obj == nullptr)
     return false;
@@ -438,6 +442,8 @@ bool ZenithSamplerProcessor::parseBankJson(const juce::var &json,
   auto samplesDir = baseDir.getChildFile("Samples");
 
   for (int i = 0; i < regionsArray->size(); ++i) {
+    if (shouldExit && shouldExit()) return false;
+
     auto *regionObj = (*regionsArray)[i].getDynamicObject();
     if (regionObj == nullptr)
       continue;

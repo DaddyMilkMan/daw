@@ -236,7 +236,7 @@ void ZenithKnob::drawValueArc(SkCanvas *canvas, float cx, float cy,
   // Glow effect
   float glowAmount =
       (glowIntensity_ + animatedGlow_ * 0.5f) *
-      (isHovered_ ? design::glow::GLOW_STRONG : design::glow::GLOW_SUBTLE);
+      (isHovered_ ? design::effects::GLOW_STRONG : design::effects::GLOW_SUBTLE);
   if (glowAmount > 0.0f) {
     paint.setMaskFilter(
         SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, glowAmount));
@@ -294,7 +294,7 @@ void ZenithKnob::drawCenterCap(SkCanvas *canvas, float cx, float cy,
   shadowPaint.setAntiAlias(true);
   shadowPaint.setColor(design::colors::GLASS_SHADOW);
   shadowPaint.setMaskFilter(
-      SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, design::glow::GLOW_MEDIUM));
+      SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, design::effects::GLOW_MEDIUM));
   canvas->drawCircle(cx, cy + 2.0f, capRadius, shadowPaint);
 
   // Cap gradient (subtle convex look)

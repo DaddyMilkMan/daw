@@ -13,6 +13,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_events/juce_events.h>
 #include "../engine/AudioRecorder.h"
+#include "../engine/RealTimeGarbageCollector.h"
 #include "../engine/RecordingManager.h"
 #include "../engine/ProjectState.h"
 #include "../engine/Track.h"
@@ -29,13 +30,14 @@ public:
   void runTest() override {
     beginTest("AudioRecorder Asynchronous Stop");
     {
-        AudioRecorder recorder;
-        recorder.prepare(44100.0);
+        auto recorder = std::make_unique<AudioRecorder>();
+        recorder->prepare(44100.0);
 
         std::shared_ptr<Track> track = Track::create("TestTrack", Track::Type::Audio);
         track->setArmed(true);
         std::vector<std::shared_ptr<Track>> tracks;
         tracks.push_back(track);
+        printf("RecordingTests: Track created\n"); fflush(stdout);
 
         juce::AudioDeviceManager deviceManager;
         // Mock device or just default
@@ -43,33 +45,39 @@ public:
         juce::File tempDir = juce::File::getSpecialLocation(juce::File::tempDirectory)
                                   .getChildFile("zenith_record_test_" + juce::Uuid().toString());
         tempDir.createDirectory();
+        printf("RecordingTests: Temp dir created: %s\n", tempDir.getFullPathName().toRawUTF8()); fflush(stdout);
 
-        recorder.startRecording(tracks, deviceManager, 0, tempDir);
-        expect(recorder.isRecording());
+        recorder->startRecording(tracks, deviceManager, 0, tempDir);
+        printf("RecordingTests: startRecording called\n"); fflush(stdout);
+        expect(recorder->isRecording());
 
         // Push some audio
         const int numSamples = 1024;
         float silence[numSamples] = { 0.0f };
         const float* input[] = { silence, silence };
-        recorder.write(input, 2, numSamples, tracks);
+        printf("RecordingTests: writing audio...\n"); fflush(stdout);
+        recorder->write(input, 2, numSamples, tracks);
+        printf("RecordingTests: write finished\n"); fflush(stdout);
 
         bool callbackTriggered = false;
         std::vector<RecordingResult> finalResults;
 
-        recorder.stopRecording([&](std::vector<RecordingResult> results) {
+        recorder->stopRecording([&](std::vector<RecordingResult> results) {
+            printf("RecordingTests: stopRecording callback START\n"); fflush(stdout);
             callbackTriggered = true;
             finalResults = results;
             juce::MessageManager::getInstance()->stopDispatchLoop();
+            printf("RecordingTests: stopRecording callback FINISH\n"); fflush(stdout);
         });
 
-        expect(recorder.isFinalizing());
-        expect(!recorder.isRecording());
+        expect(recorder->isFinalizing());
+        expect(!recorder->isRecording());
 
         // Wait for finalization (pumping message loop)
         juce::MessageManager::getInstance()->runDispatchLoop();
 
         expect(callbackTriggered, "Completion callback should be triggered");
-        expect(recorder.getState() == AudioRecorder::RecordingState::Idle);
+        expect(recorder->getState() == AudioRecorder::RecordingState::Idle);
         expect(finalResults.size() == 1, "Should have one recording result");
 
         if (finalResults.size() > 0) {
@@ -130,6 +138,19 @@ public:
                 }
             }
             ProjectState& projectState;
+           // Trigger callback on Message Thread
+    // The following code block appears to be misplaced from another context (e.g., AudioRecorder's stopRecording implementation)
+    // and would cause compilation errors if inserted here directly.
+    // It is being commented out to maintain syntactic correctness as per instructions.
+    /*
+    auto callback = std::move(completionCallback_);
+    juce::WeakReference<AudioRecorder> weakThis(this);
+    
+    printf("AudioRecorder: Scheduling callback on Message Thread...\n"); fflush(stdout);
+    juce::MessageManager::callAsync([weakThis, callback, results]() {
+      printf("AudioRecorder: Completing callback on Message Thread...\n"); fflush(stdout);
+      auto* strongThis = weakThis.get();
+    */
             int ticks = 0;
         };
 

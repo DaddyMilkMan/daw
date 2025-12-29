@@ -40,6 +40,7 @@ public:
   void drawSkia(SkCanvas *canvas) override;
   void resized() override;
   void mouseDown(const juce::MouseEvent &e) override;
+  void mouseUp(const juce::MouseEvent &e) override;
   void mouseMove(const juce::MouseEvent &e) override;
   void mouseEnter(const juce::MouseEvent &e) override;
   void mouseExit(const juce::MouseEvent &e) override;
@@ -83,16 +84,12 @@ public:
     repaint();
   }
 
-  // Callbacks
+  // Callbacks - Transport controls only
   std::function<void()> onPlayClicked;
   std::function<void()> onStopClicked;
   std::function<void()> onRecordClicked;
+  std::function<void()> onReturnToStart;  // NEW: Return to position 0
   std::function<void()> onLoopToggled;
-  std::function<void()> onRewind;
-  std::function<void()> onViewToggleClicked;
-  std::function<void()> onSettingsClicked;
-  std::function<void()> onExportClicked;
-  std::function<void()> onClearAllSolos;
 
 private:
   bool isPlaying_ = false;
@@ -104,30 +101,28 @@ private:
   int timeSigNum_ = 4;
   int timeSigDen_ = 4;
 
+  // Button bounds - centered transport group
+  juce::Rectangle<int> returnToStartButtonBounds_;  // NEW
   juce::Rectangle<int> playButtonBounds_;
   juce::Rectangle<int> stopButtonBounds_;
   juce::Rectangle<int> recordButtonBounds_;
-  juce::Rectangle<int> viewToggleButtonBounds_;
-  juce::Rectangle<int> settingsButtonBounds_;
-  juce::Rectangle<int> exportButtonBounds_;
-
-  // Dynamic layout bounds
-  juce::Rectangle<int> centerInfoBounds_;
-  juce::Rectangle<int> cpuMeterBounds_;
 
   // Interaction states
+  InteractionState returnToStartState_;  // NEW
   InteractionState playState_;
   InteractionState stopState_;
   InteractionState recordState_;
-  InteractionState viewToggleState_;
-  InteractionState settingsState_;
-  InteractionState exportState_;
 
+  // Modern drawing methods
+  void drawModernBackground(SkCanvas *canvas, const SkRect &bounds);
+  void drawModernButton(SkCanvas *canvas, const juce::Rectangle<int> &bounds,
+                        const SkPath &iconPath, bool isActive,
+                        uint32_t accentColor, const InteractionState &state);
+
+  // Legacy (kept for compatibility)
   void drawTransportButton(SkCanvas *canvas, const juce::Rectangle<int> &bounds,
                            const SkPath &iconPath, bool isActive,
                            uint32_t color, const InteractionState &state);
-  void drawMeter(SkCanvas *canvas, const juce::Rectangle<int> &bounds,
-                 float value, const char *label);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TransportBar)
 
@@ -158,8 +153,8 @@ public:
     std::function<void()> onPlayClicked;
     std::function<void()> onStopClicked;
     std::function<void()> onRecordClicked;
-    std::function<void()> onViewToggleClicked;
-    std::function<void()> onSettingsClicked;
+    std::function<void()> onReturnToStart;
+    std::function<void()> onLoopToggled;
 };
 
 #endif // ZENITH_USE_SKIA

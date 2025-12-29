@@ -65,7 +65,7 @@ bool ProjectContext::analyzeFromDAWState(const juce::var& dawState) {
                     if (audioVar.isBinaryData()) {
                         juce::MemoryBlock audioBlock;
                         if (auto* data = audioVar.getBinaryData())
-                            audioBlock.replaceWith(data->getData(), data->getSize());
+                            audioBlock.replaceAll(data->getData(), data->getSize());
                         
                         // Create audio buffer from binary data
                         juce::AudioBuffer<float> audioBuffer;

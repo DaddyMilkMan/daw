@@ -172,7 +172,7 @@ bool AudioExporter::exportProject(const ExportOptions &options) {
 
   // Create local render context
   AudioRenderContext context;
-  context.prepare(options.sampleRate, blockSize, engine_.getNumTracks(), engine_.getNumAuxBuses());
+  context.prepare(options.sampleRate, kExportBlockSize, engine_.getNumTracks(), engine_.getNumAuxBuses());
 
   juce::int64 startSample = static_cast<juce::int64>(options.startTime * options.sampleRate);
   juce::int64 totalSamples = static_cast<juce::int64>(options.sampleRate * duration);
@@ -397,7 +397,7 @@ bool AudioExporter::renderToTempFile(const juce::File &tempFile,
 
   // Create local render context
   AudioRenderContext context;
-  context.prepare(sampleRate, blockSize, engine_.getNumTracks(), engine_.getNumAuxBuses());
+  context.prepare(sampleRate, kExportBlockSize, engine_.getNumTracks(), engine_.getNumAuxBuses());
 
 
   // Note: Engine playback should already be suspended here by wrapper

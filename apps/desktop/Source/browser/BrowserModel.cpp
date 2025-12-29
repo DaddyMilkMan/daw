@@ -222,47 +222,94 @@ void BrowserModel::populateUserLibrary() {
 
 std::vector<std::shared_ptr<BrowserItem>>
 BrowserModel::search(const juce::String &queryText) {
-  std::vector<std::shared_ptr<BrowserItem>> results;
   juce::String query = queryText.toLowerCase().trim();
-
-  if (query.isEmpty())
-    return results;
-
-  struct ScoredItem {
-      std::shared_ptr<BrowserItem> item;
-      int score;
-  };
-  std::vector<ScoredItem> scoredItems;
-
-  for (const auto &item : allIndexableItems_) {
-    if (!item) continue;
-
-    int nameScore = FuzzyMatcher::score(query, item->name);
-    int catScore = FuzzyMatcher::score(query, item->metadata.category);
-    
-    int tagScore = 0;
-    for (const auto &tag : item->metadata.tags) {
-        tagScore = std::max(tagScore, FuzzyMatcher::score(query, tag));
-    }
-
-    int finalScore = std::max({nameScore, catScore, tagScore});
-    
-    if (finalScore > 0) {
-      scoredItems.push_back({item, finalScore});
-    }
+  
+  if (query == lastQuery_) {
+    const juce::ScopedLock lock(resultsLock_);
+    return lastSearchResults_;
   }
 
-  // Sort by score descending
-  std::sort(scoredItems.begin(), scoredItems.end(), [](const ScoredItem &a, const ScoredItem &b) {
-      if (a.score != b.score) return a.score > b.score;
-      return a.item->name.compareNatural(b.item->name) < 0;
-  });
-
-  for (const auto &si : scoredItems) {
-      results.push_back(si.item);
+  // If query is empty, clear immediately
+  if (query.isEmpty()) {
+    stopTimer();
+    lastQuery_ = query;
+    const juce::ScopedLock lock(resultsLock_);
+    lastSearchResults_.clear();
+    return lastSearchResults_;
   }
 
-  return getFilteredItems(results);
+  // Debounce: update pending query and restart timer
+  pendingQuery_ = query;
+  startTimer(250); // 250ms debounce
+
+  const juce::ScopedLock lock(resultsLock_);
+  return lastSearchResults_; // Returns previous results immediately, then updates async after debounce
+}
+
+void BrowserModel::timerCallback() {
+    stopTimer();
+    startAsyncSearch(pendingQuery_);
+}
+
+void BrowserModel::startAsyncSearch(const juce::String& query) {
+    lastQuery_ = query;
+    isSearching_ = true;
+    
+    // Capture items to a stable shared_ptr container for the background task
+    auto itemsToSearch = allIndexableItems_; 
+    
+    juce::Thread::launch([this, query, itemsToSearch]() {
+        struct ScoredItem {
+            std::shared_ptr<BrowserItem> item;
+            int score;
+        };
+        std::vector<ScoredItem> scoredItems;
+
+        for (const auto &item : itemsToSearch) {
+            if (!item) continue;
+
+            int nameScore = FuzzyMatcher::score(query, item->name);
+            int catScore = FuzzyMatcher::score(query, item->metadata.category);
+            
+            int tagScore = 0;
+            for (const auto &tag : item->metadata.tags) {
+                tagScore = std::max(tagScore, FuzzyMatcher::score(query, tag));
+            }
+
+            int finalScore = std::max({nameScore, catScore, tagScore});
+            
+            if (finalScore > 0) {
+                scoredItems.push_back({item, finalScore});
+            }
+        }
+
+        // Sort by score descending
+        std::sort(scoredItems.begin(), scoredItems.end(), [](const ScoredItem &a, const ScoredItem &b) {
+            if (a.score != b.score) return a.score > b.score;
+            return a.item->name.compareNatural(b.item->name) < 0;
+        });
+
+        std::vector<std::shared_ptr<BrowserItem>> results;
+        for (const auto &si : scoredItems) {
+            results.push_back(si.item);
+        }
+
+        // Filter on background as well
+        auto filteredResults = getFilteredItems(results);
+
+        // Post back to message thread
+        juce::MessageManager::callAsync([this, query, filteredResults]() {
+            // Only update if this is still the active query
+            if (query == lastQuery_) {
+                {
+                    const juce::ScopedLock lock(resultsLock_);
+                    lastSearchResults_ = filteredResults;
+                }
+                isSearching_ = false;
+                sendChangeMessage();
+            }
+        });
+    });
 }
 
 std::vector<std::shared_ptr<BrowserItem>>

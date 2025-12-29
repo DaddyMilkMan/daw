@@ -192,14 +192,14 @@ private:
   std::vector<float> visualizerBuffer_{4096};
 
   // Internal state
-  static constexpr int DEFAULT_VOICE_COUNT = 16;
-  int currentMaxVoices_ = DEFAULT_VOICE_COUNT;
-  int currentBlockSize_ = 512;  // Roast Fix #5: Track buffer size for dynamic changes
+  static constexpr int FIXED_VOICE_POOL_SIZE = 64;
+  int currentMaxVoices_ = FIXED_VOICE_POOL_SIZE; // Kept for compatibility but fixed
+  int currentBlockSize_ = 512;
   int maxActiveVoices_ = 0;
   double maxBlockProcessingTime_ = 0.0;
 
   void updateVoiceParameters();
-  void updateVoiceCount();
+  void updateVoiceCount(); // No-op now
 };
 
 class ZenithPolySynth : public InstrumentBase {

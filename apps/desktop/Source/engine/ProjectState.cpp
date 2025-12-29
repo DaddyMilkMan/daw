@@ -128,6 +128,8 @@ const juce::Identifier ProjectState::PROP_NEXT_ID("nextId");
 const juce::Identifier ProjectState::PROP_INPUT_CHANNEL("inputChannel");
 const juce::Identifier ProjectState::PROP_MANUALLY_COLORED("manuallyColored");
 const juce::Identifier ProjectState::PROP_IS_QUARANTINE("isQuarantine");
+const juce::Identifier ProjectState::PROP_IS_MIDI("isMidi");
+
 
 const juce::Identifier ProjectState::PROP_SELECTED_TRACK_ID("selectedTrackId");
 

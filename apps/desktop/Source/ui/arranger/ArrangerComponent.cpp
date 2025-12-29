@@ -298,6 +298,26 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
 #endif
 
 //==============================================================================
+// UI Verification
+//==============================================================================
+
+void ArrangerComponent::runVerificationRender() {
+#ifdef ZENITH_USE_SKIA
+    if (renderer_) {
+        // Find a suitable place to save. For Linux:
+        juce::File home = juce::File::getSpecialLocation(juce::File::userHomeDirectory);
+        juce::File desktop = home.getChildFile("Desktop");
+        juce::File output = desktop.getChildFile("ArrangerVerification.png");
+        
+        renderer_->runRenderTest(output.getFullPathName().toRawUTF8());
+        
+        juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::InfoIcon,
+            "Verification", "UI Verification rendered to: " + output.getFullPathName());
+    }
+#endif
+}
+
+//==============================================================================
 // Grid Resolution
 //==============================================================================
 

@@ -286,7 +286,7 @@ void TimelineRuler::drawSkia(SkCanvas *canvas) {
       if (loopEndX >= 0 && loopStartX <= bounds.getWidth()) {
           SkPaint bracketPaint;
           bracketPaint.setAntiAlias(true);
-          bracketPaint.setColor(colors::NEON_GREEN);
+          bracketPaint.setColor(colors::CYAN);
           bracketPaint.setStyle(SkPaint::kStroke_Style);
           bracketPaint.setStrokeWidth(2.0f);
           
@@ -310,7 +310,7 @@ void TimelineRuler::drawSkia(SkCanvas *canvas) {
           
           // Shaded region in ruler (top strip)
           SkPaint regionPaint;
-          regionPaint.setColor(withAlpha(colors::NEON_GREEN, 0.15f));
+          regionPaint.setColor(withAlpha(colors::CYAN, 0.15f));
           canvas->drawRect(SkRect::MakeLTRB(loopStartX, 0, loopEndX, bounds.getHeight()), regionPaint);
           
           // Loop Label

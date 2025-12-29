@@ -11,7 +11,7 @@ void AuxBusTrack::prepareToPlay(int samplesPerBlockExpected,
 }
 
 void AuxBusTrack::getNextAudioBlock(
-    const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
+    const juce::AudioSourceChannelInfo &bufferToFill, juce::int64 playheadSamples,
     const juce::MidiBuffer *incomingMidi,
     std::span<juce::AudioBuffer<float> * const> auxBuffers,
     const TempoMap *tempoMap, const juce::AudioBuffer<float> *sidechainBuffer) {

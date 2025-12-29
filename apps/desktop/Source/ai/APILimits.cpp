@@ -70,7 +70,7 @@ APILimits::TierConfig APILimits::getCurrentTierConfig() const {
     return tierConfigs.at(APITier::Pro); // Default to Pro
 }
 
-bool APILimits::canMakeRequest() const {
+bool APILimits::canMakeRequest() {
     checkAndResetCounters();
     
     auto config = getCurrentTierConfig();
@@ -229,22 +229,22 @@ void APILimits::saveConfiguration() {
     configFile.replaceWithText(juce::JSON::toString(config));
 }
 
-void APILimits::checkAndResetCounters() const {
+void APILimits::checkAndResetCounters() {
     auto now = juce::Time::getCurrentTime();
     
     // Check minute counter
     if (now - lastMinuteReset > juce::RelativeTime(60.0)) {
-        const_cast<APILimits*>(this)->resetMinuteCounter();
+        resetMinuteCounter();
     }
     
     // Check day counter
     if (now.getDayOfMonth() != lastDayReset.getDayOfMonth()) {
-        const_cast<APILimits*>(this)->resetDailyUsage();
+        resetDailyUsage();
     }
     
     // Check month counter
     if (now.getMonth() != monthStart.getMonth() || now.getYear() != monthStart.getYear()) {
-        const_cast<APILimits*>(this)->resetMonthlyUsage();
+        resetMonthlyUsage();
     }
 }
 

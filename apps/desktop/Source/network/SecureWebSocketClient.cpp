@@ -83,12 +83,14 @@ void SecureWebSocketClient::run() {
     
     if (!webStream->connect(nullptr)) {
         notifyConnectionError("Failed to connect to server");
+        webStream.reset();
         return;
     }
     
     // Perform WebSocket handshake
     if (!performHandshake()) {
         notifyConnectionError("WebSocket handshake failed");
+        webStream.reset();
         return;
     }
     

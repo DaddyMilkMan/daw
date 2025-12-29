@@ -160,7 +160,7 @@ public:
    * @return Pointer to the engine, or nullptr if shutting down/not created
    * @note Use this in loose async callbacks to avoid dangling references
    */
-  static Engine* getInstance();
+
 
   /**
    * @brief Cancel current offline export
@@ -659,6 +659,23 @@ public:
   void setMasterLimiterEnabled(bool enabled);
 
   /**
+   * @brief Clear all master bus plugins
+   */
+  void clearMasterPlugins();
+
+  /**
+   * @brief Get number of master bus plugins
+   */
+  int getNumMasterPlugins() const;
+
+  /**
+   * @brief Get master bus plugin by index
+   * @param index Plugin index
+   * @return Raw pointer to the plugin instance, or nullptr if out of range
+   */
+  juce::AudioPluginInstance* getMasterPlugin(int index) const;
+
+  /**
    * @brief Add a plugin to the master bus
    * @param plugin Shared pointer to the plugin instance
    */
@@ -1056,6 +1073,7 @@ private:
   // Main thread manages lifetime via currentSnapshotHolder_ and snapshotTrash_
   std::atomic<TrackSnapshot *> activeSnapshot_{nullptr};
   std::shared_ptr<TrackSnapshot> currentSnapshotHolder_;
+  std::vector<std::shared_ptr<TrackSnapshot>> snapshotTrash_;
 
   void updateTrackSnapshot();
 

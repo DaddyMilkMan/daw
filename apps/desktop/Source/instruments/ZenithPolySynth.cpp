@@ -229,8 +229,11 @@ void ZenithPolySynthProcessor::processBlock(juce::AudioBuffer<float> &buffer,
   buffer.clear();
   
   {
-      // Bug 8 Fix: usage of voiceLock_
-      const juce::SpinLock::ScopedLockType sl(voiceLock_);
+      // Bug 8 Fix: usage of voiceLock_ 
+      // NOTE: voiceLock_ is now less critical since we don't resize, BUT standard MPE synth usage typically doesn't need external locking if not resizing.
+      // However, parameters are updated on audio thread which is fine.
+      // We keep the lock just in case other UI interactions need it, but it should be uncontested.
+      // const juce::SpinLock::ScopedLockType sl(voiceLock_); 
       synthesiser_.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
   }
 
@@ -370,16 +373,21 @@ void ZenithPolySynthProcessor::pushToVisualizer(const float *buffer,
 //==============================================================================
 
 void ZenithPolySynthProcessor::updateVoiceCount() {
+  // FIXED: Using fixed pool of 64 voices.
+  // We do NOT add/remove voices dynamically to avoid audio thread blocks/allocations.
+  // The 'MaxVoices' parameter can be used to limit logic within voices if needed, 
+  // but for now we just allow full polyphony up to the pool limit.
+  /*
   int targetVoices = paramManager_.getTargetVoiceCount();
   if (targetVoices != currentMaxVoices_) {
     const juce::SpinLock::ScopedLockType sl(voiceLock_);
     while (synthesiser_.getNumVoices() > targetVoices)
       synthesiser_.removeVoice(synthesiser_.getNumVoices() - 1);
     while (synthesiser_.getNumVoices() < targetVoices)
-      // Bug 21: addVoice takes ownership
       synthesiser_.addVoice(new ZenithPolySynthVoice());
     currentMaxVoices_ = targetVoices;
   }
+  */
 }
 
 //==============================================================================

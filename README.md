@@ -4,7 +4,7 @@
 
 **Version:** 0.1.0 - Alpha (Not Production Ready)  
 **Status:** Active Development  
-**Platform:** Windows 10/11 (x64)
+**Platform:** Windows 10/11 (x64), macOS 10.15+, Linux (Ubuntu 20.04+)
 
 ---
 
@@ -32,12 +32,20 @@ This is an **early prototype** in active development. Core features are being im
 ## 🚀 Building from Source
 
 ### Prerequisites
-- Visual Studio 2022 with C++ Desktop Development
-- CMake 3.25+
-- vcpkg (for Skia dependencies)
-- Windows 10/11 x64
+- **Compiler:** 
+  - Windows: Visual Studio 2022 with C++ Desktop Development
+  - macOS: Xcode 14+ with C++ support
+  - Linux: GCC 11+ or Clang 12+
+- **Build System:** CMake 3.25+
+- **Package Manager:** vcpkg (for Skia dependencies)
+- **Platforms:** 
+  - Windows 10/11 x64
+  - macOS 10.15+ (Intel/Apple Silicon)
+  - Linux Ubuntu 20.04+ (x64)
 
 ### Build Steps
+
+### Windows
 
 ```bash
 # 1. Install vcpkg if you haven't
@@ -52,14 +60,64 @@ cd C:\vcpkg
 git clone [your-repo-url] C:\zenith
 cd C:\zenith\daw
 
-# 4. Build (creates build directory)
+# 4. Build
 .\build.bat
 
 # 5. Run
 .\run.bat
 ```
 
-**Build issues?** Check `docs/INSTALL_WINDOWS.md` for troubleshooting.
+### macOS
+
+```bash
+# 1. Install dependencies
+brew install cmake vcpkg
+
+# 2. Install Skia
+vcpkg install skia:x64-osx
+
+# 3. Clone and build
+git clone [your-repo-url] ~/zenith
+cd ~/zenith/daw
+
+# 4. Build
+mkdir build && cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=[vcpkg-root]/scripts/buildsystems/vcpkg.cmake
+make -j$(sysctl -n hw.ncpu)
+
+# 5. Run
+./ZenithDAW
+```
+
+### Linux
+
+```bash
+# 1. Install dependencies
+sudo apt update
+sudo apt install cmake build-essential git
+
+# 2. Install vcpkg
+git clone https://github.com/Microsoft/vcpkg.git ~/vcpkg
+~/vcpkg/bootstrap-vcpkg.sh
+
+# 3. Install Skia
+~/vcpkg/vcpkg install skia:x64-linux
+
+# 4. Clone and build
+git clone [your-repo-url] ~/zenith
+cd ~/zenith/daw
+mkdir build && cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=~/vcpkg/scripts/buildsystems/vcpkg.cmake
+make -j$(nproc)
+
+# 5. Run
+./ZenithDAW
+```
+
+**Build issues?** Check platform-specific guides:
+- `docs/INSTALL_WINDOWS.md` - Windows troubleshooting
+- `docs/INSTALL_MACOS.md` - macOS troubleshooting  
+- `docs/INSTALL_LINUX.md` - Linux troubleshooting
 
 ---
 

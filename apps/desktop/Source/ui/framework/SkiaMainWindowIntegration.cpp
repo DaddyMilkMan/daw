@@ -61,7 +61,7 @@ SkiaOpenGLRenderer::SkiaOpenGLRenderer(juce::Component *componentToAttach)
           std::string("SkiaOpenGLRenderer: Exception in constructor: ") +
           e.what());
     } catch (...) {
-      ZENITH_LOG_ERROR("SkiaOpenGLRenderer: Unknown exception in constructor");
+      ZENITH_LOG_ERROR("SkiaOpenGLRenderer: Critical unknown exception in constructor - Renderer may be unstable");
     }
   } else {
     ZENITH_LOG_WARNING(
@@ -156,7 +156,9 @@ void SkiaOpenGLRenderer::newOpenGLContextCreated() {
         "SkiaOpenGLRenderer: GrDirectContext created successfully!");
     contextInitialized_ = true;
     ZENITH_LOG_INFO("SkiaOpenGLRenderer: Initializing surface...");
-    recreateSurface();
+    
+    // Use current safe dimensions or component dimensions
+    recreateSurface(safeWidth_.get(), safeHeight_.get());
   } catch (const std::exception &e) {
     ZENITH_LOG_ERROR(
         std::string(
@@ -169,7 +171,7 @@ void SkiaOpenGLRenderer::newOpenGLContextCreated() {
 }
 
 void SkiaOpenGLRenderer::renderOpenGL() {
-  if (!contextInitialized_ || !grContext_) {
+  if (!isContextInitialized() || !grContext_) {
     static bool loggedOnce = false;
     if (!loggedOnce) {
         ZENITH_LOG_WARNING("SkiaOpenGLRenderer: renderOpenGL called but context not initialized!");
@@ -192,12 +194,12 @@ void SkiaOpenGLRenderer::renderOpenGL() {
   // Instead, we use std::atomic metrics updated from the main thread (in resized())
   // to avoid data races while keeping the render loop lock-free.
 
-  int width = safeWidth_.load();
-  int height = safeHeight_.load();
+  int width = safeWidth_.get();
+  int height = safeHeight_.get();
 
   // Only recreate surface if size changed
   if (width != lastWidth_ || height != lastHeight_ || !surface_) {
-    recreateSurface();
+    recreateSurface(width, height);
     lastWidth_ = width;
     lastHeight_ = height;
   }
@@ -206,9 +208,21 @@ void SkiaOpenGLRenderer::renderOpenGL() {
     return;
   }
 
+  // CRITICAL: Update OpenGL viewport to match physical pixels
+  juce::gl::glViewport(0, 0, width, height);
+
   // Get canvas and clear
   skiaCanvas_ = surface_->getCanvas();
   skiaCanvas_->clear(SkColorSetARGB(255, 10, 10, 15)); // Dark background
+
+  // CRITICAL: Scale canvas to handle HiDPI (logical to physical mapping)
+  if (targetComponent_) {
+    float logicalW = (float)targetComponent_->getWidth();
+    if (logicalW > 0) {
+      float scale = (float)width / logicalW;
+      skiaCanvas_->scale(scale, scale);
+    }
+  }
 
   // Let derived class draw
   drawSkiaContent(skiaCanvas_);
@@ -228,13 +242,13 @@ void SkiaOpenGLRenderer::openGLContextClosing() {
   contextInitialized_ = false;
 }
 
-void SkiaOpenGLRenderer::recreateSurface() {
+void SkiaOpenGLRenderer::recreateSurface(int width, int height) {
   if (!grContext_) {
     return;
   }
+  
+  // Use passed dimensions
 
-  auto width = targetComponent_->getWidth();
-  auto height = targetComponent_->getHeight();
 
   if (width <= 0 || height <= 0) {
     return;
@@ -299,8 +313,15 @@ void SkiaMainWindowIntegration::paint(juce::Graphics &g) {
 }
 
 void SkiaMainWindowIntegration::resized() {
-  // Update thread-safe dimensions for the render thread
-  updateDimensions(getWidth(), getHeight());
+  // Update thread-safe dimensions for the render thread (using physical pixels for HiDPI)
+  float scale = (float)juce::Desktop::getInstance().getDisplays()
+                 .findDisplayForPoint(getScreenBounds().getCentre()).scale;
+  
+  if (scale <= 0.1f) scale = 1.0f; // Sanity check
+
+  updateDimensions((int)std::round((float)getWidth() * scale), 
+                   (int)std::round((float)getHeight() * scale));
+  
   // Surface will be recreated in renderOpenGL if size changed
 }
 

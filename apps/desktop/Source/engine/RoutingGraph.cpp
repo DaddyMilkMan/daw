@@ -14,6 +14,8 @@
 
 #include "RoutingGraph.h"
 #include "RealTimeGarbageCollector.h"
+#include "Track.h"
+#include "AuxBus.h"
 
 namespace zenith {
 
@@ -198,6 +200,37 @@ void RoutingGraph::updateSnapshotWithPointers(
     newSnapshot->auxBusLookup[key] = value;  // Implicit shared_ptr -> weak_ptr
   }
 
+  // OPTIMIZATION: Build linear render list
+  // Pre-resolve all pointers so the audio thread doesn't have to do hash lookups
+  if (currentTopology_) {
+      newSnapshot->linearRenderOrder.reserve(currentTopology_->processingOrder.size());
+      
+      for (const auto& nodeId : currentTopology_->processingOrder) {
+          Snapshot::RenderNode node;
+          node.id = nodeId;
+          
+          // Try Track
+          auto trackIt = newSnapshot->trackLookup.find(nodeId);
+          if (trackIt != newSnapshot->trackLookup.end()) {
+              if (auto trackPtr = trackIt->second.lock()) {
+                  node.track = trackPtr.get();
+                  newSnapshot->linearRenderOrder.push_back(node);
+                  continue; 
+              }
+          }
+          
+          // Try AuxBus
+          auto busIt = newSnapshot->auxBusLookup.find(nodeId);
+          if (busIt != newSnapshot->auxBusLookup.end()) {
+              if (auto busPtr = busIt->second.lock()) {
+                  node.bus = busPtr.get();
+                  newSnapshot->linearRenderOrder.push_back(node);
+                  continue;
+              }
+          }
+      }
+  }
+
   // Atomic swap
   activeSnapshot_.store(newSnapshot.get(), std::memory_order_release);
   RealTimeGarbageCollector::getInstance().deferDelete(currentSnapshot_);
@@ -235,6 +268,39 @@ void RoutingGraph::removeNode(const juce::String &nodeId) {
   updateSnapshot();
 }
 
+bool RoutingGraph::detectCycle(const juce::String& sourceId, const juce::String& destId) {
+    // Basic idea: If we can reach sourceId starting from destId, then adding sourceId->destId creates a cycle.
+    // We use the existing connections plus the potential new one.
+    
+    std::unordered_map<std::string, std::vector<std::string>> adj;
+    for (const auto& c : connections_) {
+        adj[c.sourceId.toStdString()].push_back(c.destId.toStdString());
+    }
+    
+    // BFS queue
+    std::vector<std::string> queue;
+    std::unordered_set<std::string> visited;
+    
+    queue.push_back(destId.toStdString());
+    visited.insert(destId.toStdString());
+    
+    size_t head = 0;
+    while(head < queue.size()) {
+        std::string u = queue[head++];
+        
+        if (u == sourceId.toStdString()) return true; // Found path back to source
+        
+        for (const auto& v : adj[u]) {
+            if (visited.find(v) == visited.end()) {
+                visited.insert(v);
+                queue.push_back(v);
+            }
+        }
+    }
+    
+    return false;
+}
+
 bool RoutingGraph::connect(const juce::String &sourceId,
                            const juce::String &destId, float gain,
                            bool isSidechain, bool isFeedback) {
@@ -253,6 +319,17 @@ bool RoutingGraph::connect(const juce::String &sourceId,
     if (c.sourceId == sourceId && c.destId == destId &&
         c.isSidechain == isSidechain)
       return true; // Already connected
+  }
+  
+  // Proactive Cycle Detection (unless explicitly marked as feedback)
+  if (!isFeedback && detectCycle(sourceId, destId)) {
+      // Cycle detected!
+      // In a real scenario, we might want to allow this if 'isFeedback' was passed as true,
+      // but for standard routing, we block it to prevent infinite recursion in the renderer.
+      // If the user *intends* a feedback loop, they should use a specific feedback device, 
+      // but standard track routing should be DAG.
+      DBG("RoutingGraph: Cycle detected! Connection " + sourceId + " -> " + destId + " rejected.");
+      return false;
   }
 
   Connection c;

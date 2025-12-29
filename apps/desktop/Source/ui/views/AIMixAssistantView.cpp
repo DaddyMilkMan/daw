@@ -9,7 +9,7 @@
 */
 
 #include "AIMixAssistantView.h"
-#include "../ZenithDesignSystem.h"
+#include "../design-system/ZenithDesignSystem.h"
 
 namespace zenith {
 

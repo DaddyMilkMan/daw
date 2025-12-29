@@ -1,4 +1,5 @@
 #pragma once
+#include <span>
 #include "../instruments/Instrument.h"
 #include "ClipTrack.h"
 
@@ -35,7 +36,7 @@ public:
   }
 
   void getNextAudioBlock(
-      const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
+      const juce::AudioSourceChannelInfo &bufferToFill, juce::int64 playheadSamples,
       const juce::MidiBuffer *incomingMidi = nullptr,
       std::span<juce::AudioBuffer<float> * const> auxBuffers = {},
       const TempoMap *tempoMap = nullptr,

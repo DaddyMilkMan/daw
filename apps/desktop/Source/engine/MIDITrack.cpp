@@ -10,7 +10,7 @@ void MIDITrack::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
 }
 
 void MIDITrack::getNextAudioBlock(
-    const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
+    const juce::AudioSourceChannelInfo &bufferToFill, juce::int64 playheadSamples,
     const juce::MidiBuffer *incomingMidi,
     std::span<juce::AudioBuffer<float> * const> auxBuffers,
     const TempoMap *tempoMap, const juce::AudioBuffer<float> *sidechainBuffer) {
@@ -29,7 +29,8 @@ void MIDITrack::getNextAudioBlock(
   // 3. Add Clip MIDI with High-Res Support
   auto *snapshot = activeClipSnapshot_.load(std::memory_order_acquire);
   if (snapshot != nullptr) {
-    for (auto *clip : snapshot->clips) {
+    for (const auto& clipPtr : snapshot->clips) {
+      auto* clip = clipPtr.get();
       if (clip->getType() == Clip::Type::MIDI) {
         clip->setTransportPosition(playheadSamples);
         clip->getMidiEvents(midiBuffer, numSamples);

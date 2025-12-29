@@ -1,0 +1,84 @@
+Available Unit Tests:
+ - [AudioEngine] Track Processing
+ - [AudioEngine] Clip Playback
+ - [AudioEngine] MIDI Routing
+ - [AudioEngine] Mixer Channel
+ - [AudioEngine] Plugin Hosting
+ - [AudioEngine] Basic Audio Processing
+ - [Stability] Audio Stability (NaN/Inf)
+ - [ProjectState] ValueTree Integrity
+ - [ProjectState] Undo/Redo
+ - [ProjectState] Track Manipulation
+ - [ProjectState] Clip Manipulation
+ - [ProjectState] Automation Data
+ - [ProjectState] Project Serialization
+ - [ProjectState] Piano Roll Features
+ - [AudioEngine] Core Engine
+ - [Concurrency] Lock-Free Stress Test
+ - [Concurrency] Master Plugin RCU Stress Test
+ - [Concurrency] Engine Plugin Management Stress Test
+ - [] Theme System Tests
+ - [] UITests
+ - [MIDI] MIDI 2.0 Property Exchange
+ - [AI] AI Integration
+ - [Accessibility] AccessibilityTests
+ - [Network] CRDT Synchronization
+ - [DSP] ONNX Pipeline
+ - [Automation] PluginAutomationTests
+ - [] SampleEditorRecordingTests
+ - [Networking] Collaboration Multi-Peer
+ - [] CollaborationSecurityTest
+ - [DSP] DSP Voice Changer
+ - [AudioEngine] Recording Tempo
+ - [AudioEngine] Recording
+ - [RoutingGraph] Feedback Loop Stability
+ - [Export] Dither Algorithms
+ - [Export] Export Options
+ - [Export] Normalization
+ - [UI] ArrangerValidationTests
+-----------------------------------
+Random seed: 0xf6a0a5
+-----------------------------------------------------------------
+Starting tests in: Track Processing / Track creation...
+Completed tests in Track Processing / Track creation
+-----------------------------------------------------------------
+Starting tests in: Track Processing / Track mute/solo...
+Completed tests in Track Processing / Track mute/solo
+-----------------------------------------------------------------
+Starting tests in: Track Processing / Track volume processing...
+Completed tests in Track Processing / Track volume processing
+-----------------------------------------------------------------
+Starting tests in: Track Processing / Track pan processing...
+Completed tests in Track Processing / Track pan processing
+-----------------------------------------------------------------
+Starting tests in: Clip Playback / Clip Timing Accuracy...
+Completed tests in Clip Playback / Clip Timing Accuracy
+-----------------------------------------------------------------
+Starting tests in: Clip Playback / Clip start/stop...
+Completed tests in Clip Playback / Clip start/stop
+-----------------------------------------------------------------
+Starting tests in: Clip Playback / Clip looping...
+Completed tests in Clip Playback / Clip looping
+-----------------------------------------------------------------
+Starting tests in: MIDI Routing / MIDI note routing...
+Completed tests in MIDI Routing / MIDI note routing
+-----------------------------------------------------------------
+Starting tests in: MIDI Routing / MIDI channel filtering...
+Completed tests in MIDI Routing / MIDI channel filtering
+-----------------------------------------------------------------
+Starting tests in: Mixer Channel / EQ processing applies gain...
+Completed tests in Mixer Channel / EQ processing applies gain
+-----------------------------------------------------------------
+Starting tests in: Mixer Channel / Compression reduces gain above threshold...
+Completed tests in Mixer Channel / Compression reduces gain above threshold
+-----------------------------------------------------------------
+Starting tests in: Mixer Channel / Send levels route signal to aux buffers...
+Completed tests in Mixer Channel / Send levels route signal to aux buffers
+-----------------------------------------------------------------
+Starting tests in: Plugin Hosting / Plugin Delay Compensation...
+Completed tests in Plugin Hosting / Plugin Delay Compensation
+-----------------------------------------------------------------
+Starting tests in: Plugin Hosting / Plugin instantiation...
+Completed tests in Plugin Hosting / Plugin instantiation
+-----------------------------------------------------------------
+Starting tests in: Basic Audio Processing / Engine processes audio graph...

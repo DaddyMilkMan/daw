@@ -102,6 +102,18 @@ public:
   void mouseExit(const juce::MouseEvent &event) override;
 
   //==========================================================================
+  // State Management
+  //==========================================================================
+  
+  void setPlaying(bool playing) { isPlaying = playing; repaint(); }
+  void setRecording(bool recording) { isRecording = recording; repaint(); }
+  void setMuted(bool muted) { isMuted = muted; repaint(); }
+  
+  bool getPlaying() const { return isPlaying; }
+  bool getRecording() const { return isRecording; }
+  bool getMuted() const { return isMuted; }
+
+  //==========================================================================
   // Timer interface (for smooth animations)
   //==========================================================================
 
@@ -115,8 +127,22 @@ private:
   // Animation state
   bool isHovered = false;
   bool isSelected = false;
+  bool isPlaying = false;
+  bool isRecording = false;
+  bool isMuted = false;
+  
   float hoverAnimation = 0.0f; // 0.0 to 1.0 for smooth hover animation
   float selectionPulse = 0.0f; // 0.0 to 1.0 for selection glow pulse
+  float playheadAnimation = 0.0f; // 0.0 to 1.0 for active playhead
+  
+  // Drawing Helpers
+  void drawDropShadow(SkCanvas* canvas, const SkRRect& rect);
+  void drawClipBackground(SkCanvas* canvas, const SkRRect& rect, SkColor trackColor);
+  void drawAudioContent(SkCanvas* canvas, const SkRect& rect, SkColor trackColor, int numLoops);
+  void drawMidiContent(SkCanvas* canvas, const SkRect& rect, SkColor trackColor, int numLoops);
+  void drawOverlayStates(SkCanvas* canvas, const SkRRect& rect);
+  void drawClipName(SkCanvas* canvas);
+  void drawFadeHandles(SkCanvas* canvas, float width);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClipComponent)
 };

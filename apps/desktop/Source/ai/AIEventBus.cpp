@@ -57,7 +57,6 @@ void AIEventBus::publish(const AIEvent &event) {
       for (const auto &callback : callbacksToInvoke) {
         if (callback) {
           callback(event);
-          juce::ScopedLock sl(lock_);
           stats_.totalDelivered++;
         }
       }
@@ -162,14 +161,17 @@ std::vector<AIEvent> AIEventBus::getRecentEvents() const {
 //==============================================================================
 
 AIEventBus::Stats AIEventBus::getStats() const {
-  juce::ScopedLock sl(lock_);
-  return stats_;
+  // No lock needed for atomic reads
+  return Stats{
+      stats_.totalPublished.load(),
+      stats_.totalDelivered.load(),
+      stats_.activeSubscriptions.load()
+  };
 }
 
 void AIEventBus::resetStats() {
-  juce::ScopedLock sl(lock_);
-  stats_.totalPublished = 0;
-  stats_.totalDelivered = 0;
+  stats_.totalPublished.store(0);
+  stats_.totalDelivered.store(0);
   // Don't reset activeSubscriptions as it's a live count
 }
 

@@ -179,7 +179,7 @@ private:
     double noiseProfileSampleRate_ = 44100.0;
     
     // Internal buffers
-    std::vector<float> fftBuffer_;
+    std::vector<std::complex<float>> fftBuffer_;
     std::vector<float> windowBuffer_;
     
     // Helper methods

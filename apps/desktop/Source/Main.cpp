@@ -23,6 +23,7 @@
 #include "utils/PlatformSystemUtils.h"
 #include "ui/design-system/FontManager.h"
 #include "engine/ZenithLogger.h"
+#include "ui/arranger/ArrangerRenderer.h"
 
 
 //==============================================================================
@@ -51,13 +52,14 @@ public:
   //==========================================================================
   //==========================================================================
   void initialise(const juce::String &commandLine) override {
-    // Input validation should be added here for production releases
-    juce::ignoreUnused(commandLine);
+    if (commandLine.contains("--render-test")) {
+        DBG("Running verification render test mode...");
+        ::zenith::ArrangerRenderer::runRenderTest("/home/micah/.gemini/antigravity/brain/6610f9c0-632b-4566-8b20-8bfc371ad1f0/clip_verification.png");
+        quit();
+        return;
+    }
 
-    // Log startup
-    DBG("Zenith DAW starting...");
-    DBG("Version: " + getApplicationVersion());
-    DBG("JUCE Version: " + juce::SystemStats::getJUCEVersion());
+
 
     // Log system info
     ::zenith::PlatformSystemUtils::logSystemInfo();

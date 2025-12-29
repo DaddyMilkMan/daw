@@ -20,6 +20,7 @@
 #include "../dsp/SIMDHelpers.h"
 #include "EngineConstants.h"
 #include "RealTimeGarbageCollector.h"
+#include <span>
 
 namespace zenith {
 
@@ -207,7 +208,7 @@ void MixerChannel::getNextAudioBlock(
 
 void MixerChannel::getNextAudioBlock(
     const juce::AudioSourceChannelInfo &bufferToFill,
-    const std::vector<juce::AudioBuffer<float> *> &auxBuffers) {
+    std::span<juce::AudioBuffer<float> * const> auxBuffers) {
 
   if (muted.load() || silencedBySolo.load()) {
     bufferToFill.clearActiveBufferRegion();
@@ -259,7 +260,7 @@ void MixerChannel::getNextAudioBlock(
 
 void MixerChannel::processSends(
     const juce::AudioBuffer<float> &sourceBuffer,
-    const std::vector<juce::AudioBuffer<float> *> &sendBuffers,
+    std::span<juce::AudioBuffer<float> * const> sendBuffers,
     bool matchPreFader) {
   for (int i = 0; i < numSends && i < static_cast<int>(sendBuffers.size());
        ++i) {

@@ -13,8 +13,46 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <array>
 
 namespace zenith {
+
+// SYSTEM SECURITY: Block access to sensitive system directories
+static bool isSensitivePath(const juce::String& path) {
+    static const std::array<juce::String, 4> sensitivePrefixes = {
+        "/etc", "/proc", "/sys", "/root"
+    };
+    
+    // Normalize path separators
+    juce::String normalized = path.replace("\\", "/");
+    
+    for (const auto& prefix : sensitivePrefixes) {
+        if (normalized.startsWith(prefix)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static void sanitizeValueTree(juce::ValueTree vt) {
+    if (vt.hasProperty(ProjectState::PROP_AUDIO_FILE)) {
+        juce::String path = vt.getProperty(ProjectState::PROP_AUDIO_FILE).toString();
+        if (isSensitivePath(path)) {
+            DBG("SECURITY: Blocked loading of sensitive file: " + path);
+            vt.setProperty(ProjectState::PROP_AUDIO_FILE, "", nullptr);
+        }
+    }
+    
+    // Recursively sanitize children
+    for (int i = 0; i < vt.getNumChildren(); ++i) {
+        // Need to get child by reference or index? ValueTree logic...
+        // vt.getChild(i) returns a COPY or reference? It returns a reference wrapper.
+        // We can modify it.
+        juce::ValueTree child = vt.getChild(i);
+        sanitizeValueTree(child);
+    }
+}
+
 
 // File format version - increment when changing XML structure
 static constexpr const char *PROJECT_FORMAT_VERSION = "1.0.0";
@@ -96,6 +134,10 @@ FileIOError ProjectFileIO::loadFromFile(const juce::File &file) {
 
   // Atomic replace: remove listener, update, re-add listener
   auto &state = projectState_.getState();
+  
+  // SANITIZE: Scan for malicious paths before accepting state
+  sanitizeValueTree(newState);
+  
   state.removeListener(&projectState_);
   state = newState;
   state.addListener(&projectState_);
@@ -148,7 +190,7 @@ void ProjectFileIO::loadFromFileAsync(
       return;
     }
 
-    juce::MessageManager::callAsync([this, file, newState, callback] {
+    juce::MessageManager::callAsync([this, file, newState, callback]() mutable {
       // Re-check type safely on message thread
       if (newState.getType() != ProjectState::ID_PROJECT) {
         callback(false, "File is not a Zenith project");
@@ -156,6 +198,10 @@ void ProjectFileIO::loadFromFileAsync(
       }
 
       auto &state = projectState_.getState();
+      
+      // SANITIZE: Scan for malicious paths before accepting state
+      sanitizeValueTree(newState);
+      
       state.removeListener(&projectState_);
       state = newState;
       state.addListener(&projectState_);

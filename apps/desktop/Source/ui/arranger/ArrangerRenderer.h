@@ -107,27 +107,38 @@ private:
     void drawClips(SkCanvas* canvas, float width, float height);
     
     /**
-     * @brief Draw a single clip with full premium styling
+     * @brief Draw a single clip with full premium styling (Static for testing)
      * @param canvas Skia canvas
      * @param clipView Clip view data
+     * @param pixelsPerBeat Pixels per beat for scaling
+     * @param gridUtils Optional grid utils for waveform (nullptr safe)
      */
-    void drawSingleClip(SkCanvas* canvas, const ClipView& clipView);
+    static void drawSingleClip(SkCanvas* canvas, const ClipView& clipView, float pixelsPerBeat, const ArrangerGridUtils* gridUtils);
     
     /**
-     * @brief Draw waveform visualization for an audio clip
+     * @brief Draw waveform visualization for an audio clip (Static)
      * @param canvas Skia canvas
      * @param clip Clip view data
      * @param contentRect Content area rectangle
+     * @param gridUtils Grid utils for waveform cache
      */
-    void drawClipWaveform(SkCanvas* canvas, const ClipView& clip, const SkRect& contentRect);
+    static void drawClipWaveform(SkCanvas* canvas, const ClipView& clip, const SkRect& contentRect, const ArrangerGridUtils* gridUtils);
     
     /**
-     * @brief Draw MIDI note blobs for a MIDI clip
+     * @brief Draw MIDI note blobs for a MIDI clip (Static)
      * @param canvas Skia canvas
      * @param clip Clip view data
      * @param contentRect Content area rectangle
+     * @param pixelsPerBeat Pixels per beat for note scaling
      */
-    void drawClipMidiBlobs(SkCanvas* canvas, const ClipView& clip, const SkRect& contentRect);
+    static void drawClipMidiBlobs(SkCanvas* canvas, const ClipView& clip, const SkRect& contentRect, float pixelsPerBeat);
+
+public:
+    /**
+     * @brief Run a headless render test to verify clip visuals
+     * @param outputPath Path to save the PNG output
+     */
+    static void runRenderTest(const char* outputPath);
     
     /**
      * @brief Draw marquee selection rectangle

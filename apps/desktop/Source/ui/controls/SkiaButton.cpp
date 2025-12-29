@@ -148,7 +148,7 @@ void SkiaButton::drawSkia(SkCanvas *canvas) {
   }
 
   auto bounds = getLocalBounds().toFloat();
-  float cornerRadius = design::dimensions::RADIUS_MD;
+  float cornerRadius = design::dimensions::RADIUS_SM;
 
   SkRRect rrect = SkRRect::MakeRectXY(
       SkRect::MakeXYWH(bounds.getX(), bounds.getY(), bounds.getWidth(),

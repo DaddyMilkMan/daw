@@ -2,13 +2,13 @@
 #include "../engine/Clip.h"
 #include "../engine/Track.h"
 #include "CommandUtils.h"
-#include "Engine.h"
-#include "ProjectState.h"
+#include "../engine/Engine.h"
+#include "../engine/ProjectState.h"
 
 namespace zenith {
 
-ClipCommands::ClipCommands(Engine &eng, ProjectState &state)
-    : engine(eng), projectState(state) {}
+ClipCommands::ClipCommands(Engine &eng, ProjectState &state, CommandAPI &cmdApi)
+    : engine(eng), projectState(state), api(cmdApi) {}
 
 juce::var ClipCommands::listClips(const juce::var &params) {
   if (!params.hasProperty("trackId"))

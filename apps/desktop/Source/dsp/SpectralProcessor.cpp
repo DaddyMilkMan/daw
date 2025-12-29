@@ -16,7 +16,7 @@ namespace zenith {
 namespace dsp {
 
 SpectralProcessor::SpectralProcessor() {
-    fftBuffer_.resize(fftSize_ * 2, 0.0f);
+    fftBuffer_.resize(fftSize_, {0.0f, 0.0f});
     windowBuffer_.resize(fftSize_, 0.0f);
 }
 
@@ -52,19 +52,15 @@ void SpectralProcessor::captureNoiseProfile(const juce::AudioBuffer<float>& audi
         
         // Prepare FFT buffer (interleaved complex)
         for (int i = 0; i < fftSize_; ++i) {
-            fftBuffer_[2 * i] = windowBuffer_[i];
-            fftBuffer_[2 * i + 1] = 0.0f;
+            fftBuffer_[i] = {windowBuffer_[i], 0.0f};
         }
         
         // Perform FFT
-        fft_.perform(reinterpret_cast<const std::complex<float>*>(fftBuffer_.data()),
-                    reinterpret_cast<std::complex<float>*>(fftBuffer_.data()), false);
+        fft_.perform(fftBuffer_.data(), fftBuffer_.data(), false);
         
         // Accumulate magnitudes
         for (int k = 0; k < numBins; ++k) {
-            float real = fftBuffer_[2 * k];
-            float imag = fftBuffer_[2 * k + 1];
-            float mag = std::sqrt(real * real + imag * imag);
+            float mag = std::abs(fftBuffer_[k]);
             noiseProfile_[k] += mag;
         }
         
@@ -123,20 +119,18 @@ void SpectralProcessor::applyNoiseReduction(juce::AudioBuffer<float>& audio,
             
             // Prepare FFT buffer
             for (int i = 0; i < fftSize_; ++i) {
-                fftBuffer_[2 * i] = windowBuffer_[i];
-                fftBuffer_[2 * i + 1] = 0.0f;
+                fftBuffer_[i] = {windowBuffer_[i], 0.0f};
             }
             
             // Forward FFT
-            fft_.perform(reinterpret_cast<const std::complex<float>*>(fftBuffer_.data()),
-                        reinterpret_cast<std::complex<float>*>(fftBuffer_.data()), false);
+            fft_.perform(fftBuffer_.data(), fftBuffer_.data(), false);
             
             // Spectral subtraction
             for (int k = 0; k < numBins; ++k) {
-                float real = fftBuffer_[2 * k];
-                float imag = fftBuffer_[2 * k + 1];
-                float mag = std::sqrt(real * real + imag * imag);
-                float phase = std::atan2(imag, real);
+                float real = fftBuffer_[k].real();
+                float imag = fftBuffer_[k].imag();
+                float mag = std::abs(fftBuffer_[k]);
+                float phase = std::arg(fftBuffer_[k]);
                 
                 // Subtract noise magnitude with over-subtraction factor
                 float noiseMag = noiseProfile_[k] * strength;
@@ -154,24 +148,21 @@ void SpectralProcessor::applyNoiseReduction(juce::AudioBuffer<float>& audio,
                 }
                 
                 // Reconstruct complex
-                fftBuffer_[2 * k] = newMag * std::cos(phase);
-                fftBuffer_[2 * k + 1] = newMag * std::sin(phase);
+                fftBuffer_[k] = std::polar(newMag, phase);
                 
                 // Mirror for IFFT
                 if (k > 0 && k < fftSize_ / 2) {
                     int mirrorK = fftSize_ - k;
-                    fftBuffer_[2 * mirrorK] = fftBuffer_[2 * k];
-                    fftBuffer_[2 * mirrorK + 1] = -fftBuffer_[2 * k + 1];
+                    fftBuffer_[mirrorK] = std::conj(fftBuffer_[k]);
                 }
             }
             
             // Inverse FFT
-            fft_.perform(reinterpret_cast<const std::complex<float>*>(fftBuffer_.data()),
-                        reinterpret_cast<std::complex<float>*>(fftBuffer_.data()), true);
+            fft_.perform(fftBuffer_.data(), fftBuffer_.data(), true);
             
             // Extract real part and apply synthesis window
             for (int i = 0; i < fftSize_; ++i) {
-                windowBuffer_[i] = fftBuffer_[2 * i] / static_cast<float>(fftSize_);
+                windowBuffer_[i] = fftBuffer_[i].real() / static_cast<float>(fftSize_);
             }
             window_.multiplyWithWindowingTable(windowBuffer_.data(), fftSize_);
             
@@ -235,32 +226,27 @@ void SpectralProcessor::applyFrequencyGain(juce::AudioBuffer<float>& audio,
             
             // FFT
             for (int i = 0; i < fftSize_; ++i) {
-                fftBuffer_[2 * i] = windowBuffer_[i];
-                fftBuffer_[2 * i + 1] = 0.0f;
+                fftBuffer_[i] = {windowBuffer_[i], 0.0f};
             }
             
-            fft_.perform(reinterpret_cast<const std::complex<float>*>(fftBuffer_.data()),
-                        reinterpret_cast<std::complex<float>*>(fftBuffer_.data()), false);
+            fft_.perform(fftBuffer_.data(), fftBuffer_.data(), false);
             
             // Apply gain to selected frequency range
             for (int k = lowBin; k <= highBin; ++k) {
-                fftBuffer_[2 * k] *= gainLinear;
-                fftBuffer_[2 * k + 1] *= gainLinear;
+                fftBuffer_[k] *= gainLinear;
                 
                 // Mirror
                 if (k > 0 && k < fftSize_ / 2) {
                     int mirrorK = fftSize_ - k;
-                    fftBuffer_[2 * mirrorK] = fftBuffer_[2 * k];
-                    fftBuffer_[2 * mirrorK + 1] = -fftBuffer_[2 * k + 1];
+                    fftBuffer_[mirrorK] = std::conj(fftBuffer_[k]);
                 }
             }
             
             // IFFT
-            fft_.perform(reinterpret_cast<const std::complex<float>*>(fftBuffer_.data()),
-                        reinterpret_cast<std::complex<float>*>(fftBuffer_.data()), true);
+            fft_.perform(fftBuffer_.data(), fftBuffer_.data(), true);
             
             for (int i = 0; i < fftSize_; ++i) {
-                windowBuffer_[i] = fftBuffer_[2 * i] / static_cast<float>(fftSize_);
+                windowBuffer_[i] = fftBuffer_[i].real() / static_cast<float>(fftSize_);
             }
             window_.multiplyWithWindowingTable(windowBuffer_.data(), fftSize_);
             
@@ -310,36 +296,29 @@ void SpectralProcessor::applySpectralGate(juce::AudioBuffer<float>& audio,
             window_.multiplyWithWindowingTable(windowBuffer_.data(), fftSize_);
             
             for (int i = 0; i < fftSize_; ++i) {
-                fftBuffer_[2 * i] = windowBuffer_[i];
-                fftBuffer_[2 * i + 1] = 0.0f;
+                fftBuffer_[i] = {windowBuffer_[i], 0.0f};
             }
             
-            fft_.perform(reinterpret_cast<const std::complex<float>*>(fftBuffer_.data()),
-                        reinterpret_cast<std::complex<float>*>(fftBuffer_.data()), false);
+            fft_.perform(fftBuffer_.data(), fftBuffer_.data(), false);
             
             // Gate bins below threshold
             for (int k = 0; k < numBins; ++k) {
-                float real = fftBuffer_[2 * k];
-                float imag = fftBuffer_[2 * k + 1];
-                float mag = std::sqrt(real * real + imag * imag);
+                float mag = std::abs(fftBuffer_[k]);
                 
                 if (mag < thresholdLinear) {
-                    fftBuffer_[2 * k] = 0.0f;
-                    fftBuffer_[2 * k + 1] = 0.0f;
+                    fftBuffer_[k] = {0.0f, 0.0f};
                 }
                 
                 if (k > 0 && k < fftSize_ / 2) {
                     int mirrorK = fftSize_ - k;
-                    fftBuffer_[2 * mirrorK] = fftBuffer_[2 * k];
-                    fftBuffer_[2 * mirrorK + 1] = -fftBuffer_[2 * k + 1];
+                    fftBuffer_[mirrorK] = std::conj(fftBuffer_[k]);
                 }
             }
             
-            fft_.perform(reinterpret_cast<const std::complex<float>*>(fftBuffer_.data()),
-                        reinterpret_cast<std::complex<float>*>(fftBuffer_.data()), true);
+            fft_.perform(fftBuffer_.data(), fftBuffer_.data(), true);
             
             for (int i = 0; i < fftSize_; ++i) {
-                windowBuffer_[i] = fftBuffer_[2 * i] / static_cast<float>(fftSize_);
+                windowBuffer_[i] = fftBuffer_[i].real() / static_cast<float>(fftSize_);
             }
             window_.multiplyWithWindowingTable(windowBuffer_.data(), fftSize_);
             
@@ -419,21 +398,17 @@ void SpectralProcessor::applySpectralBlur(juce::AudioBuffer<float>& audio,
             window_.multiplyWithWindowingTable(windowBuffer_.data(), fftSize_);
             
             for (int i = 0; i < fftSize_; ++i) {
-                fftBuffer_[2 * i] = windowBuffer_[i];
-                fftBuffer_[2 * i + 1] = 0.0f;
+                fftBuffer_[i] = {windowBuffer_[i], 0.0f};
             }
             
-            fft_.perform(reinterpret_cast<const std::complex<float>*>(fftBuffer_.data()),
-                        reinterpret_cast<std::complex<float>*>(fftBuffer_.data()), false);
+            fft_.perform(fftBuffer_.data(), fftBuffer_.data(), false);
             
             // Blur magnitudes by averaging with neighbors
             std::vector<float> blurredMags(numBins);
             std::vector<float> originalPhases(numBins);
             
             for (int k = 0; k < numBins; ++k) {
-                float real = fftBuffer_[2 * k];
-                float imag = fftBuffer_[2 * k + 1];
-                originalPhases[k] = std::atan2(imag, real);
+                originalPhases[k] = std::arg(fftBuffer_[k]);
                 
                 // Average magnitude over blur window
                 float sumMag = 0.0f;
@@ -441,9 +416,7 @@ void SpectralProcessor::applySpectralBlur(juce::AudioBuffer<float>& audio,
                 for (int j = -blurWidth; j <= blurWidth; ++j) {
                     int idx = k + j;
                     if (idx >= 0 && idx < numBins) {
-                        float r = fftBuffer_[2 * idx];
-                        float im = fftBuffer_[2 * idx + 1];
-                        sumMag += std::sqrt(r * r + im * im);
+                        sumMag += std::abs(fftBuffer_[idx]);
                         count++;
                     }
                 }
@@ -452,21 +425,18 @@ void SpectralProcessor::applySpectralBlur(juce::AudioBuffer<float>& audio,
             
             // Reconstruct with blurred magnitudes
             for (int k = 0; k < numBins; ++k) {
-                fftBuffer_[2 * k] = blurredMags[k] * std::cos(originalPhases[k]);
-                fftBuffer_[2 * k + 1] = blurredMags[k] * std::sin(originalPhases[k]);
+                fftBuffer_[k] = std::polar(blurredMags[k], originalPhases[k]);
                 
                 if (k > 0 && k < fftSize_ / 2) {
                     int mirrorK = fftSize_ - k;
-                    fftBuffer_[2 * mirrorK] = fftBuffer_[2 * k];
-                    fftBuffer_[2 * mirrorK + 1] = -fftBuffer_[2 * k + 1];
+                    fftBuffer_[mirrorK] = std::conj(fftBuffer_[k]);
                 }
             }
             
-            fft_.perform(reinterpret_cast<const std::complex<float>*>(fftBuffer_.data()),
-                        reinterpret_cast<std::complex<float>*>(fftBuffer_.data()), true);
+            fft_.perform(fftBuffer_.data(), fftBuffer_.data(), true);
             
             for (int i = 0; i < fftSize_; ++i) {
-                windowBuffer_[i] = fftBuffer_[2 * i] / static_cast<float>(fftSize_);
+                windowBuffer_[i] = fftBuffer_[i].real() / static_cast<float>(fftSize_);
             }
             window_.multiplyWithWindowingTable(windowBuffer_.data(), fftSize_);
             
@@ -528,18 +498,14 @@ std::vector<std::vector<float>> SpectralProcessor::computeSpectrogram(
         
         // FFT
         for (int i = 0; i < fftSize_; ++i) {
-            fftBuffer_[2 * i] = windowBuffer_[i];
-            fftBuffer_[2 * i + 1] = 0.0f;
+            fftBuffer_[i] = {windowBuffer_[i], 0.0f};
         }
         
-        fft_.perform(reinterpret_cast<const std::complex<float>*>(fftBuffer_.data()),
-                    reinterpret_cast<std::complex<float>*>(fftBuffer_.data()), false);
+        fft_.perform(fftBuffer_.data(), fftBuffer_.data(), false);
         
         // Extract magnitudes
         for (int k = 0; k < numFreqBins; ++k) {
-            float real = fftBuffer_[2 * k];
-            float imag = fftBuffer_[2 * k + 1];
-            float mag = std::sqrt(real * real + imag * imag) / static_cast<float>(fftSize_);
+            float mag = std::abs(fftBuffer_[k]) / static_cast<float>(fftSize_);
             
             // Convert to dB and normalize to 0-1 range
             float db = 20.0f * std::log10(mag + 1e-10f);

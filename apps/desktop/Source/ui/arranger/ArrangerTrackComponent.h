@@ -13,7 +13,9 @@
 #include "../controls/ZenithSlider.h"
 #include "../controls/ZenithKnob.h"
 #include "../controls/SkiaButton.h" 
+#include "../controls/SkiaButton.h" 
 #include "../design-system/ZenithTheme.h"
+#include "TrackHeaderComponent.h"
 
 namespace zenith {
 
@@ -34,6 +36,8 @@ public:
   ArrangerTrackComponent(ProjectState &ps, ArrangerGridUtils &gridUtils,
                          TrackType type = TrackType::Audio);
   ~ArrangerTrackComponent() override;
+
+  void resized() override; // Added
 
   void drawSkia(SkCanvas *canvas) override;
 
@@ -105,12 +109,14 @@ private:
   // Interaction State
   bool isHovered_ = false;
   float hoverIntensity_ = 0.0f; // 0.0 to 1.0 for animation
-
-  int hoveredButtonIndex_ = -1; // 0=Mute, 1=Solo, 2=Rec
+  int hoveredButtonIndex_ = -1;
   
-  // Controls
-  std::unique_ptr<ZenithSlider> volSlider;
-  std::unique_ptr<ZenithKnob> panKnob;
+  // Header Component
+  std::unique_ptr<TrackHeaderComponent> headerComponent_;
+
+  // Controls (Moved to TrackHeaderComponent)
+  // std::unique_ptr<ZenithSlider> volSlider;
+  // std::unique_ptr<ZenithKnob> panKnob;
 
   // Section Specific State
   std::vector<ArrangementSection> sections_; // Cache
@@ -127,9 +133,9 @@ private:
   void rebuildSections(); // Pull from ProjectState
 
   // Helpers
-  void drawTrackHeader(SkCanvas *canvas, const SkRect &bounds);
+  // void drawTrackHeader(SkCanvas *canvas, const SkRect &bounds); // Removed/Disabled
   void drawTrackBackground(SkCanvas *canvas, const SkRect &bounds);
-  void drawControls(SkCanvas *canvas, float x, float y);
+  // void drawControls(SkCanvas *canvas, float x, float y); // Removed/Disabled
   void drawSections(SkCanvas *canvas, const SkRect &bounds);
   
   // Take Folders

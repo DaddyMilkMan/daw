@@ -16,7 +16,9 @@
 #include <atomic>
 #include <juce_core/juce_core.h>
 #include <juce_cryptography/juce_cryptography.h>
-#include <map>
+#include <juce_cryptography/juce_cryptography.h>
+#include <unordered_map>
+#include <list>
 #include <optional>
 
 namespace zenith {
@@ -32,6 +34,7 @@ struct CacheEntry {
   juce::int64 cachedAt;    // Timestamp when cached (ms since epoch)
   juce::int64 expiresAt;   // Expiration timestamp
   int hitCount = 0;        // Number of cache hits
+  std::list<juce::String>::iterator lruIterator; // O(1) access to LRU position
 
   bool isExpired() const { return juce::Time::currentTimeMillis() > expiresAt; }
 };
@@ -181,7 +184,11 @@ private:
   mutable juce::CriticalSection cacheLock_;
 
   // In-memory cache (backed by SQLite for persistence)
-  std::map<juce::String, CacheEntry> cache_;
+  // O(1) lookup
+  std::unordered_map<juce::String, CacheEntry> cache_; 
+  
+  // O(1) LRU tracking (front = most recent, back = least recent)
+  std::list<juce::String> lruList_;
 
   // SQLite database handle (using juce::File for now, could use raw SQLite)
   juce::File cacheDir_;

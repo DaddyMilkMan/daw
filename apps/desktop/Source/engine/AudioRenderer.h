@@ -244,7 +244,7 @@ public:
       std::span<const std::shared_ptr<juce::AudioPluginInstance>> masterPlugins,
       int limiterLatency);
 
-  static constexpr int kMaxAuxBuses = 32;
+  static constexpr int kMaxAuxBuses = 128;
 
 private:
   //==========================================================================

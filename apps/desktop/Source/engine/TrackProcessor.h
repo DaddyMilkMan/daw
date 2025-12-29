@@ -13,6 +13,7 @@
 
 #pragma once
 
+#include <span>
 #include "MixerChannel.h"
 #include "PluginChain.h"
 #include <juce_audio_basics/juce_audio_basics.h>
@@ -41,7 +42,7 @@ public:
      */
     void processBlock(const juce::AudioSourceChannelInfo& bufferToFill,
                       juce::MidiBuffer& midiMessages,
-                      const std::vector<juce::AudioBuffer<float>*>& auxBuffers,
+                      std::span<juce::AudioBuffer<float>* const> auxBuffers,
                       const juce::AudioBuffer<float>* sidechainBuffer);
 
     // Convenience overload for frozen track processing

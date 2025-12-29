@@ -67,7 +67,7 @@ void Track::loadPluginState(const juce::ValueTree& pluginTree, PluginHost& host)
             } catch (const std::exception& e) {
                 ZENITH_LOG_ERROR("Exception restoring plugin state: " + juce::String(e.what()));
             } catch (...) {
-                ZENITH_LOG_ERROR("Unknown exception restoring plugin state");
+                ZENITH_LOG_ERROR("Critical unknown exception restoring plugin state - Plugin may be corrupted");
             }
         }
     } else {

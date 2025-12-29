@@ -41,6 +41,8 @@ class ZenithSamplerVoice;
 class ZenithSamplerProcessor : public juce::AudioProcessor {
 public:
   //==========================================================================
+  JUCE_DECLARE_WEAK_REFERENCEABLE(ZenithSamplerProcessor)
+
   // Parameter indices
   //==========================================================================
   enum Parameters {
@@ -224,9 +226,9 @@ private:
   void loadBankAsync(const juce::File &bankFile);
   void loadBankFromJsonAsync(const juce::String &jsonString,
                              const juce::String &bankName);
-  bool parseBankFile(const juce::File &bankFile, SampleBankData &outData);
+  bool parseBankFile(const juce::File &bankFile, SampleBankData &outData, std::function<bool()> shouldExit = nullptr);
   bool parseBankJson(const juce::var &json, const juce::File &baseDir,
-                     SampleBankData &outData);
+                     SampleBankData &outData, std::function<bool()> shouldExit = nullptr);
   void applyBankData(std::shared_ptr<SampleBankData> bankData);
 
   //==========================================================================

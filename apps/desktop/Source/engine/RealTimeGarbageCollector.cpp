@@ -13,17 +13,14 @@
 
 namespace zenith {
 
-static RealTimeGarbageCollector* gInstance = nullptr;
 
 RealTimeGarbageCollector& RealTimeGarbageCollector::getInstance() {
-  if (gInstance == nullptr)
-      gInstance = new RealTimeGarbageCollector();
-  return *gInstance;
+  static RealTimeGarbageCollector instance;
+  return instance;
 }
 
 void RealTimeGarbageCollector::deleteInstance() {
-    delete gInstance;
-    gInstance = nullptr;
+  // Static instance cleanup is handled by the OS at shutdown
 }
 
 RealTimeGarbageCollector::RealTimeGarbageCollector() {

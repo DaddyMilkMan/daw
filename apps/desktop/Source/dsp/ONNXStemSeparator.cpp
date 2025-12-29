@@ -28,8 +28,8 @@ struct ONNXStemSeparator::Impl {
   std::unique_ptr<Ort::SessionOptions> sessionOptions;
 
   // Model metadata
-  std::vector<const char *> inputNames;
-  std::vector<const char *> outputNames;
+  std::vector<std::string> inputNames;
+  std::vector<std::string> outputNames;
   std::vector<int64_t> inputShape;
   std::vector<int64_t> outputShape;
 
@@ -39,10 +39,7 @@ struct ONNXStemSeparator::Impl {
   // Reuse buffer for input tensor
   std::vector<float> inputTensorValues;
 
-  ~Impl() {
-      for (auto name : inputNames) delete[] name;
-      for (auto name : outputNames) delete[] name;
-  }
+  ~Impl() = default;
 #endif
 };
 
@@ -96,9 +93,9 @@ bool ONNXStemSeparator::initialize(const juce::File &modelPath) {
   }
 
   if (!fileToLoad.existsAsFile()) {
-    DBG("ONNXStemSeparator: Model file not found - " +
-        modelPath.getFullPathName());
-    return false;
+        DBG("ONNXStemSeparator: Model file not found - " +
+            modelPath.getFullPathName());
+        return false;
   }
 
   // Validate file size (model should be at least 100KB for a minimal valid model)
@@ -140,8 +137,7 @@ bool ONNXStemSeparator::initialize(const juce::File &modelPath) {
 
   // Reset any previous state before loading new model
 #ifdef ZENITH_USE_ONNX_RUNTIME
-  for (auto name : pImpl->inputNames) delete[] name;
-  for (auto name : pImpl->outputNames) delete[] name;
+  // Vectors clear automatically thanks to RAII std::string
   pImpl->inputNames.clear();
   pImpl->outputNames.clear();
   pImpl->session.reset();
@@ -162,8 +158,7 @@ bool ONNXStemSeparator::initialize(const juce::File &modelPath) {
     pImpl->sessionOptions->SetGraphOptimizationLevel(
         GraphOptimizationLevel::ORT_ENABLE_ALL);
 
-    // Set thread count for inference (audio processing typically uses 2-4
-    // threads)
+    // Set thread count for inference
     pImpl->sessionOptions->SetIntraOpNumThreads(2);
     pImpl->sessionOptions->SetInterOpNumThreads(2);
 
@@ -186,34 +181,17 @@ bool ONNXStemSeparator::initialize(const juce::File &modelPath) {
     // Get input/output metadata
     Ort::AllocatorWithDefaultOptions allocator;
 
-    // Input metadata (typically [batch, channels, samples] for audio models)
-    size_t numInputs = pImpl->session->GetInputCount();
-    if (numInputs > 0) {
-      Ort::AllocatedStringPtr inputNameAllocated =
-          pImpl->session->GetInputNameAllocated(0, allocator);
-      pImpl->inputNames.push_back(inputNameAllocated.get());
-      inputNameAllocated.release(); // Transfer ownership to vector (manual management for C API wrapper)
-      // Actually, Ort::AllocatedStringPtr manages it, but we need it in inputNames (const char*)
-      // The push_back(get()) is correct as long as we store the AllocatedStringPtr somewhere.
-      // Wait, let's fix this memory management.
-    }
-    
-    // REDO: Robust metadata loading
     pImpl->inputNames.clear();
     pImpl->outputNames.clear();
     
     for (size_t i = 0; i < pImpl->session->GetInputCount(); ++i) {
         auto name = pImpl->session->GetInputNameAllocated(i, allocator);
-        char* nameStr = new char[strlen(name.get()) + 1];
-        strcpy(nameStr, name.get());
-        pImpl->inputNames.push_back(nameStr);
+        pImpl->inputNames.push_back(name.get());
     }
     
     for (size_t i = 0; i < pImpl->session->GetOutputCount(); ++i) {
         auto name = pImpl->session->GetOutputNameAllocated(i, allocator);
-        char* nameStr = new char[strlen(name.get()) + 1];
-        strcpy(nameStr, name.get());
-        pImpl->outputNames.push_back(nameStr);
+        pImpl->outputNames.push_back(name.get());
     }
 
     if (!pImpl->inputNames.empty()) {
@@ -231,7 +209,7 @@ bool ONNXStemSeparator::initialize(const juce::File &modelPath) {
     pImpl->isLoaded = true;
     DBG("ONNXStemSeparator: Model loaded successfully - " +
         fileToLoad.getFileName());
-    DBG("ONNXStemSeparator: Inputs: " + juce::String((int)numInputs) +
+    DBG("ONNXStemSeparator: Inputs: " + juce::String((int)pImpl->inputNames.size()) +
         ", Outputs: " + juce::String((int)pImpl->outputNames.size()));
 
     return true;
@@ -258,12 +236,11 @@ bool ONNXStemSeparator::initialize(const juce::File &modelPath) {
     pImpl->isLoaded = false;
     return false;
   } catch (const std::exception& e) {
-    DBG("ONNXStemSeparator: Unexpected error loading model - " + 
-        juce::String(e.what()));
+    DBG("ONNXStemSeparator: Standard exception while loading model - " + juce::String(e.what()));
     pImpl->isLoaded = false;
     return false;
   } catch (...) {
-    DBG("ONNXStemSeparator: Unknown exception while loading model");
+    DBG("ONNXStemSeparator: Critical unknown failure while loading model!");
     pImpl->isLoaded = false;
     return false;
   }
@@ -323,11 +300,20 @@ ONNXStemSeparator::separate(const juce::AudioBuffer<float> &input,
           *pImpl->memoryInfo, pImpl->inputTensorValues.data(), inputTensorSize,
           inputShape.data(), inputShape.size());
 
+      // Prepare name arrays for Run
+      std::vector<const char*> inputNamesC;
+      inputNamesC.reserve(pImpl->inputNames.size());
+      for (const auto& name : pImpl->inputNames) inputNamesC.push_back(name.c_str());
+
+      std::vector<const char*> outputNamesC;
+      outputNamesC.reserve(pImpl->outputNames.size());
+      for (const auto& name : pImpl->outputNames) outputNamesC.push_back(name.c_str());
+
       // Run inference
       auto startInference = juce::Time::getMillisecondCounterHiRes();
       auto outputTensors = pImpl->session->Run(
-          Ort::RunOptions{nullptr}, pImpl->inputNames.data(), &inputTensor, 1,
-          pImpl->outputNames.data(), pImpl->outputNames.size());
+          Ort::RunOptions{nullptr}, inputNamesC.data(), &inputTensor, 1,
+          outputNamesC.data(), outputNamesC.size());
       auto endInference = juce::Time::getMillisecondCounterHiRes();
       double inferenceDurationMs = endInference - startInference;
 

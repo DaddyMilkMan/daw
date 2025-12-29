@@ -2,14 +2,14 @@
   ==============================================================================
 
     WingmanPanel.h
-    Created: 2025-11-29 (Updated for Grok Integration)
+    Created: 2025-11-29 (Updated for Premium UI)
     Author:  Marcus Williams (UX Team)
 
-    Wingman AI Assistant Panel with Grok Integration
+    Wingman AI Assistant Panel - Premium Glassmorphic Implementation
     - Natural language command input
-    - Mode selector (Fast/Thinking)
-    - Conversation history
-    - Preset generation interface
+    - Context-aware suggestions
+    - Premium animations & glassmorphism
+    - Sample Hunter & Grok Integration
 
   ==============================================================================
 */
@@ -19,22 +19,24 @@
 #include "../ai/SampleHunterAgent.h"
 #include "../network/GrokDAWController.h"
 #include "Engine.h"
-// #include "../network/AIBridgeClient.h" // File missing - disabled temporarily
 #include "../../commands/CommandAPI.h"
-#include "../controls/MarkdownComponent.h"
+#include "../framework/SkiaComponent.h"
+#include "../framework/Animation.h"
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <vector>
+#include <functional>
+#include <deque>
+#include "../components/AIChatMessage.h"
 
 namespace zenith {
 
 /**
-    Wingman AI Assistant Panel
+    Wingman AI Assistant Panel - Premium Implementation
 
-    Provides a chat-like interface for controlling the DAW with natural
-   language. Now includes Sample Hunter integration for finding sounds via chat.
+    Provides a premium, glassmorphic chat interface for controlling the DAW.
 */
-class WingmanPanel : public juce::Component,
+class WingmanPanel : public SkiaComponent,
                      private juce::TextEditor::Listener,
-                     private juce::Button::Listener,
                      public ai::SampleHunterAgent::Listener {
 public:
   //==========================================================================
@@ -44,94 +46,117 @@ public:
   //==========================================================================
   // Component overrides
   void paint(juce::Graphics &g) override;
+  void drawSkia(SkCanvas* canvas) override;
   void resized() override;
+  void timerCallback() override;
+  void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& d) override; // Correct signature for JUCE 8
+  void mouseMove(const juce::MouseEvent& e) override;
+  void mouseDown(const juce::MouseEvent& e) override;
+  void mouseUp(const juce::MouseEvent& e) override;
+  void mouseExit(const juce::MouseEvent& e) override;
 
   //==========================================================================
-  /**
-      Initialize Grok integration
-
-      @param apiKey Grok API key (optional, retrieves from SecureKeyStore if
-     empty)
-      @return true if initialized successfully
-  */
+  // Logic
   bool initializeGrok(const juce::String &apiKey = juce::String());
-
-  /**
-      Check if Grok is ready
-  */
   bool isGrokReady() const;
+  
+  void setContext(const juce::String& contextName);
+  void toggleMinimize();
+
+  //==========================================================================
+  // Callbacks
+  std::function<void(const juce::String&)> onSendMessage;
+  std::function<void(const juce::String&)> onSuggestionClicked;
+  std::function<void()> onVoiceInputStart;
+  std::function<void()> onVoiceInputEnd;
 
 private:
   //==========================================================================
-  // TextEditor::Listener
-  void textEditorReturnKeyPressed(juce::TextEditor &editor) override;
+  // Data Structures
+  struct Suggestion {
+    Suggestion(const juce::String& t, const juce::String& i) : text(t), id(i) {}
+    Suggestion() = default;
 
-  // Button::Listener
-  void buttonClicked(juce::Button *button) override;
+    juce::String text;
+    juce::String id;
+    
+    // Animation/Interaction state
+    animation::AnimatedValue<float> hoverProgress{0.0f};
+    juce::Rectangle<float> bounds;
+    bool isHovered = false;
+  };
 
   //==========================================================================
-  // SampleHunterAgent::Listener
+  // Methods
+  void sendCommand();
+  void appendToConversation(const juce::String &speaker, const juce::String &message, bool isUser);
+  void updateSuggestions();
+  void layoutMessages();
+  void drawHeader(SkCanvas* canvas);
+  void drawContextIndicator(SkCanvas* canvas);
+  void drawChatArea(SkCanvas* canvas);
+  void drawSuggestions(SkCanvas* canvas);
+  void drawInputArea(SkCanvas* canvas);
+  
+  // AIChatMessage Integration
+  std::deque<std::unique_ptr<AIChatMessage>> messages_; 
+  // No longer need drawMessage as components draw themselves
+  
+  // SampleHunter Integration
   void sampleDownloaded(const ai::FoundSample &sample) override;
   void sampleAnalyzed(const ai::FoundSample &sample) override;
   void sampleImported(const juce::File &file) override;
-  void huntingProgressChanged(float progress,
-                              const juce::String &status) override;
+  void huntingProgressChanged(float progress, const juce::String &status) override;
   void huntingComplete(const ai::HuntingStats &stats, bool success) override;
 
-  //==========================================================================
-  // UI Components
-
-  // ...
-  std::unique_ptr<juce::TextEditor> inputField;
-  std::unique_ptr<widgets::MarkdownComponent> conversationDisplay;
-  std::unique_ptr<juce::TextButton> sendButton;
-  std::unique_ptr<juce::TextButton> acceptButton;
-  std::unique_ptr<juce::TextButton> denyButton;
-  std::unique_ptr<juce::ComboBox> modeSelector;
-  std::unique_ptr<juce::Label> modeLabel;
-  std::unique_ptr<juce::Label> statusLabel;
-  std::unique_ptr<juce::TextButton> clearButton;
-  std::unique_ptr<juce::TextButton> settingsButton;
+  // TextEditor Listener
+  void textEditorReturnKeyPressed(juce::TextEditor &editor) override;
 
   //==========================================================================
-  // Backend
-
+  // Dependencies
   CommandAPI &commandAPI;
   Engine &engine_;
   std::unique_ptr<GrokDAWController> grokController;
 
   //==========================================================================
+  // UI Components
+  std::unique_ptr<juce::TextEditor> inputField_;
+  // Custom buttons managed via mouse events/Skia
+  juce::Rectangle<float> minimizeBtnBounds_;
+  juce::Rectangle<float> sendBtnBounds_;
+  juce::Rectangle<float> voiceBtnBounds_;
+  juce::Rectangle<float> brainBtnBounds_;
+  
+  //==========================================================================
   // State
-
-  bool isProcessing = false;
-  GrokMode currentMode = GrokMode::Fast;
-
-  // Sample Hunter state
-  bool isSampleSearchActive_ = false;
-  std::vector<ai::FoundSample> lastSearchResults_;
-  juce::String lastSearchQuery_;
-
-  //==========================================================================
-  // Methods
-
-  void sendCommand();
-  void appendToConversation(const juce::String &speaker,
-                            const juce::String &message);
-  void setStatus(const juce::String &status,
-                 juce::Colour colour = juce::Colours::white);
-  void updateModeFromSelector();
-  void showSettings();
-
-  // Sample Hunter methods (Stateless logic)
-  static bool detectSampleSearchIntent(const juce::String &message,
-                                       juce::String &outQuery);
-  static juce::String cleanQueryFiller(const juce::String &rawQuery);
-
-  // Sample Hunter methods (Stateful)
-  bool handleImportCommand(const juce::String &message);
-  void displaySearchResults(const std::vector<ai::FoundSample> &results);
-
-  //==========================================================================
+  std::vector<Suggestion> suggestions_;
+  
+  juce::String currentContext_ = "Arrangement";
+  juce::String inputPlaceholder_ = "Ask Wingman...";
+  
+  // Animation State
+  animation::AnimatedValue<float> panelWidth_{380.0f};
+  animation::AnimatedValue<float> scrollY_{0.0f};
+  float targetScrollY_ = 0.0f;
+  float maxScrollY_ = 0.0f;
+  
+  animation::AnimatedValue<float> typingIndicatorOpacity_{0.0f};
+  float processingDotPhase_ = 0.0f;
+  
+  // Interaction State
+  bool isMinimized_ = false;
+  bool isProcessing_ = false;
+  bool isTyping_ = false;
+  
+  // Interaction State
+  bool isMinimizeHovered_ = false;
+  bool isSendHovered_ = false;
+  bool isVoiceHovered_ = false;
+  bool isBrainHovered_ = false;
+  bool isBrainActive_ = false;
+  bool isDraggingScroll_ = false;
+  float contentHeight_ = 0.0f;
+  
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WingmanPanel)
 };
 

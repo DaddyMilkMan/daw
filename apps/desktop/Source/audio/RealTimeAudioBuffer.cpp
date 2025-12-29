@@ -371,7 +371,7 @@ bool SampleRateConverter::convert(const juce::AudioBuffer<float>& input,
                                  double outputSampleRate,
                                  Quality quality) {
     
-    if (inputSampleRate == outputSampleRate) {
+    if (std::abs(inputSampleRate - outputSampleRate) < 0.001) {
         output = input;
         return true;
     }
@@ -454,15 +454,21 @@ bool SampleRateConverter::convertSinc(const juce::AudioBuffer<float>& input,
             float sum = 0.0f;
             float kernelSum = 0.0f;
             
+            auto kernel = std::atomic_load(&sincKernel);
+            if (!kernel || kernel->empty()) return true; // Should ideally fallback to linear or silence
+            
+            const auto& k = *kernel;
+            int kSize = (int)k.size();
+
             for (int i = 0; i < kernelSize; ++i) {
                 int index = centerIndex - kernelSize / 2 + i;
                 
                 if (index >= 0 && index < input.getNumSamples()) {
                     float offset = inSample - index;
-                    int kernelIndex = static_cast<int>((offset + kernelSize / 2) * sincKernel.size() / kernelSize);
+                    int kernelIndex = static_cast<int>((offset + kernelSize / 2) * kSize / kernelSize);
                     
-                    if (kernelIndex >= 0 && kernelIndex < static_cast<int>(sincKernel.size())) {
-                        float kernelValue = sincKernel[kernelIndex];
+                    if (kernelIndex >= 0 && kernelIndex < kSize) {
+                        float kernelValue = k[kernelIndex];
                         sum += inData[index] * kernelValue;
                         kernelSum += kernelValue;
                     }
@@ -477,20 +483,23 @@ bool SampleRateConverter::convertSinc(const juce::AudioBuffer<float>& input,
 }
 
 void SampleRateConverter::buildSincKernel(double cutoff) {
-    sincKernel.resize(kernelSize);
+    auto newKernel = std::make_shared<std::vector<float>>();
+    newKernel->resize(kernelSize);
     
     for (int i = 0; i < kernelSize; ++i) {
         float t = (i - kernelSize / 2.0f) / kernelSize * 2.0f;
         
-        if (t == 0.0f) {
-            sincKernel[i] = 1.0f;
+        if (std::abs(t) < 1.0e-7f) {
+            (*newKernel)[i] = 1.0f;
         } else {
-            sincKernel[i] = std::sin(juce::MathConstants<float>::pi * cutoff * t) / (juce::MathConstants<float>::pi * cutoff * t);
+            (*newKernel)[i] = std::sin(juce::MathConstants<float>::pi * cutoff * t) / (juce::MathConstants<float>::pi * cutoff * t);
         }
         
         // Apply window (Hamming)
-        sincKernel[i] *= 0.54f - 0.46f * std::cos(2.0f * juce::MathConstants<float>::pi * i / (kernelSize - 1));
+        (*newKernel)[i] *= 0.54f - 0.46f * std::cos(2.0f * juce::MathConstants<float>::pi * i / (kernelSize - 1));
     }
+    
+    std::atomic_store(&sincKernel, newKernel);
 }
 
 // RealTimeAudioProcessor Implementation

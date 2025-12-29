@@ -8,22 +8,14 @@
 #pragma once
 
 #include "../Source/engine/RecentProjectManager.h"
-#include "../arranger/ArrangerComponent.h"
-#include "../panels/BrowserPanel.h"
 #include "../controls/SkiaButton.h"
 #include "../framework/SkiaMainWindowIntegration.h"
 #include "../framework/AuroraBackground.h"
-#include "../mixer/MixerComponent.h"
-// #include "../session/SessionViewComponent.h"
 #include "../design-system/ZenithLookAndFeel.h"
-#include "../transport/TransportBar.h"
-#include "ArrangementComponent.h"
-#include "BottomBar.h"
 #include "ClipSynchronizer.h"
 #include "Engine.h"
 #include "PianoKeyboardViewSkia.h"
 #include "ProjectState.h"
-#include "RightSidePanel.h"
 #include "TrackAutomationSynchronizer.h"
 #include "TrackStateSynchronizer.h"
 #include <juce_audio_basics/juce_audio_basics.h>
@@ -41,12 +33,18 @@ namespace zenith {
 class InstrumentBrowserPanel;
 class CommandAPI;
 class MainLayoutComponent;
+class TransportBar;
+class RightSidePanel;
+class BottomBar;
 class WingmanPanel;
 class ZenithMenuBar;
 class ZenithHubComponent;
 class ZenithKnob;
 class ProjectFileIO;
 class CollaborationPresenceBar;
+class TransportBar;
+class RightSidePanel;
+class BottomBar;
 namespace ai {
 class UXDirectorAgent;
 class PresetGeneticistAgent;
@@ -101,7 +99,6 @@ private:
   juce::Component *activeDragComponent = nullptr;
   juce::Rectangle<int> dragStartBounds;
 
-  zenith::AuroraBackground aurora_;
   float animationTime_ = 0.0f;
 
   void openPianoRoll(const juce::String &trackId, const juce::String &clipId);
@@ -113,17 +110,15 @@ private:
   LoadProjectCallback onLoadProject_;
   NewProjectCallback onNewProject_;
 
-  std::unique_ptr<zenith::TransportBar> transportBar;
-  std::unique_ptr<zenith::MainLayoutComponent> mainLayout;
-  std::unique_ptr<zenith::RightSidePanel> rightSidePanel;
-  std::unique_ptr<zenith::BottomBar> bottomBar;
-  std::unique_ptr<CollaborationPresenceBar> presenceBar;
-
   juce::MidiKeyboardState midiKeyboardState;
 
   void handleImportAudio();
 
   std::unique_ptr<ZenithHubComponent> hubComponent;
+  std::unique_ptr<zenith::TransportBar> transportBar;
+  std::unique_ptr<zenith::MainLayoutComponent> mainLayout;
+  std::unique_ptr<zenith::RightSidePanel> rightSidePanel;
+  std::unique_ptr<zenith::BottomBar> bottomBar;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
@@ -139,6 +134,7 @@ public:
   ~MainWindow() override;
 
   void closeButtonPressed() override;
+  void resized() override;
 
   zenith::ProjectState *getProjectState() const { return projectState.get(); }
 

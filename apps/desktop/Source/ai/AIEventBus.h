@@ -251,8 +251,14 @@ private:
   mutable juce::CriticalSection lock_;
   std::map<AIEventType, std::vector<AIEventSubscription>> subscriptions_;
   std::vector<AIEvent> recentEvents_;
-  int nextSubscriptionId_ = 1;
-  mutable Stats stats_;
+  std::atomic<int> nextSubscriptionId_{1};
+  
+  struct AtomicStats {
+    std::atomic<int> totalPublished{0};
+    std::atomic<int> totalDelivered{0};
+    std::atomic<int> activeSubscriptions{0};
+  };
+  AtomicStats stats_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AIEventBus)
 };

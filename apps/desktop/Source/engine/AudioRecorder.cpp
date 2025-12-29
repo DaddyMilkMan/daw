@@ -29,6 +29,7 @@ AudioRingBuffer::AudioRingBuffer(int numChannels, int bufferSizeFrames)
 
 int AudioRingBuffer::write(const float *const *data, int numChannels,
                            int numSamples) {
+  if (data == nullptr || numSamples <= 0) return 0;
   int start1, size1, start2, size2;
   fifo_.prepareToWrite(numSamples, start1, size1, start2, size2);
 
@@ -77,9 +78,10 @@ int AudioRingBuffer::read(juce::AudioBuffer<float> &output, int numSamples) {
 
   const int channelsToCopy = std::min(output.getNumChannels(), numChannels_);
 
+  // Ensure output is large enough for the available data
   if (output.getNumSamples() < availableToRead) {
-    output.setSize(output.getNumChannels(), availableToRead, false, false,
-                   true);
+    printf("AudioRingBuffer::read: Resizing output samples to %d\n", availableToRead); fflush(stdout);
+    output.setSize(output.getNumChannels(), availableToRead, true, true, true);
   }
 
   if (size1 > 0) {
@@ -122,10 +124,11 @@ RecordingSession::RecordingSession(RecordingSession &&other) noexcept
     : ringBuffer(std::move(other.ringBuffer)), writer(std::move(other.writer)),
       file(std::move(other.file)), trackId(std::move(other.trackId)),
       trackIndex(other.trackIndex), inputChannelStart(other.inputChannelStart),
-      numChannels(other.numChannels),
       startSamplePosition(other.startSamplePosition),
-      samplesRecorded(other.samplesRecorded.load()),
-      sampleRate(other.sampleRate), isActive(other.isActive.load()) {}
+      sampleRate(other.sampleRate), numChannels(other.numChannels) {
+  samplesRecorded.store(other.samplesRecorded.load());
+  isActive.store(other.isActive.load());
+}
 
 RecordingSession &
 RecordingSession::operator=(RecordingSession &&other) noexcept {
@@ -136,10 +139,10 @@ RecordingSession::operator=(RecordingSession &&other) noexcept {
     trackId = std::move(other.trackId);
     trackIndex = other.trackIndex;
     inputChannelStart = other.inputChannelStart;
-    numChannels = other.numChannels;
     startSamplePosition = other.startSamplePosition;
     samplesRecorded.store(other.samplesRecorded.load());
     sampleRate = other.sampleRate;
+    numChannels = other.numChannels;
     isActive.store(other.isActive.load());
   }
   return *this;
@@ -149,26 +152,36 @@ RecordingSession::operator=(RecordingSession &&other) noexcept {
 // AudioRecorder Implementation
 //==============================================================================
 
-AudioRecorder::AudioRecorder() {
+AudioRecorder::AudioRecorder() : weakThis(this) {
+  printf("AudioRecorder: Constructor - START\n"); fflush(stdout);
   writerThread_ =
       std::make_unique<juce::TimeSliceThread>("Audio Recorder Thread");
-  writerThread_->startThread(juce::Thread::Priority::high);
+  printf("AudioRecorder: Constructor - Thread created\n"); fflush(stdout);
+  writerThread_->startThread(juce::Thread::Priority::normal);
+  printf("AudioRecorder: Constructor - Thread started\n"); fflush(stdout);
 
   tempReadBuffer_.setSize(2, kFlushBlockSize);
+  printf("AudioRecorder: Constructor - Buffer sized\n"); fflush(stdout);
 
-  // Initialize RCU snapshot
+  // Initialize the RCU snapshot with an empty list of sessions.
+  printf("AudioRecorder: Constructor - Updating snapshot...\n"); fflush(stdout);
   updateSessionSnapshot();
+  printf("AudioRecorder: Constructor - FINISH\n"); fflush(stdout);
 }
 
 AudioRecorder::~AudioRecorder() {
+  printf("AudioRecorder: Destructor - START\n"); fflush(stdout);
   // Owner is responsible for stopping recording on message thread before
   // destruction. We cannot safely call stopRecording (which asserts message
   // thread) here.
 
   if (writerThread_) {
     writerThread_->removeTimeSliceClient(this);
+    printf("AudioRecorder: Destructor - Client removed\n"); fflush(stdout);
     writerThread_->stopThread(2000);
+    printf("AudioRecorder: Destructor - Thread stopped\n"); fflush(stdout);
   }
+  printf("AudioRecorder: Destructor - FINISH\n"); fflush(stdout);
 }
 
 void AudioRecorder::prepare(double sampleRate) { sampleRate_ = sampleRate; }
@@ -256,7 +269,10 @@ void AudioRecorder::startRecording(
 
     auto session = std::make_shared<RecordingSession>();
     session->ringBuffer = std::make_unique<AudioRingBuffer>(sessionNumChannels);
-    session->writer = std::move(threadedWriter);
+    {
+        const juce::ScopedLock sl(session->writerLock);
+        session->writer = std::move(threadedWriter);
+    }
     session->file = recordFile;
     session->trackId = track->getTrackId();
     session->trackIndex = static_cast<int>(i);
@@ -283,6 +299,7 @@ void AudioRecorder::startRecording(
 }
 
 void AudioRecorder::stopRecording(std::function<void(std::vector<RecordingResult>)> completionCallback) {
+  printf("AudioRecorder: stopRecording - START\n"); fflush(stdout);
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
   if (state_.load() != RecordingState::Recording) {
@@ -293,17 +310,19 @@ void AudioRecorder::stopRecording(std::function<void(std::vector<RecordingResult
 
   completionCallback_ = std::move(completionCallback);
   state_.store(RecordingState::Finalizing);
+  printf("AudioRecorder: stopRecording - State set to Finalizing\n"); fflush(stdout);
 
   // Notify writer thread to finalize
   if (writerThread_) {
     writerThread_->notify();
+    printf("AudioRecorder: stopRecording - writerThread notified\n"); fflush(stdout);
   }
 }
 
 void AudioRecorder::onLoopCycle() {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-  if (!isRecording_.load() || !loopRecordingEnabled_.load())
+  if (!isRecording() || !loopRecordingEnabled_.load())
     return;
 
   DBG("AudioRecorder: Loop cycle detected, creating new takes (take " +
@@ -323,12 +342,21 @@ void AudioRecorder::onLoopCycle() {
                                     session->numChannels > 1
                                         ? tempReadBuffer_.getReadPointer(1)
                                         : tempReadBuffer_.getReadPointer(0)};
-        session->writer->write(channels, numRead);
+        std::shared_ptr<juce::AudioFormatWriter::ThreadedWriter> currentWriter;
+        {
+            const juce::ScopedLock sl(session->writerLock);
+            currentWriter = session->writer;
+        }
+        if (currentWriter)
+            currentWriter->write(channels, numRead);
       }
     }
 
     // Finalize writer
-    session->writer.reset();
+    {
+        const juce::ScopedLock sl(session->writerLock);
+        session->writer = nullptr;
+    }
 
     // Store as completed take
     RecordingResult result;
@@ -362,11 +390,17 @@ void AudioRecorder::onLoopCycle() {
     }
 
     juce::WavAudioFormat wavFormat;
-    std::unique_ptr<juce::AudioFormatWriter> baseWriter(
-        wavFormat.createWriterFor(
-            fileStream.release(), oldSession->sampleRate,
-            static_cast<unsigned int>(oldSession->numChannels),
-            constants::kRecordingBitDepth, {}, 0));
+
+    // Move to generic OutputStream unique_ptr for the new API
+    std::unique_ptr<juce::OutputStream> outputStream = std::move(fileStream);
+
+    auto writerOptions = juce::AudioFormatWriter::Options()
+        .withSampleRate(oldSession->sampleRate)
+        .withNumChannels(static_cast<int>(oldSession->numChannels))
+        .withBitsPerSample(constants::kRecordingBitDepth);
+
+    std::unique_ptr<juce::AudioFormatWriter> baseWriter = 
+        wavFormat.createWriterFor(outputStream, writerOptions);
 
     if (!baseWriter)
       continue;
@@ -395,14 +429,19 @@ void AudioRecorder::onLoopCycle() {
 
   // Replace sessions
   sessions_ = std::move(newSessions);
-  updateSessionSnapshot();
+    updateSessionSnapshot();
 }
 
 void AudioRecorder::updateSessionSnapshot() {
+  // printf("AudioRecorder: updateSessionSnapshot - START\n"); fflush(stdout);
   std::shared_ptr<SessionSnapshot> newSnapshot = std::make_shared<SessionSnapshot>(sessions_);
+  // printf("AudioRecorder: updateSessionSnapshot - Created shared_ptr\n"); fflush(stdout);
   activeSessionSnapshot_.store(newSnapshot.get(), std::memory_order_release);
+  // printf("AudioRecorder: updateSessionSnapshot - Stored atomic pointer\n"); fflush(stdout);
   RealTimeGarbageCollector::getInstance().deferDelete(currentSessionSnapshot_);
+  // printf("AudioRecorder: updateSessionSnapshot - Deferred deletion\n"); fflush(stdout);
   currentSessionSnapshot_ = newSnapshot;
+  // printf("AudioRecorder: updateSessionSnapshot - FINISH\n"); fflush(stdout);
 }
 
 void AudioRecorder::write(const float *const *inputChannelData,
@@ -413,17 +452,25 @@ void AudioRecorder::write(const float *const *inputChannelData,
 
   // RCU Lock-Free Access
   auto *snapshot = activeSessionSnapshot_.load(std::memory_order_acquire);
-  if (!snapshot)
+  if (!snapshot) {
+    DBG("AudioRecorder: No snapshot in write!");
     return;
+  }
 
   for (const auto &session : snapshot->sessions) {
+    if (!session) {
+       DBG("AudioRecorder: Null session in snapshot!");
+       continue;
+    }
     if (!session->isActive.load() || !session->ringBuffer)
       continue;
 
     // Verify track index validity (optional safety)
     if (session->trackIndex < 0 ||
-        session->trackIndex >= static_cast<int>(tracks.size()))
+        session->trackIndex >= static_cast<int>(tracks.size())) {
+      DBG("AudioRecorder: Invalid track index: " + juce::String(session->trackIndex));
       continue;
+    }
     if (!tracks[session->trackIndex]->isArmed())
       continue;
 
@@ -452,23 +499,54 @@ void AudioRecorder::write(const float *const *inputChannelData,
 }
 
 int AudioRecorder::useTimeSlice() {
-  const auto currentState = state_.load();
-  if (currentState == RecordingState::Idle)
-    return -1;
-
-  // RCU Lock-Free Access
+  printf("AudioRecorder: useTimeSlice - START\n"); fflush(stdout);
   auto *snapshot = activeSessionSnapshot_.load(std::memory_order_acquire);
-  if (!snapshot)
-    return -1;
+  if (!snapshot) {
+    printf("AudioRecorder: useTimeSlice - snapshot is NULL\n"); fflush(stdout);
+    return 10;
+  }
 
   bool anyWork = false;
-  bool finalizing = (currentState == RecordingState::Finalizing);
+  const bool finalizing = (state_.load() == RecordingState::Finalizing);
+  if (finalizing) {
+    printf("AudioRecorder: useTimeSlice - FINALIZING (sessions: %d)\n", (int)snapshot->sessions.size()); fflush(stdout);
+  }
 
   for (const auto &session : snapshot->sessions) {
-    if (!session->isActive.load() || !session->ringBuffer || !session->writer)
+    if (!session) {
+      printf("AudioRecorder: useTimeSlice - session is NULL!\n"); fflush(stdout);
       continue;
+    }
+    printf("AudioRecorder: useTimeSlice - processing session (isActive: %s, ringBuffer: %p, writer: %p)\n", 
+           session->isActive.load() ? "YES" : "NO", session->ringBuffer.get(), session->writer.get()); fflush(stdout);
+    
+    std::shared_ptr<juce::AudioFormatWriter::ThreadedWriter> writer;
+    {
+        printf("AudioRecorder: useTimeSlice - acquiring writerLock...\n"); fflush(stdout);
+        const juce::ScopedLock sl(session->writerLock);
+        printf("AudioRecorder: useTimeSlice - writerLock acquired\n"); fflush(stdout);
+        writer = session->writer;
+    }
 
+    printf("AudioRecorder: useTimeSlice - checking isActive...\n"); fflush(stdout);
+    if (!session->isActive.load()) {
+      printf("AudioRecorder: useTimeSlice - session INACTIVE, skipping\n"); fflush(stdout);
+      continue;
+    }
+    printf("AudioRecorder: useTimeSlice - checking ringBuffer...\n"); fflush(stdout);
+    if (!session->ringBuffer) {
+      printf("AudioRecorder: useTimeSlice - ringBuffer NULL, skipping\n"); fflush(stdout);
+      continue;
+    }
+    printf("AudioRecorder: useTimeSlice - checking local writer...\n"); fflush(stdout);
+    if (!writer) {
+      printf("AudioRecorder: useTimeSlice - local writer NULL, skipping\n"); fflush(stdout);
+      continue;
+    }
+
+    printf("AudioRecorder: useTimeSlice - calling getNumReady...\n"); fflush(stdout);
     const int numReady = session->ringBuffer->getNumReady();
+    printf("AudioRecorder: useTimeSlice - numReady = %d\n", numReady); fflush(stdout);
     
     // In finalizing state, we flush EVERYTHING. 
     // In recording state, we only flush if we have enough data (hysteresis).
@@ -481,35 +559,57 @@ int AudioRecorder::useTimeSlice() {
       }
 
       const int toRead = std::min(numReady, kFlushBlockSize);
+      printf("AudioRecorder: useTimeSlice - reading %d samples from ringBuffer...\n", toRead); fflush(stdout);
       const int numRead = session->ringBuffer->read(tempReadBuffer_, toRead);
+      printf("AudioRecorder: useTimeSlice - read %d samples\n", numRead); fflush(stdout);
 
       if (numRead > 0) {
         // Correcting channel mapping logic for safety
         const float* writerChannels[2];
         writerChannels[0] = tempReadBuffer_.getReadPointer(0);
         writerChannels[1] = session->numChannels > 1 ? tempReadBuffer_.getReadPointer(1) : writerChannels[0];
-
-        session->writer->write(writerChannels, numRead);
+ 
+        printf("AudioRecorder: useTimeSlice - writing to ThreadedWriter (channels: %d)...\n", session->numChannels); fflush(stdout);
+        writer->write(writerChannels, numRead);
+        printf("AudioRecorder: useTimeSlice - write finished\n"); fflush(stdout);
         anyWork = true;
       }
     }
   }
 
   if (finalizing && !anyWork) {
+    printf("AudioRecorder: useTimeSlice - finalizing results...\n"); fflush(stdout);
     // Everything flushed from ring buffers, now finalize writers and results
     std::vector<RecordingResult> results;
     
-    for (auto& session : sessions_) {
+    for (auto& session : snapshot->sessions) {
+      if (!session || !session->ringBuffer) continue;
+
+      std::shared_ptr<juce::AudioFormatWriter::ThreadedWriter> writer;
+      {
+          const juce::ScopedLock sl(session->writerLock);
+          writer = session->writer;
+      }
+      
       if (session->ringBuffer->hasOverflowed(true)) {
         DBG("AudioRecorder: WARNING - Ring buffer overflow detected");
       }
 
       // Resetting ThreadedWriter flushes its internal fifo to disk (BLOCKING on this thread)
-      session->writer.reset();
+      if (writer) {
+          {
+              const juce::ScopedLock sl(session->writerLock);
+              session->writer = nullptr;
+          }
+          printf("AudioRecorder: useTimeSlice - resetting writer...\n"); fflush(stdout);
+          writer.reset();          // This (if it's the last one) flushes and deletes the ThreadedWriter
+          printf("AudioRecorder: useTimeSlice - writer reset\n"); fflush(stdout);
+      }
 
       RecordingResult result;
       result.file = session->file;
       result.trackIndex = session->trackIndex;
+      result.trackId = session->trackId;
       result.trackId = session->trackId;
       result.startSamplePosition = session->startSamplePosition;
       result.samplesRecorded = session->samplesRecorded.load();
@@ -517,19 +617,38 @@ int AudioRecorder::useTimeSlice() {
       results.push_back(result);
     }
 
-    // Trigger callback on Message Thread
-    auto callback = std::move(completionCallback_);
-    juce::MessageManager::callAsync([this, callback, results]() {
-      // Clear sessions on message thread
-      sessions_.clear();
-      updateSessionSnapshot();
-      writerThread_->removeTimeSliceClient(this);
-      
-      state_.store(RecordingState::Idle);
+    // Hand off to Message Thread
+    printf("AudioRecorder: useTimeSlice - handing off to message thread...\n"); fflush(stdout);
+    auto state = std::make_shared<FinalizationState>();
+    printf("AudioRecorder: useTimeSlice - FinalizationState created\n"); fflush(stdout);
+    state->callback = std::move(completionCallback_);
+    printf("AudioRecorder: useTimeSlice - callback moved\n"); fflush(stdout);
+    state->results = std::move(results);
+    printf("AudioRecorder: useTimeSlice - results moved\n"); fflush(stdout);
+    
+    // Using the pre-constructed weakThis that was initialized on Message Thread
+    auto safeWeakThis = weakThis;
+    printf("AudioRecorder: useTimeSlice - weak link captured\n"); fflush(stdout);
+    
+    printf("AudioRecorder: useTimeSlice - calling callAsync...\n"); fflush(stdout);
+    printf("AudioRecorder: useTimeSlice - executing finalization cleanup IMMEDIATELY (DEBUG)...\n"); fflush(stdout);
+    {
+      auto* strongThis = safeWeakThis.get();
+      if (strongThis) {
+        printf("AudioRecorder: Finalization - strongThis found\n"); fflush(stdout);
+        strongThis->sessions_.clear();
+        strongThis->updateSessionSnapshot();
+        // Skip removeTimeSliceClient here as it might be dangerous from within useTimeSlice
+        strongThis->state_.store(RecordingState::Idle);
+      }
 
-      if (callback)
-        callback(results);
-    });
+      if (state->callback) {
+        printf("AudioRecorder: Finalization - triggering user callback\n"); fflush(stdout);
+        state->callback(std::move(state->results));
+      }
+    }
+    printf("AudioRecorder: useTimeSlice - immediate cleanup FINISH\n"); fflush(stdout);
+    return -1;
 
     return -1;
   }

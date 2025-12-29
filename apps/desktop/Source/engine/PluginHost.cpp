@@ -132,46 +132,55 @@ bool PluginHost::scanFileOutProcess(const juce::File& file, juce::PluginDescript
 
     if (process.start(args))
     {
-        juce::String output = process.readAllProcessOutput();
-        process.waitForProcessToFinish(5000); // 5 sec timeout
-        
-        if (process.getExitCode() == 0)
+        // Fix: Wait for process to finish with a timeout BEFORE reading output.
+        // Reading first would block indefinitely if the child process hangs.
+        if (process.waitForProcessToFinish(10000)) // 10 second timeout
         {
-            // Parse JSON output
-            // Output usually contains JSON on one line, but maybe headers.
-            // We look for the last valid JSON lines or clean output.
+            juce::String output = process.readAllProcessOutput();
             
-            output = output.trim();
-            int jsonStart = output.indexOf("{");
-            int jsonEnd = output.lastIndexOf("}");
-            
-            if (jsonStart >= 0 && jsonEnd > jsonStart)
+            if (process.getExitCode() == 0)
             {
-                juce::String jsonStr = output.substring(jsonStart, jsonEnd + 1);
-                auto json = juce::JSON::parse(jsonStr);
+                // Parse JSON output
+                // Output usually contains JSON on one line, but maybe headers.
+                // We look for the last valid JSON lines or clean output.
                 
-                if (!json.isVoid() && json.hasProperty("status"))
+                output = output.trim();
+                int jsonStart = output.indexOf("{");
+                int jsonEnd = output.lastIndexOf("}");
+                
+                if (jsonStart >= 0 && jsonEnd > jsonStart)
                 {
-                   juce::String status = json["status"];
-                   if (status == "success") {
-                       result.fileOrIdentifier = file.getFullPathName();
-                       result.name = json["name"];
-                       result.manufacturerName = json["manufacturer"];
-                       result.version = json["version"];
-                       result.uniqueId = json["uid"].toString().getIntValue();
-                       result.pluginFormatName = "VST3";
-                       result.lastInfoUpdateTime = juce::Time::getCurrentTime();
-                       
-                       bool isInst = json["isInstrument"];
-                       result.isInstrument = isInst;
-                       
-                       return true;
-                   }
+                    juce::String jsonStr = output.substring(jsonStart, jsonEnd + 1);
+                    auto json = juce::JSON::parse(jsonStr);
+                    
+                    if (!json.isVoid() && json.hasProperty("status"))
+                    {
+                       juce::String status = json["status"];
+                       if (status == "success") {
+                           result.fileOrIdentifier = file.getFullPathName();
+                           result.name = json["name"];
+                           result.manufacturerName = json["manufacturer"];
+                           result.version = json["version"];
+                           result.uniqueId = json["uid"].toString().getIntValue();
+                           result.pluginFormatName = "VST3";
+                           result.lastInfoUpdateTime = juce::Time::getCurrentTime();
+                           
+                           bool isInst = json["isInstrument"];
+                           result.isInstrument = isInst;
+                           
+                           return true;
+                       }
+                    }
                 }
             }
+            else {
+                 DBG("PluginHost: Detailed Crash detected scanning " + file.getFileName());
+            }
         }
-        else {
-             DBG("PluginHost: Detailed Crash detected scanning " + file.getFileName());
+        else
+        {
+            process.kill();
+            DBG("PluginHost: Scanner timed out (hung) scanning " + file.getFileName());
         }
     }
     

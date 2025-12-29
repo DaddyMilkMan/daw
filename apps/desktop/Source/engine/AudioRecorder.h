@@ -97,7 +97,8 @@ private:
 */
 struct RecordingSession {
   std::unique_ptr<AudioRingBuffer> ringBuffer;
-  std::unique_ptr<juce::AudioFormatWriter::ThreadedWriter> writer;
+  std::shared_ptr<juce::AudioFormatWriter::ThreadedWriter> writer;
+  juce::CriticalSection writerLock;
   juce::File file;
   juce::String trackId; // Added for robust linking
   int trackIndex = -1;
@@ -148,6 +149,11 @@ public:
     Idle,
     Recording,
     Finalizing
+  };
+
+  struct FinalizationState {
+      std::function<void(std::vector<RecordingResult>)> callback;
+      std::vector<RecordingResult> results;
   };
 
   AudioRecorder();
@@ -254,6 +260,7 @@ private:
                                  const juce::String &trackName);
 
   std::unique_ptr<juce::TimeSliceThread> writerThread_;
+
   std::atomic<RecordingState> state_{RecordingState::Idle};
   std::function<void(std::vector<RecordingResult>)> completionCallback_;
   double sampleRate_ = constants::kDefaultSampleRate;
@@ -276,6 +283,9 @@ private:
   // Recording directory for creating new take files
   juce::File recordingsDir_;
 
+  juce::WeakReference<AudioRecorder>::Master masterReference;
+  juce::WeakReference<AudioRecorder> weakThis;
+  friend class juce::WeakReference<AudioRecorder>;
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioRecorder)
 };
 

@@ -5,10 +5,10 @@
 namespace zenith {
 
 void AudioTrack::getNextAudioBlock(
-    const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
+    const juce::AudioSourceChannelInfo &bufferToFill, juce::int64 playheadSamples,
     const juce::MidiBuffer *incomingMidi,
     std::span<juce::AudioBuffer<float> * const> auxBuffers,
-    const TempoMap *tempoMap, const juce::AudioBuffer<float> *sidechainBuffer) {
+    const TempoMap *tempoMap, const juce::AudioBuffer<float> *sidechain) {
   juce::ignoreUnused(incomingMidi);
 
   // Clear the buffer first
@@ -25,7 +25,8 @@ void AudioTrack::getNextAudioBlock(
       activeClipSnapshot_.load(std::memory_order_acquire);
 
   if (currentSnapshot) {
-    for (auto *clip : currentSnapshot->clips) {
+    for (const auto& clipPtr : currentSnapshot->clips) {
+      auto* clip = clipPtr.get();
       if (clip != nullptr && clip->isPlaying() && clip->getType() == Clip::Type::Audio) {
         const int64_t clipStart = clip->getStartPosition();
         const int64_t clipEnd = clip->getEndPosition();
@@ -62,7 +63,7 @@ void AudioTrack::getNextAudioBlock(
   // 3. Process through plugin chain and mixer (delegated to Processor)
   juce::AudioSourceChannelInfo blockInfo(bufferToFill.buffer, bufferToFill.startSample, bufferToFill.numSamples);
   juce::MidiBuffer dummyMidi;
-  processor->processBlock(blockInfo, dummyMidi, auxBuffers, sidechainBuffer);
+  processor->processBlock(blockInfo, dummyMidi, auxBuffers, sidechain);
 }
 
 } // namespace zenith

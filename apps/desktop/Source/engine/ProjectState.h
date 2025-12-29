@@ -128,6 +128,7 @@ public:
   static const juce::Identifier PROP_LANE_INDEX;
   static const juce::Identifier PROP_MANUALLY_COLORED;
   static const juce::Identifier PROP_IS_QUARANTINE;
+  static const juce::Identifier PROP_IS_MIDI;
 
   // Automation properties
   static const juce::Identifier PROP_PARAM;
@@ -177,6 +178,7 @@ public:
   //==========================================================================
 
   void newProject();
+  void createDefaultState();
   bool loadFromFile(const juce::File &file);
   bool saveToFile(const juce::File &file);
   juce::File saveCrashDump();

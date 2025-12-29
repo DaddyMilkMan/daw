@@ -21,6 +21,7 @@
 #include <core/SkPaint.h>
 #include <core/SkRect.h>
 
+#include <effects/SkGradientShader.h>
 #endif
 
 namespace zenith {
@@ -63,55 +64,70 @@ void RightSidePanel::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
   SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
 
-  // Lazy update of cached resources on the Render Thread
   if (skBounds != cachedBounds_) {
     updateCachedPaints(skBounds);
     cachedBounds_ = skBounds;
   }
 
-  // Glassmorphism Background (Frame)
-  canvas->drawRect(skBounds, bgPaint_);
+  // Draw Glassmorphic Panel Background
+  float radius = design::dimensions::RADIUS_LG;
+  SkRRect rrect;
+  rrect.setRectXY(skBounds, radius, radius);
 
-  // Left border glow
-  canvas->drawLine(0.0f, 0.0f, 0.0f, skBounds.height(), borderPaint_);
+  // Background Glass (High-Alpha for white canvas contrast)
+  canvas->drawRRect(rrect, bgPaint_);
 
-  // Note: Old meter code removed. Visualizer handles it now.
+  // Left Border Glow (Cyberpunk feel)
+  SkPaint glowPaint;
+  glowPaint.setAntiAlias(true);
+  glowPaint.setStyle(SkPaint::kStroke_Style);
+  glowPaint.setStrokeWidth(2.0f);
+  
+  SkPoint pts[2] = { {0.0f, 0.0f}, {0.0f, skBounds.height()} };
+  SkColor colors[2] = { design::colors::ACCENT_PRIMARY, 
+                        design::withAlpha(design::colors::ACCENT_SECONDARY, 0.0f) };
+  
+  glowPaint.setShader(SkGradientShader::MakeLinear(
+      pts, colors, nullptr, 2, SkTileMode::kClamp));
+  canvas->drawLine(0.0f, radius, 0.0f, skBounds.height() - radius, glowPaint);
+
+  // Subtle Outer Border
+  canvas->drawRRect(rrect, borderPaint_);
+
+  // Recursively draw children (WingmanPanel, Spectra, Undo)
+  drawChildren(canvas);
 }
 
 void RightSidePanel::updateCachedPaints(const SkRect &bounds) {
   juce::ignoreUnused(bounds);
   
-  // 1. Background Paint
+  // 1. Background Paint - Premium Glass for White Canvas
   bgPaint_.setAntiAlias(true);
-  bgPaint_.setColor(SkColorSetARGB(240, 20, 20, 20)); // Almost opaque dark grey
+  bgPaint_.setColor(design::withAlpha(design::colors::BG_01, 0.95f)); // Deep Charcoal but slightly transparent
   bgPaint_.setStyle(SkPaint::kFill_Style);
 
-  // 2. Border Paint
+  // 2. Border Paint - Subtle Cyan Glow
   borderPaint_.setAntiAlias(true);
   borderPaint_.setStyle(SkPaint::kStroke_Style);
   borderPaint_.setStrokeWidth(1.0f);
-  borderPaint_.setColor(SkColorSetARGB(100, 0, 170, 255)); // Cyan accent
+  borderPaint_.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.3f));
 
-  // 3. Text Paints
+  // 3. Text Paints - Standardized Typography
   textPaint_.setAntiAlias(true);
   textPaint_.setStyle(SkPaint::kFill_Style);
-  textPaint_.setColor(SkColorSetARGB(255, 255, 255, 255)); // White text
+  textPaint_.setColor(design::colors::TEXT_PRIMARY);
 
   subTextPaint_.setAntiAlias(true);
   subTextPaint_.setStyle(SkPaint::kFill_Style);
-  subTextPaint_.setColor(SkColorSetARGB(180, 200, 200, 200)); // Light grey text
+  subTextPaint_.setColor(design::colors::TEXT_SECONDARY);
 
-  // 4. Fonts
-  headerFont_.setSize(16.0f);
-  headerFont_.setEmbolden(true);
-  headerFont_.setSubpixel(true);
-
-  bodyFont_.setSize(12.0f);
-  bodyFont_.setEmbolden(false);
-  bodyFont_.setSubpixel(true);
-
-  labelFont_.setSize(10.0f);
-  labelFont_.setSubpixel(true);
+  // 4. Fonts - Modern Inter & JetBrains Mono Integration
+  headerFont_ = design::typography::getSkFont(design::typography::FONT_LG, 
+                                            design::typography::FontWeight::Bold);
+  bodyFont_ = design::typography::getSkFont(design::typography::FONT_MD, 
+                                         design::typography::FontWeight::Regular);
+  labelFont_ = design::typography::getSkFont(design::typography::FONT_SM, 
+                                          design::typography::FontWeight::Regular);
 
   // 5. Meter Paints
   meterBgPaint_.setAntiAlias(true);

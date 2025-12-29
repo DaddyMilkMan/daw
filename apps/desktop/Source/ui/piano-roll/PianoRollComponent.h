@@ -1001,6 +1001,7 @@ private:
   // Grid & Snap
   double gridBeats = 0.25; // 1/16 note
   bool snapEnabled = true;
+  int defaultVelocity = 100; // New items use this velocity
 
   // View & Zoom
   double pixelsPerBeat = 80.0;
@@ -1011,17 +1012,18 @@ private:
   int scrollOffsetY = 0;
 
   // Layout
-  static constexpr int PIANO_WIDTH = 60;
+  static constexpr int PIANO_WIDTH = 80;
   static constexpr int TOOLBAR_HEIGHT = 40;
   static constexpr int RULER_HEIGHT = 30;
-  int velocityLaneHeight = 160; // Increased from 120 for better precision
-                                // (~1.26px per velocity value)
+  int velocityLaneHeight = 80;  // 80px as requested
+  bool velocityLaneVisible = true;
   float noteGridHeight = 0.0f;  // Cached note grid height
   float resizeHandleWidth = 8.0f;
 
   // Interaction State
   int hoveredPianoKey = -1;
   int playingPianoKey = -1;
+  bool isDraggingVelocitySlider = false;
   DragMode currentDragMode = DragMode::None;
   NoteRect *activeNote = nullptr;
   NoteRect *hoveredNote = nullptr;

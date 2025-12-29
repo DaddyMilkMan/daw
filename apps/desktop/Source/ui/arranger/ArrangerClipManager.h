@@ -47,9 +47,15 @@ struct ClipView {
     double lengthBeats;               ///< Duration in beats
     double fadeInBeats = 0.0;         ///< Fade in length in beats
     double fadeOutBeats = 0.0;        ///< Fade out length in beats
+    double loopLengthBeats = 0.0;     ///< Loop length in beats (0 = no loop)
+    double offsetBeats = 0.0;         ///< Content start offset in beats
     bool isMidi;                      ///< True for MIDI, false for audio
     bool isSelected;                  ///< Selection state
+    bool isMuted = false;             ///< Muted state
+    bool isSoloed = false;            ///< Soloed state
+    bool isArmed = false;             ///< Recording state
     juce::Rectangle<float> bounds;    ///< Screen bounds (updated by recomputeClipBounds)
+    juce::Colour trackColor;          ///< Track color for rendering
 
     // Cached content for rendering
     juce::String audioFilePath;              ///< For audio clips: source file path

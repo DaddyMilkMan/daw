@@ -55,18 +55,18 @@ struct ZenithPalette {
     SkColor amber = 0xFFFFAB00;       // Warm Warning
 
     // Background Layers
-    SkColor bg00 = 0xFF0A0A0A;       // Deepest/App Background
-    SkColor bg01 = 0xFF121212;       // Canvas/Main
-    SkColor bg02 = 0xFF1A1A1A;       // Panels
-    SkColor bg03 = 0xFF242424;       // Elevated Surfaces
-    SkColor bg04 = 0xFF2E2E2E;       // Highest Elevation
+    SkColor bg00 = 0xFF0D0D11;       // Obsidian (Deepest/App Background)
+    SkColor bg01 = 0xFF1C1C24;       // Charcoal (Canvas/Main)
+    SkColor bg02 = 0xFF24242C;       // Panels
+    SkColor bg03 = 0xFF2E2E36;       // Elevated Surfaces
+    SkColor bg04 = 0xFF383840;       // Highest Elevation
 
     // Text Hierarchy
     SkColor textPrimary = 0xFFF2F2F7;
     SkColor textSecondary = 0xFFA1A1AA;
     SkColor textTertiary = 0xFF71717A;
     SkColor textDisabled = 0xFF52525B;
-    SkColor textInverse = 0xFF111111;
+    SkColor textInverse = 0xFF1C1C24;
 
     // Borders & Dividers
     SkColor borderSubtle = 0x0FFFFFFF;
@@ -437,20 +437,13 @@ constexpr float RADIUS_SM = 8.0f;
 constexpr float RADIUS_LG = 16.0f;
 constexpr float RADIUS_FULL = 9999.0f;
 
-[[deprecated("Use RADIUS_SM (8.0f) instead")]]
-constexpr float RADIUS_XS = RADIUS_SM;
-[[deprecated("Use RADIUS_SM (8.0f) instead")]]
-constexpr float RADIUS_MD = RADIUS_SM;
-[[deprecated("Use RADIUS_LG (16.0f) instead")]]
-constexpr float RADIUS_XL = RADIUS_LG;
-
 // ============================================================================
 // ARRANGER VIEW LAYOUT (Single Source of Truth!)
 // ============================================================================
 // CRITICAL: All arranger files MUST use these constants to avoid coordinate chaos
-constexpr float ARRANGER_HEADER_WIDTH = 240.0f;
+constexpr float ARRANGER_HEADER_WIDTH = 200.0f;
 constexpr float ARRANGER_SECTION_HEIGHT = 24.0f;
-constexpr float ARRANGER_RULER_HEIGHT = 30.0f;
+constexpr float ARRANGER_RULER_HEIGHT = 32.0f;
 constexpr float ARRANGER_TRACK_HEIGHT = 80.0f;
 constexpr float ARRANGER_TOP_MARGIN = ARRANGER_SECTION_HEIGHT + ARRANGER_RULER_HEIGHT;
 
@@ -459,7 +452,43 @@ constexpr float ARRANGER_MIN_GRID_SPACING = 20.0f;
 constexpr float ARRANGER_BAR_LINE_WIDTH = 1.0f;
 constexpr float ARRANGER_BEAT_LINE_WIDTH = 1.0f;
 
+// ============================================================================
+// SESSION VIEW LAYOUT (Vertical tracks - Ableton-style)
+// ============================================================================
+constexpr float SESSION_CELL_WIDTH = 100.0f;
+constexpr float SESSION_CELL_HEIGHT = 80.0f;
+constexpr float SESSION_SCENE_HEADER_WIDTH = 80.0f;
+constexpr float SESSION_TRACK_HEADER_HEIGHT = 48.0f;
+constexpr float SESSION_CELL_CORNER_RADIUS = 6.0f;
+constexpr float SESSION_CELL_GAP = 2.0f;
+
 } // namespace dimensions
+
+// ============================================================================
+// TRACK COLORS PALETTE
+// ============================================================================
+namespace colors {
+
+// Neon-inspired track color palette
+static const std::vector<juce::Colour> TRACK_COLORS = {
+    juce::Colour(0xFF00F0FF),  // Cyan
+    juce::Colour(0xFFFF00D4),  // Magenta
+    juce::Colour(0xFF00FF9D),  // Neon Green
+    juce::Colour(0xFFFF8800),  // Orange
+    juce::Colour(0xFF7000FF),  // Violet
+    juce::Colour(0xFFFF1493),  // Deep Pink
+    juce::Colour(0xFF3B82F6),  // Blue
+    juce::Colour(0xFF10B981),  // Teal
+    juce::Colour(0xFFF59E0B),  // Amber
+    juce::Colour(0xFFEC4899),  // Pink
+    juce::Colour(0xFFAA00FF),  // Purple
+    juce::Colour(0xFF00FF00),  // Lime
+};
+
+// Note: BG_00 through BG_04 already defined above as SkColor references
+// Use design::toJuceColour() to convert if JUCE Colour is needed
+
+} // namespace colors
 
 // ============================================================================
 // EFFECTS

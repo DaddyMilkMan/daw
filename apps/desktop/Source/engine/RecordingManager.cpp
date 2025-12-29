@@ -20,11 +20,18 @@ namespace zenith {
 
 //==============================================================================
 RecordingManager::RecordingManager() {
+  printf("RecordingManager: Constructor - START\n"); fflush(stdout);
   // Initialize MIDI fifo buffer
   midiFifoData_.resize(constants::kMidiRecordFifoSize);
+  printf("RecordingManager: Constructor - FIFO resized\n"); fflush(stdout);
 
   // Create audio recorder
   audioRecorder_ = std::make_unique<AudioRecorder>();
+  if (audioRecorder_) {
+    printf("RecordingManager: Constructor - AudioRecorder created successfully\n"); fflush(stdout);
+  } else {
+    printf("RecordingManager: Constructor - AudioRecorder creation FAILED\n"); fflush(stdout);
+  }
 }
 
 RecordingManager::~RecordingManager() {

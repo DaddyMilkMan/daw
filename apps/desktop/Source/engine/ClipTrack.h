@@ -72,7 +72,7 @@ public:
   }
 
   // Clip management
-  void addClip(std::unique_ptr<Clip> clip);
+  void addClip(std::shared_ptr<Clip> clip);
   void removeClip(int clipIndex);
   void removeClip(Clip *clip);
   void clearClips();
@@ -82,7 +82,7 @@ public:
       return clipsOwned_[index].get();
     return nullptr;
   }
-  const std::vector<std::unique_ptr<Clip>> &getClips() const {
+  const std::vector<std::shared_ptr<Clip>> &getClips() const {
     return clipsOwned_;
   }
 
@@ -142,22 +142,18 @@ public:
 
 protected:
   struct ClipSnapshot {
-    std::vector<Clip *> clips;
-    std::vector<TakeFolder *> takeFolders;
+    std::vector<std::shared_ptr<Clip>> clips;
+    std::vector<std::shared_ptr<TakeFolder>> takeFolders;
     ClipSnapshot() = default;
     explicit ClipSnapshot(
-        const std::vector<std::unique_ptr<Clip>> &ownedClips,
+        const std::vector<std::shared_ptr<Clip>> &ownedClips,
         const std::vector<std::shared_ptr<TakeFolder>> &ownedFolders) {
-      clips.reserve(ownedClips.size());
-      for (const auto &clip : ownedClips)
-        clips.push_back(clip.get());
-      takeFolders.reserve(ownedFolders.size());
-      for (const auto &folder : ownedFolders)
-        takeFolders.push_back(folder.get());
+      clips = ownedClips;
+      takeFolders = ownedFolders;
     }
   };
 
-  std::vector<std::unique_ptr<Clip>> clipsOwned_;
+  std::vector<std::shared_ptr<Clip>> clipsOwned_;
   std::vector<std::shared_ptr<TakeFolder>> takeFoldersOwned_;
   std::atomic<const ClipSnapshot *> activeClipSnapshot_{nullptr};
   std::shared_ptr<ClipSnapshot> currentClipSnapshot_;

@@ -168,7 +168,7 @@ void Track::setFreezeFile(const juce::File &file) {
 
 //==============================================================================
 //==============================================================================
-void Track::addClip(std::unique_ptr<Clip> clip) {
+void Track::addClip(std::shared_ptr<Clip> clip) {
   juce::ignoreUnused(clip);
   // Base Track class does not manage clips directly.
   // Subclasses (ClipTrack, AudioTrack, MIDITrack) should override this.
@@ -317,9 +317,5 @@ void Track::updateClipPositions(juce::int64 playheadPosition) {
   }
 }
 
-//==============================================================================
-float Track::getCurrentLevel() const { return mixerChannel.getOutputLevel(); }
-float Track::getPeakLevel() const { return mixerChannel.getOutputPeak(); }
-void Track::resetPeakLevel() { mixerChannel.resetPeaks(); }
 
 } // namespace zenith

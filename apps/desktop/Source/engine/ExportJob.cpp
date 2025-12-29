@@ -6,6 +6,7 @@
 #include "ExportJob.h"
 #include "AudioExporter.h"
 #include "Engine.h"
+#include "AudioRenderer.h"
 #include "../dsp/Dither.h"
 
 namespace zenith {
@@ -213,6 +214,11 @@ juce::Result ExportJob::performExport()
     
     // Prepare buffers
     juce::AudioBuffer<float> buffer(2, kExportBlockSize);
+
+    // Create Render Context
+    AudioRenderContext context;
+    context.prepare(options_.sampleRate, kExportBlockSize, 
+                    engine_.getNumTracks(), engine_.getNumAuxBuses());
     
     juce::int64 startSample = static_cast<juce::int64>(options_.startTime * options_.sampleRate);
     juce::int64 totalSamples = static_cast<juce::int64>(options_.sampleRate * duration);
@@ -236,7 +242,7 @@ juce::Result ExportJob::performExport()
                        totalSamples - samplesWritten));
         
         // Render audio block
-        engine_.renderOfflineBlock(buffer, numSamples, startSample + samplesWritten);
+        engine_.renderOfflineBlock(context, buffer, numSamples, startSample + samplesWritten);
         
         // Apply dithering
         if (options_.enableDither && options_.bitDepth < 32)

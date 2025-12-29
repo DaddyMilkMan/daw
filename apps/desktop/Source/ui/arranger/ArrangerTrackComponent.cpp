@@ -29,9 +29,19 @@ ArrangerTrackComponent::ArrangerTrackComponent(ProjectState &ps,
                                                TrackType type)
     : projectState(ps), gridUtils_(gridUtils), type_(type) {
 
+  // Initialize Header
+  headerComponent_ = std::make_unique<TrackHeaderComponent>(projectState, trackId_);
+  addAndMakeVisible(headerComponent_.get());
+
   if (type_ == TrackType::Section) {
     rebuildSections();
   }
+}
+
+void ArrangerTrackComponent::resized() {
+    if (headerComponent_) {
+         headerComponent_->setBounds(0, 0, HEADER_WIDTH, getHeight());
+    }
 }
 
 ArrangerTrackComponent::~ArrangerTrackComponent() = default;
@@ -83,119 +93,20 @@ void ArrangerTrackComponent::drawSkia(SkCanvas *canvas) {
   } else {
     // Generic Track (Audio/Midi)
     drawTrackBackground(canvas, rect);
-    drawTrackHeader(canvas, rect);
+    // drawTrackHeader(canvas, rect); // Handled by component
   }
   
   // Draw child components (like TakeFolderComponents)
   drawChildren(canvas);
 }
 
+// Header handled by TrackHeaderComponent
+/*
 void ArrangerTrackComponent::drawTrackHeader(SkCanvas *canvas,
                                              const SkRect &bounds) {
-  using namespace design;
-
-  float y = 0;
-  float trackHeight = bounds.height();
-  SkRect headerRect = SkRect::MakeXYWH(0, 0, HEADER_WIDTH, trackHeight);
-
-  SkPaint trackBgPaint;
-  trackBgPaint.setStyle(SkPaint::kFill_Style);
-
-  // A. Track Header Background - PREMIUM GLASSMORPHIC GRADIENT (Distinct Cyan Tint)
-  {
-    SkPoint hdrGradPts[2] = {{0, y}, {0, y + trackHeight}};
-    SkColor hdrGradColors[3] = {
-        design::colors::BG_01, // Top
-        design::withAlpha(design::colors::BG_DARKER, 0.8f), // Middle
-        design::colors::BG_00  // Bottom
-    };
-    float hdrPositions[3] = {0.0f, 0.3f, 1.0f};
-    trackBgPaint.setShader(SkGradientShader::MakeLinear(
-        hdrGradPts, hdrGradColors, hdrPositions, 3, SkTileMode::kClamp));
-    canvas->drawRect(headerRect, trackBgPaint);
-
-    // HOVER GLOW ANIMATION
-    if (hoverIntensity_ > 0.001f) {
-        SkPaint glowPaint;
-        glowPaint.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.1f * hoverIntensity_));
-        // Use a quicker blur for performance
-        // glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 10.0f)); 
-        // Actually, just drawing a semi-transparent overlay is faster and sharp for "glass" feel
-        canvas->drawRect(headerRect, glowPaint);
-        
-        // Left accent bar
-        SkPaint accentBar;
-        accentBar.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.8f * hoverIntensity_));
-        canvas->drawRect(SkRect::MakeXYWH(0, 0, 3.0f, trackHeight), accentBar);
-    }
-  }
-
-  // Top edge highlight
-  SkPaint topHighlight;
-  topHighlight.setColor(design::colors::BORDER_SUBTLE);
-  topHighlight.setStrokeWidth(1.0f);
-  canvas->drawLine(0, 0.5f, HEADER_WIDTH, 0.5f, topHighlight);
-
-  // D. Header Content
-  SkFont nameFont =
-      typography::getSkFont(typography::FONT_MD, FontWeight::Medium);
-  SkFont smallFont =
-      typography::getSkFont(typography::FONT_XS, FontWeight::Regular);
-
-  // Track Number Badge
-  {
-    SkPaint badgePaint;
-    badgePaint.setAntiAlias(true);
-    badgePaint.setColor(design::colors::BG_03);
-    SkRect badgeRect = SkRect::MakeXYWH(spacing::SM, spacing::SM, spacing::LG, 18);
-    canvas->drawRRect(SkRRect::MakeRectXY(badgeRect, dimensions::RADIUS_SM, dimensions::RADIUS_SM), badgePaint);
-
-    SkPaint numPaint;
-    numPaint.setAntiAlias(true);
-    numPaint.setColor(design::colors::TEXT_SECONDARY);
-    canvas->drawString(juce::String(trackIndex_ + 1).toStdString().c_str(),
-                       spacing::SM + 6, 21, smallFont, numPaint);
-  }
-
-  // Track Name
-  {
-    SkPaint shadowPaint;
-    shadowPaint.setAntiAlias(true);
-    shadowPaint.setColor(design::withAlpha(design::colors::BG_DARKEST, 0.3f));
-    canvas->drawString(trackName_.toStdString().c_str(), spacing::MD + 24 + 1,
-                       bounds.centerY() + 7.0f, nameFont, shadowPaint);
-
-    SkPaint textPaint;
-    textPaint.setAntiAlias(true);
-    textPaint.setColor(design::colors::TEXT_PRIMARY);
-    canvas->drawString(trackName_.toStdString().c_str(), spacing::MD + 24,
-                       bounds.centerY() + 6.0f, nameFont, textPaint);
-  }
-
-  // Controls (Mute/Solo/Rec) - centered vertically
-  drawControls(canvas, spacing::MD, bounds.centerY() - 11.0f);
-
-  // E. Right Border for Header
-  {
-    SkPaint dividerPaint;
-    SkPoint divPts[2] = {{HEADER_WIDTH - 1, 0},
-                         {HEADER_WIDTH - 1, trackHeight}};
-    SkColor divBase = design::colors::BORDER_SUBTLE;
-    SkColor divColors[3] = {design::withAlpha(divBase, 0.25f),
-                            design::withAlpha(divBase, 0.12f),
-                            design::withAlpha(divBase, 0.04f)};
-    float divPos[3] = {0.0f, 0.2f, 1.0f};
-    dividerPaint.setShader(SkGradientShader::MakeLinear(
-        divPts, divColors, divPos, 3, SkTileMode::kClamp));
-    canvas->drawLine(HEADER_WIDTH - 0.5f, 0, HEADER_WIDTH - 0.5f, trackHeight,
-                     dividerPaint);
- 
-    SkPaint shadowLine;
-    shadowLine.setColor(design::withAlpha(design::colors::BG_DARKEST, 0.15f));
-    canvas->drawLine(HEADER_WIDTH + 0.5f, 0, HEADER_WIDTH + 0.5f, trackHeight,
-                     shadowLine);
-  }
+  // ...
 }
+*/
 
 void ArrangerTrackComponent::drawTrackBackground(SkCanvas *canvas,
                                                  const SkRect &bounds) {
@@ -244,77 +155,7 @@ void ArrangerTrackComponent::drawTrackBackground(SkCanvas *canvas,
   }
 }
 
-void ArrangerTrackComponent::drawControls(SkCanvas *canvas, float startX,
-                                          float btnY) {
-  using namespace design;
-
-  float btnSize = 22.0f;
-  float btnGap = 28.0f;
-
-  auto drawBtn = [&](int index, const SkPath &icon, bool active,
-                     SkColor activeColor) {
-    float bx = startX + (index * btnGap);
-    SkRect btnRect = SkRect::MakeXYWH(bx, btnY, btnSize, btnSize);
-    SkRRect btnRRect = SkRRect::MakeRectXY(btnRect, dimensions::RADIUS_SM, dimensions::RADIUS_SM);
-
-    bool isHovered = (hoveredButtonIndex_ == index);
-
-    // Shadow
-    SkPaint shadowPaint;
-    shadowPaint.setAntiAlias(true);
-    shadowPaint.setColor(SkColorSetARGB(40, 0, 0, 0));
-    shadowPaint.setMaskFilter(
-        SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 2.0f));
-    SkRect shadowRect = btnRect;
-    shadowRect.offset(0, 1);
-    canvas->drawRRect(SkRRect::MakeRectXY(shadowRect, dimensions::RADIUS_SM, dimensions::RADIUS_SM), shadowPaint);
-
-    if (active) {
-      // Active state
-      SkPaint glowPaint;
-      glowPaint.setAntiAlias(true);
-      glowPaint.setColor(withAlpha(activeColor, 0.5f));
-      glowPaint.setMaskFilter(
-          SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 6.0f));
-      canvas->drawRRect(btnRRect, glowPaint);
-
-      SkPaint btnPaint;
-      btnPaint.setAntiAlias(true);
-      btnPaint.setColor(activeColor);
-      canvas->drawRRect(btnRRect, btnPaint);
-    } else {
-      // Inactive state
-      SkPaint btnPaint;
-      btnPaint.setAntiAlias(true);
-      btnPaint.setColor(isHovered ? SkColorSetARGB(30, 255, 255, 255)
-                                  : SkColorSetARGB(15, 255, 255, 255));
-      canvas->drawRRect(btnRRect, btnPaint);
-
-      SkPaint border;
-      border.setStyle(SkPaint::kStroke_Style);
-      border.setColor(SkColorSetARGB(30, 255, 255, 255));
-      canvas->drawRRect(btnRRect, border);
-    }
-
-    // Draw icon centered
-    icons::IconStyle style;
-    style.color = active ? SK_ColorWHITE : colors::TEXT_SECONDARY;
-    style.filled = active; 
-    style.strokeWidth = icons::STROKE_REGULAR;
-    
-    // Brighten on hover
-    if (!active && isHovered) {
-        style.color = SK_ColorWHITE;
-    }
-
-    icons::drawIconCentered(canvas, icon, btnRect, btnSize * 0.6f, style);
-  };
-
-  drawBtn(0, icons::Mute(), isMuted_, design::colors::WARNING);
-  drawBtn(1, icons::Solo(), isSoloed_, design::colors::INFO);
-  drawBtn(2, icons::Arm(), isRecordArmed_, design::colors::DANGER);
-  drawBtn(3, icons::Eye(), isInputMonitoring_, design::colors::SUCCESS); // Input Monitor (Eye)
-}
+// drawControls removed - functionality moved to TrackHeaderComponent
 
 void ArrangerTrackComponent::drawSections(SkCanvas *canvas,
                                           const SkRect &bounds) {
@@ -553,35 +394,7 @@ void ArrangerTrackComponent::mouseDown(const juce::MouseEvent &e) {
     }
     
     // Left-click on buttons (existing logic)
-    if (e.position.x < HEADER_WIDTH && hoveredButtonIndex_ >= 0) {
-      // Button clicked
-      if (hoveredButtonIndex_ == 0) {
-        bool newMute = !isMuted_;
-        setMuted(newMute);
-        if (trackId_.isNotEmpty()) {
-          projectState.setTrackMute(trackId_, newMute, "Toggle Mute");
-        }
-      } else if (hoveredButtonIndex_ == 1) {
-        bool newSolo = !isSoloed_;
-        setSoloed(newSolo);
-        if (trackId_.isNotEmpty()) {
-          projectState.setTrackSolo(trackId_, newSolo, "Toggle Solo");
-        }
-      } else if (hoveredButtonIndex_ == 2) {
-        bool newArmed = !isRecordArmed_;
-        setRecordArmed(newArmed);
-        if (trackId_.isNotEmpty()) {
-          projectState.setTrackArmed(trackId_, newArmed, "Toggle Record Arm");
-        }
-      } else if (hoveredButtonIndex_ == 3) {
-        bool newMonitor = !isInputMonitoring_;
-        setInputMonitor(newMonitor);
-        if (trackId_.isNotEmpty()) {
-          projectState.setTrackInputMonitor(trackId_, newMonitor,
-                                            "Toggle Input Monitor");
-        }
-      }
-    }
+    // Left-click on buttons handled by TrackHeaderComponent
   }
 }
 
@@ -605,37 +418,25 @@ void ArrangerTrackComponent::mouseUp(const juce::MouseEvent &e) {
 void ArrangerTrackComponent::mouseDoubleClick(const juce::MouseEvent &e) {}
 
 void ArrangerTrackComponent::mouseMove(const juce::MouseEvent &e) {
-  if (type_ != TrackType::Section && e.position.x < HEADER_WIDTH) {
-    using namespace design;
-    float startX = spacing::MD;
-    float btnY = e.eventComponent->getLocalBounds().getCentreY() - 11.0f;
-    float btnSize = 22.0f;
-    float btnGap = 28.0f;
-
-    int oldHover = hoveredButtonIndex_;
-    hoveredButtonIndex_ = -1;
-
-    for (int i = 0; i < 4; ++i) {
-      float bx = startX + (i * btnGap);
-      if (e.position.x >= bx && e.position.x <= bx + btnSize &&
-          e.position.y >= btnY && e.position.y <= btnY + btnSize) {
-        hoveredButtonIndex_ = i;
-        break;
-      }
-    }
-
-    if (oldHover != hoveredButtonIndex_)
-      repaint();
+  if (!isHovered_) {
+    isHovered_ = true;
+    // Animation trigger
   }
+  
+  if (type_ != TrackType::Section && e.position.x < HEADER_WIDTH) {
+      // Header hover logic handled by TrackHeaderComponent
+  }
+  
+  hoverIntensity_ = 1.0f;
+  repaint();
 }
 
 void ArrangerTrackComponent::mouseEnter(const juce::MouseEvent &e) {
-  using namespace design::animation;
-  Animator::getInstance().animate(
+  zenith::design::animation::Animator::getInstance().animate(
       trackId_ + "_hover",
       hoverIntensity_, 1.0f,
-      DURATION_FAST,
-      Curve::EaseOutQuad,
+      zenith::design::animation::DURATION_FAST,
+      zenith::design::animation::Curve::EaseOutQuad,
       [this](float val) {
           hoverIntensity_ = val;
           repaint();
@@ -644,17 +445,14 @@ void ArrangerTrackComponent::mouseEnter(const juce::MouseEvent &e) {
 }
 
 void ArrangerTrackComponent::mouseExit(const juce::MouseEvent &e) {
-  using namespace design;
-  if (hoveredButtonIndex_ != -1) {
-    hoveredButtonIndex_ = -1;
-    repaint();
-  }
+  isHovered_ = false;
+  hoverIntensity_ = 0.0f;
   
-  animation::Animator::getInstance().animate(
+  zenith::design::animation::Animator::getInstance().animate(
       trackId_ + "_hover",
       hoverIntensity_, 0.0f,
-      animation::DURATION_NORMAL,
-      animation::Curve::EaseOutCubic,
+      zenith::design::animation::DURATION_NORMAL,
+      zenith::design::animation::Curve::EaseOutCubic,
       [this](float val) {
           hoverIntensity_ = val;
           repaint();

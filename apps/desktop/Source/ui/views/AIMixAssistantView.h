@@ -14,7 +14,7 @@
 
 #include "../../ai/AIMasteringAgent.h"
 #include "../framework/GlassmorphicPanel.h"
-#include "../framework/ZenithControls.h"
+#include "../controls/ZenithUIComponents.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 

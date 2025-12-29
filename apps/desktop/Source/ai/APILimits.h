@@ -49,7 +49,7 @@ public:
     TierConfig getCurrentTierConfig() const;
     
     // Usage tracking
-    bool canMakeRequest() const;
+    bool canMakeRequest();
     void recordRequest();
     void recordCost(float cost);
     

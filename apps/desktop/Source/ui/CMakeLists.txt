@@ -41,6 +41,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerGridUtils.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/GridResolutionDropdown.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerTrackComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/TrackHeaderComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ClipComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/TakeFolderComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/AutomationLaneComponent.cpp
@@ -65,6 +66,7 @@ target_sources(ZenithDAW PRIVATE
 # -----------------------------------------------------------------------------
 target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/piano-roll/PianoRollComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/piano-roll/MidiEditorContainer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/piano-roll/ModulationMatrixView.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/piano-roll/QuantizeSettingsComponent.cpp
 )
@@ -81,15 +83,17 @@ target_sources(ZenithDAW PRIVATE
 # -----------------------------------------------------------------------------
 target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/views/SessionViewComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/session/SkiaGridComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/session/DrumPadComponent.cpp
 )
 
 # -----------------------------------------------------------------------------
 # AI Views
 # -----------------------------------------------------------------------------
-target_sources(ZenithDAW PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/views/AIMixAssistantView.cpp
-)
+# TEMPORARILY DISABLED - API incompatibilities with current design system
+# target_sources(ZenithDAW PRIVATE
+#     ${CMAKE_CURRENT_SOURCE_DIR}/views/AIMixAssistantView.cpp
+# )
 
 # -----------------------------------------------------------------------------
 # Browser Panel
@@ -137,6 +141,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/common/PianoKeyboardViewSkia.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/AIAssistantPanel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/HelpViewPanel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/components/AIChatMessage.cpp
 )
 
 # -----------------------------------------------------------------------------

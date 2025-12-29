@@ -91,13 +91,11 @@ void TimeStretcher::processChannel(int channel, const float* input, float* outpu
 
         // Interleave into analysis buffer: [Re, Im, Re, Im...]
         for (int i = 0; i < fftSize; ++i) {
-            state.analysisBuffer[2 * i] = inputFrame[i];
-            state.analysisBuffer[2 * i + 1] = 0.0f;
+            state.analysisBuffer[i] = {inputFrame[i], 0.0f};
         }
         
         // 2. FFT (Complex -> Complex)
-        fft_.perform(reinterpret_cast<const std::complex<float>*>(state.analysisBuffer.data()), 
-                     reinterpret_cast<std::complex<float>*>(state.analysisBuffer.data()), false);
+        fft_.perform(state.analysisBuffer.data(), state.analysisBuffer.data(), false);
 
         // 3. Polar Conversion & Phase Vocoding
         // Iterate only up to Nyquist (fftSize/2) for analysis, but full size for synthesis?
@@ -107,8 +105,8 @@ void TimeStretcher::processChannel(int channel, const float* input, float* outpu
         // For standard PV, we usually process bins 0 to N/2.
         
         for (int k = 0; k <= fftSize / 2; ++k) {
-            float real = state.analysisBuffer[2 * k];
-            float imag = state.analysisBuffer[2 * k + 1];
+            float real = state.analysisBuffer[k].real();
+            float imag = state.analysisBuffer[k].imag();
             
             float mag = std::sqrt(real * real + imag * imag);
             float phase = std::atan2(imag, real);
@@ -136,20 +134,17 @@ void TimeStretcher::processChannel(int channel, const float* input, float* outpu
             state.lastInputPhase[k] = phase; 
 
             // Polar -> Cartesian
-            state.synthesisBuffer[2 * k] = mag * std::cos(newPhase);
-            state.synthesisBuffer[2 * k + 1] = mag * std::sin(newPhase);
+            state.synthesisBuffer[k] = std::polar(mag, newPhase);
             
             // Mirror to upper half for valid real IFFT result
             if (k > 0 && k < fftSize / 2) {
                 int mirrorK = fftSize - k;
-                state.synthesisBuffer[2 * mirrorK] = state.synthesisBuffer[2 * k];
-                state.synthesisBuffer[2 * mirrorK + 1] = -state.synthesisBuffer[2 * k + 1]; // Conjugate
+                state.synthesisBuffer[mirrorK] = std::conj(state.synthesisBuffer[k]);
             }
         }
 
         // 4. IFFT
-        fft_.perform(reinterpret_cast<const std::complex<float>*>(state.synthesisBuffer.data()), 
-                     reinterpret_cast<std::complex<float>*>(state.synthesisBuffer.data()), true);
+        fft_.perform(state.synthesisBuffer.data(), state.synthesisBuffer.data(), true);
 
         // 5. Window and Overlap-Add
         // Output is interleaved [Re, Im...]. Imaginary part should be ~0.
@@ -162,7 +157,7 @@ void TimeStretcher::processChannel(int channel, const float* input, float* outpu
 
         // Copy Real part to temp for windowing
         for (int i = 0; i < fftSize; ++i) {
-            outputFrame[i] = state.synthesisBuffer[2 * i] * gain; // Extract Real
+            outputFrame[i] = state.synthesisBuffer[i].real() * gain; // Extract Real
         }
         
         window_.multiplyWithWindowingTable(outputFrame.data(), fftSize);

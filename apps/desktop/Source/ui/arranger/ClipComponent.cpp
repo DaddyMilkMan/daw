@@ -108,6 +108,7 @@ void ClipComponent::updateBounds(double pixelsPerBeat, int yPosition,
   setBounds(x, yPosition, width, height);
 }
 
+//==============================================================================
 void ClipComponent::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds();
   using namespace zenith::design;
@@ -119,9 +120,10 @@ void ClipComponent::drawSkia(SkCanvas *canvas) {
   if (fWidth <= 0 || fHeight <= 0)
     return;
 
-  // 1. Calculate Smart Corners
+  // 1. Calculate Smart Corners (4px as requested)
   NeighborhoodState neighbors = getNeighborhoodState();
-  float radius = 8.0f; // As requested
+  // Using 4.0 as explicitly requested by user (overriding system default if needed)
+  float radius = 4.0f;  
 
   // radii order: TopLeft, TopRight, BottomRight, BottomLeft
   SkVector radii[4];
@@ -131,6 +133,8 @@ void ClipComponent::drawSkia(SkCanvas *canvas) {
     radii[0].set(0, 0); // TopLeft flat
     radii[3].set(0, 0); // BottomLeft flat
   } else {
+    // If clip spans full track height, us RADIUS_MD (assuming full height is > 40px)
+    // For now we stick to the requested 4px unless it's huge
     radii[0].set(radius, radius);
     radii[3].set(radius, radius);
   }
@@ -146,231 +150,339 @@ void ClipComponent::drawSkia(SkCanvas *canvas) {
 
   SkRRect clipRRect;
   clipRRect.setRectRadii(SkRect::MakeWH(fWidth, fHeight), radii);
-
+  
   // 2. Setup Colors
   juce::String clipType = clip[ProjectState::PROP_TYPE].toString();
-  SkColor baseColor =
-      (clipType == "midi") ? design::colors::NEON_PURPLE : design::colors::CYAN;
+  // Default to Cyan/Purple, or use Track Color if available (TODO: propagate track color)
+  SkColor baseColor = (clipType == "midi") ? design::colors::NEON_PURPLE : design::colors::CYAN;
 
-  // Header Color (Solid)
-  SkColor headerColor = baseColor;
+  // 3. Draw Shadow first (outside clip bounds)
+  drawDropShadow(canvas, clipRRect);
 
-  // Body Color (Muted/Transparent)
-  SkColor bodyColor = SkColorSetARGB(
-      40, // Very transparent for body
-      SkColorGetR(baseColor), SkColorGetG(baseColor), SkColorGetB(baseColor));
-
-  // 3. Clipping for Rounded Structure
+  // 4. Clip Content
   canvas->save();
   canvas->clipRRect(clipRRect, true);
 
-  // 4. Draw Backgrounds (Ghost Loop Support)
+  // 5. Draw Background
+  drawClipBackground(canvas, clipRRect, baseColor);
+
+  // 6. Draw Content (Waveform / MIDI)
+  // Calculate loop info for content drawing
   double loopBeats = getLoopLength();
   double totalBeats = getLengthBeats();
-  double pixelsPerBeat = (totalBeats > 0) ? (fWidth / totalBeats) : 0;
-
+  
   // Guard against divide by zero or negative loops
-  if (loopBeats <= 0)
-    loopBeats = totalBeats;
+  if (loopBeats <= 0) loopBeats = totalBeats;
+  if (totalBeats <= 0) totalBeats = 1.0; 
 
-  // Guard against zero-length clips
-  if (totalBeats <= 0)
-    totalBeats = 1.0; // Minimum 1 beat to prevent division issues
-
-  float loopWidthPx = (float)(loopBeats * pixelsPerBeat);
   int numLoops = (int)std::ceil(totalBeats / loopBeats);
-
-  // Performance safety: Cap max loop iterations to prevent runaway rendering
   static constexpr int kMaxClipLoopIterations = 100;
   numLoops = std::min(numLoops, kMaxClipLoopIterations);
 
-  // Constants
-  const float headerHeight = 24.0f;
-  const float contentAreaTop = headerHeight;
-
-  for (int i = 0; i < numLoops; ++i) {
-    float xOffset = i * loopWidthPx;
-    float loopRight = std::min(xOffset + loopWidthPx, fWidth);
-    float loopW = loopRight - xOffset;
-
-    if (loopW <= 0)
-      continue;
-
-    SkRect loopRect = SkRect::MakeXYWH(xOffset, 0, loopW, fHeight);
-
-    bool isGhost = (i > 0);
-
-    // Draw Body
-    SkPaint bodyPaint;
-    if (isGhost) {
-      // Ghost: Faded
-      bodyPaint.setColor(SkColorSetA(bodyColor, 20)); // Fainter
-    } else {
-      // Main: Regular
-      bodyPaint.setColor(bodyColor);
-    }
-    canvas->drawRect(loopRect, bodyPaint);
-
-    // Draw Separator for Ghost Loops (Dashed Line at boundary)
-    if (isGhost) {
-      SkPaint dividerPaint;
-      dividerPaint.setColor(SkColorSetA(headerColor, 128));
-      dividerPaint.setStrokeWidth(1.0f);
-      SkScalar dashes[] = {4.0f, 4.0f};
-      dividerPaint.setPathEffect(
-          SkDashPathEffect::Make(SkSpan<const SkScalar>(dashes, 2), 0));
-      canvas->drawLine(xOffset, 0, xOffset, fHeight, dividerPaint);
-    }
-
-    // Draw Header Area for this loop iteration?
-    // User says "Clip Header strip at the top... separate".
-    // Usually Header is only on the Clip Container, NOT repeated per loop.
-    // "Clip Header strip... separate from the waveform/MIDI content area".
-    // So I will draw the Header ONCE on top of everything.
-
-    // Ghost visual: "Original loop iteration is opaque, and subsequent loops...
-    // have a dashed outline" Dashed outline usually refers to the content or
-    // the loop boundary.
+  if (clipType == "midi") {
+      drawMidiContent(canvas, SkRect::MakeWH(fWidth, fHeight), baseColor, numLoops);
+  } else {
+      drawAudioContent(canvas, SkRect::MakeWH(fWidth, fHeight), baseColor, numLoops);
   }
 
-  // 5. Draw Header (Overlay on top of loops)
-  // The header background
-  SkRect headerRect = SkRect::MakeXYWH(0, 0, fWidth, headerHeight);
-  SkPaint headerPaint;
-  headerPaint.setColor(headerColor);
-  canvas->drawRect(headerRect, headerPaint);
+  // 7. Draw Name
+  drawClipName(canvas);
+  
+  // 8. Draw Fade Handles (on hover)
+  if (isHovered && !isMuted) {
+    drawFadeHandles(canvas, fWidth);
+  }
+  
+  // 9. Draw Stretch Indicator (if stretched - placeholder logic)
+  // float playbackRate = clip.getProperty("playbackRate", 1.0f);
+  // if (std::abs(playbackRate - 1.0f) > 0.01f) { ... }
 
-  // Header Name (A+ Typography)
-  if (fWidth > 20) {
-    SkFont font =
-        design::typography::getSkFont(12.0f, design::FontWeight::Bold);
+  canvas->restore(); // End clipping
 
+  // 10. Draw Overlay States (Selection, Recording, Playing borders)
+  drawOverlayStates(canvas, clipRRect);
+}
+
+void ClipComponent::drawDropShadow(SkCanvas* canvas, const SkRRect& rect) {
+    // Subtle drop shadow (2px offset, 4px blur, 20% black)
+    SkPaint shadowPaint;
+    shadowPaint.setColor(SkColorSetA(SK_ColorBLACK, 51)); // 20% opacity
+    shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
+    
+    // Draw slightly offset
+    canvas->save();
+    canvas->translate(0, 2.0f); 
+    canvas->drawRRect(rect, shadowPaint);
+    canvas->restore();
+}
+
+void ClipComponent::drawClipBackground(SkCanvas* canvas, const SkRRect& rect, SkColor trackColor) {
+    SkPaint bgPaint;
+    // Track color at 70% opacity
+    SkColor bgColor = SkColorSetA(trackColor, 179); // ~70% of 255
+    
+    if (isMuted) {
+        // Grayed out (50% opacity of the 70%)
+        bgColor = SkColorSetA(trackColor, 90); 
+    }
+    
+    bgPaint.setColor(bgColor);
+    canvas->drawRRect(rect, bgPaint);
+}
+
+void ClipComponent::drawAudioContent(SkCanvas* canvas, const SkRect& rect, SkColor trackColor, int numLoops) {
+    using namespace zenith::design;
+    float fWidth = rect.width();
+    float fHeight = rect.height();
+    
+    double loopBeats = getLoopLength();
+    double totalBeats = getLengthBeats();
+    double pixelsPerBeat = (totalBeats > 0) ? (fWidth / totalBeats) : 0;
+    float loopWidthPx = (float)(loopBeats * pixelsPerBeat);
+    
+    // Generative waveform (placeholder for real audio data)
+    juce::String cid = clip[ProjectState::PROP_ID].toString();
+    juce::Random rng(cid.hashCode());
+    
+    for (int i = 0; i < numLoops; ++i) {
+        float xOffset = i * loopWidthPx;
+        float loopRight = std::min(xOffset + loopWidthPx, fWidth);
+        float loopW = loopRight - xOffset;
+        if (loopW <= 0) continue;
+
+        bool isGhost = (i > 0);
+        
+        canvas->save();
+        canvas->clipRect(SkRect::MakeXYWH(xOffset, 0, loopW, fHeight));
+        canvas->translate(xOffset, 0);
+        
+        // Waveform Style: Filled, centered around middle
+        // Color: Lighter shade of track color
+        SkColor waveColor = withAlpha(lighten(trackColor, 0.3f), isGhost ? 0.3f : 0.8f);
+        
+        SkPath wavePath;
+        float midY = fHeight * 0.5f;
+        float amp = fHeight * 0.4f; // Leave some padding
+        
+        wavePath.moveTo(0, midY);
+        
+        // Simplified at zoom out (simulated by step size)
+        // Detailed at zoom in
+        int steps = std::max(2, (int)(loopWidthPx / 2.0f));
+        
+        for (int s = 0; s <= steps; ++s) {
+            float x = s * 2.0f;
+            // Generate deterministic noise based on x
+            float n1 = std::sin(x * 0.05f + cid.hashCode());
+            float n2 = std::cos(x * 0.13f + cid.hashCode());
+            float val = n1 * n2;
+            
+            wavePath.lineTo(x, midY + val * amp);
+        }
+        
+        // Mirror for filled style
+        for (int s = steps; s >= 0; --s) {
+            float x = s * 2.0f;
+            float n1 = std::sin(x * 0.05f + cid.hashCode());
+            float n2 = std::cos(x * 0.13f + cid.hashCode());
+            float val = n1 * n2;
+             
+            wavePath.lineTo(x, midY - val * amp);
+        }
+        
+        wavePath.close();
+        
+        SkPaint wavePaint;
+        wavePaint.setStyle(SkPaint::kFill_Style);
+        wavePaint.setColor(waveColor);
+        wavePaint.setAntiAlias(true);
+        
+        canvas->drawPath(wavePath, wavePaint);
+        
+        // Loop separator
+        if (isGhost) {
+            SkPaint divPaint;
+            divPaint.setColor(SkColorSetA(SK_ColorWHITE, 50));
+            divPaint.setStrokeWidth(1.0f);
+            SkScalar dashes[] = {4.0f, 4.0f};
+            divPaint.setPathEffect(SkDashPathEffect::Make(SkSpan(dashes, 2), 0));
+            canvas->drawLine(0, 0, 0, fHeight, divPaint);
+        }
+
+        canvas->restore();
+    }
+}
+
+void ClipComponent::drawMidiContent(SkCanvas* canvas, const SkRect& rect, SkColor trackColor, int numLoops) {
+    using namespace zenith::design;
+    float fWidth = rect.width();
+    float fHeight = rect.height();
+    
+    double loopBeats = getLoopLength();
+    double totalBeats = getLengthBeats();
+    double pixelsPerBeat = (totalBeats > 0) ? (fWidth / totalBeats) : 0;
+    float loopWidthPx = (float)(loopBeats * pixelsPerBeat);
+    
+    juce::String cid = clip[ProjectState::PROP_ID].toString();
+    juce::Random rng(cid.hashCode());
+    
+    for (int i = 0; i < numLoops; ++i) {
+        float xOffset = i * loopWidthPx;
+        float loopRight = std::min(xOffset + loopWidthPx, fWidth);
+        float loopW = loopRight - xOffset;
+        if (loopW <= 0) continue;
+        
+        bool isGhost = (i > 0);
+
+        canvas->save();
+        canvas->clipRect(SkRect::MakeXYWH(xOffset, 0, loopW, fHeight));
+        canvas->translate(xOffset, 0);
+
+        // Draw Loop Indicator if looping
+        if (i == 0 && isHovered && loopBeats < totalBeats) {
+            // Tiny loop icon in top right - just a visual hint
+        }
+        
+        // Random notes
+        int numNotes = (int)(loopWidthPx / 10) + 2;
+        
+        for (int n = 0; n < numNotes; ++n) {
+            if (rng.nextFloat() > 0.6f) continue;
+            
+            float x = n * 10.0f + rng.nextFloat() * 2.0f;
+            float pitchNorm = rng.nextFloat(); // 0..1
+            float y = pitchNorm * (fHeight - 4.0f); // Height based on pitch
+            float w = 6.0f + rng.nextFloat() * 15.0f;
+            float h = 3.0f;
+            float vel = 0.4f + rng.nextFloat() * 0.6f; // Opacity based on velocity
+            
+            SkRect noteRect = SkRect::MakeXYWH(x, y, w, h);
+            
+            SkPaint notePaint;
+            notePaint.setColor(SkColorSetA(SK_ColorWHITE, (int)(vel * 255.0f)));
+            if (isGhost) notePaint.setAlpha(50);
+            
+            canvas->drawRect(noteRect, notePaint);
+        }
+        
+        // Loop separator
+        if (isGhost) {
+            SkPaint divPaint;
+            divPaint.setColor(SkColorSetA(SK_ColorWHITE, 50));
+            divPaint.setStrokeWidth(1.0f);
+            SkScalar dashes[] = {4.0f, 4.0f};
+            divPaint.setPathEffect(SkDashPathEffect::Make(SkSpan(dashes, 2), 0));
+            canvas->drawLine(0, 0, 0, fHeight, divPaint);
+        }
+
+        canvas->restore();
+    }
+}
+
+void ClipComponent::drawClipName(SkCanvas* canvas) {
+    using namespace zenith::design;
+    
     juce::String clipName = clip[ProjectState::PROP_NAME].toString();
-    if (clipName.isEmpty())
-      clipName = "Clip";
-
-    // Text Paint
+    if (clipName.isEmpty()) clipName = "Clip";
+    
+    // Font: FONT_XS (10px), White
+    SkFont font = typography::getSkFont(typography::FONT_XS, typography::FontWeight::Bold);
+    
     SkPaint textPaint;
     textPaint.setAntiAlias(true);
     textPaint.setColor(SK_ColorWHITE);
-
-    // Text Shadow for contrast
+    
+    // Shadow for readability
     SkPaint shadowPaint;
     shadowPaint.setAntiAlias(true);
-    shadowPaint.setColor(SkColorSetA(SK_ColorBLACK, 128));
+    shadowPaint.setColor(SkColorSetA(SK_ColorBLACK, 180));
+    shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 1.0f));
+    
+    float x = 4.0f; // Padding
+    float y = 12.0f; // Baseline approx
+    
+    canvas->drawSimpleText(clipName.toRawUTF8(), clipName.length(), SkTextEncoding::kUTF8, x, y, font, shadowPaint);
+    canvas->drawSimpleText(clipName.toRawUTF8(), clipName.length(), SkTextEncoding::kUTF8, x, y, font, textPaint);
+}
 
-    float textX = 8.0f;
-    float textY = headerHeight / 2.0f + 5.0f; // Adjusted vertical center
+void ClipComponent::drawFadeHandles(SkCanvas* canvas, float width) {
+    // Triangles at corners
+    SkPaint handlePaint;
+    handlePaint.setColor(SkColorSetA(SK_ColorWHITE, 128));
+    handlePaint.setAntiAlias(true);
+    handlePaint.setStyle(SkPaint::kFill_Style);
+    
+    float size = 6.0f;
+    
+    // Top Left
+    SkPath pathL;
+    pathL.moveTo(0, 0);
+    pathL.lineTo(size, 0);
+    pathL.lineTo(0, size);
+    pathL.close();
+    canvas->drawPath(pathL, handlePaint);
+    
+    // Top Right
+    SkPath pathR;
+    pathR.moveTo(width, 0);
+    pathR.lineTo(width - size, 0);
+    pathR.lineTo(width, size);
+    pathR.close();
+    canvas->drawPath(pathR, handlePaint);
+}
 
-    // Simple text clipping
-    canvas->save();
-    canvas->clipRect(headerRect);
-
-    // Draw Shadow
-    canvas->drawSimpleText(clipName.toRawUTF8(), clipName.length(),
-                           SkTextEncoding::kUTF8, textX + 1.0f, textY + 1.0f,
-                           font, shadowPaint);
-
-    // Draw Text
-    canvas->drawSimpleText(clipName.toRawUTF8(), clipName.length(),
-                           SkTextEncoding::kUTF8, textX, textY, font,
-                           textPaint);
-    canvas->restore();
-  }
-
-  // 6. Content Area (Waveform/MIDI Blobs)
-  // The content area starts below the header and extends to the clip bottom.
-  SkRect contentRect =
-      SkRect::MakeXYWH(0, contentAreaTop, fWidth, fHeight - contentAreaTop);
-
-  canvas->save();
-  canvas->clipRect(contentRect);
-
-  // Use Clip ID to seed random for consistent visualization
-  // (In proper implementation, this would read actual note/audio data)
-  juce::String cid = clip[ProjectState::PROP_ID].toString();
-  juce::Random rng(cid.hashCode());
-
-  if (clipType == "midi") {
-    // Draw Neon MIDI bars
-    SkPaint notePaint;
-    notePaint.setAntiAlias(true);
-
-    int numNotes = (int)(fWidth / 15) + 2;
-    for (int i = 0; i < numNotes; ++i) {
-      if (rng.nextFloat() > 0.7f)
-        continue; // Sparsity
-
-      float x = i * 15.0f + rng.nextFloat() * 5.0f;
-      float pitchNorm = rng.nextFloat();
-      float y = contentAreaTop + pitchNorm * (fHeight - contentAreaTop - 6);
-      float w = 8.0f + rng.nextFloat() * 20.0f;
-      float h = 4.0f;
-
-      SkRect noteRect = SkRect::MakeXYWH(x, y, w, h);
-
-      // Glowy Note
-      notePaint.setColor(SkColorSetA(baseColor, 255));
-      canvas->drawRRect(SkRRect::MakeRectXY(noteRect, 2, 2), notePaint);
-
-      // Subtle tail
-      SkPaint tailPaint;
-      tailPaint.setColor(SkColorSetA(baseColor, 50));
-      canvas->drawRect(SkRect::MakeXYWH(x + w, y, 10, h), tailPaint);
+void ClipComponent::drawOverlayStates(SkCanvas* canvas, const SkRRect& rect) {
+    using namespace zenith::design;
+    
+    // 1. Selection: CYAN border (2px), subtle glow
+    if (isSelected) {
+        SkPaint selPaint;
+        selPaint.setStyle(SkPaint::kStroke_Style);
+        selPaint.setStrokeWidth(2.0f);
+        selPaint.setColor(colors::CYAN);
+        selPaint.setAntiAlias(true);
+        selPaint.setMaskFilter(SkMaskFilter::MakeBlur(kSolid_SkBlurStyle, 2.0f * selectionPulse)); // Pulse
+        
+        canvas->drawRRect(rect, selPaint);
+        
+        // Crisp inner stroke
+        selPaint.setMaskFilter(nullptr);
+        canvas->drawRRect(rect, selPaint);
     }
-  } else {
-    // Draw Waveform (Generative approximation)
-    SkPath wavePath;
-    float midY = contentAreaTop + (fHeight - contentAreaTop) * 0.5f;
-    float amp = (fHeight - contentAreaTop) * 0.4f;
-
-    wavePath.moveTo(0, midY);
-    int steps = (int)(fWidth / 2.0f);
-    for (int i = 0; i < steps; ++i) {
-      float x = i * 2.0f;
-      float noise = (rng.nextFloat() * 2.0f - 1.0f);
-      // Mix with sine for structure
-      float val = std::sin(x * 0.1f) * noise * noise; // Squared for peaks
-      wavePath.lineTo(x, midY + val * amp);
+    
+    // 2. Recording: RED border, pulsing glow
+    if (isRecording) {
+        SkPaint recPaint;
+        recPaint.setStyle(SkPaint::kStroke_Style);
+        recPaint.setStrokeWidth(2.0f);
+        recPaint.setColor(colors::RED);
+        recPaint.setAntiAlias(true);
+        // Intense pulse
+        recPaint.setMaskFilter(SkMaskFilter::MakeBlur(kSolid_SkBlurStyle, 4.0f + 2.0f * std::sin(selectionPulse * 10)));
+        canvas->drawRRect(rect, recPaint);
     }
-
-    SkPaint wavePaint;
-    wavePaint.setStyle(SkPaint::kStroke_Style);
-    wavePaint.setStrokeWidth(1.5f);
-    wavePaint.setAntiAlias(true);
-    wavePaint.setColor(SkColorSetA(baseColor, 200));
-    canvas->drawPath(wavePath, wavePaint);
-
-    // Fill
-    wavePath.lineTo(fWidth, midY); // Close path loosely
-    wavePath.lineTo(0, midY);
-
-    SkPaint fillPaint;
-    fillPaint.setStyle(SkPaint::kFill_Style);
-    fillPaint.setColor(SkColorSetA(baseColor, 50));
-    canvas->drawPath(wavePath, fillPaint);
-  }
-
-  canvas->restore(); // Restore Clipping (Ends Content Area)
-  canvas->restore(); // Restore Clipping (Ends Smart Rounded Corner Mask)
-
-  // 7. Draw Borders (Selection or Outline)
-  if (isSelected) {
-    SkPaint selectionPaint;
-    selectionPaint.setAntiAlias(true);
-    selectionPaint.setColor(
-        SkColorSetA(design::colors::CYAN, 255)); // Bright accent
-    selectionPaint.setStyle(SkPaint::kStroke_Style);
-    selectionPaint.setStrokeWidth(2.0f);
-    canvas->drawRRect(clipRRect, selectionPaint);
-  } else {
-    SkPaint borderPaint;
-    borderPaint.setAntiAlias(true);
-    borderPaint.setColor(SkColorSetA(design::colors::BORDER_SUBTLE, 100));
-    borderPaint.setStyle(SkPaint::kStroke_Style);
-    borderPaint.setStrokeWidth(1.0f);
-    canvas->drawRRect(clipRRect, borderPaint);
-  }
+    
+    // 3. Resize Highlights (Edge highlights CYAN) - simulated
+    // Real impl would check mouse position near edges
+    
+    // 4. Playing: Left edge has animated playhead line
+    if (isPlaying) {
+         SkPaint playPaint;
+         playPaint.setColor(colors::PLAYHEAD); // Orange
+         playPaint.setStrokeWidth(2.0f);
+         playPaint.setAntiAlias(true);
+         
+         // Animate position? For now just left edge indicator or moving line
+         // Requirement: "Left edge has animated playhead line"? 
+         // Usually playhead moves across. If "Left edge" implies it marks the clip as playing:
+         canvas->drawLine(1.0f, 0, 1.0f, rect.height(), playPaint);
+         
+         // Inner glow
+         playPaint.setStrokeWidth(4.0f);
+         playPaint.setAlpha(100);
+         playPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f));
+         canvas->drawLine(1.0f, 0, 1.0f, rect.height(), playPaint);
+    }
 }
 
 void ClipComponent::mouseEnter(const juce::MouseEvent &event) {
@@ -388,40 +500,35 @@ void ClipComponent::mouseExit(const juce::MouseEvent &event) {
 void ClipComponent::mouseDown(const juce::MouseEvent &event) {
   dragStartPos = event.getPosition();
   dragStartBeats = getStartBeats();
-
   // Toggle selection on click (Ctrl/Cmd for multi-select)
   if (!event.mods.isCommandDown()) {
     isSelected = !isSelected;
   }
-
   repaint();
 }
 
 void ClipComponent::mouseDrag(const juce::MouseEvent &event) {
-  // Simple drag visualization (actual state changes would go through
-  // ProjectState)
   auto delta = event.getPosition() - dragStartPos;
+  // Drag preview...
+  // In a real implementation this informs the Arranger to move the clip
+  // For visual feedback only:
   setTopLeftPosition(getX() + delta.x, getY());
 }
 
 void ClipComponent::timerCallback() {
-  // Smooth animation updates
   const float animationSpeed = 0.1f;
-
-  // Hover animation (smooth ease in/out)
   float targetHover = isHovered ? 1.0f : 0.0f;
-  hoverAnimation += (targetHover - hoverAnimation) * animationSpeed;
-
-  // Selection pulse animation
-  if (isSelected) {
-    selectionPulse += 0.02f;
-    if (selectionPulse > 1.0f) {
-      selectionPulse -= 1.0f;
-    }
+  
+  if (std::abs(targetHover - hoverAnimation) > 0.001f) {
+      hoverAnimation += (targetHover - hoverAnimation) * animationSpeed;
+      repaint();
   }
 
-  // Repaint only if animation is active
-  if (std::abs(hoverAnimation - targetHover) > 0.01f || isSelected) {
+  if (isSelected || isRecording) {
+    selectionPulse += 0.05f;
+    if (selectionPulse > 1.0f) {
+      selectionPulse -= 1.0f; // Wrap around for continuous phase
+    }
     repaint();
   }
 }

@@ -12,7 +12,7 @@ public:
   void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override;
 
   void getNextAudioBlock(
-      const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
+      const juce::AudioSourceChannelInfo &bufferToFill, juce::int64 playheadSamples,
       const juce::MidiBuffer *incomingMidi = nullptr,
       std::span<juce::AudioBuffer<float> * const> auxBuffers = {},
       const TempoMap *tempoMap = nullptr,

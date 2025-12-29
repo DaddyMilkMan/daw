@@ -71,6 +71,9 @@ void AIResponseCache::initDatabase() {
 
         // Skip expired entries
         if (!entry.isExpired()) {
+          // Initialize LRU for loaded entries (append to front)
+          lruList_.push_front(entry.promptHash);
+          entry.lruIterator = lruList_.begin();
           cache_[entry.promptHash] = entry;
         }
       }
@@ -109,6 +112,10 @@ AIResponseCache::get(const juce::String &promptHash) {
   stats_.updateHitRate();
   it->second.hitCount++;
 
+  // Move to front of LRU list (O(1))
+  lruList_.splice(lruList_.begin(), lruList_, it->second.lruIterator);
+  it->second.lruIterator = lruList_.begin();
+
   DBG("AIResponseCache: HIT for " + promptHash.substring(0, 16) + "...");
 
   return it->second.response;
@@ -127,6 +134,10 @@ void AIResponseCache::put(const juce::String &promptHash,
   entry.cachedAt = juce::Time::currentTimeMillis();
   entry.expiresAt = entry.cachedAt + (ttlSeconds * 1000);
   entry.hitCount = 0;
+
+  // Add to front of LRU list
+  lruList_.push_front(promptHash);
+  entry.lruIterator = lruList_.begin();
 
   cache_[promptHash] = entry;
   stats_.totalEntries = static_cast<int>(cache_.size());
@@ -162,11 +173,13 @@ void AIResponseCache::invalidate(const juce::String &pattern) {
   if (pattern.isEmpty()) {
     // Clear all
     cache_.clear();
+    lruList_.clear();
     stats_.totalEntries = 0;
   } else {
     // Remove matching entries
     for (auto it = cache_.begin(); it != cache_.end();) {
       if (it->first.matchesWildcard(pattern, true)) {
+        lruList_.erase(it->second.lruIterator);
         it = cache_.erase(it);
       } else {
         ++it;
@@ -213,30 +226,19 @@ void AIResponseCache::resetStats() {
 //==============================================================================
 
 void AIResponseCache::evictLRU() {
-  // Note: cacheLock_ should already be held by caller
-
-  // Find entries with lowest hit count
-  std::vector<std::pair<juce::String, int>> entries;
-  for (const auto &pair : cache_) {
-    entries.emplace_back(pair.first, pair.second.hitCount);
-  }
-
-  // Sort by hit count (ascending)
-  std::sort(entries.begin(), entries.end(),
-            [](const auto &a, const auto &b) { return a.second < b.second; });
-
-  // Remove lowest 25%
-  size_t toRemove = entries.size() / 4;
-  if (toRemove == 0)
-    toRemove = 1;
-
-  for (size_t i = 0; i < toRemove && i < entries.size(); ++i) {
-    cache_.erase(entries[i].first);
+  // O(1) Eviction: Remove from back of list
+  // Remove entries until size is under limit
+  int removedCount = 0;
+  while (calculateTotalSize() > maxSizeBytes_ && !lruList_.empty()) {
+      juce::String keyToRemove = lruList_.back();
+      lruList_.pop_back();
+      cache_.erase(keyToRemove);
+      removedCount++;
   }
 
   stats_.totalEntries = static_cast<int>(cache_.size());
 
-  DBG("AIResponseCache: Evicted " + juce::String(toRemove) + " entries");
+  DBG("AIResponseCache: Evicted " + juce::String(removedCount) + " entries");
 }
 
 juce::int64 AIResponseCache::calculateTotalSize() const {

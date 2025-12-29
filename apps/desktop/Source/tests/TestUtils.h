@@ -151,8 +151,13 @@ inline juce::File createTempWavFile(const juce::String& name, int lengthSamples,
     if (tempFile.exists()) tempFile.deleteFile();
 
     juce::WavAudioFormat format;
+    // Note: createWriterFor takes ownership of the stream. 
+    // We use the older API version to avoid complex Option setup for a simple test utility.
+    auto stream = std::make_unique<juce::FileOutputStream>(tempFile);
+    if (!stream->openedOk()) return {};
+
     std::unique_ptr<juce::AudioFormatWriter> writer(format.createWriterFor(
-        new juce::FileOutputStream(tempFile), 44100.0, (unsigned int)numChannels, 16, {}, 0));
+        stream.release(), 44100.0, (unsigned int)numChannels, 16, {}, 0));
     
     if (writer) {
         juce::AudioBuffer<float> buffer(numChannels, lengthSamples);

@@ -104,6 +104,8 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/tests/RecordingTests.cpp
     apps/desktop/Source/tests/RoutingGraphTest.cpp
     apps/desktop/Source/tests/ExportTests.cpp
+    apps/desktop/Source/tests/ArrangerValidationTests.cpp
+    apps/desktop/Source/ui/arranger/TrackHeaderComponent.cpp
 )
 
 # Common sources used by both DAW and Tests
@@ -301,7 +303,7 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/ui/controls/ExportProgressBar.cpp
     apps/desktop/Source/ui/controls/FreezeProgressOverlay.cpp
     apps/desktop/Source/ui/session/DrumPadComponent.cpp
-    apps/desktop/Source/platform/linux/window/PlatformWindowUtils_Linux.cpp
+    apps/desktop/Source/ui/session/SkiaGridComponent.cpp
     apps/desktop/Source/ui/common/MainLayoutComponent.cpp
     apps/desktop/Source/ui/common/MainWindow.cpp
     apps/desktop/Source/ui/common/MenuBar.cpp
@@ -313,12 +315,10 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/ui/common/ZenithHubComponent.cpp
     apps/desktop/Source/ai/ZenithStyleApplicator.cpp
     apps/desktop/Source/network/SecureKeyStore.cpp
-<<<<<<< HEAD
-=======
     apps/desktop/Source/network/AuthenticationService.cpp
+    apps/desktop/Source/network/OAuthRedirectServer.cpp
     apps/desktop/Source/ui/common/LoginComponent.cpp
     apps/desktop/Source/platform/linux/network/SecureKeyStore_Linux.cpp
->>>>>>> origin/master
     apps/desktop/Source/ui/panels/PresetBrowserComponent.cpp
 
     apps/desktop/Source/effects/ConsoleEmulation.cpp
@@ -361,7 +361,6 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/ai/AIStatusManager.cpp
     apps/desktop/Source/ai/AudioFitnessEvaluator.cpp
     apps/desktop/Source/platform/linux/engine/PlatformAudioUtils_Linux.cpp
-    apps/desktop/Source/platform/linux/network/SecureKeyStore_Linux.cpp
     apps/desktop/Source/network/GrokUtils.cpp
 
     apps/desktop/Source/network/GrokDAWController.cpp
@@ -375,6 +374,7 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/dsp/ONNXStemSeparator.cpp
     apps/desktop/Source/ui/sample-editor/SampleEditorComponent.cpp
     apps/desktop/Source/engine/MixerController.cpp
+    apps/desktop/Source/engine/TakeFolder.cpp
     apps/desktop/Source/engine/TrackProcessor.cpp
     apps/desktop/Source/utils/StemSeparationJob.cpp
     apps/desktop/Source/dsp/SpectralProcessor.cpp
@@ -392,6 +392,12 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/platform/linux/system/PlatformSystemUtils_Linux.cpp
     apps/desktop/Source/platform/linux/config/PlatformPathUtils_Linux.cpp
     apps/desktop/Source/platform/linux/window/PlatformWindowUtils_Linux.cpp
+    apps/desktop/Source/platform/linux/dsp/PlatformModelUtils_Linux.cpp
+    
+    # Missing sources for linker - added for ZenithDAWTests
+    apps/desktop/Source/platform/linux/system/PlatformLogUtils_Linux.cpp
+    apps/desktop/Source/ui/piano-roll/MidiEditorContainer.cpp
+    apps/desktop/Source/ui/components/AIChatMessage.cpp
 )
 
 
@@ -545,6 +551,9 @@ elseif(UNIX AND NOT APPLE)
         message(STATUS "Vulkan not found - Skia Vulkan backend might fail at runtime")
         target_link_libraries(ZenithDAW PRIVATE vulkan) # Try explicit link
     endif()
+    
+    # Skia/Freetype dependencies
+    target_link_libraries(ZenithDAW PRIVATE bz2 expat)
 endif()
 
 # Selective RTTI disabling removed in favor of LinkerFix.cpp
@@ -732,6 +741,7 @@ if(BUILD_TESTS)
     target_compile_definitions(ZenithDAWTests PRIVATE
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
+        ZENITH_USE_SKIA=1
     )
 
     target_compile_features(ZenithDAWTests PRIVATE cxx_std_20)

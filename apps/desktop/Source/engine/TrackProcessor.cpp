@@ -46,7 +46,7 @@ void TrackProcessor::releaseResources() {
 
 void TrackProcessor::processBlock(const juce::AudioSourceChannelInfo& bufferToFill,
                                   juce::MidiBuffer& midiMessages,
-                                  const std::vector<juce::AudioBuffer<float>*>& auxBuffers,
+                                  std::span<juce::AudioBuffer<float>* const> auxBuffers,
                                   const juce::AudioBuffer<float>* sidechain) {
     
     // 1. Process Plugin Chain
@@ -74,8 +74,7 @@ void TrackProcessor::processBlock(const juce::AudioSourceChannelInfo& bufferToFi
 void TrackProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) {
     // Convenience overload - create AudioSourceChannelInfo and call full version
     juce::AudioSourceChannelInfo info(&buffer, 0, buffer.getNumSamples());
-    std::vector<juce::AudioBuffer<float>*> emptyAux;
-    processBlock(info, midiMessages, emptyAux, nullptr);
+    processBlock(info, midiMessages, {}, nullptr);
 }
 
 } // namespace zenith

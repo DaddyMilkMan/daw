@@ -53,34 +53,47 @@ public:
   }
 
   void drawSkia(SkCanvas *canvas) override {
-    // Dot indicator
-    float radius = 4.0f;
+    auto bounds = getLocalBounds().toFloat();
+    float cy = bounds.getHeight() / 2.0f;
     float cx = 10.0f;
-    float cy = getHeight() / 2.0f;
+    float radius = 4.0f;
 
     SkPaint paint;
     paint.setAntiAlias(true);
 
     if (wasDirty) {
-      // Unsaved: Amber pulse
-      float alpha = 0.6f + 0.4f * std::sin(pulsePhase);
-      paint.setColor(
-          SkColorSetA(SkColorSetRGB(255, 191, 0), (int)(alpha * 255)));
+      // Unsaved: Amber pulse with aura
+      float pulse = 0.6f + 0.4f * std::sin(pulsePhase);
+      SkColor amber = design::colors::WARNING;
+      
+      // Aura
+      paint.setColor(design::withAlpha(amber, 0.3f * pulse));
+      canvas->drawCircle(cx, cy, radius + 3.0f, paint);
+
+      // Core
+      paint.setColor(amber);
       canvas->drawCircle(cx, cy, radius, paint);
 
       // Text: "Unsaved"
-      paint.setColor(design::colors::TEXT_SECONDARY);
-      auto font = design::getSkFont(10.0f);
-      canvas->drawString("Unsaved", cx + 10, cy + 3, font, paint);
+      SkPaint textPaint;
+      textPaint.setAntiAlias(true);
+      textPaint.setColor(design::colors::TEXT_SECONDARY);
+      auto font = design::typography::getSkFont(design::typography::FONT_XS, design::typography::FontWeight::Medium);
+      canvas->drawString("Unsaved", cx + 12.0f, cy + 4.0f, font, textPaint);
     } else {
-      // Saved: Green static
-      paint.setColor(SkColorSetRGB(0, 255, 0));
+      // Saved: Emerald static
+      SkColor emerald = design::colors::SUCCESS;
+      
+      // Core
+      paint.setColor(emerald);
       canvas->drawCircle(cx, cy, radius, paint);
 
       // Text: "Saved"
-      paint.setColor(design::colors::TEXT_TERTIARY);
-      auto font = design::getSkFont(10.0f);
-      canvas->drawString("Saved", cx + 10, cy + 3, font, paint);
+      SkPaint textPaint;
+      textPaint.setAntiAlias(true);
+      textPaint.setColor(design::colors::TEXT_TERTIARY);
+      auto font = design::typography::getSkFont(design::typography::FONT_XS, design::typography::FontWeight::Medium);
+      canvas->drawString("Saved", cx + 12.0f, cy + 4.0f, font, textPaint);
     }
   }
 

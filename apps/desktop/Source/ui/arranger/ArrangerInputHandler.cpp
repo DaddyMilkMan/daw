@@ -794,6 +794,12 @@ bool ArrangerInputHandler::keyPressed(const juce::KeyPress& key) {
         return true;
     }
 
+    // Tab - Run Verification Render (Temporary binding)
+    if (key.getKeyCode() == juce::KeyPress::tabKey) {
+        owner_.runVerificationRender();
+        return true;
+    }
+
     // + key - Zoom in
     if (key.getKeyCode() == '+' || key.getKeyCode() == '=') {
         owner_.pixelsPerBeat *= 1.2;

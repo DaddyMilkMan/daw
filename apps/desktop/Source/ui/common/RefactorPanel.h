@@ -50,7 +50,7 @@ public:
 
     SkRRect bgRRect;
     bgRRect.setRectXY(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()),
-                      spacing::RADIUS_MD, spacing::RADIUS_MD);
+                      dimensions::RADIUS_SM, dimensions::RADIUS_SM);
     canvas->drawRRect(bgRRect, bgPaint);
 
     // Border

@@ -3,11 +3,16 @@
 #endif
 #pragma once
 
+// Standard headers first
+#include <memory>
+
+// JUCE headers
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_opengl/juce_opengl.h>
-#include <atomic>
+
+// Use juce::FloatVectorOperations instead of <algorithm>
 
 #ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
@@ -96,20 +101,20 @@ protected:
   SkCanvas *skiaCanvas_ = nullptr;
   bool contextInitialized_ = false;
   juce::Component *targetComponent_ = nullptr;
-
-private:
+  
+  // Render thread state (only accessed in renderOpenGL)
   int lastWidth_ = 0;
   int lastHeight_ = 0;
-  
-  // Thread-safe dimensions (Atomic for lock-free read/write)
-  std::atomic<int> safeWidth_{0};
-  std::atomic<int> safeHeight_{0};
 
-  void recreateSurface();
+  // Thread-safe dimensions (Atomic for lock-free read/write)
+  juce::Atomic<int> safeWidth_{0};
+  juce::Atomic<int> safeHeight_{0};
+
+  void recreateSurface(int width, int height);
 public:
   void updateDimensions(int width, int height) {
-      safeWidth_.store(width);
-      safeHeight_.store(height);
+      safeWidth_ = width;
+      safeHeight_ = height;
   }
 
   JUCE_DECLARE_WEAK_REFERENCEABLE(SkiaOpenGLRenderer)

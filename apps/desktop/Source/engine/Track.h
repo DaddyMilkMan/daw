@@ -32,6 +32,7 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
+#include <span>
 #include <unordered_map>
 #include <vector>
 
@@ -112,10 +113,11 @@ public:
 
   // Phase 1.3: Version that takes explicit playhead position and optional
   // incoming MIDI and aux buffers. Added optional TempoMap for automation.
+
   virtual void getNextAudioBlock(
-      const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
+      const juce::AudioSourceChannelInfo &bufferToFill, juce::int64 playheadSamples,
       const juce::MidiBuffer *incomingMidi = nullptr,
-      const std::vector<juce::AudioBuffer<float> *> &auxBuffers = {},
+      std::span<juce::AudioBuffer<float> * const> auxBuffers = {},
       const TempoMap *tempoMap = nullptr,
       const juce::AudioBuffer<float> *sidechainBuffer = nullptr) = 0;
 
@@ -255,7 +257,7 @@ public:
   virtual int getNumClips() const { return 0; }
   virtual Clip *getClip(int index) const { return nullptr; }
   virtual void addClip(Clip *clip) { juce::ignoreUnused(clip); }
-  virtual void addClip(std::unique_ptr<Clip> clip);
+  virtual void addClip(std::shared_ptr<Clip> clip);
   
   // Take Folder Management
   virtual int getNumTakeFolders() const { return 0; }
