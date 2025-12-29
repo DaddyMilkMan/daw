@@ -21,7 +21,7 @@
 #endif
 
 // Zenith Includes
-#include "../browser/BrowserDragSource.h"
+#include "../../browser/BrowserDragSource.h"
 #include "GridResolutionDropdown.h"
 #include "ZenithDesignSystem.h"
 
@@ -32,20 +32,21 @@
 namespace zenith {
 
 //==============================================================================
-// Layout Constants
+// Layout Constants - USE DESIGN SYSTEM (Single Source of Truth)
 //==============================================================================
-static constexpr float HEADER_WIDTH = 220.0f;
-static constexpr float SECTION_HEIGHT = 24.0f;
-static constexpr float RULER_HEIGHT = 30.0f;
-static constexpr float TRACK_HEIGHT = 80.0f;
-static constexpr float TOP_MARGIN = SECTION_HEIGHT + RULER_HEIGHT;
+static constexpr float HEADER_WIDTH = zenith::design::dimensions::ARRANGER_HEADER_WIDTH;
+static constexpr float SECTION_HEIGHT = zenith::design::dimensions::ARRANGER_SECTION_HEIGHT;
+static constexpr float RULER_HEIGHT = zenith::design::dimensions::ARRANGER_RULER_HEIGHT;
+static constexpr float TRACK_HEIGHT = zenith::design::dimensions::ARRANGER_TRACK_HEIGHT;
+static constexpr float TOP_MARGIN = zenith::design::dimensions::ARRANGER_TOP_MARGIN;
 
 //==============================================================================
 // Constructor & Destructor
 //==============================================================================
 
-ArrangerComponent::ArrangerComponent(Engine& eng, ProjectState& ps)
-    : engine_(eng), projectState(ps) {
+ArrangerComponent::ArrangerComponent(Engine& eng, ProjectState& ps, CommandAPI& api)
+    : engine_(eng), projectState(ps), commandAPI(api) {
+
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
     setWantsKeyboardFocus(true);
@@ -137,7 +138,7 @@ ArrangerComponent::ArrangerComponent(Engine& eng, ProjectState& ps)
     // Initialize Section Track
     sectionTrack.reset(new ArrangerTrackComponent(projectState, *gridUtils_,
                                                   ArrangerTrackComponent::TrackType::Section));
-    addChildComponent(sectionTrack.get());
+    addAndMakeVisible(sectionTrack.get());
 
     DBG("ArrangerComponent: Created");
 }
@@ -277,7 +278,22 @@ juce::String ArrangerComponent::getTooltip() {
 
 #ifdef ZENITH_USE_SKIA
 void ArrangerComponent::drawSkia(SkCanvas* canvas) {
-    renderer_->drawSkia(canvas);
+    auto bounds = getLocalBounds().toFloat();
+    SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
+
+    // 1. Draw Background
+    SkPaint bgPaint;
+    bgPaint.setColor(design::colors::BG_DARKEST);
+    canvas->drawRect(skBounds, bgPaint);
+
+    // 2. Draw Child SkiaComponents (Tracks, Ruler, MiniMap, etc.)
+    // Note: Tracks should be behind clips (which are drawn in step 3)
+    drawChildren(canvas);
+
+    // 3. Draw ArrangerRenderer (Grid, Clips, Playhead, etc.)
+    if (renderer_) {
+        renderer_->drawSkia(canvas);
+    }
 }
 #endif
 

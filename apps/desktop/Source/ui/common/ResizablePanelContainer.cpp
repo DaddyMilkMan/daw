@@ -853,6 +853,9 @@ void ResizablePanelContainer::drawSkia(SkCanvas *canvas) {
       canvas->restore();
     }
   }
+
+  // Draw any other child components (e.g. TabGroups)
+  drawChildren(canvas);
 }
 
 void ResizablePanelContainer::resized() { recalculateLayout(); }

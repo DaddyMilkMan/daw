@@ -57,6 +57,10 @@ public:
   void resized() override;
   void drawSkia(SkCanvas *canvas) override;
 
+  // Accessibility
+  std::unique_ptr<juce::AccessibilityHandler>
+  createAccessibilityHandler() override;
+
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
   void mouseDrag(const juce::MouseEvent &e) override;
@@ -94,6 +98,20 @@ private:
   // State
   std::vector<PadData> pads;
   int baseNote = 36; // C1
+  int focusedPadIndex = 0; // For keyboard navigation
+
+  // Optimized resources
+  SkFont font;
+
+  // Layout Constants
+  static constexpr float kPadHeightRatio = 0.75f;
+  static constexpr float kSequencerHeightRatio = 0.20f;
+  static constexpr float kInternalGapRatio = 0.05f;
+  static constexpr float kDefaultCornerRadius = 8.0f;
+  static constexpr float kStepCornerRadius = 2.0f;
+  static constexpr float kPadFontSize = 16.0f;
+  static constexpr float kMargin = 10.0f;
+  static constexpr float kGap = 8.0f;
 
   // Internal methods
   void updatePadLayout();
@@ -111,7 +129,14 @@ private:
   void updateAnimations();
   void timerCallback() override;
 
+  // Keyboard Navigation
+  bool keyPressed(const juce::KeyPress &key) override;
+  void focusGained(FocusChangeType cause) override;
+  void focusLost(FocusChangeType cause) override;
+
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrumPadComponent)
+
+  friend class DrumPadAccessibilityHandler;
 };
 
 } // namespace zenith

@@ -5,8 +5,7 @@
  * This file initializes the JUCE application and creates the main window.
  */
 
-#include "MainWindow.h"
-#include "utils/SampleGenerator.h"
+// JUCE includes first
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -16,6 +15,14 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_gui_extra/juce_gui_extra.h>
+
+// Project includes after JUCE
+#include "ui/common/MainWindow.h"
+#include "engine/ProjectState.h"
+#include "utils/SampleGenerator.h"
+#include "utils/PlatformSystemUtils.h"
+#include "ui/design-system/FontManager.h"
+#include "engine/ZenithLogger.h"
 
 
 //==============================================================================
@@ -53,59 +60,44 @@ public:
     DBG("JUCE Version: " + juce::SystemStats::getJUCEVersion());
 
     // Log system info
-    logSystemInfo();
+    ::zenith::PlatformSystemUtils::logSystemInfo();
 
     // Ensure content validity (Generate missing samples if needed)
-    zenith::SampleGenerator::generateMissingSamples();
+    ::zenith::SampleGenerator::generateMissingSamples();
+
+    // Pre-initialize FontManager to avoid hangs when UI is created
+    DBG("Initializing FontManager...");
+    ::zenith::design::FontManager::getInstance();
+    DBG("FontManager initialized.");
 
     // Create main window
-    mainWindow = std::make_unique<MainWindow>(getApplicationName());
+    mainWindow = std::make_unique<::zenith::MainWindow>(getApplicationName());
 
     DBG("Zenith DAW initialized successfully!");
   }
 
   void shutdown() override {
+    ZENITH_LOG_INFO("ZenithApplication::shutdown() STARTED");
     DBG("Zenith DAW shutting down...");
 
     // Close main window (releases all resources)
     mainWindow.reset();
 
+    ZENITH_LOG_INFO("ZenithApplication::shutdown() COMPLETE");
     DBG("Zenith DAW shutdown complete.");
   }
 
   //==========================================================================
   void systemRequestedQuit() override {
-    if (mainWindow != nullptr) {
-      auto *projectState = mainWindow->getProjectState();
-      if (projectState != nullptr && projectState->hasUnsavedChanges()) {
-        int result = juce::NativeMessageBox::showYesNoCancelBox(
-            juce::AlertWindow::WarningIcon, "Unsaved Changes",
-            "You have unsaved changes. Do you want to save before quitting?",
-            mainWindow.get(), nullptr);
-
-        // JUCE NativeMessageBox return values:
-        // 1 = Yes, 2 = No, 0 = Cancel
-        const int RESULT_YES = 1;
-        const int RESULT_NO = 2;
-        const int RESULT_CANCEL = 0;
-
-        if (result == RESULT_YES) // Yes
-        {
-          // Save and quit
-          mainWindow->saveProject();
-          quit();
-        } else if (result == RESULT_NO) // No
-        {
-          // User explicitly consented to data loss (discard changes).
-          quit();
-        }
-        // Cancel (result == RESULT_CANCEL) -> do nothing
-      } else {
-        quit();
-      }
-    } else {
-      quit();
-    }
+    // NOTE: MainWindow::closeButtonPressed() already handles the "unsaved changes" dialog
+    // with proper async callbacks. This method is called AFTER the user has already
+    // confirmed they want to quit (or there were no unsaved changes).
+    // 
+    // Previously this had a DUPLICATE synchronous dialog that was broken on Linux
+    // (showYesNoCancelBox returning 0 immediately before user clicked).
+    //
+    // Now we just quit. The save logic is handled by closeButtonPressed().
+    quit();
   }
 
   void anotherInstanceStarted(const juce::String &commandLine) override {
@@ -114,21 +106,7 @@ public:
 
 private:
   //==========================================================================
-  void logSystemInfo() {
-    DBG("========================================");
-    DBG("System Information");
-    DBG("========================================");
-    DBG("OS: " + juce::SystemStats::getOperatingSystemName());
-    DBG("CPU: " + juce::String(juce::SystemStats::getCpuSpeedInMegahertz()) +
-        " MHz");
-    DBG("CPU Cores: " + juce::String(juce::SystemStats::getNumCpus()));
-    DBG("Memory: " +
-        juce::String(juce::SystemStats::getMemorySizeInMegabytes()) + " MB");
-    DBG("========================================");
-  }
-
-  //==========================================================================
-  std::unique_ptr<MainWindow> mainWindow;
+  std::unique_ptr<::zenith::MainWindow> mainWindow;
 };
 
 //==============================================================================

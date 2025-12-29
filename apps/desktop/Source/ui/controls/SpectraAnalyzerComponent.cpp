@@ -46,11 +46,21 @@ SpectraAnalyzerComponent::SpectraAnalyzerComponent(Engine &engine)
   scopeBtn.onClick = [this] { setMode(AnalysisMode::Scope); };
   stereoBtn.onClick = [this] { setMode(AnalysisMode::StereoField); };
 
-  // Basic styling - ZenithButtons use different styling approach
-  // Skip juce::TextButton coloring for ZenithButton instances
-  spectrumBtn.setVisible(true);
-  scopeBtn.setVisible(true);
-  stereoBtn.setVisible(true);
+  // Enable toggle mode
+  spectrumBtn.setToggleable(true);
+  scopeBtn.setToggleable(true);
+  stereoBtn.setToggleable(true);
+
+  // Set styles
+  spectrumBtn.setStyle(ZenithButton::Style::Ghost);
+  scopeBtn.setStyle(ZenithButton::Style::Ghost);
+  stereoBtn.setStyle(ZenithButton::Style::Ghost);
+
+  // Set explicit sizes if needed, or rely on default
+  spectrumBtn.setSize(ZenithButton::Size::Small);
+  scopeBtn.setSize(ZenithButton::Size::Small);
+  stereoBtn.setSize(ZenithButton::Size::Small);
+
 
   setMode(AnalysisMode::Spectrum); // Default
 
@@ -274,6 +284,7 @@ void SpectraAnalyzerComponent::renderScope(SkCanvas *canvas,
     paint.setStrokeWidth(3.0f);
     paint.setColor(SkColorSetA(color, 100));
     paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f));
+
     canvas->drawPath(path, paint);
 
     // Core (Inner)
@@ -336,6 +347,7 @@ void SpectraAnalyzerComponent::renderStereoField(SkCanvas *canvas,
   glow.setColor(design::withAlpha(sField, 0.3f)); // 80/255 -> 0.31
   glow.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 2.0f));
   canvas->drawPath(path, glow);
+
 
   canvas->drawPath(path, paint);
 }

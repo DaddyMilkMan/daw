@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "GrokAPIClient.h"
+#include "GrokDAWClient.h"
 #include "AudioAnalysisService.h"
 #include "../commands/CommandAPI.h"
 #include <juce_core/juce_core.h>
@@ -30,8 +30,9 @@ namespace zenith {
     - Converts natural language to DAW commands
     - Provides DAW context to Grok
     - Handles function calling workflow
-    - Manages preset generation
+    - Manage preset generation
 */
+
 class GrokDAWController
 {
 public:
@@ -102,6 +103,25 @@ public:
         Get conversation history
     */
     juce::Array<juce::var> getHistory() const;
+
+    //==========================================================================
+    // Vibe DAW - Transactional Edits
+    //==========================================================================
+    
+    /**
+        Accept and commit the last batch of changes made by the AI
+    */
+    void acceptLastChanges();
+
+    /**
+        Deny and rollback the last batch of changes made by the AI
+    */
+    void denyLastChanges();
+
+    /**
+        Set a callback for when the AI proposes changes that need confirmation
+    */
+    void setOnChangesPending(std::function<void(bool)> callback);
     
     //==========================================================================
     /**

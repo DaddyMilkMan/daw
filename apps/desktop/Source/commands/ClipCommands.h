@@ -6,10 +6,11 @@ namespace zenith {
 // Forward declarations
 class Engine;
 class ProjectState;
+class CommandAPI;
 
 class ClipCommands {
 public:
-  ClipCommands(Engine &engine, ProjectState &projectState);
+  ClipCommands(Engine &engine, ProjectState &projectState, CommandAPI &api);
 
   juce::var listClips(const juce::var &params);
   juce::var createClip(const juce::var &params);
@@ -22,6 +23,7 @@ public:
 private:
   Engine &engine;
   ProjectState &projectState;
+  CommandAPI &api;
 };
 
 } // namespace zenith

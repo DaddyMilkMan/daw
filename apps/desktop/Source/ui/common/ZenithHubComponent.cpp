@@ -8,10 +8,11 @@
 */
 
 #include "ZenithHubComponent.h"
+#include "LoginComponent.h"
 #include "../design-system/ZenithLayout.h"
 #include "ZenithIcons.h"
 #include "../../engine/ZenithLogger.h"
-#include "../design-system/ZenithTypography.h"
+#include "../design-system/ZenithDesignSystem.h"
 #include <array>
 #include <cmath>
 #include <map>
@@ -87,12 +88,26 @@ ZenithHubComponent::ZenithHubComponent(
   alpha_.setTarget(0.0f, 0);
   alpha_.setTarget(1.0f, 600, ::zenith::animation::Easing::EaseOut);
 
+  // Register for auth state changes and try to restore session
+  if (auto* auth = AuthenticationService::getInstance()) {
+    auth->addListener(this);
+    if (auth->restoreSession()) {
+      currentUser_ = auth->getCurrentUser();
+      if (currentUser_.isValid()) {
+        greetingText_ = "Welcome back, " + currentUser_.displayName;
+      }
+    }
+  }
+
   if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60);
 }
 
 ZenithHubComponent::~ZenithHubComponent() {
   stopTimer();
   recentProjectManager_.removeListener(this);
+  if (auto* auth = AuthenticationService::getInstance()) {
+    auth->removeListener(this);
+  }
 }
 
 void ZenithHubComponent::mouseExit(const juce::MouseEvent &e) {
@@ -100,6 +115,7 @@ void ZenithHubComponent::mouseExit(const juce::MouseEvent &e) {
   isNewProjectHovered_ = false;
   isProfileHovered_ = false;
   isGreetingHovered_ = false;
+  isSignInHovered_ = false;
   for (auto &p : recentProjects_)
     p.isHovered = false;
   for (auto &t : templates_)
@@ -171,6 +187,43 @@ void ZenithHubComponent::recentProjectsChanged() {
   juce::MessageManager::callAsync([this]() { loadFromManager(); });
 }
 
+void ZenithHubComponent::authStateChanged(bool isLoggedIn, const AuthUser& user) {
+  juce::MessageManager::callAsync([this, isLoggedIn, user]() {
+    currentUser_ = user;
+    if (isLoggedIn && user.isValid()) {
+      greetingText_ = "Welcome back, " + user.displayName;
+      hideLoginComponent();
+    } else {
+      greetingText_ = "Welcome to Zenith";
+    }
+    repaint();
+  });
+}
+
+void ZenithHubComponent::showLoginComponent() {
+  if (showingLogin_) return;
+  
+  loginComponent_ = std::make_unique<LoginComponent>([this](const AuthUser& user) {
+    currentUser_ = user;
+    hideLoginComponent();
+  });
+  
+  addAndMakeVisible(loginComponent_.get());
+  loginComponent_->setBounds(getLocalBounds());
+  loginComponent_->toFront(true);
+  showingLogin_ = true;
+  repaint();
+}
+
+void ZenithHubComponent::hideLoginComponent() {
+  if (loginComponent_) {
+    removeChildComponent(loginComponent_.get());
+    loginComponent_.reset();
+  }
+  showingLogin_ = false;
+  repaint();
+}
+
 void ZenithHubComponent::resized() { updateLayout(); }
 
 void ZenithHubComponent::updateLayout() {
@@ -203,6 +256,9 @@ void ZenithHubComponent::updateLayout() {
       cardH - (padding * 2) - headerHeight);
 
   // 1. Layout Left (Recent) vs Right (Sidebar) using ZenithLayout (Agent 4)
+  fprintf(stderr, "[ZenithHub] CRITIC: contentRect=%.1f,%.1f %.1fx%.1f\n", 
+          contentRect.getX(), contentRect.getY(), contentRect.getWidth(), contentRect.getHeight());
+  
   auto mainColumns =
       ZenithLayout::begin()
           .withFloatBounds(contentRect)
@@ -211,8 +267,11 @@ void ZenithHubComponent::updateLayout() {
           .addFlexItem(juce::FlexItem().withFlex(0.4f)) // Sidebar (40%)
           .layout(juce::FlexBox::Direction::row);
 
+  fprintf(stderr, "[ZenithHub] CRITIC: mainColumns.size()=%zu\n", mainColumns.size());
+  
   if (mainColumns.size() >= 2) {
     auto r = mainColumns[0];
+    fprintf(stderr, "[ZenithHub] CRITIC: recentRect=%.1f,%.1f %.1fx%.1f\n", r.getX(), r.getY(), r.getWidth(), r.getHeight());
     recentArea_ = SkRect::MakeXYWH(r.getX(), r.getY(), r.getWidth(), r.getHeight());
 
     // Slice Recent Area: Header vs Grid
@@ -327,10 +386,20 @@ void ZenithHubComponent::updateLayout() {
     }
   }
 
-  // Update Template Cards (Larger with icons)
+  // Update Template Cards - Calculate height to fit within bounds
   if (!templatesContentBounds_.isEmpty()) {
-    float tCardH = 80.0f;  // Slightly smaller for better fit
-    float cardGap = 12.0f;
+    float availableHeight = templatesContentBounds_.height();
+    float cardGap = 10.0f;
+    size_t numTemplates = templates_.size();
+    
+    // Calculate card height to fit all templates: available = n*height + (n-1)*gap
+    // height = (available - (n-1)*gap) / n
+    float tCardH = numTemplates > 0 
+        ? (availableHeight - (numTemplates - 1) * cardGap) / numTemplates 
+        : 60.0f;
+    
+    // Clamp to reasonable range
+    tCardH = std::clamp(tCardH, 50.0f, 80.0f);
     
     for (size_t i = 0; i < templates_.size(); ++i) {
       float tx = templatesContentBounds_.fLeft;
@@ -429,7 +498,7 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
   icons::drawIconCentered(canvas, icons::Edit(), greetingEditIconBounds_,
                           kGreetingIconSize, iconStyle);
 
-  drawRecentProjects(canvas);
+  drawProjectList(canvas);
   drawAccount(canvas);
   drawNewProjectButton(canvas);
   drawTemplates(canvas);
@@ -449,7 +518,7 @@ void ZenithHubComponent::drawBackground(SkCanvas *canvas) {
   canvas->drawRect(SkRect::MakeWH(getWidth(), getHeight()), bgPaint);
 }
 
-void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
+void ZenithHubComponent::drawProjectList(SkCanvas *canvas) {
   textPaint_.setColor(colors::TEXT_PRIMARY);
   drawText(canvas, "Recent Projects", recentHeaderBounds_, headerFont_, textPaint_, true);
 
@@ -611,34 +680,85 @@ void ZenithHubComponent::drawAccount(SkCanvas *canvas) {
     drawText(canvas, "Collaborations", accountHeaderBounds_, headerFont_, textPaint_, true);
   }
 
-  SkRRect rrect = SkRRect::MakeRectXY(profileBounds_, 12.0f, 12.0f);
-  SkPaint bgPaint;
-  bgPaint.setColor(isProfileHovered_ ? withAlpha(colors::BG_LIGHT, 0.15f)
-                                     : withAlpha(colors::BG_LIGHT, 0.08f));
-  bgPaint.setAntiAlias(true);
-  canvas->drawRRect(rrect, bgPaint);
+  bool isLoggedIn = currentUser_.isValid();
+  
+  if (isLoggedIn) {
+    // ===== LOGGED IN: Show user profile =====
+    SkRRect rrect = SkRRect::MakeRectXY(profileBounds_, 12.0f, 12.0f);
+    SkPaint bgPaint;
+    bgPaint.setColor(isProfileHovered_ ? withAlpha(colors::BG_LIGHT, 0.15f)
+                                       : withAlpha(colors::BG_LIGHT, 0.08f));
+    bgPaint.setAntiAlias(true);
+    canvas->drawRRect(rrect, bgPaint);
 
-  float avatarSize = 44.0f;
-  SkPaint avatarPaint;
-  avatarPaint.setColor(colors::AMBER);
-  avatarPaint.setAntiAlias(true);
-  float avatarCenterY = profileBounds_.centerY();
-  float avatarCenterX = profileBounds_.fLeft + 16 + avatarSize * 0.5f;
-  canvas->drawCircle(avatarCenterX, avatarCenterY, avatarSize * 0.5f, avatarPaint);
+    float avatarSize = 44.0f;
+    SkPaint avatarPaint;
+    // Use different colors based on provider
+    SkColor avatarColor = (currentUser_.provider == AuthProvider::Google) 
+        ? SkColorSetRGB(66, 133, 244)  // Google blue
+        : colors::AMBER;               // SylorLabs amber
+    avatarPaint.setColor(avatarColor);
+    avatarPaint.setAntiAlias(true);
+    float avatarCenterY = profileBounds_.centerY();
+    float avatarCenterX = profileBounds_.fLeft + 16 + avatarSize * 0.5f;
+    canvas->drawCircle(avatarCenterX, avatarCenterY, avatarSize * 0.5f, avatarPaint);
+    
+    // Draw initial letter in avatar
+    SkPaint initialPaint;
+    initialPaint.setColor(colors::TEXT_PRIMARY);
+    initialPaint.setAntiAlias(true);
+    juce::String initial = currentUser_.displayName.substring(0, 1).toUpperCase();
+    canvas->drawString(SkString(initial.toRawUTF8()), 
+                       avatarCenterX - 8, avatarCenterY + 8, 
+                       design::getSkFont(24.0f, design::FontWeight::Bold), initialPaint);
 
-  // Username text - positioned to the right of avatar with proper spacing
-  float textX = avatarCenterX + avatarSize * 0.5f + 14;
-  drawText(canvas, "SoundDesigner99",
-           SkRect::MakeXYWH(textX, avatarCenterY - 16, 
-                            profileBounds_.width() - (textX - profileBounds_.fLeft) - 10, 24),
-           profileFont_, textPaint_, false);
+    // Username text
+    float textX = avatarCenterX + avatarSize * 0.5f + 14;
+    drawText(canvas, currentUser_.displayName,
+             SkRect::MakeXYWH(textX, avatarCenterY - 16, 
+                              profileBounds_.width() - (textX - profileBounds_.fLeft) - 10, 24),
+             profileFont_, textPaint_, false);
 
-  SkPaint onlineStatusPaint;
-  onlineStatusPaint.setColor(SkColorSetARGB(255, 16, 185, 129));
-  onlineStatusPaint.setAntiAlias(true);
-  drawText(canvas, "* Online",
-           SkRect::MakeXYWH(textX, avatarCenterY + 6, 100, 20),
-           statusFont_, onlineStatusPaint, false);
+    SkPaint onlineStatusPaint;
+    onlineStatusPaint.setColor(SkColorSetARGB(255, 16, 185, 129)); // Green
+    onlineStatusPaint.setAntiAlias(true);
+    drawText(canvas, "● Online",
+             SkRect::MakeXYWH(textX, avatarCenterY + 6, 100, 20),
+             statusFont_, onlineStatusPaint, false);
+  } else {
+    // ===== NOT LOGGED IN: Show Sign In button =====
+    signInButtonBounds_ = profileBounds_;
+    
+    SkRRect rrect = SkRRect::MakeRectXY(signInButtonBounds_, 12.0f, 12.0f);
+    
+    // Gradient background
+    SkPaint bgPaint;
+    bgPaint.setAntiAlias(true);
+    SkColor startColor = isSignInHovered_ ? colors::CYAN : SkColorSetRGB(0, 150, 200);
+    SkColor endColor = isSignInHovered_ ? colors::BLUE : SkColorSetRGB(0, 100, 180);
+    
+    SkPoint pts[2] = {{signInButtonBounds_.fLeft, signInButtonBounds_.fTop},
+                      {signInButtonBounds_.fRight, signInButtonBounds_.fBottom}};
+    SkColor gradColors[2] = {startColor, endColor};
+    bgPaint.setShader(SkGradientShader::MakeLinear(pts, gradColors, nullptr, 2, SkTileMode::kClamp));
+    
+    canvas->drawRRect(rrect, bgPaint);
+    
+    // Icon + text
+    icons::IconStyle iconStyle;
+    iconStyle.color = colors::TEXT_PRIMARY;
+    iconStyle.strokeWidth = icons::STROKE_BOLD;
+    
+    float iconSize = 20.0f;
+    SkRect iconBounds = SkRect::MakeXYWH(
+        signInButtonBounds_.fLeft + 20, signInButtonBounds_.centerY() - iconSize / 2,
+        iconSize, iconSize);
+    icons::drawIconCentered(canvas, icons::Users(), iconBounds, iconSize, iconStyle);
+    
+    SkRect textBounds = signInButtonBounds_;
+    textBounds.fLeft += 50;
+    drawText(canvas, "Sign In", textBounds, buttonFont_, textPaint_, true);
+  }
 }
 
 void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
@@ -714,6 +834,15 @@ void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
     needsUpdate = true;
   }
 
+  // Sign In button hover (when not logged in)
+  if (!currentUser_.isValid() && !signInButtonBounds_.isEmpty()) {
+    bool sih = signInButtonBounds_.contains(pt.fX, pt.fY);
+    if (sih != isSignInHovered_) {
+      isSignInHovered_ = sih;
+      needsUpdate = true;
+    }
+  }
+
   bool nph = newProjectButtonBounds_.contains(pt.fX, pt.fY);
   if (nph != isNewProjectHovered_) {
     isNewProjectHovered_ = nph;
@@ -754,6 +883,13 @@ void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
     }
   }
 
+  // Sign In button click (when not logged in)
+  if (!currentUser_.isValid() && !signInButtonBounds_.isEmpty() &&
+      signInButtonBounds_.contains(pt.fX, pt.fY)) {
+    showLoginComponent();
+    return;
+  }
+
   if (newProjectButtonBounds_.contains(pt.fX, pt.fY)) {
     if (onNewProject_)
       onNewProject_();
@@ -762,8 +898,11 @@ void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
   }
 
   // Greeting Edit
-  if (greetingTextBounds_.contains(pt.fX, pt.fY) ||
-      greetingEditIconBounds_.contains(pt.fX, pt.fY)) {
+  bool textHit = greetingTextBounds_.contains(pt.fX, pt.fY);
+  bool iconHit = greetingEditIconBounds_.contains(pt.fX, pt.fY);
+  if (textHit || iconHit) {
+    fprintf(stderr, "[ZenithHub] CLICK on greeting! textHit=%d iconHit=%d pt=(%.1f,%.1f)\n",
+            textHit, iconHit, pt.fX, pt.fY);
     showGreetingEditor();
     return;
   }
@@ -777,23 +916,32 @@ void ZenithHubComponent::showGreetingEditor() {
   if (greetingEditor_.isVisible())
     return;
 
+  fprintf(stderr, "[ZenithHub] showGreetingEditor() called, bounds=%.1f,%.1f %.1fx%.1f\n",
+          greetingTextBounds_.left(), greetingTextBounds_.top(),
+          greetingTextBounds_.width(), greetingTextBounds_.height());
+
+  if (greetingTextBounds_.isEmpty()) {
+    fprintf(stderr, "[ZenithHub] ERROR: greetingTextBounds_ is empty!\n");
+    return;
+  }
+
   greetingEditor_.setText(greetingText_);
   greetingEditor_.setSelectAllWhenFocused(true);
   greetingEditor_.setJustification(juce::Justification::left);
   greetingEditor_.setFont(ZenithTheme::Typography::getFont(18.0f));
 
-  // Named constants for TextEditor sizing
+  // Position editor directly over the greeting text
   constexpr int kEditorWidthPadding = 60;
-  constexpr int kEditorHeight = 24;
-
-  if (greetingTextBounds_.isEmpty()) {
-    return;
-  }
+  constexpr int kEditorHeight = 28;
 
   juce::Rectangle<int> bounds(
       (int)greetingTextBounds_.left(),
-      (int)greetingTextBounds_.top() + (int)greetingTextBounds_.height() / 2,
-      (int)(greetingTextBounds_.width() + kEditorWidthPadding), kEditorHeight);
+      (int)greetingTextBounds_.top() - 2,  // Align with text, small offset for visual fit
+      (int)(greetingTextBounds_.width() + kEditorWidthPadding), 
+      kEditorHeight);
+
+  fprintf(stderr, "[ZenithHub] Setting editor bounds: %d,%d %dx%d\n",
+          bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight());
 
   greetingEditor_.setBounds(bounds);
   greetingEditor_.setVisible(true);

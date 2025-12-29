@@ -8,13 +8,13 @@
 #pragma once
 
 #include "../Source/engine/RecentProjectManager.h"
-#include "../arranger/ArrangerClipManager.h"
-#include "../browser/BrowserPanel.h"
+#include "../arranger/ArrangerComponent.h"
+#include "../panels/BrowserPanel.h"
 #include "../controls/SkiaButton.h"
 #include "../framework/SkiaMainWindowIntegration.h"
 #include "../framework/AuroraBackground.h"
 #include "../mixer/MixerComponent.h"
-#include "../views/SessionViewComponent.h"
+// #include "../session/SessionViewComponent.h"
 #include "../design-system/ZenithLookAndFeel.h"
 #include "../transport/TransportBar.h"
 #include "ArrangementComponent.h"
@@ -142,8 +142,8 @@ public:
 
   zenith::ProjectState *getProjectState() const { return projectState.get(); }
 
-  void saveProject();
-  void saveProjectAs();
+  void saveProject(std::function<void(bool)> onComplete = nullptr);
+  void saveProjectAs(std::function<void(bool)> onComplete = nullptr);
   bool loadProject(const juce::File &file);
   void openProject();
   void newProject();

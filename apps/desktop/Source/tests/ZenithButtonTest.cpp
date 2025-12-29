@@ -1,6 +1,6 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <gtest/gtest.h>
-#include "../ui/widgets/ZenithButton.h"
+#include "../ui/controls/ZenithButton.h"
 
 // Manual Spy instead of GMock macros to avoid include/version issues
 class SpyZenithLookAndFeel : public juce::LookAndFeel_V4 {

@@ -19,19 +19,23 @@
 #include <JuceHeader.h>
 
 #include "../../engine/RecentProjectManager.h"
+#include "../../network/AuthenticationService.h"
 #include "../utils/PhysicsSpring.h"
-#include "../framework/AuroraBackground.h"
-#include "../framework/GlassmorphicPanel.h"
-#include "../framework/SkiaComponent.h"
-#include "../design-system/ZenithDesignSystem.h"
+#include "AuroraBackground.h"
+#include "GlassmorphicPanel.h"
+#include "SkiaComponent.h"
+#include "ZenithDesignSystem.h"
 #include <functional>
 #include <memory>
 #include <vector>
 
 namespace zenith {
 
+class LoginComponent;  // Forward declaration
+
 class ZenithHubComponent : public SkiaComponent,
-                           public RecentProjectManager::Listener {
+                           public RecentProjectManager::Listener,
+                           public AuthenticationService::Listener {
 public:
   /**
    * @brief Callback type for project loading
@@ -78,12 +82,16 @@ public:
 
   // RecentProjectManager::Listener
   void recentProjectsChanged() override;
+  
+  // AuthenticationService::Listener
+  void authStateChanged(bool isLoggedIn, const AuthUser& user) override;
 
   void show();
   void dismiss();
   void refreshProjects();
 
   float getAlpha() const { return alpha_.get(); }
+
 
   /**
    * @brief Refresh the recent projects list from the manager
@@ -161,9 +169,19 @@ private:
   };
   std::vector<TemplateItem> templates_;
 
-  // Profile
+  // Profile / Auth State
   SkRect profileBounds_;
   bool isProfileHovered_ = false;
+  
+  // Login UI
+  AuthUser currentUser_;           // Current authenticated user
+  SkRect signInButtonBounds_;      // "Sign In" button when not logged in
+  bool isSignInHovered_ = false;
+  std::unique_ptr<LoginComponent> loginComponent_;
+  bool showingLogin_ = false;
+  
+  void showLoginComponent();
+  void hideLoginComponent();
 
   // New Project Button
   SkRect newProjectButtonBounds_;
@@ -202,7 +220,6 @@ private:
                 bool centerVertical = true);
   void drawBackground(SkCanvas *canvas);
   void drawProjectList(SkCanvas *canvas);
-  void drawRecentProjects(SkCanvas *canvas);
   void drawTemplates(SkCanvas *canvas);
   void drawAccount(SkCanvas *canvas);
   void drawNewProjectButton(SkCanvas *canvas);

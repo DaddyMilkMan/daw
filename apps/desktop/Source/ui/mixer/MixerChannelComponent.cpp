@@ -26,7 +26,7 @@
 #include "../controls/SkiaPopupMenu.h"
 #include "../controls/ContextMenuManager.h"
 #include "../design-system/ColorBridge.h"
-#include "../design-system/ZenithTypography.h"
+#include "../design-system/ZenithDesignSystem.h"
 #include "PluginBrowser.h"
 #include <JuceHeader.h>
 
@@ -76,7 +76,9 @@ MixerChannelComponent::MixerChannelComponent(Track *track, ProjectState& state, 
   // Track name label
   nameLabel_.setText(track_->getName(), juce::dontSendNotification);
   nameLabel_.setJustificationType(juce::Justification::centred);
-  nameLabel_.setFont(isMaster_ ? ZenithTypography::getHeaderFont().withHeight(16.0f) : ZenithTypography::getHeaderFont().withHeight(14.0f));
+  nameLabel_.setFont(isMaster_ 
+      ? design::typography::getJuceFont(16.0f, design::typography::FontWeight::Bold) 
+      : design::typography::getJuceFont(14.0f, design::typography::FontWeight::Bold));
   nameLabel_.setEditable(true, true, false);
   nameLabel_.onTextChange = [this]() {
     if (track_) {
@@ -652,11 +654,10 @@ void MixerChannelComponent::LevelMeter::timerCallback() {
   };
 
   if (stereo_) {
-    float velocityL = 0.0f, velocityR = 0.0f;
     smoothLevel(targetLevelL_.load(), currentLevelL_, peakLevelL_,
-                peakHoldCounterL_, velocityL);
+                peakHoldCounterL_, velocityL_);
     smoothLevel(targetLevelR_.load(), currentLevelR_, peakLevelR_,
-                peakHoldCounterR_, velocityR);
+                peakHoldCounterR_, velocityR_);
 
     if (std::abs(currentLevelL_ - targetLevelL_.load()) > 0.001f ||
         std::abs(currentLevelR_ - targetLevelR_.load()) > 0.001f ||
@@ -664,9 +665,8 @@ void MixerChannelComponent::LevelMeter::timerCallback() {
       repaint();
     }
   } else {
-    float velocity = 0.0f;
     smoothLevel(targetLevel_.load(), currentLevel_, peakLevel_,
-                peakHoldCounter_, velocity);
+                peakHoldCounter_, velocity_);
 
     if (std::abs(currentLevel_ - targetLevel_.load()) > 0.001f ||
         peakLevel_ > 0.001f) {
@@ -733,6 +733,7 @@ void MixerChannelComponent::LevelMeter::drawMeterBar(SkCanvas *canvas,
       glowPaint.setColor(design::withAlpha(topColor, 0.3f));
       glowPaint.setMaskFilter(
           SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
+
       glowPaint.setAntiAlias(true);
       canvas->drawRoundRect(meterRect, 1.0f, 1.0f, glowPaint);
     }

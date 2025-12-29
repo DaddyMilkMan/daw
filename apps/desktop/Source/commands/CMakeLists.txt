@@ -1,5 +1,6 @@
 target_sources(ZenithDAW PRIVATE
-    CommandAPI.cpp
+    # TEMPORARILY DISABLED - depends on disabled AI agents
+    # CommandAPI.cpp
     SessionGraph.cpp
     TrackCommands.cpp
     ClipCommands.cpp

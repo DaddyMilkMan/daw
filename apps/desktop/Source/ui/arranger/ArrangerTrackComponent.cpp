@@ -1,4 +1,5 @@
 #include "ArrangerTrackComponent.h"
+#include "../framework/Animation.h"
 #include "TakeFolderComponent.h"
 #include "../design-system/ColorBridge.h"
 #include "../design-system/ZenithDesignSystem.h"
@@ -18,11 +19,8 @@
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
 
-#ifdef kNormal_SkBlurStyle
-#undef kNormal_SkBlurStyle
-#endif
-
-static constexpr float HEADER_WIDTH = 240.0f; // Aligned with design::spacing::trackHeaderWidth
+// Layout Constants - USE DESIGN SYSTEM (Single Source of Truth)
+static constexpr float HEADER_WIDTH = zenith::design::dimensions::ARRANGER_HEADER_WIDTH;
 
 namespace zenith {
 
@@ -87,6 +85,9 @@ void ArrangerTrackComponent::drawSkia(SkCanvas *canvas) {
     drawTrackBackground(canvas, rect);
     drawTrackHeader(canvas, rect);
   }
+  
+  // Draw child components (like TakeFolderComponents)
+  drawChildren(canvas);
 }
 
 void ArrangerTrackComponent::drawTrackHeader(SkCanvas *canvas,
@@ -112,6 +113,21 @@ void ArrangerTrackComponent::drawTrackHeader(SkCanvas *canvas,
     trackBgPaint.setShader(SkGradientShader::MakeLinear(
         hdrGradPts, hdrGradColors, hdrPositions, 3, SkTileMode::kClamp));
     canvas->drawRect(headerRect, trackBgPaint);
+
+    // HOVER GLOW ANIMATION
+    if (hoverIntensity_ > 0.001f) {
+        SkPaint glowPaint;
+        glowPaint.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.1f * hoverIntensity_));
+        // Use a quicker blur for performance
+        // glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 10.0f)); 
+        // Actually, just drawing a semi-transparent overlay is faster and sharp for "glass" feel
+        canvas->drawRect(headerRect, glowPaint);
+        
+        // Left accent bar
+        SkPaint accentBar;
+        accentBar.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.8f * hoverIntensity_));
+        canvas->drawRect(SkRect::MakeXYWH(0, 0, 3.0f, trackHeight), accentBar);
+    }
   }
 
   // Top edge highlight
@@ -185,27 +201,47 @@ void ArrangerTrackComponent::drawTrackBackground(SkCanvas *canvas,
                                                  const SkRect &bounds) {
   using namespace design;
 
-  // Alternating row tint
+  // Base track lane background (subtle but VISIBLE)
+  {
+    SkPaint lanePaint;
+    lanePaint.setColor(design::withAlpha(design::colors::BG_02, 0.5f));
+    canvas->drawRect(SkRect::MakeXYWH(HEADER_WIDTH, 0,
+                                      bounds.width() - HEADER_WIDTH,
+                                      bounds.height()),
+                     lanePaint);
+  }
+
+  // Alternating row tint - INCREASED from pathetic 3% to visible 10%
   if (trackIndex_ % 2 == 1) {
     SkPaint altRowPaint;
-    altRowPaint.setColor(design::withAlpha(design::colors::BG_04, 0.03f));
+    altRowPaint.setColor(design::withAlpha(design::colors::BG_04, 0.10f)); // Was 0.03f
     canvas->drawRect(SkRect::MakeXYWH(HEADER_WIDTH, 0,
                                       bounds.width() - HEADER_WIDTH,
                                       bounds.height()),
                      altRowPaint);
   }
 
-  // Separator
-  SkPaint sepPaint;
-  SkPoint sepPts[2] = {{0, 0}, {bounds.width(), 0}};
-  SkColor sepColors[3] = {SkColorSetARGB(60, 255, 255, 255),
-                          SkColorSetARGB(30, 255, 255, 255),
-                          SkColorSetARGB(10, 255, 255, 255)};
-  float sepPos[3] = {0.0f, 0.3f, 1.0f};
-  sepPaint.setShader(SkGradientShader::MakeLinear(sepPts, sepColors, sepPos, 3,
-                                                  SkTileMode::kClamp));
-  canvas->drawLine(0, bounds.height() - 0.5f, bounds.width(),
-                   bounds.height() - 0.5f, sepPaint);
+  // TOP Separator - subtle highlight
+  {
+    SkPaint topSepPaint;
+    topSepPaint.setColor(design::withAlpha(design::colors::BORDER_SUBTLE, 0.3f));
+    canvas->drawLine(HEADER_WIDTH, 0.5f, bounds.width(), 0.5f, topSepPaint);
+  }
+
+  // BOTTOM Separator - clear lane boundary
+  {
+    SkPaint sepPaint;
+    SkPoint sepPts[2] = {{HEADER_WIDTH, bounds.height()}, {bounds.width(), bounds.height()}};
+    SkColor sepColors[2] = {
+        design::withAlpha(design::colors::BORDER_SUBTLE, 0.5f),
+        design::withAlpha(design::colors::BORDER_SUBTLE, 0.2f)
+    };
+    sepPaint.setShader(SkGradientShader::MakeLinear(sepPts, sepColors, nullptr, 2,
+                                                    SkTileMode::kClamp));
+    sepPaint.setStrokeWidth(1.0f);
+    canvas->drawLine(HEADER_WIDTH, bounds.height() - 0.5f, bounds.width(),
+                     bounds.height() - 0.5f, sepPaint);
+  }
 }
 
 void ArrangerTrackComponent::drawControls(SkCanvas *canvas, float startX,
@@ -593,11 +629,37 @@ void ArrangerTrackComponent::mouseMove(const juce::MouseEvent &e) {
   }
 }
 
+void ArrangerTrackComponent::mouseEnter(const juce::MouseEvent &e) {
+  using namespace design::animation;
+  Animator::getInstance().animate(
+      trackId_ + "_hover",
+      hoverIntensity_, 1.0f,
+      DURATION_FAST,
+      Curve::EaseOutQuad,
+      [this](float val) {
+          hoverIntensity_ = val;
+          repaint();
+      }
+  );
+}
+
 void ArrangerTrackComponent::mouseExit(const juce::MouseEvent &e) {
+  using namespace design;
   if (hoveredButtonIndex_ != -1) {
     hoveredButtonIndex_ = -1;
     repaint();
   }
+  
+  animation::Animator::getInstance().animate(
+      trackId_ + "_hover",
+      hoverIntensity_, 0.0f,
+      animation::DURATION_NORMAL,
+      animation::Curve::EaseOutCubic,
+      [this](float val) {
+          hoverIntensity_ = val;
+          repaint();
+      }
+  );
 }
 
 void ArrangerTrackComponent::moveSection(int index, double newStartBeats) {

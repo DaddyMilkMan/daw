@@ -83,22 +83,20 @@ ZenithSamplerEditor::ZenithSamplerEditor(
 
     addAndMakeVisible(statusLabel);
     statusLabel.setText("Ready", juce::dontSendNotification);
-    statusLabel.setJustificationType(juce::Justification::centred);
+    statusLabel.setJustification(SkiaLabel::Justification::Center);
 
     // Envelope group
     addAndMakeVisible(envelopeGroup);
     envelopeGroup.setText("Envelope");
     envelopeGroup.setTextLabelPosition(juce::Justification::centredTop);
 
-    auto setupSlider = [this](juce::Slider& slider, juce::Label& label, const juce::String& text)
+    auto setupSlider = [this](ZenithKnob& slider, SkiaLabel& label, const juce::String& text)
     {
         addAndMakeVisible(slider);
-        slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-        slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
+        // ZenithKnob handles its own styling
 
         addAndMakeVisible(label);
-        label.setText(text, juce::dontSendNotification);
-        label.setJustificationType(juce::Justification::centred);
+        label.setText(text);
     };
 
     setupSlider(attackSlider, attackLabel, "Attack");
@@ -124,16 +122,25 @@ ZenithSamplerEditor::ZenithSamplerEditor(
     setupSlider(characterSlider, characterLabel, "Character");
 
     // Create parameter attachments
+    // Create parameter attachments using ZenithParameterAttachment for ZenithKnobs
     auto& apvts = sampler.getAPVTS();
-    attackAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "attack", attackSlider);
-    decayAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "decay", decaySlider);
-    sustainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "sustain", sustainSlider);
-    releaseAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "release", releaseSlider);
-    filterCutoffAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "filterCutoff", filterCutoffSlider);
-    filterResonanceAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "filterResonance", filterResonanceSlider);
-    tuneAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "tune", tuneSlider);
-    gainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "gain", gainSlider);
-    characterAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "character", characterSlider);
+    
+    auto addAttachment = [&](const juce::String& paramId, ZenithKnob& knob) {
+        if (auto* param = apvts.getParameter(paramId)) {
+            attachments_.push_back(std::make_unique<ZenithParameterAttachment>(*param, knob));
+        }
+    };
+
+    addAttachment("attack", attackSlider);
+    addAttachment("decay", decaySlider);
+    addAttachment("sustain", sustainSlider);
+    addAttachment("release", releaseSlider);
+    addAttachment("filterCutoff", filterCutoffSlider);
+    addAttachment("filterResonance", filterResonanceSlider);
+    addAttachment("tune", tuneSlider);
+    addAttachment("gain", gainSlider);
+    addAttachment("character", characterSlider);
+
 
     // Update patch list
     updatePatchList();
@@ -142,7 +149,7 @@ ZenithSamplerEditor::ZenithSamplerEditor(
     loadSampleMapData();
 
     // Start timer for status updates
-    startTimer(100);
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(100);
 }
 
 ZenithSamplerEditor::~ZenithSamplerEditor()
@@ -295,7 +302,7 @@ void ZenithSamplerEditor::onPatchSelected()
     int selectedId = presetComboBox.getSelectedId();
     if (selectedId > 0)
     {
-        juce::String patchName = presetComboBox.getItemText(selectedId - 1);
+        juce::String patchName = presetComboBox.getText();
         sampler.loadPatchByName(patchName);
 
         // Reload sample map

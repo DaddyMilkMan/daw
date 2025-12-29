@@ -2146,15 +2146,19 @@ void SampleEditorComponent::saveAsNewFile(const juce::File &targetFile) {
 
   targetFile.deleteFile();
   juce::WavAudioFormat format;
-  
-  std::unique_ptr<juce::FileOutputStream> stream(new juce::FileOutputStream(targetFile));
-  if (!stream->openedOk()) {
+  auto options = juce::AudioFormatWriterOptions()
+                     .withSampleRate(sampleRate)
+                     .withNumChannels((int)bufferToSave->getNumChannels())
+                     .withBitsPerSample(24);
+
+  // createWriterFor takes a reference to unique_ptr (JUCE 8+ API)
+  std::unique_ptr<juce::OutputStream> fileStream(new juce::FileOutputStream(targetFile));
+  if (!static_cast<juce::FileOutputStream*>(fileStream.get())->openedOk()) {
     DBG("[SampleEditor] Failed to open file for writing: " + targetFile.getFullPathName());
     return;
   }
   
-  std::unique_ptr<juce::AudioFormatWriter> writer(
-      format.createWriterFor(stream.release(), sampleRate, (int)bufferToSave->getNumChannels(), 24, {}, 0));
+  std::unique_ptr<juce::AudioFormatWriter> writer(format.createWriterFor(fileStream, options));
 
   if (writer) {
     writer->writeFromAudioSampleBuffer(*bufferToSave, 0,
@@ -2183,10 +2187,13 @@ void SampleEditorComponent::exportSelection(const juce::File &targetFile) {
 
   targetFile.deleteFile();
   juce::WavAudioFormat format;
-  
+  auto options = juce::AudioFormatWriterOptions()
+                     .withSampleRate(sampleRate)
+                     .withNumChannels((int)bufferToSave->getNumChannels())
+                     .withBitsPerSample(24);
+
   std::unique_ptr<juce::OutputStream> fileStream(new juce::FileOutputStream(targetFile));
-  std::unique_ptr<juce::AudioFormatWriter> writer(
-      format.createWriterFor(fileStream.release(), sampleRate, (int)bufferToSave->getNumChannels(), 24, {}, 0));
+  std::unique_ptr<juce::AudioFormatWriter> writer(format.createWriterFor(fileStream, options));
 
   if (writer) {
     writer->writeFromAudioSampleBuffer(*bufferToSave, startSample, numSamples);

@@ -135,13 +135,19 @@ void AIResponseCache::put(const juce::String &promptHash,
   if (calculateTotalSize() > maxSizeBytes_) {
     evictLRU();
   }
+  
+  // Create snapshot for async persistence
+  auto cacheSnapshot = cache_;
 
-  // Persist to disk (async would be better in production)
-  persistCache();
+  // Persist to disk asynchronously to avoid blocking
+  std::thread([this, snapshot = std::move(cacheSnapshot)]() {
+      persistCache(snapshot);
+  }).detach();
 
   DBG("AIResponseCache: PUT " + promptHash.substring(0, 16) +
       "... (TTL: " + juce::String(ttlSeconds) + "s)");
 }
+
 
 bool AIResponseCache::has(const juce::String &promptHash) const {
   if (!enabled_)
@@ -175,7 +181,13 @@ void AIResponseCache::invalidate(const juce::String &pattern) {
     stats_.totalEntries = static_cast<int>(cache_.size());
   }
 
-  persistCache();
+  // Create snapshot for async persistence
+  auto cacheSnapshot = cache_;
+
+  // Persist to disk asynchronously
+  std::thread([this, snapshot = std::move(cacheSnapshot)]() {
+      persistCache(snapshot);
+  }).detach();
 }
 
 void AIResponseCache::clear() { invalidate(""); }
@@ -252,11 +264,13 @@ juce::int64 AIResponseCache::calculateTotalSize() const {
 // Persistence
 //==============================================================================
 
-void AIResponseCache::persistCache() {
-  // Build JSON object
+void AIResponseCache::persistCache(const std::map<juce::String, ai::CacheEntry>& snapshot) {
+  juce::ScopedLock sl(diskLock_);
+
+  // Build JSON object from snapshot
   juce::DynamicObject::Ptr root = new juce::DynamicObject();
 
-  for (const auto &pair : cache_) {
+  for (const auto &pair : snapshot) {
     juce::DynamicObject::Ptr entryObj = new juce::DynamicObject();
     entryObj->setProperty("response", pair.second.response);
     entryObj->setProperty("cachedAt", pair.second.cachedAt);
@@ -269,7 +283,23 @@ void AIResponseCache::persistCache() {
   // Write to file
   juce::File cacheFile = getCacheFile();
   juce::String jsonStr = juce::JSON::toString(root.get());
-  cacheFile.replaceWithText(jsonStr);
+  
+  // Use a temporary file and move for atomicity
+  auto tempFile = cacheFile.getSiblingFile(cacheFile.getFileName() + ".tmp");
+  tempFile.replaceWithText(jsonStr);
+  tempFile.moveFileTo(cacheFile);
+}
+
+void AIResponseCache::persistCache() {
+    // Overload for internal use if needed, but we prefer the snapshot version
+    // This is kept if existing code calls it, though we updated call sites.
+    // For safety, we'll take a lock and snapshot here if called directly.
+    std::map<juce::String, ai::CacheEntry> snapshot;
+    {
+        juce::ScopedLock sl(cacheLock_);
+        snapshot = cache_;
+    }
+    persistCache(snapshot);
 }
 
 } // namespace ai

@@ -1,13 +1,19 @@
-#include "TransportCommands.h"
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "Actions.h"
+#include "CommandAPI.h"
+#include "CommandUtils.h"
 #include "Engine.h"
 #include "ProjectState.h"
-#include "CommandUtils.h"
-
+#include "TransportCommands.h"
 
 namespace zenith {
 
-TransportCommands::TransportCommands(Engine &eng, ProjectState &state)
-    : engine(eng), projectState(state) {}
+TransportCommands::TransportCommands(Engine &eng, ProjectState &state,
+                                     CommandAPI &api)
+    : engine(eng), projectState(state), api(api) {}
 
 juce::var TransportCommands::play(const juce::var &params) {
   juce::ignoreUnused(params);
@@ -54,15 +60,18 @@ juce::var TransportCommands::setTempo(const juce::var &params) {
     return createErrorResponse("Missing 'bpm'");
 
   double bpm = (double)params["bpm"];
-  projectState.setTempo(bpm);
 
-  engine.syncTempoMap();
+  if (api.performAction(std::make_unique<SetTempoAction>(projectState, bpm))) {
+    engine.syncTempoMap();
 
-  auto *resultObj = new juce::DynamicObject();
-  resultObj->setProperty("bpm", bpm);
-  resultObj->setProperty("success", true);
+    auto *resultObj = new juce::DynamicObject();
+    resultObj->setProperty("bpm", bpm);
+    resultObj->setProperty("success", true);
 
-  return createSuccessResponse(juce::var(resultObj));
+    return createSuccessResponse(juce::var(resultObj));
+  }
+
+  return createErrorResponse("Failed to set tempo");
 }
 
 juce::var TransportCommands::setTimeSignature(const juce::var &params) {
@@ -72,8 +81,12 @@ juce::var TransportCommands::setTimeSignature(const juce::var &params) {
   int num = params["numerator"];
   int den = params["denominator"];
 
-  projectState.setTimeSignature(num, den);
-  return createSuccessResponse(juce::var());
+  if (api.performAction(
+          std::make_unique<SetTimeSignatureAction>(projectState, num, den))) {
+    return createSuccessResponse(juce::var());
+  }
+
+  return createErrorResponse("Failed to set time signature");
 }
 
 juce::var TransportCommands::addTempoChange(const juce::var &params) {
@@ -85,16 +98,22 @@ juce::var TransportCommands::addTempoChange(const juce::var &params) {
   double timeBeats = (double)params["timeBeats"];
   double bpm = (double)params["bpm"];
 
-  juce::String pointId =
-      projectState.addTempoChange(timeBeats, bpm, "Add Tempo Change");
+  auto action =
+      std::make_unique<AddTempoPointAction>(projectState, timeBeats, bpm);
+  auto *rawAction = action.get();
 
-  engine.syncTempoMap();
+  if (api.performAction(std::move(action))) {
+    engine.syncTempoMap();
 
-  auto *resultObj = new juce::DynamicObject();
-  resultObj->setProperty("pointId", pointId);
-  resultObj->setProperty("success", true);
+    juce::String pointId = rawAction->getPointId();
+    auto *resultObj = new juce::DynamicObject();
+    resultObj->setProperty("pointId", pointId);
+    resultObj->setProperty("success", true);
 
-  return createSuccessResponse(juce::var(resultObj));
+    return createSuccessResponse(juce::var(resultObj));
+  }
+
+  return createErrorResponse("Failed to add tempo change");
 }
 
 juce::var TransportCommands::getTempoMap(const juce::var &params) {
