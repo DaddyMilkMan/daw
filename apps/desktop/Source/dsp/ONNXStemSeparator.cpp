@@ -28,6 +28,8 @@ struct ONNXStemSeparator::Impl {
   std::unique_ptr<Ort::SessionOptions> sessionOptions;
 
   // Model metadata
+  std::vector<Ort::AllocatedStringPtr> inputNamesOwned;
+  std::vector<Ort::AllocatedStringPtr> outputNamesOwned;
   std::vector<const char *> inputNames;
   std::vector<const char *> outputNames;
   std::vector<int64_t> inputShape;
@@ -39,10 +41,7 @@ struct ONNXStemSeparator::Impl {
   // Reuse buffer for input tensor
   std::vector<float> inputTensorValues;
 
-  ~Impl() {
-      for (auto name : inputNames) delete[] name;
-      for (auto name : outputNames) delete[] name;
-  }
+  ~Impl() = default;
 #endif
 };
 
@@ -140,8 +139,8 @@ bool ONNXStemSeparator::initialize(const juce::File &modelPath) {
 
   // Reset any previous state before loading new model
 #ifdef ZENITH_USE_ONNX_RUNTIME
-  for (auto name : pImpl->inputNames) delete[] name;
-  for (auto name : pImpl->outputNames) delete[] name;
+  pImpl->inputNamesOwned.clear();
+  pImpl->outputNamesOwned.clear();
   pImpl->inputNames.clear();
   pImpl->outputNames.clear();
   pImpl->session.reset();
@@ -199,21 +198,23 @@ bool ONNXStemSeparator::initialize(const juce::File &modelPath) {
     }
     
     // REDO: Robust metadata loading
+    pImpl->inputNamesOwned.clear();
+    pImpl->outputNamesOwned.clear();
     pImpl->inputNames.clear();
     pImpl->outputNames.clear();
     
+    Ort::AllocatorWithDefaultOptions allocator;
+
     for (size_t i = 0; i < pImpl->session->GetInputCount(); ++i) {
         auto name = pImpl->session->GetInputNameAllocated(i, allocator);
-        char* nameStr = new char[strlen(name.get()) + 1];
-        strcpy(nameStr, name.get());
-        pImpl->inputNames.push_back(nameStr);
+        pImpl->inputNames.push_back(name.get());
+        pImpl->inputNamesOwned.push_back(std::move(name));
     }
     
     for (size_t i = 0; i < pImpl->session->GetOutputCount(); ++i) {
         auto name = pImpl->session->GetOutputNameAllocated(i, allocator);
-        char* nameStr = new char[strlen(name.get()) + 1];
-        strcpy(nameStr, name.get());
-        pImpl->outputNames.push_back(nameStr);
+        pImpl->outputNames.push_back(name.get());
+        pImpl->outputNamesOwned.push_back(std::move(name));
     }
 
     if (!pImpl->inputNames.empty()) {

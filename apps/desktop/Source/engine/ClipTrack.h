@@ -161,7 +161,6 @@ protected:
   std::vector<std::shared_ptr<TakeFolder>> takeFoldersOwned_;
   std::atomic<const ClipSnapshot *> activeClipSnapshot_{nullptr};
   std::shared_ptr<ClipSnapshot> currentClipSnapshot_;
-  std::vector<std::shared_ptr<ClipSnapshot>> clipSnapshotTrash_;
 
   void updateClipSnapshot();
   juce::AudioBuffer<float> clipBuffer_;

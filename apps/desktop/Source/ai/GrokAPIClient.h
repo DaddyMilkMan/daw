@@ -172,7 +172,7 @@ private:
 
     // Chain options
     auto options =
-        juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
+        juce::URL::InputStreamOptions(juce::URL::ParameterHandling::ignoreAllParameters)
             .withExtraHeaders(headerString)
             .withConnectionTimeoutMs(30000);
 

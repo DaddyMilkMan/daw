@@ -6,7 +6,7 @@ target_sources(ZenithDAW PRIVATE
     AIEventBus.h
     AIEventBus.cpp
     AIResponseCache.h
-    # AIResponseCache.cpp
+    AIResponseCache.cpp
     GrokAPIClient.h
 
     # Style & UI
