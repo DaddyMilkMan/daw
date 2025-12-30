@@ -1,91 +1,50 @@
-# --- The Citadel Strict Ignore Policy ---
+# Build artifacts and dependencies
+build/
+_deps/
+Debug/
+Release/
+bin/
+obj/
+*.so
+*.a
+*.lib
+*.dll
+*.exe
+compile_commands.json
 
-# 1. Build Artifacts (Aggressive)
-/build*/
-/out/
-/bin/
-/lib/
-cmake-build-*/
-.cache/
-**/CMakeFiles/
-**/cmake_install.cmake
-*.vcxproj.filters
-build_output*.txt
-
-# 1b. Logs Directory
-/logs/
-
-# 1c. Leftover & Nested Build Folders
-build_fix*/
-build_manual/
-build_skia/
-build_trash/
-modules/*/build/
-
-# 2. OS Junk
-.DS_Store
-Thumbs.db
-Desktop.ini
-
-# 3. IDE Clutter
+# IDE and editor configurations
 .vscode/
 .idea/
-*.sln
-*.vcxproj
-*.vcxproj.user
+*.swp
+*.swo
+*.code-workspace
+.clangd
 
-# 4. Node Dependencies
-node_modules/
-npm-debug.log
-
-# 5. Local Env
-.env
-*.local
-
-# 6. Build Logs and Error Files
-build_errors*.txt
-build_log*.txt
-build_verbose.txt
-cmake_error*.log
-msbuild_*.log
+# Log files and temporary output
 *.log
-debug_log.txt
+daw_gui_log*.txt
+build_error*.txt
+build_tree.txt
+output.txt
+server_log.txt
 
-# 7. Backup Files
-*.bak
-*.old
+# Script and patch files
+*.ps1
+*.patch
+
+# OS-specific files
+.DS_Store
+Thumbs.db
 *.tmp
-*.backup
-*.orig
 
-# 8. Python Artifacts
-*.pyc
-__pycache__/
-*.pyo
-*.pyd
-.Python
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
 
-# 9. Images in root (stray artifacts)
-/*.png
-/*.jpg
-/*.gif
+# Precompiled headers
+pch.h.gch
 
-# 10. Zenith DAW Specific transients
-/final_test_results*.txt
-/test_critic_fix.txt
-/test_debug.txt
-/test_final*.txt
-/test_manual.txt
-/test_output*.txt
-/test_results.txt
-/sync_log.txt
-/session_debug_log.txt
-/leak_traces.txt
-/all_linked_objects.txt
-/linked_objects.txt
-/obj_list.txt
-/*.log
-/apps/desktop/Source/zenith_headers.txt
-/find_brace_level.py
-/launch.sh
-/apps/scanner/
+# OS-specific artifacts
+*.o
+*.obj
