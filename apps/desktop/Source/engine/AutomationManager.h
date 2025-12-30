@@ -42,10 +42,8 @@ private:
   void updateSnapshot();
 
   std::unordered_map<juce::String, std::shared_ptr<AutomationLane>> lanesOwned_;
-  std::atomic<std::shared_ptr<AutomationSnapshot>> activeSnapshot_;
   std::shared_ptr<AutomationSnapshot> currentSnapshot_;
-
-
+  std::atomic<const AutomationSnapshot*> activeSnapshot_{nullptr};
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AutomationManager)
 };

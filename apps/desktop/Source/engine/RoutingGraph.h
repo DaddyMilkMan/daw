@@ -53,7 +53,6 @@ public:
     float gain = 1.0f;
     int sourceChannelIndex = 0; // For multi-channel routing
     int destChannelIndex = 0;
-    bool isFeedback = false; // Flag for back-edges in cycles
   };
 
   //==============================================================================
@@ -66,7 +65,7 @@ public:
   void removeNode(const juce::String &nodeId);
 
   bool connect(const juce::String &sourceId, const juce::String &destId,
-               float gain = 1.0f, bool isSidechain = false, bool isFeedback = false);
+               float gain = 1.0f, bool isSidechain = false);
   bool disconnect(const juce::String &sourceId, const juce::String &destId);
 
   //==============================================================================

@@ -37,10 +37,9 @@ namespace zenith {
 //==============================================================================
 CommandAPI::CommandAPI(ProjectState &state, Engine &eng)
     : projectState(state), engine(eng) {
-  trackCommands = std::make_unique<TrackCommands>(engine, projectState, *this);
-  clipCommands = std::make_unique<ClipCommands>(engine, projectState, *this);
+  trackCommands = std::make_unique<TrackCommands>(engine, projectState);
+  clipCommands = std::make_unique<ClipCommands>(engine, projectState);
   transportCommands = std::make_unique<TransportCommands>(engine, projectState, *this);
-
 
   DBG("CommandAPI: Initialized");
   initializeCommandMap();
@@ -328,6 +327,14 @@ void CommandAPI::registerCommand(const juce::String &commandName,
 //==============================================================================
 
 CommandAPI::~CommandAPI() {}
+
+//==============================================================================
+bool CommandAPI::performAction(std::unique_ptr<juce::UndoableAction> action) {
+  if (action) {
+    return projectState.getUndoManager().perform(action.get());
+  }
+  return false;
+}
 
 //==============================================================================
 juce::var CommandAPI::executeCommand(const juce::var &request) {

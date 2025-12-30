@@ -40,9 +40,5 @@
   - Added assertions to ensure message-thread-only methods are not called from audio thread.
 
 ## Pending Fixes
-- [x] **Roast #2: UI Thread Safety**
-  - **Audit**: `MixerView` was accessing `engine_.tracks()` directly (polling). Audio thread access was safe via snapshot, but UI architectural coupling was high.
-  - **Fix**: Refactored `MixerView` to listen to `ProjectState` (Source of Truth).
-  - **Implementation**: Used `juce::ValueTree::Listener` + `callAsync` to trigger rebuilds only when persistent state changes.
-  - **Result**: Decoupled UI from Engine internals. UI only displays tracks that exist in the project model.
+- [ ] **Roast #2: UI Thread Safety**
 

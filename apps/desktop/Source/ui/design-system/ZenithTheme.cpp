@@ -5,67 +5,76 @@
  */
 
 #include "ZenithTheme.h"
-#include "ColorBridge.h"
+#include "ColorBridge.h" // Added for ColorBridge access
 #include <cmath>
 
 namespace zenith {
 
 //==============================================================================
-// Dynamic Theme Modification (God Mode)
+// Modern Color Palette Definitions (Sourced from ZenithDesignSystem)
 //==============================================================================
 
-void ZenithTheme::Colors::setColor(const juce::String& colorId, const juce::Colour& color) {
-    if (colorId == "bg_00") bg_00 = color;
-    else if (colorId == "bg_01") bg_01 = color;
-    else if (colorId == "bg_02") bg_02 = color;
-    else if (colorId == "bg_03") bg_03 = color;
-    else if (colorId == "bg_04") bg_04 = color;
-    else if (colorId == "accent_primary") accent_primary = color;
-    else if (colorId == "accent_secondary") accent_secondary = color;
-    else if (colorId == "waveform_audio") waveform_audio = color;
-    else if (colorId == "waveform_midi") waveform_midi = color;
-    else if (colorId == "playhead") playhead = color;
-    else if (colorId == "text_primary") text_primary = color;
-    else if (colorId == "text_secondary") text_secondary = color;
-}
+// Background layers
+const juce::Colour ZenithTheme::Colors::bg_00 = design::toJuceColour(design::colors::BG_00);
+const juce::Colour ZenithTheme::Colors::bg_01 = design::toJuceColour(design::colors::BG_01);
+const juce::Colour ZenithTheme::Colors::bg_02 = design::toJuceColour(design::colors::BG_02);
+const juce::Colour ZenithTheme::Colors::bg_03 = design::toJuceColour(design::colors::BG_03);
+const juce::Colour ZenithTheme::Colors::bg_04 = design::toJuceColour(design::colors::BG_04);
 
-void ZenithTheme::setSpacing(const juce::String& key, int value) {
-    if (key == "trackHeight") Spacing::trackHeight = value;
-    else if (key == "trackHeaderWidth") Spacing::trackHeaderWidth = value;
-    else if (key == "mixerWidth") Spacing::mixerWidth = value;
-    else if (key == "sidebarWidth") Spacing::sidebarWidth = value;
-    else if (key == "toolbarHeight") Spacing::toolbarHeight = value;
-    
-    // Trigger global UI refresh
-    if (auto* mm = juce::MessageManager::getInstance()) {
-        mm->callAsync([]() {
-            for (int i = 0; i < juce::TopLevelWindow::getNumTopLevelWindows(); ++i)
-                if (auto* win = juce::TopLevelWindow::getTopLevelWindow(i))
-                    win->resized();
-        });
-    }
-}
+// Borders with proper opacity
+const juce::Colour ZenithTheme::Colors::border_subtle = design::toJuceColour(design::colors::BORDER_SUBTLE);
+const juce::Colour ZenithTheme::Colors::border_default = design::toJuceColour(design::colors::BORDER_DEFAULT);
+const juce::Colour ZenithTheme::Colors::border_strong = design::toJuceColour(design::colors::BORDER_STRONG);
+const juce::Colour ZenithTheme::Colors::border_focus = design::toJuceColour(design::colors::BORDER_FOCUS);
 
-//==============================================================================
-// Utility Functions
-//==============================================================================
+// Text hierarchy
+const juce::Colour ZenithTheme::Colors::text_primary = design::toJuceColour(design::colors::TEXT_PRIMARY);
+const juce::Colour ZenithTheme::Colors::text_secondary = design::toJuceColour(design::colors::TEXT_SECONDARY);
+const juce::Colour ZenithTheme::Colors::text_tertiary = design::toJuceColour(design::colors::TEXT_TERTIARY);
+const juce::Colour ZenithTheme::Colors::text_inverse = design::toJuceColour(design::colors::TEXT_INVERSE);
 
+// Primary accent (unified with Neon Noir design system)
+const juce::Colour ZenithTheme::Colors::accent_primary = design::toJuceColour(design::colors::ACCENT_PRIMARY);
+const juce::Colour ZenithTheme::Colors::accent_secondary = design::toJuceColour(design::colors::ACCENT_SECONDARY);
+const juce::Colour ZenithTheme::Colors::accent_hover = design::toJuceColour(design::colors::ACCENT_PRIMARY).brighter(0.2f);
+const juce::Colour ZenithTheme::Colors::accent_pressed = design::toJuceColour(design::colors::ACCENT_PRIMARY).darker(0.1f);
+const juce::Colour ZenithTheme::Colors::accent_subtle = design::toJuceColour(design::colors::ACCENT_PRIMARY).withAlpha(0.10f);
+const juce::Colour ZenithTheme::Colors::hover_overlay = design::toJuceColour(design::colors::GLASS_HOVER);
+
+// Semantic colors
+const juce::Colour ZenithTheme::Colors::success = design::toJuceColour(design::colors::SUCCESS);
+const juce::Colour ZenithTheme::Colors::warning = design::toJuceColour(design::colors::WARNING);
+const juce::Colour ZenithTheme::Colors::error = design::toJuceColour(design::colors::DANGER);
+const juce::Colour ZenithTheme::Colors::info = design::toJuceColour(design::colors::INFO);
+
+// Audio-specific colors
+const juce::Colour ZenithTheme::Colors::waveform_audio = design::toJuceColour(design::colors::WAVEFORM_AUDIO);
+const juce::Colour ZenithTheme::Colors::waveform_midi = design::toJuceColour(design::colors::WAVEFORM_MIDI);
+const juce::Colour ZenithTheme::Colors::automation = design::toJuceColour(design::colors::AUTOMATION);
+const juce::Colour ZenithTheme::Colors::playhead = design::toJuceColour(design::colors::PLAYHEAD);
+
+// Track color generation using golden ratio for even distribution
 juce::Colour ZenithTheme::Colors::getTrackColor(int index, float saturation,
                                                 float brightness) {
+  // Golden ratio (1.618...) provides optimal color distribution
   float goldenRatio = 0.618033988749895f;
   float hue = std::fmod(index * goldenRatio, 1.0f);
+
   return juce::Colour::fromHSV(hue, saturation, brightness, 1.0f);
 }
 
-juce::Colour ZenithTheme::Colors::withAlpha(const juce::Colour &color, float alpha) {
+juce::Colour ZenithTheme::Colors::withAlpha(const juce::Colour &color,
+                                            float alpha) {
   return color.withAlpha(juce::jlimit(0.0f, 1.0f, alpha));
 }
 
-juce::Colour ZenithTheme::Colors::lighten(const juce::Colour &color, float amount) {
+juce::Colour ZenithTheme::Colors::lighten(const juce::Colour &color,
+                                          float amount) {
   return color.brighter(amount);
 }
 
-juce::Colour ZenithTheme::Colors::darken(const juce::Colour &color, float amount) {
+juce::Colour ZenithTheme::Colors::darken(const juce::Colour &color,
+                                         float amount) {
   return color.darker(amount);
 }
 
@@ -75,43 +84,84 @@ juce::Colour ZenithTheme::Colors::darken(const juce::Colour &color, float amount
 
 juce::Font ZenithTheme::Typography::getFont(float size, Weight weight) {
   auto fontName = juce::Font::getDefaultSansSerifFontName();
+
   switch (weight) {
-  case Weight::Regular: return juce::Font(juce::FontOptions(fontName, size, juce::Font::plain));
-  case Weight::Medium: return juce::Font(juce::FontOptions(fontName, size, juce::Font::plain)).withExtraKerningFactor(0.05f);
-  case Weight::Bold: return juce::Font(juce::FontOptions(fontName, size, juce::Font::bold));
-  default: return juce::Font(juce::FontOptions(fontName, size, juce::Font::plain));
+  case Weight::Regular:
+    return juce::Font(juce::FontOptions(fontName, size, juce::Font::plain));
+  case Weight::Medium:
+    return juce::Font(juce::FontOptions(fontName, size, juce::Font::plain))
+        .withExtraKerningFactor(0.05f);
+  case Weight::Bold:
+    return juce::Font(juce::FontOptions(fontName, size, juce::Font::bold));
+  default:
+    return juce::Font(juce::FontOptions(fontName, size, juce::Font::plain));
   }
 }
 
-juce::Font ZenithTheme::Typography::getTinyFont(Weight weight) { return getFont(tiny, weight); }
-juce::Font ZenithTheme::Typography::getSmallFont(Weight weight) { return getFont(sm, weight); }
-juce::Font ZenithTheme::Typography::getBodyFont(Weight weight) { return getFont(body, weight); }
-juce::Font ZenithTheme::Typography::getHeadingFont(Weight weight) { return getFont(heading, weight); }
-juce::Font ZenithTheme::Typography::getLargeFont(Weight weight) { return getFont(large, weight); }
-juce::Font ZenithTheme::Typography::getDisplayFont(Weight weight) { return getFont(display, weight); }
+juce::Font ZenithTheme::Typography::getTinyFont(Weight weight) {
+  return getFont(tiny, weight);
+}
+
+juce::Font ZenithTheme::Typography::getSmallFont(Weight weight) {
+  return getFont(sm, weight);
+}
+
+juce::Font ZenithTheme::Typography::getBodyFont(Weight weight) {
+  return getFont(body, weight);
+}
+
+juce::Font ZenithTheme::Typography::getHeadingFont(Weight weight) {
+  return getFont(heading, weight);
+}
+
+juce::Font ZenithTheme::Typography::getLargeFont(Weight weight) {
+  return getFont(large, weight);
+}
+
+juce::Font ZenithTheme::Typography::getDisplayFont(Weight weight) {
+  return getFont(display, weight);
+}
 
 //==============================================================================
-// Shadow System
+// Shadow System Implementation
 //==============================================================================
 
-void ZenithTheme::Shadows::drawShadow(juce::Graphics &g, juce::Rectangle<float> bounds, float elevation, float radius) {
+void ZenithTheme::Shadows::drawShadow(juce::Graphics &g,
+                                      juce::Rectangle<float> bounds,
+                                      float elevation, float radius) {
+  // Multi-layer shadows for realistic depth
   int layers = static_cast<int>(elevation * 20.0f) + 1;
+
   for (int i = 0; i < layers; ++i) {
     float layerAlpha = elevation * 0.5f / (i + 1);
     float layerOffset = (i + 1) * 2.0f;
     float layerBlur = (i + 1) * 3.0f;
+
     auto shadowBounds = bounds.translated(0, layerOffset).expanded(layerBlur);
+
     g.setColour(juce::Colours::black.withAlpha(layerAlpha));
-    if (radius > 0.0f) g.fillRoundedRectangle(shadowBounds, radius);
-    else g.fillRect(shadowBounds);
+
+    if (radius > 0.0f) {
+      g.fillRoundedRectangle(shadowBounds, radius);
+    } else {
+      g.fillRect(shadowBounds);
+    }
   }
 }
 
-void ZenithTheme::Shadows::drawInnerShadow(juce::Graphics &g, juce::Rectangle<float> bounds, float radius) {
-  g.setGradientFill(juce::ColourGradient(juce::Colours::black.withAlpha(0.3f), bounds.getTopLeft(),
+void ZenithTheme::Shadows::drawInnerShadow(juce::Graphics &g,
+                                           juce::Rectangle<float> bounds,
+                                           float radius) {
+  // Inner shadow for recessed appearance
+  g.setGradientFill(juce::ColourGradient(
+      juce::Colours::black.withAlpha(0.3f), bounds.getTopLeft(),
       juce::Colours::transparentBlack, bounds.getBottomRight(), false));
-  if (radius > 0.0f) g.fillRoundedRectangle(bounds.reduced(1.0f), radius);
-  else g.fillRect(bounds.reduced(1.0f));
+
+  if (radius > 0.0f) {
+    g.fillRoundedRectangle(bounds.reduced(1.0f), radius);
+  } else {
+    g.fillRect(bounds.reduced(1.0f));
+  }
 }
 
 //==============================================================================
@@ -119,7 +169,15 @@ void ZenithTheme::Shadows::drawInnerShadow(juce::Graphics &g, juce::Rectangle<fl
 //==============================================================================
 
 ZenithTheme::Mode ZenithTheme::currentMode_ = ZenithTheme::Mode::Standard;
-void ZenithTheme::setMode(Mode mode) { currentMode_ = mode; }
+
+void ZenithTheme::setMode(Mode mode) {
+  currentMode_ = mode;
+
+  // Future: Dynamically adjust colors based on mode
+  // For OLED mode, pure blacks
+  // For HighContrast mode, increased contrast ratios
+}
+
 ZenithTheme::Mode ZenithTheme::getMode() { return currentMode_; }
 
 } // namespace zenith

@@ -26,22 +26,17 @@ public:
             expect(tm.getActiveTheme() == ThemePreset::Dark);
             
             // Check a representative color
-            expect(tm.getPalette().bg00 == 0xFF0A0A0A);
+            expect(tm.getPalette().bgDarkest == SkColorSetARGB(255, 13, 13, 17));
             
             // Switch to Light
             tm.setActiveTheme(ThemePreset::Light);
             expect(tm.getActiveTheme() == ThemePreset::Light);
-            // Assuming Light Theme sets bg00 to White or very bright
-            // But we don't know the implementation of applyLightTheme. 
-            // We'll relax the check or trust it.
-            // Let's just fix the member name first.
-            // The previous test expected SK_ColorWHITE.
-            expect(tm.getPalette().bg00 == SK_ColorWHITE);
+            expect(tm.getPalette().bgDarkest == SK_ColorWHITE);
             
             // Switch to Darker
             tm.setActiveTheme(ThemePreset::Darker);
             expect(tm.getActiveTheme() == ThemePreset::Darker);
-            expect(tm.getPalette().bg00 == SK_ColorBLACK);
+            expect(tm.getPalette().bgDarkest == SK_ColorBLACK);
         }
 
         beginTest("Theme Listener Notification");

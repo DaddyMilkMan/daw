@@ -35,7 +35,6 @@
 #include <effects/SkGradientShader.h>
 #include <effects/SkImageFilters.h>
 #include <effects/SkRuntimeEffect.h>
-#pragma clang diagnostic pop
 #include <juce_core/juce_core.h>
 #include <stack>
 
@@ -54,7 +53,7 @@ struct BackdropBlurConfig {
   // Quality multipliers based on design::Settings::BlurQuality
   static float getRadiusMultiplier() {
     using BQ = design::Settings::BlurQuality;
-    switch (design::getSettings().blurQuality) {
+    switch (design::Settings::getBlurQuality()) {
     case BQ::Off:
       return 0.0f;
     case BQ::Low:
@@ -69,7 +68,7 @@ struct BackdropBlurConfig {
 
   // Should we skip blur entirely?
   static bool isBlurEnabled() {
-    return design::getSettings().blurQuality !=
+    return design::Settings::getBlurQuality() !=
            design::Settings::BlurQuality::Off;
   }
 

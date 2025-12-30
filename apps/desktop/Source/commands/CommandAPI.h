@@ -88,6 +88,9 @@ public:
   
   juce::String executeCommandString(const juce::String& jsonRequest);
   juce::var executeBatch(const juce::Array<juce::var>& commands, const juce::String& batchName);
+  
+  // Method to perform actions (for command classes)
+  bool performAction(std::unique_ptr<juce::UndoableAction> action);
 
   using CommandHandler = std::function<juce::var(const juce::var &params)>;
   void registerCommand(const juce::String &commandName, CommandHandler handler);

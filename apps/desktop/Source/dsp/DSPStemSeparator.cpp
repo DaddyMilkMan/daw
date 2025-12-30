@@ -32,15 +32,17 @@ void DSPStemSeparator::prepare(const juce::dsp::ProcessSpec& spec) {
     auto hpCoeffs = juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate_, 200.0f);
 
     // Apply coefficients to filter chains (4 biquads = 8th order, but we use them in pairs usually)
-    lowPassFilter_.get<0>().coefficients = lpCoeffs;
-    lowPassFilter_.get<1>().coefficients = lpCoeffs;
-    lowPassFilter_.get<2>().coefficients = lpCoeffs;
-    lowPassFilter_.get<3>().coefficients = lpCoeffs;
-    
-    highPassFilter_.get<0>().coefficients = hpCoeffs;
-    highPassFilter_.get<1>().coefficients = hpCoeffs;
-    highPassFilter_.get<2>().coefficients = hpCoeffs;
-    highPassFilter_.get<3>().coefficients = hpCoeffs;
+    for (int i = 0; i < 4; ++i) {
+        lowPassFilter_.get<0>().coefficients = lpCoeffs;
+        lowPassFilter_.get<1>().coefficients = lpCoeffs;
+        lowPassFilter_.get<2>().coefficients = lpCoeffs;
+        lowPassFilter_.get<3>().coefficients = lpCoeffs;
+        
+        highPassFilter_.get<0>().coefficients = hpCoeffs;
+        highPassFilter_.get<1>().coefficients = hpCoeffs;
+        highPassFilter_.get<2>().coefficients = hpCoeffs;
+        highPassFilter_.get<3>().coefficients = hpCoeffs;
+    }
 
     juce::dsp::ProcessSpec monoSpec = spec;
     monoSpec.numChannels = 1;

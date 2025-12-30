@@ -233,8 +233,7 @@ void DebugConsoleComponent::drawHealthIndicator(SkCanvas *canvas, float x,
   // Highlight
   SkPaint highlightPaint;
   highlightPaint.setAntiAlias(true);
-  highlightPaint.setColor(design::withAlpha(design::colors::TEXT_PRIMARY, 0.3f)); // Fallback from GLASS_HIGHLIGHT
-
+  highlightPaint.setColor(design::unified::withAlpha(design::unified::text_primary(), 0.3f)); // Fallback from GLASS_HIGHLIGHT
   canvas->drawCircle(x - pulseSize * 0.3f, y - pulseSize * 0.3f,
                      pulseSize * 0.4f, highlightPaint);
 }
@@ -276,22 +275,18 @@ void DebugConsoleComponent::drawNotificationBadge(SkCanvas *canvas, float x,
   SkPaint badgePaint;
   badgePaint.setAntiAlias(true);
   badgePaint.setColor(
-      design::withAlpha(design::colors::ACCENT_PRIMARY, alpha));
-
+      design::unified::withAlpha(design::unified::accent_primary(), alpha));
 
   canvas->drawCircle(x, y, 6.0f, badgePaint);
 }
 
 SkColor DebugConsoleComponent::getHealthColor(float score) const {
   if (score >= 80.0f) {
-    return design::colors::SUCCESS;
-
+    return design::unified::success();
   } else if (score >= 50.0f) {
-    return design::colors::WARNING;
-
+    return design::unified::warning();
   } else {
-    return design::colors::DANGER;
-
+    return design::unified::error();
   }
 }
 
@@ -402,44 +397,36 @@ void DebugConsoleComponent::setExpanded(bool expanded) {
 void DebugConsoleComponent::updateCachedPaints() {
   // Background - dark with subtle transparency
   bgPaint_.setAntiAlias(true);
-  bgPaint_.setColor(design::withAlpha(design::colors::BG_01, 0.9f));
-
+  bgPaint_.setColor(design::unified::withAlpha(design::unified::bg_01(), 0.9f));
   bgPaint_.setStyle(SkPaint::kFill_Style);
 
   // Border - subtle glow
   borderPaint_.setAntiAlias(true);
-  borderPaint_.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.25f));
-
+  borderPaint_.setColor(design::unified::withAlpha(design::unified::accent_primary(), 0.25f));
   borderPaint_.setStyle(SkPaint::kStroke_Style);
   borderPaint_.setStrokeWidth(1.0f);
 
   // Health colors
   healthGoodPaint_.setAntiAlias(true);
-  healthGoodPaint_.setColor(design::colors::SUCCESS);
-
+  healthGoodPaint_.setColor(design::unified::success());
 
   healthWarningPaint_.setAntiAlias(true);
-  healthWarningPaint_.setColor(design::colors::WARNING);
-
+  healthWarningPaint_.setColor(design::unified::warning());
 
   healthCriticalPaint_.setAntiAlias(true);
-  healthCriticalPaint_.setColor(design::colors::DANGER);
-
+  healthCriticalPaint_.setColor(design::unified::error());
 
   // Text
   textPaint_.setAntiAlias(true);
-  textPaint_.setColor(design::colors::TEXT_PRIMARY);
-
+  textPaint_.setColor(design::unified::text_primary());
 
   // Icons
   iconPaint_.setAntiAlias(true);
-  iconPaint_.setColor(design::colors::TEXT_PRIMARY);
-
+  iconPaint_.setColor(design::unified::text_primary());
 
   // Notification
   notificationPaint_.setAntiAlias(true);
-  notificationPaint_.setColor(design::colors::ACCENT_SECONDARY);
-
+  notificationPaint_.setColor(design::unified::accent_secondary());
 
   // Fonts
   font_.setSize(12.0f);

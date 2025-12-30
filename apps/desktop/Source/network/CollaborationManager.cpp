@@ -19,23 +19,17 @@ void CollaborationManager::startHosting() {
   currentState.store(ConnectionState::Registering, std::memory_order_release);
   sendChangeMessage();
 
-  juce::Thread::launch([weakThis = juce::WeakReference<CollaborationManager>(this)]() {
-    if (!weakThis) return;
-    
+  juce::Thread::launch([this]() {
     // 2. Register via TCP to get Code
-    juce::String code = weakThis->registerWithSignalingTCP();
+    juce::String code = registerWithSignalingTCP();
 
-    juce::MessageManager::callAsync([weakThis, code]() {
-      if (weakThis) {
-          if (code != "ERR" && code.isNotEmpty()) {
-            weakThis->sessionCode = code;
-            weakThis->startHolePunching(); // Move to UDP phase
-          } else {
-            // Can't access direct atomic with weak ptr easily without accessor or friend, 
-            // but we are inside the class scope effectively? No, lambda.
-            // But we can call methods.
-            weakThis->reportError("Registration failed");
-          }
+    juce::MessageManager::callAsync([this, code]() {
+      if (code != "ERR" && code.isNotEmpty()) {
+        sessionCode = code;
+        startHolePunching(); // Move to UDP phase
+      } else {
+        currentState.store(ConnectionState::Error, std::memory_order_release);
+        sendChangeMessage();
       }
     });
   });
@@ -43,30 +37,20 @@ void CollaborationManager::startHosting() {
 
 void CollaborationManager::joinSession(const juce::String &code) {
   disconnect();
-  
-  // Strict Validation
-  if (!validateSessionCode(code)) {
-      juce::MessageManager::callAsync([this]() { reportError("Invalid session code format (must be 6-12 upper-case alphanumeric)"); });
-      return;
-  }
-
   isHost = false;
   sessionCode = code;
 
   currentState.store(ConnectionState::Registering, std::memory_order_release);
   sendChangeMessage();
 
-  juce::Thread::launch([weakThis = juce::WeakReference<CollaborationManager>(this), code]() {
-    if (!weakThis) return;
-
+  juce::Thread::launch([this, code]() {
     // 1. Verify Code via TCP
-    if (weakThis->verifyCodeTCP(code)) {
-      juce::MessageManager::callAsync([weakThis]() { 
-          if (weakThis) weakThis->startHolePunching(); 
-      });
+    if (verifyCodeTCP(code)) {
+      juce::MessageManager::callAsync([this]() { startHolePunching(); });
     } else {
-      juce::MessageManager::callAsync([weakThis]() {
-        if (weakThis) weakThis->reportError("Invalid session code");
+      juce::MessageManager::callAsync([this]() {
+        currentState.store(ConnectionState::Error, std::memory_order_release);
+        sendChangeMessage();
       });
     }
   });
@@ -143,8 +127,8 @@ void CollaborationManager::run() {
     // Punching timeout
     if (state == ConnectionState::Punching) {
       if (now - punchingStartTime > PUNCHING_TIMEOUT_MS) {
-        juce::MessageManager::callAsync([weakThis = juce::WeakReference<CollaborationManager>(this)]() {
-          if (weakThis) weakThis->reportError("Connection timeout - could not establish P2P connection");
+        juce::MessageManager::callAsync([this]() {
+          reportError("Connection timeout - could not establish P2P connection");
         });
         return;
       }
@@ -155,8 +139,8 @@ void CollaborationManager::run() {
       if (handshakingStartTime == 0) {
         handshakingStartTime = now;
       } else if (now - handshakingStartTime > HANDSHAKING_TIMEOUT_MS) {
-        juce::MessageManager::callAsync([weakThis = juce::WeakReference<CollaborationManager>(this)]() {
-          if (weakThis) weakThis->reportError("Handshake timeout - peer authentication failed");
+        juce::MessageManager::callAsync([this]() {
+          reportError("Handshake timeout - peer authentication failed");
         });
         return;
       }
@@ -181,9 +165,7 @@ void CollaborationManager::run() {
           }
           
           it = activePeers.erase(it);
-          juce::MessageManager::callAsync([weakThis = juce::WeakReference<CollaborationManager>(this)]() { 
-              if (weakThis) weakThis->sendChangeMessage(); 
-          });
+          juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
         } else {
           ++it;
         }
@@ -283,27 +265,12 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
             sendChangeMessage();
         }
 
-        // Send Challenge with Salt if not sent yet for this peer
-        if (peer->challenge == 0) {
+        // Send Challenge (if we haven't already for this specific peer, but for now we re-use sentChallenge)
+        if (sentChallenge == 0) {
             juce::Random rng;
-            peer->challenge = rng.nextInt();
-            
-            // Generate robust 16-byte random salt
-            juce::MemoryBlock saltMB(16, true);
-            for(int i=0; i<4; ++i) { // Fill with random ints
-                int r = rng.nextInt();
-                saltMB.copyFrom(&r, i*4, 4);
-            }
-            peer->salt = juce::String::toHexString(saltMB.getData(), (int)saltMB.getSize(), 0);
-            
-            // Payload: [INT Challenge] [16 bytes SALT]
-            // We'll send salt as raw bytes for efficiency
-            juce::MemoryBlock payload;
-            payload.append(&peer->challenge, sizeof(int));
-            payload.append(saltMB.getData(), 16);
-            
-            sendPacket(PacketType::Challenge, payload.getData(), payload.getSize(), senderIP, senderPort);
+            sentChallenge = rng.nextInt();
         }
+        sendPacket(PacketType::Challenge, &sentChallenge, sizeof(int), senderIP, senderPort);
       }
     }
 
@@ -316,56 +283,48 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
     PacketType type = (PacketType)typeInt;
 
     int headerSize = sizeof(int);
-    const char *payloadPtr = (const char *)data + headerSize;
+    char *payloadPtr = (char *)data + headerSize;
     int payloadSize = size - headerSize;
 
     // --- Authentication Flow ---
     if (type == PacketType::Challenge) {
-      // Expect: [INT Challenge] [16 bytes SALT]
-      if (payloadSize >= (int)(sizeof(int) + 16)) {
+      if (payloadSize == sizeof(int)) {
         int challenge = 0;
         memcpy(&challenge, payloadPtr, sizeof(int));
         
-        juce::String saltHex;
-        {
-             juce::MemoryBlock s(payloadPtr + sizeof(int), 16);
-             saltHex = juce::String::toHexString(s.getData(), (int)s.getSize(), 0);
-        }
+        // SECURITY NOTE: MD5 is cryptographically weak but juce_cryptography is not linked.
+        // For proper security, add juce_cryptography to CMakeLists.txt and switch to SHA256.
+        // This authentication is sufficient for casual collaboration but NOT for high-security use.
+        juce::String salt = zenith::config::ConfigurationManager::getInstance()
+                               .getString(zenith::config::keys::COLLAB_SALT, "ZENITH_SALT_2025");
+        // Add session code AND current time to prevent replay attacks
+        juce::String secret = juce::String(challenge) + sessionCode + salt + 
+                              juce::String(juce::Time::currentTimeMillis() / 30000); // 30-second window
         
-        // Derive session key using PBKDF2
-        juce::MemoryBlock sessionKey = deriveSessionKey(sessionCode, saltHex);
-        juce::String secret = juce::String::toHexString(sessionKey.getData(), (int)sessionKey.getSize(), 0);
+        // Compute MD5 hash - use FULL 16-byte hash, not truncated
+        juce::MD5 hasher((const juce::uint8*)secret.toRawUTF8(), (size_t)secret.length());
+        auto hashBlock = hasher.getRawChecksumData();
         
-        // Compute HMAC
-        // Nonce? We use challenge as nonce.
-        juce::String message = juce::String(challenge);
-        juce::String signature = calculateHMAC(message, secret);
-        
-        // Send signature
-        sendPacket(PacketType::ChallengeResponse, signature.toRawUTF8(), signature.length(), senderIP, senderPort);
+        // Send full 16-byte hash as response
+        sendPacket(PacketType::ChallengeResponse, hashBlock.getData(), 16);
       }
     } else if (type == PacketType::ChallengeResponse) {
-        // We expect a hex string of the HMAC-SHA256 (64 chars)
-      if (payloadSize >= 64 && peer->challenge != 0) { 
-        juce::String receivedSignature = juce::String::fromUTF8(payloadPtr, payloadSize);
+      if (payloadSize >= 16) { // Expect full 16-byte hash now
+        // SECURITY NOTE: Same MD5 limitation applies here
+        juce::String salt = zenith::config::ConfigurationManager::getInstance()
+                               .getString(zenith::config::keys::COLLAB_SALT, "ZENITH_SALT_2025");
+        juce::String expectedSecret = juce::String(sentChallenge) + sessionCode + salt +
+                                      juce::String(juce::Time::currentTimeMillis() / 30000);
+        
+        juce::MD5 hasher((const juce::uint8*)expectedSecret.toRawUTF8(), (size_t)expectedSecret.length());
+        auto expectedHash = hasher.getRawChecksumData();
 
-        // Re-derive key using the salt WE sent
-        juce::MemoryBlock sessionKey = deriveSessionKey(sessionCode, peer->salt);
-        juce::String secret = juce::String::toHexString(sessionKey.getData(), (int)sessionKey.getSize(), 0);
-        
-        juce::String message = juce::String(peer->challenge);
-        juce::String expectedSignature = calculateHMAC(message, secret);
-        
-        // Constant-time comparison
-        bool match = (receivedSignature.length() == expectedSignature.length());
-        if (match) {
-            const char* a = receivedSignature.toRawUTF8();
-            const char* b = expectedSignature.toRawUTF8();
-            volatile int result = 0;
-            for (int i = 0; i < receivedSignature.length(); ++i) {
-                result |= (a[i] ^ b[i]);
-            }
-            match = (result == 0);
+        // Compare full 16-byte hash using constant-time comparison to prevent timing attacks
+        bool match = true;
+        const juce::uint8* received = static_cast<const juce::uint8*>(static_cast<const void*>(payloadPtr));
+        const juce::uint8* expected = static_cast<const juce::uint8*>(expectedHash.getData());
+        for (int i = 0; i < 16; ++i) {
+          if (received[i] != expected[i]) match = false;
         }
 
         if (match) {
@@ -381,13 +340,10 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
           m.append(localUserName.toRawUTF8(), localUserName.length());
           p2pSocket.write(senderIP, senderPort, m.getData(), (int)m.getSize());
         } else {
-          DBG("Collab: Auth Failed for " + senderIP + "! Signature mismatch.");
-          DBG("Expected: " + expectedSignature);
-          DBG("Received: " + receivedSignature);
+          DBG("Collab: Auth Failed for " + senderIP + "! Hash mismatch.");
         }
       }
     }
-
     // --- Application Data ---
     else if (type == PacketType::Hello && payloadSize > 0) {
       // Received remote user's name
@@ -457,9 +413,7 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
               juce::String::fromUTF8(payloadPtr, payloadSize);
           if (onEditReceived) {
             juce::MessageManager::callAsync(
-                [weakThis = juce::WeakReference<CollaborationManager>(this), cmdData]() { 
-                    if (weakThis && weakThis->onEditReceived) weakThis->onEditReceived(cmdData); 
-                });
+                [this, cmdData]() { onEditReceived(cmdData); });
           }
         }
       } else {
@@ -647,97 +601,3 @@ void CollaborationManager::reportError(const juce::String& error) {
 }
 
 } // namespace zenith
-
-// --- Security Helpers ---
-
-// --- Security Helpers ---
-
-bool zenith::CollaborationManager::validateSessionCode(const juce::String& code) {
-    // Strict validation: 6-12 chars, alphanumeric only
-    if (code.length() < 6 || code.length() > 12) return false;
-    return code.containsOnly("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
-}
-
-juce::MemoryBlock hmacSha256(const juce::MemoryBlock& key, const juce::MemoryBlock& data) {
-    const int blockSize = 64;
-    juce::MemoryBlock k = key;
-    
-    // Hash key if longer than block size
-    if (k.getSize() > blockSize) {
-        juce::SHA256 h(k.getData(), k.getSize());
-        auto hash = h.getRawData(); 
-        k = hash;
-    }
-    
-    // Pad key if shorter
-    if (k.getSize() < blockSize) k.ensureSize(blockSize, true);
-    
-    juce::uint8* kData = static_cast<juce::uint8*>(k.getData());
-    juce::MemoryBlock ipad(blockSize, true);
-    juce::MemoryBlock opad(blockSize, true);
-    juce::uint8* iData = static_cast<juce::uint8*>(ipad.getData());
-    juce::uint8* oData = static_cast<juce::uint8*>(opad.getData());
-    
-    for (int i = 0; i < blockSize; ++i) {
-        iData[i] = kData[i] ^ 0x36;
-        oData[i] = kData[i] ^ 0x5c;
-    }
-    
-    // Inner
-    juce::MemoryBlock inner;
-    inner.append(ipad.getData(), ipad.getSize());
-    inner.append(data.getData(), data.getSize());
-    juce::SHA256 hInner(inner.getData(), inner.getSize());
-    
-    // Outer
-    juce::MemoryBlock outer;
-    outer.append(opad.getData(), opad.getSize());
-    auto innerHash = hInner.getRawData();
-    outer.append(innerHash.getData(), innerHash.getSize());
-    
-    juce::SHA256 hOuter(outer.getData(), outer.getSize());
-    auto outerHash = hOuter.getRawData();
-    return juce::MemoryBlock(outerHash.getData(), outerHash.getSize());
-}
-
-juce::String zenith::CollaborationManager::calculateHMAC(const juce::String& message, const juce::String& secret) {
-    juce::MemoryBlock k; k.append(secret.toRawUTF8(), secret.length());
-    juce::MemoryBlock m; m.append(message.toRawUTF8(), message.length());
-    
-    juce::MemoryBlock result = hmacSha256(k, m);
-    return juce::String::toHexString(result.getData(), (int)result.getSize(), 0);
-}
-
-juce::MemoryBlock zenith::CollaborationManager::deriveSessionKey(const juce::String& password, const juce::String& salt) {
-    // PBKDF2-HMAC-SHA256 Implementation
-    // Iterations: 10000
-    // DKLen: 32 bytes
-    
-    const int iterations = 10000;
-    
-    // Key is the password, Data is Salt + INT(1)
-    juce::MemoryBlock P; P.append(password.toRawUTF8(), password.length());
-    
-    juce::MemoryBlock S; S.append(salt.toRawUTF8(), salt.length());
-    juce::uint8 blockIndex[4] = {0, 0, 0, 1}; // Big Endian 1
-    S.append(blockIndex, 4);
-    
-    // U1 = PRF(P, S || 1)
-    juce::MemoryBlock U = hmacSha256(P, S);
-    juce::MemoryBlock T = U; // T = U1
-    
-    // Loop
-    for (int i = 1; i < iterations; ++i) {
-        // U_i = PRF(P, U_{i-1})
-        U = hmacSha256(P, U);
-        
-        // T ^= U_i
-        juce::uint8* tData = static_cast<juce::uint8*>(T.getData());
-        juce::uint8* uData = static_cast<juce::uint8*>(U.getData());
-        for (size_t b = 0; b < 32; ++b) {
-            tData[b] ^= uData[b];
-        }
-    }
-    
-    return T;
-}

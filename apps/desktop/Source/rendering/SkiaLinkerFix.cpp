@@ -19,48 +19,45 @@
 // We need to define the typeinfo for polymorphic Skia types that we touch
 // from our RTTI-enabled code.
 
-// Static dummy variable to provide a unique, valid address for non-null symbols
-static char dummy_typeinfo = 0;
-
 extern "C" {
     // SkCanvas (8 chars)
-    void* _ZTI8SkCanvas = &dummy_typeinfo;
+    void* _ZTI8SkCanvas = (void*)0x1;
     
     // GrDirectContext (15 chars)
-    void* _ZTI15GrDirectContext = &dummy_typeinfo;
+    void* _ZTI15GrDirectContext = (void*)0x1;
 
     // SkRuntimeEffect (15 chars)
-    void* _ZTI15SkRuntimeEffect = &dummy_typeinfo;
+    void* _ZTI15SkRuntimeEffect = (void*)0x1;
     
     // SkTypeface (10 chars)
-    void* _ZTI10SkTypeface = &dummy_typeinfo;
+    void* _ZTI10SkTypeface = (void*)0x1;
     
     // SkSurface (9 chars)
-    void* _ZTI9SkSurface = &dummy_typeinfo;
+    void* _ZTI9SkSurface = nullptr;
     
     // SkImage (7 chars)
-    void* _ZTI7SkImage = &dummy_typeinfo;
+    void* _ZTI7SkImage = nullptr;
     
     // SkPicture (9 chars)
-    void* _ZTI9SkPicture = &dummy_typeinfo;
+    void* _ZTI9SkPicture = nullptr;
     
     // SkShader (8 chars)
-    void* _ZTI8SkShader = &dummy_typeinfo;
+    void* _ZTI8SkShader = nullptr;
     
     // SkColorFilter (13 chars)
-    void* _ZTI13SkColorFilter = &dummy_typeinfo;
+    void* _ZTI13SkColorFilter = nullptr;
     
     // SkMaskFilter (12 chars)
-    void* _ZTI12SkMaskFilter = &dummy_typeinfo;
+    void* _ZTI12SkMaskFilter = nullptr;
     
     // SkPathEffect (12 chars)
-    void* _ZTI12SkPathEffect = &dummy_typeinfo;
+    void* _ZTI12SkPathEffect = nullptr;
     
     // SkBlender (9 chars)
-    void* _ZTI9SkBlender = &dummy_typeinfo;
+    void* _ZTI9SkBlender = nullptr;
 
     // Additional types that appeared in linker errors
-    void* _ZTIN4skgpu12BudgetedE = &dummy_typeinfo;
+    void* _ZTIN4skgpu12BudgetedE = nullptr;
 }
 
 #endif

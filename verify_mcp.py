@@ -1,7 +1,6 @@
-import subprocess, json, time, sys, select, os
+import subprocess, json, time, sys, select
 
-default_path = "./build/ZenithDAW_artefacts/Debug/Zenith DAW"
-exe = os.environ.get('ZENITH_DAW_PATH', default_path)
+exe = "./build/ZenithDAW_artefacts/Debug/Zenith DAW"
 print(f"Launching {exe}...")
 
 try:

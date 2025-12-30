@@ -3,7 +3,6 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_dsp/juce_dsp.h>
 #include "Clip.h"
-#include "TempoMap.h"
 
 namespace zenith {
 
@@ -22,11 +21,10 @@ public:
     /**
      * @brief Detects transients in an audio buffer and returns MIDI note specs.
      * @param audio The input audio buffer.
-     * @param tempoMap The project tempo map for beat conversion.
      * @param threshold Sensitivity threshold (0.0 - 1.0).
      * @return Array of MidiNoteSpec for the detected hits.
      */
-    juce::Array<MidiNoteSpec> transcribeTransients(const juce::AudioBuffer<float>& audio, const TempoMap& tempoMap, float threshold = 0.5f);
+    juce::Array<MidiNoteSpec> transcribeTransients(const juce::AudioBuffer<float>& audio, float threshold = 0.5f);
 
     /**
      * @brief Performs pitch detection and returns a melodic MIDI sequence.

@@ -5,8 +5,6 @@
 
 #include "MainWindow.h"
 #include "../../commands/CommandAPI.h"
-#include "../engine/Engine.h"
-#include "../engine/ProjectState.h"
 #include "../engine/Clip.h"
 #include "../engine/Track.h"
 #include "../engine/MixerController.h"
@@ -133,8 +131,7 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   // The "Perfect DAW" Tri-Pane Layout Manager
   ZENITH_LOG_INFO("-> Creating MainLayoutComponent...");
   mainLayout =
-      std::make_unique<zenith::MainLayoutComponent>(engine, projectState, api);
-
+      std::make_unique<zenith::MainLayoutComponent>(engine, projectState);
   addAndMakeVisible(mainLayout.get());
   ZENITH_LOG_INFO("[OK] MainLayoutComponent created");
 
@@ -521,54 +518,23 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::closeButtonPressed() {
-  fprintf(stderr, "[MainWindow] closeButtonPressed() ENTER\n");
-  
-  // If no projectState or no unsaved changes, just quit immediately
-  if (projectState == nullptr) {
-    fprintf(stderr, "[MainWindow] projectState is null, calling quit\n");
-    juce::JUCEApplication::getInstance()->systemRequestedQuit();
-    return;
-  }
-  
-  fprintf(stderr, "[MainWindow] Checking hasUnsavedChanges...\n");
-  if (!projectState->hasUnsavedChanges()) {
-    fprintf(stderr, "[MainWindow] No unsaved changes, calling quit\n");
-    juce::JUCEApplication::getInstance()->systemRequestedQuit();
-    return;
-  }
+  if (projectState->hasUnsavedChanges()) {
+    int result = juce::NativeMessageBox::showYesNoCancelBox(
+        juce::AlertWindow::WarningIcon, "Unsaved Changes",
+        "Save changes before closing?", this, nullptr);
 
-  fprintf(stderr, "[MainWindow] Has unsaved changes, showing dialog...\n");
-  
-  // Use AlertWindow (non-blocking) - NativeMessageBox freezes on Linux
-  auto options = juce::MessageBoxOptions()
-      .withIconType(juce::MessageBoxIconType::WarningIcon)
-      .withTitle("Unsaved Changes")
-      .withMessage("Save changes before closing?")
-      .withButton("Save")
-      .withButton("Don't Save") 
-      .withButton("Cancel")
-      .withAssociatedComponent(this);
-  
-  fprintf(stderr, "[MainWindow] About to call AlertWindow::showAsync\n");
-  
-  juce::AlertWindow::showAsync(options, [this](int result) {
-    fprintf(stderr, "[MainWindow] AlertWindow callback result=%d\n", result);
-    // 0 = Save, 1 = Don't Save, 2 = Cancel
-    if (result == 0) {
-      saveProject([this](bool success) {
-        if (success) {
-          juce::JUCEApplication::getInstance()->systemRequestedQuit();
-        }
-      });
-    } else if (result == 1) {
-      juce::JUCEApplication::getInstance()->systemRequestedQuit();
+    if (result == 1) { // Yes
+      saveProject();
+      // Wait for save? it's synchronous mostly except recent files
+      // But if user cancels save?
+    } else if (result == 0) { // Cancel
+      return;
     }
-    // result == 2 is Cancel - do nothing
-  });
-  
-  fprintf(stderr, "[MainWindow] closeButtonPressed() EXITING (dialog shown)\n");
-}
+    // Result 2 is No (discard)
+  }
 
+  juce::JUCEApplication::getInstance()->systemRequestedQuit();
+}
 
 void MainWindow::showAboutDialog() {
   juce::String aboutMessage;
@@ -661,21 +627,20 @@ void MainWindow::newProject() {
   repaint();
 }
 
-void MainWindow::saveProject(std::function<void(bool)> onComplete) {
+void MainWindow::saveProject() {
   juce::File projectFile = fileIO_->getCurrentProjectFile();
 
   if (!projectFile.existsAsFile()) {
-    saveProjectAs(onComplete);
+    saveProjectAs();
     return;
   }
 
   // Use async save to keep UI responsive
-  fileIO_->saveToFileAsync(projectFile, {}, [this, projectFile, onComplete](bool success, juce::String error) {
+  fileIO_->saveToFileAsync(projectFile, {}, [this, projectFile](bool success, juce::String error) {
     if (!success) {
         juce::NativeMessageBox::showMessageBoxAsync(
             juce::AlertWindow::WarningIcon, "Save Failed",
             "Failed to save project: " + error);
-        if (onComplete) onComplete(false);
         return;
     }
 
@@ -685,11 +650,10 @@ void MainWindow::saveProject(std::function<void(bool)> onComplete) {
                                         projectState->getProjectName());
       recentProjectManager_->save();
     }
-    if (onComplete) onComplete(true);
   });
 }
 
-void MainWindow::saveProjectAs(std::function<void(bool)> onComplete) {
+void MainWindow::saveProjectAs() {
   auto chooser = std::make_shared<::juce::FileChooser>(
       "Save Project As...",
       ::juce::File::getSpecialLocation(::juce::File::userDocumentsDirectory),
@@ -697,28 +661,10 @@ void MainWindow::saveProjectAs(std::function<void(bool)> onComplete) {
   auto chooserFlags = ::juce::FileBrowserComponent::saveMode |
                       ::juce::FileBrowserComponent::canSelectFiles;
 
-  chooser->launchAsync(chooserFlags, [this, chooser, onComplete](const ::juce::FileChooser &fc) {
+  chooser->launchAsync(chooserFlags, [this,
+                                       chooser](const ::juce::FileChooser &fc) {
     auto file = fc.getResult();
-    if (file == juce::File{}) {
-        if (onComplete) onComplete(false);
-        return;
-    }
-    
-    fileIO_->saveToFileAsync(file, {}, [this, file, onComplete](bool success, juce::String error) {
-        if (success) {
-            updateWindowTitle();
-            if (recentProjectManager_) {
-                recentProjectManager_->addProject(file, projectState->getProjectName());
-                recentProjectManager_->save();
-            }
-            if (onComplete) onComplete(true);
-        } else {
-            juce::NativeMessageBox::showMessageBoxAsync(juce::AlertWindow::WarningIcon, "Save Failed", error);
-            if (onComplete) onComplete(false);
-        }
-    });
-  });
-}
+    if (file == juce::File{})
       return;
     if (!file.hasFileExtension(".zth"))
       file = file.withFileExtension(".zth");

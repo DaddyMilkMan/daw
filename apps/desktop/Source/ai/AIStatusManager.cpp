@@ -22,7 +22,7 @@ namespace ai {
 AIStatusManager::AIStatusManager() {
   // Start timer for stale operation cleanup (every 5 seconds)
   if (juce::MessageManager::getInstanceWithoutCreating() != nullptr)
-    startTimer(5000);
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(5000);
 }
 
 AIStatusManager::~AIStatusManager() { stopTimer(); }

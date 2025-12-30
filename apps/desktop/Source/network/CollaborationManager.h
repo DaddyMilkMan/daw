@@ -32,8 +32,6 @@ enum class PacketType {
 
 class CollaborationManager : public juce::ChangeBroadcaster,
                              private juce::Thread {
-  JUCE_DECLARE_WEAK_REFERENCEABLE(CollaborationManager)
-  friend class CollaborationSecurityTest;
 public:
   static CollaborationManager &getInstance() {
     static CollaborationManager instance;
@@ -113,7 +111,7 @@ private:
   int peerPort = 0;
   bool isHost = false;
   bool allowRemoteEditing = false;
-
+  int sentChallenge = 0; // The challenge we sent
 
 
   // TCP Helper
@@ -138,16 +136,9 @@ private:
       int port;
       bool authenticated = false;
       juce::uint64 lastSeen = 0;
-      int challenge = 0;
-      juce::String salt;
   };
   std::vector<PeerConnection> activePeers;
-  mutable juce::CriticalSection peersLock; 
-  
-  // Security Helper
-  static juce::String calculateHMAC(const juce::String& message, const juce::String& secret);
-  static bool validateSessionCode(const juce::String& code);
-  static juce::MemoryBlock deriveSessionKey(const juce::String& password, const juce::String& salt);
+  mutable juce::CriticalSection peersLock; // CRITIC FIX: Protect activePeers from race conditions
 };
 
 } // namespace zenith

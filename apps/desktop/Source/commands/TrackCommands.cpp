@@ -326,7 +326,7 @@ juce::var TrackCommands::separateTrack(const juce::var &params) {
     if (clip) {
       maxEnd =
           juce::jmax(maxEnd, static_cast<juce::int64>(clip->getStartPosition() +
-                                                       clip->getLength()));
+                                                      clip->getLength()));
     }
   }
 
@@ -334,6 +334,7 @@ juce::var TrackCommands::separateTrack(const juce::var &params) {
     return createErrorResponse("Track is empty");
 
   // Safety Limit: Prevent huge allocations (e.g. > 15 mins @ 48kHz) to avoid crash
+  // 15 * 60 * 48000 = 43,200,000 samples.
   const juce::int64 kMaxSeparationSamples = 45000000; 
   if (maxEnd > kMaxSeparationSamples)
       return createErrorResponse("Track too long for separation (limit: ~15 mins). Please split the clip.");
@@ -342,114 +343,101 @@ juce::var TrackCommands::separateTrack(const juce::var &params) {
   if (sampleRate <= 0)
     sampleRate = 44100.0;
 
-  juce::String trackName = track->getName();
+  juce::AudioBuffer<float> trackBuffer(2, (int)maxEnd);
+  trackBuffer.clear();
 
-  // Capture references for async task. 
-  // NOTE: TrackCommands instance might be destroyed, so we capture engine and projectState refs directly.
-  Engine& engineRef = engine;
-  ProjectState& stateRef = projectState;
+  int blockSize = 1024;
+  juce::int64 samplesRendered = 0;
 
-  // Launch background thread for rendering and AI processing
-  juce::Thread::launch([&engineRef, &stateRef, trackId, trackName, maxEnd, sampleRate]() {
-      // 1. Render Track Audio (Background Thread)
-      juce::AudioBuffer<float> trackBuffer(2, (int)maxEnd);
-      trackBuffer.clear();
+  juce::AudioBuffer<float> blockBuffer(2, blockSize);
 
-      // We need to find the track again on this thread since capturing a raw pointer is unsafe
-      Track* trackPtr = findTrackById(engineRef, trackId);
-      if (!trackPtr) return;
+  while (samplesRendered < maxEnd) {
+    int numSamples =
+        (int)juce::jmin((juce::int64)blockSize, maxEnd - samplesRendered);
 
-      int blockSize = 1024;
-      juce::int64 samplesRendered = 0;
-      juce::AudioBuffer<float> blockBuffer(2, blockSize);
+    blockBuffer.clear();
+    juce::AudioSourceChannelInfo info(&blockBuffer, 0, numSamples);
 
-      while (samplesRendered < maxEnd) {
-        int numSamples = (int)juce::jmin((juce::int64)blockSize, maxEnd - samplesRendered);
-        blockBuffer.clear();
-        juce::AudioSourceChannelInfo info(&blockBuffer, 0, numSamples);
+    track->getNextAudioBlock(info, samplesRendered, nullptr);
 
-        trackPtr->getNextAudioBlock(info, samplesRendered, nullptr);
+    for (int ch = 0; ch < 2; ++ch) {
+      trackBuffer.copyFrom(ch, (int)samplesRendered, blockBuffer, ch, 0,
+                           numSamples);
+    }
 
-        for (int ch = 0; ch < 2; ++ch) {
-          trackBuffer.copyFrom(ch, (int)samplesRendered, blockBuffer, ch, 0, numSamples);
+    samplesRendered += numSamples;
+  }
+
+  ONNXStemSeparator separator;
+  separator.initialize(juce::File());
+
+  auto result = separator.separate(trackBuffer, sampleRate);
+
+  if (!result.success)
+    return createErrorResponse("Separation failed: " + result.error);
+
+  juce::File recordingsDir =
+      juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
+          .getChildFile("ZenithDAW/Stems");
+
+  if (!recordingsDir.exists())
+    recordingsDir.createDirectory();
+
+  juce::String timestamp =
+      juce::Time::getCurrentTime().formatted("%Y%m%d_%H%M%S");
+  juce::String baseName = track->getName() + "_" + timestamp;
+
+  struct StemInfo {
+    juce::String suffix;
+    juce::AudioBuffer<float> &buffer;
+  };
+
+  StemInfo stems[] = {{"Vocals", result.vocals},
+                      {"Drums", result.drums},
+                      {"Bass", result.bass},
+                      {"Other", result.other}};
+
+  juce::var createdTracks;
+  juce::WavAudioFormat wavFormat;
+
+  for (const auto &stem : stems) {
+    juce::File stemFile =
+        recordingsDir.getChildFile(baseName + "_" + stem.suffix + ".wav");
+    auto fileStream = std::make_unique<juce::FileOutputStream>(stemFile);
+
+    if (fileStream->openedOk()) {
+      std::unique_ptr<juce::AudioFormatWriter> writer(
+          wavFormat.createWriterFor(fileStream.release(), sampleRate, 2, 24, {}, 0));
+
+      if (writer) {
+        writer->writeFromAudioSampleBuffer(stem.buffer, 0,
+                                           stem.buffer.getNumSamples());
+        writer.reset();
+
+        juce::String newTrackName = track->getName() + " (" + stem.suffix + ")";
+        juce::String newTrackId = projectState.addTrack(newTrackName, "audio");
+
+        juce::String clipName = stem.suffix;
+        juce::String actionName = "create_stem_clip";
+        juce::String clipId = projectState.createClip(
+            newTrackId, "audio", 0, stem.buffer.getNumSamples(), clipName,
+            actionName);
+
+        auto clipTree = projectState.getClip(newTrackId, clipId);
+        if (clipTree.isValid()) {
+          clipTree.setProperty(ProjectState::PROP_AUDIO_FILE,
+                               stemFile.getFullPathName(),
+                               &projectState.getUndoManager());
         }
-        samplesRendered += numSamples;
+
+        createdTracks.append(newTrackId);
       }
-
-      // 2. AI STEM SEPARATION (Background Thread - Intensive)
-      ONNXStemSeparator separator;
-      separator.initialize(juce::File());
-      
-      auto result = std::make_shared<ONNXStemSeparator::SeparationResult>();
-      *result = separator.separate(trackBuffer, sampleRate);
-
-      if (!result->success) {
-          DBG("Separation failed: " + result->error);
-          return;
-      }
-
-      // 3. Update Project State (Main Thread Async)
-      // We must move back to message thread for ProjectState updates + track creation
-      juce::MessageManager::callAsync([&stateRef, trackName, trackId, result, sampleRate]() {
-          juce::File recordingsDir = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
-              .getChildFile("ZenithDAW/Stems");
-
-          if (!recordingsDir.exists())
-            recordingsDir.createDirectory();
-
-          juce::String timestamp = juce::Time::getCurrentTime().formatted("%Y%m%d_%H%M%S");
-          juce::String baseName = trackName + "_" + timestamp;
-
-          struct StemInfo {
-            juce::String suffix;
-            juce::AudioBuffer<float> &buffer;
-          };
-
-          StemInfo stems[] = {{"Vocals", result->vocals},
-                              {"Drums", result->drums},
-                              {"Bass", result->bass},
-                              {"Other", result->other}};
-
-          juce::WavAudioFormat wavFormat;
-
-          for (const auto &stem : stems) {
-            juce::File stemFile = recordingsDir.getChildFile(baseName + "_" + stem.suffix + ".wav");
-            auto fileStream = std::make_unique<juce::FileOutputStream>(stemFile);
-
-            if (fileStream->openedOk()) {
-              auto writerOptions = juce::AudioFormatWriter::Options()
-                                       .withSampleRate(sampleRate)
-                                       .withNumChannels(2)
-                                       .withBitsPerSample(24);
-
-              std::unique_ptr<juce::OutputStream> outputStream = std::move(fileStream);
-              std::unique_ptr<juce::AudioFormatWriter> writer = wavFormat.createWriterFor(outputStream, writerOptions);
-
-              if (writer) {
-                writer->writeFromAudioSampleBuffer(stem.buffer, 0, stem.buffer.getNumSamples());
-                writer.reset();
-
-                juce::String newTrackName = trackName + " (" + stem.suffix + ")";
-                juce::String newTrackId = stateRef.addTrack(newTrackName, "audio");
-
-                juce::String clipId = stateRef.createClip(
-                    newTrackId, "audio", 0, stem.buffer.getNumSamples(), stem.suffix, "create_stem_clip");
-
-                auto clipTree = stateRef.getClip(newTrackId, clipId);
-                if (clipTree.isValid()) {
-                  clipTree.setProperty(ProjectState::PROP_AUDIO_FILE, stemFile.getFullPathName(), &stateRef.getUndoManager());
-                }
-              }
-            }
-          }
-          
-          DBG("Stem separation complete for: " + trackName);
-      });
-  });
+    }
+  }
 
   auto *resultObj = new juce::DynamicObject();
   resultObj->setProperty("originalTrackId", trackId);
-  resultObj->setProperty("status", "started_async");
+  resultObj->setProperty("createdTracks", createdTracks);
   resultObj->setProperty("success", true);
 
   return createSuccessResponse(juce::var(resultObj));

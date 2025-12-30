@@ -15,7 +15,6 @@
 #include "../../engine/TrackFreeze.h"
 #include "../../engine/AudioExporter.h"
 #include "../../utils/AudioAnalysisUtils.h"
-#include "../design-system/ZenithDesignSystem.h"
 
 #include <juce_events/juce_events.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -25,13 +24,13 @@
 namespace zenith {
 
 //==============================================================================
-// Layout Constants - USE DESIGN SYSTEM (Single Source of Truth)
+// Layout Constants (must match ArrangerComponent.cpp)
 //==============================================================================
-static constexpr float HEADER_WIDTH = zenith::design::dimensions::ARRANGER_HEADER_WIDTH;
-static constexpr float SECTION_HEIGHT = zenith::design::dimensions::ARRANGER_SECTION_HEIGHT;
-static constexpr float RULER_HEIGHT = zenith::design::dimensions::ARRANGER_RULER_HEIGHT;
-static constexpr float TRACK_HEIGHT = zenith::design::dimensions::ARRANGER_TRACK_HEIGHT;
-static constexpr float TOP_MARGIN = zenith::design::dimensions::ARRANGER_TOP_MARGIN;
+static constexpr float HEADER_WIDTH = 220.0f;
+static constexpr float SECTION_HEIGHT = 24.0f;
+static constexpr float RULER_HEIGHT = 30.0f;
+static constexpr float TRACK_HEIGHT = 80.0f;
+static constexpr float TOP_MARGIN = SECTION_HEIGHT + RULER_HEIGHT;
 
 //==============================================================================
 // Constructor
@@ -111,7 +110,7 @@ void ArrangerClipManager::rebuildTrackComponents() {
     while (owner_.trackComponents.size() < required) {
         auto type = ArrangerTrackComponent::TrackType::Audio;
         auto newTrack = std::make_unique<ArrangerTrackComponent>(projectState_, gridUtils_, type);
-        owner_.addAndMakeVisible(newTrack.get());
+        owner_.addChildComponent(newTrack.get());
         owner_.trackComponents.push_back(std::move(newTrack));
     }
     
@@ -152,8 +151,7 @@ void ArrangerClipManager::rebuildTrackComponents() {
         };
 
         comp->onSeparateStems = [this](const juce::String& trackId) {
-            TrackCommands trackCmds(owner_.engine_, projectState_, owner_.getCommandAPI());
-
+            TrackCommands trackCmds(owner_.engine_, projectState_);
             auto* paramsObj = new juce::DynamicObject();
             paramsObj->setProperty("trackId", trackId);
             juce::var params(paramsObj);
@@ -449,10 +447,8 @@ void ArrangerClipManager::consolidateSelectedClips() {
 
     if (clipsByTrack.empty()) return;
 
-    // ASYNC FIX: We'll process each track's consolidation sequentially or in parallel
-    // For simplicity and correctness with UndoManager, we'll do them one by one but async.
-    // In a production app, we might want a batch export job.
-    
+    projectState_.getUndoManager().beginNewTransaction("Consolidate Clips");
+
     for (auto& [trackId, clips] : clipsByTrack) {
         if (clips.size() < 2) continue; // Nothing to consolidate
 
@@ -502,44 +498,32 @@ void ArrangerClipManager::consolidateSelectedClips() {
         options.startTime = startSeconds;
         options.duration = durationSeconds;
         options.exportStems = true;
-        options.exportStemsAsync = true; 
+        options.exportStemsAsync = false;  // Synchronous for consolidation
         options.stemTrackIndices = {trackIndex};
 
-        // Export using AudioExporter asynchronously
-        auto exporter = std::make_shared<zenith::AudioExporter>(owner_.engine_);
-        
-        // Capture necessary state for completion
-        // Note: juce::Array needs to be copied into the lambda
-        juce::Array<juce::String> clipIdsToDelete;
-        for(auto* c : clips) clipIdsToDelete.add(c->clipId);
+        // Export using AudioExporter
+        zenith::AudioExporter exporter(owner_.engine_);
+        bool success = exporter.exportProject(options);
 
-        exporter->exportProjectAsync(options, [this, exporter, trackId, minStart, maxEnd, outputFile, clipIdsToDelete](juce::Result result) {
-            if (result.wasOk()) {
-                juce::MessageManager::callAsync([this, trackId, minStart, maxEnd, outputFile, clipIdsToDelete]() {
-                    projectState_.getUndoManager().beginNewTransaction("Consolidate Clips");
-                    
-                    // Delete original clips
-                    for (const auto& clipId : clipIdsToDelete) {
-                        projectState_.deleteClip(trackId, clipId, "Consolidate Clips");
-                    }
-
-                    // Create new consolidated clip
-                    projectState_.createAudioClip(trackId, minStart, maxEnd - minStart,
-                                                  outputFile.getFullPathName(), "Consolidated", 
-                                                  "Consolidate Clips");
-
-                    DBG("ArrangerClipManager: Consolidated clips to " + outputFile.getFullPathName());
-                    
-                    rebuildClipViews();
-                    owner_.repaint();
-                });
-            } else {
-                DBG("ArrangerClipManager: Consolidation export failed for track " + trackId + ": " + result.getErrorMessage());
+        if (success) {
+            // Delete original clips
+            for (auto* clip : clips) {
+                projectState_.deleteClip(trackId, clip->clipId, "Consolidate Clips");
             }
-        });
+
+            // Create new consolidated clip
+            projectState_.createAudioClip(trackId, minStart, maxEnd - minStart,
+                                          outputFile.getFullPathName(), "Consolidated", 
+                                          "Consolidate Clips");
+
+            DBG("ArrangerClipManager: Consolidated " + juce::String(clips.size()) + " clips to " + outputFile.getFullPathName());
+        } else {
+            DBG("ArrangerClipManager: Consolidation export failed for track " + trackId);
+        }
     }
 
     clearSelection();
+    rebuildClipViews();
 }
 
 void ArrangerClipManager::renderSelectedClipsToAudio() {
@@ -550,7 +534,8 @@ void ArrangerClipManager::renderSelectedClipsToAudio() {
         return;
     }
 
-    // ASYNC FIX: Process each clip's rendering asynchronously
+    projectState_.getUndoManager().beginNewTransaction("Render to Audio");
+
     for (const auto& clipId : selectedClipIds_) {
         auto* view = findClipView(clipId);
         if (!view || !view->isMidi) continue; // Only render MIDI clips
@@ -589,42 +574,32 @@ void ArrangerClipManager::renderSelectedClipsToAudio() {
         options.startTime = startSeconds;
         options.duration = durationSeconds;
         options.exportStems = true;
-        options.exportStemsAsync = true;
+        options.exportStemsAsync = false;  // Synchronous for bounce-in-place
         options.stemTrackIndices = {trackIndex};
 
-        // Export using AudioExporter asynchronously
-        auto exporter = std::make_shared<zenith::AudioExporter>(owner_.engine_);
-        
-        // Capture view properties by value for completion
-        double startBeats = view->startBeats;
-        double lengthBeats = view->lengthBeats;
+        // Export using AudioExporter
+        zenith::AudioExporter exporter(owner_.engine_);
+        bool success = exporter.exportProject(options);
 
-        exporter->exportProjectAsync(options, [this, exporter, trackId, clipId, startBeats, lengthBeats, outputFile](juce::Result result) {
-            if (result.wasOk()) {
-                juce::MessageManager::callAsync([this, trackId, clipId, startBeats, lengthBeats, outputFile]() {
-                    projectState_.getUndoManager().beginNewTransaction("Render to Audio");
-                    
-                    // Place audio clip at the same position
-                    projectState_.createAudioClip(trackId, startBeats, lengthBeats,
-                                                  outputFile.getFullPathName(), "Bounced Audio", 
-                                                  "Render to Audio");
+        if (success) {
+            // Place audio clip at the same position
+            projectState_.createAudioClip(trackId, view->startBeats, view->lengthBeats,
+                                          outputFile.getFullPathName(), "Bounced Audio", 
+                                          "Render to Audio");
 
-                    // Mute the original MIDI clip instead of deleting it
-                    auto [track, clip] = projectState_.findClip(clipId);
-                    if (clip.isValid()) {
-                        clip.setProperty(zenith::ProjectState::PROP_MUTE, true, &projectState_.getUndoManager());
-                    }
-
-                    DBG("ArrangerClipManager: Bounced MIDI clip " + clipId + " to " + outputFile.getFullPathName());
-                    
-                    rebuildClipViews();
-                    owner_.repaint();
-                });
-            } else {
-                DBG("ArrangerClipManager: Bounce failed for clip " + clipId + ": " + result.getErrorMessage());
+            // Mute the original MIDI clip instead of deleting it
+            auto [track, clip] = projectState_.findClip(clipId);
+            if (clip.isValid()) {
+                clip.setProperty(zenith::ProjectState::PROP_MUTE, true, &projectState_.getUndoManager());
             }
-        });
+
+            DBG("ArrangerClipManager: Bounced MIDI clip " + clipId + " to " + outputFile.getFullPathName());
+        } else {
+            DBG("ArrangerClipManager: Bounce failed for clip " + clipId);
+        }
     }
+
+    rebuildClipViews();
 }
 
 void ArrangerClipManager::detectTempoForSelectedClip() {
@@ -651,50 +626,44 @@ void ArrangerClipManager::detectTempoForSelectedClip() {
             continue;
         }
 
-        // ASYNC FIX: Move heavy lifting to background thread
-        juce::Thread::launch([this, audioFile]() {
-            // Load audio file
-            juce::AudioFormatManager formatManager;
-            formatManager.registerBasicFormats();
+        // Load audio file
+        juce::AudioFormatManager formatManager;
+        formatManager.registerBasicFormats();
 
-            std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(audioFile));
-            if (!reader) {
-                DBG("ArrangerClipManager::detectTempoForSelectedClip: Failed to read audio file");
-                return;
-            }
+        std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(audioFile));
+        if (!reader) {
+            DBG("ArrangerClipManager::detectTempoForSelectedClip: Failed to read audio file");
+            continue;
+        }
 
-            // Read into buffer
-            int numSamples = static_cast<int>(reader->lengthInSamples);
-            int numChannels = static_cast<int>(reader->numChannels);
-            juce::AudioBuffer<float> buffer(numChannels, numSamples);
-            reader->read(&buffer, 0, numSamples, 0, true, true);
+        // Read into buffer
+        int numSamples = static_cast<int>(reader->lengthInSamples);
+        int numChannels = static_cast<int>(reader->numChannels);
+        juce::AudioBuffer<float> buffer(numChannels, numSamples);
+        reader->read(&buffer, 0, numSamples, 0, true, true);
 
-            // Detect BPM
-            double detectedBpm = zenith::AudioAnalysisUtils::detectBpm(buffer, reader->sampleRate);
+        // Detect BPM
+        double detectedBpm = zenith::AudioAnalysisUtils::detectBpm(buffer, reader->sampleRate);
 
-            // Post result back to message thread
-            juce::MessageManager::callAsync([detectedBpm]() {
-                if (detectedBpm > 0.0) {
-                    DBG("ArrangerClipManager::detectTempoForSelectedClip: Detected BPM = " + juce::String(detectedBpm, 1));
+        if (detectedBpm > 0.0) {
+            DBG("ArrangerClipManager::detectTempoForSelectedClip: Detected BPM = " + juce::String(detectedBpm, 1));
 
-                    // Show result
-                    juce::AlertWindow::showMessageBoxAsync(
-                        juce::AlertWindow::InfoIcon,
-                        "Tempo Detection",
-                        "Detected Tempo: " + juce::String(detectedBpm, 1) + " BPM\n\n"
-                        "You can set the project tempo to this value in the Transport bar.",
-                        "OK");
-                } else {
-                    DBG("ArrangerClipManager::detectTempoForSelectedClip: Could not detect tempo");
-                    juce::AlertWindow::showMessageBoxAsync(
-                        juce::AlertWindow::WarningIcon,
-                        "Tempo Detection",
-                        "Could not detect tempo for this audio clip.\n"
-                        "Try a clip with a clearer rhythmic structure.",
-                        "OK");
-                }
-            });
-        });
+            // Show result
+            juce::AlertWindow::showMessageBoxAsync(
+                juce::AlertWindow::InfoIcon,
+                "Tempo Detection",
+                "Detected Tempo: " + juce::String(detectedBpm, 1) + " BPM\n\n"
+                "You can set the project tempo to this value in the Transport bar.",
+                "OK");
+        } else {
+            DBG("ArrangerClipManager::detectTempoForSelectedClip: Could not detect tempo");
+            juce::AlertWindow::showMessageBoxAsync(
+                juce::AlertWindow::WarningIcon,
+                "Tempo Detection",
+                "Could not detect tempo for this audio clip.\n"
+                "Try a clip with a clearer rhythmic structure.",
+                "OK");
+        }
 
         break; // Only process first audio clip
     }
