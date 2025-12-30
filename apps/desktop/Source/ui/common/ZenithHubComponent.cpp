@@ -8,8 +8,11 @@
 */
 
 #include "ZenithHubComponent.h"
+#include "LoginComponent.h"
 #include "../design-system/ZenithLayout.h"
 #include "ZenithIcons.h"
+#include "../../engine/ZenithLogger.h"
+#include "../design-system/ZenithDesignSystem.h"
 #include <array>
 #include <cmath>
 #include <map>
@@ -83,14 +86,28 @@ ZenithHubComponent::ZenithHubComponent(
   auroraBackground_ = std::make_unique<AuroraBackground>();
 
   alpha_.setTarget(0.0f, 0);
-  alpha_.setTarget(1.0f, 600, AnimatedValue::EasingCurve::EaseOut);
+  alpha_.setTarget(1.0f, 600, ::zenith::animation::Easing::EaseOut);
 
-  startTimerHz(60);
+  // Register for auth state changes and try to restore session
+  if (auto* auth = AuthenticationService::getInstance()) {
+    auth->addListener(this);
+    if (auth->restoreSession()) {
+      currentUser_ = auth->getCurrentUser();
+      if (currentUser_.isValid()) {
+        greetingText_ = "Welcome back, " + currentUser_.displayName;
+      }
+    }
+  }
+
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60);
 }
 
 ZenithHubComponent::~ZenithHubComponent() {
   stopTimer();
   recentProjectManager_.removeListener(this);
+  if (auto* auth = AuthenticationService::getInstance()) {
+    auth->removeListener(this);
+  }
 }
 
 void ZenithHubComponent::mouseExit(const juce::MouseEvent &e) {
@@ -98,8 +115,11 @@ void ZenithHubComponent::mouseExit(const juce::MouseEvent &e) {
   isNewProjectHovered_ = false;
   isProfileHovered_ = false;
   isGreetingHovered_ = false;
-  for (auto &p : recentProjects_) p.isHovered = false;
-  for (auto &t : templates_) t.isHovered = false;
+  isSignInHovered_ = false;
+  for (auto &p : recentProjects_)
+    p.isHovered = false;
+  for (auto &t : templates_)
+    t.isHovered = false;
   repaint();
 }
 
@@ -131,7 +151,8 @@ void ZenithHubComponent::loadFromManager() {
     }
 
     recentProjects_.push_back(proj);
-    if (recentProjects_.size() >= 6) break;
+    if (recentProjects_.size() >= 6)
+      break;
   }
 
   if (isVisible()) {
@@ -142,13 +163,21 @@ void ZenithHubComponent::loadFromManager() {
 
 SkColor ZenithHubComponent::getAccentColorForGenre(const juce::String &genre) {
   juce::String g = genre.toLowerCase();
-  if (g.contains("electronic") || g.contains("edm") || g.contains("synth")) return colors::CYAN;
-  if (g.contains("orchestral") || g.contains("cinematic") || g.contains("score")) return colors::VIOLET;
-  if (g.contains("jazz") || g.contains("swing")) return colors::NEON_PINK;
-  if (g.contains("techno") || g.contains("house") || g.contains("dance")) return colors::NEON_GREEN;
-  if (g.contains("ambient") || g.contains("chill")) return colors::BLUE;
-  if (g.contains("rock") || g.contains("metal")) return colors::AMBER;
-  if (g.contains("hip") || g.contains("rap") || g.contains("trap")) return colors::MAGENTA;
+  if (g.contains("electronic") || g.contains("edm") || g.contains("synth"))
+    return colors::CYAN;
+  if (g.contains("orchestral") || g.contains("cinematic") ||
+      g.contains("score"))
+    return colors::VIOLET;
+  if (g.contains("jazz") || g.contains("swing"))
+    return colors::NEON_PINK;
+  if (g.contains("techno") || g.contains("house") || g.contains("dance"))
+    return colors::NEON_GREEN;
+  if (g.contains("ambient") || g.contains("chill"))
+    return colors::BLUE;
+  if (g.contains("rock") || g.contains("metal"))
+    return colors::AMBER;
+  if (g.contains("hip") || g.contains("rap") || g.contains("trap"))
+    return colors::MAGENTA;
   return colors::CYAN;
 }
 
@@ -158,12 +187,58 @@ void ZenithHubComponent::recentProjectsChanged() {
   juce::MessageManager::callAsync([this]() { loadFromManager(); });
 }
 
+void ZenithHubComponent::authStateChanged(bool isLoggedIn, const AuthUser& user) {
+  juce::MessageManager::callAsync([this, isLoggedIn, user]() {
+    currentUser_ = user;
+    if (isLoggedIn && user.isValid()) {
+      greetingText_ = "Welcome back, " + user.displayName;
+      hideLoginComponent();
+    } else {
+      greetingText_ = "Welcome to Zenith";
+    }
+    repaint();
+  });
+}
+
+void ZenithHubComponent::showLoginComponent() {
+  if (showingLogin_) return;
+  
+  loginComponent_ = std::make_unique<LoginComponent>([this](const AuthUser& user) {
+    currentUser_ = user;
+    hideLoginComponent();
+  });
+  
+  addAndMakeVisible(loginComponent_.get());
+  loginComponent_->setBounds(getLocalBounds());
+  loginComponent_->toFront(true);
+  showingLogin_ = true;
+  repaint();
+}
+
+void ZenithHubComponent::hideLoginComponent() {
+  if (loginComponent_) {
+    removeChildComponent(loginComponent_.get());
+    loginComponent_.reset();
+  }
+  showingLogin_ = false;
+  repaint();
+}
+
 void ZenithHubComponent::resized() { updateLayout(); }
 
 void ZenithHubComponent::updateLayout() {
   auto bounds = getLocalBounds().toFloat();
   float w = bounds.getWidth();
   float h = bounds.getHeight();
+
+  // DEBUG: Always print this to confirm function is called
+  ZENITH_LOG_INFO(juce::String::formatted("[ZenithHub] updateLayout() called, bounds: %.1f x %.1f", w, h));
+
+  // Early exit if bounds are invalid (can happen during initialization)
+  if (w < 100 || h < 100) {
+    ZENITH_LOG_INFO("[ZenithHub] Early return! Bounds too small.");
+    return;
+  }
 
   float cardW = std::min(1100.0f, w * 0.9f);
   float cardH = std::min(750.0f, h * 0.85f);
@@ -177,68 +252,125 @@ void ZenithHubComponent::updateLayout() {
 
   float headerHeight = 140.0f;
   juce::Rectangle<float> contentRect(
-      cardX + padding, 
-      cardY + padding + headerHeight,
-      cardW - (padding * 2), 
+      cardX + padding, cardY + padding + headerHeight, cardW - (padding * 2),
       cardH - (padding * 2) - headerHeight);
 
   // 1. Layout Left (Recent) vs Right (Sidebar) using ZenithLayout (Agent 4)
-  auto mainColumns = ZenithLayout::begin()
-      .withFloatBounds(contentRect)
-      .withGap(gridGap)
-      .addFlexItem(juce::FlexItem().withFlex(0.6f)) // Recent Area (60%)
-      .addFlexItem(juce::FlexItem().withFlex(0.4f)) // Sidebar (40%)
-      .layout(juce::FlexBox::Direction::row);
+  fprintf(stderr, "[ZenithHub] CRITIC: contentRect=%.1f,%.1f %.1fx%.1f\n", 
+          contentRect.getX(), contentRect.getY(), contentRect.getWidth(), contentRect.getHeight());
+  
+  auto mainColumns =
+      ZenithLayout::begin()
+          .withFloatBounds(contentRect)
+          .withGap(gridGap)
+          .addFlexItem(juce::FlexItem().withFlex(0.6f)) // Recent Area (60%)
+          .addFlexItem(juce::FlexItem().withFlex(0.4f)) // Sidebar (40%)
+          .layout(juce::FlexBox::Direction::row);
 
+  fprintf(stderr, "[ZenithHub] CRITIC: mainColumns.size()=%zu\n", mainColumns.size());
+  
   if (mainColumns.size() >= 2) {
-      auto r = mainColumns[0];
-      recentArea_ = SkRect::MakeXYWH(r.getX(), r.getY(), r.getWidth(), r.getHeight());
+    auto r = mainColumns[0];
+    fprintf(stderr, "[ZenithHub] CRITIC: recentRect=%.1f,%.1f %.1fx%.1f\n", r.getX(), r.getY(), r.getWidth(), r.getHeight());
+    recentArea_ = SkRect::MakeXYWH(r.getX(), r.getY(), r.getWidth(), r.getHeight());
+
+    // Slice Recent Area: Header vs Grid
+    float kHeaderHeight = 32.0f;
+    float kHeaderGap = 16.0f;
+    
+    recentHeaderBounds_ = SkRect::MakeXYWH(recentArea_.fLeft, recentArea_.fTop, recentArea_.width(), kHeaderHeight);
+    recentGridBounds_ = SkRect::MakeXYWH(recentArea_.fLeft, recentArea_.fTop + kHeaderHeight + kHeaderGap,
+                                         recentArea_.width(),
+                                         recentArea_.height() - kHeaderHeight - kHeaderGap);
+
+
+    auto s = mainColumns[1];
+    juce::Rectangle<float> sidebarRect = s;
+
+    // DEBUG: Log sidebar rect
+    fprintf(stderr, "[ZenithHub] sidebarRect: %.1f,%.1f %.1fx%.1f\n", 
+            sidebarRect.getX(), sidebarRect.getY(), sidebarRect.getWidth(), sidebarRect.getHeight());
+
+    // 2. Layout Sidebar: New Project Button -> Collaborations -> Templates
+    // Proper spacing to prevent overlap
+    auto sidebarRows = ZenithLayout::begin()
+                           .withFloatBounds(sidebarRect)
+                           .withGap(24.0f)  // Reduced gap for better spacing
+                           .addFlexItem(juce::FlexItem().withHeight(60.0f))   // New Project button
+                           .addFlexItem(juce::FlexItem().withHeight(140.0f))  // Collaborations/Profile area (Increased to prevented overlap)
+                           .addFlexItem(juce::FlexItem().withFlex(1.0f))      // Templates
+                           .layout(juce::FlexBox::Direction::column);
+
+    // DEBUG: Log sidebarRows size
+    fprintf(stderr, "[ZenithHub] sidebarRows.size() = %zu\n", sidebarRows.size());
+
+    if (sidebarRows.size() >= 3) {
+      // Row 0: New Project Button (at top of sidebar)
+      auto b = sidebarRows[0];
+      newProjectButtonBounds_ =
+          SkRect::MakeXYWH(b.getX(), b.getY(), b.getWidth(), b.getHeight());
       
-      auto s = mainColumns[1];
-      juce::Rectangle<float> sidebarRect = s; 
+      // DEBUG: Log button bounds
+      fprintf(stderr, "[ZenithHub] newProjectButtonBounds_: %.1f,%.1f %.1fx%.1f\n",
+              b.getX(), b.getY(), b.getWidth(), b.getHeight());
 
-      // 2. Layout Sidebar (Account, Button, Templates)
-      auto sidebarRows = ZenithLayout::begin()
-          .withFloatBounds(sidebarRect)
-          .withGap(padding)
-          .addFlexItem(juce::FlexItem().withHeight(100.0f))
-          .addFlexItem(juce::FlexItem().withHeight(60.0f))
-          .addFlexItem(juce::FlexItem().withFlex(1.0f))
-          .layout(juce::FlexBox::Direction::column);
-          
-      if (sidebarRows.size() >= 3) {
-          auto a = sidebarRows[0];
-          accountArea_ = SkRect::MakeXYWH(a.getX(), a.getY(), a.getWidth(), a.getHeight());
-          
-          auto b = sidebarRows[1];
-          newProjectButtonBounds_ = SkRect::MakeXYWH(b.getX(), b.getY(), b.getWidth(), b.getHeight());
-          
-          auto t = sidebarRows[2];
-          templatesArea_ = SkRect::MakeXYWH(t.getX(), t.getY(), t.getWidth(), t.getHeight());
+      // Row 1: Collaborations/Account area
+      auto a = sidebarRows[1];
+      accountArea_ = SkRect::MakeXYWH(a.getX(), a.getY(), a.getWidth(), a.getHeight());
+      
+      accountHeaderBounds_ = SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop, accountArea_.width(), kHeaderHeight);
+      
+      // Profile card positioned below header
+      float profileY = accountArea_.fTop + kHeaderHeight + kHeaderGap;
+      accountContentBounds_ = SkRect::MakeXYWH(accountArea_.fLeft, profileY, 
+                                               accountArea_.width(), accountArea_.height() - (kHeaderHeight + kHeaderGap));
+      
+      profileBounds_ = SkRect::MakeXYWH(accountContentBounds_.fLeft, accountContentBounds_.fTop,
+                                        accountContentBounds_.width(), std::min(80.0f, accountContentBounds_.height()));
 
-          // Profile Button - SAFE calculation inside valid sidebar check
-          profileBounds_ =
-            SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop + 50.0f,
-                   accountArea_.width(), 90.0f);
-      } else {
-        accountArea_.setEmpty();
-        newProjectButtonBounds_.setEmpty();
-        templatesArea_.setEmpty();
-        profileBounds_.setEmpty();
-      }
+      // Row 2: Templates/Quick Start area  
+      auto t = sidebarRows[2];
+      templatesArea_ = SkRect::MakeXYWH(t.getX(), t.getY(), t.getWidth(), t.getHeight());
+      
+      quickStartHeaderBounds_ = SkRect::MakeXYWH(templatesArea_.fLeft, templatesArea_.fTop, templatesArea_.width(), kHeaderHeight);
+      
+      templatesContentBounds_ = SkRect::MakeXYWH(templatesArea_.fLeft, templatesArea_.fTop + kHeaderHeight + kHeaderGap,
+                                         templatesArea_.width(),
+                                         templatesArea_.height() - kHeaderHeight - kHeaderGap);
+                                         
+    } else {
+      fprintf(stderr, "[ZenithHub] ERROR: sidebarRows.size() < 3, setting empty bounds!\n");
+      accountArea_.setEmpty();
+      accountHeaderBounds_.setEmpty();
+      accountContentBounds_.setEmpty();
+      newProjectButtonBounds_.setEmpty();
+      templatesArea_.setEmpty();
+      quickStartHeaderBounds_.setEmpty();
+      templatesContentBounds_.setEmpty();
+      profileBounds_.setEmpty();
+    }
   } else {
     // Reset layout on failure
     recentArea_.setEmpty();
+    recentHeaderBounds_.setEmpty();
+    recentGridBounds_.setEmpty();
+    
     accountArea_.setEmpty();
+    accountHeaderBounds_.setEmpty();
+    accountContentBounds_.setEmpty();
+    
     newProjectButtonBounds_.setEmpty();
+    
     templatesArea_.setEmpty();
+    quickStartHeaderBounds_.setEmpty();
+    templatesContentBounds_.setEmpty();
+    
     profileBounds_.setEmpty();
   }
 
-
   // Update Recent Project Cards Layout (Grid)
-  if (!recentArea_.isEmpty()) {
-    float gridW = recentArea_.width();
+  if (!recentGridBounds_.isEmpty()) {
+    float gridW = recentGridBounds_.width();
     float cardGap = 16.0f;
     float pCardW = (gridW - cardGap) / 2.0f;
     float pCardH = 110.0f;
@@ -247,53 +379,76 @@ void ZenithHubComponent::updateLayout() {
       int row = (int)i / 2;
       int col = (int)i % 2;
 
-      float px = recentArea_.fLeft + (col * (pCardW + cardGap));
-      float py = recentArea_.fTop + (row * (pCardH + cardGap));
+      float px = recentGridBounds_.fLeft + (col * (pCardW + cardGap));
+      float py = recentGridBounds_.fTop + (row * (pCardH + cardGap));
 
       recentProjects_[i].bounds = SkRect::MakeXYWH(px, py, pCardW, pCardH);
     }
   }
 
-  // Update Template Cards (Larger with icons)
-  if (!templatesArea_.isEmpty()) {
-    float tCardH = 90.0f;
-    float cardGap = 16.0f;
+  // Update Template Cards - Calculate height to fit within bounds
+  if (!templatesContentBounds_.isEmpty()) {
+    float availableHeight = templatesContentBounds_.height();
+    float cardGap = 10.0f;
+    size_t numTemplates = templates_.size();
+    
+    // Calculate card height to fit all templates: available = n*height + (n-1)*gap
+    // height = (available - (n-1)*gap) / n
+    float tCardH = numTemplates > 0 
+        ? (availableHeight - (numTemplates - 1) * cardGap) / numTemplates 
+        : 60.0f;
+    
+    // Clamp to reasonable range
+    tCardH = std::clamp(tCardH, 50.0f, 80.0f);
+    
     for (size_t i = 0; i < templates_.size(); ++i) {
-      float tx = templatesArea_.fLeft;
-      float ty = templatesArea_.fTop + 50.0f + (i * (tCardH + cardGap));
-      templates_[i].bounds = SkRect::MakeXYWH(tx, ty, templatesArea_.width(), tCardH);
+      float tx = templatesContentBounds_.fLeft;
+      float ty = templatesContentBounds_.fTop + (i * (tCardH + cardGap));
+      templates_[i].bounds =
+          SkRect::MakeXYWH(tx, ty, templatesContentBounds_.width(), tCardH);
     }
   }
 
   if (greetingEditor_.isVisible()) {
-      showGreetingEditor(); // Re-layout editor
+    showGreetingEditor(); // Re-layout editor
   }
 }
 
 void ZenithHubComponent::timerCallback() {
   animationTime_ += 0.016f;
   alpha_.update(16.0f);
-  if (alpha_.isAnimating() || auroraBackground_) repaint();
+  if (alpha_.isAnimating() || auroraBackground_)
+    repaint();
 }
 
 void ZenithHubComponent::show() {
   setVisible(true);
-  alpha_.setTarget(1.0f, 600, AnimatedValue::EasingCurve::EaseOut);
+  alpha_.setTarget(1.0f, 600, ::zenith::animation::Easing::EaseOut);
 }
 
 void ZenithHubComponent::dismiss() {
-  alpha_.setTarget(0.0f, 400, AnimatedValue::EasingCurve::EaseIn);
-  if (onDismiss_) onDismiss_();
+  alpha_.setTarget(0.0f, 400, ::zenith::animation::Easing::EaseIn);
+  if (onDismiss_)
+    onDismiss_();
 }
 
 void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
-  float opacity = alpha_.getCurrentValue();
-  if (opacity <= 0.001f) return;
+  float opacity = alpha_.get();
+  if (opacity <= 0.001f)
+    return;
+
+  // Skip drawing if layout hasn't been computed yet
+  if (mainCardBounds_.isEmpty()) {
+    // Just draw the background while waiting for proper layout
+    drawBackground(canvas);
+    return;
+  }
 
   canvas->saveLayerAlpha(nullptr, (U8CPU)(opacity * 255));
   drawBackground(canvas);
 
-  GlassmorphicPanel::draw(canvas, mainCardBounds_, GlassmorphicPanel::Style::Floating);
+  GlassmorphicPanel::draw(canvas, mainCardBounds_,
+                          GlassmorphicPanel::Style::Floating);
 
   // Header with proper hierarchy
   textPaint_.setColor(colors::TEXT_PRIMARY);
@@ -325,7 +480,7 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
   SkRect helperBounds = SkRect::MakeXYWH(subX, subY - bounds.height(),
                                          bounds.width(), bounds.height());
   drawText(canvas, greetingText_, helperBounds, subFont_, subPaint_, false);
-  
+
   // Use predefined constant instead of magic number per code review feedback
   constexpr float kGreetingIconSize = 16.0f;
 
@@ -343,8 +498,7 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
   icons::drawIconCentered(canvas, icons::Edit(), greetingEditIconBounds_,
                           kGreetingIconSize, iconStyle);
 
-
-  drawRecentProjects(canvas);
+  drawProjectList(canvas);
   drawAccount(canvas);
   drawNewProjectButton(canvas);
   drawTemplates(canvas);
@@ -364,42 +518,46 @@ void ZenithHubComponent::drawBackground(SkCanvas *canvas) {
   canvas->drawRect(SkRect::MakeWH(getWidth(), getHeight()), bgPaint);
 }
 
-void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
+void ZenithHubComponent::drawProjectList(SkCanvas *canvas) {
   textPaint_.setColor(colors::TEXT_PRIMARY);
-  drawText(canvas, "Recent Projects", SkRect::MakeXYWH(recentArea_.fLeft, recentArea_.fTop - 40, 300, 30), 
-           headerFont_, textPaint_, false);
-
+  drawText(canvas, "Recent Projects", recentHeaderBounds_, headerFont_, textPaint_, true);
 
   // Empty state check
   if (recentProjects_.empty()) {
     SkPaint emptyStatePaint = textPaint_;
     emptyStatePaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.35f));
-    drawText(canvas, "No recent projects yet.", SkRect::MakeXYWH(recentArea_.fLeft, recentArea_.fTop + 10, 300, 20),
-             bodyFont_, emptyStatePaint, false);
+    drawText(
+        canvas, "No recent projects yet.",
+        SkRect::MakeXYWH(recentGridBounds_.fLeft, recentGridBounds_.fTop, 300, 20),
+        bodyFont_, emptyStatePaint, false);
     return;
   }
 
   for (size_t i = 0; i < recentProjects_.size(); ++i) {
     const auto &proj = recentProjects_[i];
-    bool isSelected = (selectedSection_ == SelectionSection::Recent && (int)i == selectedIndex_);
+    bool isSelected = (selectedSection_ == SelectionSection::Recent &&
+                       (int)i == selectedIndex_);
 
     bool active = proj.isHovered || isSelected;
 
     SkRRect rrect = SkRRect::MakeRectXY(proj.bounds, 12.0f, 12.0f);
     SkPaint cardPaint;
-    cardPaint.setColor(active ? withAlpha(colors::BG_LIGHT, 0.15f) : withAlpha(colors::BG_LIGHT, 0.08f));
+    cardPaint.setColor(active ? withAlpha(colors::BG_LIGHT, 0.15f)
+                              : withAlpha(colors::BG_LIGHT, 0.08f));
     cardPaint.setAntiAlias(true);
     canvas->drawRRect(rrect, cardPaint);
 
     SkPaint borderPaint;
     borderPaint.setStyle(SkPaint::kStroke_Style);
     borderPaint.setStrokeWidth(isSelected ? 2.0f : 1.0f);
-    borderPaint.setColor(active ? withAlpha(proj.accent, 0.6f) : withAlpha(colors::TEXT_PRIMARY, 0.06f));
+    borderPaint.setColor(active ? withAlpha(proj.accent, 0.6f)
+                                : withAlpha(colors::TEXT_PRIMARY, 0.06f));
 
     borderPaint.setAntiAlias(true);
     canvas->drawRRect(rrect, borderPaint);
 
-    SkRect thumbRect = SkRect::MakeXYWH(proj.bounds.fLeft + 12, proj.bounds.fTop + 12, 86, 86);
+    SkRect thumbRect =
+        SkRect::MakeXYWH(proj.bounds.fLeft + 12, proj.bounds.fTop + 12, 86, 86);
     SkPaint thumbPaint;
     thumbPaint.setColor(withAlpha(proj.accent, 0.25f));
     thumbPaint.setAntiAlias(true);
@@ -416,40 +574,56 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
     iconStyle.color = active ? proj.accent : withAlpha(proj.accent, 0.6f);
     iconStyle.strokeWidth = icons::STROKE_REGULAR;
     if (active) {
-        iconStyle.glowRadius = 4.0f;
-        iconStyle.glowColor = withAlpha(proj.accent, 0.4f);
+      iconStyle.glowRadius = 4.0f;
+      iconStyle.glowColor = withAlpha(proj.accent, 0.4f);
     }
 
     icons::drawIconCentered(canvas, iconPath, thumbRect, 40.0f, iconStyle);
 
     float textX = thumbRect.right() + 16;
-    drawText(canvas, proj.name, SkRect::MakeXYWH(textX, proj.bounds.fTop + 20, proj.bounds.width() - 110, 24), 
+    drawText(canvas, proj.name,
+             SkRect::MakeXYWH(textX, proj.bounds.fTop + 20,
+                              proj.bounds.width() - 110, 24),
              cardTitleFont_, textPaint_, false);
-    drawText(canvas, proj.date, SkRect::MakeXYWH(textX, proj.bounds.fTop + 45, proj.bounds.width() - 110, 20), 
+    drawText(canvas, proj.date,
+             SkRect::MakeXYWH(textX, proj.bounds.fTop + 45,
+                              proj.bounds.width() - 110, 20),
              cardDateFont_, subPaint_, false);
-    
+
     if (proj.genre.isNotEmpty()) {
       SkPaint genrePaint = textPaint_;
       genrePaint.setColor(proj.accent);
-      drawText(canvas, proj.genre, SkRect::MakeXYWH(textX, proj.bounds.fTop + 65, proj.bounds.width() - 110, 20), 
+      drawText(canvas, proj.genre,
+               SkRect::MakeXYWH(textX, proj.bounds.fTop + 65,
+                                proj.bounds.width() - 110, 20),
                cardGenreFont_, genrePaint, false);
     }
   }
 }
 
 void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
-  drawText(canvas, "Quick Start", SkRect::MakeXYWH(templatesArea_.fLeft, templatesArea_.fTop - 40, 200, 30), 
-           headerFont_, textPaint_, false);
+  // Skip if bounds not calculated
+  if (templatesArea_.isEmpty() || quickStartHeaderBounds_.isEmpty()) {
+    return;
+  }
+
+  // Draw "Quick Start" header inside its explicit bounds
+  drawText(
+      canvas, "Quick Start",
+      quickStartHeaderBounds_,
+      headerFont_, textPaint_, true);
 
   for (size_t i = 0; i < templates_.size(); ++i) {
     const auto &tmpl = templates_[i];
-    bool isSelected = (this->selectedSection_ == SelectionSection::Templates && (int)i == selectedIndex_);
+    bool isSelected = (this->selectedSection_ == SelectionSection::Templates &&
+                       (int)i == selectedIndex_);
 
     bool active = tmpl.isHovered || isSelected;
 
     SkRRect rrect = SkRRect::MakeRectXY(tmpl.bounds, 12.0f, 12.0f);
     SkPaint cardPaint;
-    cardPaint.setColor(active ? withAlpha(tmpl.color, 0.15f) : withAlpha(colors::BG_LIGHT, 0.08f));
+    cardPaint.setColor(active ? withAlpha(tmpl.color, 0.15f)
+                              : withAlpha(colors::BG_LIGHT, 0.08f));
     cardPaint.setAntiAlias(true);
     canvas->drawRRect(rrect, cardPaint);
 
@@ -457,12 +631,15 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
     SkPaint borderPaint;
     borderPaint.setStyle(SkPaint::kStroke_Style);
     borderPaint.setStrokeWidth(isSelected ? 2.0f : 1.0f);
-    borderPaint.setColor(active ? withAlpha(tmpl.color, 0.6f) : withAlpha(colors::TEXT_PRIMARY, 0.06f));
+    borderPaint.setColor(active ? withAlpha(tmpl.color, 0.6f)
+                                : withAlpha(colors::TEXT_PRIMARY, 0.06f));
     borderPaint.setAntiAlias(true);
     canvas->drawRRect(rrect, borderPaint);
 
     float iconSize = 48.0f;
-    SkRect iconBounds = SkRect::MakeXYWH(tmpl.bounds.fLeft + 20, tmpl.bounds.centerY() - iconSize * 0.5f, iconSize, iconSize);
+    SkRect iconBounds = SkRect::MakeXYWH(
+        tmpl.bounds.fLeft + 20, tmpl.bounds.centerY() - iconSize * 0.5f,
+        iconSize, iconSize);
     SkPaint iconBgPaint;
     iconBgPaint.setColor(withAlpha(tmpl.color, 0.2f));
     iconBgPaint.setAntiAlias(true);
@@ -479,68 +656,141 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
     iconStyle.color = tmpl.color;
     iconStyle.strokeWidth = active ? icons::STROKE_BOLD : icons::STROKE_REGULAR;
     if (active) {
-        iconStyle.glowRadius = 8.0f;
-        iconStyle.glowColor = withAlpha(tmpl.color, 0.5f);
+      iconStyle.glowRadius = 8.0f;
+      iconStyle.glowColor = withAlpha(tmpl.color, 0.5f);
     }
-    icons::drawIconCentered(canvas, iconPath, iconBounds, iconBounds.width() * 0.6f, iconStyle);
+    icons::drawIconCentered(canvas, iconPath, iconBounds,
+                            iconBounds.width() * 0.6f, iconStyle);
 
-    drawText(canvas, tmpl.name, SkRect::MakeXYWH(iconBounds.right() + 16, tmpl.bounds.centerY() - 12, 200, 24), 
+    drawText(canvas, tmpl.name,
+             SkRect::MakeXYWH(iconBounds.right() + 16,
+                              tmpl.bounds.centerY() - 12, 200, 24),
              templateFont_, textPaint_, false);
-
   }
 }
 
 void ZenithHubComponent::drawAccount(SkCanvas *canvas) {
-  drawText(canvas, "Collaborations", SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop - 40, 200, 30), 
-           headerFont_, textPaint_, false);
+  // Skip if bounds not calculated
+  if (accountArea_.isEmpty() || profileBounds_.isEmpty()) {
+    return;
+  }
 
-  SkRRect rrect = SkRRect::MakeRectXY(profileBounds_, 12.0f, 12.0f);
-  SkPaint bgPaint;
-  bgPaint.setColor(isProfileHovered_ ? withAlpha(colors::BG_LIGHT, 0.15f) : withAlpha(colors::BG_LIGHT, 0.08f));
-  bgPaint.setAntiAlias(true);
-  canvas->drawRRect(rrect, bgPaint);
+  // Draw "Collaborations" header inside its explicit bounds
+  if (!accountHeaderBounds_.isEmpty()) {
+    drawText(canvas, "Collaborations", accountHeaderBounds_, headerFont_, textPaint_, true);
+  }
 
-  float avatarSize = 48.0f;
-  SkPaint avatarPaint;
-  avatarPaint.setColor(colors::AMBER);
-  avatarPaint.setAntiAlias(true);
-  float centerY = profileBounds_.fTop + profileBounds_.height() * 0.5f;
-  canvas->drawCircle(profileBounds_.fLeft + 30 + avatarSize * 0.5f, centerY, avatarSize * 0.5f, avatarPaint);
+  bool isLoggedIn = currentUser_.isValid();
+  
+  if (isLoggedIn) {
+    // ===== LOGGED IN: Show user profile =====
+    SkRRect rrect = SkRRect::MakeRectXY(profileBounds_, 12.0f, 12.0f);
+    SkPaint bgPaint;
+    bgPaint.setColor(isProfileHovered_ ? withAlpha(colors::BG_LIGHT, 0.15f)
+                                       : withAlpha(colors::BG_LIGHT, 0.08f));
+    bgPaint.setAntiAlias(true);
+    canvas->drawRRect(rrect, bgPaint);
 
-  drawText(canvas, "SoundDesigner99", SkRect::MakeXYWH(profileBounds_.fLeft + 90, centerY - 18, 200, 24), 
-           profileFont_, textPaint_, false);
+    float avatarSize = 44.0f;
+    SkPaint avatarPaint;
+    // Use different colors based on provider
+    SkColor avatarColor = (currentUser_.provider == AuthProvider::Google) 
+        ? SkColorSetRGB(66, 133, 244)  // Google blue
+        : colors::AMBER;               // SylorLabs amber
+    avatarPaint.setColor(avatarColor);
+    avatarPaint.setAntiAlias(true);
+    float avatarCenterY = profileBounds_.centerY();
+    float avatarCenterX = profileBounds_.fLeft + 16 + avatarSize * 0.5f;
+    canvas->drawCircle(avatarCenterX, avatarCenterY, avatarSize * 0.5f, avatarPaint);
+    
+    // Draw initial letter in avatar
+    SkPaint initialPaint;
+    initialPaint.setColor(colors::TEXT_PRIMARY);
+    initialPaint.setAntiAlias(true);
+    juce::String initial = currentUser_.displayName.substring(0, 1).toUpperCase();
+    canvas->drawString(SkString(initial.toRawUTF8()), 
+                       avatarCenterX - 8, avatarCenterY + 8, 
+                       design::getSkFont(24.0f, design::FontWeight::Bold), initialPaint);
 
-  SkPaint onlineStatusPaint;
-  onlineStatusPaint.setColor(SkColorSetARGB(255, 16, 185, 129)); 
-  onlineStatusPaint.setAntiAlias(true);
-  drawText(canvas, "● Online", SkRect::MakeXYWH(profileBounds_.fLeft + 90, (profileBounds_.fTop + profileBounds_.height() * 0.5f) + 4, 100, 20), 
-           statusFont_, onlineStatusPaint, false);
+    // Username text
+    float textX = avatarCenterX + avatarSize * 0.5f + 14;
+    drawText(canvas, currentUser_.displayName,
+             SkRect::MakeXYWH(textX, avatarCenterY - 16, 
+                              profileBounds_.width() - (textX - profileBounds_.fLeft) - 10, 24),
+             profileFont_, textPaint_, false);
 
+    SkPaint onlineStatusPaint;
+    onlineStatusPaint.setColor(SkColorSetARGB(255, 16, 185, 129)); // Green
+    onlineStatusPaint.setAntiAlias(true);
+    drawText(canvas, "● Online",
+             SkRect::MakeXYWH(textX, avatarCenterY + 6, 100, 20),
+             statusFont_, onlineStatusPaint, false);
+  } else {
+    // ===== NOT LOGGED IN: Show Sign In button =====
+    signInButtonBounds_ = profileBounds_;
+    
+    SkRRect rrect = SkRRect::MakeRectXY(signInButtonBounds_, 12.0f, 12.0f);
+    
+    // Gradient background
+    SkPaint bgPaint;
+    bgPaint.setAntiAlias(true);
+    SkColor startColor = isSignInHovered_ ? colors::CYAN : SkColorSetRGB(0, 150, 200);
+    SkColor endColor = isSignInHovered_ ? colors::BLUE : SkColorSetRGB(0, 100, 180);
+    
+    SkPoint pts[2] = {{signInButtonBounds_.fLeft, signInButtonBounds_.fTop},
+                      {signInButtonBounds_.fRight, signInButtonBounds_.fBottom}};
+    SkColor gradColors[2] = {startColor, endColor};
+    bgPaint.setShader(SkGradientShader::MakeLinear(pts, gradColors, nullptr, 2, SkTileMode::kClamp));
+    
+    canvas->drawRRect(rrect, bgPaint);
+    
+    // Icon + text
+    icons::IconStyle iconStyle;
+    iconStyle.color = colors::TEXT_PRIMARY;
+    iconStyle.strokeWidth = icons::STROKE_BOLD;
+    
+    float iconSize = 20.0f;
+    SkRect iconBounds = SkRect::MakeXYWH(
+        signInButtonBounds_.fLeft + 20, signInButtonBounds_.centerY() - iconSize / 2,
+        iconSize, iconSize);
+    icons::drawIconCentered(canvas, icons::Users(), iconBounds, iconSize, iconStyle);
+    
+    SkRect textBounds = signInButtonBounds_;
+    textBounds.fLeft += 50;
+    drawText(canvas, "Sign In", textBounds, buttonFont_, textPaint_, true);
+  }
 }
 
 void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
+  // Skip if bounds are empty
+  if (newProjectButtonBounds_.isEmpty()) {
+    return;
+  }
+
   bool isSelected = (this->selectedSection_ == SelectionSection::New);
   bool active = isNewProjectHovered_ || isSelected;
 
   // PREMIUM: Real glassmorphism button
   GlassmorphicPanel::Options opts;
-  opts.style = active ? GlassmorphicPanel::Style::ActiveGlow : GlassmorphicPanel::Style::Elevated;
+  opts.style = active ? GlassmorphicPanel::Style::ActiveGlow
+                      : GlassmorphicPanel::Style::Elevated;
   opts.accentColor = colors::BLUE;
   opts.cornerRadius = 12.0f;
   opts.glowIntensity = active ? 1.5f : 0.0f;
-  
+
   GlassmorphicPanel::drawWithOptions(canvas, newProjectButtonBounds_, opts);
 
   // Draw Icon + Text
   float iconSize = 20.0f;
-  SkRect iconBounds = SkRect::MakeXYWH(newProjectButtonBounds_.fLeft + 20, 
-                                       newProjectButtonBounds_.centerY() - iconSize * 0.5f, 
-                                       iconSize, iconSize);
-  
+  SkRect iconBounds = SkRect::MakeXYWH(
+      newProjectButtonBounds_.fLeft + 20,
+      newProjectButtonBounds_.centerY() - iconSize * 0.5f, iconSize, iconSize);
+
   icons::IconStyle iconStyle;
   iconStyle.color = colors::TEXT_PRIMARY;
   iconStyle.strokeWidth = icons::STROKE_BOLD;
-  icons::drawIconCentered(canvas, icons::Plus(), iconBounds, iconSize, iconStyle);
+  icons::drawIconCentered(canvas, icons::Plus(), iconBounds, iconSize,
+                          iconStyle);
 
   SkRect textBounds = newProjectButtonBounds_;
   textBounds.fLeft += 45;
@@ -552,26 +802,52 @@ void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
   bool needsUpdate = false;
 
   if (selectedSection_ != SelectionSection::None) {
-      selectedSection_ = SelectionSection::None;
-      selectedIndex_ = -1;
-      needsUpdate = true;
+    selectedSection_ = SelectionSection::None;
+    selectedIndex_ = -1;
+    needsUpdate = true;
   }
 
+  // OPTIMIZATION: Early-exit bounding box check for recent projects
+  // Only perform inner contains check if point is within the recentGridBounds_
+  bool inRecentArea = recentGridBounds_.contains(pt.fX, pt.fY);
   for (auto &proj : recentProjects_) {
-    bool h = proj.bounds.contains(pt.fX, pt.fY);
-    if (h != proj.isHovered) { proj.isHovered = h; needsUpdate = true; }
+    bool h = inRecentArea && proj.bounds.contains(pt.fX, pt.fY);
+    if (h != proj.isHovered) {
+      proj.isHovered = h;
+      needsUpdate = true;
+    }
   }
 
+  // OPTIMIZATION: Early-exit bounding box check for templates
+  bool inTemplatesArea = templatesContentBounds_.contains(pt.fX, pt.fY);
   for (auto &tmpl : templates_) {
-    bool h = tmpl.bounds.contains(pt.fX, pt.fY);
-    if (h != tmpl.isHovered) { tmpl.isHovered = h; needsUpdate = true; }
+    bool h = inTemplatesArea && tmpl.bounds.contains(pt.fX, pt.fY);
+    if (h != tmpl.isHovered) {
+      tmpl.isHovered = h;
+      needsUpdate = true;
+    }
   }
 
   bool ph = profileBounds_.contains(pt.fX, pt.fY);
-  if (ph != isProfileHovered_) { isProfileHovered_ = ph; needsUpdate = true; }
+  if (ph != isProfileHovered_) {
+    isProfileHovered_ = ph;
+    needsUpdate = true;
+  }
+
+  // Sign In button hover (when not logged in)
+  if (!currentUser_.isValid() && !signInButtonBounds_.isEmpty()) {
+    bool sih = signInButtonBounds_.contains(pt.fX, pt.fY);
+    if (sih != isSignInHovered_) {
+      isSignInHovered_ = sih;
+      needsUpdate = true;
+    }
+  }
 
   bool nph = newProjectButtonBounds_.contains(pt.fX, pt.fY);
-  if (nph != isNewProjectHovered_) { isNewProjectHovered_ = nph; needsUpdate = true; }
+  if (nph != isNewProjectHovered_) {
+    isNewProjectHovered_ = nph;
+    needsUpdate = true;
+  }
 
   bool gh = greetingTextBounds_.contains(pt.fX, pt.fY) ||
             greetingEditIconBounds_.contains(pt.fX, pt.fY);
@@ -580,16 +856,19 @@ void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
     needsUpdate = true;
   }
 
-  if (needsUpdate) repaint();
+  if (needsUpdate)
+    repaint();
 }
 
 void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
   SkPoint pt = {(float)e.x, (float)e.y};
-  if (!mainCardBounds_.contains(pt.fX, pt.fY)) return;
+  if (!mainCardBounds_.contains(pt.fX, pt.fY))
+    return;
 
   for (const auto &proj : recentProjects_) {
     if (proj.bounds.contains(pt.fX, pt.fY)) {
-      if (onLoadProject_ && proj.path.existsAsFile()) onLoadProject_(proj.path);
+      if (onLoadProject_ && proj.path.existsAsFile())
+        onLoadProject_(proj.path);
       dismiss();
       return;
     }
@@ -597,49 +876,72 @@ void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
 
   for (const auto &tmpl : templates_) {
     if (tmpl.bounds.contains(pt.fX, pt.fY)) {
-      if (onNewProject_) onNewProject_();
+      if (onNewProject_)
+        onNewProject_();
       dismiss();
       return;
     }
   }
 
+  // Sign In button click (when not logged in)
+  if (!currentUser_.isValid() && !signInButtonBounds_.isEmpty() &&
+      signInButtonBounds_.contains(pt.fX, pt.fY)) {
+    showLoginComponent();
+    return;
+  }
+
   if (newProjectButtonBounds_.contains(pt.fX, pt.fY)) {
-    if (onNewProject_) onNewProject_();
+    if (onNewProject_)
+      onNewProject_();
     dismiss();
     return;
   }
 
   // Greeting Edit
-  if (greetingTextBounds_.contains(pt.fX, pt.fY) ||
-      greetingEditIconBounds_.contains(pt.fX, pt.fY)) {
+  bool textHit = greetingTextBounds_.contains(pt.fX, pt.fY);
+  bool iconHit = greetingEditIconBounds_.contains(pt.fX, pt.fY);
+  if (textHit || iconHit) {
+    fprintf(stderr, "[ZenithHub] CLICK on greeting! textHit=%d iconHit=%d pt=(%.1f,%.1f)\n",
+            textHit, iconHit, pt.fX, pt.fY);
     showGreetingEditor();
     return;
   }
 }
 
-void ZenithHubComponent::mouseUp(const juce::MouseEvent &e) { juce::ignoreUnused(e); }
+void ZenithHubComponent::mouseUp(const juce::MouseEvent &e) {
+  juce::ignoreUnused(e);
+}
 
 void ZenithHubComponent::showGreetingEditor() {
   if (greetingEditor_.isVisible())
     return;
 
-  greetingEditor_.setText(greetingText_);
-  greetingEditor_.setSelectAllWhenFocused(true);
-  greetingEditor_.setJustification(juce::Justification::left);
-  greetingEditor_.setFont(juce::Font(18.0f));
-
-  // Named constants for TextEditor sizing
-  constexpr int kEditorWidthPadding = 60;
-  constexpr int kEditorHeight = 24;
+  fprintf(stderr, "[ZenithHub] showGreetingEditor() called, bounds=%.1f,%.1f %.1fx%.1f\n",
+          greetingTextBounds_.left(), greetingTextBounds_.top(),
+          greetingTextBounds_.width(), greetingTextBounds_.height());
 
   if (greetingTextBounds_.isEmpty()) {
+    fprintf(stderr, "[ZenithHub] ERROR: greetingTextBounds_ is empty!\n");
     return;
   }
 
+  greetingEditor_.setText(greetingText_);
+  greetingEditor_.setSelectAllWhenFocused(true);
+  greetingEditor_.setJustification(juce::Justification::left);
+  greetingEditor_.setFont(ZenithTheme::Typography::getFont(18.0f));
+
+  // Position editor directly over the greeting text
+  constexpr int kEditorWidthPadding = 60;
+  constexpr int kEditorHeight = 28;
+
   juce::Rectangle<int> bounds(
       (int)greetingTextBounds_.left(),
-      (int)greetingTextBounds_.top() + (int)greetingTextBounds_.height() / 2,
-      (int)(greetingTextBounds_.width() + kEditorWidthPadding), kEditorHeight);
+      (int)greetingTextBounds_.top() - 2,  // Align with text, small offset for visual fit
+      (int)(greetingTextBounds_.width() + kEditorWidthPadding), 
+      kEditorHeight);
+
+  fprintf(stderr, "[ZenithHub] Setting editor bounds: %d,%d %dx%d\n",
+          bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight());
 
   greetingEditor_.setBounds(bounds);
   greetingEditor_.setVisible(true);
@@ -707,10 +1009,12 @@ void ZenithHubComponent::moveSelection(int dx, int dy) {
       // Navigation within grid
       int newRow = row + dy;
       int newCol = col + dx;
-      
+
       // Vertical wrap or limit? Let's limit for now to be predictable.
-      if (newRow < 0) newRow = 0;
-      if (newRow >= (int)(recentProjects_.size() + 1) / 2) newRow = (int)(recentProjects_.size() + 1) / 2 - 1;
+      if (newRow < 0)
+        newRow = 0;
+      if (newRow >= (int)(recentProjects_.size() + 1) / 2)
+        newRow = (int)(recentProjects_.size() + 1) / 2 - 1;
 
       int newIdx = (newRow * 2) + newCol;
       if (newIdx >= 0 && newIdx < (int)recentProjects_.size()) {
@@ -749,17 +1053,43 @@ void ZenithHubComponent::triggerSelection() {
       onLoadProject_(recentProjects_[selectedIndex_].path);
     }
     dismiss();
-  } else if (selectedSection_ == SelectionSection::New || selectedSection_ == SelectionSection::Templates) {
-    if (onNewProject_) onNewProject_();
+  } else if (selectedSection_ == SelectionSection::New ||
+             selectedSection_ == SelectionSection::Templates) {
+    if (onNewProject_)
+      onNewProject_();
     dismiss();
   }
 }
 
 // Text Rendering Helper - Fixed vertical alignment per code review
+// Text Rendering Helper - Fixed vertical alignment and added truncation
 void ZenithHubComponent::drawText(SkCanvas *canvas, const juce::String &text,
                                   const SkRect &bounds, const SkFont &font,
                                   const SkPaint &paint, bool centerVertical) {
   SkString skText(text.toRawUTF8());
+  SkScalar width = font.measureText(skText.c_str(), skText.size(), SkTextEncoding::kUTF8);
+  
+  // Truncate if text is wider than bounds
+  if (width > bounds.width()) {
+    SkString ellipsis("...");
+    SkScalar ellipsisWidth = font.measureText(ellipsis.c_str(), ellipsis.size(), SkTextEncoding::kUTF8);
+    
+    // If even ellipsis doesn't fit, just draw nothing or ellipsis
+    if (ellipsisWidth > bounds.width()) {
+      skText = ellipsis; 
+    } else {
+      // Linear reduction - simple and effective for short titles
+      juce::String jStr = text;
+      
+      while (jStr.length() > 0 && width + ellipsisWidth > bounds.width()) {
+        jStr = jStr.substring(0, jStr.length() - 1);
+        skText = SkString(jStr.toRawUTF8());
+        width = font.measureText(skText.c_str(), skText.size(), SkTextEncoding::kUTF8);
+      }
+      skText.append("...");
+    }
+  }
+
   SkRect textBounds;
   font.measureText(skText.c_str(), skText.size(), SkTextEncoding::kUTF8,
                    &textBounds);

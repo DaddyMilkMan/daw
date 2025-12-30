@@ -35,10 +35,14 @@ class UXDirectorAgent;
     - Agent health scores
     - Manual trigger buttons
 */
-class AIAssistantPanel : public SkiaComponent, public ai::AIStatusListener {
+class AIAssistantPanel : public SkiaComponent, 
+                         public ai::AIStatusListener {
 public:
   AIAssistantPanel();
   ~AIAssistantPanel() override;
+
+  void timerCallback() override;
+
 
   //============================================================================
   // SkiaComponent

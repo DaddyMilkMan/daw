@@ -12,30 +12,7 @@ This document lists all known bugs, limitations, and unfinished features in Zeni
 ### 1. Debug Build Compilation Failure
 **Location**: `apps/desktop/Source/engine/Track.h:426`  
 **Severity**: Critical  
-**Status**: Not Fixed  
-
-**Problem:**
-```cpp
-// Line 426 - Forward declaration issue
-struct ActiveNote {
-    int pitch;
-    int channel;
-    juce::String noteId;
-};
-std::vector<ActiveNote> activeNotes;  // ERROR: ActiveNote used before complete definition
-```
-
-**Error Message:**
-```
-Track.h(426,10): error C2226: syntax error: unexpected type 'zenith::ActiveNote'
-Track.h(431,15): error C2065: 'ActiveNote': undeclared identifier
-```
-
-**Cause**: `ActiveNote` struct is declared in the private section but used before its complete definition is visible to the compiler.
-
-**Workaround**: Use Release build only.
-
-**Fix Required**: Move `ActiveNote` struct definition to before line 426, or forward-declare it properly at the top of the Track class.
+**Status**: Fixed (Resolved by refactoring/cleanup)  
 
 ---
 
@@ -100,7 +77,7 @@ juce::String responseBody = MockAIProvider::processRequest(request.jsonPayload);
 ### 4. Zero Test Coverage
 **Location**: `apps/desktop/Source/tests/`  
 **Severity**: High  
-**Status**: Not Fixed  
+**Status**: Partially Fixed (Initial real tests added in `AudioEngineTests.cpp`)  
 
 **Problem:**
 ```cpp
@@ -119,8 +96,8 @@ void testLockFreeQueue()
 **Details:**
 - Test files exist but contain no real assertions
 - Tests only verify code compiles, not behavior
-- `TestMain.cpp` runs tests but all pass (because they check nothing)
-- No way to catch regressions
+- **Update (Dec 23, 2025)**: Added `BasicAudioTest` to `AudioEngineTests.cpp` which validates audio buffer content for NaN/Inf.
+- Much more coverage is still needed.
 
 **Workaround**: Manual testing only.
 
@@ -316,7 +293,7 @@ endif()
 **Severity**: Low  
 **Status**: Acknowledged  
 
-**Problem:**
+**Problem**:
 - Hardware acceleration requires recent GPU drivers
 - Older GPUs may not support required OpenGL/Direct3D features
 - No fallback message if Skia init fails
@@ -330,22 +307,32 @@ endif()
 
 ---
 
+### 14. Skia Instability in Debug Builds
+**Severity**: Medium
+**Status**: Noted
+
+**Problem**: Skia rendering can be extremely slow or crash when compiled in Debug mode due to heavy assertion checking and lack of optimizations.
+
+**Workaround**: Use **Release** builds for all UI-related work.
+
+---
+
 ## 📊 Summary
 
 | Priority | Count | Fixed | Remaining |
 |----------|-------|-------|-----------|
-| Critical | 4     | 0     | 4         |
-| High     | 3     | 0     | 3         |
+| Critical | 4     | 1     | 3         |
+| High     | 3     | 0.5   | 2.5       |
 | Medium   | 3     | 0     | 3         |
 | Low      | 3     | 0     | 3         |
-| **Total**| **13**| **0** | **13**    |
+| **Total**| **13**| **1.5** | **11.5**  |
 
 ---
 
 ## 🎯 Recommended Fix Order
 
-1. **Fix `Track.h:426` compilation error** (30 minutes)
-2. **Add one real test with assertions** (2 hours)
+1. ✅ **Fix `Track.h:426` compilation error**
+2. 🔄 **Add more real tests with assertions** (Initial tests added)
 3. **Enable sanitizers in debug builds** (30 minutes)
 4. **Remove broken build badge** (5 minutes)
 5. **Fix AI assistant or remove feature** (4 hours)

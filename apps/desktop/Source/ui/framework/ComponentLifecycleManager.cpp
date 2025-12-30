@@ -831,7 +831,8 @@ juce::String ComponentStatePersistence::serializeComponentState(
   state->setProperty("timestamp", juce::Time::getCurrentTime().toISO8601(true));
 
   // Component-specific state would be added here
-  // This would be customized in subclasses
+  // Subclasses should override this method to save their state
+  // DBG("WARNING: Base serializeComponentState called for " << component->getComponentId() << " - specific state may be missing");
 
   juce::String json = juce::JSON::toString(juce::var(state.get()));
   return json;
@@ -843,9 +844,9 @@ void ComponentStatePersistence::deserializeComponentState(
 
   if (auto *object = parsed.getDynamicObject()) {
     // Restore component state
-    // This would be customized in subclasses
-
-    DBG("Component state loaded for: " << component->getComponentId());
+    // Subclasses should override this method to load their state
+    
+    // DBG("Component state loaded for: " << component->getComponentId());
   }
 }
 

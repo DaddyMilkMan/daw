@@ -1,7 +1,11 @@
 #pragma once
 
-#include <include/core/SkRect.h>
+#include "ZenithDesignSystem.h"
 #include <juce_gui_basics/juce_gui_basics.h>
+
+#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
+#include "ZenithSkia.h"
+#endif
 
 namespace zenith {
 namespace design {

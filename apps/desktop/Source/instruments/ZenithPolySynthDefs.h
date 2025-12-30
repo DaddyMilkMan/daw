@@ -31,7 +31,7 @@ enum class OscillatorWaveform {
   Triangle,
   Noise,
   Supersaw,
-  Wavetable, // Flagship Feature
+  Wavetable,
   NumWaveforms
 };
 
@@ -43,20 +43,12 @@ enum class FilterType { Lowpass = 0, Bandpass, Highpass, NumTypes };
 /**
     Filter model types
 */
-enum class FilterModelType {
-    SVF = 0,
-    Ladder
-};
+enum class FilterModelType { SVF = 0, Ladder };
 
 /**
     Quality preset for CPU optimization
 */
-enum class QualityPreset {
-  Low = 0, // Max 3 unison voices, optimized for CPU
-  Medium,  // Max 5 unison voices, balanced
-  High,    // Max 7 unison voices, full quality
-  NumPresets
-};
+enum class QualityPreset { Low = 0, Medium, High, NumPresets };
 
 /**
     LFO waveform shapes
@@ -89,8 +81,8 @@ enum class LFOTarget {
 */
 enum class FilterKeyTrack {
   Off = 0,
-  Half,    // 50% tracking
-  Full,    // 100% tracking
+  Half, // 50% tracking
+  Full, // 100% tracking
   NumModes
 };
 
@@ -127,6 +119,7 @@ enum class ModulationSource {
   Velocity,   // Note-on velocity (0 to 1)
   ModWheel,   // MIDI mod wheel CC#1 (0 to 1)
   Aftertouch, // MIDI channel pressure (0 to 1)
+  Timbre,     // MPE Y-axis (CC#74) (0 to 1)
   NumSources
 };
 

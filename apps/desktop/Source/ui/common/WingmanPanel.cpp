@@ -15,7 +15,9 @@
 #include "../network/SecureKeyStore.h"
 #include "SettingsComponent.h"
 #include "ZenithLookAndFeel.h"
-#include "ZenithTheme.h" // For Colors and Typography
+#include "../design-system/ZenithDesignSystem.h"
+#include "../design-system/ColorBridge.h"
+// #include "ZenithTheme.h" // Deprecated
 
 namespace zenith {
 
@@ -46,14 +48,14 @@ WingmanPanel::WingmanPanel(CommandAPI &api, Engine &engine)
   inputField->setReturnKeyStartsNewLine(false);
   inputField->setPopupMenuEnabled(true);
   inputField->setColour(juce::TextEditor::backgroundColourId,
-                        ZenithTheme::Colors::bg_02);
+                        design::toJuceColour(design::colors::BG_02));
   inputField->setColour(juce::TextEditor::textColourId,
-                        ZenithTheme::Colors::text_primary);
+                        design::toJuceColour(design::colors::TEXT_PRIMARY));
   inputField->setColour(juce::TextEditor::outlineColourId,
-                        ZenithTheme::Colors::accent_primary);
-  inputField->setFont(ZenithTheme::Typography::getBodyFont());
+                        design::toJuceColour(design::colors::ACCENT_PRIMARY));
+  inputField->setFont(design::typography::getJuceFont(14.0f));
   inputField->setTextToShowWhenEmpty("Ask Wingman anything...",
-                                     ZenithTheme::Colors::text_secondary);
+                                     design::toJuceColour(design::colors::TEXT_SECONDARY));
   inputField->addListener(this);
   addAndMakeVisible(inputField.get());
 
@@ -62,30 +64,56 @@ WingmanPanel::WingmanPanel(CommandAPI &api, Engine &engine)
   sendButton = std::make_unique<juce::TextButton>("Send");
   sendButton->setButtonText("Send");
   sendButton->setColour(juce::TextButton::buttonColourId,
-                        ZenithTheme::Colors::accent_primary);
+                        design::toJuceColour(design::colors::ACCENT_PRIMARY));
   sendButton->setColour(juce::TextButton::textColourOffId,
-                        ZenithTheme::Colors::text_primary);
+                        design::toJuceColour(design::colors::TEXT_PRIMARY));
   sendButton->addListener(this);
   addAndMakeVisible(sendButton.get());
+
+  //==========================================================================
+  // Vibe DAW Buttons (Accept/Deny)
+  acceptButton = std::make_unique<juce::TextButton>("Accept");
+  acceptButton->setButtonText("Accept Changes");
+  acceptButton->setColour(juce::TextButton::buttonColourId,
+                          design::toJuceColour(design::colors::SUCCESS));
+  acceptButton->setVisible(false);
+  acceptButton->addListener(this);
+  addAndMakeVisible(acceptButton.get());
+
+  denyButton = std::make_unique<juce::TextButton>("Deny");
+  denyButton->setButtonText("Rollback");
+  denyButton->setColour(juce::TextButton::buttonColourId,
+                        design::toJuceColour(design::colors::DANGER));
+  denyButton->setVisible(false);
+  denyButton->addListener(this);
+  addAndMakeVisible(denyButton.get());
+
+  grokController->setOnChangesPending([this](bool pending) {
+      juce::MessageManager::callAsync([this, pending]() {
+          acceptButton->setVisible(pending);
+          denyButton->setVisible(pending);
+          resized();
+      });
+  });
 
   //==========================================================================
   // Mode Selector
   modeLabel = std::make_unique<juce::Label>("ModeLabel", "Mode:");
   modeLabel->setColour(juce::Label::textColourId,
-                       ZenithTheme::Colors::text_primary);
-  modeLabel->setFont(ZenithTheme::Typography::getBodyFont());
+                       design::toJuceColour(design::colors::TEXT_PRIMARY));
+  modeLabel->setFont(design::typography::getJuceFont(14.0f));
   addAndMakeVisible(modeLabel.get());
 
   modeSelector = std::make_unique<juce::ComboBox>("Mode");
-  modeSelector->addItem("⚡ Fast (Quick responses)", 1);
-  modeSelector->addItem("🧠 Thinking (Deep analysis)", 2);
+  modeSelector->addItem(juce::CharPointer_UTF8("\xe2\x9a\xa1 Fast (Quick responses)"), 1);
+  modeSelector->addItem(juce::CharPointer_UTF8("\xf0\x9f\xa7\xa0 Thinking (Deep analysis)"), 2);
   modeSelector->setSelectedId(1); // Default to Fast
   modeSelector->setColour(juce::ComboBox::backgroundColourId,
-                          ZenithTheme::Colors::bg_02);
+                          design::toJuceColour(design::colors::BG_02));
   modeSelector->setColour(juce::ComboBox::textColourId,
-                          ZenithTheme::Colors::text_primary);
+                          design::toJuceColour(design::colors::TEXT_PRIMARY));
   modeSelector->setColour(juce::ComboBox::outlineColourId,
-                          ZenithTheme::Colors::accent_primary);
+                          design::toJuceColour(design::colors::ACCENT_PRIMARY));
   modeSelector->onChange = [this]() { updateModeFromSelector(); };
   addAndMakeVisible(modeSelector.get());
 
@@ -93,8 +121,8 @@ WingmanPanel::WingmanPanel(CommandAPI &api, Engine &engine)
   // Status Label
   statusLabel = std::make_unique<juce::Label>("Status", "Ready");
   statusLabel->setColour(juce::Label::textColourId,
-                         juce::Colours::green); // Keep green for status
-  statusLabel->setFont(ZenithTheme::Typography::getSmallFont());
+                         design::toJuceColour(design::colors::SUCCESS)); // Keep green for status
+  statusLabel->setFont(design::typography::getJuceFont(12.0f));
   statusLabel->setJustificationType(juce::Justification::centredLeft);
   addAndMakeVisible(statusLabel.get());
 
@@ -103,20 +131,20 @@ WingmanPanel::WingmanPanel(CommandAPI &api, Engine &engine)
   clearButton = std::make_unique<juce::TextButton>("Clear");
   clearButton->setButtonText("Clear");
   clearButton->setColour(juce::TextButton::buttonColourId,
-                         ZenithTheme::Colors::bg_02);
+                         design::toJuceColour(design::colors::BG_02));
   clearButton->setColour(juce::TextButton::textColourOffId,
-                         ZenithTheme::Colors::text_secondary);
+                         design::toJuceColour(design::colors::TEXT_SECONDARY));
   clearButton->addListener(this);
   addAndMakeVisible(clearButton.get());
 
   //==========================================================================
   // Settings Button
   settingsButton = std::make_unique<juce::TextButton>("Settings");
-  settingsButton->setButtonText("⚙");
+  settingsButton->setButtonText(juce::CharPointer_UTF8("\xe2\x9a\x99"));
   settingsButton->setColour(juce::TextButton::buttonColourId,
-                            ZenithTheme::Colors::bg_02);
+                            design::toJuceColour(design::colors::BG_02));
   settingsButton->setColour(juce::TextButton::textColourOffId,
-                            ZenithTheme::Colors::text_secondary);
+                            design::toJuceColour(design::colors::TEXT_SECONDARY));
   settingsButton->addListener(this);
   addAndMakeVisible(settingsButton.get());
 
@@ -131,15 +159,15 @@ WingmanPanel::~WingmanPanel() { inputField->removeListener(this); }
 //==============================================================================
 void WingmanPanel::paint(juce::Graphics &g) {
   // Background
-  g.fillAll(ZenithTheme::Colors::bg_01);
-
+  g.fillAll(design::toJuceColour(design::colors::BG_01));
+ 
   // Header
-  g.setColour(ZenithTheme::Colors::bg_02);
+  g.setColour(design::toJuceColour(design::colors::BG_02));
   g.fillRect(0, 0, getWidth(), 40);
-
+ 
   // Title
-  g.setColour(ZenithTheme::Colors::accent_primary);
-  g.setFont(ZenithTheme::Typography::getLargeFont().boldened());
+  g.setColour(design::toJuceColour(design::colors::ACCENT_PRIMARY));
+  g.setFont(design::typography::getJuceFont(18.0f, design::FontWeight::Bold));
   g.drawText("Wingman AI Assistant", 10, 0, getWidth() - 20, 40,
              juce::Justification::centredLeft);
 }
@@ -155,9 +183,20 @@ void WingmanPanel::resized() {
   auto statusArea = bounds.removeFromBottom(30);
   statusLabel->setBounds(statusArea.reduced(5));
 
-  // Input area (80px)
-  auto inputArea = bounds.removeFromBottom(80);
+  // Input area (dynamic height)
+  int inputHeight = 80;
+  if (acceptButton->isVisible()) inputHeight += 40;
+  
+  auto inputArea = bounds.removeFromBottom(inputHeight);
   inputArea.reduce(10, 10);
+
+  // Vibe Row (Accept/Deny)
+  if (acceptButton->isVisible()) {
+      auto vibeRow = inputArea.removeFromTop(30);
+      acceptButton->setBounds(vibeRow.removeFromLeft(vibeRow.getWidth() / 2).reduced(2, 0));
+      denyButton->setBounds(vibeRow.reduced(2, 0));
+      inputArea.removeFromTop(10);
+  }
 
   // Mode selector row
   auto modeRow = inputArea.removeFromTop(30);
@@ -183,9 +222,9 @@ bool WingmanPanel::initializeGrok(const juce::String &apiKey) {
   bool success = grokController->initialize(apiKey);
 
   if (success) {
-    setStatus("Grok Ready", juce::Colour(0xff00ff00));
+    setStatus("Grok Ready", design::toJuceColour(design::colors::SUCCESS));
   } else {
-    setStatus("Grok initialization failed", juce::Colour(0xffff0000));
+    setStatus("Grok initialization failed", design::toJuceColour(design::colors::DANGER));
   }
 
   return success;
@@ -194,22 +233,27 @@ bool WingmanPanel::initializeGrok(const juce::String &apiKey) {
 bool WingmanPanel::isGrokReady() const { return grokController->isReady(); }
 
 //==============================================================================
-void WingmanPanel::textEditorReturnKeyPressed(juce::TextEditor &editor) {
-  if (&editor == inputField.get()) {
-    sendCommand();
-  }
-}
-
 void WingmanPanel::buttonClicked(juce::Button *button) {
   if (button == sendButton.get()) {
     sendCommand();
+  } else if (button == acceptButton.get()) {
+    grokController->acceptLastChanges();
+    appendToConversation("Wingman", "*Changes applied and committed.*");
+  } else if (button == denyButton.get()) {
+    grokController->denyLastChanges();
+    appendToConversation("Wingman", "*Changes rolled back.*");
   } else if (button == clearButton.get()) {
     conversationDisplay->clear();
     grokController->clearHistory();
-    appendToConversation("Wingman",
-                         "Conversation cleared. How can I help you?");
   } else if (button == settingsButton.get()) {
     showSettings();
+  }
+}
+
+//==============================================================================
+void WingmanPanel::textEditorReturnKeyPressed(juce::TextEditor &editor) {
+  if (&editor == inputField.get()) {
+    sendCommand();
   }
 }
 
@@ -224,7 +268,7 @@ void WingmanPanel::sendCommand() {
 
   if (!isGrokReady()) {
     appendToConversation("System",
-                         "Grok API key not configured. Click ⚙ to set it up.");
+                         "Grok API key not configured. Click Settings to set it up.");
     return;
   }
 
@@ -236,7 +280,7 @@ void WingmanPanel::sendCommand() {
 
   // Set processing state
   isProcessing = true;
-  setStatus("Processing...", juce::Colour(0xffffff00));
+  setStatus("Processing...", design::toJuceColour(design::colors::WARNING));
   sendButton->setEnabled(false);
 
   // Send to Grok
@@ -246,7 +290,7 @@ void WingmanPanel::sendCommand() {
         // Success
         juce::MessageManager::callAsync([this, response]() {
           appendToConversation("Wingman", response);
-          setStatus("Ready", juce::Colour(0xff00ff00));
+          setStatus("Ready", design::toJuceColour(design::colors::SUCCESS));
           isProcessing = false;
           sendButton->setEnabled(true);
         });
@@ -254,8 +298,29 @@ void WingmanPanel::sendCommand() {
       [this](juce::String error) {
         // Error
         juce::MessageManager::callAsync([this, error]() {
-          appendToConversation("Error", error);
-          setStatus("Error", juce::Colour(0xffff0000));
+          juce::String friendlyError = error;
+          juce::String suggestedAction = "";
+          
+          if (error.contains("401")) {
+            friendlyError = "Authentication failed.";
+            suggestedAction = "Please check your API key in Settings";
+          } else if (error.contains("429")) {
+            friendlyError = "Rate limit exceeded.";
+            suggestedAction = "Please wait a moment before trying again.";
+          } else if (error.contains("timed out") || error.contains("connection")) {
+            friendlyError = "Connection issue.";
+            suggestedAction = "Please check your internet connection.";
+          } else if (error.contains("quota")) {
+             friendlyError = "API Quota Exceeded.";
+             suggestedAction = "Please check your usage limits at console.x.ai";
+          }
+
+          appendToConversation("Error", friendlyError);
+          if (suggestedAction.isNotEmpty()) {
+             appendToConversation("Wingman", "**" + suggestedAction + "**");
+          }
+          
+          setStatus("Error", design::toJuceColour(design::colors::DANGER));
           isProcessing = false;
           sendButton->setEnabled(true);
         });
@@ -263,7 +328,7 @@ void WingmanPanel::sendCommand() {
       [this](juce::String status) {
         // Progress
         juce::MessageManager::callAsync(
-            [this, status]() { setStatus(status, juce::Colour(0xffffff00)); });
+            [this, status]() { setStatus(status, design::toJuceColour(design::colors::WARNING)); });
       });
 }
 
@@ -282,7 +347,7 @@ void WingmanPanel::updateModeFromSelector() {
   currentMode = (selectedId == 2) ? GrokMode::Thinking : GrokMode::Fast;
 
   juce::String modeName = (currentMode == GrokMode::Fast) ? "Fast" : "Thinking";
-  setStatus("Mode: " + modeName, juce::Colour(0xff00aaff));
+  setStatus("Mode: " + modeName, design::toJuceColour(design::colors::ACCENT_PRIMARY));
 }
 
 void WingmanPanel::showSettings() {
@@ -290,7 +355,7 @@ void WingmanPanel::showSettings() {
   options.content.setOwned(new SettingsComponent(engine_));
   options.content->setSize(600, 500);
   options.dialogTitle = "Zenith DAW Settings";
-  options.dialogBackgroundColour = ZenithTheme::Colors::bg_01;
+  options.dialogBackgroundColour = design::toJuceColour(design::colors::BG_01);
   options.escapeKeyTriggersCloseButton = true;
   options.useNativeTitleBar = true;
   options.resizable = true;
@@ -326,7 +391,7 @@ void WingmanPanel::sampleImported(const juce::File &file) {
 void WingmanPanel::huntingProgressChanged(float progress,
                                           const juce::String &status) {
   juce::MessageManager::callAsync([this, progress, status]() {
-    setStatus(status, juce::Colour(0xff00aaff));
+    setStatus(status, design::toJuceColour(design::colors::INFO));
   });
 }
 
@@ -337,11 +402,11 @@ void WingmanPanel::huntingComplete(const zenith::ai::HuntingStats &stats,
       appendToConversation("Wingman", "Sample hunting complete! Found " +
                                           juce::String(stats.samplesFound) +
                                           " samples.");
-      setStatus("Ready", juce::Colour(0xff00ff00));
+      setStatus("Ready", design::toJuceColour(design::colors::SUCCESS));
     } else {
       appendToConversation("Wingman",
                            "Sample hunting failed or was cancelled.");
-      setStatus("Failed", juce::Colour(0xffff0000));
+      setStatus("Failed", design::toJuceColour(design::colors::DANGER));
     }
   });
 }

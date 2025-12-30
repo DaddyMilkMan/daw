@@ -12,10 +12,8 @@
 
 #include "GlassmorphicPanel.h" // Added
 #include "NeonGlow.h"          // Added
-#include <core/SkFont.h>
-#include <core/SkPaint.h>
+#include "ZenithSkia.h"
 #include <core/SkPath.h>
-#include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
 
 namespace zenith {

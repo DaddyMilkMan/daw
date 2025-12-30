@@ -80,9 +80,22 @@ public:
     
     std::vector<std::shared_ptr<BrowserItem>> getItemsByTag(const juce::String& tag);
     std::set<juce::String> getAllTags() const { return allTags_; }
+
+    // Tag Colors
+    void setTagColor(const juce::String& tag, const juce::String& hexColor);
+    juce::String getTagColor(const juce::String& tag) const;
     
     void saveTags();
     void loadTags();
+
+    //==============================================================================
+    // Ratings System
+    //==============================================================================
+
+    void setItemRating(std::shared_ptr<BrowserItem> item, int rating);
+    int getItemRating(const juce::String& itemId) const;
+    void saveRatings();
+    void loadRatings();
 
     //==============================================================================
     // Browser History
@@ -93,6 +106,13 @@ public:
     std::shared_ptr<BrowserItem> peekHistory() const;
     bool canGoBack() const { return !history_.empty(); }
     void clearHistory() { history_.clear(); }
+
+    // Recent Items
+    void addToRecent(std::shared_ptr<BrowserItem> item);
+    std::vector<std::shared_ptr<BrowserItem>> getRecentItems() const;
+    void clearRecent();
+    void saveRecent();
+    void loadRecent();
     
     //==============================================================================
     // Category Filtering
@@ -138,6 +158,14 @@ private:
     // Tags (itemId -> tags)
     std::map<juce::String, std::vector<juce::String>> itemTags_;
     std::set<juce::String> allTags_;
+    std::map<juce::String, juce::String> tagColors_;
+    
+    // Ratings
+    std::map<juce::String, int> itemRatings_;
+
+    // Recent Items
+    std::deque<juce::String> recentItemIds_;
+    static constexpr size_t maxRecentSize_ = 50;
     
     // History stack
     std::deque<std::shared_ptr<BrowserItem>> history_;
@@ -155,6 +183,9 @@ private:
     // Persistence helpers
     juce::File getFavoritesFile() const;
     juce::File getTagsFile() const;
+
+    juce::WeakReference<BrowserModel>::Master masterReference;
+    friend class juce::WeakReference<BrowserModel>;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BrowserModel)
 };
