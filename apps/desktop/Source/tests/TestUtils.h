@@ -70,7 +70,6 @@ public:
     desc.category = "Test";
     desc.manufacturerName = "Zenith Tests";
     desc.version = "1.0";
-    desc.version = "1.0";
     desc.uniqueId = 0;
   }
 

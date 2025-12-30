@@ -1,4 +1,3 @@
-#include <gtest/gtest.h>
 #include "../engine/TakeFolder.h"
 #include "../engine/Clip.h"
 #include "../engine/AudioFilePool.h"
