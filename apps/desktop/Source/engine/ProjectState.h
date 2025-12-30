@@ -32,6 +32,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_graphics/juce_graphics.h>
+#include "MidiNote.h"
 
 //==============================================================================
 //==============================================================================
@@ -55,6 +56,7 @@ namespace zenith {
 
 class TrackStateManager;
 class ClipStateManager;
+class MidiNoteStateManager;
 class AutomationStateManager;
 class ProjectFileIO;
 class Engine;
@@ -80,6 +82,14 @@ public:
       return addTrack(trackName, ID_TRACK.toString());
   }
 
+  void addListener(juce::ValueTree::Listener *listener) {
+      state.addListener(listener);
+  }
+
+  void removeListener(juce::ValueTree::Listener *listener) {
+      state.removeListener(listener);
+  }
+
   static const juce::Identifier ID_PROJECT;
   static const juce::Identifier ID_TRACKS;
   static const juce::Identifier ID_TRACK;
@@ -90,6 +100,14 @@ public:
   static const juce::Identifier ID_ENVELOPE;
   static const juce::Identifier ID_POINTS;      // Container for points
   static const juce::Identifier ID_POINT;       // Individual point
+
+  // Take Management IDs
+  static const juce::Identifier ID_TAKE_FOLDERS;
+  static const juce::Identifier ID_TAKE_FOLDER; // Singular
+  static const juce::Identifier ID_TAKES;
+  static const juce::Identifier ID_TAKE;
+  static const juce::Identifier ID_COMP_REGIONS;
+  static const juce::Identifier ID_COMP_REGION;
   static const juce::Identifier ID_NOTES;       // MIDI notes container
   static const juce::Identifier ID_NOTE;        // Individual MIDI note
   static const juce::Identifier ID_TEMPO_MAP;   // Container for tempo changes
@@ -98,9 +116,7 @@ public:
   static const juce::Identifier ID_MARKER;      // Individual marker
   static const juce::Identifier ID_SECTIONS; // Container for arranger sections
   static const juce::Identifier ID_SECTION;  // Individual arranger section
-  static const juce::Identifier ID_TAKE_FOLDER; // Take folder container
-  static const juce::Identifier ID_COMP_REGIONS; // Container for comp regions
-  static const juce::Identifier ID_COMP_REGION; // Individual comp region
+
   static const juce::Identifier PROP_NAME;
   static const juce::Identifier PROP_TEMPO;
   static const juce::Identifier PROP_TIME_SIG_NUM;
@@ -434,31 +450,7 @@ public:
                        double lengthBeats, int pitch, int velocity,
                        const juce::String &actionName);
 
-  struct MidiNoteSpec {
-    juce::String id;
-    int pitch;
-    double startBeats;
-    double lengthBeats;
-    int velocity;
-    bool muted;
-
-    float probability = 1.0f; // 0.0 to 1.0
-    juce::String condition;   // e.g., "fill", "not-fill", "pre"
-    juce::String recurrence;  // e.g., "1:4"
-    int articulationId = 0;   // 0 = Default
-    float tension = 0.0f;     // -1.0 to 1.0
-
-    MidiNoteSpec()
-        : pitch(60), startBeats(0.0), lengthBeats(1.0), velocity(100),
-          muted(false), probability(1.0f), tension(0.0f) {}
-
-    MidiNoteSpec(const juce::String &id, int pitch, double startBeats,
-                 double lengthBeats, int velocity, bool muted,
-                 float probability = 1.0f, float tension = 0.0f)
-        : id(id), pitch(pitch), startBeats(startBeats),
-          lengthBeats(lengthBeats), velocity(velocity), muted(muted),
-          probability(probability), tension(tension) {}
-  };
+  using MidiNoteSpec = zenith::MidiNote;
 
   void addNotes(const juce::String &clipId,
                 const std::vector<MidiNoteSpec> &notes,
@@ -589,36 +581,6 @@ public:
   juce::File getAssetDirectory(const juce::String& name);
 
   //==========================================================================
-  // God Mode Helpers (Eyes for AI)
-  //==========================================================================
-  
-  /**
-   * @brief Get a property from any node in the project by its unique ID
-   */
-  juce::var getProperty(const juce::String& nodeId, const juce::String& propId) const;
-
-  /**
-   * @brief Set a property on any node in the project by its unique ID
-   */
-  void setProperty(const juce::String& nodeId, const juce::String& propId, const juce::var& value);
-
-  /**
-   * @brief Returns a structured map of the entire project (IDs and Names)
-   * This gives the AI a 'mental map' of the project structure.
-   */
-  juce::var getProjectHierarchy() const;
-
-  /**
-   * @brief Returns a list of strings representing the undo history
-   */
-  juce::StringArray getUndoHistory() const;
-
-  /**
-   * @brief Perform multiple undos to reach a specific point in history
-   */
-  void undoTo(int index);
-
-  //==========================================================================
   // Routing Graph
   //==========================================================================
   zenith::RoutingGraph &getRoutingGraph() { return routingGraph; }
@@ -628,20 +590,18 @@ public:
   // Debug Helpers
   //==========================================================================
 
+#if JUCE_DEBUG
   void dumpClipStructureToLog() const;
-
-  juce::String generateUniqueId(const juce::String &prefix);
-
-
+#endif
 
 private:
   //==========================================================================
   // Helper Methods
   //==========================================================================
 
-  // Moved to public
+  void createDefaultState();
+  juce::String generateUniqueId(const juce::String &prefix);
   juce::ValueTree findTrackInternal(const juce::String &trackId) const;
-
   juce::ValueTree findNote(const juce::String &trackId,
                            const juce::String &clipId,
                            const juce::String &noteId);
@@ -660,7 +620,6 @@ private:
   // juce::UndoManager undoManager; // Moved to public as per Step 1
   std::atomic<int> idCounter{0};
   mutable std::unordered_map<juce::String, juce::ValueTree> trackIdMap_;
-  mutable std::unordered_map<juce::String, juce::ValueTree> nodeCache_; // Full project cache
   std::atomic<bool> isDirty{false};
   juce::File projectFile;
   zenith::RoutingGraph routingGraph;
@@ -668,6 +627,7 @@ private:
 
   std::unique_ptr<TrackStateManager> trackStateManager;
   std::unique_ptr<ClipStateManager> clipStateManager;
+  std::unique_ptr<MidiNoteStateManager> midiNoteStateManager;
   std::unique_ptr<AutomationStateManager> automationStateManager;
   std::unique_ptr<ProjectFileIO> projectFileIO;
 

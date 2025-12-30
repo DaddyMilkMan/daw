@@ -172,7 +172,6 @@ public:
 
 private:
   juce::SpinLock voiceLock_;
-  mutable juce::SpinLock modMatrixLock_;
   juce::MPESynthesiser synthesiser_;
   std::atomic<double> currentBpm_{120.0};
   juce::AudioProcessorValueTreeState parameters_;
@@ -184,7 +183,7 @@ private:
   ZenithEffects effects_;
 
   // Modulation Matrix Storage (Global for UI, applied to voices)
-  // Modulation Matrix Storage (Global for UI, applied to voices)
+  juce::SpinLock modMatrixLock_;
   std::array<ModulationSlot, 64> globalModMatrix_;
 
   // Visualizer Buffer

@@ -76,7 +76,7 @@ public:
     glowPaint.setStyle(SkPaint::kFill_Style);
     glowPaint.setColor(withAlpha(color, alpha));
     glowPaint.setMaskFilter(
-        SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, blurRadius));
+        SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle, blurRadius));
 
     if (cornerRadius > 0.0f) {
       SkRRect rrect = SkRRect::MakeRectXY(bounds, cornerRadius, cornerRadius);
@@ -110,7 +110,7 @@ public:
     outerPaint.setStrokeWidth(strokeWidth + 4.0f);
     outerPaint.setColor(withAlpha(color, alpha * 0.3f));
     outerPaint.setMaskFilter(SkMaskFilter::MakeBlur(
-        kNormal_SkBlurStyle, blurRadius * 1.5f));
+        SkBlurStyle::kNormal_SkBlurStyle, blurRadius * 1.5f));
 
     // Inner glow layer
     SkPaint innerPaint;
@@ -119,7 +119,7 @@ public:
     innerPaint.setStrokeWidth(strokeWidth);
     innerPaint.setColor(withAlpha(color, alpha));
     innerPaint.setMaskFilter(SkMaskFilter::MakeBlur(
-        kNormal_SkBlurStyle, blurRadius * 0.5f));
+        SkBlurStyle::kNormal_SkBlurStyle, blurRadius * 0.5f));
 
     // Core (solid) layer
     SkPaint corePaint;
@@ -166,7 +166,7 @@ public:
     glowPaint.setAntiAlias(true);
     glowPaint.setColor(withAlpha(color, alpha * 0.6f));
     glowPaint.setMaskFilter(
-        SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, blurRadius));
+        SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle, blurRadius));
     canvas->drawString(text, x, y, font, glowPaint);
 
     // Main text
@@ -198,7 +198,7 @@ public:
     glowPaint.setStrokeWidth(3.0f);
     glowPaint.setColor(withAlpha(color, alpha * 0.5f));
     glowPaint.setMaskFilter(
-        SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, blurRadius));
+        SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle, blurRadius));
     canvas->drawCircle(center.x(), center.y(), radius, glowPaint);
 
     // Inner ring
@@ -236,7 +236,7 @@ public:
     glowPaint.setStrokeWidth(2.0f + pulseIntensity * 2.0f);
     glowPaint.setColor(withAlpha(color, alpha));
     glowPaint.setMaskFilter(
-        SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, blurRadius));
+        SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle, blurRadius));
 
     if (cornerRadius > 0.0f) {
       SkRRect rrect = SkRRect::MakeRectXY(bounds, cornerRadius, cornerRadius);
@@ -294,7 +294,7 @@ public:
       glowPaint.setAntiAlias(true);
       glowPaint.setColor(withAlpha(peakColor, 0.6f * globalGlow));
       glowPaint.setMaskFilter(
-          SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, blurRadius));
+          SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle, blurRadius));
       canvas->drawRect(peakRect, glowPaint);
     }
   }
@@ -315,7 +315,7 @@ public:
       glowPaint.setStrokeWidth(4.0f);
       glowPaint.setColor(withAlpha(color, 0.3f * globalGlow));
       glowPaint.setMaskFilter(
-          SkMaskFilter::MakeBlur(kNormal_SkBlurStyle,
+          SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle,
                                  design::effects::GLOW_MEDIUM * globalGlow));
       canvas->drawLine(x, top, x, bottom, glowPaint);
     }

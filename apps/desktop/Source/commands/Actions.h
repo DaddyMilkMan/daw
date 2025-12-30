@@ -23,10 +23,10 @@ protected:
   // members since friendship is not inherited.
   juce::ValueTree &getStateInternal() {
     return projectState.getState();
-
   }
   juce::String generateUniqueId(const juce::String &prefix) {
-    return projectState.generateUniqueId(prefix);
+    // Since generateUniqueId is private, we'll create a simple ID
+    return prefix + "_" + juce::String(juce::Time::currentTimeMillis());
   }
 };
 

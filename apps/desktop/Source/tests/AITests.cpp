@@ -222,7 +222,7 @@ public:
       bool completed = false;
       utils::StemSeparationJob::StemFiles results;
 
-      auto job = std::make_unique<utils::StemSeparationJob>(testFile, outputDir, [&](const utils::StemSeparationJob::StemFiles& res) {
+      auto job = new utils::StemSeparationJob(testFile, outputDir, [&](const utils::StemSeparationJob::StemFiles& res) {
           results = res;
           completed = true;
           completionEvent.signal();
@@ -230,6 +230,7 @@ public:
 
       // Run job synchronously for test
       job->runJob();
+      delete job;
 
       // Wait for async callback with explicit timeout (2 seconds)
       bool signaled = completionEvent.wait(2000);

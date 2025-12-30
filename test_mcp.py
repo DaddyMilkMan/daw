@@ -2,10 +2,10 @@ import subprocess
 import json
 import time
 import os
-import os
+import signal
+
 # Path to executable
-default_path = "./build/ZenithDAW_artefacts/Debug/Zenith DAW"
-exe_path = os.environ.get('ZENITH_DAW_PATH', default_path)
+exe_path = "./build/ZenithDAW_artefacts/Debug/Zenith DAW"
 
 # Start process
 print(f"Launching {exe_path}...")

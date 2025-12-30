@@ -301,7 +301,7 @@ private:
 
     if (blurAmount > 0) {
       shadowPaint.setMaskFilter(
-          SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, blurAmount));
+          SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle, blurAmount));
       SkRRect shadowRRect = rrect;
       shadowRRect.offset(0, offset);
       canvas->drawRRect(shadowRRect, shadowPaint);
@@ -517,7 +517,7 @@ private:
     glowPaint.setStrokeWidth(2.0f);
     glowPaint.setColor(withAlpha(accentColor, 0.4f * globalGlow));
     glowPaint.setMaskFilter(
-        SkMaskFilter::MakeBlur(kNormal_SkBlurStyle,
+        SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle,
                                design::effects::GLOW_MEDIUM * globalGlow));
 
     canvas->drawRRect(rrect, glowPaint);

@@ -90,17 +90,17 @@ public:
   // Take Folder Management (override from Track)
   //==========================================================================
 
-  int getNumTakeFolders() const override {
+  int getNumTakeFolders() const {
     return static_cast<int>(takeFoldersOwned_.size());
   }
 
-  TakeFolder *getTakeFolder(int index) const override {
+  TakeFolder *getTakeFolder(int index) const {
     if (index >= 0 && index < static_cast<int>(takeFoldersOwned_.size()))
       return takeFoldersOwned_[index].get();
     return nullptr;
   }
 
-  TakeFolder *getTakeFolderAt(int64_t position) const override {
+  TakeFolder *getTakeFolderAt(int64_t position) const {
     for (const auto &folder : takeFoldersOwned_) {
       if (folder && position >= folder->getStartPosition() &&
           position < folder->getEndPosition()) {
@@ -110,7 +110,7 @@ public:
     return nullptr;
   }
 
-  void addTakeFolder(std::shared_ptr<TakeFolder> folder) override {
+  void addTakeFolder(std::shared_ptr<TakeFolder> folder) {
     if (folder) {
       takeFoldersOwned_.push_back(folder);
     }
@@ -161,7 +161,6 @@ protected:
   std::vector<std::shared_ptr<TakeFolder>> takeFoldersOwned_;
   std::atomic<const ClipSnapshot *> activeClipSnapshot_{nullptr};
   std::shared_ptr<ClipSnapshot> currentClipSnapshot_;
-  std::vector<std::shared_ptr<ClipSnapshot>> clipSnapshotTrash_;
 
   void updateClipSnapshot();
   juce::AudioBuffer<float> clipBuffer_;

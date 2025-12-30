@@ -29,8 +29,7 @@ void TempoMapSynchronizer::start() {
   DBG("TempoMapSynchronizer: Starting");
 
   // Listen to ProjectState changes
-  projectState.getState().addListener(this);
-
+  projectState.addListener(this);
 
   // Initial update
   forceUpdate();
@@ -47,8 +46,7 @@ void TempoMapSynchronizer::stop() {
   DBG("TempoMapSynchronizer: Stopping");
 
   // Stop listening
-  projectState.getState().removeListener(this);
-
+  projectState.removeListener(this);
 
   isActive = false;
 }

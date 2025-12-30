@@ -94,47 +94,36 @@ void PluginChain::process(juce::AudioBuffer<float> &buffer,
       
       // If the plugin has more inputs than our main bus, assume the rest are sidechain/aux
       if (sidechain != nullptr && numTotalInputChannels > numMainChannels) {
-        auto* scBuffer = snapshot->sidechainBuffer.get();
-        
-        // RT-Safe Check: Ensure we have a valid buffer large enough for this plugin
-        // Due to "High Watermark" allocation in updateSnapshot, this should always be true
-        // unless the plugin dynamicallly increased channel count beyond expectation (unsupported by this safety fixes without lock)
-        if (scBuffer != nullptr && 
-            scBuffer->getNumChannels() >= numTotalInputChannels && 
-            scBuffer->getNumSamples() >= numSamples) {
-            
-            // Create a stack-based proxy buffer that views the pre-allocated memory
-            // with the correct number of channels for this specific plugin
-            juce::AudioBuffer<float> proxy(scBuffer->getArrayOfWritePointers(), 
-                                         numTotalInputChannels, 
-                                         numSamples);
-
-            // Copy main channels
-            for (int i = 0; i < numMainChannels; ++i)
-              proxy.copyFrom(i, 0, buffer, i, 0, numSamples);
-              
-            // Copy sidechain channels
-            const int numSidechainChansToCopy = juce::jmin(sidechain->getNumChannels(),
-                                                           numTotalInputChannels - numMainChannels);
-            
-            for (int i = 0; i < numSidechainChansToCopy; ++i)
-              proxy.copyFrom(numMainChannels + i, 0, *sidechain, i, 0, numSamples);
-                                         
-            // Clear any remaining unconnected channels to ensure clean inputs
-            for (int i = numMainChannels + numSidechainChansToCopy; i < numTotalInputChannels; ++i)
-               proxy.clear(i, 0, numSamples);
-
-            plugin->processBlock(proxy, midi);
-
-            // Copy back main channels (outputs)
-            for (int i = 0; i < numMainChannels; ++i)
-              buffer.copyFrom(i, 0, proxy, i, 0, numSamples);
-
-        } else {
-             // Fallback: Buffer too small (should not happen with correct prepareToPlay/updateSnapshot logic)
-             // Process without sidechain to avoid crash/alloc
-             plugin->processBlock(buffer, midi);
+        // Ensure proxy buffer is big enough
+        if (sidechainProxyBuffer_.getNumChannels() < numTotalInputChannels || 
+            sidechainProxyBuffer_.getNumSamples() < numSamples) {
+            sidechainProxyBuffer_.setSize(numTotalInputChannels, numSamples, false, true, true);
         }
+
+        // Copy main channels
+        for (int i = 0; i < numMainChannels; ++i)
+          sidechainProxyBuffer_.copyFrom(i, 0, buffer, i, 0, numSamples);
+          
+        // Silence any gaps between main channels and sidechain start if any?
+        // Assuming sidechain inputs start immediately after main inputs.
+        
+        // Copy sidechain channels
+        const int numSidechainChansToCopy = juce::jmin(sidechain->getNumChannels(),
+                                                       numTotalInputChannels - numMainChannels);
+        
+        for (int i = 0; i < numSidechainChansToCopy; ++i)
+          sidechainProxyBuffer_.copyFrom(numMainChannels + i, 0, *sidechain, i, 0,
+                                     numSamples);
+                                     
+        // Clear any remaining unconnected channels
+        for (int i = numMainChannels + numSidechainChansToCopy; i < numTotalInputChannels; ++i)
+           sidechainProxyBuffer_.clear(i, 0, numSamples);
+
+        plugin->processBlock(sidechainProxyBuffer_, midi);
+
+        // Copy back main channels
+        for (int i = 0; i < numMainChannels; ++i)
+          buffer.copyFrom(i, 0, sidechainProxyBuffer_, i, 0, numSamples);
       } else {
         plugin->processBlock(buffer, midi);
       }
@@ -159,8 +148,7 @@ void PluginChain::prepareToPlay(double sampleRate, int blockSize) {
       b->prepare(sampleRate);
   }
 
-  // Update snapshot to ensure sidechain buffers are resized if maxChannels increased
-  updateSnapshot();
+  sidechainProxyBuffer_.setSize(maxChannels, blockSize, false, true, true);
 }
 
 void PluginChain::releaseResources() {
@@ -169,46 +157,7 @@ void PluginChain::releaseResources() {
 }
 
 void PluginChain::updateSnapshot() {
-  // 1. Calculate requirements
-  int maxChannels = 2; 
-  // Ensure we allocate at least enough for typical usage, or respect current block size
-  int requiredSamples = currentBlockSize_ > 0 ? currentBlockSize_ : 4096;
-
-  for (const auto& p : pluginsOwned_) {
-     // Check both input and output count to be safe, though sidechain is usually input-focused
-     maxChannels = std::max(maxChannels, p->getTotalNumInputChannels());
-  }
-
-  // 2. High Watermark Allocation Strategy
-  std::shared_ptr<juce::AudioBuffer<float>> chainBuffer;
-  int currentCapacityChannels = 0;
-  int currentCapacitySamples = 0;
-
-  if (currentSnapshot_ && currentSnapshot_->sidechainBuffer) {
-      currentCapacityChannels = currentSnapshot_->sidechainBuffer->getNumChannels();
-      currentCapacitySamples = currentSnapshot_->sidechainBuffer->getNumSamples();
-  }
-
-  // "High Watermark": Capacity only grows.
-  int targetChannels = std::max(maxChannels, currentCapacityChannels);
-  int targetSamples = std::max(requiredSamples, currentCapacitySamples);
-
-  bool reallocate = true;
-  if (currentSnapshot_ && currentSnapshot_->sidechainBuffer) {
-      // If the current buffer meets the TARGET requirements (which it should if it defines the capacity), reuse it.
-      // But if target > current, we must reallocate.
-      if (currentCapacityChannels >= targetChannels && currentCapacitySamples >= targetSamples) {
-          chainBuffer = currentSnapshot_->sidechainBuffer;
-          reallocate = false;
-      }
-  }
-
-  if (reallocate) {
-      chainBuffer = std::make_shared<juce::AudioBuffer<float>>(targetChannels, targetSamples);
-      chainBuffer->clear();
-  }
-
-  auto newSnapshot = std::make_shared<PluginSnapshot>(pluginsOwned_, bindingsOwned_, chainBuffer);
+  auto newSnapshot = std::make_shared<PluginSnapshot>(pluginsOwned_, bindingsOwned_);
   activeSnapshot_.store(newSnapshot.get(), std::memory_order_release);
   
   RealTimeGarbageCollector::getInstance().deferDelete(currentSnapshot_);

@@ -30,9 +30,7 @@ def send_mcp_request(process, method, params=None, request_id=1):
 
 def main():
     # Launch the DAW in MCP mode
-    import os
-    default_path = "/home/micah/Desktop/zenith/daw/build/ZenithDAW_artefacts/Release/Zenith DAW"
-    daw_path = os.environ.get('ZENITH_DAW_PATH', default_path)
+    daw_path = "/home/micah/Desktop/zenith/daw/build/ZenithDAW_artefacts/Release/Zenith DAW"
     
     print("Starting Zenith DAW in MCP mode...")
     

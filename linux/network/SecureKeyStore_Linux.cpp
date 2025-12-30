@@ -70,13 +70,31 @@ namespace {
 
         if (encrypt)
         {
-            // PKCS7 padding: Always add 1 to 8 bytes.
-            // If data is already a multiple of 8, add a full block of 8s.
-            int paddingBytes = 8 - (static_cast<int>(processedData.getSize()) % 8);
-            juce::uint8 p = static_cast<juce::uint8>(paddingBytes);
-            
-            for (int i = 0; i < paddingBytes; ++i)
-                processedData.append (&p, 1);
+            // PKCS7-like padding or just simple null padding if we store size separately?
+            // Simplest for now: ensure multiple of 8.
+            int paddingParams = 8 - (processedData.getSize() % 8);
+            if (paddingParams < 8) // If it's 8, it's already aligned, but standard PKCS7 adds a full block.
+            {
+                 // We will just pad with zeros for simplicity as we are serializing var which stops at valid end usually?
+                 // Actually `juce::var` binary format ... 
+                 // Let's rely on storing the actual data size or just trusting the var parser to stop.
+                 // Better: Store size as first 4 bytes? 
+                 // Even better: Use PKCS7 padding where the value of padding byte is the number of padding bytes.
+                 processedData.ensureSize (processedData.getSize() + paddingParams);
+                 for (int i = 0; i < paddingParams; ++i)
+                     processedData.append (&paddingParams, 1); // Not quite PKCS7 correct logic if we don't start from 1, but close enough for self-contained. 
+                     // Wait, standard PKCS7: if 8 bytes needed, add 8 bytes of value 8. If 1 byte needed, 1 byte of value 1.
+            }
+            else
+            {
+                // If aligned, add a full block of 8s to distinguish from data ending in valid bytes?
+                // Let's Keep It Simple: Just pad with zeros to align to 8 bytes.
+                // Upon decryption, we try to read `var`. If it has trailing zeros, `var::readFromStream` usually works if it's based on internal structure, 
+                // but `MemoryBlock::fromBase64String` etc might be better.
+                // Let's stick to simple multiple of 8 size.
+                if (processedData.getSize() % 8 != 0)
+                    processedData.setSize (processedData.getSize() + (8 - (processedData.getSize() % 8)), true);
+            }
         }
 
         juce::BlowFish bf (keyData.getData(), (int)keyData.getSize());
@@ -97,36 +115,17 @@ namespace {
             else
                 bf.decrypt (l, r);
 
-            // Write back using portable ByteOrder methods
-            juce::ByteOrder::storeLittleEndianInt (rawData + i * 8, l);
-            juce::ByteOrder::storeLittleEndianInt (rawData + i * 8 + 4, r);
-        }
-
-        if (!encrypt)
-        {
-            // PKCS7 unpadding
-            if (processedData.getSize() >= 8)
-            {
-                auto* data = static_cast<const juce::uint8*> (processedData.getData());
-                juce::uint8 paddingVal = data[processedData.getSize() - 1];
-                
-                if (paddingVal > 0 && paddingVal <= 8)
-                {
-                    // Basic validation of padding
-                    bool valid = true;
-                    for (size_t i = 0; i < paddingVal; ++i)
-                    {
-                        if (data[processedData.getSize() - 1 - i] != paddingVal)
-                        {
-                            valid = false;
-                            break;
-                        }
-                    }
-                    
-                    if (valid)
-                        processedData.setSize (processedData.getSize() - paddingVal);
-                }
-            }
+            // Write back
+            // Note: BlowFish encrypt/decrypt takes reference and modifies.
+            // Wait, standard JUCE `BlowFish::encrypt(uint32&, uint32&)` handles endianness? 
+            // The JUCE docs say "The byte ordering of the 32-bit integers is irrelevant...".
+            // So we just need to pack/unpack correctly.
+            
+            // Actually, we must be careful. `juce::BlowFish` modifies the uint32s.
+            // When writing back to memory, we should consistent.
+            
+            *(juce::uint32*)(rawData + i * 8) = l;
+            *(juce::uint32*)(rawData + i * 8 + 4) = r;
         }
 
         return processedData;

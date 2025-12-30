@@ -7,9 +7,13 @@
   ==============================================================================
 */
 
-#include "ui/framework/PlatformWindowUtils.h"
-#include <gpu/ganesh/gl/GrGLAssembleInterface.h>
-#include "engine/ZenithLogger.h"
+#include "../../../ui/framework/PlatformWindowUtils.h"
+#include <include/gpu/ganesh/gl/GrGLInterface.h>
+#include <include/core/SkRefCnt.h>
+#include <include/gpu/ganesh/gl/GrGLInterface.h>
+#include <include/gpu/ganesh/gl/GrGLAssembleInterface.h>
+#include <juce_opengl/juce_opengl.h>
+#include "../../../engine/ZenithLogger.h"
 
 #ifdef __linux__
 namespace zenith {
@@ -18,21 +22,13 @@ sk_sp<const GrGLInterface> PlatformWindowUtils::createNativeGLInterface(juce::Op
     auto interface = GrGLMakeNativeInterface();
     
     if (interface == nullptr) {
-        ZENITH_LOG_WARNING("PlatformWindowUtils: Native GL interface creation failed, trying fallback...");
-        // Fallback for Linux GL drivers
+        ZENITH_LOG_INFO("PlatformWindowUtils: GrGLMakeNativeInterface failed, using assembled fallback");
         interface = GrGLMakeAssembledInterface(
-            &context, [](void* ctx, const char* name) -> GrGLFuncPtr {
-                juce::ignoreUnused(ctx);
+            &context, [](void* /*ctx*/, const char* name) -> GrGLFuncPtr {
                 return (GrGLFuncPtr) juce::OpenGLHelpers::getExtensionFunction(name);
             });
-            
-        if (interface) {
-             ZENITH_LOG_INFO("PlatformWindowUtils: Assembled GL interface created successfully.");
-        } else {
-             ZENITH_LOG_ERROR("PlatformWindowUtils: Fallback GL interface creation FAILED.");
-        }
     } else {
-        ZENITH_LOG_INFO("PlatformWindowUtils: Native GL interface created successfully.");
+        ZENITH_LOG_INFO("PlatformWindowUtils: GrGLMakeNativeInterface succeeded");
     }
     
     return interface;

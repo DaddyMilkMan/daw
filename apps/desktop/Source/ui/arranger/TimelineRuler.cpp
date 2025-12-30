@@ -373,9 +373,6 @@ void TimelineRuler::drawSkia(SkCanvas *canvas) {
                            SkTextEncoding::kUTF8, textX, textY, tooltipFont,
                            tooltipTextPaint);
   }
-
-  // Draw any future child components
-  drawChildren(canvas);
 }
 #else
 void TimelineRuler::paint(juce::Graphics &g) {

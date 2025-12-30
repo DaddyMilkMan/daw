@@ -9,16 +9,11 @@
 
 namespace zenith {
 
-// Forward declaration for test friend
 /**
  * @class PluginChain
  * @brief Manages a sequence of plugins with RT-safe snapshot pattern.
  */
-// Forward declare test class
-namespace tests { class PluginBufferingTests; }
-
 class PluginChain {
-  friend class ::zenith::tests::PluginBufferingTests;
 public:
   //============================================================================
   /**
@@ -47,7 +42,6 @@ public:
 
   int getNumPlugins() const;
   juce::AudioPluginInstance *getPlugin(int index) const;
-  const std::vector<std::shared_ptr<juce::AudioPluginInstance>>& getPlugins() const { return pluginsOwned_; }
 
   // Audio thread safe
   void process(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midi,
@@ -108,15 +102,13 @@ private:
   struct PluginSnapshot {
     std::vector<std::shared_ptr<juce::AudioPluginInstance>> plugins;
     
+    // Bindings are RT-safe, kept alive by shared_ptr
     std::vector<std::shared_ptr<PluginAutomationBinding>> bindings;
-    std::shared_ptr<juce::AudioBuffer<float>> sidechainBuffer;
 
     PluginSnapshot() = default;
     explicit PluginSnapshot(
         const std::vector<std::shared_ptr<juce::AudioPluginInstance>>& ownedPlugins,
-        const std::vector<std::shared_ptr<PluginAutomationBinding>>& ownedBindings,
-        std::shared_ptr<juce::AudioBuffer<float>> buffer) 
-      : sidechainBuffer(std::move(buffer)) {
+        const std::vector<std::shared_ptr<PluginAutomationBinding>>& ownedBindings) {
       plugins.reserve(ownedPlugins.size());
       for (const auto &p : ownedPlugins)
         plugins.push_back(p);
@@ -137,6 +129,8 @@ private:
 
   double currentSampleRate_ = 0;
   int currentBlockSize_ = 0;
+
+  juce::AudioBuffer<float> sidechainProxyBuffer_;
   
   // Helper to find existing binding
   std::shared_ptr<PluginAutomationBinding> findBinding(int pluginIndex, int paramIndex);

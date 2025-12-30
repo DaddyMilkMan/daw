@@ -17,7 +17,7 @@
 #include <core/SkRect.h>
 #include <core/SkShader.h>
 #include <core/SkSurface.h>
-#include <include/core/SkBlurTypes.h>
+#include <core/SkBlurTypes.h>
 #else
 #include "design-system/ZenithDesignSystem.h"
 // Additional mocks if needed

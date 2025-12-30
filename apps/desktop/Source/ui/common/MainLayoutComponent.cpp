@@ -15,7 +15,7 @@
 #include "../../instruments/InstrumentRegistry.h"
 #include "../arranger/ArrangerComponent.h"
 #include "../arranger/ArrangerClipManager.h"
-#include "../panels/BrowserPanel.h"
+#include "../browser/BrowserPanel.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../framework/GlassmorphicPanel.h"
 #include "../framework/LayoutManager.h"
@@ -23,7 +23,6 @@
 #include "../piano-roll/PianoRollComponent.h"
 #include "../sample-editor/SampleEditorComponent.h"
 #include "../views/SessionViewComponent.h"
-
 #include "../ui/common/RemoteCursorOverlay.h"
 #include <memory>
 #include <utility>
@@ -32,8 +31,6 @@
 #include "../ui/piano-roll/PianoRollComponent.h"
 #include "ResizablePanelContainer.h"
 #include "HelpViewPanel.h"
-
-#include "../../engine/GrokGodModeHelper.h"
 
 namespace zenith {
 
@@ -80,7 +77,11 @@ public:
   }
 
   void drawSkia(SkCanvas *canvas) override {
-    drawChildren(canvas);
+    if (auto *view = getView(activeIndex_)) {
+      if (auto *sc = dynamic_cast<SkiaComponent *>(view)) {
+        sc->drawSkia(canvas);
+      }
+    }
   }
 
 private:
@@ -92,15 +93,12 @@ private:
 // MainLayoutComponent
 //==============================================================================
 
-
-MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state, CommandAPI &api)
-    : engine_(engine), projectState_(state), api_(api) {
-
+MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state)
+    : engine_(engine), projectState_(state) {
 
   // 1. Initialize Browser Model
   browserModel_ = std::make_unique<BrowserModel>(
       engine_.getInstrumentRegistry(), engine_.getPluginHost());
-  GrokGodModeHelper::getInstance().setBrowserModel(browserModel_.get());
 
   auto &layoutMgr = layout::LayoutManager::getInstance();
 
@@ -122,8 +120,7 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state, Co
         auto switcher = std::make_unique<ViewSwitcher>();
         // Add Arranger
         auto arranger =
-            std::make_unique<ArrangerComponent>(engine_, projectState_, api_);
-
+            std::make_unique<ArrangerComponent>(engine_, projectState_);
         arranger->onClipDoubleClicked = [this](const juce::String &trackId,
                                                const juce::String &clipId) {
           // Check clip type
@@ -234,8 +231,7 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state, Co
   auto switcher = std::make_unique<ViewSwitcher>();
   viewSwitcher_ = switcher.get();
 
-  auto arranger = std::make_unique<ArrangerComponent>(engine_, projectState_, api_);
-
+  auto arranger = std::make_unique<ArrangerComponent>(engine_, projectState_);
   arranger->onClipDoubleClicked = [this](const juce::String &trackId,
                                          const juce::String &clipId) {
     // Check clip type
@@ -326,12 +322,7 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state, Co
 
   panelContainer_->addPanel(std::move(centerContainer), centerCfg);
 
-  // 5. Apply Initial Layout from Manager (Complaint #1 Fix: Dynamic Furniture)
-  if (layoutMgr.hasLastLayout()) {
-      layoutMgr.applyLayout(layoutMgr.loadLastLayout(), panelContainer_.get());
-  }
-
-  // 6. Cursor Overlay with ID-to-Rect mapping for collaboration
+  // 5. Cursor Overlay with ID-to-Rect mapping for collaboration
   cursorOverlay_ = std::make_unique<RemoteCursorOverlay>();
   
   // Set up the mapper to convert selection IDs to screen rectangles

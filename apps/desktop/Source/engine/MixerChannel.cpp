@@ -250,13 +250,9 @@ MixerChannel::MixerChannel() {
   eqBands[3].frequency.store(8000.0f);
 
   // Initialize coefficient buffers
-<<<<<<< HEAD
   auto* coeffs = new FilterCoefficients();
   coeffs->incReferenceCount(); // Held by activeCoeffs_
   activeCoeffs_.store(coeffs);
-=======
-  activeCoeffs_ = new FilterCoefficients();
->>>>>>> origin/master
 
   consoleEmulation = std::make_unique<zenith::effects::ConsoleEmulation>();
 }
@@ -368,7 +364,6 @@ void MixerChannel::recalculateCoefficients() {
     newCoeffs->eq[i] = {coeffs.coefficients[0], coeffs.coefficients[1],
                         coeffs.coefficients[2], 1.0,
                         coeffs.coefficients[3], coeffs.coefficients[4]};
-<<<<<<< HEAD
   }
 
   // Atomically swap pointer - old coefficients will be released by GC
@@ -383,36 +378,15 @@ void MixerChannel::recalculateCoefficients() {
       oldCoeffs->decReferenceCount(); // Transfer ownership to smart pointer
       RealTimeGarbageCollector::getInstance().deferDelete(ptr);
   }
-=======
-  }
-
-  // Atomically swap pointer - old coefficients will be released when 
-  // oldCoeffs goes out of scope and its refcount drops to zero.
-  // FilterCoefficients uses juce::ReferenceCountedObjectPtr for safe lifetime management.
-  {
-    const juce::SpinLock::ScopedLockType sl(coeffLock_);
-    activeCoeffs_ = newCoeffs;
-  }
->>>>>>> origin/master
 }
 
 void MixerChannel::updateFiltersFromCoefficients() {
   // Safe atomic retrieval of current coefficients
-<<<<<<< HEAD
   // We don't increment refcount here as we assume the pointer is valid 
   // for the duration of this call (GC has 1s safety buffer)
   auto* localCoeffs = activeCoeffs_.load(std::memory_order_acquire);
 
   if (localCoeffs == nullptr)
-=======
-  FilterCoefficients::Ptr localCoeffs;
-  {
-    const juce::SpinLock::ScopedLockType sl(coeffLock_);
-    localCoeffs = activeCoeffs_;
-  }
-
-  if (!localCoeffs)
->>>>>>> origin/master
     return;
 
   // Apply HPF
@@ -579,25 +553,15 @@ void MixerChannel::setCompressorRatio(float ratio) {
 }
 
 void MixerChannel::setCompressorAttack(float attackMs) {
-<<<<<<< HEAD
   compAttack.store(juce::jlimit<float>(::zenith::constants::kMinCompAttackMs,
                                 ::zenith::constants::kMaxCompAttackMs, attackMs));
-=======
-  compAttack.store(juce::jlimit(constants::kMinCompAttackMs,
-                                constants::kMaxCompAttackMs, attackMs));
->>>>>>> origin/master
   compressor_.setAttack(attackMs);
   sendChangeMessage();
 }
 
 void MixerChannel::setCompressorRelease(float releaseMs) {
-<<<<<<< HEAD
   compRelease.store(juce::jlimit<float>(::zenith::constants::kMinCompReleaseMs,
                                  ::zenith::constants::kMaxCompReleaseMs, releaseMs));
-=======
-  compRelease.store(juce::jlimit(constants::kMinCompReleaseMs,
-                                 constants::kMaxCompReleaseMs, releaseMs));
->>>>>>> origin/master
   compressor_.setRelease(releaseMs);
   sendChangeMessage();
 }

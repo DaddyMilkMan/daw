@@ -17,8 +17,9 @@
 #pragma once
 
 #include "ZenithSkia.h"
-#include <core/SkMaskFilter.h>
 #include <core/SkPath.h>
+#include <core/SkPaint.h>
+#include <core/SkMaskFilter.h>
 
 namespace zenith {
 namespace icons {
