@@ -162,12 +162,16 @@ public:
         // Use atomic swap for thread safety
         auto newSnapshot = std::make_unique<std::unordered_map<juce::String, TrackState>>(*currentSnapshot_.load());
         (*newSnapshot)[trackId] = state;
-        currentSnapshot_.store(newSnapshot.release());
         
-        // Clean up old snapshot
+        // BUG FIX #3: Properly save old pointer before replacing using exchange
+        auto* oldPtr = currentSnapshot_.exchange(newSnapshot.release());
+        
+        // Clean up previous old snapshot
         if (oldSnapshot_) {
             delete oldSnapshot_;
         }
+        // Store the just-replaced pointer for deferred deletion on next call
+        oldSnapshot_ = oldPtr;
     }
     
     const TrackState* getTrackState(const juce::String& trackId) const {

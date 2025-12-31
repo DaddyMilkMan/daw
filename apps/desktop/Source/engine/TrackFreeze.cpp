@@ -238,10 +238,13 @@ void FreezeRenderThread::run() {
     }
 
     std::unique_ptr<juce::OutputStream> outputStream = std::move(fileStream);
-    
+    auto options = juce::AudioFormatWriterOptions()
+                       .withSampleRate(sampleRate)
+                       .withNumChannels(2)
+                       .withBitsPerSample(constants::kFreezeBitDepth);
+
     std::unique_ptr<juce::AudioFormatWriter> writer(
-        wavFormat.createWriterFor(outputStream.get(), sampleRate, 2, 
-                                constants::kFreezeBitDepth, {}, 0));
+        wavFormat.createWriterFor(outputStream, options));
     
     if (writer == nullptr) {
         DBG("FreezeRenderThread: Failed to create audio writer");

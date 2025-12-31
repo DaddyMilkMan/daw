@@ -20,7 +20,12 @@ PluginHost::PluginHost() {
   DBG("PluginHost: Initializing...");
 
   // Add VST3 format
-  formatManager.addDefaultFormats();
+#if JUCE_PLUGINHOST_VST3
+  formatManager.addFormat(new juce::VST3PluginFormat());
+#endif
+#if JUCE_MAC && JUCE_PLUGINHOST_AU
+  formatManager.addFormat(new juce::AudioUnitPluginFormat());
+#endif
   formatManager.addFormat(new InternalPluginFormat());
 
   // Get VST3 format pointer for later use

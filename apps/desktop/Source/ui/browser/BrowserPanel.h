@@ -17,14 +17,14 @@
 
 #pragma once
 
-#include "BrowserRecentSidebar.h"
+#include "../panels/BrowserRecentSidebar.h"
 #include "../../browser/BrowserPreviewEngine.h"
 #include "../../browser/BrowserScanner.h"
-#include "BrowserWaveformLoader.h"
-#include "BrowserSearchBar.h"
-#include "BrowserFilterBar.h"
-#include "BrowserListView.h"
-#include "BrowserPreviewPanel.h"
+#include "../panels/BrowserWaveformLoader.h"
+#include "../panels/BrowserSearchBar.h"
+#include "../panels/BrowserFilterBar.h"
+#include "../panels/BrowserListView.h"
+#include "../panels/BrowserPreviewPanel.h"
 
 namespace zenith {
 

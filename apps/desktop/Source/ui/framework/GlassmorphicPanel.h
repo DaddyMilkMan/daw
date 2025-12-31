@@ -65,6 +65,7 @@ public:
     bool drawTopHighlight = true;
     bool drawShadow = true;
     bool useBackdropBlur = true; // NEW: Enable real blur (can disable for perf)
+    SkColor customTintColor = 0x00000000; // Optional custom tint
   };
 
   /**
@@ -176,7 +177,7 @@ public:
 
     // 2. Background: REAL backdrop blur OR solid fallback
     float blurRadius = getBlurRadiusForStyle(opts.style);
-    SkColor tintColor = getTintColorForStyle(opts.style);
+    SkColor tintColor = opts.customTintColor != 0 ? opts.customTintColor : getTintColorForStyle(opts.style);
     float tintOpacity = getTintOpacityForStyle(opts.style);
 
     bool isBlurEnabled = opts.useBackdropBlur && blurRadius > 0.0f &&
@@ -190,7 +191,7 @@ public:
       );
     } else {
       // Fallback to solid gradient (flat mode or performance reasons)
-      drawSolidBackground(canvas, rrect, opts.style);
+      drawSolidBackground(canvas, rrect, opts.style, opts.customTintColor);
     }
 
     // NEW: Noise Texture (Subtle tactility)
@@ -224,7 +225,7 @@ public:
 
     SkPaint dividerPaint;
     dividerPaint.setAntiAlias(true);
-    dividerPaint.setStrokeWidth(1.0f);
+    dividerPaint.setStrokeWidth(0.6f);
     dividerPaint.setColor(colors::BORDER_SUBTLE);
     canvas->drawLine(x1, y, x2, y, dividerPaint);
 
@@ -312,13 +313,21 @@ private:
    * @brief Draw solid gradient background (fallback when blur is disabled)
    */
   static void drawSolidBackground(SkCanvas *canvas, const SkRRect &rrect,
-                                  Style style) {
+                                  Style style, SkColor customTint = 0) {
     using namespace design;
 
     SkPaint bgPaint;
     bgPaint.setAntiAlias(true);
 
+    if (customTint != 0) {
+        // Use custom tint flat color
+        bgPaint.setColor(customTint);
+        canvas->drawRRect(rrect, bgPaint);
+        return;
+    }
+
     SkColor bgTop, bgBottom;
+
 
     switch (style) {
     case Style::Flat:
@@ -341,7 +350,11 @@ private:
       bgTop = colors::BG_DARK;
       bgBottom = colors::BG_DARKEST;
       break;
+      bgTop = colors::BG_DARK;
+      bgBottom = colors::BG_DARKEST;
+      break;
     }
+
 
     SkRect bounds = rrect.getBounds();
     SkPoint gradPoints[2] = {{bounds.centerX(), bounds.top()},
@@ -412,7 +425,7 @@ private:
     SkPaint rimPaint;
     rimPaint.setAntiAlias(true);
     rimPaint.setStyle(SkPaint::kStroke_Style);
-    rimPaint.setStrokeWidth(1.0f); // 1px stroke
+    rimPaint.setStrokeWidth(0.8f); // 0.8px stroke
 
     // Gradient from Top-Left (White) to Bottom-Right (Transparent)
     // This simulates light catching the top-left edge
@@ -422,7 +435,7 @@ private:
     };
 
     SkColor colors[2] = {
-        SkColorSetA(SK_ColorWHITE, 180), // ~70% White at corner
+        SkColorSetA(SK_ColorWHITE, 60), // Reduced from 180 (Too bright/pill-like)
         SkColorSetA(SK_ColorWHITE, 0)    // Transparent
     };
 
@@ -452,7 +465,7 @@ private:
     SkPaint highlightPaint;
     highlightPaint.setAntiAlias(true);
     highlightPaint.setStyle(SkPaint::kStroke_Style);
-    highlightPaint.setStrokeWidth(1.0f);
+    highlightPaint.setStrokeWidth(0.8f);
 
     // Gradient from visible white at top to transparent
     SkPoint hlPoints[2] = {
@@ -480,7 +493,7 @@ private:
     SkPaint borderPaint;
     borderPaint.setAntiAlias(true);
     borderPaint.setStyle(SkPaint::kStroke_Style);
-    borderPaint.setStrokeWidth(1.0f);
+    borderPaint.setStrokeWidth(0.8f);
 
     SkRect bounds = rrect.getBounds();
     SkRRect borderRRect = rrect;
@@ -494,8 +507,8 @@ private:
       SkPoint pts[2] = {{bounds.left(), bounds.top()},
                         {bounds.right(), bounds.bottom()}};
       SkColor colors[2] = {
-          SkColorSetA(SK_ColorWHITE, 60), // Brighter top-left
-          SkColorSetA(SK_ColorWHITE, 20)  // Subtler bottom-right
+          SkColorSetA(SK_ColorWHITE, 30), // Was 60
+          SkColorSetA(SK_ColorWHITE, 10)  // Was 20
       };
       borderPaint.setShader(SkGradientShader::MakeLinear(
           pts, colors, nullptr, 2, SkTileMode::kClamp));

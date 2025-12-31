@@ -26,6 +26,7 @@
 
 namespace zenith {
 
+#ifndef __linux__
 sk_sp<const GrGLInterface>
 PlatformWindowUtils::createNativeGLInterface(juce::OpenGLContext &context) {
   juce::ignoreUnused(context); // Might be used in future or other platforms
@@ -83,5 +84,6 @@ PlatformWindowUtils::createNativeGLInterface(juce::OpenGLContext &context) {
   return nullptr;
 #endif
 }
+#endif
 
 } // namespace zenith

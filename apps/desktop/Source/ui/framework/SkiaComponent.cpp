@@ -66,7 +66,7 @@ SkCanvas *SkiaComponent::getSkiaCanvas(juce::Graphics &g) {
 
 void SkiaComponent::applyGlow(SkPaint &paint, float intensity) {
   // Apply global glow intensity
-  float globalIntensity = design::getGlowIntensity();
+  float globalIntensity = design::Settings::getGlowIntensity();
   float finalIntensity = intensity * globalIntensity;
 
   float clampedIntensity = juce::jlimit(0.0f, 1.0f, finalIntensity);

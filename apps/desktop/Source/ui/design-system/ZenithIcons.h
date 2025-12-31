@@ -77,7 +77,8 @@ inline SkPath Pause() {
 /** Stop - square */
 inline SkPath Stop() {
   SkPath path;
-  path.addRect(SkRect::MakeLTRB(6.0f, 6.0f, 18.0f, 18.0f));
+  // 14x14 square centered in 24x24
+  path.addRect(SkRect::MakeLTRB(5.0f, 5.0f, 19.0f, 19.0f));
   return path;
 }
 
@@ -907,6 +908,58 @@ inline SkPath Users() {
 
 /** Waveform alias */
 inline SkPath Waveform() { return Audio(); }
+
+// ============================================================================
+// AI ICONS
+// ============================================================================
+
+/** Brain icon for AI/Thinking - realistic but vectorized */
+inline SkPath Brain() {
+  SkPath path;
+  // Left hemisphere
+  path.moveTo(12.0f, 4.0f);
+  path.cubicTo(8.0f, 4.0f, 4.0f, 7.0f, 4.0f, 12.0f);
+  path.cubicTo(4.0f, 16.0f, 7.0f, 18.0f, 10.0f, 19.5f);
+  path.cubicTo(11.0f, 20.0f, 12.0f, 20.0f, 12.0f, 19.0f);
+  path.lineTo(12.0f, 4.0f);
+  
+  // Right hemisphere
+  path.moveTo(12.0f, 4.0f);
+  path.cubicTo(16.0f, 4.0f, 20.0f, 7.0f, 20.0f, 12.0f);
+  path.cubicTo(20.0f, 16.0f, 17.0f, 18.0f, 14.0f, 19.5f);
+  path.cubicTo(13.0f, 20.0f, 12.0f, 20.0f, 12.0f, 19.0f);
+  path.lineTo(12.0f, 4.0f);
+
+  // Brain folds/details (left)
+  path.moveTo(7.0f, 8.0f);
+  path.cubicTo(6.0f, 10.0f, 9.0f, 11.0f, 8.0f, 13.0f);
+  path.moveTo(10.0f, 6.0f);
+  path.cubicTo(9.0f, 8.0f, 11.0f, 10.0f, 10.0f, 12.0f);
+  path.moveTo(7.0f, 15.0f);
+  path.cubicTo(8.0f, 16.0f, 10.0f, 15.0f, 11.0f, 16.5f);
+
+  // Brain folds/details (right)
+  path.moveTo(17.0f, 8.0f);
+  path.cubicTo(18.0f, 10.0f, 15.0f, 11.0f, 16.0f, 13.0f);
+  path.moveTo(14.0f, 6.0f);
+  path.cubicTo(15.0f, 8.0f, 13.0f, 10.0f, 14.0f, 12.0f);
+  path.moveTo(17.0f, 15.0f);
+  path.cubicTo(16.0f, 16.0f, 14.0f, 15.0f, 13.0f, 16.5f);
+
+  return path;
+}
+
+/** Send icon - diagonal arrow with tail */
+inline SkPath Send() {
+  SkPath path;
+  path.moveTo(2.0f, 21.0f);    // Bottom left tail
+  path.lineTo(22.0f, 2.0f);    // Top right tip
+  path.moveTo(22.0f, 2.0f);    // Arrow head start
+  path.lineTo(22.0f, 10.0f);   // Down
+  path.moveTo(22.0f, 2.0f);    // Tip again
+  path.lineTo(14.0f, 2.0f);    // Left
+  return path;
+}
 
 // ============================================================================
 // DRAWING HELPERS

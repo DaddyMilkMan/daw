@@ -104,6 +104,7 @@ endif()
 set(ZENITH_TEST_SOURCES
     apps/desktop/Source/tests/TestMain.cpp
     apps/desktop/Source/tests/AudioEngineTests.cpp
+
     apps/desktop/Source/tests/ProjectStateTests.cpp
     apps/desktop/Source/tests/EngineTests.cpp
     apps/desktop/Source/tests/ConcurrencyTests.cpp
@@ -138,6 +139,16 @@ juce_generate_juce_header(ZenithDAW)
 target_sources(ZenithDAW PRIVATE ${ZENITH_ALL_SOURCES})
 
 # =============================================================================
+# COMPILE DEFINITIONS
+# =============================================================================
+
+target_compile_definitions(ZenithDAW PRIVATE
+    JUCE_PLUGINHOST_VST3=1
+    JUCE_PLUGINHOST_AU=1
+    JUCE_ALSA=1  # Ensure ALSA is used on Linux
+)
+
+# =============================================================================
 # INCLUDE DIRECTORIES
 # =============================================================================
 
@@ -153,6 +164,8 @@ target_include_directories(ZenithDAW PUBLIC
     apps/desktop/Source/ui/piano-roll
     apps/desktop/Source/ui/transport
     apps/desktop/Source/ui/common
+    apps/desktop/Source/ui/controls
+    apps/desktop/Source/ui/panels
     apps/desktop/Source/ui/widgets
     apps/desktop/Source/ui/session
     apps/desktop/Source/ui/instruments
@@ -325,7 +338,9 @@ if(BUILD_TESTS)
     
     juce_generate_juce_header(ZenithDAWTests)
     
-    target_sources(ZenithDAWTests PRIVATE ${ZENITH_TEST_SOURCES} ${ZENITH_ALL_SOURCES})
+    set(ZENITH_TEST_APP_SOURCES ${ZENITH_ALL_SOURCES})
+    list(FILTER ZENITH_TEST_APP_SOURCES EXCLUDE REGEX "Main\\.cpp$")
+    target_sources(ZenithDAWTests PRIVATE ${ZENITH_TEST_SOURCES} ${ZENITH_TEST_APP_SOURCES})
     
     target_include_directories(ZenithDAWTests PRIVATE 
         ${CMAKE_BINARY_DIR}/ZenithDAWTests_artefacts/JuceLibraryCode

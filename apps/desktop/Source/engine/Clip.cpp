@@ -773,19 +773,20 @@ void Clip::applyFadesSIMD(const juce::AudioSourceChannelInfo &bufferToFill,
   // Optimization: Cache pointers to avoid getWritePointer() in loop
   const int numChannels = bufferToFill.buffer->getNumChannels();
   
-  // Use stack buffer for common case, heap for edge cases (huge amounts of channels)
-  float** channelPtrs = nullptr;
-  float* stackPtrs[64];
-  std::vector<float*> heapPtrs;
-
-  if (numChannels <= 64) {
-      channelPtrs = stackPtrs;
-  } else {
-      heapPtrs.resize(numChannels);
-      channelPtrs = heapPtrs.data();
+  // BUG FIX #12: Use larger stack buffer to avoid heap allocation on RT path
+  // 256 channels covers all practical cases (even Dolby Atmos uses max 128)
+  // If somehow we exceed this, we MUST NOT allocate - just clamp and warn
+  static constexpr int MAX_STACK_CHANNELS = 256;
+  float* stackPtrs[MAX_STACK_CHANNELS];
+  float** channelPtrs = stackPtrs;
+  
+  const int channelsToProcess = juce::jmin(numChannels, MAX_STACK_CHANNELS);
+  if (numChannels > MAX_STACK_CHANNELS) {
+    // This should never happen - log and continue with clamped channels
+    jassertfalse; // Debug builds will catch this
   }
 
-  for (int ch = 0; ch < numChannels; ++ch) {
+  for (int ch = 0; ch < channelsToProcess; ++ch) {
       // Use destOffset to target correct buffer region
       channelPtrs[ch] = bufferToFill.buffer->getWritePointer(ch, bufferToFill.startSample + destOffset);
   }
@@ -805,7 +806,7 @@ void Clip::applyFadesSIMD(const juce::AudioSourceChannelInfo &bufferToFill,
     }
 
     if (multiplier != 1.0f) {
-      for (int ch = 0; ch < numChannels; ++ch)
+      for (int ch = 0; ch < channelsToProcess; ++ch)
         channelPtrs[ch][i] *= multiplier;
     }
   }

@@ -56,7 +56,7 @@ void OAuthRedirectServer::runServer(int port, CodeReceivedCallback callback, int
     
     if (!serverSocket_->createListener(port, "127.0.0.1")) {
         ZENITH_LOG_ERROR("[OAuth] Failed to bind to port " + juce::String(port));
-        callback("", "Failed to bind to port " + juce::String(port));
+        callback("", "", "Failed to bind to port " + juce::String(port));
         running_.store(false);
         return;
     }
@@ -77,7 +77,7 @@ void OAuthRedirectServer::runServer(int port, CodeReceivedCallback callback, int
     if (clientSocket == nullptr) {
         if (!shouldStop_.load()) {
             ZENITH_LOG_WARNING("[OAuth] Accept timed out or failed");
-            callback("", "Timeout waiting for OAuth callback");
+            callback("", "", "Timeout waiting for OAuth callback");
         }
         running_.store(false);
         return;
@@ -92,37 +92,61 @@ void OAuthRedirectServer::runServer(int port, CodeReceivedCallback callback, int
         juce::String request(buffer, (size_t)bytesRead);
         ZENITH_LOG_INFO("[OAuth] Received callback request");
         
-        // Parse authorization code or error
-        juce::String code = parseAuthCode(request);
-        juce::String error = parseError(request);
+        // Extract the path and query part from the HTTP request
+        // Request usually starts with "GET /oauth2callback?code=... HTTP/1.1"
+        int firstSpace = request.indexOf(" ");
+        int secondSpace = request.indexOf(firstSpace + 1, " ");
         
-        if (code.isNotEmpty()) {
-            ZENITH_LOG_INFO("[OAuth] Authorization code received!");
-            sendResponse(clientSocket.get(), true);
+        if (firstSpace != -1 && secondSpace != -1) {
+            juce::String urlPath = request.substring(firstSpace + 1, secondSpace);
+            juce::URL url("http://localhost" + urlPath);
             
-            // Post callback to message thread
-            juce::MessageManager::callAsync([callback, code]() {
-                callback(code, "");
-            });
-        } else if (error.isNotEmpty()) {
-            ZENITH_LOG_ERROR("[OAuth] Error received: " + error);
-            sendResponse(clientSocket.get(), false);
+            juce::String code;
+            juce::String token;
+            juce::String error;
             
-            juce::MessageManager::callAsync([callback, error]() {
-                callback("", error);
-            });
+            auto paramNames = url.getParameterNames();
+            auto paramValues = url.getParameterValues();
+            
+            for (int i = 0; i < paramNames.size(); ++i) {
+                if (paramNames[i] == "code") code = paramValues[i];
+                else if (paramNames[i] == "token") token = paramValues[i];
+                else if (paramNames[i] == "error") error = paramValues[i];
+            }
+            
+            if (code.isNotEmpty() || token.isNotEmpty()) {
+                ZENITH_LOG_INFO("[OAuth] Authorization received!");
+                sendStaticResponse(clientSocket.get(), true);
+                
+                juce::MessageManager::callAsync([callback, code, token]() {
+                    callback(code, token, "");
+                });
+            } else if (error.isNotEmpty()) {
+                ZENITH_LOG_ERROR("[OAuth] Error received: " + error);
+                sendStaticResponse(clientSocket.get(), false);
+                
+                juce::MessageManager::callAsync([callback, error]() {
+                    callback("", "", error);
+                });
+            } else {
+                ZENITH_LOG_ERROR("[OAuth] No code or error in callback");
+                sendStaticResponse(clientSocket.get(), false);
+                
+                juce::MessageManager::callAsync([callback]() {
+                    callback("", "", "Invalid OAuth callback response");
+                });
+            }
         } else {
-            ZENITH_LOG_ERROR("[OAuth] No code or error in callback");
-            sendResponse(clientSocket.get(), false);
-            
+            ZENITH_LOG_ERROR("[OAuth] Malformed HTTP request");
+            sendStaticResponse(clientSocket.get(), false);
             juce::MessageManager::callAsync([callback]() {
-                callback("", "Invalid OAuth callback response");
+                callback("", "", "Malformed HTTP request");
             });
         }
     } else {
         ZENITH_LOG_ERROR("[OAuth] Failed to read from client socket");
         juce::MessageManager::callAsync([callback]() {
-            callback("", "Failed to read OAuth callback");
+            callback("", "", "Failed to read OAuth callback");
         });
     }
     
@@ -133,30 +157,7 @@ void OAuthRedirectServer::runServer(int port, CodeReceivedCallback callback, int
     ZENITH_LOG_INFO("[OAuth] Redirect server stopped");
 }
 
-juce::String OAuthRedirectServer::parseAuthCode(const juce::String& request) {
-    // Request looks like: GET /oauth2callback?code=4/ABC123&scope=... HTTP/1.1
-    int codeStart = request.indexOf("code=");
-    if (codeStart < 0) return "";
-    
-    codeStart += 5; // Skip "code="
-    int codeEnd = request.indexOfAnyOf("& ", codeStart);
-    if (codeEnd < 0) codeEnd = request.length();
-    
-    return request.substring(codeStart, codeEnd);
-}
-
-juce::String OAuthRedirectServer::parseError(const juce::String& request) {
-    int errorStart = request.indexOf("error=");
-    if (errorStart < 0) return "";
-    
-    errorStart += 6;
-    int errorEnd = request.indexOfAnyOf("& ", errorStart);
-    if (errorEnd < 0) errorEnd = request.length();
-    
-    return juce::URL::removeEscapeChars(request.substring(errorStart, errorEnd));
-}
-
-void OAuthRedirectServer::sendResponse(juce::StreamingSocket* clientSocket, bool success) {
+void OAuthRedirectServer::sendStaticResponse(juce::StreamingSocket* clientSocket, bool success) {
     juce::String html;
     if (success) {
         html = R"(<!DOCTYPE html>
@@ -198,75 +199,6 @@ h1 { color: #f44; margin-bottom: 16px; }
                            "\r\n" + html;
     
     clientSocket->write(response.toRawUTF8(), (int)response.length());
-}
-
-} // namespace zenith
-
-juce::String OAuthRedirectServer::parseAuthCode(const juce::String& request) {
-    // Request looks like: GET /oauth2callback?code=4/ABC123&scope=... HTTP/1.1
-    int codeStart = request.indexOf("code=");
-    if (codeStart < 0) return "";
-    
-    codeStart += 5; // Skip "code="
-    int codeEnd = request.indexOfAnyOf("& ", codeStart);
-    if (codeEnd < 0) codeEnd = request.length();
-    
-    return request.substring(codeStart, codeEnd);
-}
-
-juce::String OAuthRedirectServer::parseError(const juce::String& request) {
-    int errorStart = request.indexOf("error=");
-    if (errorStart < 0) return "";
-    
-    errorStart += 6;
-    int errorEnd = request.indexOfAnyOf("& ", errorStart);
-    if (errorEnd < 0) errorEnd = request.length();
-    
-    return juce::URL::removeEscapeChars(request.substring(errorStart, errorEnd));
-}
-
-void OAuthRedirectServer::sendResponse(int clientSocket, bool success) {
-    juce::String html;
-    if (success) {
-        html = R"(<!DOCTYPE html>
-<html>
-<head><title>Zenith DAW - Login Successful</title>
-<style>
-body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%); 
-       color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-.card { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 48px; text-align: center; 
-        border: 1px solid rgba(0,200,255,0.3); box-shadow: 0 0 40px rgba(0,200,255,0.2); }
-h1 { color: #0cf; margin-bottom: 16px; }
-p { color: #aaa; }
-</style></head>
-<body><div class="card">
-<h1>✓ Login Successful!</h1>
-<p>You can close this window and return to Zenith DAW.</p>
-</div></body></html>)";
-    } else {
-        html = R"(<!DOCTYPE html>
-<html>
-<head><title>Zenith DAW - Login Failed</title>
-<style>
-body { font-family: system-ui, sans-serif; background: #0a0a0f; color: #fff; 
-       display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-.card { background: rgba(255,0,0,0.1); border-radius: 16px; padding: 48px; text-align: center;
-        border: 1px solid rgba(255,0,0,0.3); }
-h1 { color: #f44; margin-bottom: 16px; }
-</style></head>
-<body><div class="card">
-<h1>✗ Login Failed</h1>
-<p>Please try again in Zenith DAW.</p>
-</div></body></html>)";
-    }
-    
-    juce::String response = "HTTP/1.1 200 OK\r\n"
-                           "Content-Type: text/html; charset=utf-8\r\n"
-                           "Content-Length: " + juce::String(html.length()) + "\r\n"
-                           "Connection: close\r\n"
-                           "\r\n" + html;
-    
-    send(clientSocket, response.toRawUTF8(), (int)response.length(), 0);
 }
 
 } // namespace zenith

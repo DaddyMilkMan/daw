@@ -211,6 +211,7 @@ public:
    * @brief Mark as dirty (unsaved changes)
    */
   void markDirty() { isDirty.store(true); }
+  void markSaved() { isDirty.store(false); }
 
   //==========================================================================
   // ValueTree::Listener overrides

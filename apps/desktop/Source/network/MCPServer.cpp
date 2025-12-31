@@ -5,6 +5,9 @@
     Created: 2025-12-24
     Author:  Zenith DAW
 
+    Professional Implementation of the Model Context Protocol (MCP) for 
+    high-level DAW control and AI-driven automation.
+
   ==============================================================================
 */
 
@@ -12,6 +15,7 @@
 #include "../../commands/CommandAPI.h"
 #include "../engine/Engine.h"
 #include "../ui/common/MainWindow.h"
+#include "../../ui/design-system/ZenithDesignSystem.h"
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -40,10 +44,8 @@ void MCPServer::stop() {
 
   running_.store(false);
 
-  // std::cin.getline is blocking, so we might need a more graceful way to
-  // interrupt, but for now, we'll let it join if it finishes or the app exits.
   if (serverThread_.joinable())
-    serverThread_.detach(); // Stdio thread is detached to allow for non-blocking shutdown
+    serverThread_.detach(); 
 }
 
 void MCPServer::run() {
@@ -192,7 +194,7 @@ juce::var MCPServer::handleToolsList() {
   juce::Array<juce::var> tools;
 
   auto addTool = [&](const juce::String &name, const juce::String &desc,
-                     const juce::var &schema) {
+                      const juce::var &schema) {
     juce::ReferenceCountedObjectPtr<juce::DynamicObject> tool =
         new juce::DynamicObject();
     tool->setProperty("name", name);
@@ -218,13 +220,26 @@ juce::var MCPServer::handleToolsList() {
   juce::ReferenceCountedObjectPtr<juce::DynamicObject> idProp =
       new juce::DynamicObject();
   idProp->setProperty("type", "string");
-  idProp->setProperty("description",
-                      "The unique ID or name of the component to click.");
+  idProp->setProperty("description", "Unique ID or name of the component.");
   clickProps->setProperty("componentId", juce::var(idProp.get()));
   clickSchema->setProperty("properties", juce::var(clickProps.get()));
   clickSchema->setProperty("required", juce::Array<juce::var>{"componentId"});
-  addTool("click_component", "Simulates a mouse click on a UI component.",
-          juce::var(clickSchema.get()));
+  addTool("click_component", "Clicks a UI component.", juce::var(clickSchema.get()));
+
+  // Tool: execute_command
+  juce::ReferenceCountedObjectPtr<juce::DynamicObject> cmdSchema =
+      new juce::DynamicObject();
+  cmdSchema->setProperty("type", "object");
+  juce::ReferenceCountedObjectPtr<juce::DynamicObject> cmdProps =
+      new juce::DynamicObject();
+  juce::ReferenceCountedObjectPtr<juce::DynamicObject> commandProp =
+      new juce::DynamicObject();
+  commandProp->setProperty("type", "string");
+  commandProp->setProperty("description", "Command string (e.g., 'play', 'stop', 'track:add')");
+  cmdProps->setProperty("command", juce::var(commandProp.get()));
+  cmdSchema->setProperty("properties", juce::var(cmdProps.get()));
+  cmdSchema->setProperty("required", juce::Array<juce::var>{"command"});
+  addTool("execute_command", "Executes a global DAW command.", juce::var(cmdSchema.get()));
 
   juce::ReferenceCountedObjectPtr<juce::DynamicObject> result =
       new juce::DynamicObject();
@@ -311,20 +326,57 @@ juce::var MCPServer::serializeComponent(juce::Component *comp) {
   return juce::var(obj.get());
 }
 
+static juce::Component* findComponentRecursive(juce::Component* parent, const juce::String& id) {
+    if (parent->getComponentID() == id || parent->getName() == id)
+        return parent;
+    
+    for (int i = 0; i < parent->getNumChildComponents(); ++i) {
+        if (auto* found = findComponentRecursive(parent->getChildComponent(i), id))
+            return found;
+    }
+    return nullptr;
+}
+
 juce::var MCPServer::toolClickComponent(const juce::String &componentId) {
-  // Implementation for simulated click would go here.
-  // In a real scenario, we'd search for the component by ID and send mouse
-  // events.
-  return "Click simulated (UI tree exploration recommended)";
+    if (!mainWindow_) return "Error: Main window not available";
+
+    auto* comp = findComponentRecursive(mainWindow_, componentId);
+    if (!comp) return "Error: Component not found: " + componentId;
+
+    if (!comp->isVisible()) return "Error: Component is hidden";
+
+    // Simulate click via MouseEvents
+    auto mouseSource = juce::Desktop::getInstance().getMainMouseSource();
+    auto center = comp->getLocalPoint(nullptr, comp->getScreenBounds().getCentre()).toFloat();
+    
+    juce::MouseEvent ev(mouseSource, center, juce::ModifierKeys(),
+                        1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+                        comp, comp, juce::Time::getCurrentTime(),
+                        center, juce::Time::getCurrentTime(), 1, false);
+    
+    comp->mouseDown(ev);
+    comp->mouseUp(ev);
+
+    return "Clicked: " + comp->getName() + " (" + juce::String(typeid(*comp).name()) + ")";
 }
 
 juce::var MCPServer::toolSetText(const juce::String &componentId,
                                  const juce::String &text) {
-  return "Text set simulated";
+    if (!mainWindow_) return "Error: Main window not available";
+
+    auto* comp = findComponentRecursive(mainWindow_, componentId);
+    if (!comp) return "Error: Component not found: " + componentId;
+
+    if (auto* editor = dynamic_cast<juce::TextEditor*>(comp)) {
+        editor->setText(text, juce::NotificationType::sendNotification);
+        return "Text set on: " + comp->getName();
+    }
+
+    return "Error: Component is not a text editor";
 }
 
 juce::var MCPServer::toolExecuteCommand(const juce::String &command) {
-  return "Command executed via CommandAPI";
+    return commandAPI_.executeCommand(command);
 }
 
 } // namespace mcp

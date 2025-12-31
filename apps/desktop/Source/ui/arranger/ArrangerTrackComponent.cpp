@@ -12,11 +12,11 @@
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
 #include <core/SkFont.h>
-#include <core/SkMaskFilter.h>
+#include <skia/include/core/SkMaskFilter.h>
 #include <core/SkPaint.h>
 #include <core/SkPoint.h>
 #include <core/SkRRect.h>
-#include <effects/SkGradientShader.h>
+#include <skia/include/effects/SkGradientShader.h>
 
 #ifdef kNormal_SkBlurStyle
 #undef kNormal_SkBlurStyle
@@ -25,6 +25,7 @@
 static constexpr float HEADER_WIDTH = 240.0f; // Aligned with design::spacing::trackHeaderWidth
 
 namespace zenith {
+using namespace design;
 
 ArrangerTrackComponent::ArrangerTrackComponent(ProjectState &ps,
                                                ArrangerGridUtils &gridUtils,
@@ -100,13 +101,13 @@ void ArrangerTrackComponent::drawTrackHeader(SkCanvas *canvas,
   SkPaint trackBgPaint;
   trackBgPaint.setStyle(SkPaint::kFill_Style);
 
-  // A. Track Header Background - PREMIUM GLASSMORPHIC GRADIENT (Distinct Cyan Tint)
+  // A. Track Header Background - PREMIUM GLASSMORPHIC GRADIENT
   {
     SkPoint hdrGradPts[2] = {{0, y}, {0, y + trackHeight}};
     SkColor hdrGradColors[3] = {
-        design::colors::BG_01, // Top
-        design::withAlpha(design::colors::BG_DARKER, 0.8f), // Middle
-        design::colors::BG_00  // Bottom
+        withAlpha(colors::BG_DARK, 0.4f), 
+        withAlpha(colors::BG_DARKER, 0.35f),
+        withAlpha(colors::BG_DARKEST, 0.55f)
     };
     float hdrPositions[3] = {0.0f, 0.3f, 1.0f};
     trackBgPaint.setShader(SkGradientShader::MakeLinear(
@@ -159,27 +160,20 @@ void ArrangerTrackComponent::drawTrackHeader(SkCanvas *canvas,
   // Controls (Mute/Solo/Rec) - centered vertically
   drawControls(canvas, spacing::MD, bounds.centerY() - 11.0f);
 
-  // E. Right Border for Header
+  // E. Right Border for Header (Glowing Divider)
   {
     SkPaint dividerPaint;
-    SkPoint divPts[2] = {{HEADER_WIDTH - 1, 0},
-                         {HEADER_WIDTH - 1, trackHeight}};
-    SkColor divBase = design::colors::BORDER_SUBTLE;
-    SkColor divColors[3] = {design::withAlpha(divBase, 0.25f),
-                            design::withAlpha(divBase, 0.12f),
-                            design::withAlpha(divBase, 0.04f)};
-    float divPos[3] = {0.0f, 0.2f, 1.0f};
-    dividerPaint.setShader(SkGradientShader::MakeLinear(
-        divPts, divColors, divPos, 3, SkTileMode::kClamp));
+    dividerPaint.setAntiAlias(true);
+    dividerPaint.setStrokeWidth(1.0f);
+    dividerPaint.setColor(withAlpha(colors::ACCENT_PRIMARY, 0.2f));
     canvas->drawLine(HEADER_WIDTH - 0.5f, 0, HEADER_WIDTH - 0.5f, trackHeight,
                      dividerPaint);
- 
+  }
     SkPaint shadowLine;
-    shadowLine.setColor(design::withAlpha(design::colors::BG_DARKEST, 0.15f));
+    shadowLine.setColor(withAlpha(colors::BG_DARKEST, 0.15f));
     canvas->drawLine(HEADER_WIDTH + 0.5f, 0, HEADER_WIDTH + 0.5f, trackHeight,
                      shadowLine);
-  }
-}
+} // Correctly close drawTrackHeader
 
 void ArrangerTrackComponent::drawTrackBackground(SkCanvas *canvas,
                                                  const SkRect &bounds) {
@@ -195,12 +189,12 @@ void ArrangerTrackComponent::drawTrackBackground(SkCanvas *canvas,
                      altRowPaint);
   }
 
-  // Separator
+  // Separator (Subtle Neon)
   SkPaint sepPaint;
   SkPoint sepPts[2] = {{0, 0}, {bounds.width(), 0}};
-  SkColor sepColors[3] = {SkColorSetARGB(60, 255, 255, 255),
-                          SkColorSetARGB(30, 255, 255, 255),
-                          SkColorSetARGB(10, 255, 255, 255)};
+  SkColor sepColors[3] = {withAlpha(colors::ACCENT_PRIMARY, 0.12f),
+                          withAlpha(SK_ColorWHITE, 0.05f),
+                          withAlpha(SK_ColorWHITE, 0.02f)};
   float sepPos[3] = {0.0f, 0.3f, 1.0f};
   sepPaint.setShader(SkGradientShader::MakeLinear(sepPts, sepColors, sepPos, 3,
                                                   SkTileMode::kClamp));
@@ -314,9 +308,7 @@ void ArrangerTrackComponent::drawSections(SkCanvas *canvas,
       continue;
 
     SkRRect rrect = SkRRect::MakeRectXY(rect, 6.0f, 6.0f);
-    SkColor c =
-        SkColorSetARGB(255, section.color.getRed(), section.color.getGreen(),
-                       section.color.getBlue());
+    SkColor skColor = design::toSkColor(section.color);
     bool isDragging = (draggingSectionIndex_ == static_cast<int>(idx));
 
     // Pill Fill
@@ -324,9 +316,9 @@ void ArrangerTrackComponent::drawSections(SkCanvas *canvas,
     fillPaint.setAntiAlias(true);
     SkPoint pts[2] = {{rect.left(), rect.top()}, {rect.left(), rect.bottom()}};
     SkColor gradColors[3] = {
-        withAlpha(lighten(c, 0.2f), isDragging ? 0.9f : 0.7f),
-        withAlpha(c, isDragging ? 0.7f : 0.5f),
-        withAlpha(darken(c, 0.2f), isDragging ? 0.6f : 0.4f)};
+        withAlpha(lighten(skColor, 0.2f), isDragging ? 0.9f : 0.7f),
+        withAlpha(skColor, isDragging ? 0.7f : 0.5f),
+        withAlpha(darken(skColor, 0.2f), isDragging ? 0.6f : 0.4f)};
     float positions[3] = {0.0f, 0.4f, 1.0f};
     fillPaint.setShader(SkGradientShader::MakeLinear(pts, gradColors, positions,
                                                      3, SkTileMode::kClamp));
@@ -568,6 +560,11 @@ void ArrangerTrackComponent::mouseUp(const juce::MouseEvent &e) {
 
 void ArrangerTrackComponent::mouseDoubleClick(const juce::MouseEvent &e) {}
 
+void ArrangerTrackComponent::mouseEnter(const juce::MouseEvent &e) {
+  isHovered_ = true;
+  repaint();
+}
+
 void ArrangerTrackComponent::mouseMove(const juce::MouseEvent &e) {
   if (type_ != TrackType::Section && e.position.x < HEADER_WIDTH) {
     using namespace design;
@@ -653,10 +650,9 @@ const ArrangementSection *ArrangerTrackComponent::getDraggingSection() const {
 
 void ArrangerTrackComponent::updateTakeFolders() {
   if (type_ == TrackType::Section) return;
-  
   if (trackId_.isEmpty()) {
-      takeFolders_.clear();
-      return;
+    takeFolders_.clear();
+    return;
   }
   
   auto trackNode = projectState.findTrack(trackId_);
@@ -664,77 +660,55 @@ void ArrangerTrackComponent::updateTakeFolders() {
   
   auto clipsNode = trackNode.getChildWithName(ProjectState::ID_CLIPS);
   if (!clipsNode.isValid()) {
-      takeFolders_.clear();
-      return;
+    takeFolders_.clear();
+    return;
   }
-  
-  // Reuse existing components if possible? 
-  // For simplicity, we'll clear and rebuild for now, optimization later if needed.
-  // Ideally we should sync: add new, remove stale, update existing.
   
   std::vector<juce::String> keptIds;
   
-  // 1. Mark and Sweep / Sync approach
-  // Iterate current components, see if they still exist in ValueTree
+  // 1. Sync existing folders
   for (auto it = takeFolders_.begin(); it != takeFolders_.end(); ) {
-      juce::String id = (*it)->getValueTree()[ProjectState::PROP_ID].toString();
-      auto folderNode = clipsNode.getChildWithProperty(ProjectState::PROP_ID, id);
-      
-      if (folderNode.isValid() && folderNode.hasType(ProjectState::ID_TAKE_FOLDER)) {
-           // Exists, keep it
-           (*it)->setZoomLevel(pixelsPerBeat_);
-           (*it)->updateBounds(pixelsPerBeat_, 0 /* y */, 0 /* height handled by drawExpanded */);
-           // Actually, TakeFolderComponent needs to know its track height context?
-           // Currently logic is self-contained.
-           keptIds.push_back(id);
-           ++it;
-      } else {
-           // Removed
-           removeChildComponent(it->get());
-           it = takeFolders_.erase(it);
-      }
+    juce::String id = (*it)->getValueTree()[ProjectState::PROP_ID].toString();
+    auto folderNode = clipsNode.getChildWithProperty(ProjectState::PROP_ID, id);
+    
+    if (folderNode.isValid() && folderNode.hasType(ProjectState::ID_TAKE_FOLDER)) {
+      (*it)->setZoomLevel(pixelsPerBeat_);
+      keptIds.push_back(id);
+      ++it;
+    } else {
+      removeChildComponent(it->get());
+      it = takeFolders_.erase(it);
+    }
   }
   
   // 2. Add new folders
   for (const auto& child : clipsNode) {
-      if (child.hasType(ProjectState::ID_TAKE_FOLDER)) {
-          juce::String id = child[ProjectState::PROP_ID].toString();
-          bool found = false;
-          for (const auto& existingId : keptIds) {
-              if (existingId == id) { found = true; break; }
-          }
-          
-          if (!found) {
-              auto tf = std::make_unique<TakeFolderComponent>(projectState, gridUtils_, child);
-              tf->setZoomLevel(pixelsPerBeat_);
-              addAndMakeVisible(tf.get());
-              takeFolders_.push_back(std::move(tf));
-          }
+    if (child.hasType(ProjectState::ID_TAKE_FOLDER)) {
+      juce::String id = child[ProjectState::PROP_ID].toString();
+      bool found = false;
+      for (const auto& existingId : keptIds) {
+        if (existingId == id) { found = true; break; }
       }
+      
+      if (!found) {
+        auto tf = std::make_unique<TakeFolderComponent>(projectState, gridUtils_, child);
+        tf->setZoomLevel(pixelsPerBeat_);
+        addAndMakeVisible(tf.get());
+        takeFolders_.push_back(std::move(tf));
+      }
+    }
   }
   
   // 3. Update Layout
-  // Arrange them vertically? No, they are timeline objects.
-  // Their x/w is determined by start/length.
-  // The Track Height might need to expand!
-  // This is a layout complexity. For now, we will layout them inside the track bounds.
-  // If track is not tall enough, they might clip.
-  
-  // For now, auto-collapse or something.
   for (auto& tf : takeFolders_) {
-      double start = tf->getValueTree()[ProjectState::PROP_START];
-      double len = tf->getValueTree()[ProjectState::PROP_LENGTH];
-      
-      // Update bounds geometry
-      // We need to properly calculate x/w in pixels
-      // Using helper?
-      int x = static_cast<int>((start - viewStartBeats_) * pixelsPerBeat_) + (int)HEADER_WIDTH;
-      int w = static_cast<int>(len * pixelsPerBeat_);
-      int h = 80; // Default track height?
-                   // If expanded, it needs more height.
-                   
-      tf->setBounds(x, 0, w, h);
+    double start = tf->getValueTree()[ProjectState::PROP_START];
+    double len = tf->getValueTree()[ProjectState::PROP_LENGTH];
+    
+    int x = static_cast<int>((start - viewStartBeats_) * pixelsPerBeat_) + (int)HEADER_WIDTH;
+    int w = static_cast<int>(len * pixelsPerBeat_);
+    int h = 80; 
+                 
+    tf->setBounds(x, 0, w, h);
   }
 }
-
 } // namespace zenith

@@ -234,7 +234,7 @@ void LoginComponent::drawGoogleButton(SkCanvas* canvas) {
     SkPaint textPaint;
     textPaint.setColor(SkColorSetRGB(60, 60, 60));
     textPaint.setAntiAlias(true);
-    canvas->drawString("Sign in with Google", iconX + iconSize + 12, googleButtonBounds_.centerY() + 6, buttonFont_, textPaint);
+    canvas->drawString("Continue in Browser", iconX + iconSize + 12, googleButtonBounds_.centerY() + 6, buttonFont_, textPaint);
 }
 
 void LoginComponent::drawSubmitButton(SkCanvas* canvas) {
@@ -352,17 +352,18 @@ void LoginComponent::mouseUp(const juce::MouseEvent& e) {
 void LoginComponent::handleGoogleLogin() {
     if (isLoading_) return;
     
-    ZENITH_LOG_INFO("[LoginUI] Google login clicked");
+    ZENITH_LOG_INFO("[LoginUI] Web/Google login clicked - Redirecting to Portal");
     isLoading_ = true;
     errorMessage_.clear();
     repaint();
     
     if (auto* auth = AuthenticationService::getInstance()) {
-        auth->loginWithGoogle([this](bool success, juce::String error) {
+        // Use generic Web Login for SylorLabs portal (which includes Google option)
+        auth->loginWithWeb([this](bool success, juce::String error) {
             juce::MessageManager::callAsync([this, success, error]() {
                 isLoading_ = false;
                 if (!success) {
-                    errorMessage_ = error.isEmpty() ? "Google login failed" : error;
+                    errorMessage_ = error.isEmpty() ? "Web login failed" : error;
                 }
                 repaint();
             });
@@ -434,10 +435,8 @@ void LoginComponent::handleSubmit() {
 }
 
 void LoginComponent::toggleMode() {
-    mode_ = (mode_ == Mode::SignIn) ? Mode::SignUp : Mode::SignIn;
-    errorMessage_.clear();
-    layoutFields();
-    repaint();
+    // Redirect to web signup as per "Real Auth" requirement
+    juce::URL("https://sylorlabs.com/signup").launchInDefaultBrowser();
 }
 
 } // namespace zenith

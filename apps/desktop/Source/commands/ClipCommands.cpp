@@ -7,8 +7,8 @@
 
 namespace zenith {
 
-ClipCommands::ClipCommands(Engine &eng, ProjectState &state)
-    : engine(eng), projectState(state) {}
+ClipCommands::ClipCommands(Engine &eng, ProjectState &state, CommandAPI &apiRef)
+    : engine(eng), projectState(state), api(apiRef) {}
 
 juce::var ClipCommands::listClips(const juce::var &params) {
   if (!params.hasProperty("trackId"))

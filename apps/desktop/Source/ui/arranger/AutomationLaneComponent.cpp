@@ -116,14 +116,15 @@ void AutomationLaneComponent::drawSkia(SkCanvas *canvas) {
   // Draw grid (re-implemented in Skia)
   {
       SkPaint gridPaint;
-      gridPaint.setColor(SkColorSetARGB(50, 255, 255, 255));
+      gridPaint.setAntiAlias(true);
       gridPaint.setStrokeWidth(1.0f);
       
       const int width = getWidth();
       const int height = getHeight();
 
-      // Horizontal lines
+      // Horizontal lines (subtle)
       const int numHLines = 5;
+      gridPaint.setColor(withAlpha(SK_ColorWHITE, 0.05f));
       for (int i = 0; i <= numHLines; ++i) {
         float y = i * height / static_cast<float>(numHLines);
         canvas->drawLine(0.0f, y, static_cast<float>(width), y, gridPaint);
@@ -137,9 +138,9 @@ void AutomationLaneComponent::drawSkia(SkCanvas *canvas) {
         float x = beatsToPixels(beat);
         if (x >= 0.0f && x <= width) {
           if (static_cast<int>(beat) % 4 == 0)
-             gridPaint.setColor(SkColorSetARGB(80, 255, 255, 255));
+             gridPaint.setColor(withAlpha(colors::ACCENT_PRIMARY, 0.15f));
           else
-             gridPaint.setColor(SkColorSetARGB(40, 255, 255, 255));
+             gridPaint.setColor(withAlpha(SK_ColorWHITE, 0.08f));
 
           canvas->drawLine(x, 0.0f, x, static_cast<float>(height), gridPaint);
         }
@@ -187,8 +188,17 @@ void AutomationLaneComponent::drawSkia(SkCanvas *canvas) {
     SkPaint curvePaint;
     curvePaint.setColor(colors::CYAN);
     curvePaint.setStyle(SkPaint::kStroke_Style);
-    curvePaint.setStrokeWidth(2.5f);
+    curvePaint.setStrokeWidth(3.0f); // Slightly thicker for neon effect
     curvePaint.setAntiAlias(true);
+    
+    // Add neon glow to the curve
+    curvePaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 2.0f));
+    canvas->drawPath(path, curvePaint);
+    
+    // Core curve line
+    curvePaint.setMaskFilter(nullptr);
+    curvePaint.setStrokeWidth(1.5f);
+    curvePaint.setColor(SK_ColorWHITE);
     canvas->drawPath(path, curvePaint);
   }
 
@@ -227,10 +237,11 @@ void AutomationLaneComponent::drawSkia(SkCanvas *canvas) {
     // Hover glow
     if (isHovered && !isSelected) {
       SkPaint glowPaint;
-      glowPaint.setColor(SkColorSetARGB(40, 0, 212, 170));
+      glowPaint.setColor(withAlpha(colors::CYAN, 0.4f));
       glowPaint.setAntiAlias(true);
+      glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f));
       canvas->drawCircle(handle.screenPos.x, handle.screenPos.y,
-                        handle.radius + 3.0f, glowPaint);
+                        handle.radius + 4.0f, glowPaint);
     }
   }
 
@@ -240,7 +251,7 @@ void AutomationLaneComponent::drawSkia(SkCanvas *canvas) {
                                " @ " + juce::String(hoveredPointTime, 2) +
                                " beats";
 
-    SkFont font = zenith::design::typography::getMonoFont(10.0f);
+    SkFont font = zenith::design::typography::getSkFont(typography::FONT_XS);
 
     auto textStr = tooltipText.toStdString();
     SkRect textBounds;
@@ -257,9 +268,9 @@ void AutomationLaneComponent::drawSkia(SkCanvas *canvas) {
                             tooltipX);
     tooltipY = juce::jmax(4.0f, tooltipY);
 
-    // Tooltip background
+    // Tooltip background (Glass)
     SkPaint tooltipBg;
-    tooltipBg.setColor(colors::BG_MEDIUM);
+    tooltipBg.setColor(withAlpha(colors::BG_DARKEST, 0.85f));
     tooltipBg.setAntiAlias(true);
     SkRRect tooltipRect = SkRRect::MakeRectXY(
         SkRect::MakeXYWH(tooltipX, tooltipY, tooltipWidth, tooltipHeight),
@@ -282,8 +293,8 @@ void AutomationLaneComponent::drawSkia(SkCanvas *canvas) {
     canvas->drawTextBlob(blob, tooltipX + 6.0f, tooltipY + 14.0f, textPaint);
   }
 
-  // Draw parameter name
-  SkFont nameFont = zenith::design::typography::getSkFont(14.0f);
+  // Draw parameter name (Design System)
+  SkFont nameFont = zenith::design::typography::getSkFont(typography::FONT_SM, FontWeight::Medium);
 
   SkPaint namePaint;
   namePaint.setColor(colors::TEXT_TERTIARY);

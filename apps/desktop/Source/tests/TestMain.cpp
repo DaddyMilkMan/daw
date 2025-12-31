@@ -48,5 +48,9 @@ extern "C" int main(int argc, char *argv[]) {
   // C6: Shutdown ONNX environment
   zenith::ONNXStemSeparator::shutdown();
 
+  // Print final status
+  std::cout << "TestMain: Shutdown complete." << std::endl;
+
+
   return 0;
 }

@@ -257,14 +257,13 @@ void TimelineRuler::drawSkia(SkCanvas *canvas) {
       juce::String text = juce::String(measure);
       SkPaint textPaint;
       textPaint.setAntiAlias(true);
-      textPaint.setColor(isHoveredMeasure ? design::unified::accent_primary()
-                                          : design::unified::text_secondary());
+      textPaint.setColor(isHoveredMeasure ? colors::ACCENT_PRIMARY
+                                           : colors::TEXT_SECONDARY);
       if (isHoveredMeasure)
-        textPaint.setAlpha(
-            static_cast<uint8_t>(255 * hoverAnimation * 0.5f + 255 * 0.5f));
+        textPaint.setAlphaf(hoverAnimation * 0.5f + 0.5f);
 
-      canvas->drawSimpleText(
-          text.toRawUTF8(), text.length(), SkTextEncoding::kUTF8, x + 8,
+      canvas->drawString(
+          text.toRawUTF8(), x + 8,
           bounds.getHeight() / 2 + typography::FONT_SM / 2, font, textPaint);
     } else {
       // Minor beat ticks using borderSubtle
@@ -317,11 +316,14 @@ void TimelineRuler::drawSkia(SkCanvas *canvas) {
           if (loopEndX - loopStartX > 60) {
               SkFont labelFont = typography::getSkFont(typography::FONT_XS, FontWeight::Bold);
               SkPaint textPaint;
-              textPaint.setColor(design::unified::accent_primary());
+              textPaint.setColor(colors::NEON_GREEN);
               textPaint.setAntiAlias(true);
               
-              const char* lbl = "LOOP";
-              canvas->drawString(lbl, loopStartX + 5, 12, labelFont, textPaint);
+              // Add a subtle glow to the text
+              textPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 2.0f));
+              canvas->drawString("LOOP", loopStartX + 5, 12, labelFont, textPaint);
+              textPaint.setMaskFilter(nullptr);
+              canvas->drawString("LOOP", loopStartX + 5, 12, labelFont, textPaint);
           }
       }
   }

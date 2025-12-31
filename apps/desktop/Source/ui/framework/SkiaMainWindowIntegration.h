@@ -135,6 +135,10 @@ public:
   SkiaMainWindowIntegration(const SkiaMainWindowIntegration &) = delete;
   SkiaMainWindowIntegration &
   operator=(const SkiaMainWindowIntegration &) = delete;
+
+private:
+  sk_sp<SkSurface> softwareSurface_;
+  juce::Image softwareImage_;
 };
 
 #endif // ZENITH_USE_SKIA

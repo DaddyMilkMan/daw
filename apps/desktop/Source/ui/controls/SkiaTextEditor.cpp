@@ -12,6 +12,7 @@
 
 #include "SkiaTextEditor.h"
 #include "ZenithDesignSystem.h"
+#include <skia/include/core/SkMaskFilter.h>
 
 namespace zenith {
 
@@ -83,26 +84,83 @@ void SkiaTextEditor::setScrollbarsShown(bool show) {
   markDirty();
 }
 
+void SkiaTextEditor::setPillStyle(bool enabled) {
+  if (pillStyle_ != enabled) {
+    pillStyle_ = enabled;
+    if (enabled) {
+      // Apply pill defaults: white bg, black text
+      backgroundColour_ = SK_ColorWHITE;
+      textColour_ = SK_ColorBLACK;
+    }
+    markDirty();
+  }
+}
+
+void SkiaTextEditor::setPillCornerRadius(float radius) {
+  if (pillCornerRadius_ != radius) {
+    pillCornerRadius_ = radius;
+    markDirty();
+  }
+}
+
 void SkiaTextEditor::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
+  SkRect rect = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
+  
+  if (pillStyle_) {
+    // Premium pill style with shadow and rounded corners
+    SkRRect rrect = SkRRect::MakeRectXY(rect, pillCornerRadius_, pillCornerRadius_);
+    
+    // Subtle drop shadow
+    SkPaint shadowPaint;
+    shadowPaint.setColor(design::withAlpha(SK_ColorBLACK, 0.15f));
+    shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
+    shadowPaint.setAntiAlias(true);
+    canvas->save();
+    canvas->translate(0, 2);
+    canvas->drawRRect(rrect, shadowPaint);
+    canvas->restore();
+    
+    // White background
+    SkPaint bgPaint;
+    bgPaint.setColor(backgroundColour_);
+    bgPaint.setAntiAlias(true);
+    canvas->drawRRect(rrect, bgPaint);
+    
+    // Subtle border when not focused
+    if (!isFocused()) {
+      SkPaint borderPaint;
+      borderPaint.setColor(design::withAlpha(SK_ColorBLACK, 0.1f));
+      borderPaint.setStyle(SkPaint::kStroke_Style);
+      borderPaint.setStrokeWidth(1.0f);
+      borderPaint.setAntiAlias(true);
+      canvas->drawRRect(rrect, borderPaint);
+    } else {
+      // Cyan glow on focus
+      SkPaint focusPaint;
+      focusPaint.setColor(design::withAlpha(design::colors::CYAN, 0.4f));
+      focusPaint.setStyle(SkPaint::kStroke_Style);
+      focusPaint.setStrokeWidth(2.0f);
+      focusPaint.setAntiAlias(true);
+      canvas->drawRRect(rrect, focusPaint);
+    }
+  } else {
+    // Original rectangle style
+    SkPaint bgPaint;
+    bgPaint.setColor(backgroundColour_);
+    canvas->drawRect(rect, bgPaint);
 
-  // Draw background
-  SkPaint bgPaint;
-  bgPaint.setColor(backgroundColour_);
-  canvas->drawRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()),
-                   bgPaint);
+    SkPaint borderPaint;
+    borderPaint.setColor(isFocused() ? design::colors::BORDER_FOCUS
+                                     : design::colors::BORDER_DEFAULT);
+    borderPaint.setStyle(SkPaint::kStroke_Style);
+    borderPaint.setStrokeWidth(1.0f);
+    borderPaint.setAntiAlias(true);
+    canvas->drawRect(rect, borderPaint);
+  }
 
-  // Draw border
-  SkPaint borderPaint;
-  borderPaint.setColor(isFocused() ? design::colors::BORDER_FOCUS
-                                   : design::colors::BORDER_DEFAULT);
-  borderPaint.setStyle(SkPaint::kStroke_Style);
-  borderPaint.setStrokeWidth(1.0f);
-  borderPaint.setAntiAlias(true);
-  canvas->drawRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()),
-                   borderPaint);
-
-  // Draw text or placeholder
+  // Draw text or placeholder with proper padding
+  float textPadding = pillStyle_ ? 16.0f : 8.0f;
   SkPaint textPaint;
   textPaint.setColor(text_.isEmpty() ? placeholderColour_ : textColour_);
   textPaint.setAntiAlias(true);
@@ -110,25 +168,24 @@ void SkiaTextEditor::drawSkia(SkCanvas *canvas) {
   const juce::String &textToDraw = text_.isEmpty() ? placeholderText_ : text_;
 
   if (!textToDraw.isEmpty()) {
-    // Simple single-line text drawing (multi-line support can be added later)
-    canvas->drawString(textToDraw.toRawUTF8(), 8.0f,
+    canvas->drawString(textToDraw.toRawUTF8(), textPadding,
                        bounds.getHeight() * 0.5f + font_.getSize() * 0.3f,
                        font_, textPaint);
   }
 
   // Draw caret if focused and visible
-  if (isFocused() && caretVisible_ && !readOnly_ && !text_.isEmpty()) {
-    // Calculate caret position (simplified)
-    float caretX =
-        8.0f + font_.measureText(text_.substring(0, caretPosition_).toRawUTF8(),
-                                 text_.substring(0, caretPosition_).length(),
-                                 SkTextEncoding::kUTF8);
+  if (isFocused() && caretVisible_ && !readOnly_) {
+    float caretX = textPadding;
+    if (!text_.isEmpty()) {
+      caretX += font_.measureText(text_.substring(0, caretPosition_).toRawUTF8(),
+                                   text_.substring(0, caretPosition_).length(),
+                                   SkTextEncoding::kUTF8);
+    }
 
     SkPaint caretPaint;
     caretPaint.setColor(textColour_);
-    caretPaint.setStrokeWidth(1.0f);
-    canvas->drawLine(caretX, 4.0f, caretX, bounds.getHeight() - 4.0f,
-                     caretPaint);
+    caretPaint.setStrokeWidth(2.0f);
+    canvas->drawLine(caretX, 6.0f, caretX, bounds.getHeight() - 6.0f, caretPaint);
   }
 }
 
@@ -167,6 +224,14 @@ bool SkiaTextEditor::keyPressed(const juce::KeyPress &key,
 
   auto keyCode = key.getKeyCode();
 
+  // Handle escape key
+  if (keyCode == juce::KeyPress::escapeKey) {
+    if (onEscapeKey) {
+      onEscapeKey();
+    }
+    return true;
+  }
+
   // Handle return key
   if (keyCode == juce::KeyPress::returnKey) {
     if (onReturnKey) {
@@ -187,6 +252,42 @@ bool SkiaTextEditor::keyPressed(const juce::KeyPress &key,
         onTextChange();
       }
     }
+    return true;
+  }
+
+  // Handle left arrow
+  if (keyCode == juce::KeyPress::leftKey) {
+    if (caretPosition_ > 0) {
+      caretPosition_--;
+      caretVisible_ = true;
+      markDirty();
+    }
+    return true;
+  }
+
+  // Handle right arrow
+  if (keyCode == juce::KeyPress::rightKey) {
+    if (caretPosition_ < text_.length()) {
+      caretPosition_++;
+      caretVisible_ = true;
+      markDirty();
+    }
+    return true;
+  }
+
+  // Handle home key
+  if (keyCode == juce::KeyPress::homeKey) {
+    caretPosition_ = 0;
+    caretVisible_ = true;
+    markDirty();
+    return true;
+  }
+
+  // Handle end key  
+  if (keyCode == juce::KeyPress::endKey) {
+    caretPosition_ = text_.length();
+    caretVisible_ = true;
+    markDirty();
     return true;
   }
 
@@ -255,6 +356,16 @@ void SkiaTextEditor::timerCallback() {
   if (isFocused()) {
     caretVisible_ = !caretVisible_;
     markDirty();
+  }
+}
+
+void SkiaTextEditor::focusLost(FocusChangeType cause) {
+  juce::ignoreUnused(cause);
+  caretVisible_ = false;
+  markDirty();
+  
+  if (onFocusLost) {
+    onFocusLost();
   }
 }
 

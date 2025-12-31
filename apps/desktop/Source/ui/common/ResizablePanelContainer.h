@@ -131,7 +131,7 @@ private:
 
   static constexpr int collapsedHeight = PanelHeader::headerHeight;
   static constexpr float animationDurationMs =
-      200.0f; // Animation duration in ms
+      300.0f; // Animation duration in ms
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PanelWrapper)
 };

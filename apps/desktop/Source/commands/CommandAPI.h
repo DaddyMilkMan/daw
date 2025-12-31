@@ -82,15 +82,13 @@ public:
   ~CommandAPI();
 
   //==========================================================================
-  juce::String executeCommand(const juce::String &commandJson);
-  juce::var executeCommand(const juce::var &request); // Added overload used in cpp
-  juce::var executeCommand(CommandID id, const juce::var &params); // Overload for internal use
+  juce::var executeCommand(const juce::var &request);
+  juce::var executeCommand(CommandID id, const juce::var &params);
+  juce::String executeCommand(const juce::String &jsonRequest);
   
-  juce::String executeCommandString(const juce::String& jsonRequest);
   juce::var executeBatch(const juce::Array<juce::var>& commands, const juce::String& batchName);
   
-  // Method to perform actions (for command classes)
-  bool performAction(std::unique_ptr<juce::UndoableAction> action);
+
 
   using CommandHandler = std::function<juce::var(const juce::var &params)>;
   void registerCommand(const juce::String &commandName, CommandHandler handler);

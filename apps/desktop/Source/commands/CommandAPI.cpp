@@ -37,8 +37,8 @@ namespace zenith {
 //==============================================================================
 CommandAPI::CommandAPI(ProjectState &state, Engine &eng)
     : projectState(state), engine(eng) {
-  trackCommands = std::make_unique<TrackCommands>(engine, projectState);
-  clipCommands = std::make_unique<ClipCommands>(engine, projectState);
+  trackCommands = std::make_unique<TrackCommands>(engine, projectState, *this);
+  clipCommands = std::make_unique<ClipCommands>(engine, projectState, *this);
   transportCommands = std::make_unique<TransportCommands>(engine, projectState, *this);
 
   DBG("CommandAPI: Initialized");
@@ -329,12 +329,6 @@ void CommandAPI::registerCommand(const juce::String &commandName,
 CommandAPI::~CommandAPI() {}
 
 //==============================================================================
-bool CommandAPI::performAction(std::unique_ptr<juce::UndoableAction> action) {
-  if (action) {
-    return projectState.getUndoManager().perform(action.get());
-  }
-  return false;
-}
 
 //==============================================================================
 juce::var CommandAPI::executeCommand(const juce::var &request) {
@@ -360,7 +354,7 @@ juce::var CommandAPI::executeCommand(const juce::var &request) {
                              commandStr);
 }
 
-juce::String CommandAPI::executeCommandString(const juce::String &jsonRequest) {
+juce::String CommandAPI::executeCommand(const juce::String &jsonRequest) {
   // Parse JSON string to var
   juce::var parsedJson;
   auto result = juce::JSON::parse(jsonRequest, parsedJson);

@@ -10,6 +10,7 @@
 #include "../../../ui/design-system/PlatformFontUtils.h"
 
 #ifdef __linux__
+#include <include/core/SkFontMgr.h>
 #include <include/ports/SkFontMgr_fontconfig.h>
 #include <include/ports/SkFontScanner_FreeType.h>
 #include <juce_core/juce_core.h>
@@ -19,9 +20,16 @@ namespace zenith {
 namespace design {
 
 sk_sp<SkFontMgr> PlatformFontUtils::createDefaultFontManager() {
-    auto fontMgr = SkFontMgr_New_FontConfig(nullptr, SkFontScanner_Make_FreeType());
+    // Manually create FontConfig-based manager as RefDefault is missing in this Skia version
+    auto scanner = SkFontScanner_Make_FreeType();
+    if (!scanner) {
+        DBG("[FontManager] ERROR: Failed to create FreeType scanner");
+        return nullptr;
+    }
+    
+    auto fontMgr = SkFontMgr_New_FontConfig(nullptr, std::move(scanner));
     if (!fontMgr) {
-        DBG("[FontManager] WARNING: FontConfig font manager unavailable, using empty manager");
+        DBG("[FontManager] WARNING: FontConfig font manager creation failed");
         return SkFontMgr::RefEmpty();
     }
     return fontMgr;

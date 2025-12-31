@@ -66,7 +66,6 @@ void FontManager::initialize() {
   fontMgr_ = PlatformFontUtils::createDefaultFontManager();
 
   // Determine font resource directory
-  // Determine font resource directory
   // Robust search strategy for various deployment scenarios
   juce::File exeDir =
       juce::File::getSpecialLocation(juce::File::currentExecutableFile)
@@ -106,8 +105,7 @@ void FontManager::initialize() {
   if (!fontDir_.isDirectory()) {
     DBG("[FontManager] WARNING: Font directory not found. Tried: "
         << fontDir_.getFullPathName());
-    DBG("[FontManager] Custom fonts will not be available - using system "
-        "fallback");
+    DBG("[FontManager] Custom fonts will not be available - using system fallback");
     fontsLoaded_ = false;
     return;
   }
@@ -161,8 +159,7 @@ void FontManager::initialize() {
   } else {
     DBG("[FontManager] WARNING: Some essential fonts failed to load.");
     DBG("[FontManager]   Inter-Regular: " << (interRegular ? "OK" : "FAILED"));
-    DBG("[FontManager]   JetBrainsMono-Regular: " << (monoRegular ? "OK"
-                                                                  : "FAILED"));
+    DBG("[FontManager]   JetBrainsMono-Regular: " << (monoRegular ? "OK" : "FAILED"));
   }
 }
 
@@ -191,6 +188,8 @@ bool FontManager::loadFont(const juce::String &filename, FontFamily family,
   }
 
   // Create typeface from data
+  if (!fontMgr_) return false;
+  
   sk_sp<SkTypeface> typeface = fontMgr_->makeFromData(skData, 0);
   if (!typeface) {
     DBG("[FontManager] Failed to create typeface from: " << filename);
@@ -231,9 +230,7 @@ sk_sp<SkTypeface> FontManager::getTypeface(FontFamily family,
 }
 
 void FontManager::configureFont(SkFont &font) const {
-  // Configure for optimal rendering on Windows
-  // Per research: setEdging(kSubpixelAntiAlias), setSubpixel(true), and slight
-  // hinting
+  // Configure for optimal rendering
   font.setEdging(SkFont::Edging::kSubpixelAntiAlias);
   font.setSubpixel(true);
   font.setHinting(static_cast<SkFontHinting>(1));

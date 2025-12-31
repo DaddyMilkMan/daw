@@ -328,6 +328,10 @@ SkColor ZenithButton::getBorderColor() const {
 }
 
 SkColor ZenithButton::getGlowColor() const {
+  if (isGlowEnabled()) {
+    return SkiaComponent::getGlowColor();
+  }
+  
   switch (style_) {
   case Style::Primary:
     return design::colors::CYAN;

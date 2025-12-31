@@ -121,7 +121,9 @@ void ZenithLogger::log(LogLevel level, const juce::String &message,
 
   // Console output - ALWAYS use stderr to keep stdout clean for MCP/IPC
   if (logToConsole_) {
+    #if !JUCE_LINUX
     std::cerr << logEntry.toStdString() << std::endl;
+    #endif
   }
 
   // File output via juce::FileLogger (High performance, thread-safe buffering)
@@ -130,6 +132,7 @@ void ZenithLogger::log(LogLevel level, const juce::String &message,
   }
 
   // Always keep DBG output for IDE users
+  // On Linux, this also writes to stderr, serving as the console output
   juce::Logger::outputDebugString(logEntry);
 }
 

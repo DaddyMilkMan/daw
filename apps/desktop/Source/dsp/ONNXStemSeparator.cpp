@@ -54,14 +54,25 @@ ONNXStemSeparator::ONNXStemSeparator() : pImpl(std::make_unique<Impl>()) {
   try {
     // Use shared ONNX Runtime environment
     if (!Impl::sharedEnv) {
-        Impl::sharedEnv = std::make_shared<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "ZenithStemSeparator");
+        // Create environment with critical logging level to reduce noise
+        Impl::sharedEnv = std::shared_ptr<Ort::Env>(
+            new Ort::Env(ORT_LOGGING_LEVEL_WARNING, "ZenithStemSeparator"), 
+            [](Ort::Env* env) {
+                // Custom deleter for better tracking (optional, but good for debugging)
+                delete env;
+            });
     }
     pImpl->env = Impl::sharedEnv;
     
     if (pImpl->env) {
         pImpl->memoryInfo = std::make_unique<Ort::MemoryInfo>(
             Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault));
-        DBG("ONNXStemSeparator: ONNX Runtime environment initialized [v" + juce::String(ORT_API_VERSION) + "]");
+        // Only log once per session to avoid spam
+        static bool logged = false;
+        if (!logged) {
+            DBG("ONNXStemSeparator: ONNX Runtime environment initialized [v" + juce::String(ORT_API_VERSION) + "]");
+            logged = true;
+        }
     }
   } catch (const Ort::Exception &e) {
     DBG("ONNXStemSeparator: Failed to initialize ONNX Runtime - " +
@@ -203,7 +214,7 @@ bool ONNXStemSeparator::initialize(const juce::File &modelPath) {
     pImpl->inputNames.clear();
     pImpl->outputNames.clear();
     
-    Ort::AllocatorWithDefaultOptions allocator;
+
 
     for (size_t i = 0; i < pImpl->session->GetInputCount(); ++i) {
         auto name = pImpl->session->GetInputNameAllocated(i, allocator);
@@ -450,7 +461,10 @@ juce::File ONNXStemSeparator::findDefaultModel() {
 
 void ONNXStemSeparator::shutdown() {
 #ifdef ZENITH_USE_ONNX_RUNTIME
+    // Release the shared environment explicitly
+    // This decreases the ref count. If it hits zero, the Env is destroyed.
     Impl::sharedEnv.reset();
+    DBG("ONNXStemSeparator: Shutdown complete");
 #endif
 }
 

@@ -41,7 +41,6 @@ public:
 
   void drawSkia(SkCanvas *canvas) override;
   void resized() override;
-  void timerCallback() override;
 
 private:
   // Child components
@@ -61,8 +60,6 @@ private:
   ::SkFont bodyFont_;
   ::SkFont labelFont_;
   ::SkRect cachedBounds_;
-
-  float animationPhase_ = 0.0f;
 
   void updateCachedPaints(const ::SkRect &bounds);
 

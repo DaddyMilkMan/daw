@@ -12,10 +12,10 @@
 
 #pragma once
 
-#include "SkiaButton.h"
-#include "SkiaComponent.h"
-#include "SkiaLabel.h"
-#include "SkiaTextEditor.h"
+#include "../controls/SkiaButton.h"
+#include "../framework/SkiaComponent.h"
+#include "../controls/SkiaLabel.h"
+#include "../controls/SkiaTextEditor.h"
 #include <juce_core/juce_core.h>
 
 
