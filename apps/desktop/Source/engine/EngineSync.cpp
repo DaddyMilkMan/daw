@@ -17,6 +17,7 @@ namespace zenith {
 //==============================================================================
 
 void Engine::syncTempoMap() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   if (projectState_ && tempoMap_) {
     tempoMap_->updateFromValueTree(projectState_->getTempoMap());
   }

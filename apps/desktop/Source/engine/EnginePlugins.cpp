@@ -11,7 +11,7 @@
 namespace zenith {
 
 void Engine::updateMasterPluginSnapshot() {
-
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   auto newSnapshot = std::make_shared<MasterPluginSnapshot>();
 
   {
@@ -28,6 +28,7 @@ void Engine::updateMasterPluginSnapshot() {
 }
 
 void Engine::addMasterPlugin(std::shared_ptr<juce::AudioPluginInstance> plugin) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   if (!plugin)
     return;
 
@@ -40,7 +41,7 @@ void Engine::addMasterPlugin(std::shared_ptr<juce::AudioPluginInstance> plugin) 
 }
 
 void Engine::removeMasterPlugin(int index) {
-
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   {
     const juce::ScopedLock sl(masterPluginLock_);
     if (index >= 0 && index < static_cast<int>(masterPlugins_.size())) {

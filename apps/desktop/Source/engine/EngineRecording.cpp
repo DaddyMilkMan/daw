@@ -18,6 +18,7 @@ namespace zenith {
 //==============================================================================
 
 void Engine::record() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   DBG("Engine: Record");
 
   if (!transportController_) {
@@ -60,12 +61,14 @@ void Engine::record() {
 }
 
 void Engine::stopRecording() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   DBG("Engine: Stop recording");
   TempoMap tempoMap; // Use default tempo map for now
   recordingManager_->stopRecording(tracks_, tempoMap);
 }
 
 void Engine::toggleRecording() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   if (recordingManager_) {
     if (recordingManager_->isRecording()) {
       stopRecording();

@@ -31,6 +31,8 @@
 #include <vector>
 #include <mutex>
 
+class SkSurface;
+
 namespace zenith {
 
 class ZenithHubComponent : public SkiaComponent,
@@ -181,6 +183,7 @@ private:
 
   // Profile Icon (top-right of hub)
   SkRect profileIconBounds_;
+  SkRect friendsMenuItemBounds_;
   bool isProfileIconHovered_ = false;
   bool isProfileMenuOpen_ = false;
 
@@ -231,6 +234,7 @@ private:
 
   // Aurora living background
   std::unique_ptr<AuroraBackground> auroraBackground_;
+  std::unique_ptr<SkSurface> backgroundCache_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithHubComponent)
 };

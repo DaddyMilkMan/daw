@@ -17,6 +17,7 @@ namespace zenith {
 //==============================================================================
 
 void Engine::enableMidiInput() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   DBG("Engine: Enabling MIDI input...");
 
   // Get list of available MIDI input devices
@@ -52,6 +53,7 @@ void Engine::enableMidiInput() {
 }
 
 void Engine::disableMidiInput() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   DBG("Engine: Disabling MIDI inputs...");
 
   for (auto &input : midiInputs_) {
@@ -106,6 +108,7 @@ void Engine::handleIncomingMidiMessage(juce::MidiInput *source,
 }
 
 void Engine::panic() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   DBG("Engine: PANIC triggered!");
 
   // 1. Stop Transport

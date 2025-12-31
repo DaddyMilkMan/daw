@@ -20,6 +20,7 @@ namespace zenith {
 //==============================================================================
 
 void Engine::play() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   DBG("Engine: Play");
 
   // Handle loop region - reset to loop start if past loop end
@@ -45,6 +46,7 @@ void Engine::play() {
 }
 
 void Engine::stop() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   DBG("Engine: Stop");
 
   if (transportController_) {
@@ -93,18 +95,21 @@ double Engine::getPlaybackPositionBeats() const {
 //==============================================================================
 
 void Engine::setPlayheadSamples(juce::int64 position) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   if (transportController_) {
     transportController_->setPlayheadSamples(position);
   }
 }
 
 void Engine::setLooping(bool shouldLoop) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   if (transportController_) {
     transportController_->setLooping(shouldLoop);
   }
 }
 
 void Engine::setLoopRegion(juce::int64 start, juce::int64 end) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   if (transportController_) {
     transportController_->setLoopRegionSamples(start, end);
   }
@@ -127,6 +132,7 @@ juce::int64 Engine::getLoopEnd() const {
 //==============================================================================
 
 void Engine::toggleMetronome() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   if (transportController_) {
     bool newState = !transportController_->isMetronomeEnabled();
     transportController_->setMetronomeEnabled(newState);
@@ -142,6 +148,7 @@ bool Engine::isMetronomeEnabled() const {
 }
 
 void Engine::setMetronomeLevel(float level) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   if (transportController_) {
     transportController_->setMetronomeLevel(level);
     if (metronome_) {

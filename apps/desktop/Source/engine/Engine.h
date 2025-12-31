@@ -225,10 +225,6 @@ public:
    * @brief Toggle recording on/off
    * @note Convenience method for record button
    */
-  /**
-   * @brief Toggle recording on/off
-   * @note Convenience method for record button
-   */
   void toggleRecording();
 
   /**
@@ -290,7 +286,7 @@ public:
   /**
    * @brief Get current playback position in samples (legacy accessor)
    */
-  juce::int64 getPlaybackPosition() const;
+  JUCE_DEPRECATED juce::int64 getPlaybackPosition() const;
 
   /**
    * @brief Get current playback position in beats
