@@ -658,6 +658,9 @@ void ConfigurationManager::loadDefaults() {
   setDefaultValue(keys::PROJECT_DEFAULT_TIMESIG_DEN, ConfigValue(4));
   setDefaultValue(keys::PROJECT_DEFAULT_SAMPLE_RATE, ConfigValue(44100));
   setDefaultValue(keys::PROJECT_DEFAULT_BUFFER_SIZE, ConfigValue(512));
+
+  // Collaboration defaults
+  setDefaultValue(keys::COLLAB_SERVER_IP, ConfigValue("216.126.231.46"));
 }
 
 juce::var ConfigurationManager::getNestedValue(const juce::String &key) const {

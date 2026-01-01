@@ -9,6 +9,8 @@
 */
 
 #include "TrackProcessor.h"
+#include <array>
+#include <algorithm>
 
 namespace zenith {
 
@@ -50,18 +52,18 @@ void TrackProcessor::processBlock(const juce::AudioSourceChannelInfo& bufferToFi
                                   const juce::AudioBuffer<float>* sidechain) {
     
     // 1. Process Plugin Chain
-    // Using a local buffer wrapper implies we process in-place on bufferToFill.buffer
-    // BUT Track::processPluginChain took a reference to a buffer.
-    // Let's match typical Track behavior: process the buffer directly.
+    // Correctly create a local buffer wrapper by offsetting pointers to startSample
+    const int numChannels = bufferToFill.buffer->getNumChannels();
     
-    // Create a local AudioBuffer referencing the detailed part of bufferToFill
-    // to avoid messing with offsets manually inside pluginChain
-    juce::AudioBuffer<float> localBuffer(
-        bufferToFill.buffer->getArrayOfWritePointers(),
-        bufferToFill.buffer->getNumChannels(),
-        bufferToFill.startSample,
-        bufferToFill.numSamples
-    );
+    // Use a fixed-size array on the stack to avoid allocations
+    std::array<float*, 32> pointers;
+    const int safeChannels = std::min(numChannels, 32);
+    
+    for (int i = 0; i < safeChannels; ++i) {
+        pointers[i] = bufferToFill.buffer->getWritePointer(i, bufferToFill.startSample);
+    }
+
+    juce::AudioBuffer<float> localBuffer(pointers.data(), safeChannels, bufferToFill.numSamples);
 
     pluginChain.process(localBuffer, midiMessages, sidechain);
 
@@ -74,8 +76,8 @@ void TrackProcessor::processBlock(const juce::AudioSourceChannelInfo& bufferToFi
 void TrackProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) {
     // Convenience overload - create AudioSourceChannelInfo and call full version
     juce::AudioSourceChannelInfo info(&buffer, 0, buffer.getNumSamples());
-    std::vector<juce::AudioBuffer<float>*> emptyAux;
-    processBlock(info, midiMessages, emptyAux, nullptr);
+    
+    processBlock(info, midiMessages, emptyAux_, nullptr);
 }
 
 } // namespace zenith

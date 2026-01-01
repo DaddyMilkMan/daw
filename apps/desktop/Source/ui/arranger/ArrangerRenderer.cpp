@@ -124,10 +124,30 @@ void ArrangerRenderer::drawBackground(SkCanvas* canvas, float /* width */, float
 void ArrangerRenderer::drawGrid(SkCanvas* canvas, float width, float height) {
     using namespace zenith::design;
     
+    // Optimization: Get clip bounds to only draw visible grid lines
+    SkRect clipBounds = SkRect::MakeWH(width, height);
+    if (!canvas->getLocalClipBounds(&clipBounds)) {
+        clipBounds = SkRect::MakeWH(width, height);
+    }
+
     int beatsPerBar = gridUtils_.getBeatsPerBar();
-    double startBeat = std::floor(owner_.viewStartBeats);
-    double endBeat = owner_.viewStartBeats + ((width - HEADER_WIDTH) / owner_.pixelsPerBeat);
     
+    // Calculate start/end based on CLIP BOUNDS, not just view bounds
+    // x = HEADER_WIDTH + (beat - viewStart) * ppb
+    // beat = viewStart + (x - HEADER_WIDTH) / ppb
+    
+    float clipLeft = std::max(HEADER_WIDTH, clipBounds.fLeft);
+    float clipRight = std::min(width, clipBounds.fRight);
+    
+    if (clipLeft >= clipRight) return;
+
+    double startBeat = owner_.viewStartBeats + (clipLeft - HEADER_WIDTH) / owner_.pixelsPerBeat;
+    double endBeat = owner_.viewStartBeats + (clipRight - HEADER_WIDTH) / owner_.pixelsPerBeat;
+    
+    // Buffer for edge cases
+    startBeat = std::max(0.0, startBeat - 1.0);
+    endBeat += 1.0;
+
     // Grid Step Calculation
     double gridStep = owner_.gridSnapBeats;
     if (gridStep <= 0.0) gridStep = 1.0;
@@ -157,6 +177,9 @@ void ArrangerRenderer::drawGrid(SkCanvas* canvas, float width, float height) {
             float barStartX = gridUtils_.beatsToX(bar * beatsPerBar);
             float barEndX = gridUtils_.beatsToX((bar + 1) * beatsPerBar);
             
+            // Skip if out of horizontal clip
+            if (barEndX < clipLeft || barStartX > clipRight) continue;
+
             SkPoint pts[2] = {{barStartX, SECTION_HEIGHT}, {barStartX, height}};
             SkColor colors[2] = {
             withAlpha(SK_ColorWHITE, kBarHighlightAlphaTop),
@@ -176,8 +199,8 @@ void ArrangerRenderer::drawGrid(SkCanvas* canvas, float width, float height) {
     for (double beat = alignedStart; beat <= endBeat + 0.001; beat += gridStep) {
         float x = gridUtils_.beatsToX(beat);
         
-        // Skip if outside view
-        if (x < HEADER_WIDTH || x > width) continue;
+        // Skip if outside view or clip
+        if (x < clipLeft || x > clipRight) continue;
 
         // Determine hierarchy
         bool isBarLine = (std::abs(std::fmod(beat, (double)beatsPerBar)) < 0.001);
@@ -204,16 +227,19 @@ void ArrangerRenderer::drawGrid(SkCanvas* canvas, float width, float height) {
     canvas->restore();
     
     // C. HEADER/TIMELINE BOUNDARY GLOW
-    SkPaint boundaryGlowPaint;
-    SkPoint glowPts[2] = {{HEADER_WIDTH, 0}, {HEADER_WIDTH + 40, 0}}; // Wider glow
-    SkColor glowColors[2] = {
-        withAlpha(colors::ACCENT_PRIMARY, 0.25f),
-        withAlpha(colors::ACCENT_PRIMARY, 0.0f)
-    };
-    boundaryGlowPaint.setShader(SkGradientShader::MakeLinear(
-        glowPts, glowColors, nullptr, 2, SkTileMode::kClamp));
-    canvas->drawRect(SkRect::MakeXYWH(HEADER_WIDTH, SECTION_HEIGHT, 40,
-                                       height - SECTION_HEIGHT), boundaryGlowPaint);
+    // Only draw if within clip
+    if (clipBounds.intersects(SkRect::MakeXYWH(HEADER_WIDTH, SECTION_HEIGHT, 40, height - SECTION_HEIGHT))) {
+        SkPaint boundaryGlowPaint;
+        SkPoint glowPts[2] = {{HEADER_WIDTH, 0}, {HEADER_WIDTH + 40, 0}}; // Wider glow
+        SkColor glowColors[2] = {
+            withAlpha(colors::ACCENT_PRIMARY, 0.25f),
+            withAlpha(colors::ACCENT_PRIMARY, 0.0f)
+        };
+        boundaryGlowPaint.setShader(SkGradientShader::MakeLinear(
+            glowPts, glowColors, nullptr, 2, SkTileMode::kClamp));
+        canvas->drawRect(SkRect::MakeXYWH(HEADER_WIDTH, SECTION_HEIGHT, 40,
+                                           height - SECTION_HEIGHT), boundaryGlowPaint);
+    }
 }
 
 //==============================================================================
@@ -236,7 +262,14 @@ void ArrangerRenderer::drawSectionHighlight(SkCanvas* canvas, float height) {
     
     if (sl <= 0)
         return;
-        
+    
+    // Optimization: Check clip intersection
+    SkRect r = SkRect::MakeXYWH(sx, SECTION_HEIGHT, sl, height - SECTION_HEIGHT);
+    SkRect clip;
+    if (canvas->getLocalClipBounds(&clip)) {
+        if (!clip.intersects(r)) return;
+    }
+
     SkPaint highlightPaint;
     juce::Colour c = section->color;
     if (c.isTransparent())
@@ -246,8 +279,7 @@ void ArrangerRenderer::drawSectionHighlight(SkCanvas* canvas, float height) {
     highlightPaint.setColor(sc);
     highlightPaint.setStyle(SkPaint::kFill_Style);
     
-    canvas->drawRect(SkRect::MakeXYWH(sx, SECTION_HEIGHT, sl, height - SECTION_HEIGHT),
-                     highlightPaint);
+    canvas->drawRect(r, highlightPaint);
 }
 
 //==============================================================================
@@ -257,12 +289,25 @@ void ArrangerRenderer::drawSectionHighlight(SkCanvas* canvas, float height) {
 void ArrangerRenderer::drawClips(SkCanvas* canvas, float width, float height) {
     using namespace zenith::design;
     
+    // Optimization: Get clip bounds
+    SkRect clipBounds = SkRect::MakeWH(width, height);
+    if (!canvas->getLocalClipBounds(&clipBounds)) {
+        clipBounds = SkRect::MakeWH(width, height);
+    }
+    
     canvas->save();
     canvas->clipRect(SkRect::MakeXYWH(HEADER_WIDTH, RULER_HEIGHT, 
                                        width - HEADER_WIDTH, height - RULER_HEIGHT));
     
     for (const auto& clipView : clipManager_.getClipViews()) {
-        // Check visibility
+        // Check visibility against global view AND dirty rect
+        SkRect clipRect = SkRect::MakeXYWH(clipView.bounds.getX(), clipView.bounds.getY(),
+                                           clipView.bounds.getWidth(), clipView.bounds.getHeight());
+                                           
+        if (!clipRect.intersects(clipBounds)) {
+             continue; // Skip clips outside dirty region
+        }
+        
         if (clipView.bounds.getRight() < HEADER_WIDTH || clipView.bounds.getX() > width)
             continue;
             

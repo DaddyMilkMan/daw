@@ -84,6 +84,18 @@ void ZenithKnob::mouseDrag(const juce::MouseEvent &e) {
   }
 }
 
+void ZenithKnob::mouseEnter(const juce::MouseEvent &e) {
+  ZenithControl::mouseEnter(e);
+  int duration = design::Settings::isReducedMotionEnabled() ? 0 : design::animation::DURATION_FAST;
+  animateTo("hover", 1.0f, duration);
+}
+
+void ZenithKnob::mouseExit(const juce::MouseEvent &e) {
+  ZenithControl::mouseExit(e);
+  int duration = design::Settings::isReducedMotionEnabled() ? 0 : design::animation::DURATION_FAST;
+  animateTo("hover", 0.0f, duration);
+}
+
 void ZenithKnob::drawSkia(SkCanvas *canvas) {
 #ifdef ZENITH_USE_SKIA
   if (canvas == nullptr)
@@ -234,9 +246,10 @@ void ZenithKnob::drawValueArc(SkCanvas *canvas, float cx, float cy,
   paint.setShader(createArcGradient(cx, cy, radius));
 
   // Glow effect
+  float hoverAnim = getAnimatedValue("hover");
   float glowAmount =
       (glowIntensity_ + animatedGlow_ * 0.5f) *
-      (isHovered_ ? design::effects::GLOW_STRONG : design::effects::GLOW_SUBTLE);
+      design::interpolate(design::effects::GLOW_SUBTLE, design::effects::GLOW_STRONG, hoverAnim);
   if (glowAmount > 0.0f) {
     paint.setMaskFilter(
         SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, glowAmount));

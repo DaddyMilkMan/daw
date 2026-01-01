@@ -130,7 +130,7 @@ void ProCompressor::process(juce::AudioBuffer<float> &buffer) {
     }
 
     // Convert to dB
-    float levelDb = juce::Decibels::gainToDecibels(level, -100.0f);
+    float levelDb = zenith::simd::fastGainToDb(level);
 
     // Compute gain reduction with soft knee
     float gr = computeGainReduction(levelDb);
@@ -143,13 +143,13 @@ void ProCompressor::process(juce::AudioBuffer<float> &buffer) {
     }
 
     // Track max gain reduction for metering
-    float grDb = juce::Decibels::gainToDecibels(gainSmooth_, -100.0f);
+    float grDb = zenith::simd::fastGainToDb(gainSmooth_);
     if (-grDb > maxGR)
       maxGR = -grDb;
 
     // Apply makeup gain
     float totalGain =
-        gainSmooth_ * juce::Decibels::decibelsToGain(
+        gainSmooth_ * zenith::simd::fastDbToGain(
                           autoMakeupEnabled_ ? autoMakeup_ : makeup_);
 
     // Apply with lookahead
@@ -221,7 +221,7 @@ float ProCompressor::computeGainReduction(float inputDb) const {
   }
 
   float gr = output - inputDb;
-  return juce::Decibels::decibelsToGain(gr);
+  return zenith::simd::fastDbToGain(gr);
 }
 
 //==============================================================================

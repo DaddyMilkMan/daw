@@ -32,7 +32,7 @@ public:
     Engine* getEngine() const { return engine.get(); }
 
     void setAnalysisService(AudioAnalysisService* s) { analysisService = s; }
-    AudioAnalysisService* getAnalysisService() const { return analysisService; }
+    AudioAnalysisService* getAnalysisService() const { return analysisService.get(); }
 
     void setBrowserModel(BrowserModel* m) { browserModel = m; }
     BrowserModel* getBrowserModel() const { return browserModel.get(); }
@@ -42,10 +42,7 @@ private:
     
     juce::WeakReference<Engine> engine;
     juce::WeakReference<BrowserModel> browserModel;
-    
-    // AudioAnalysisService is usually owned by Engine, so we keep a raw pointer
-    // but check engine validity first in bindings.
-    AudioAnalysisService* analysisService = nullptr;
+    juce::WeakReference<AudioAnalysisService> analysisService;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GrokGodModeHelper)
 };

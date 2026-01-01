@@ -84,6 +84,8 @@ set(ZENITH_UI_FRAMEWORK_SOURCES
     apps/desktop/Source/ui/framework/LayoutManager.cpp
     apps/desktop/Source/rendering/SkiaRenderer.cpp
     apps/desktop/Source/rendering/SkiaLinkerFix.cpp
+    apps/desktop/Source/ui/framework/AnimationCoordinator.cpp
+    apps/desktop/Source/ui/design-system/MeterRenderer.cpp
 )
 
 # UI Components sources
@@ -137,10 +139,10 @@ set(ZENITH_UI_MAIN_SOURCES
 
 # Browser UI sources
 set(ZENITH_UI_BROWSER_SOURCES
+    apps/desktop/Source/ui/browser/BrowserPanel.cpp
     apps/desktop/Source/ui/panels/BrowserFilterBar.cpp
     apps/desktop/Source/ui/panels/BrowserHoverPreview.cpp
     apps/desktop/Source/ui/panels/BrowserListView.cpp
-    apps/desktop/Source/ui/panels/BrowserPanel.cpp
     apps/desktop/Source/ui/panels/BrowserPreviewPanel.cpp
     apps/desktop/Source/ui/panels/BrowserRecentSidebar.cpp
     apps/desktop/Source/ui/panels/BrowserSearchBar.cpp
@@ -167,6 +169,7 @@ set(ZENITH_UI_SPECIALIZED_SOURCES
     apps/desktop/Source/ui/arranger/TempoLaneComponent.cpp
     apps/desktop/Source/ui/arranger/TimelineRuler.cpp
     apps/desktop/Source/ui/mixer/MixerChannelComponent.cpp
+    apps/desktop/Source/ui/mixer/TrackGroupHeader.cpp
     apps/desktop/Source/ui/mixer/MixerComponent.cpp
     apps/desktop/Source/ui/mixer/PluginBrowser.cpp
     apps/desktop/Source/ui/transport/TransportBar.cpp
@@ -249,6 +252,7 @@ set(ZENITH_AI_NETWORK_SOURCES
     apps/desktop/Source/network/GrokDAWController.cpp
     apps/desktop/Source/network/GrokDAWClient.cpp
     apps/desktop/Source/network/CollaborationManager.cpp
+    apps/desktop/Source/network/DTLSSocket.cpp
     apps/desktop/Source/network/FreesoundClient.cpp
     apps/desktop/Source/network/AIPrompts.cpp
     apps/desktop/Source/network/AITools.cpp

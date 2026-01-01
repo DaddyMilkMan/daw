@@ -57,7 +57,6 @@ RightSidePanel::~RightSidePanel() {}
 
 void RightSidePanel::drawSkia(SkCanvas *canvas) {
   if (canvas == nullptr) return;
-  ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: drawSkia() called");
   
   auto bounds = getLocalBounds().toFloat();
   SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
@@ -83,7 +82,6 @@ void RightSidePanel::resized() {
   if (!wingmanPanel_) return; // Null check only Wingman for now
   // if (!wingmanPanel_ || !spectraAnalyzer_ || !undoHistoryPanel_) return;
   
-  ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: resized() called");
   auto bounds = getLocalBounds();
 
   ZenithLayout::begin()

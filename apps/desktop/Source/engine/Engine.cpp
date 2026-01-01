@@ -32,10 +32,12 @@
 
 // Refactor 2025-12-09: Modular Components
 #include "../engine/AudioRenderer.h"
+#include "../engine/AudioExporter.h"
 #include "../engine/MeteringSystem.h"
 #include "../engine/Metronome.h"
 #include "../engine/RecordingManager.h"
 #include "../engine/TransportController.h"
+#include "RTSafetyChecks.h"  // Zero-Latency Agent: RT-safety debug infrastructure
 
 //==============================================================================
 namespace zenith {
@@ -45,6 +47,7 @@ Engine::Engine() {
 
   // Initialize Modular Components
   audioRenderer_ = std::make_unique<AudioRenderer>();
+  audioExporter_ = std::make_unique<AudioExporter>(*this);
   recordingManager_ = std::make_unique<RecordingManager>();
   transportController_ = std::make_unique<TransportController>();
   metronome_ = std::make_unique<Metronome>();
@@ -405,6 +408,9 @@ void Engine::registerFormats() {
 
 void Engine::audioDeviceAboutToStart(juce::AudioIODevice *device) {
   DBG("Engine: Audio device starting...");
+
+  // Zero-Latency Agent: Mark this thread for RT-safety assertions
+  rt::markAsAudioThread();
 
   // Update settings
   currentSampleRate.store(device->getCurrentSampleRate());

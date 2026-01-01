@@ -8,6 +8,12 @@ target_sources(ZenithDAW PRIVATE
     AIResponseCache.h
     AIResponseCache.cpp
     GrokAPIClient.h
+    NeuralInferenceBridge.h
+    NeuralInferenceBridge.cpp
+    PresetSchemaValidator.h
+    PresetSchemaValidator.cpp
+    NeuralPresetGenerator.h
+    NeuralPresetGenerator.cpp
 
     # Style & UI
     ZenithStyleApplicator.h

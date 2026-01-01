@@ -134,6 +134,8 @@ public:
 
 protected:
   void mouseDrag(const juce::MouseEvent &e) override;
+  void mouseEnter(const juce::MouseEvent &e) override;
+  void mouseExit(const juce::MouseEvent &e) override;
 
 private:
 #ifdef ZENITH_USE_SKIA

@@ -51,7 +51,7 @@ public:
   void mouseExit(const juce::MouseEvent &e) override;
   bool hitTest(int x, int y) override;
 
-  void timerCallback() override;
+  void onAnimationTick(float deltaMs) override;
   void visibilityChanged() override;
 
   std::unique_ptr<juce::AccessibilityHandler>

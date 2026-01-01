@@ -179,67 +179,30 @@ void SkiaOpenGLRenderer::newOpenGLContextCreated() {
 }
 
 void SkiaOpenGLRenderer::renderOpenGL() {
-  std::cerr << "[RENDER] renderOpenGL() ENTRY" << std::endl;
-  std::cerr.flush();
-  if (!contextInitialized_ || !grContext_) {
-    static bool loggedOnce = false;
-    if (!loggedOnce) {
-        ZENITH_LOG_WARNING("SkiaOpenGLRenderer: renderOpenGL called but context not initialized!");
-        loggedOnce = true;
-    }
+  if (!contextInitialized_)
     return;
-  }
 
-  std::cerr << "[RENDER] renderOpenGL() - context valid" << std::endl;
-  ZENITH_LOG_INFO("SkiaOpenGLRenderer: renderOpenGL() START");
+  // Use thread-safe dimensions
+  int width = safeWidth_.load();
+  int height = safeHeight_.load();
 
-  // ROBUSTNESS: Check if we are being destroyed or if peer is gone
-  // This prevents accessing invalid window handles during teardown
-  if (targetComponent_ == nullptr || targetComponent_->getPeer() == nullptr) {
-       return;
-  }
-  
-  if (!targetComponent_->isVisible()) {
-      return; 
-  }
+  if (width <= 0 || height <= 0)
+    return;
 
-  // IMPORTANT: Do NOT use MessageManagerLock here!
-  // The OpenGL render thread should not block the message thread.
-  // This was causing UI events (including close button) to be blocked.
-
-  auto width = safeWidth_.load();
-  auto height = safeHeight_.load();
-  
-  // Fallback to component dimensions if atomic values not yet set
-  if (width <= 0 || height <= 0) {
-    width = targetComponent_->getWidth();
-    height = targetComponent_->getHeight();
-  }
-
-  // Only recreate surface if size changed
-  if (width != lastWidth_ || height != lastHeight_ || !surface_) {
+  if (lastWidth_ != width || lastHeight_ != height) {
+    recreateSurface();
     lastWidth_ = width;
     lastHeight_ = height;
-    recreateSurface();
   }
 
-  if (!surface_) {
-    return;
+  if (surface_) {
+    SkCanvas *canvas = surface_->getCanvas();
+    if (canvas) {
+      canvas->clear(SK_ColorTRANSPARENT);
+      drawSkiaContent(canvas);
+      grContext_->flush();
+    }
   }
-
-  // Get canvas and clear
-  skiaCanvas_ = surface_->getCanvas();
-  ZENITH_LOG_INFO("SkiaOpenGLRenderer: Clearing canvas...");
-  skiaCanvas_->clear(SkColorSetARGB(255, 10, 10, 15)); // Dark background
-
-  // Let derived class draw
-  ZENITH_LOG_INFO("SkiaOpenGLRenderer: calling drawSkiaContent...");
-  drawSkiaContent(skiaCanvas_);
-  ZENITH_LOG_INFO("SkiaOpenGLRenderer: drawSkiaContent returned.");
-
-  // Flush to GPU
-  grContext_->flushAndSubmit();
-  skiaCanvas_ = nullptr;
 }
 
 void SkiaOpenGLRenderer::openGLContextClosing() {
@@ -315,14 +278,10 @@ SkiaMainWindowIntegration::SkiaMainWindowIntegration()
 SkiaMainWindowIntegration::~SkiaMainWindowIntegration() {}
 
 void SkiaMainWindowIntegration::paint(juce::Graphics &g) {
-  // Software Rasterization Fallback
+  // Software fallback rendering
   static int frameCount = 0;
   frameCount++;
-  if (frameCount == 1 || frameCount % 300 == 0) {
-      ZENITH_LOG_INFO("Software Paint Frame " + std::to_string(frameCount) + 
-                      ", Size: " + std::to_string(getWidth()) + "x" + std::to_string(getHeight()));
-  }
-
+  
   auto bounds = getLocalBounds();
   if (bounds.isEmpty()) return;
 

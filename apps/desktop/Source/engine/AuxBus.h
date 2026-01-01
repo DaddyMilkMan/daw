@@ -43,6 +43,9 @@ public:
   [[nodiscard]] const juce::String &getId() const { return id_; }
   void setId(const juce::String &newId) { id_ = newId; }
 
+  int getBusIndex() const { return busIndex_; }
+  void setBusIndex(int index) { busIndex_ = index; }
+
   //==============================================================================
   // Mixer controls (delegated to MixerChannel)
   //==============================================================================
@@ -77,6 +80,7 @@ public:
 private:
   juce::String name_;
   juce::String id_;
+  int busIndex_ = -1;
   MixerChannel mixerChannel;
 
   // Input buffer for accumulating sends from tracks

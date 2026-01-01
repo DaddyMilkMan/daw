@@ -26,10 +26,12 @@
 #include "../framework/SkiaComponent.h"
 #include "../controls/SkiaTextEditor.h"
 #include "../design-system/ZenithDesignSystem.h"
+#include "../framework/AnimationCoordinator.h"
 #include <functional>
 #include <memory>
 #include <vector>
 #include <mutex>
+#include <atomic>
 
 class SkSurface;
 
@@ -79,8 +81,10 @@ public:
   // New: Restrict hits to card only
   bool hitTest(int x, int y) override;
 
-  // Animation hook
-  void timerCallback() override;
+  // AnimationListener interface (replaces timerCallback)
+  void onAnimationTick(float deltaMs) override;
+  bool isAnimating() const override;
+  bool requiresVisibility() const override { return true; }
 
   // RecentProjectManager::Listener
   void recentProjectsChanged() override;
@@ -151,7 +155,7 @@ private:
     juce::File path; // Actual file path for loading
     SkColor accent;
     SkRect bounds;
-    bool isHovered = false;
+    bool isHovered = false;  // Changed from atomic - only accessed from message thread
     std::vector<float> waveform;
     zenith::PhysicsSpring scaleSpring{1.0f}; // Start at 1.0
   };
@@ -163,7 +167,7 @@ private:
     juce::String icon; // Unicode or ID
     SkColor color;
     SkRect bounds;
-    bool isHovered = false;
+    bool isHovered = false;  // Changed from atomic - only accessed from message thread
     zenith::PhysicsSpring scaleSpring{1.0f};
   };
   std::vector<TemplateItem> templates_;
@@ -178,21 +182,21 @@ private:
 
   // New Project Button
   SkRect newProjectButtonBounds_;
-  bool isNewProjectHovered_ = false;
+  std::atomic<bool> isNewProjectHovered_{false};
   float buttonGradientAngle_ = 0.0f;
 
   // Profile Icon (top-right of hub)
   SkRect profileIconBounds_;
   SkRect friendsMenuItemBounds_;
-  bool isProfileIconHovered_ = false;
-  bool isProfileMenuOpen_ = false;
+  std::atomic<bool> isProfileIconHovered_{false};
+  std::atomic<bool> isProfileMenuOpen_{false};
 
   // Greeting Customization
   juce::String greetingText_ = "Welcome back, User";
   SkRect greetingTextBounds_;
   SkRect greetingEditIconBounds_;
   std::unique_ptr<SkiaTextEditor> greetingEditor_;
-  bool isGreetingHovered_ = false;
+  std::atomic<bool> isGreetingHovered_{false};
 
   void showGreetingEditor();
   void hideGreetingEditor(bool save);
@@ -231,10 +235,6 @@ private:
   static SkColor getAccentColorForGenre(const juce::String &genre);
 
   void updateLayout();
-
-  // Aurora living background
-  std::unique_ptr<AuroraBackground> auroraBackground_;
-  std::unique_ptr<SkSurface> backgroundCache_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithHubComponent)
 };

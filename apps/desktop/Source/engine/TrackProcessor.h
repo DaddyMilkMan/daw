@@ -80,6 +80,7 @@ private:
     int currentBlockSize = 512;
 
     std::unordered_map<int, Track*> sidechainSources;
+    std::vector<juce::AudioBuffer<float>*> emptyAux_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackProcessor)
 };

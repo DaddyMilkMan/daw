@@ -22,6 +22,7 @@ float Settings::glowIntensity = 1.0f;
 float Settings::uiScale = 1.0f;
 Settings::Theme Settings::currentTheme = Settings::Theme::NeonNoir;
 Settings::BlurQuality Settings::blurQuality = Settings::BlurQuality::High;
+bool Settings::reducedMotionEnabled = false;
 
 // ============================================================================
 // THEME MANAGER IMPLEMENTATION

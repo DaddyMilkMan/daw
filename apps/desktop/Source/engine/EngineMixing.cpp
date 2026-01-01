@@ -152,6 +152,7 @@ int Engine::createAuxBus(const juce::String &name) {
     bus->prepareToPlay(currentBufferSize.load(), currentSampleRate.load());
   }
 
+  bus->setBusIndex(static_cast<int>(auxBuses_.size()));
   auxBuses_.push_back(bus);
   int index = static_cast<int>(auxBuses_.size()) - 1;
 
@@ -173,7 +174,7 @@ int Engine::createAuxBus(const juce::String &name) {
 
   updateTrackSnapshot();
 
-  DBG("Engine: Created Aux Bus '" + name + "' (ID: " + node.id + ")");
+  DBG("Engine: Created Aux Bus '" + name + "' (ID: " + node.id + ") at index " + juce::String(index));
   return index;
 }
 
@@ -192,6 +193,11 @@ void Engine::removeAuxBus(int auxIndex) {
     }
 
     auxBuses_.erase(auxBuses_.begin() + auxIndex);
+
+    // Re-index remaining buses
+    for (int i = 0; i < static_cast<int>(auxBuses_.size()); ++i) {
+        auxBuses_[i]->setBusIndex(i);
+    }
 
     updateTrackSnapshot();
   }

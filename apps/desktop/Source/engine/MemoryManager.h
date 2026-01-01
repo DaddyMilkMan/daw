@@ -16,6 +16,9 @@ namespace zenith {
 /**
  * @class ObjectPool
  * @brief Pre-allocated object pool to avoid real-time allocations
+ * 
+ * Note: The standard acquire()/release() methods use std::mutex and are NOT RT-safe.
+ * For audio thread use, use tryAcquireRT()/releaseRT() which use try_lock.
  */
 template<typename T>
 class ObjectPool {
@@ -25,6 +28,10 @@ public:
             available_.push(std::make_unique<T>());
         }
     }
+    
+    // =========================================================================
+    // NON-RT-SAFE methods (use from message thread only)
+    // =========================================================================
     
     std::unique_ptr<T> acquire() {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -47,6 +54,50 @@ public:
     size_t availableCount() const {
         std::lock_guard<std::mutex> lock(mutex_);
         return available_.size();
+    }
+    
+    // =========================================================================
+    // RT-SAFE methods (safe for audio thread)
+    // =========================================================================
+    
+    /**
+     * @brief RT-SAFE: Try to acquire an object without blocking
+     * @return Raw pointer to object, or nullptr if pool is empty or lock unavailable
+     * @note Caller takes ownership and must call releaseRT() when done
+     */
+    T* tryAcquireRT() noexcept {
+        if (!mutex_.try_lock()) {
+            return nullptr;  // Lock not available - don't block
+        }
+        
+        T* result = nullptr;
+        if (!available_.empty()) {
+            result = available_.top().release();  // Transfer ownership
+            available_.pop();
+        }
+        
+        mutex_.unlock();
+        return result;
+    }
+    
+    /**
+     * @brief RT-SAFE: Try to release an object without blocking
+     * @param obj Raw pointer to release (pool takes ownership)
+     * @return true if released to pool, false if lock unavailable (caller keeps ownership)
+     * @note If this returns false, the object may leak - acceptable for RT safety
+     */
+    bool releaseRT(T* obj) noexcept {
+        if (!obj) return true;
+        
+        if (!mutex_.try_lock()) {
+            // Can't get lock - caller must handle this
+            // In RT context, leaking is preferable to blocking
+            return false;
+        }
+        
+        available_.push(std::unique_ptr<T>(obj));
+        mutex_.unlock();
+        return true;
     }
     
 private:

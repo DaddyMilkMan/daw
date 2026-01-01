@@ -14,7 +14,7 @@ include(cmake/BuildOptimizations.cmake OPTIONAL)
 
 cmake_minimum_required(VERSION 3.25)
 
-project(ZenithDAW 
+project(ZenithDAW
     VERSION 0.1.0
     DESCRIPTION "Zenith DAW - Professional Digital Audio Workstation"
     LANGUAGES CXX C
@@ -48,40 +48,8 @@ endif()
 # DEPENDENCIES
 # =============================================================================
 
-# JUCE Setup - prefer local directory if available
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/CMakeLists.txt")
-    message(STATUS "Using local JUCE from external/JUCE")
-    add_subdirectory(external/JUCE)
-else()
-    message(STATUS "Fetching JUCE from GitHub...")
-    include(FetchContent)
-    FetchContent_Declare(
-        JUCE
-        GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-        GIT_TAG 8.0.0
-    )
-    FetchContent_MakeAvailable(JUCE)
-endif()
-
-# Core JUCE modules for Zenith DAW
-set(ZENITH_JUCE_MODULES
-    juce::juce_core
-    juce::juce_cryptography
-    juce::juce_events
-    juce::juce_graphics
-    juce::juce_data_structures
-    juce::juce_gui_basics
-    juce::juce_gui_extra
-    juce::juce_audio_basics
-    juce::juce_audio_devices
-    juce::juce_audio_formats
-    juce::juce_audio_processors
-    juce::juce_audio_utils
-    juce::juce_dsp
-    juce::juce_opengl
-)
-
-message(STATUS "Zenith DAW: JUCE 8.0.0 configured")
+# Centralized dependency management (JUCE, ONNX, OpenSSL, etc.)
+include(cmake/Dependencies.cmake)
 
 # =============================================================================
 # SOURCE FILES
@@ -93,7 +61,7 @@ include(cmake/SourceFiles.cmake OPTIONAL)
 # Fallback if modular file not found
 if(NOT DEFINED ZENITH_ALL_SOURCES)
     message(STATUS "Using fallback source collection")
-    file(GLOB_RECURSE ZENITH_ALL_SOURCES 
+    file(GLOB_RECURSE ZENITH_ALL_SOURCES
         "apps/desktop/Source/*.cpp"
         "apps/desktop/Source/engine/*.cpp"
         "apps/desktop/Source/ui/*.cpp"
@@ -106,10 +74,10 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/tests/AudioEngineTests.cpp
 
     apps/desktop/Source/tests/ProjectStateTests.cpp
+    apps/desktop/Source/tests/ProjectFileIOTests.cpp
     apps/desktop/Source/tests/EngineTests.cpp
     apps/desktop/Source/tests/ConcurrencyTests.cpp
     apps/desktop/Source/tests/ThemeTests.cpp
-    apps/desktop/Source/tests/UITests.cpp
     apps/desktop/Source/tests/Midi2Tests.cpp
     apps/desktop/Source/tests/AITests.cpp
     apps/desktop/Source/tests/AccessibilityTests.cpp
@@ -117,7 +85,10 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/tests/OnnxPipelineTests.cpp
     apps/desktop/Source/tests/PluginAutomationTests.cpp
     apps/desktop/Source/tests/SampleEditorRecordingTests.cpp
-    apps/desktop/Source/tests/CollaborationMultiPeerTest.cpp
+    apps/desktop/Source/tests/SampleEditorRecordingTests.cpp
+    apps/desktop/Source/tests/MixerChannelBenchmark.cpp
+    apps/desktop/Source/tests/TrackGroupHeaderTest.cpp
+    apps/desktop/Source/tests/SIMDHelpersTest.cpp
 )
 
 # =============================================================================
@@ -133,7 +104,7 @@ juce_add_gui_app(ZenithDAW
 )
 
 # Generate JuceHeader.h
-juce_generate_juce_header(ZenithDAW)
+# juce_generate_juce_header(ZenithDAW)
 
 # Add source files
 target_sources(ZenithDAW PRIVATE ${ZENITH_ALL_SOURCES})
@@ -152,37 +123,18 @@ target_compile_definitions(ZenithDAW PRIVATE
 # INCLUDE DIRECTORIES
 # =============================================================================
 
-target_include_directories(ZenithDAW PUBLIC
+# Load centralized interface libraries for includes
+include(cmake/TargetIncludes.cmake)
+
+# Build artifacts includes (PRIVATE - internal to ZenithDAW target)
+target_include_directories(ZenithDAW PRIVATE
     ${CMAKE_BINARY_DIR}/ZenithDAW_artefacts/JuceLibraryCode
-    apps/desktop/Source
-    apps/desktop/Source/engine
-    apps/desktop/Source/ui
-    apps/desktop/Source/ui/framework
-    apps/desktop/Source/ui/design-system
-    apps/desktop/Source/ui/arranger
-    apps/desktop/Source/ui/mixer
-    apps/desktop/Source/ui/piano-roll
-    apps/desktop/Source/ui/transport
-    apps/desktop/Source/ui/common
-    apps/desktop/Source/ui/controls
-    apps/desktop/Source/ui/panels
-    apps/desktop/Source/ui/widgets
-    apps/desktop/Source/ui/session
-    apps/desktop/Source/ui/instruments
-    apps/desktop/Source/ui/dialogs
-    apps/desktop/Source/ui/sample-editor
-    apps/desktop/Source/commands
-    apps/desktop/Source/instruments
-    apps/desktop/Source/network
-    apps/desktop/Source/dsp
-    apps/desktop/Source/rendering
-    apps/desktop/Source/ai
-    apps/desktop/Source/ui/skia
-    apps/desktop/Source/utils
-    ${CMAKE_PREFIX_PATH}/include
     ${CMAKE_BINARY_DIR}/JuceLibraryCode
-    "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
 )
+
+# Link interface libraries for source includes
+# This provides all Source/ subdirectories via zenith_app_includes
+target_link_libraries(ZenithDAW PRIVATE zenith_app_includes)
 
 # =============================================================================
 # LIBRARY LINKING
@@ -190,6 +142,7 @@ target_include_directories(ZenithDAW PUBLIC
 
 # Link JUCE modules
 target_link_libraries(ZenithDAW PRIVATE ${ZENITH_JUCE_MODULES})
+
 
 # =============================================================================
 # SKIA INTEGRATION (after target creation)
@@ -204,7 +157,7 @@ if(ZENITH_ENABLE_SKIA)
         include(apps/desktop/cmake/SkiaManualIntegration.cmake)
         target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_SKIA=1)
         message(STATUS "Zenith DAW: Skia rendering ENABLED")
-        
+
         # Platform-specific graphics libraries
         if(WIN32)
             target_link_libraries(ZenithDAW PRIVATE d3d12 dxgi dcomp uuid)
@@ -231,46 +184,44 @@ endif()
 # ONNX RUNTIME INTEGRATION (after target creation)
 # =============================================================================
 
-# ONNX Runtime for AI features (Linux only currently)
-option(ENABLE_ONNX "Enable ONNX Runtime for AI features" ON)
+# =============================================================================
+# ONNX RUNTIME INTEGRATION (Post-Target)
+# =============================================================================
 
-if(ENABLE_ONNX)
-    if(UNIX AND NOT APPLE)
-        include(FetchContent)
-        FetchContent_Declare(
-            onnxruntime
-            URL https://github.com/microsoft/onnxruntime/releases/download/v1.17.1/onnxruntime-linux-x64-1.17.1.tgz
-        )
-        FetchContent_MakeAvailable(onnxruntime)
-        
-        # Global compile definitions
-        target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_ONNX_RUNTIME=1)
-        target_link_libraries(ZenithDAW PRIVATE ${onnxruntime_SOURCE_DIR}/lib/libonnxruntime.so)
-        target_include_directories(ZenithDAW PRIVATE ${onnxruntime_SOURCE_DIR}/include)
-        
-        # Copy ONNX library to output directory
-        add_custom_command(TARGET ZenithDAW POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${onnxruntime_SOURCE_DIR}/lib/libonnxruntime.so.1.17.1"
-            "$<TARGET_FILE_DIR:ZenithDAW>/libonnxruntime.so.1.17.1"
-            COMMAND ${CMAKE_COMMAND} -E create_symlink
-            "libonnxruntime.so.1.17.1"
-            "$<TARGET_FILE_DIR:ZenithDAW>/libonnxruntime.so.1"
-            COMMAND ${CMAKE_COMMAND} -E create_symlink
-            "libonnxruntime.so.1.17.1"
-            "$<TARGET_FILE_DIR:ZenithDAW>/libonnxruntime.so"
-            COMMENT "Copying ONNX Runtime library to output directory"
-        )
-        
-        message(STATUS "Zenith DAW: ONNX Runtime support ENABLED (Linux)")
-    else()
-        message(STATUS "Zenith DAW: ONNX Runtime support disabled on this platform")
-        set(ENABLE_ONNX OFF)
-    endif()
-else()
-    message(STATUS "Zenith DAW: ONNX Runtime support disabled by user")
+if(ZENITH_HAS_ONNX)
+    # Global compile definitions
+    target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_ONNX_RUNTIME=1)
+    
+    # Link against imported target from Dependencies.cmake
+    target_link_libraries(ZenithDAW PRIVATE onnxruntime)
+    
+    # Copy ONNX library to output directory
+    add_custom_command(TARGET ZenithDAW POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${ONNX_RUNTIME_LIBRARY_DIR}/${ONNX_RUNTIME_SHARED_LIB_VERSIONED}"
+        "$<TARGET_FILE_DIR:ZenithDAW>/${ONNX_RUNTIME_SHARED_LIB_VERSIONED}"
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+        "${ONNX_RUNTIME_SHARED_LIB_VERSIONED}"
+        "$<TARGET_FILE_DIR:ZenithDAW>/${ONNX_RUNTIME_SHARED_LIB}"
+        COMMAND ${CMAKE_COMMAND} -E create_symlink
+        "${ONNX_RUNTIME_SHARED_LIB_VERSIONED}"
+        "$<TARGET_FILE_DIR:ZenithDAW>/libonnxruntime.so.1" # Legacy compat
+        COMMENT "Copying ONNX Runtime library to output directory"
+    )
 endif()
 
+# =============================================================================
+# OPENSSL (Collaboration Security)
+# =============================================================================
+
+if(ZENITH_ENABLE_COLLAB)
+    # Link against standard targets defined in Dependencies.cmake
+    target_link_libraries(ZenithDAW PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+
+    if (UNIX AND NOT APPLE)
+        target_link_libraries(ZenithDAW PRIVATE dl)
+    endif()
+endif()
 # =============================================================================
 # COMPILE DEFINITIONS
 # =============================================================================
@@ -332,55 +283,34 @@ endif()
 
 option(BUILD_TESTS "Build unit tests" OFF)
 if(BUILD_TESTS)
-    juce_add_gui_app(ZenithDAWTests
+    juce_add_console_app(ZenithDAWTests
         PRODUCT_NAME "ZenithDAWTests"
     )
-    
+
     juce_generate_juce_header(ZenithDAWTests)
-    
+
     set(ZENITH_TEST_APP_SOURCES ${ZENITH_ALL_SOURCES})
     list(FILTER ZENITH_TEST_APP_SOURCES EXCLUDE REGEX "Main\\.cpp$")
     target_sources(ZenithDAWTests PRIVATE ${ZENITH_TEST_SOURCES} ${ZENITH_TEST_APP_SOURCES})
-    
-    target_include_directories(ZenithDAWTests PRIVATE 
+
+    # Use centralized interface libraries (same as ZenithDAW)
+    target_include_directories(ZenithDAWTests PRIVATE
         ${CMAKE_BINARY_DIR}/ZenithDAWTests_artefacts/JuceLibraryCode
-        apps/desktop/Source
-        apps/desktop/Source/engine
-        apps/desktop/Source/ui
-        apps/desktop/Source/ui/framework
-        apps/desktop/Source/ui/design-system
-        apps/desktop/Source/ui/arranger
-        apps/desktop/Source/ui/mixer
-        apps/desktop/Source/ui/piano-roll
-        apps/desktop/Source/ui/transport
-        apps/desktop/Source/ui/common
-        apps/desktop/Source/ui/widgets
-        apps/desktop/Source/ui/session
-        apps/desktop/Source/ui/instruments
-        apps/desktop/Source/ui/dialogs
-        apps/desktop/Source/ui/sample-editor
-        apps/desktop/Source/commands
-        apps/desktop/Source/instruments
-        apps/desktop/Source/network
-        apps/desktop/Source/dsp
-        apps/desktop/Source/rendering
-        apps/desktop/Source/ai
-        apps/desktop/Source/ui/skia
-        apps/desktop/Source/utils
-        ${CMAKE_PREFIX_PATH}/include
         ${CMAKE_BINARY_DIR}/JuceLibraryCode
-        "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
     )
     
+    # Link interface libraries for source includes
+    target_link_libraries(ZenithDAWTests PRIVATE zenith_app_includes)
     target_link_libraries(ZenithDAWTests PRIVATE ${ZENITH_JUCE_MODULES})
-    
+
+
     target_compile_definitions(ZenithDAWTests PRIVATE
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
     )
-    
+
     target_compile_features(ZenithDAWTests PRIVATE cxx_std_20)
-    
+
     if(ZENITH_ENABLE_SKIA)
         # Re-use SKIA_ROOT/SKIA_INCLUDE_DIR detected by SkiaManualIntegration.cmake
         target_include_directories(ZenithDAWTests PRIVATE ${SKIA_ROOT}/include ${SKIA_INCLUDE_DIR})
@@ -388,16 +318,81 @@ if(BUILD_TESTS)
             target_link_libraries(ZenithDAWTests PRIVATE ${SKIA_LIBRARY})
         endif()
         target_compile_definitions(ZenithDAWTests PRIVATE ZENITH_USE_SKIA=1)
-        
+
         # Platform libs similar to ZenithDAW
         if(WIN32)
             target_link_libraries(ZenithDAWTests PRIVATE d3d12 dxgi dcomp uuid)
         elseif(APPLE)
             target_link_libraries(ZenithDAWTests PRIVATE "-framework Metal" "-framework Foundation" "-framework QuartzCore")
         elseif(UNIX AND NOT APPLE)
-            target_link_libraries(ZenithDAWTests PRIVATE vulkan) 
+            target_link_libraries(ZenithDAWTests PRIVATE vulkan EGL GLESv2)
         endif()
     endif()
+
+    # =========================================================================
+    # MetricsChartTests - Lightweight test for MetricsChart multi-series
+    # =========================================================================
+    juce_add_console_app(MetricsChartTests
+        PRODUCT_NAME "MetricsChartTests"
+    )
+
+    juce_generate_juce_header(MetricsChartTests)
+
+    target_sources(MetricsChartTests PRIVATE
+        apps/desktop/Source/tests/TestRunner.cpp
+        apps/desktop/Source/tests/UITests.cpp
+        apps/desktop/Source/ui/dashboards/MetricsChart.cpp
+    )
+
+    # Use centralized interface libraries
+    target_include_directories(MetricsChartTests PRIVATE
+        ${CMAKE_BINARY_DIR}/MetricsChartTests_artefacts/JuceLibraryCode
+    )
+    
+    # Link minimal interface libraries (lightweight test)
+    target_link_libraries(MetricsChartTests PRIVATE 
+        zenith_core_includes
+        zenith_ui_includes
+        zenith_juce_includes
+    )
+
+    # Skia includes (if enabled)
+    if(ZENITH_ENABLE_SKIA)
+        target_include_directories(MetricsChartTests PRIVATE 
+            ${SKIA_ROOT}/include 
+            ${SKIA_INCLUDE_DIR}
+        )
+    endif()
+
+    target_link_libraries(MetricsChartTests PRIVATE
+        juce::juce_core
+        juce::juce_events
+        juce::juce_graphics
+        juce::juce_data_structures
+        juce::juce_gui_basics
+    )
+
+
+    if(ZENITH_ENABLE_SKIA)
+        target_link_libraries(MetricsChartTests PRIVATE ${SKIA_LIBRARY})
+        target_compile_definitions(MetricsChartTests PRIVATE ZENITH_USE_SKIA=1)
+        
+        if(WIN32)
+            target_link_libraries(MetricsChartTests PRIVATE d3d12 dxgi dcomp uuid)
+        elseif(APPLE)
+            target_link_libraries(MetricsChartTests PRIVATE "-framework Metal" "-framework Foundation" "-framework QuartzCore")
+        elseif(UNIX AND NOT APPLE)
+            target_link_libraries(MetricsChartTests PRIVATE vulkan)
+        endif()
+    endif()
+
+    target_compile_definitions(MetricsChartTests PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        ZENITH_TEST_MODE=1
+    )
+
+    target_compile_features(MetricsChartTests PRIVATE cxx_std_20)
 endif()
 
 # =============================================================================
@@ -420,6 +415,49 @@ add_custom_command(TARGET ZenithDAW POST_BUILD
     $<TARGET_FILE_DIR:ZenithDAW>/Resources/fonts
     COMMENT "Copying Fonts to Output Directory"
 )
+
+# =============================================================================
+# PYTHON INTEGRATION (Signaling Server)
+# =============================================================================
+
+option(ZENITH_ENABLE_COLLAB "Enable Collaboration Features (requires Python3)" OFF)
+
+if(ZENITH_ENABLE_COLLAB)
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
+    if(Python3_FOUND)
+        message(STATUS "Found Python 3: ${Python3_EXECUTABLE}")
+
+        set(PYTHON_DEPS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/backend/signaling/requirements.txt)
+        set(PYTHON_SERVER_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/backend/signaling/signaling_server.py)
+
+        # Custom target to install python dependencies
+        add_custom_target(
+            install_python_deps
+            COMMAND ${Python3_EXECUTABLE} -m pip install -r ${PYTHON_DEPS_FILE}
+            COMMENT "Installing Python dependencies for signaling server"
+            USES_TERMINAL
+        )
+
+        # Custom target to run the signaling server
+        add_custom_target(
+            run_signaling_server
+            COMMAND ${Python3_EXECUTABLE} ${PYTHON_SERVER_SCRIPT}
+            COMMENT "Running Python signaling server"
+            USES_TERMINAL
+        )
+
+        # Make install_python_deps a dependency of the main app, so it's always considered
+        add_dependencies(ZenithDAW install_python_deps)
+
+        message(STATUS "Collaboration features enabled. Use target 'run_signaling_server' to start the server.")
+    else()
+        message(WARNING "Python 3 not found, collaboration features will be unavailable.")
+        set(ZENITH_ENABLE_COLLAB OFF)
+    endif()
+else()
+    message(STATUS "Collaboration features disabled by user.")
+endif()
 
 # =============================================================================
 # BUILD INFORMATION

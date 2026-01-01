@@ -358,8 +358,6 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, CommandAPI &api, Projec
 MainLayoutComponent::~MainLayoutComponent() = default;
 
 void MainLayoutComponent::drawSkia(SkCanvas *canvas) {
-  // Background
-  ZENITH_LOG_INFO("MainLayoutComponent: drawSkia() called");
   auto bounds = getLocalBounds().toFloat();
   SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
   GlassmorphicPanel::fillBackground(canvas, skBounds);

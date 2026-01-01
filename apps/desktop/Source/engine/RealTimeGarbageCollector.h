@@ -100,11 +100,16 @@ private:
   };
 
   // Queue of items to delete
-  // Access protected by lock (Message Thread writes, Timer Thread reads/writes)
-  // Since Timer usually runs on Message Thread, this lock might be redundant if single-threaded,
-  // but we enforce safety.
-  std::vector<TrashItem> trash_;
-  juce::CriticalSection trashLock_;
+  // Using a larger fixed-size buffer with AbstractFifo for MPSC safety
+  static constexpr int kMaxTrashItems = 4096;
+  std::vector<TrashItem> trashBuffer_;
+  juce::AbstractFifo fifo_{kMaxTrashItems};
+  
+  // Multiple producers (Audio Threads) need to synchronize their writes
+  juce::SpinLock writeLock_;
+
+  // Items currently waiting for the safety duration to pass
+  std::vector<TrashItem> pendingDestruction_;
 
   // Safety buffer duration in milliseconds
   static constexpr uint32_t kSafetyDurationMs = 1000;

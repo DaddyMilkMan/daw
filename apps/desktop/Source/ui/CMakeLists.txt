@@ -7,6 +7,7 @@
 # Framework (Core Skia components)
 # -----------------------------------------------------------------------------
 target_sources(ZenithDAW PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/framework/AnimationCoordinator.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/framework/SkiaComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/framework/SkiaMainWindowIntegration.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/framework/AuroraBackground.cpp
@@ -27,6 +28,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/design-system/ZenithLayout.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/design-system/ZenithLookAndFeel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/design-system/ZenithTheme.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/design-system/MeterRenderer.cpp
 )
 
 # -----------------------------------------------------------------------------
@@ -55,6 +57,7 @@ target_sources(ZenithDAW PRIVATE
 target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/mixer/MixerComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/mixer/MixerChannelComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/mixer/TrackGroupHeader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/mixer/PluginBrowser.cpp
 )
 

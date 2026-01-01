@@ -87,6 +87,21 @@ public:
   /** Callback when selection changes */
   std::function<void(const juce::String &)> onSelectionChanged;
 
+  //==========================================================================
+  // Keyboard Navigation (WCAG 2.1.1 Keyboard)
+  //==========================================================================
+
+  bool keyPressed(const juce::KeyPress& key, juce::Component* origin) override;
+  
+  /** Navigate to next channel (right arrow) */
+  void selectNextChannel();
+  
+  /** Navigate to previous channel (left arrow) */
+  void selectPreviousChannel();
+  
+  /** Get index of currently selected channel (-1 if none, numChannels for master) */
+  int getSelectedChannelIndex() const;
+
 private:
   //==========================================================================
   // Internal methods
@@ -142,14 +157,15 @@ private:
   // Selection state
   juce::String selectedTrackId_;
 
-  // Layout constants
-  static constexpr int stripWidth = 100;
-  static constexpr int masterStripWidth = 140;
-  static constexpr int stripSpacing = 4;
-  static constexpr int topMargin = 8;
-  static constexpr int bottomMargin = 8;
-  static constexpr int sideMargin = 8;
-  static constexpr int dividerWidth = 2;
+  // Layout constants - Use design system tokens (no magic numbers!)
+  // Anti-Corner-Cutting: These must reference ZenithDesignSystem values
+  static constexpr int stripWidth = design::dimensions::MIXER_CHANNEL_WIDTH;
+  static constexpr int masterStripWidth = design::dimensions::MIXER_MASTER_WIDTH;
+  static constexpr int stripSpacing = design::dimensions::MIXER_CHANNEL_SPACING;
+  static constexpr int topMargin = static_cast<int>(design::spacing::SM);
+  static constexpr int bottomMargin = static_cast<int>(design::spacing::SM);
+  static constexpr int sideMargin = static_cast<int>(design::spacing::SM);
+  static constexpr int dividerWidth = design::dimensions::DIVIDER_WIDTH;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerComponent)
 };

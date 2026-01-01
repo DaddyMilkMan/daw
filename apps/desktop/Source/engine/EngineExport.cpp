@@ -6,6 +6,7 @@
 
 #include "Engine.h"
 #include "../engine/AudioRenderer.h"
+#include "../engine/AudioExporter.h"
 #include "../engine/Track.h"
 #include "../engine/Clip.h"
 #include "../engine/AuxBus.h"
@@ -134,6 +135,24 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
   }
 
   return true;
+}
+
+bool Engine::exportProjectToWavSync(const juce::File &outputFile, double sampleRate,
+                                    int bitDepth, double duration, double startTime) {
+    if (!audioExporter_)
+        return false;
+
+    zenith::ExportOptions options; // Explicitly use AudioExporter's options struct
+    options.outputFile = outputFile;
+    options.sampleRate = sampleRate;
+    options.bitDepth = bitDepth;
+    options.duration = duration;
+    options.startTime = startTime;
+    options.format = zenith::ExportFormat::WAV; // Explicitly use zenith::ExportFormat
+    options.enableDither = true;
+    options.normalize = false;
+
+    return audioExporter_->exportProject(options);
 }
 
 bool Engine::exportProject(const ExportOptions &options) {

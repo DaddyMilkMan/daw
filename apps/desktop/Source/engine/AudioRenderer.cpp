@@ -37,38 +37,31 @@ void AudioRenderer::renderAudioGraph(
   outputBuffer.clear();
 
   const auto *snapshot = routingGraph.getSnapshot();
-  if (snapshot == nullptr || snapshot->topology->processingOrder.empty()) {
+  if (snapshot == nullptr || snapshot->renderList.empty()) {
     return;
   }
 
-  const size_t numBuses = std::min(auxBuses.size(), context.auxBusBuffers.size());
-  for (size_t i = 0; i < numBuses; ++i) {
-    context.auxBusBuffers[i].clear();
-  }
-
-  static constexpr int kMaxAuxBuses = 32;
-  std::array<juce::AudioBuffer<float> *, kMaxAuxBuses> auxBufferPtrs;
-  size_t actualAuxCount = 0;
-  for (size_t i = 0; i < numBuses && actualAuxCount < kMaxAuxBuses; ++i) {
-    auxBufferPtrs[actualAuxCount++] = &context.auxBusBuffers[i];
-  }
-  
+  // Use pre-allocated pointers to avoid std::vector allocations
   context.auxBufferPtrsVector.clear();
-  for(size_t i = 0; i < actualAuxCount; ++i) context.auxBufferPtrsVector.push_back(auxBufferPtrs[i]);
+  for (auto &buffer : context.auxBusBuffers) {
+      buffer.clear();
+      context.auxBufferPtrsVector.push_back(&buffer);
+  }
 
-  for (const auto &nodeId : snapshot->topology->processingOrder) {
-    auto trackIt = snapshot->trackLookup.find(nodeId);
-    if (trackIt != snapshot->trackLookup.end()) {
-      if (auto trackPtr = trackIt->second.lock()) {
-         Track* track = trackPtr.get();
-         int trackIdx = track->getTrackIndex();
+  for (const auto &rn : snapshot->renderList) {
+    if (rn.type == RoutingGraph::RenderNode::Type::Track) {
+      Track* track = rn.track;
+      int trackIdx = rn.bufferIndex;
          
+      if (trackIdx < 0 || trackIdx >= (int)context.trackBuffers.size())
+        continue;
+
+      auto &trackBuffer = context.trackBuffers[trackIdx];
+      trackBuffer.clear();
+
       if (track->isFrozen()) {
         auto freezeBuffer = track->getFreezeBuffer();
-        if (freezeBuffer != nullptr && trackIdx >= 0 && trackIdx < (int)context.trackBuffers.size()) {
-          auto &trackBuffer = context.trackBuffers[trackIdx];
-          trackBuffer.clear();
-
+        if (freezeBuffer != nullptr) {
           const juce::int64 readPos = playheadPosition;
           const int bufferLength = freezeBuffer->getNumSamples();
           
@@ -84,30 +77,21 @@ void AudioRenderer::renderAudioGraph(
           if (auto* processor = track->getProcessor()) {
               juce::MidiBuffer dummyMidi;
               juce::AudioSourceChannelInfo trackInfo(&trackBuffer, 0, numSamples);
-              processor->processBlock(trackInfo, dummyMidi, {}, nullptr);
+              processor->processBlock(trackInfo, dummyMidi, context.auxBufferPtrsVector, nullptr);
           }
 
-          for (const auto &conn : snapshot->topology->connections) {
-            if (conn.sourceId == nodeId && conn.destId == "master") {
-              if (conn.gain != 1.0f) trackBuffer.applyGain(conn.gain);
-              
-              for (int ch = 0; ch < std::min(outputBuffer.getNumChannels(), trackBuffer.getNumChannels()); ++ch) {
-                  juce::FloatVectorOperations::add(outputBuffer.getWritePointer(ch), 
-                                                trackBuffer.getReadPointer(ch), 
-                                                numSamples);
-              }
-              break; 
+          if (rn.hasMasterSend) {
+            if (rn.masterGain != 1.0f) trackBuffer.applyGain(rn.masterGain);
+            
+            for (int ch = 0; ch < std::min(outputBuffer.getNumChannels(), trackBuffer.getNumChannels()); ++ch) {
+                juce::FloatVectorOperations::add(outputBuffer.getWritePointer(ch), 
+                                              trackBuffer.getReadPointer(ch), 
+                                              numSamples);
             }
           }
         }
         continue;
       }
-
-      if (trackIdx < 0 || trackIdx >= (int)context.trackBuffers.size())
-        continue;
-
-      auto &trackBuffer = context.trackBuffers[trackIdx];
-      trackBuffer.clear();
 
       if (track->isBeingFrozen()) {
           continue;
@@ -131,51 +115,29 @@ void AudioRenderer::renderAudioGraph(
                                 context.auxBufferPtrsVector, tempoMap, sidechainBuffer);
 
       if (context.pdcDelayBuffers.size() > 0) { 
-        applyPDCDelay(context, trackBuffer, static_cast<int>(trackIdx), numSamples);
+        applyPDCDelay(context, trackBuffer, trackIdx, numSamples);
       }
 
-      for (const auto &conn : snapshot->topology->connections) {
-        if (conn.sourceId == nodeId && conn.destId == "master") {
+      if (rn.hasMasterSend) {
           for (int ch = 0; ch < std::min(outputBuffer.getNumChannels(), trackBuffer.getNumChannels()); ++ch) {
-            outputBuffer.addFrom(ch, 0, trackBuffer.getReadPointer(ch), numSamples, conn.gain);
+            outputBuffer.addFrom(ch, 0, trackBuffer.getReadPointer(ch), numSamples, rn.masterGain);
           }
-          break;
-        }
       }
-      }
-      continue;
-    }
+    } else if (rn.type == RoutingGraph::RenderNode::Type::Bus) {
+       AuxBus* bus = rn.auxBus;
+       int busIdx = rn.bufferIndex;
 
-    auto busIt = snapshot->auxBusLookup.find(nodeId);
-    if (busIt != snapshot->auxBusLookup.end()) {
-       if (auto busPtr = busIt->second.lock()) {
-         AuxBus* bus = busPtr.get();
-       size_t busIdx = 0;
-       bool found = false;
-       for (size_t i = 0; i < auxBuses.size(); ++i) {
-           if (auxBuses[i] == bus) {
-               busIdx = i;
-               found = true;
-               break;
-           }
-       }
-
-       if (found && busIdx < context.auxBusBuffers.size()) {
+       if (busIdx >= 0 && busIdx < (int)context.auxBusBuffers.size()) {
         auto &busBuffer = context.auxBusBuffers[busIdx];
         juce::AudioSourceChannelInfo auxInfo(&busBuffer, 0, numSamples);
         bus->getNextAudioBlock(auxInfo);
 
-        for (const auto &conn : snapshot->topology->connections) {
-          if (conn.sourceId == nodeId && conn.destId == "master") {
+        if (rn.hasMasterSend) {
             for (int ch = 0; ch < std::min(outputBuffer.getNumChannels(), busBuffer.getNumChannels()); ++ch) {
-              outputBuffer.addFrom(ch, 0, busBuffer, ch, 0, numSamples, conn.gain);
+              outputBuffer.addFrom(ch, 0, busBuffer, ch, 0, numSamples, rn.masterGain);
             }
-            break;
-          }
-        }
         }
       }
-      continue;
     }
   }
   processMasterPlugins(outputBuffer, masterPlugins);
@@ -231,32 +193,50 @@ void AudioRenderer::applyPDCDelay(AudioRenderContext& context, juce::AudioBuffer
   auto &delayBuffer = context.pdcDelayBuffers[trackIndex];
   int &writePos = context.pdcDelayWritePos[trackIndex];
 
-  auto *const *channelData = buffer.getArrayOfWritePointers();
   const int numBufferChannels = buffer.getNumChannels();
   const int numDelayBufferChannels = delayBuffer.getNumChannels();
+  const int maxDelay = constants::kMaxPDCLatencySamples;
 
-  const int initialReadPos =
-      (writePos - delayNeeded + constants::kMaxPDCLatencySamples) %
-      constants::kMaxPDCLatencySamples;
+  const int initialReadPos = (writePos - delayNeeded + maxDelay) % maxDelay;
 
   for (int ch = 0; ch < numBufferChannels && ch < numDelayBufferChannels; ++ch) {
-    float* channelPtr = channelData[ch];
+    float* channelPtr = buffer.getWritePointer(ch);
     float* delayChannelPtr = delayBuffer.getWritePointer(ch);
     
-    int readPos = initialReadPos;
-    int localWritePos = writePos;
+    int readP = initialReadPos;
+    int writeP = writePos;
     
-    for (int i = 0; i < numSamples; ++i) {
-      const float delayedSample = delayChannelPtr[readPos];
-      delayChannelPtr[localWritePos] = channelPtr[i];
-      channelPtr[i] = delayedSample;
-      
-      readPos = (readPos + 1) % constants::kMaxPDCLatencySamples;
-      localWritePos = (localWritePos + 1) % constants::kMaxPDCLatencySamples;
+    // Process in chunks to handle buffer wrapping and improve performance
+    int samplesProcessed = 0;
+    while (samplesProcessed < numSamples) {
+        int samplesToProcess = std::min(numSamples - samplesProcessed,
+                                        std::min(maxDelay - readP, maxDelay - writeP));
+        
+        // We need to swap samples: output = delayed, delayed = input
+        // Since we don't have a "swap" vector operation, we'll do it in a small loop
+        // but without modulo.
+        float* src = &channelPtr[samplesProcessed];
+        float* dly = &delayChannelPtr[readP];
+        float* dlyW = &delayChannelPtr[writeP];
+
+        if (readP == writeP) {
+            // Special case: no delay (shouldn't happen here due to delayNeeded > 0 check)
+            // but just in case, we do nothing.
+        } else {
+            for (int i = 0; i < samplesToProcess; ++i) {
+                float in = src[i];
+                src[i] = dly[i];
+                dlyW[i] = in;
+            }
+        }
+
+        readP = (readP + samplesToProcess) % maxDelay;
+        writeP = (writeP + samplesToProcess) % maxDelay;
+        samplesProcessed += samplesToProcess;
     }
   }
 
-  writePos = (writePos + numSamples) % constants::kMaxPDCLatencySamples;
+  writePos = (writePos + numSamples) % maxDelay;
 }
 
 //==============================================================================

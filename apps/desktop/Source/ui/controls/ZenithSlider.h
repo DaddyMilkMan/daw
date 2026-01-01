@@ -85,6 +85,8 @@ public:
   //==========================================================================
   void drawSkia(SkCanvas *canvas) override;
   void mouseDrag(const juce::MouseEvent &e) override;
+  void mouseEnter(const juce::MouseEvent &e) override;
+  void mouseExit(const juce::MouseEvent &e) override;
   // mouseDrag is overridden in .cpp implicitly if base has it, but .cpp
   // implementation doesn't look like it overrides it? .cpp has no mouseDrag
   // implementation shown in view_file. Wait, line 59 in original header

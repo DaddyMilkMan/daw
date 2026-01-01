@@ -169,7 +169,6 @@ void WingmanPanel::onShow() {
 
 void WingmanPanel::drawSkia(SkCanvas *canvas) {
   if (canvas == nullptr) return;
-  ZENITH_LOG_UI(zenith::LogLevel::Info, "WingmanPanel: drawSkia() called");
 
   auto bounds = getLocalBounds().toFloat();
   SkRect rect = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
@@ -263,7 +262,6 @@ void WingmanPanel::drawSkia(SkCanvas *canvas) {
 //==============================================================================
 
 void WingmanPanel::resized() {
-  ZENITH_LOG_UI(zenith::LogLevel::Info, "WingmanPanel: resized() called");
   auto bounds = getLocalBounds();
 
   // Header - settings button on right

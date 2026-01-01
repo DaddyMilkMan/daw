@@ -370,14 +370,16 @@ void MarkerLaneComponent::showRenameDialog(const juce::String& markerId)
         dialog->setBounds((parent->getWidth() - w) / 2, (parent->getHeight() - h) / 2, w, h);
         parent->addAndMakeVisible(dialog);
         
-        dialog->showAsync([this, markerId, dialog](SkiaAlertWindow::Result result) {
+        // Capture dialog pointer for use in lambda
+        SkiaAlertWindow* dialogPtr = dialog;
+        dialog->showAsync([this, markerId, dialogPtr](SkiaAlertWindow::Result result) {
             if (result == SkiaAlertWindow::Result::Button1) {
-                juce::String newName = dialog->getTextEditorContents("name");
+                juce::String newName = dialogPtr->getTextEditorContents("name");
                 if (newName.isNotEmpty()) {
                     projectState.renameMarker(markerId, newName, "Rename Marker");
                 }
             }
-            delete dialog;
+            delete dialogPtr;
         });
     } else {
         delete dialog;

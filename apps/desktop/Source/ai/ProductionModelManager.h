@@ -9,7 +9,8 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
-#include "ModelTrainer.h"
+#include "AICommon.h"
+#include "RealNeuralNetwork.h"
 #include <memory>
 #include <unordered_map>
 #include <vector>

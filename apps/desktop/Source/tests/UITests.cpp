@@ -11,6 +11,7 @@
 */
 
 #include "../ui/design-system/ZenithLayout.h"
+#include "../ui/dashboards/MetricsChart.h"
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -81,6 +82,25 @@ public:
       expectEquals((int)read2->frameNumber, 2);
     }
 #endif // ZENITH_USE_SKIA
+
+    beginTest("MetricsChart Multi-Series");
+    {
+      zenith::ui::MetricsChart chart(zenith::ui::MetricsChart::ChartType::Line);
+      expectEquals(chart.getSeriesCount(), 0);
+      
+      chart.addSeries("SeriesA", juce::Colours::red);
+      expectEquals(chart.getSeriesCount(), 1);
+      
+      chart.addDataPointToSeries("SeriesA", 10.0f, 20.0f);
+      expectEquals(chart.getSeriesPointCount("SeriesA"), 1);
+      
+      chart.clearSeries("SeriesA");
+      expectEquals(chart.getSeriesPointCount("SeriesA"), 0);
+      expectEquals(chart.getSeriesCount(), 1);
+      
+      chart.clearAllSeries();
+      expectEquals(chart.getSeriesCount(), 0);
+    }
   }
 };
 

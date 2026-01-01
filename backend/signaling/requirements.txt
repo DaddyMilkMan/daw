@@ -1,3 +1,3 @@
-# Zenith Signaling Server Requirements
-# Currently only uses Python Standard Library (socket, threading, json, time, random)
-# No external dependencies required yet.
+# This file is for listing Python dependencies for the signaling server.
+# Although the current script uses only standard libraries,
+# any future dependencies like websockets or aiohttp should be added here.

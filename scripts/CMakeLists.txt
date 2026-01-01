@@ -7,14 +7,16 @@ if(NOT VEXEL_ENABLE_LUA)
 endif()
 
 # LuaBridge - C++ to Lua binding library
+# Uses pinned version from cmake/FetchContentVersions.cmake
 include(FetchContent)
 FetchContent_Declare(
     LuaBridge
-    GIT_REPOSITORY https://github.com/vinniefalco/LuaBridge.git
-    GIT_TAG 2.8
-    GIT_SHALLOW TRUE
+    GIT_REPOSITORY ${ZENITH_LUABRIDGE_GIT_URL}
+    GIT_TAG ${ZENITH_LUABRIDGE_GIT_HASH}
+    GIT_SHALLOW FALSE  # Required for specific commit hash
 )
 FetchContent_MakeAvailable(LuaBridge)
+
 
 # Scripting engine library
 add_library(ZenithScripting STATIC

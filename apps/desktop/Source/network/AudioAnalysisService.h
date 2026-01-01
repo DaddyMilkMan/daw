@@ -124,6 +124,9 @@ private:
     class Impl;
     std::unique_ptr<Impl> pImpl;
     
+    juce::WeakReference<AudioAnalysisService>::Master masterReference;
+    friend class juce::WeakReference<AudioAnalysisService>;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioAnalysisService)
 };
 

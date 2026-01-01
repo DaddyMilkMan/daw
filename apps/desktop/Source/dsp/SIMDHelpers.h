@@ -458,3 +458,68 @@ inline float gainToDb(float gain) noexcept {
 
 } // namespace simd
 } // namespace zenith
+
+//==============================================================================
+// Fast Math Approximations (SIMD/Scalar)
+//==============================================================================
+
+namespace zenith {
+namespace simd {
+
+/**
+ * @brief Fast approximation of log10(x)
+ * @param x Input value (must be > 0)
+ * @return Approximation of log10(x)
+ */
+inline float fastLog10(float x) noexcept {
+    //  Bit hack for integer part of log2
+    union { float f; int i; } vx = { x };
+    float y = (float)vx.i;
+    y *= 1.1920928955078125e-7f; // 1/8388608
+    y -= 126.942529f; // Bias adjustment
+    
+    // Linear approximation of log2 converted to log10
+    // log10(x) = log2(x) * log10(2)
+    // log10(2) ~= 0.30103
+    return y * 0.30102999566f;
+}
+
+/**
+ * @brief Fast approximation of pow(10, x)
+ * @param x Input power
+ * @return Approximation of 10^x
+ */
+inline float fastPow10(float x) noexcept {
+    // 10^x = 2^(x * log2(10))
+    // log2(10) ~= 3.32192809489
+    float y = x * 3.32192809489f;
+    
+    // Fast 2^y approximation
+    // val = (y + 126.942529) * 8388608
+    union { float f; int i; } vx;
+    vx.i = (int)((y + 126.942529f) * 8388608.0f);
+    return vx.f;
+}
+
+/**
+ * @brief Fast conversion from linear gain to decibels
+ * @param gain Linear gain
+ * @return Decibels (or -100.0 if gain <= 0)
+ */
+inline float fastGainToDb(float gain) noexcept {
+    if (gain <= 0.0000001f) return -100.0f;
+    return fastLog10(gain) * 20.0f;
+}
+
+/**
+ * @brief Fast conversion from decibels to linear gain
+ * @param db Decibels
+ * @return Linear gain
+ */
+inline float fastDbToGain(float db) noexcept {
+    if (db <= -100.0f) return 0.0f;
+    return fastPow10(db * 0.05f); // db/20
+}
+
+} // namespace simd
+} // namespace zenith

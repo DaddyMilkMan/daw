@@ -11,6 +11,7 @@
  */
 
 #include "MixerChannelComponent.h"
+#include "MixerComponent.h"
 #include "../../effects/ConsoleEmulation.h"
 #include "../../engine/EngineConstants.h"
 #include "../common/PluginEditorWindow.h"
@@ -21,7 +22,9 @@
 #include "GlassmorphicPanel.h"
 #include "NeonGlow.h"
 #include "ZenithDesignSystem.h"
+#include "../design-system/ZenithLayout.h"
 #include "../design-system/ZenithIcons.h"
+#include "../design-system/ZenithLayout.h"
 // #include "../design-system/ZenithTheme.h" // Deprecated
 #include "../controls/SkiaPopupMenu.h"
 #include "../controls/ContextMenuManager.h"
@@ -33,6 +36,7 @@
 #include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
 #include <effects/SkGradientShader.h>
+#include "../design-system/MeterRenderer.h"
 
 namespace zenith {
 
@@ -69,6 +73,9 @@ MixerChannelComponent::MixerChannelComponent(Track *track, ProjectState& state, 
   jassert(track_ != nullptr);
   track_->addChangeListener(this);
   zenith::design::ThemeManager::getInstance().addChangeListener(this);
+  
+  // Accessibility: Allow focus
+  setWantsKeyboardFocus(true);
 
   // Initialize UI from track
   updateFromTrack();
@@ -156,8 +163,8 @@ MixerChannelComponent::MixerChannelComponent(Track *track, ProjectState& state, 
     sendIndicators_.push_back(std::move(send));
   }
 
-  // Start timer for meter updates (30 Hz)
-  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(33);
+  // Register for updates (30 Hz approx -> Normal Priority)
+  ZENITH_REGISTER_ANIMATION(zenith::animation::Priority::Medium);
 
   // Set size based on channel type
   setSize(isMaster_ ? static_cast<int>(kMasterStripWidth)
@@ -169,7 +176,7 @@ MixerChannelComponent::~MixerChannelComponent() {
   if (track_)
     track_->removeChangeListener(this);
   zenith::design::ThemeManager::getInstance().removeChangeListener(this);
-  stopTimer();
+  ZENITH_UNREGISTER_ANIMATION();
 }
 
 void MixerChannelComponent::changeListenerCallback(
@@ -338,137 +345,151 @@ void MixerChannelComponent::drawSkia(SkCanvas *canvas) {
     canvas->drawString("MASTER", bounds.getWidth() / 2 - 22, 16, badgeFont,
                        badgeTextPaint);
   }
+
+  // Accessibility: Focus Ring
+  if (hasFocus_) {
+    SkPaint focusPaint;
+    focusPaint.setAntiAlias(true);
+    focusPaint.setStyle(SkPaint::kStroke_Style);
+    focusPaint.setStrokeWidth(design::accessibility::FOCUS_RING_WIDTH);
+    focusPaint.setColor(design::accessibility::FOCUS_RING_COLOR);
+    
+    SkRect focusRect = skBounds;
+    // Inset half stroke width to stay within bounds, plus offset
+    float inset = design::accessibility::FOCUS_RING_OFFSET;
+    focusRect.inset(inset, inset);
+    
+    canvas->drawRoundRect(focusRect, design::dimensions::RADIUS_SM + 2, 
+                         design::dimensions::RADIUS_SM + 2, focusPaint);
+  }
 }
 
 void MixerChannelComponent::resized() {
   auto bounds = getLocalBounds();
-  const int totalHeight = bounds.getHeight();
-  const int minFaderHeight = 60; // Absolute minimum for usability
   
   // -- 1. High Priority: Track Name (Top) --
   int topHeight = isMaster_ ? kTopHeightMaster : kTopHeightNormal;
   nameLabel_.setBounds(bounds.removeFromTop(topHeight));
-  bounds.removeFromTop(4);
-
+  
   // -- 2. High Priority: Buttons (Bottom) --
-  auto buttonArea = bounds.removeFromBottom(isMaster_ ? 100 : 80);
-
-  // Arm button (only for non-master)
+  int buttonAreaHeight = isMaster_ ? 100 : 80;
+  auto buttonArea = bounds.removeFromBottom(buttonAreaHeight);
+  
   if (!isMaster_) {
-    armButton_.setBounds(buttonArea.removeFromTop(24).reduced(2));
-    buttonArea.removeFromTop(2);
+      // Arm button on top of Mute/Solo
+      auto armRect = buttonArea.removeFromTop(24);
+      ZenithLayout::row(armRect.reduced(2), {&armButton_}, 0, juce::FlexBox::JustifyContent::center);
+      buttonArea.removeFromTop(2); // spacer
   }
-
-  // Mute/Solo buttons side by side
+  
+  // Mute/Solo Row
   auto msRow = buttonArea.removeFromTop(28);
-  muteButton_.setBounds(msRow.removeFromLeft(msRow.getWidth() / 2).reduced(2));
-  soloButton_.setBounds(msRow.reduced(2));
-  buttonArea.removeFromTop(4);
-
-  // Pan knob
+  ZenithLayout::row(msRow, {&muteButton_, &soloButton_}, 4);
+  buttonArea.removeFromTop(4); // spacer
+  
+  // Pan Knob
   int panSize = isMaster_ ? 70 : 60;
-  panKnob_.setBounds(buttonArea.withSizeKeepingCentre(panSize, panSize));
+  auto panRect = buttonArea.withSizeKeepingCentre(panSize, panSize);
+  panKnob_.setBounds(panRect);
 
-  // Determine available vertical space for optional components
+  // -- 3. Dynamic Priority Layout with ZenithLayout --
+  // We determine visibility first, then lay out.
+  
+  const int totalHeight = getLocalBounds().getHeight();
   int availableHeight = bounds.getHeight();
+  const int minFaderHeight = 60;
   
-  // -- 3. Medium Priority: Spectrum Analyzer (Top) --
-  // Hide spectrum if we are crunched for space (< 450px total, or < 150px remaining)
+  // Spectrum
   bool showSpectrum = (totalHeight > 450 && availableHeight > 150);
-  
   if (spectrumAnalyzer_) {
-    spectrumAnalyzer_->setVisible(showSpectrum);
-    if (showSpectrum) {
-      spectrumAnalyzer_->setBounds(
-          bounds.removeFromTop(kSpectrumHeight).reduced(2));
-      bounds.removeFromTop(4);
-    }
+      spectrumAnalyzer_->setVisible(showSpectrum);
+      if (showSpectrum) {
+          auto spectrumRect = bounds.removeFromTop(kSpectrumHeight).reduced(2);
+          spectrumAnalyzer_->setBounds(spectrumRect);
+          bounds.removeFromTop(4);
+      }
   }
-
-  // Reload available height
+  
   availableHeight = bounds.getHeight();
-
-  // -- 4. Medium Priority: Sends (Bottom) --
-  // Show sends only if we have space. 
+  
+  // Sends
   float sendHeight = kSendIndicatorHeight;
   int requiredSendTotal = static_cast<int>(sendHeight * zenith::constants::kNumSends + 8);
-  
-  // Ensure we leave room for fader + inserts
-  // Ensure we leave room for fader + inserts
   bool showSends = (availableHeight > requiredSendTotal + minFaderHeight + 40);
   
-  // Reset header bounds
-  sendHeaderBounds_ = SkRect::MakeEmpty();
-
   if (showSends) {
-    // Calculate header position (just above the sends)
-    sendHeaderBounds_ = SkRect::MakeXYWH(8, bounds.getBottom() - requiredSendTotal - 14, 100, 10);
-
-    auto sendArea = bounds.removeFromBottom(requiredSendTotal);
-    sendArea.removeFromBottom(4);
-    for (auto &send : sendIndicators_) {
-        send->setVisible(true);
-        send->setBounds(sendArea.removeFromTop(static_cast<int>(sendHeight)).reduced(2, 1));
-    }
-    bounds.removeFromBottom(8);
-  } else {
-     for (auto &send : sendIndicators_) send->setVisible(false);
-  }
-
-  // Reload available height
-  availableHeight = bounds.getHeight();
-
-  // -- 5. Low Priority: Insert Slots (Bottom) --
-  // Calculate how many inserts we can fit while keeping minFaderHeight
-  int maxInsertAreaHeight = availableHeight - minFaderHeight - 8; // 8 for spacing
-  float insertHeight = kInsertSlotHeight;
-  
-  // Reset header bounds
-  insertHeaderBounds_ = SkRect::MakeEmpty();
-
-  // Always reserve space for at least 0 inserts. 
-  // If we have space, fill 'er up.
-  if (maxInsertAreaHeight > 0) {
-      int usableInsertHeight = std::min(maxInsertAreaHeight, static_cast<int>(insertHeight * kNumInsertSlots + 8));
+      // Header
+      sendHeaderBounds_ = SkRect::MakeXYWH(8, bounds.getBottom() - requiredSendTotal - 14, 100, 10);
+      auto sendArea = bounds.removeFromBottom(requiredSendTotal);
+      sendArea.removeFromBottom(4);
       
-      // Calculate header position (just above the inserts)
-      if (usableInsertHeight >= insertHeight) {
-           insertHeaderBounds_ = SkRect::MakeXYWH(8, bounds.getBottom() - usableInsertHeight - 14, 100, 10);
-      }
+      // Use efficient layout for sends
+      std::vector<juce::Component*> visibleSends;
+      visibleSends.reserve(sendIndicators_.size());
+      for (const auto& send : sendIndicators_) visibleSends.push_back(send.get());
 
+      ZenithLayout::column(sendArea.reduced(2, 0), 
+                           visibleSends, 
+                           1, juce::FlexBox::JustifyContent::flexStart);
+      
+      for (auto& send : sendIndicators_) send->setVisible(true);
+      bounds.removeFromBottom(8);
+  } else {
+      sendHeaderBounds_ = SkRect::MakeEmpty();
+      for (auto& send : sendIndicators_) send->setVisible(false);
+  }
+  
+  availableHeight = bounds.getHeight();
+  
+  // Inserts
+  int maxInsertAreaHeight = availableHeight - minFaderHeight - 8;
+  float insertHeight = kInsertSlotHeight;
+  int usableInsertHeight = 0;
+  
+  if (maxInsertAreaHeight > static_cast<int>(insertHeight)) {
+      usableInsertHeight = std::min(maxInsertAreaHeight, static_cast<int>(insertHeight * kNumInsertSlots + 8));
+      insertHeaderBounds_ = SkRect::MakeXYWH(8, bounds.getBottom() - usableInsertHeight - 14, 100, 10);
+      
       auto insertArea = bounds.removeFromBottom(usableInsertHeight);
       insertArea.removeFromBottom(4);
       
+      // Filter visible slots based on height
+      std::vector<juce::Component*> visibleSlots;
+      int fits = insertArea.getHeight() / static_cast<int>(insertHeight + 1); // +1 gap
+      
       for (size_t i = 0; i < insertSlots_.size(); ++i) {
-          if (insertArea.getHeight() >= insertHeight) {
+          if (i < (size_t)fits) {
               insertSlots_[i]->setVisible(true);
-              insertSlots_[i]->setBounds(insertArea.removeFromTop(static_cast<int>(insertHeight)).reduced(2, 0));
+              visibleSlots.push_back(insertSlots_[i].get());
           } else {
               insertSlots_[i]->setVisible(false);
           }
       }
+      
+      ZenithLayout::column(insertArea.reduced(2, 0), visibleSlots, 2, juce::FlexBox::JustifyContent::flexStart);
       bounds.removeFromBottom(8);
   } else {
+      insertHeaderBounds_ = SkRect::MakeEmpty();
       for (auto &slot : insertSlots_) slot->setVisible(false);
   }
-
-  // -- 6. Remaining: Meter and Fader --
-  // Remaining space: meter and fader side by side
-  int meterWidth = isMaster_ ? 24 : 18;
-  auto meterBounds = bounds.removeFromLeft(meterWidth);
-  meter_.setBounds(meterBounds.reduced(0, 4));
   
-  bounds.removeFromLeft(4);
-
-  // Fader takes remaining space
-  faderSlider_.setBounds(bounds.reduced(2, 4));
+  // Meter and Fader (Side by Side)
+  // Use ZenithLayout for the horizontal arrangement
+  ZenithLayout::Builder()
+      .withBounds(bounds)
+      .withGap(4)
+      .withAlign(juce::FlexBox::AlignItems::stretch)
+      .addFixedItem(&meter_, isMaster_ ? 24.0f : 18.0f, bounds.toFloat().getHeight())
+      .addItem(&faderSlider_, 1.0f)
+      .applyRow();
 }
 
 //==============================================================================
 // Timer Callback
 //==============================================================================
 
-void MixerChannelComponent::timerCallback() {
+void MixerChannelComponent::onAnimationTick(float deltaMs) {
+  SkiaComponent::updateInternalAnimations(deltaMs);
   if (track_ != nullptr) {
     float level = track_->getCurrentLevel();
     meter_.setLevel(level);
@@ -617,23 +638,37 @@ void MixerChannelComponent::onArmClicked() {
 // LevelMeter Implementation
 //==============================================================================
 
-MixerChannelComponent::LevelMeter::LevelMeter() { if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60); }
+MixerChannelComponent::LevelMeter::LevelMeter() { 
+  ZENITH_REGISTER_ANIMATION(zenith::animation::Priority::Critical); 
+}
 
-MixerChannelComponent::LevelMeter::~LevelMeter() { stopTimer(); }
+MixerChannelComponent::LevelMeter::~LevelMeter() { 
+  ZENITH_UNREGISTER_ANIMATION(); 
+}
 
-void MixerChannelComponent::LevelMeter::timerCallback() {
+void MixerChannelComponent::LevelMeter::onAnimationTick(float deltaMs) {
+  SkiaComponent::updateInternalAnimations(deltaMs);
+
   // Smooth meter ballistics with gravity-based falloff
-  auto smoothLevel = [](float target, float &current, float &peak,
-                        int &peakHold, float &velocity) {
+  // Time-corrected for variable deltaMs
+  auto smoothLevel = [deltaMs](float target, float &current, float &peak,
+                        float &peakHoldMs, float &velocity) {
+    
+    const float kTargetFrameMs = 16.66f; // Reference 60Hz
+    float timeScale = deltaMs / kTargetFrameMs;
+    // Prevent explosion on large delta
+    timeScale = std::min(timeScale, 4.0f);
+
     const float attackSpeed = 0.8f;
-    const float gravity = 0.002f; // Downward acceleration
+    const float gravity = 0.002f; // Downward acceleration per 60Hz frame
 
     if (target > current) {
-      current += (target - current) * attackSpeed;
+      // Instant attack with slight smoothing
+      current += (target - current) * attackSpeed * timeScale;
       velocity = 0.0f; // Reset velocity on upward jump
     } else {
-      velocity += gravity;
-      current -= velocity;
+      velocity += gravity * timeScale;
+      current -= velocity * timeScale;
       if (current < target) {
         current = target;
         velocity = 0.0f;
@@ -643,34 +678,39 @@ void MixerChannelComponent::LevelMeter::timerCallback() {
     // Peak hold logic
     if (current > peak) {
       peak = current;
-      peakHold = 120; // 2 seconds at 60 Hz
-    } else if (peakHold > 0) {
-      peakHold--;
+      peakHoldMs = 2000.0f; // 2 seconds
+    } else if (peakHoldMs > 0) {
+      peakHoldMs -= deltaMs;
     } else {
-      peak *= 0.95f;
+      // Exponential decay: 0.95 per frame -> pow(0.95, timeScale)
+      peak *= std::pow(0.95f, timeScale);
     }
   };
 
   if (stereo_) {
-    float velocityL = 0.0f, velocityR = 0.0f;
+    float oldLevelL = currentLevelL_;
+    float oldLevelR = currentLevelR_;
+    
     smoothLevel(targetLevelL_.load(), currentLevelL_, peakLevelL_,
-                peakHoldCounterL_, velocityL);
+                peakHoldMsL_, velocityL_);
     smoothLevel(targetLevelR_.load(), currentLevelR_, peakLevelR_,
-                peakHoldCounterR_, velocityR);
+                peakHoldMsR_, velocityR_);
 
-    if (std::abs(currentLevelL_ - targetLevelL_.load()) > 0.001f ||
-        std::abs(currentLevelR_ - targetLevelR_.load()) > 0.001f ||
-        peakLevelL_ > 0.001f || peakLevelR_ > 0.001f) {
-      repaint();
+    bool levelChanged = std::abs(currentLevelL_ - oldLevelL) > 0.001f ||
+                        std::abs(currentLevelR_ - oldLevelR) > 0.001f ||
+                        peakLevelL_ > 0.001f || peakLevelR_ > 0.001f;
+
+    if (levelChanged) {
+       repaint();
     }
   } else {
-    float velocity = 0.0f;
+    float oldLevel = currentLevel_;
+    float oldPeak = peakLevel_;
     smoothLevel(targetLevel_.load(), currentLevel_, peakLevel_,
-                peakHoldCounter_, velocity);
+                peakHoldMs_, velocity_);
 
-    if (std::abs(currentLevel_ - targetLevel_.load()) > 0.001f ||
-        peakLevel_ > 0.001f) {
-      repaint();
+    if (std::abs(currentLevel_ - oldLevel) > 0.001f || peakLevel_ != oldPeak) {
+       repaint();
     }
   }
 }
@@ -678,80 +718,7 @@ void MixerChannelComponent::LevelMeter::timerCallback() {
 void MixerChannelComponent::LevelMeter::drawMeterBar(SkCanvas *canvas,
                                                      const SkRect &bounds,
                                                      float level, float peak) {
-  using namespace design;
-
-  // Draw background
-  SkPaint bgPaint;
-  bgPaint.setColor(design::colors::BG_04);
-  bgPaint.setAntiAlias(true);
-  canvas->drawRoundRect(bounds, design::dimensions::RADIUS_SM, design::dimensions::RADIUS_SM, bgPaint);
-
-  if (level < 0.001f && peak < 0.001f)
-    return;
-
-  // Calculate normalized level
-  float levelDb = juce::Decibels::gainToDecibels(level);
-  float normalizedLevel = juce::jmap(levelDb, -60.0f, 0.0f, 0.0f, 1.0f);
-  normalizedLevel = juce::jlimit(0.0f, 1.0f, normalizedLevel);
-
-  // Define colors at function scope for reuse
-  SkColor cGreen = design::colors::SUCCESS;
-  SkColor cAmber = design::colors::WARNING;
-  SkColor cRed = design::colors::DANGER;
-
-  if (normalizedLevel > 0.01f) {
-    float barHeight = bounds.height() * normalizedLevel;
-    SkRect meterRect =
-        SkRect::MakeXYWH(bounds.x() + 2, bounds.bottom() - barHeight - 2,
-                         bounds.width() - 4, barHeight);
-
-    // Gradient: green -> yellow -> red based on level
-    SkColor topColor = cGreen;
-    if (normalizedLevel > 0.9f) {
-      topColor = cRed;
-    } else if (normalizedLevel > 0.7f) {
-      topColor = cAmber;
-    } else if (normalizedLevel > 0.5f) {
-      topColor = design::colors::NEON_YELLOW; // Yellow-green
-    }
-
-    SkPoint pts[2] = {{meterRect.centerX(), meterRect.bottom()},
-                      {meterRect.centerX(), meterRect.top()}};
-    SkColor gradColors[3] = {cGreen, design::colors::NEON_YELLOW,
-                             topColor};
-    SkScalar positions[3] = {0.0f, 0.6f, 1.0f};
-
-    SkPaint meterPaint;
-    meterPaint.setShader(SkGradientShader::MakeLinear(
-        pts, gradColors, positions, 3, SkTileMode::kClamp));
-    meterPaint.setAntiAlias(true);
-    canvas->drawRoundRect(meterRect, 1.0f, 1.0f, meterPaint);
-
-    // Glow effect for high levels
-    if (normalizedLevel > 0.7f) {
-      SkPaint glowPaint;
-      glowPaint.setColor(design::withAlpha(topColor, 0.3f));
-      glowPaint.setMaskFilter(
-          SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
-      glowPaint.setAntiAlias(true);
-      canvas->drawRoundRect(meterRect, 1.0f, 1.0f, glowPaint);
-    }
-  }
-
-  // Peak indicator
-  if (peak > 0.001f) {
-    float peakDb = juce::Decibels::gainToDecibels(peak);
-    float normalizedPeak = juce::jmap(peakDb, -60.0f, 0.0f, 0.0f, 1.0f);
-    normalizedPeak = juce::jlimit(0.0f, 1.0f, normalizedPeak);
-
-    float peakY = bounds.bottom() - (bounds.height() * normalizedPeak) - 2;
-    SkPaint peakPaint;
-    peakPaint.setColor(normalizedPeak > 0.95f ? cRed : SK_ColorWHITE);
-    peakPaint.setAntiAlias(true);
-    canvas->drawRect(
-        SkRect::MakeXYWH(bounds.x() + 2, peakY, bounds.width() - 4, 2.0f),
-        peakPaint);
-  }
+  zenith::design::MeterRenderer::drawVerticalLevelMeter(canvas, bounds, level, peak);
 }
 
 void MixerChannelComponent::LevelMeter::drawSkia(SkCanvas *canvas) {
@@ -1007,6 +974,67 @@ void MixerChannelComponent::SendIndicator::mouseDown(const juce::MouseEvent& e) 
     
     ContextMenuManager::getInstance().showMenuAt(std::move(menu), this, e.x, e.y);
   }
+}
+
+//==============================================================================
+// Focus & Accessibility
+//==============================================================================
+
+void MixerChannelComponent::focusGained(juce::Component::FocusChangeType cause) {
+  juce::ignoreUnused(cause);
+  hasFocus_ = true;
+  repaint();
+}
+
+void MixerChannelComponent::focusLost(juce::Component::FocusChangeType cause) {
+  juce::ignoreUnused(cause);
+  hasFocus_ = false;
+  repaint();
+}
+
+bool MixerChannelComponent::keyPressed(const juce::KeyPress& key, juce::Component* origin) {
+  juce::ignoreUnused(origin);
+  
+  // Shortcuts (Phase 3)
+  if (key.getTextCharacter() == 'm' || key.getTextCharacter() == 'M') {
+    muteButton_.onClick();
+    return true;
+  }
+  if (key.getTextCharacter() == 's' || key.getTextCharacter() == 'S') {
+    soloButton_.onClick();
+    return true;
+  }
+  if (key.getTextCharacter() == 'r' || key.getTextCharacter() == 'R') {
+    armButton_.onClick();
+    return true;
+  }
+  
+  // Navigation bubbling to MixerComponent
+  if (auto* mixer = findParentComponentOfClass<MixerComponent>()) {
+    return mixer->keyPressed(key, origin);
+  }
+  
+  return false;
+}
+
+std::unique_ptr<juce::AccessibilityHandler> MixerChannelComponent::createAccessibilityHandler() {
+  auto handler = std::make_unique<juce::AccessibilityHandler>(
+    *this,
+    juce::AccessibilityRole::group,
+    juce::AccessibilityActions()
+      .addAction(juce::AccessibilityActionType::focus, [this]() { grabKeyboardFocus(); })
+  );
+  
+  if (track_) {
+    // TODO: JUCE AccessibilityHandler doesn't have setTitle/setDescription
+    // These need to be set through proper accessibility configuration
+    // handler->setTitle(track_->getName());
+    // handler->setDescription("Mixer Channel Strip. Use Left/Right to navigate, M to mute, S to solo.");
+  } else {
+    // handler->setTitle("Unassigned Channel");
+  }
+  
+  return handler;
 }
 
 void MixerChannelComponent::SendIndicator::drawSkia(SkCanvas *canvas) {

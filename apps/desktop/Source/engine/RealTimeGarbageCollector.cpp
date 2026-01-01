@@ -26,9 +26,10 @@ void RealTimeGarbageCollector::deleteInstance() {
 }
 
 RealTimeGarbageCollector::RealTimeGarbageCollector() {
+  trashBuffer_.resize(kMaxTrashItems);
   // Run cleanup every 100ms
   if (juce::MessageManager::getInstanceWithoutCreating() != nullptr)
-    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(100);
+    startTimer(100);
 }
 
 RealTimeGarbageCollector::~RealTimeGarbageCollector() {
@@ -38,59 +39,76 @@ RealTimeGarbageCollector::~RealTimeGarbageCollector() {
 void RealTimeGarbageCollector::deferDelete(std::function<void()> deleter) {
   if (!deleter) return;
 
-  const juce::ScopedLock sl(trashLock_);
-  trash_.push_back({std::move(deleter), juce::Time::getMillisecondCounter()});
+  const uint32_t now = juce::Time::getMillisecondCounter();
+  
+  // Multiple producers: synchronize access to FIFO write
+  const juce::SpinLock::ScopedLockType sl(writeLock_);
+  
+  int start1, size1, start2, size2;
+  fifo_.prepareToWrite(1, start1, size1, start2, size2);
+  
+  if (size1 > 0) {
+    trashBuffer_[start1] = { std::move(deleter), now };
+    fifo_.finishedWrite(1);
+  } else {
+    // Buffer full - this is bad, but at least we don't crash.
+    // In a production DAW we'd want to log this.
+    jassertfalse; 
+  }
 }
 
 void RealTimeGarbageCollector::ensureClean() {
   stopTimer();
-  const juce::ScopedLock sl(trashLock_);
-  trash_.clear(); // Destructors run here
+  
+  // Process remaining items in FIFO
+  int start1, size1, start2, size2;
+  fifo_.prepareToRead(fifo_.getNumReady(), start1, size1, start2, size2);
+  fifo_.finishedRead(size1 + size2);
+  
+  trashBuffer_.clear();
+  pendingDestruction_.clear();
 }
 
 void RealTimeGarbageCollector::timerCallback() {
   const uint32_t now = juce::Time::getMillisecondCounter();
   
-  // We need to remove items, so we can't iterate simply.
-  // Move items to keep into a new vector? Or just remove_if.
-  // Actually, destructors running inside the lock is fine if they are message thread safe.
+  // 1. Pull new items from FIFO into pendingDestruction_
+  int start1, size1, start2, size2;
+  int numReady = fifo_.getNumReady();
   
-  // Safe extraction to a temp list to destroy OUTSIDE the lock (optional but good practice)
-  std::vector<TrashItem> toDestroy;
-
-  {
-    const juce::ScopedLock sl(trashLock_);
+  if (numReady > 0) {
+    fifo_.prepareToRead(numReady, start1, size1, start2, size2);
     
-    // Partition items into 'expired' and 'keep'
-    // Items are roughly ordered by time, so we could just pop front.
-    // But let's be robust.
-    
-    auto it = std::remove_if(trash_.begin(), trash_.end(), [&](const TrashItem& item) {
-      // Handle wraparound of tick count (unlikely to matter for 1s difference but strict correctness)
-      return (now >= item.insertionTimeMs + kSafetyDurationMs) || 
-             (now < item.insertionTimeMs && (now + (UINT32_MAX - item.insertionTimeMs)) > kSafetyDurationMs);
-    });
-
-    // Move expired items to toDestroy (manually, since remove_if just shifts)
-    // Actually standard remove_if doesn't move to another container.
-    // Let's just create a new list for kept items, it's easier.
-    
-    std::vector<TrashItem> kept;
-    kept.reserve(trash_.size());
-    
-    for (auto& item : trash_) {
-      if ((now >= item.insertionTimeMs + kSafetyDurationMs) || 
-          (now < item.insertionTimeMs && (now + (UINT32_MAX - item.insertionTimeMs)) > kSafetyDurationMs)) {
-        toDestroy.push_back(std::move(item));
-      } else {
-        kept.push_back(std::move(item));
-      }
-    }
-    
-    trash_ = std::move(kept);
+    for (int i = 0; i < size1; ++i)
+      pendingDestruction_.push_back(std::move(trashBuffer_[start1 + i]));
+      
+    for (int i = 0; i < size2; ++i)
+      pendingDestruction_.push_back(std::move(trashBuffer_[start2 + i]));
+      
+    fifo_.finishedRead(size1 + size2);
   }
 
-  // toDestroy goes out of scope here, running destructors (releasing sharedprobs)
+  // 2. Separate expired items
+  std::vector<TrashItem> toDestroy;
+  std::vector<TrashItem> kept;
+  kept.reserve(pendingDestruction_.size());
+  
+  for (auto& item : pendingDestruction_) {
+    // Handle wraparound
+    bool expired = (now >= item.insertionTimeMs + kSafetyDurationMs) || 
+                   (now < item.insertionTimeMs && (now + (UINT32_MAX - item.insertionTimeMs)) > kSafetyDurationMs);
+                   
+    if (expired) {
+      toDestroy.push_back(std::move(item));
+    } else {
+      kept.push_back(std::move(item));
+    }
+  }
+  
+  pendingDestruction_ = std::move(kept);
+  
+  // 3. Destructors run here as toDestroy goes out of scope
+  toDestroy.clear();
 }
 
 } // namespace zenith

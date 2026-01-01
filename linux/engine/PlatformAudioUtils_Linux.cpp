@@ -58,6 +58,13 @@ bool initializeAudioWithFallback(juce::AudioDeviceManager& deviceManager) {
         return true;
     }
     
+    // Check for PulseAudio and warn if using it as default
+    for (auto* type : deviceManager.getAvailableDeviceTypes()) {
+        if (type->getTypeName().containsIgnoreCase("Pulse")) {
+             ZENITH_LOG_WARNING("Zenith is using PulseAudio. This is NOT recommended for low-latency production. Please install JACK or use ALSA directly.");
+        }
+    }
+
     // Last resort: default device
     error = deviceManager.initialise(2, 2, nullptr, false);
     if (error.isEmpty()) {

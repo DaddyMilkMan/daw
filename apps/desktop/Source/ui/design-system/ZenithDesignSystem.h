@@ -182,6 +182,106 @@ inline void resetToDefault() {
 } // namespace colors
 
 // ============================================================================
+// OPACITY TOKENS - Semantic opacity values (eliminates magic floats)
+// ============================================================================
+// Use these instead of hardcoded values like withAlpha(color, 0.15f)
+// Access via: design::opacity::HOVER, design::opacity::ACTIVE, etc.
+
+namespace opacity {
+// State opacities (for text, icons, and elements)
+constexpr float DISABLED = 0.35f;     // Disabled elements, tertiary text
+constexpr float SECONDARY = 0.6f;     // Secondary text, de-emphasized elements
+constexpr float TERTIARY = 0.45f;     // Tertiary elements
+constexpr float PRIMARY = 0.95f;      // Primary text (near-white, not pure)
+
+// Interaction opacities (for overlays and state changes)
+constexpr float HOVER = 0.08f;        // Hover overlay on surfaces
+constexpr float ACTIVE = 0.15f;       // Active/pressed overlay
+constexpr float FOCUS = 0.20f;        // Focus ring background
+constexpr float SELECTED = 0.25f;     // Selected state overlay
+
+// Surface opacities (for glassmorphism and panels)
+constexpr float GLASS_SUBTLE = 0.06f; // Subtle glass effect
+constexpr float GLASS_MEDIUM = 0.12f; // Medium glass effect
+constexpr float GLASS_STRONG = 0.20f; // Strong glass effect
+constexpr float GLASS_SOLID = 0.30f;  // Nearly solid glass
+
+// Border opacities
+constexpr float BORDER_SUBTLE = 0.06f;   // Barely visible dividers
+constexpr float BORDER_DEFAULT = 0.12f;  // Standard borders
+constexpr float BORDER_STRONG = 0.20f;   // Emphasized borders
+constexpr float BORDER_ACCENT = 0.60f;   // Accent color borders
+
+// Glow opacities
+constexpr float GLOW_SUBTLE = 0.20f;  // Subtle glow
+constexpr float GLOW_MEDIUM = 0.40f;  // Medium glow
+constexpr float GLOW_STRONG = 0.60f;  // Strong glow
+constexpr float GLOW_INTENSE = 0.80f; // Intense glow (warnings, errors)
+
+// Shadow opacities
+constexpr float SHADOW_LIGHT = 0.10f;   // Light shadow
+constexpr float SHADOW_MEDIUM = 0.20f;  // Medium shadow
+constexpr float SHADOW_STRONG = 0.40f;  // Strong shadow
+} // namespace opacity
+
+// ============================================================================
+// ACCESSIBILITY TOKENS - WCAG 2.1 AA Compliance
+// ============================================================================
+// Reference: https://www.w3.org/WAI/WCAG21/
+// Focus indicators: 2.4.7 Focus Visible, 2.4.13 Focus Appearance
+// Contrast: 1.4.3 (4.5:1 text), 1.4.11 (3:1 UI components)
+
+namespace accessibility {
+
+// Focus Ring - WCAG 2.4.13 compliant (3:1 contrast, 2px minimum)
+constexpr float FOCUS_RING_WIDTH = 2.0f;
+constexpr float FOCUS_RING_OFFSET = 2.0f;
+inline SkColor FOCUS_RING_COLOR = colors::CYAN;  // 00F0FF on 121212 = 12.5:1 ✅
+
+// Touch Target - WCAG 2.5.5 (44x44px minimum recommended)
+constexpr float MIN_TOUCH_TARGET = 44.0f;
+constexpr float MIN_TOUCH_TARGET_SM = 24.0f;
+
+// Responsive Breakpoints
+constexpr int BREAKPOINT_COMPACT = 400;   // Narrow layout mode
+constexpr int BREAKPOINT_NORMAL = 800;    // Standard layout
+constexpr int BREAKPOINT_WIDE = 1200;     // Full-width layout
+
+// Luminance calculation (sRGB to relative luminance per WCAG 2.1)
+inline float luminance(SkColor c) {
+  auto linearize = [](float v) -> float {
+    return v <= 0.03928f ? v / 12.92f : std::pow((v + 0.055f) / 1.055f, 2.4f);
+  };
+  float r = linearize(SkColorGetR(c) / 255.0f);
+  float g = linearize(SkColorGetG(c) / 255.0f);
+  float b = linearize(SkColorGetB(c) / 255.0f);
+  return 0.2126f * r + 0.7152f * g + 0.0722f * b;
+}
+
+// Contrast ratio calculation per WCAG 2.1
+inline float contrastRatio(SkColor fg, SkColor bg) {
+  float l1 = luminance(fg);
+  float l2 = luminance(bg);
+  if (l2 > l1) std::swap(l1, l2);
+  return (l1 + 0.05f) / (l2 + 0.05f);
+}
+
+// WCAG AA compliance checks
+inline bool meetsWCAG_AA_Text(SkColor fg, SkColor bg) {
+  return contrastRatio(fg, bg) >= 4.5f;
+}
+
+inline bool meetsWCAG_AA_LargeText(SkColor fg, SkColor bg) {
+  return contrastRatio(fg, bg) >= 3.0f;
+}
+
+inline bool meetsWCAG_AA_UI(SkColor fg, SkColor bg) {
+  return contrastRatio(fg, bg) >= 3.0f;
+}
+
+} // namespace accessibility
+
+// ============================================================================
 // THEME MANAGER
 // ============================================================================
 
@@ -514,6 +614,31 @@ constexpr float RADIUS_XS = RADIUS_SM;
 constexpr float RADIUS_MD = RADIUS_SM;
 [[deprecated("Use RADIUS_LG (16.0f) instead")]]
 constexpr float RADIUS_XL = RADIUS_LG;
+
+// ===========================================================================
+// MIXER DIMENSIONS - Layout constants for mixer channel strips
+// ===========================================================================
+// Anti-Corner-Cutting: No hardcoded pixel values in component code!
+constexpr int MIXER_CHANNEL_WIDTH = 100;   // Standard channel strip width
+constexpr int MIXER_MASTER_WIDTH = 140;    // Master channel (wider)
+constexpr int MIXER_CHANNEL_SPACING = 4;   // Gap between channels
+constexpr int DIVIDER_WIDTH = 2;           // Vertical divider thickness
+
+// ===========================================================================
+// TRACK DIMENSIONS - Arranger track sizes
+// ===========================================================================
+constexpr int TRACK_HEIGHT_MIN = 64;       // Minimum collapsed track
+constexpr int TRACK_HEIGHT_DEFAULT = 100;  // Standard track height
+constexpr int TRACK_HEIGHT_EXPANDED = 200; // Expanded track with lanes
+constexpr int TRACK_HEADER_WIDTH = 200;    // Left-side track header
+
+// ===========================================================================
+// ARRANGER DIMENSIONS - Timeline view sizing
+// ===========================================================================
+constexpr int TIMELINE_RULER_HEIGHT = 24;  // Top time ruler
+constexpr int SECTION_TRACK_HEIGHT = 32;   // Arrangement markers lane
+constexpr int TEMPO_LANE_HEIGHT = 48;      // BPM envelope lane
+
 } // namespace dimensions
 
 // ============================================================================
@@ -619,6 +744,144 @@ inline SkColor interpolateColor(SkColor c1, SkColor c2, float t) {
 }
 
 // ============================================================================
+// COMPONENT TOKENS - Button
+// ============================================================================
+// Component-level tokens wrap semantic tokens with DAW-specific accessors.
+// This follows Material Design's primitive → semantic → component hierarchy.
+// Reference: https://material.io/design/tokens
+
+namespace button {
+// Background colors by style (sourced from colors namespace)
+inline SkColor getBgPrimary() { return colors::CYAN; }
+inline SkColor getBgSecondary() { return colors::BG_02; }
+inline SkColor getBgDanger() { return colors::RED; }
+inline SkColor getBgSuccess() { return colors::GREEN; }
+inline SkColor getBgWarning() { return colors::AMBER; }
+inline SkColor getBgGhost() { return withAlpha(colors::BG_02, 0.0f); }
+
+// Text colors
+inline SkColor getTextDefault() { return colors::TEXT_PRIMARY; }
+inline SkColor getTextOnAccent() { return colors::TEXT_INVERSE; }
+inline SkColor getTextDisabled() { return colors::TEXT_TERTIARY; }
+
+// Border colors
+inline SkColor getBorderDefault() { return colors::BORDER_DEFAULT; }
+inline SkColor getBorderFocus() { return colors::BORDER_FOCUS; }
+inline SkColor getBorderGhost() { return colors::BORDER_SUBTLE; }
+
+// Glow colors (match background for consistency)
+inline SkColor getGlowPrimary() { return colors::CYAN; }
+inline SkColor getGlowDanger() { return colors::RED; }
+inline SkColor getGlowSuccess() { return colors::GREEN; }
+inline SkColor getGlowWarning() { return colors::AMBER; }
+inline SkColor getGlowSecondary() { return colors::VIOLET; }
+
+// State opacities (from opacity namespace)
+inline float getHoverOpacity() { return opacity::HOVER; }
+inline float getActiveOpacity() { return opacity::ACTIVE; }
+inline float getFocusOpacity() { return opacity::FOCUS; }
+inline float getDisabledOpacity() { return opacity::DISABLED; }
+
+// Dimensions
+inline float getHeightSm() { return 24.0f; }
+inline float getHeightMd() { return 32.0f; }
+inline float getHeightLg() { return 40.0f; }
+inline float getRadiusSm() { return dimensions::RADIUS_SM; }
+inline float getRadiusLg() { return dimensions::RADIUS_LG; }
+inline float getPaddingX() { return spacing::SM * 1.5f; } // 12px
+inline float getPaddingY() { return spacing::XS; }         // 4px
+
+// Typography
+inline float getFontSizeSm() { return typography::FONT_XS; }
+inline float getFontSizeMd() { return typography::FONT_SM; }
+inline float getFontSizeLg() { return typography::FONT_MD; }
+
+// Animation
+inline int getHoverDuration() { return animation::DURATION_FAST; }
+inline int getPressDuration() { return animation::DURATION_FAST; }
+} // namespace button
+
+// ============================================================================
+// COMPONENT TOKENS - Slider
+// ============================================================================
+
+namespace slider {
+// Track colors
+inline SkColor getTrackBg() { return colors::BG_01; }
+inline SkColor getTrackBorder() { return colors::BORDER_SUBTLE; }
+inline SkColor getTrackFillDefault() { return colors::CYAN; }
+inline SkColor getTrackFillMuted() { return colors::AMBER; }
+inline SkColor getTrackFillSolo() { return colors::NEON_GREEN; }
+
+// Handle colors
+inline SkColor getHandleDefault() { return colors::TEXT_PRIMARY; }
+inline SkColor getHandleHover() { return colors::CYAN; }
+inline SkColor getHandleActive() { return colors::CYAN; }
+inline SkColor getHandleDisabled() { return colors::TEXT_TERTIARY; }
+
+// Glow
+inline SkColor getGlowDefault() { return colors::CYAN; }
+inline float getGlowIntensity() { return effects::GLOW_MEDIUM; }
+
+// Dimensions
+inline float getTrackHeightHorizontal() { return 4.0f; }
+inline float getTrackWidthVertical() { return 4.0f; }
+inline float getHandleSize() { return 16.0f; }
+inline float getHandleSizeLg() { return 20.0f; }
+inline float getHandleRadius() { return dimensions::RADIUS_FULL; }
+
+// DB Fader specific
+inline float getFaderWidth() { return 32.0f; }
+inline float getFaderHeight() { return 120.0f; }
+inline float getFaderHandleHeight() { return 24.0f; }
+
+// State opacities
+inline float getDisabledOpacity() { return opacity::DISABLED; }
+} // namespace slider
+
+// ============================================================================
+// COMPONENT TOKENS - Panel
+// ============================================================================
+
+namespace panel {
+// Background colors by elevation (BG_00 = deepest, BG_04 = highest)
+inline SkColor getBg0() { return colors::BG_00; } // App background
+inline SkColor getBg1() { return colors::BG_01; } // Canvas/main
+inline SkColor getBg2() { return colors::BG_02; } // Panels
+inline SkColor getBg3() { return colors::BG_03; } // Elevated surfaces
+inline SkColor getBg4() { return colors::BG_04; } // Modals/popups
+
+// Border colors
+inline SkColor getBorderDefault() { return colors::BORDER_DEFAULT; }
+inline SkColor getBorderSubtle() { return colors::BORDER_SUBTLE; }
+inline SkColor getBorderStrong() { return colors::BORDER_STRONG; }
+
+// Glassmorphism
+inline SkColor getGlassHighlight() { return colors::GLASS_HIGHLIGHT; }
+inline SkColor getGlassShadow() { return colors::GLASS_SHADOW; }
+inline float getGlassBlur() { return effects::BLUR_GLASS; }
+
+// Header/footer
+inline SkColor getHeaderBg() { return colors::BG_03; }
+inline SkColor getFooterBg() { return colors::BG_02; }
+
+// Dimensions
+inline float getPadding() { return spacing::MD; }
+inline float getPaddingSm() { return spacing::SM; }
+inline float getPaddingLg() { return spacing::LG; }
+inline float getRadius() { return dimensions::RADIUS_LG; }
+inline float getRadiusSm() { return dimensions::RADIUS_SM; }
+
+// Header heights
+inline float getHeaderHeight() { return 32.0f; }
+inline float getToolbarHeight() { return dimensions::TRANSPORT_BAR_HEIGHT; }
+
+// Shadow
+inline float getShadowOpacity() { return opacity::SHADOW_MEDIUM; }
+inline float getShadowOffset() { return effects::SHADOW_OFFSET_MD; }
+} // namespace panel
+
+// ============================================================================
 // GLOBAL SETTINGS (Karen Fixes)
 // ============================================================================
 
@@ -644,6 +907,11 @@ struct Settings {
   // Accessors for blur quality
   static BlurQuality getBlurQuality() { return blurQuality; }
   static void setBlurQuality(BlurQuality quality) { blurQuality = quality; }
+
+  // Reduced Motion (Accessibility)
+  static bool reducedMotionEnabled;
+  static bool isReducedMotionEnabled() { return reducedMotionEnabled; }
+  static void setReducedMotionEnabled(bool enabled) { reducedMotionEnabled = enabled; }
 };
 
 } // namespace design

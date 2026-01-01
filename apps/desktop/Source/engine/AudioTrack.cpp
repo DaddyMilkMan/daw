@@ -26,33 +26,40 @@ void AudioTrack::getNextAudioBlock(
 
   if (currentSnapshot) {
     for (auto *clip : currentSnapshot->clips) {
-      if (clip != nullptr && clip->isPlaying() && clip->getType() == Clip::Type::Audio) {
-        const int64_t clipStart = clip->getStartPosition();
-        const int64_t clipEnd = clip->getEndPosition();
-        const int64_t blockStart = playheadSamples;
-        const int64_t blockEnd = playheadSamples + bufferToFill.numSamples;
+      if (clip == nullptr || !clip->isPlaying() || clip->getType() != Clip::Type::Audio)
+        continue;
 
-        // Check for overlap
-        if (blockEnd > clipStart && blockStart < clipEnd) {
-          const int64_t overlapStart = std::max(blockStart, clipStart);
-          const int64_t overlapEnd = std::min(blockEnd, clipEnd);
-          const int numToProcess = static_cast<int>(overlapEnd - overlapStart);
+      const int64_t clipStart = clip->getStartPosition();
+      const int64_t blockEnd = playheadSamples + bufferToFill.numSamples;
 
-          if (numToProcess > 0) {
-            const int startOffsetInBuffer = static_cast<int>(overlapStart - blockStart);
-            
-            clipBuffer_.clear();
-            juce::AudioSourceChannelInfo clipInfo(&clipBuffer_, 0, numToProcess);
-            
-            // Process the intersecting part of the clip
-            clip->processAudioClip(clipInfo, overlapStart);
+      // Since clips are sorted by start position, we can stop early if this clip starts after the current block
+      if (clipStart >= blockEnd)
+          break;
 
-            const int channelsToMix = juce::jmin(bufferToFill.buffer->getNumChannels(),
-                                                 clipBuffer_.getNumChannels());
-            for (int ch = 0; ch < channelsToMix; ++ch) {
-              bufferToFill.buffer->addFrom(ch, bufferToFill.startSample + startOffsetInBuffer,
-                                           clipBuffer_, ch, 0, numToProcess);
-            }
+      const int64_t clipEnd = clip->getEndPosition();
+      const int64_t blockStart = playheadSamples;
+
+      // Check for overlap
+      if (blockEnd > clipStart && blockStart < clipEnd) {
+        const int64_t overlapStart = std::max(blockStart, clipStart);
+        const int64_t overlapEnd = std::min(blockEnd, clipEnd);
+        const int numToProcess = static_cast<int>(overlapEnd - overlapStart);
+
+        if (numToProcess > 0) {
+          const int startOffsetInBuffer = static_cast<int>(overlapStart - blockStart);
+          
+          clipBuffer_.clear();
+          juce::AudioSourceChannelInfo clipInfo(&clipBuffer_, 0, numToProcess);
+          
+          // Process the intersecting part of the clip
+          clip->processAudioClip(clipInfo, overlapStart);
+
+          const int channelsToMix = juce::jmin(bufferToFill.buffer->getNumChannels(),
+                                               clipBuffer_.getNumChannels());
+          for (int ch = 0; ch < channelsToMix; ++ch) {
+            juce::FloatVectorOperations::add(bufferToFill.buffer->getWritePointer(ch, bufferToFill.startSample + startOffsetInBuffer),
+                                           clipBuffer_.getReadPointer(ch), 
+                                           numToProcess);
           }
         }
       }

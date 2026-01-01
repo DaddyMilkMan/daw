@@ -102,9 +102,22 @@ public:
     int version = 0;
   };
 
+  struct RenderNode {
+    enum class Type { Track, Bus };
+    Type type;
+    Track* track = nullptr;
+    AuxBus* auxBus = nullptr;
+    int bufferIndex = -1;
+    float masterGain = 0.0f;
+    bool hasMasterSend = false;
+  };
+
   struct Snapshot {
     std::unordered_map<std::string, Node> nodes;
     std::shared_ptr<Topology> topology;
+
+    // Precomputed render list for the audio thread
+    std::vector<RenderNode> renderList;
 
     // Fast lookup maps (populated by RoutingGraph::updateSnapshot)
     std::unordered_map<juce::String, std::weak_ptr<Track>> trackLookup;

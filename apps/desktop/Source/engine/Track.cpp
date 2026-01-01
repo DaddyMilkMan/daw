@@ -34,9 +34,7 @@ std::unique_ptr<Track> Track::create(const juce::String &name, Type type) {
 //==============================================================================
   Track::Track(const juce::String &name, Type type)
     : trackName(name), trackType(type),
-      processor(std::make_unique<TrackProcessor>()),
-      mixerChannel(processor->getMixerChannel()),
-      pluginChain(processor->getPluginChain()) {
+      processor(std::make_unique<TrackProcessor>()) {
     for (int i = 0; i < numSends; ++i) {
       sendDestinations[i].store(-1); // -1 means no destination
     }
@@ -105,7 +103,7 @@ void Track::setEnabled(bool shouldBeEnabled) {
 }
 
 void Track::setSoloed(bool shouldBeSoloed) {
-  mixerChannel.setSolo(shouldBeSoloed);
+  processor->getMixerChannel().setSolo(shouldBeSoloed);
   // BUG FIX #11: Consistent thread safety check like other setters
   if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
     sendChangeMessage();
@@ -114,7 +112,7 @@ void Track::setSoloed(bool shouldBeSoloed) {
   }
 }
 
-bool Track::isSoloed() const { return mixerChannel.isSolo(); }
+bool Track::isSoloed() const { return processor->getMixerChannel().isSolo(); }
 
 void Track::setColor(juce::Colour newColor) {
   trackColor = newColor;
@@ -180,7 +178,7 @@ void Track::addClip(std::unique_ptr<Clip> clip) {
 }
 
 void Track::addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin) {
-  pluginChain.addPlugin(std::move(plugin), currentSampleRate, currentBlockSize);
+  processor->getPluginChain().addPlugin(std::move(plugin), currentSampleRate, currentBlockSize);
   if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
     sendChangeMessage();
   } else {
@@ -189,7 +187,7 @@ void Track::addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin) {
 }
 
 void Track::removePlugin(int pluginIndex) {
-  pluginChain.removePlugin(pluginIndex);
+  processor->getPluginChain().removePlugin(pluginIndex);
   if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
     sendChangeMessage();
   } else {
@@ -198,7 +196,7 @@ void Track::removePlugin(int pluginIndex) {
 }
 
 void Track::clearPlugins() {
-  pluginChain.clearPlugins();
+  processor->getPluginChain().clearPlugins();
   if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
     sendChangeMessage();
   } else {
@@ -206,9 +204,9 @@ void Track::clearPlugins() {
   }
 }
 
-int Track::getNumPlugins() const { return pluginChain.getNumPlugins(); }
+int Track::getNumPlugins() const { return processor->getPluginChain().getNumPlugins(); }
 juce::AudioPluginInstance *Track::getPlugin(int index) const {
-  return pluginChain.getPlugin(index);
+  return processor->getPluginChain().getPlugin(index);
 }
 
 //==============================================================================
@@ -231,19 +229,19 @@ int Track::getSendDestination(int sendIndex) const {
 }
 
 void Track::setSendLevel(int sendIndex, float level) {
-  mixerChannel.setSendLevel(sendIndex, level);
+  processor->getMixerChannel().setSendLevel(sendIndex, level);
 }
 
 float Track::getSendLevel(int sendIndex) const {
-  return mixerChannel.getSendLevel(sendIndex);
+  return processor->getMixerChannel().getSendLevel(sendIndex);
 }
 
 void Track::setSendPreFader(int sendIndex, bool preFader) {
-  mixerChannel.setSendPreFader(sendIndex, preFader);
+  processor->getMixerChannel().setSendPreFader(sendIndex, preFader);
 }
 
 bool Track::isSendPreFader(int sendIndex) const {
-  return mixerChannel.isSendPreFader(sendIndex);
+  return processor->getMixerChannel().isSendPreFader(sendIndex);
 }
 
 void Track::setPluginSidechainSource(int pluginIndex, Track* sourceTrack) {
@@ -271,10 +269,10 @@ juce::ValueTree Track::getState() const {
   juce::ValueTree state("Track");
   state.setProperty("name", trackName, nullptr);
   state.setProperty("type", static_cast<int>(trackType), nullptr);
-  state.setProperty("volume", mixerChannel.getVolume(), nullptr);
-  state.setProperty("pan", mixerChannel.getPan(), nullptr);
-  state.setProperty("muted", mixerChannel.isMuted(), nullptr);
-  state.setProperty("solo", mixerChannel.isSolo(), nullptr);
+  state.setProperty("volume", processor->getMixerChannel().getVolume(), nullptr);
+  state.setProperty("pan", processor->getMixerChannel().getPan(), nullptr);
+  state.setProperty("muted", processor->getMixerChannel().isMuted(), nullptr);
+  state.setProperty("solo", processor->getMixerChannel().isSolo(), nullptr);
   state.setProperty("armed", armed.load(), nullptr);
   state.setProperty("inputMonitor", inputMonitor_.load(), nullptr);
   state.setProperty("enabled", enabled.load(), nullptr);
@@ -282,8 +280,8 @@ juce::ValueTree Track::getState() const {
   state.setProperty("outputId", outputId, nullptr);
 
   juce::ValueTree pluginsState("Plugins");
-  for (int i = 0; i < pluginChain.getNumPlugins(); ++i) {
-    auto *plugin = pluginChain.getPlugin(i);
+  for (int i = 0; i < processor->getPluginChain().getNumPlugins(); ++i) {
+    auto *plugin = processor->getPluginChain().getPlugin(i);
     juce::ValueTree ps("Plugin");
     savePluginState(plugin, ps);
     pluginsState.appendChild(ps, nullptr);
@@ -296,10 +294,10 @@ void Track::loadState(const juce::ValueTree &state) {
   if (!state.hasType("Track"))
     return;
   trackName = state.getProperty("name", "Untitled Track");
-  mixerChannel.setVolume(state.getProperty("volume", 0.8f));
-  mixerChannel.setPan(state.getProperty("pan", 0.0f));
-  mixerChannel.setMuted(state.getProperty("muted", false));
-  mixerChannel.setSolo(state.getProperty("solo", false));
+  processor->getMixerChannel().setVolume(state.getProperty("volume", 0.8f));
+  processor->getMixerChannel().setPan(state.getProperty("pan", 0.0f));
+  processor->getMixerChannel().setMuted(state.getProperty("muted", false));
+  processor->getMixerChannel().setSolo(state.getProperty("solo", false));
   armed.store(state.getProperty("armed", false));
   inputMonitor_.store(state.getProperty("inputMonitor", false));
   enabled.store(state.getProperty("enabled", true));
