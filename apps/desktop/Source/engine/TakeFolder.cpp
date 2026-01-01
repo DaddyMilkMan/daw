@@ -295,16 +295,23 @@ std::unique_ptr<Clip> TakeFolder::flatten(double sampleRate, const juce::File& o
 
   // 2. Setup format writer
   juce::WavAudioFormat wavFormat;
-  std::unique_ptr<juce::FileOutputStream> fileStream(new juce::FileOutputStream(outputFile)); // Raw ptr for createWriterFor
-
-  if (fileStream->failedToOpen()) {
+  auto* fos = new juce::FileOutputStream(outputFile);
+  
+  if (fos->failedToOpen()) {
+    delete fos;
     DBG("TakeFolder: Failed to open output file for flattening: " + outputFile.getFullPathName());
     return nullptr;
   }
+  
+  std::unique_ptr<juce::OutputStream> fileStream(fos);
 
   // Writer takes ownership of stream
-  std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(
-      fileStream.release(), sampleRate, 2, 24, {}, 0));
+  auto options = juce::AudioFormatWriterOptions()
+      .withSampleRate(sampleRate)
+      .withNumChannels(2)
+      .withBitsPerSample(24);
+      
+  std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(fileStream, options));
 
   if (!writer) {
      DBG("TakeFolder: Failed to create WAV writer");

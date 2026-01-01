@@ -520,8 +520,14 @@ void MetricsChart::drawTooltip(juce::Graphics& g) {
     auto tooltipFont = zenith::design::typography::getJuceFont(zenith::design::typography::FONT_XS);
     g.setFont(tooltipFont);
     
-    float textWidth = tooltipFont.getStringWidthFloat(tooltipText.upToFirstOccurrenceOf("\n", false, false));
-    float secondLineWidth = tooltipFont.getStringWidthFloat(tooltipText.fromLastOccurrenceOf("\n", false, false));
+    auto getLayoutWidth = [&](const juce::String& t) {
+        juce::TextLayout tl;
+        tl.createLayout(tooltipFont, t);
+        return tl.getWidth();
+    };
+
+    float textWidth = getLayoutWidth(tooltipText.upToFirstOccurrenceOf("\n", false, false));
+    float secondLineWidth = getLayoutWidth(tooltipText.fromLastOccurrenceOf("\n", false, false));
     textWidth = juce::jmax(textWidth, secondLineWidth);
     
     float tooltipWidth = textWidth + 24.0f;
@@ -666,7 +672,9 @@ void MetricsChart::drawLegend(juce::Graphics& g) {
     
     float maxTextWidth = 0.0f;
     for (const auto& [name, series] : series_) {
-        maxTextWidth = juce::jmax(maxTextWidth, legendFont.getStringWidthFloat(name));
+        juce::TextLayout tl;
+        tl.createLayout(legendFont, name);
+        maxTextWidth = juce::jmax(maxTextWidth, tl.getWidth());
     }
     
     float legendWidth = legendPadding * 2 + swatchSize + textPadding + maxTextWidth;

@@ -42,6 +42,10 @@ endif()
 if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /FS /bigobj" CACHE STRING "" FORCE)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /FS /bigobj" CACHE STRING "" FORCE)
+else()
+    # Suppress Skia vcpkg header warnings (clang::reinitializes attribute)
+    # These come from external/vcpkg headers and cannot be fixed in our code
+    add_compile_options(-Wno-attributes -Wno-unknown-attributes)
 endif()
 
 # =============================================================================

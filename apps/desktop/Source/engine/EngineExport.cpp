@@ -71,7 +71,12 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
   std::unique_ptr<juce::OutputStream> fileStream = std::make_unique<juce::FileOutputStream>(outputFile);
   if (fileStream == nullptr || static_cast<juce::FileOutputStream*>(fileStream.get())->failedToOpen()) return false;
 
-  std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(fileStream.release(), sampleRate, numChannels, bitDepth, {}, 0));
+  auto writerOptions = juce::AudioFormatWriterOptions()
+      .withSampleRate(sampleRate)
+      .withNumChannels(numChannels)
+      .withBitsPerSample(bitDepth);
+      
+  std::unique_ptr<juce::AudioFormatWriter> writer = wavFormat.createWriterFor(fileStream, writerOptions);
 
   if (!writer)
     return false;
@@ -192,8 +197,12 @@ bool Engine::exportProject(const ExportOptions &options) {
   if (fileStream == nullptr || static_cast<juce::FileOutputStream*>(fileStream.get())->failedToOpen())
     return false;
 
-  std::unique_ptr<juce::AudioFormatWriter> writer(format->createWriterFor(
-      fileStream.release(), options.sampleRate, 2, options.bitDepth, {}, 0));
+  auto writerOptions = juce::AudioFormatWriterOptions()
+      .withSampleRate(options.sampleRate)
+      .withNumChannels(2)
+      .withBitsPerSample(options.bitDepth);
+
+  std::unique_ptr<juce::AudioFormatWriter> writer = format->createWriterFor(fileStream, writerOptions);
 
   if (!writer)
     return false;

@@ -139,7 +139,7 @@ public:
         
         if (container != nullptr)
         {
-            container->startDragging(juce::var(description), sourceComponent, image, true, nullptr);
+            container->startDragging(juce::var(description), sourceComponent, juce::ScaledImage(image), true, nullptr);
             DBG("BrowserDrag: Started dragging " + item->name);
         }
         else
