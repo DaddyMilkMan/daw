@@ -28,8 +28,8 @@
 - [CodeReviewFeedback.md](CodeReviewFeedback.md) - Review results
 
 #### Build & Development
-- [BUILD_WITH_SKIA.bat](BUILD_WITH_SKIA.bat) - Primary build script
-- [REBUILD_WITH_SKIA.bat](REBUILD_WITH_SKIA.bat) - Clean rebuild script
+- [BUILD_WITH_SKIA.bat](BUILD_WITH_SKIA.bat) - Legacy build script
+- [CMakeLists.txt](CMakeLists.txt) - **Primary Build Configuration (CMake)**
 
 ---
 
@@ -86,6 +86,7 @@
 - [planning/roadmaps/](planning/roadmaps/) - Roadmaps
   - MASTER_IMPLEMENTATION_ROADMAP.md
   - ZENITH_UNIFICATION_PLAN.md
+- [planning/WEEK_1_PLAN.md](planning/WEEK_1_PLAN.md) - **Active Week 1 Development Plan**
 
 #### UI/UX Design
 - [planning/ui-ux/PERFECT_DAW_UI_DESIGN.md](planning/ui-ux/PERFECT_DAW_UI_DESIGN.md)
