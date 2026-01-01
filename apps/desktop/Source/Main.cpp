@@ -72,7 +72,6 @@ public:
 
     // Create main window
     mainWindow = std::make_unique<::zenith::MainWindow>(getApplicationName());
-    // DBG("MainWindow creation SKIPPED");
 
     DBG("Zenith DAW initialized successfully!");
   }

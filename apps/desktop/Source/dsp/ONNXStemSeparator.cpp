@@ -193,28 +193,16 @@ bool ONNXStemSeparator::initialize(const juce::File &modelPath) {
         *pImpl->env, sModelPath.c_str(), *pImpl->sessionOptions);
 #endif
 
-    // Get input/output metadata
-    Ort::AllocatorWithDefaultOptions allocator;
-
-    // Input metadata (typically [batch, channels, samples] for audio models)
-    size_t numInputs = pImpl->session->GetInputCount();
-    if (numInputs > 0) {
-      Ort::AllocatedStringPtr inputNameAllocated =
-          pImpl->session->GetInputNameAllocated(0, allocator);
-      pImpl->inputNames.push_back(inputNameAllocated.get());
-      inputNameAllocated.release(); // Transfer ownership to vector (manual management for C API wrapper)
-      // Actually, Ort::AllocatedStringPtr manages it, but we need it in inputNames (const char*)
-      // The push_back(get()) is correct as long as we store the AllocatedStringPtr somewhere.
-      // Wait, let's fix this memory management.
-    }
-    
     // REDO: Robust metadata loading
     pImpl->inputNamesOwned.clear();
     pImpl->outputNamesOwned.clear();
     pImpl->inputNames.clear();
     pImpl->outputNames.clear();
-    
 
+    size_t numInputs = pImpl->session->GetInputCount();
+
+
+    Ort::AllocatorWithDefaultOptions allocator;
 
     for (size_t i = 0; i < pImpl->session->GetInputCount(); ++i) {
         auto name = pImpl->session->GetInputNameAllocated(i, allocator);

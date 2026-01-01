@@ -232,6 +232,12 @@ void AudioRecorder::startRecording(
         createRecordingFile(recordingsDir, track->getName());
     juce::WavAudioFormat wavFormat;
     auto fileStream = std::make_unique<juce::FileOutputStream>(recordFile);
+    
+    if (!fileStream->openedOk()) {
+      DBG("AudioRecorder: Could not open file for writing - " + recordFile.getFullPathName());
+      continue;
+    }
+
     std::unique_ptr<juce::OutputStream> outputStream = std::move(fileStream);
 
     // Use the new options-based API
@@ -415,6 +421,12 @@ void AudioRecorder::onLoopCycle() {
         trackName + "_Take" + juce::String(currentTakeNumber_.load()));
     juce::WavAudioFormat wavFormat;
     auto fileStream = std::make_unique<juce::FileOutputStream>(recordFile);
+    
+    if (!fileStream->openedOk()) {
+      DBG("AudioRecorder: Could not open file for writing (loop) - " + recordFile.getFullPathName());
+      continue;
+    }
+
     std::unique_ptr<juce::OutputStream> outputStream = std::move(fileStream);
 
     auto options = juce::AudioFormatWriterOptions()
