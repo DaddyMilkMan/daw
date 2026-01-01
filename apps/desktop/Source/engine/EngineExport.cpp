@@ -22,6 +22,7 @@ namespace zenith {
 
 bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
                                 int bitDepth, double durationInSeconds) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   DBG("Engine: Starting WAV export to " + outputFile.getFullPathName());
 
   if (sampleRate <= 0.0)
@@ -136,6 +137,7 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
 }
 
 bool Engine::exportProject(const ExportOptions &options) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   DBG("Engine: Starting Advanced Export...");
   registerFormats();
 
@@ -288,6 +290,7 @@ double Engine::autoDetectProjectDuration() const {
 //==============================================================================
 
 void Engine::renderOfflineBlock(juce::AudioBuffer<float>& buffer, int numSamples, juce::int64 position) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   // Clear the buffer first
   buffer.clear();
 

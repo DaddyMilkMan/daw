@@ -497,4 +497,45 @@ void DrumPadComponent::timerCallback() {
   updateAnimations();
 }
 
+void DrumPadComponent::focusGained(FocusChangeType cause) {
+  repaint();
+}
+
+void DrumPadComponent::focusLost(FocusChangeType cause) {
+  repaint();
+}
+
+bool DrumPadComponent::keyPressed(const juce::KeyPress &key) {
+  // Simple navigation
+  if (key.isKeyCode(juce::KeyPress::leftKey)) {
+    focusedPadIndex = (focusedPadIndex - 1 + kNumPads) % kNumPads;
+    repaint();
+    return true;
+  }
+  if (key.isKeyCode(juce::KeyPress::rightKey)) {
+    focusedPadIndex = (focusedPadIndex + 1) % kNumPads;
+    repaint();
+    return true;
+  }
+  if (key.isKeyCode(juce::KeyPress::upKey)) {
+    focusedPadIndex = (focusedPadIndex - kCols + kNumPads) % kNumPads;
+    repaint();
+    return true;
+  }
+  if (key.isKeyCode(juce::KeyPress::downKey)) {
+    focusedPadIndex = (focusedPadIndex + kCols) % kNumPads;
+    repaint();
+    return true;
+  }
+  if (key.isKeyCode(juce::KeyPress::returnKey) || key.isKeyCode(juce::KeyPress::spaceKey)) {
+    hitPad(focusedPadIndex, 1.0f);
+    return true;
+  }
+  return false;
+}
+
+std::unique_ptr<juce::AccessibilityHandler> DrumPadComponent::createAccessibilityHandler() { 
+  return std::make_unique<juce::AccessibilityHandler>(*this, juce::AccessibilityRole::group);
+}
+
 } // namespace zenith

@@ -30,7 +30,7 @@ namespace zenith {
  */
 class OAuthRedirectServer {
 public:
-    using CodeReceivedCallback = std::function<void(const juce::String& code, const juce::String& error)>;
+    using CodeReceivedCallback = std::function<void(const juce::String& code, const juce::String& token, const juce::String& error)>;
     
     OAuthRedirectServer() = default;
     ~OAuthRedirectServer();
@@ -61,9 +61,7 @@ private:
     std::unique_ptr<juce::StreamingSocket> serverSocket_;
     
     void runServer(int port, CodeReceivedCallback callback, int timeoutSeconds);
-    juce::String parseAuthCode(const juce::String& request);
-    juce::String parseError(const juce::String& request);
-    void sendResponse(juce::StreamingSocket* clientSocket, bool success);
+    void sendStaticResponse(juce::StreamingSocket* clientSocket, bool success);
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OAuthRedirectServer)
 };

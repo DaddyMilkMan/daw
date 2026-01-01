@@ -5,13 +5,15 @@ namespace zenith {
 class ZenithTypography {
 public:
     static juce::Font getHeaderFont() { 
-        return design::FontManager::getInstance().getDisplayFont(24.0f).getTypeface()->getBounds().isEmpty() ? 
-               juce::Font(24.0f, juce::Font::bold) : 
-               juce::Font(juce::FontOptions(24.0f).withStyle("Bold")); // Actually we want Inter
+        return design::typography::getJuceFont(24.0f, design::FontWeight::Bold);
     }
     
     static juce::Font getBodyFont() { 
-        return juce::Font(14.0f); 
+        return design::typography::getJuceFont(14.0f, design::FontWeight::Regular);
+    }
+
+    static juce::Font getMonoFont(float size) {
+        return design::typography::getJuceMonoFont(size);
     }
 };
 } // namespace zenith

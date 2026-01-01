@@ -43,10 +43,10 @@ void PanelHeader::drawSkia(SkCanvas *canvas) {
   // Bottom border
   SkPaint borderPaint;
   borderPaint.setColor(design::colors::BORDER_SUBTLE);
-  borderPaint.setStrokeWidth(1.0f);
+  borderPaint.setStrokeWidth(0.6f);
   borderPaint.setStyle(SkPaint::kStroke_Style);
-  canvas->drawLine(0, bounds.getHeight() - 0.5f, bounds.getWidth(),
-                   bounds.getHeight() - 0.5f, borderPaint);
+  canvas->drawLine(0, bounds.getHeight() - 0.3f, bounds.getWidth(),
+                   bounds.getHeight() - 0.3f, borderPaint);
 
   // Collapse button (if collapsible)
   if (isCollapsible_) {
@@ -68,7 +68,7 @@ void PanelHeader::drawSkia(SkCanvas *canvas) {
                                    : design::colors::TEXT_SECONDARY);
     iconPaint.setAntiAlias(true);
     iconPaint.setStyle(SkPaint::kStroke_Style);
-    iconPaint.setStrokeWidth(1.5f);
+    iconPaint.setStrokeWidth(1.2f);
     iconPaint.setStrokeCap(SkPaint::kRound_Cap);
 
     float cx = collapseBtn.getCentreX();
@@ -76,11 +76,21 @@ void PanelHeader::drawSkia(SkCanvas *canvas) {
     float size = 4.0f;
 
     SkPath chevron;
+    // Determine orientation - if height >> width, we are a side-collapsed panel
+    bool isVerticalBar = bounds.getHeight() > bounds.getWidth() * 2;
+
     if (isCollapsed_) {
-      // Right-pointing chevron
-      chevron.moveTo(cx - size, cy - size);
-      chevron.lineTo(cx + size, cy);
-      chevron.lineTo(cx - size, cy + size);
+      if (isVerticalBar) {
+         // Left-pointing chevron (since sidebar is on right)
+         chevron.moveTo(cx + size, cy - size);
+         chevron.lineTo(cx - size, cy);
+         chevron.lineTo(cx + size, cy + size);
+      } else {
+        // Right-pointing chevron
+        chevron.moveTo(cx - size, cy - size);
+        chevron.lineTo(cx + size, cy);
+        chevron.lineTo(cx - size, cy + size);
+      }
     } else {
       // Down-pointing chevron
       chevron.moveTo(cx - size, cy - size);
@@ -90,18 +100,19 @@ void PanelHeader::drawSkia(SkCanvas *canvas) {
     canvas->drawPath(chevron, iconPaint);
   }
 
-  // Title text
-  SkFont font = design::getSkFont(11.0f, design::FontWeight::Bold);
-  font.setSize(11.0f);
+  // Title text (Hide if too narrow)
+  if (bounds.getWidth() > 40.0f) {
+    SkFont font = design::getSkFont(design::typography::FONT_XL, design::FontWeight::Bold);
 
-  SkPaint textPaint;
-  textPaint.setColor(design::colors::TEXT_PRIMARY);
-  textPaint.setAntiAlias(true);
+    SkPaint textPaint;
+    textPaint.setColor(design::colors::TEXT_PRIMARY);
+    textPaint.setAntiAlias(true);
 
-  float textX = isCollapsible_ ? 28.0f : 8.0f;
-  float textY = bounds.getHeight() / 2.0f + 4.0f;
+    float textX = isCollapsible_ ? 28.0f : 8.0f;
+    float textY = bounds.getHeight() / 2.0f + 4.0f;
 
-  canvas->drawString(title_.toRawUTF8(), textX, textY, font, textPaint);
+    canvas->drawString(title_.toRawUTF8(), textX, textY, font, textPaint);
+  }
 }
 
 void PanelHeader::mouseDown(const juce::MouseEvent &e) {
@@ -296,8 +307,8 @@ void PanelWrapper::timerCallback() {
     currentSize_ = targetSize_;
     stopTimer();
   } else {
-    // Smooth easing (ease out cubic)
-    float eased = 1.0f - std::pow(1.0f - animationProgress_, 3.0f);
+    // Smooth easing (ease out quintic)
+    float eased = 1.0f - std::pow(1.0f - animationProgress_, 5.0f);
     float startSize =
         isCollapsed_ ? preCollapseSize_ : static_cast<float>(collapsedHeight);
     currentSize_ = startSize + (targetSize_ - startSize) * eased;
@@ -324,18 +335,18 @@ void PanelDivider::drawSkia(SkCanvas *canvas) {
 
   // Background
   SkPaint bgPaint;
-  bgPaint.setColor(isDragging_  ? design::colors::NEON_GREEN
-                   : isHovered_ ? design::colors::BG_LIGHT
-                                : design::colors::BG_DARK);
+  bgPaint.setColor(isDragging_  ? design::withAlpha(design::colors::ACCENT_PRIMARY, 1.0f)
+                   : isHovered_ ? design::withAlpha(design::colors::ACCENT_PRIMARY, 0.4f)
+                                : design::withAlpha(design::colors::BORDER_DEFAULT, 0.1f));
   bgPaint.setAntiAlias(true);
   canvas->drawRect(skBounds, bgPaint);
 
   // Center line indicator
   SkPaint linePaint;
-  linePaint.setColor(isDragging_  ? design::colors::NEON_GREEN
-                     : isHovered_ ? design::colors::TEXT_SECONDARY
+  linePaint.setColor(isDragging_  ? design::colors::TEXT_INVERSE
+                     : isHovered_ ? design::colors::TEXT_PRIMARY
                                   : design::colors::BORDER_SUBTLE);
-  linePaint.setStrokeWidth(2.0f);
+  linePaint.setStrokeWidth(1.0f);
   linePaint.setStrokeCap(SkPaint::kRound_Cap);
   linePaint.setAntiAlias(true);
 

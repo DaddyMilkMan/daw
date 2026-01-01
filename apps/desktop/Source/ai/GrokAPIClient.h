@@ -170,9 +170,8 @@ private:
                                 "Authorization: Bearer " +
                                 apiKey_;
 
-    // Chain options
     auto options =
-        juce::URL::InputStreamOptions(juce::URL::ParameterHandling::ignoreAllParameters)
+        juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
             .withExtraHeaders(headerString)
             .withConnectionTimeoutMs(30000);
 

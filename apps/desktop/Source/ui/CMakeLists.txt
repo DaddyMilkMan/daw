@@ -14,7 +14,6 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/framework/ComponentLifecycleManager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/framework/ConfigurationManager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/framework/SkiaLayout.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/framework/UITestFramework.cpp
 )
 
 # Platform-specific sources are handled via Source/platform/[os]/master
@@ -113,7 +112,9 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/common/UndoHistoryPanel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/ResizablePanelContainer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/MenuBar.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/common/ZenithHubComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/ZenithHubComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/TitleBarComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/LoginComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/WingmanPanel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/AIAssistantPanel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/MacroToolbar.cpp
@@ -132,6 +133,8 @@ target_sources(ZenithDAW PRIVATE
 target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/dialogs/ExportDialog.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/dialogs/AdaptiveUISettings.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/dialogs/ProjectRecoveryModal.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/settings/GlobalSettingsPanel.cpp
 )
 
 # -----------------------------------------------------------------------------

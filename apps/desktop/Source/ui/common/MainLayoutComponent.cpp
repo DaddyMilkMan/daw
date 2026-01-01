@@ -12,6 +12,7 @@
 #include "../../browser/BrowserModel.h"
 #include "../../engine/Engine.h"
 #include "../../engine/PluginHost.h"
+#include "../../engine/ZenithLogger.h"
 #include "../../instruments/InstrumentRegistry.h"
 #include "../arranger/ArrangerComponent.h"
 #include "../arranger/ArrangerClipManager.h"
@@ -31,6 +32,7 @@
 #include "../ui/piano-roll/PianoRollComponent.h"
 #include "ResizablePanelContainer.h"
 #include "HelpViewPanel.h"
+#include "RightSidePanel.h"
 
 namespace zenith {
 
@@ -93,7 +95,7 @@ private:
 // MainLayoutComponent
 //==============================================================================
 
-MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state)
+MainLayoutComponent::MainLayoutComponent(Engine &engine, CommandAPI &api, ProjectState &state)
     : engine_(engine), projectState_(state) {
 
   // 1. Initialize Browser Model
@@ -322,7 +324,23 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state)
 
   panelContainer_->addPanel(std::move(centerContainer), centerCfg);
 
-  // 5. Cursor Overlay with ID-to-Rect mapping for collaboration
+  // 6. Create Right Container (Vertical: RightSidePanel)
+  auto rightSidePanel = std::make_unique<RightSidePanel>(api, engine_, projectState_);
+  rightSidePanel_ = rightSidePanel.get();
+  
+  layout::PanelConfig rightCfg;
+  rightCfg.id = "right_sidebar";
+  rightCfg.type = "right_sidebar";
+  rightCfg.name = "Wingman";
+  rightCfg.initialSize = 300;
+  rightCfg.minSize = 250;
+  rightCfg.flex = 0;
+  rightCfg.isCollapsible = true;
+  rightCfg.isCollapsed = true; // Default to closed for "pop out" behavior
+  
+  panelContainer_->addPanel(std::move(rightSidePanel), rightCfg);
+
+  // 7. Cursor Overlay with ID-to-Rect mapping for collaboration
   cursorOverlay_ = std::make_unique<RemoteCursorOverlay>();
   
   // Set up the mapper to convert selection IDs to screen rectangles
@@ -341,6 +359,7 @@ MainLayoutComponent::~MainLayoutComponent() = default;
 
 void MainLayoutComponent::drawSkia(SkCanvas *canvas) {
   // Background
+  ZENITH_LOG_INFO("MainLayoutComponent: drawSkia() called");
   auto bounds = getLocalBounds().toFloat();
   SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
   GlassmorphicPanel::fillBackground(canvas, skBounds);
@@ -378,6 +397,12 @@ void MainLayoutComponent::toggleView() {
 
 void MainLayoutComponent::toggleBrowser() {
   if (auto *wrapper = panelContainer_->getPanel("browser")) {
+    wrapper->toggleCollapse(true);
+  }
+}
+
+void MainLayoutComponent::toggleWingman() {
+  if (auto *wrapper = panelContainer_->getPanel("right_sidebar")) {
     wrapper->toggleCollapse(true);
   }
 }

@@ -1316,8 +1316,17 @@ public:
   ~PianoRollWindow() override = default;
 
   void closeButtonPressed() override {
-    // Safe deletion - schedule for async destruction to avoid use-after-free
-    juce::MessageManager::callAsync([this]() { delete this; });
+    // BUG FIX #14: Don't use delete this - use proper JUCE window deletion
+    // Option 1: Just hide and let owner manage lifetime
+    // Option 2: Use DeletedAtShutdown or weak reference pattern
+    // For standalone window, we use JUCE's recommended pattern:
+    setVisible(false);
+    // Schedule safe deletion on next message loop iteration
+    juce::MessageManager::callAsync([safeThis = juce::Component::SafePointer<PianoRollWindow>(this)]() {
+      if (safeThis != nullptr) {
+        delete safeThis.getComponent();
+      }
+    });
   }
 
 private:

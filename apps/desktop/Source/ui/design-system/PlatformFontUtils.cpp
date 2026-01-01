@@ -20,12 +20,12 @@
 #include <include/ports/SkTypeface_mac.h>
 #elif defined(__linux__)
 #include <include/ports/SkFontMgr_fontconfig.h>
+#include <include/core/SkFontScanner.h>
+#include <include/ports/SkFontScanner_FreeType.h>
 #else
 #include <include/ports/SkFontMgr_empty.h>
 #endif
 
-// On Windows/Mac/Linux, we generally rely on Skia's default factory
-// ensuring the correct ports are linked.
 #endif
 
 namespace zenith {
@@ -39,14 +39,11 @@ sk_sp<SkFontMgr> PlatformFontUtils::createDefaultFontManager()
 #elif defined(__APPLE__)
     return SkFontMgr_New_CoreText(nullptr);
 #elif defined(__linux__)
-    return SkFontMgr_New_FontConfig(nullptr);
+    return SkFontMgr_New_FontConfig(nullptr, SkFontScanner_Make_FreeType());
 #else
     return SkFontMgr_New_Custom_Empty();
 #endif
 }
-#else
-// Placeholder if Skia is disabled (though types would arguably fail in header)
-// This is just to satisfy the linker if somehow this file is compiled without Skia
 #endif
 
 } // namespace design

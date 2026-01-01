@@ -14,10 +14,14 @@
 
 #include "MarkerLaneComponent.h"
 #include "../design-system/ZenithDesignSystem.h"
+#include "../design-system/ColorBridge.h"
+#include "../controls/SkiaAlertWindow.h"
+#include "../controls/SkiaButton.h"
 #include <core/SkPaint.h>
 #include <core/SkPath.h>
 #include <core/SkFont.h>
-
+#include <skia/include/effects/SkGradientShader.h>
+#include <skia/include/core/SkMaskFilter.h>
 using namespace zenith;
 
 //==============================================================================
@@ -38,7 +42,7 @@ MarkerLaneComponent::~MarkerLaneComponent()
     DBG("MarkerLaneComponent: Destructor");
 }
 
-// ... (existing code)
+
 
 //==============================================================================
 // Component Interface
@@ -51,22 +55,22 @@ void MarkerLaneComponent::resized()
 
 void MarkerLaneComponent::drawSkia(SkCanvas* canvas)
 {
-    // ... (existing implementation)
     using namespace zenith::design;
 
     auto bounds = getLocalBounds();
     float width = (float)bounds.getWidth();
     float height = (float)bounds.getHeight();
 
-    // Background
+    // Background (Design System)
     SkPaint bgPaint;
-    bgPaint.setColor(SkColorSetRGB(45, 45, 45)); // 0xff2d2d2d
+    bgPaint.setColor(colors::BG_DARKEST);
+    bgPaint.setAntiAlias(true);
     canvas->drawRect(SkRect::MakeWH(width, height), bgPaint);
 
     // Draw markers
     drawMarkers(canvas);
 
-    // Draw hovered marker highlight
+    // Draw hovered marker highlight (Neon Pulse)
     if (hoveredMarkerId.isNotEmpty())
     {
         auto markers = projectState.getMarkers();
@@ -78,7 +82,8 @@ void MarkerLaneComponent::drawSkia(SkCanvas* canvas)
                 float x = beatsToX(timeBeats);
 
                 SkPaint highlightPaint;
-                highlightPaint.setColor(SkColorSetARGB(50, 255, 255, 0)); // Yellow with alpha 0.2
+                highlightPaint.setAntiAlias(true);
+                highlightPaint.setColor(design::withAlpha(colors::ACCENT_PRIMARY, 0.15f));
                 canvas->drawRect(SkRect::MakeXYWH(x - 12, 0.0f, 24.0f, height), highlightPaint);
                 break;
             }
@@ -122,53 +127,66 @@ void MarkerLaneComponent::drawMarker(SkCanvas* canvas, double timeBeats, const j
     // Parse color
     juce::Colour markerColor = juce::Colour::fromString(colorHex);
     if (markerColor == juce::Colour())
-        markerColor = juce::Colour(0xff4a9eff); // Default blue
+        markerColor = juce::Colours::cyan;
 
-    SkColor skColor = SkColorSetARGB(markerColor.getAlpha(), markerColor.getRed(), markerColor.getGreen(), markerColor.getBlue());
-    SkColor brighterColor = SkColorSetARGB(255, 
-        std::min(255, markerColor.getRed() + 70), 
-        std::min(255, markerColor.getGreen() + 70), 
-        std::min(255, markerColor.getBlue() + 70));
-    SkColor darkerColor = SkColorSetARGB(255, 
-        std::max(0, markerColor.getRed() - 70), 
-        std::max(0, markerColor.getGreen() - 70), 
-        std::max(0, markerColor.getBlue() - 70));
-
-    // Draw vertical line
+    SkColor skColor = design::toSkColor(markerColor);
+    
+    // Draw vertical line (Neon Core)
     SkPaint linePaint;
-    linePaint.setColor(selected ? brighterColor : skColor);
-    linePaint.setStrokeWidth(selected ? 2.0f : 1.5f);
+    linePaint.setColor(design::withAlpha(skColor, selected ? 0.9f : 0.6f));
+    linePaint.setStrokeWidth(selected ? 2.0f : 1.0f);
     linePaint.setAntiAlias(true);
+    
+    // Glow for line
+    linePaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 2.0f));
+    canvas->drawLine(x, y + flagHeight, x, height, linePaint);
+    
+    linePaint.setMaskFilter(nullptr);
+    linePaint.setColor(SK_ColorWHITE);
+    linePaint.setStrokeWidth(0.5f);
     canvas->drawLine(x, y + flagHeight, x, height, linePaint);
 
-    // Draw flag shape
+    // Draw flag shape (Pinned look)
     SkPath flagPath;
     flagPath.moveTo(x, y);
     flagPath.lineTo(x, y + flagHeight);
-    flagPath.lineTo(x + flagWidth, y + flagHeight * 0.5f);
+    flagPath.lineTo(x + flagWidth + 4, y + flagHeight * 0.5f);
     flagPath.close();
 
+    // Glass Background for Flag
     SkPaint flagPaint;
-    flagPaint.setColor(selected ? skColor : SkColorSetA(skColor, 204)); // 0.8 alpha = ~204
-    flagPaint.setStyle(SkPaint::kFill_Style);
     flagPaint.setAntiAlias(true);
+    
+    SkPoint pts[2] = {{x, y}, {x, y + flagHeight}};
+    SkColor flagColors[2] = {design::lighten(skColor, 0.2f), design::darken(skColor, 0.1f)};
+    flagPaint.setShader(SkGradientShader::MakeLinear(pts, flagColors, nullptr, 2, SkTileMode::kClamp));
+    flagPaint.setAlphaf(selected ? 0.9f : 0.7f);
     canvas->drawPath(flagPath, flagPaint);
 
-    // Draw flag border
+    // Neon Glow for Flag
+    SkPaint glowPaint;
+    glowPaint.setAntiAlias(true);
+    glowPaint.setStyle(SkPaint::kStroke_Style);
+    glowPaint.setStrokeWidth(2.0f);
+    glowPaint.setColor(design::withAlpha(skColor, 0.6f));
+    glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f));
+    canvas->drawPath(flagPath, glowPaint);
+
+    // Core Border
     SkPaint borderPaint;
-    borderPaint.setColor(darkerColor);
+    borderPaint.setColor(SK_ColorWHITE);
     borderPaint.setStyle(SkPaint::kStroke_Style);
-    borderPaint.setStrokeWidth(selected ? 2.0f : 1.0f);
+    borderPaint.setStrokeWidth(1.0f);
     borderPaint.setAntiAlias(true);
     canvas->drawPath(flagPath, borderPaint);
 
-    // Draw name label
+    // Draw name label (Inter)
     SkPaint textPaint;
-    textPaint.setColor(SK_ColorWHITE);
+    textPaint.setColor(colors::TEXT_PRIMARY);
     textPaint.setAntiAlias(true);
-    SkFont font = typography::getMonoFont(10.0f);
+    SkFont font = typography::getSkFont(typography::FONT_XS, FontWeight::Bold);
     
-    canvas->drawString(name.toStdString().c_str(), x + 5, y + 35, font, textPaint);
+    canvas->drawString(name.toRawUTF8(), x + 6, y + flagHeight + 12, font, textPaint);
 }
 
 //==============================================================================
@@ -331,24 +349,39 @@ void MarkerLaneComponent::showRenameDialog(const juce::String& markerId)
     if (currentName.isEmpty())
         return;
 
-    // Show alert window with text editor
-    juce::AlertWindow::showAsync(
-        juce::MessageBoxOptions()
-            .withIconType(juce::MessageBoxIconType::QuestionIcon)
-            .withTitle("Rename Marker")
-            .withMessage("Enter new name for marker:")
-            .withButton("OK")
-            .withButton("Cancel"),
-        [this, markerId, currentName](int result)
-        {
-            if (result == 1) // OK
-            {
-                // Note: In a real implementation, we'd get the text from the text editor
-                // For this MVP, we'll use a placeholder approach
-                // In a full implementation, use juce::AlertWindow with addTextEditor
+    auto* dialog = new SkiaAlertWindow(
+        "Rename Marker",
+        "Enter new name for marker:",
+        SkiaAlertWindow::IconType::NoIcon);
+
+    dialog->addTextEditor("name", currentName, "Marker Name");
+    dialog->addButton("Rename", SkiaAlertWindow::Result::Button1, SkiaButton::Style::Primary);
+    dialog->addButton("Cancel", SkiaAlertWindow::Result::Cancelled, SkiaButton::Style::Secondary);
+
+    // Find parent to add to
+    auto* parent = getParentComponent();
+    while (parent != nullptr && parent->getParentComponent() != nullptr) {
+        parent = parent->getParentComponent();
+    }
+
+    if (parent != nullptr) {
+        int w = 400;
+        int h = 200;
+        dialog->setBounds((parent->getWidth() - w) / 2, (parent->getHeight() - h) / 2, w, h);
+        parent->addAndMakeVisible(dialog);
+        
+        dialog->showAsync([this, markerId, dialog](SkiaAlertWindow::Result result) {
+            if (result == SkiaAlertWindow::Result::Button1) {
+                juce::String newName = dialog->getTextEditorContents("name");
+                if (newName.isNotEmpty()) {
+                    projectState.renameMarker(markerId, newName, "Rename Marker");
+                }
             }
-        }
-    );
+            delete dialog;
+        });
+    } else {
+        delete dialog;
+    }
 }
 
 //==============================================================================

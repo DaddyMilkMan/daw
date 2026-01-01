@@ -18,20 +18,26 @@
 
 #include <JuceHeader.h>
 
+#include "../../network/AuthenticationService.h"
 #include "../../engine/RecentProjectManager.h"
 #include "../utils/PhysicsSpring.h"
 #include "../framework/AuroraBackground.h"
 #include "../framework/GlassmorphicPanel.h"
 #include "../framework/SkiaComponent.h"
+#include "../controls/SkiaTextEditor.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include <functional>
 #include <memory>
 #include <vector>
+#include <mutex>
+
+class SkSurface;
 
 namespace zenith {
 
 class ZenithHubComponent : public SkiaComponent,
-                           public RecentProjectManager::Listener {
+                           public RecentProjectManager::Listener,
+                           public AuthenticationService::Listener {
 public:
   /**
    * @brief Callback type for project loading
@@ -150,6 +156,7 @@ private:
     zenith::PhysicsSpring scaleSpring{1.0f}; // Start at 1.0
   };
   std::vector<RecentProject> recentProjects_;
+  std::mutex projectsMutex_;
 
   struct TemplateItem {
     juce::String name;
@@ -161,20 +168,30 @@ private:
   };
   std::vector<TemplateItem> templates_;
 
-  // Profile
-  SkRect profileBounds_;
-  bool isProfileHovered_ = false;
+  // AuthenticationService::Listener
+  void authStateChanged(bool isLoggedIn, const AuthUser& user) override;
+
+  // Profile Menu
+  // bool isLoggedIn_ = true; // REMOVED: Using AuthenticationService state
+  zenith::PhysicsSpring menuSpring_{0.0f};
+  void drawProfileMenu(SkCanvas* canvas);
 
   // New Project Button
   SkRect newProjectButtonBounds_;
   bool isNewProjectHovered_ = false;
   float buttonGradientAngle_ = 0.0f;
 
+  // Profile Icon (top-right of hub)
+  SkRect profileIconBounds_;
+  SkRect friendsMenuItemBounds_;
+  bool isProfileIconHovered_ = false;
+  bool isProfileMenuOpen_ = false;
+
   // Greeting Customization
   juce::String greetingText_ = "Welcome back, User";
   SkRect greetingTextBounds_;
   SkRect greetingEditIconBounds_;
-  juce::TextEditor greetingEditor_;
+  std::unique_ptr<SkiaTextEditor> greetingEditor_;
   bool isGreetingHovered_ = false;
 
   void showGreetingEditor();
@@ -204,8 +221,8 @@ private:
   void drawProjectList(SkCanvas *canvas);
   void drawRecentProjects(SkCanvas *canvas);
   void drawTemplates(SkCanvas *canvas);
-  void drawAccount(SkCanvas *canvas);
   void drawNewProjectButton(SkCanvas *canvas);
+  void drawProfileIcon(SkCanvas *canvas);
 
   /** @brief Convert RecentProjectEntry to internal format */
   void loadFromManager();
@@ -217,6 +234,7 @@ private:
 
   // Aurora living background
   std::unique_ptr<AuroraBackground> auroraBackground_;
+  std::unique_ptr<SkSurface> backgroundCache_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithHubComponent)
 };

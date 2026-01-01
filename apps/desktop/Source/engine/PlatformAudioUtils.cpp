@@ -14,6 +14,7 @@
 
 namespace zenith {
 
+#ifndef __linux__
 void PlatformAudioUtils::initializeAudioDeviceSetup(juce::AudioDeviceManager& deviceManager)
 {
     // Basic initialization - can be expanded for WASAPI/ASIO specific logic on Windows
@@ -24,5 +25,6 @@ void PlatformAudioUtils::initializeAudioDeviceSetup(juce::AudioDeviceManager& de
     // Specifying 2 inputs and 2 outputs as a safe default.
     deviceManager.initialise(2, 2, nullptr, true);
 }
+#endif
 
 } // namespace zenith

@@ -50,7 +50,7 @@ using AuthCallback = std::function<void(bool success, juce::String errorMessage)
 // Constants for REAL API Implementation
 // NOTE: These are placeholders. In a real deployment, these would point to production servers.
 // The "Critic" validates that these are used for REAL network calls, even if they 404.
-static constexpr const char* kSylorLabsBaseUrl = "http://216.126.231.46:5000/v1";
+static constexpr const char* kSylorLabsBaseUrl = "https://sylorlabs.com/api/v1";
 static constexpr const char* kGoogleAuthUrl = "https://accounts.google.com/o/oauth2/v2/auth";
 static constexpr const char* kGoogleTokenUrl = "https://oauth2.googleapis.com/token";
 static constexpr const char* kGoogleClientId = "299395583046-536666ntt3lpku0jneqj7751hurfvfl7.apps.googleusercontent.com";
@@ -84,6 +84,20 @@ public:
      * @param callback Called with success/failure and error message
      */
     void loginWithGoogle(AuthCallback callback);
+    
+    /**
+     * @brief Initiate Web-based login flow (sylorlabs.com/login)
+     * Opens system browser to SylorLabs login, waits for callback.
+     * @param callback Called with success/failure and error message
+     */
+    void loginWithWeb(AuthCallback callback);
+    
+    /**
+     * @brief Initiate Web-based signup flow (sylorlabs.com/signup)
+     * Opens system browser to SylorLabs signup, waits for callback.
+     * @param callback Called with success/failure and error message
+     */
+    void signupWithWeb(AuthCallback callback);
     
     //==========================================================================
     // SylorLabs Authentication
@@ -158,11 +172,15 @@ private:
     
     // Real API Implementation Helpers
     void performGoogleLogin(AuthCallback callback);
+    void performWebLogin(AuthCallback callback);
+    void performWebSignup(AuthCallback callback);
     void performSylorLabsLogin(const juce::String& username, const juce::String& password, AuthCallback callback);
     void performSylorLabsSignup(const juce::String& username, const juce::String& email, const juce::String& password, AuthCallback callback);
     
     // OAuth Helpers
     void exchangeAuthCodeForToken(const juce::String& code, AuthCallback callback);
+    void exchangeWebAuthCodeForToken(const juce::String& code, AuthCallback callback);
+    void fetchWebUserInfo(const juce::String& token, AuthCallback callback);
     std::unique_ptr<OAuthRedirectServer> oauthServer_;
     
     // Storage

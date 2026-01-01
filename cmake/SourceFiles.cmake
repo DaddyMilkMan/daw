@@ -67,7 +67,6 @@ set(ZENITH_LEGACY_SOURCES
 # UI Framework sources
 set(ZENITH_UI_FRAMEWORK_SOURCES
     apps/desktop/Source/ui/design-system/ZenithLayout.cpp
-    apps/desktop/Source/ui/framework/UITestFramework.cpp
     apps/desktop/Source/ui/framework/SkiaMainWindowIntegration.cpp
     apps/desktop/Source/ui/framework/AuroraBackground.cpp
     apps/desktop/Source/ui/framework/SkiaComponent.cpp
@@ -133,21 +132,22 @@ set(ZENITH_UI_MAIN_SOURCES
     apps/desktop/Source/ui/common/HelpViewPanel.cpp
     apps/desktop/Source/ui/common/MacroToolbar.cpp
     apps/desktop/Source/ui/common/ZenithHubComponent.cpp
+    apps/desktop/Source/ui/common/TitleBarComponent.cpp
 )
 
 # Browser UI sources
 set(ZENITH_UI_BROWSER_SOURCES
-    apps/desktop/Source/ui/browser/BrowserFilterBar.cpp
-    apps/desktop/Source/ui/browser/BrowserHoverPreview.cpp
-    apps/desktop/Source/ui/browser/BrowserListView.cpp
-    apps/desktop/Source/ui/browser/BrowserPanel.cpp
-    apps/desktop/Source/ui/browser/BrowserPreviewPanel.cpp
-    apps/desktop/Source/ui/browser/BrowserRecentSidebar.cpp
-    apps/desktop/Source/ui/browser/BrowserSearchBar.cpp
-    apps/desktop/Source/ui/browser/BrowserWaveformLoader.cpp
-    apps/desktop/Source/ui/browser/InstrumentBrowserPanel.cpp
-    apps/desktop/Source/ui/browser/PluginBrowserComponent.cpp
-    apps/desktop/Source/ui/browser/PresetBrowserComponent.cpp
+    apps/desktop/Source/ui/panels/BrowserFilterBar.cpp
+    apps/desktop/Source/ui/panels/BrowserHoverPreview.cpp
+    apps/desktop/Source/ui/panels/BrowserListView.cpp
+    apps/desktop/Source/ui/panels/BrowserPanel.cpp
+    apps/desktop/Source/ui/panels/BrowserPreviewPanel.cpp
+    apps/desktop/Source/ui/panels/BrowserRecentSidebar.cpp
+    apps/desktop/Source/ui/panels/BrowserSearchBar.cpp
+    apps/desktop/Source/ui/panels/BrowserWaveformLoader.cpp
+    apps/desktop/Source/ui/panels/InstrumentBrowserPanel.cpp
+    apps/desktop/Source/ui/panels/PluginBrowserComponent.cpp
+    apps/desktop/Source/ui/panels/PresetBrowserComponent.cpp
 )
 
 # Specialized UI sources
@@ -185,6 +185,9 @@ set(ZENITH_UI_DIALOGS_SOURCES
     apps/desktop/Source/ui/dialogs/ExportDialog.cpp
     apps/desktop/Source/ui/dialogs/HardwareControlPanel.cpp
     apps/desktop/Source/ui/dialogs/SettingsComponent.cpp
+    apps/desktop/Source/ui/dialogs/ProjectRecoveryModal.cpp
+    apps/desktop/Source/ui/settings/GlobalSettingsPanel.cpp
+    apps/desktop/Source/ui/dialogs/UnsavedChangesModal.cpp
 )
 
 # Instruments sources
@@ -249,6 +252,8 @@ set(ZENITH_AI_NETWORK_SOURCES
     apps/desktop/Source/network/FreesoundClient.cpp
     apps/desktop/Source/network/AIPrompts.cpp
     apps/desktop/Source/network/AITools.cpp
+    apps/desktop/Source/network/AuthenticationService.cpp
+    apps/desktop/Source/network/OAuthRedirectServer.cpp
     apps/desktop/Source/network/MCPServer.cpp
     apps/desktop/Source/network/AudioAnalysisService.cpp
     apps/desktop/Source/utils/PlatformSystemUtils.cpp

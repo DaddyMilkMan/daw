@@ -177,9 +177,14 @@ void AudioRecorder::startRecording(
     const std::vector<std::shared_ptr<Track>> &tracks,
     const juce::AudioDeviceManager &deviceManager, juce::int64 startSample,
     const juce::File &recordingsDir) {
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  // Thread safety check - return if not on message thread (replaces crash-prone jassert)
+  if (!juce::MessageManager::getInstanceWithoutCreating() ||
+      !juce::MessageManager::getInstanceWithoutCreating()->isThisTheMessageThread()) {
+    DBG("AudioRecorder: Method called from wrong thread - ignoring");
+    return;
+  }
 
-  if (isRecording_.load()) {
+  if (state_.load() != RecordingState::Idle) {
     DBG("AudioRecorder: Already recording, ignoring start request");
     return;
   }
@@ -225,23 +230,24 @@ void AudioRecorder::startRecording(
 
     juce::File recordFile =
         createRecordingFile(recordingsDir, track->getName());
+    juce::WavAudioFormat wavFormat;
     auto fileStream = std::make_unique<juce::FileOutputStream>(recordFile);
-
+    
     if (!fileStream->openedOk()) {
-      DBG("AudioRecorder: Failed to create file: " +
-          recordFile.getFullPathName());
+      DBG("AudioRecorder: Could not open file for writing - " + recordFile.getFullPathName());
       continue;
     }
 
-    juce::WavAudioFormat wavFormat;
-
-    // Move to generic OutputStream unique_ptr for the new API
     std::unique_ptr<juce::OutputStream> outputStream = std::move(fileStream);
 
+    // Use the new options-based API
+    auto options = juce::AudioFormatWriterOptions()
+                       .withSampleRate(deviceSampleRate)
+                       .withNumChannels(static_cast<unsigned int>(sessionNumChannels))
+                       .withBitsPerSample(constants::kRecordingBitDepth);
+
     std::unique_ptr<juce::AudioFormatWriter> baseWriter(
-        wavFormat.createWriterFor(outputStream.release(), deviceSampleRate,
-                                  static_cast<unsigned int>(sessionNumChannels),
-                                  constants::kRecordingBitDepth, {}, 0));
+        wavFormat.createWriterFor(outputStream, options));
 
     if (!baseWriter)
       continue;
@@ -275,19 +281,26 @@ void AudioRecorder::startRecording(
 
   if (!sessions_.empty()) {
     writerThread_->addTimeSliceClient(this);
-    isRecording_.store(true);
+    state_.store(RecordingState::Recording);
   }
 }
 
-std::vector<RecordingResult> AudioRecorder::stopRecording() {
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+void AudioRecorder::stopRecording(std::function<void(std::vector<RecordingResult>)> completionCallback) {
+  // Thread safety check - return if not on message thread (replaces crash-prone jassert)
+  if (!juce::MessageManager::getInstanceWithoutCreating() ||
+      !juce::MessageManager::getInstanceWithoutCreating()->isThisTheMessageThread()) {
+    DBG("AudioRecorder: Method called from wrong thread - ignoring");
+    return;
+  }
 
   std::vector<RecordingResult> results;
 
-  if (!isRecording_.load())
-    return results;
+  if (state_.load() != RecordingState::Recording) {
+    if (completionCallback) completionCallback(results);
+    return;
+  }
 
-  isRecording_.store(false);
+  state_.store(RecordingState::Finalizing);
 
   if (writerThread_) {
     writerThread_->removeTimeSliceClient(this);
@@ -340,13 +353,23 @@ std::vector<RecordingResult> AudioRecorder::stopRecording() {
   // Update snapshot to clear audio thread view
   updateSessionSnapshot();
 
-  return results;
+  state_.store(RecordingState::Idle);
+
+  // Invoke completion callback
+  if (completionCallback) {
+    completionCallback(results);
+  }
 }
 
 void AudioRecorder::onLoopCycle() {
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  // Thread safety check - return if not on message thread (replaces crash-prone jassert)
+  if (!juce::MessageManager::getInstanceWithoutCreating() ||
+      !juce::MessageManager::getInstanceWithoutCreating()->isThisTheMessageThread()) {
+    DBG("AudioRecorder: Method called from wrong thread - ignoring");
+    return;
+  }
 
-  if (!isRecording_.load() || !loopRecordingEnabled_.load())
+  if (state_.load() != RecordingState::Recording || !loopRecordingEnabled_.load())
     return;
 
   DBG("AudioRecorder: Loop cycle detected, creating new takes (take " +
@@ -396,20 +419,23 @@ void AudioRecorder::onLoopCycle() {
     juce::File recordFile = createRecordingFile(
         recordingsDir_,
         trackName + "_Take" + juce::String(currentTakeNumber_.load()));
+    juce::WavAudioFormat wavFormat;
     auto fileStream = std::make_unique<juce::FileOutputStream>(recordFile);
-
+    
     if (!fileStream->openedOk()) {
-      DBG("AudioRecorder: Failed to create file for new take: " +
-          recordFile.getFullPathName());
+      DBG("AudioRecorder: Could not open file for writing (loop) - " + recordFile.getFullPathName());
       continue;
     }
 
-    juce::WavAudioFormat wavFormat;
+    std::unique_ptr<juce::OutputStream> outputStream = std::move(fileStream);
+
+    auto options = juce::AudioFormatWriterOptions()
+                       .withSampleRate(oldSession->sampleRate)
+                       .withNumChannels(static_cast<unsigned int>(oldSession->numChannels))
+                       .withBitsPerSample(constants::kRecordingBitDepth);
+
     std::unique_ptr<juce::AudioFormatWriter> baseWriter(
-        wavFormat.createWriterFor(
-            fileStream.release(), oldSession->sampleRate,
-            static_cast<unsigned int>(oldSession->numChannels),
-            constants::kRecordingBitDepth, {}, 0));
+        wavFormat.createWriterFor(outputStream, options));
 
     if (!baseWriter)
       continue;
@@ -442,16 +468,29 @@ void AudioRecorder::onLoopCycle() {
 }
 
 void AudioRecorder::updateSessionSnapshot() {
+  // BUG FIX #5: Proper RCU pattern - defer deletion of OLD snapshot
+  // 1. Create new snapshot from current sessions
   std::shared_ptr<SessionSnapshot> newSnapshot = std::make_shared<SessionSnapshot>(sessions_);
-  activeSessionSnapshot_.store(newSnapshot.get(), std::memory_order_release);
-  RealTimeGarbageCollector::getInstance().deferDelete(currentSessionSnapshot_);
+  
+  // 2. Keep reference to old snapshot for deferred deletion
+  std::shared_ptr<SessionSnapshot> oldSnapshot = currentSessionSnapshot_;
+  
+  // 3. Update owner reference to new snapshot (keeps it alive)
   currentSessionSnapshot_ = newSnapshot;
+  
+  // 4. Atomically publish raw pointer for audio thread
+  activeSessionSnapshot_.store(newSnapshot.get(), std::memory_order_release);
+  
+  // 5. Defer delete of OLD snapshot - audio thread may still be reading it
+  if (oldSnapshot) {
+    RealTimeGarbageCollector::getInstance().deferDelete(oldSnapshot);
+  }
 }
 
 void AudioRecorder::write(const float *const *inputChannelData,
                           int numInputChannels, int numSamples,
                           const std::vector<std::shared_ptr<Track>> &tracks) {
-  if (!isRecording_.load() || inputChannelData == nullptr || numSamples <= 0)
+  if (state_.load() != RecordingState::Recording || inputChannelData == nullptr || numSamples <= 0)
     return;
 
   // RCU Lock-Free Access
@@ -495,7 +534,7 @@ void AudioRecorder::write(const float *const *inputChannelData,
 }
 
 int AudioRecorder::useTimeSlice() {
-  if (!isRecording_.load())
+  if (state_.load() == RecordingState::Idle)
     return -1;
 
   // RCU Lock-Free Access

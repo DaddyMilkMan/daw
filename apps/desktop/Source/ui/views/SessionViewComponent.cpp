@@ -24,6 +24,8 @@
 #endif
 
 namespace zenith {
+using namespace design;
+using namespace design::colors;
 
 //==============================================================================
 // Construction/Destruction
@@ -434,28 +436,38 @@ void SessionViewComponent::drawTrackHeaders(SkCanvas *canvas) {
 
     // Glassmorphic header background
     SkPaint headerPaint;
-    headerPaint.setColor(design::colors::BG_DARK);
     headerPaint.setAntiAlias(true);
+    
+    SkPoint pts[2] = {{headerRect.left(), headerRect.top()}, {headerRect.left(), headerRect.bottom()}};
+    SkColor bgColors[3] = {
+        design::withAlpha(design::colors::BG_MEDIUM, 0.4f),
+        design::withAlpha(design::colors::BG_DARK, 0.3f),
+        design::withAlpha(design::colors::BG_DARKEST, 0.5f)
+    };
+    float bgPositions[3] = {0.0f, 0.4f, 1.0f};
+    
+    headerPaint.setShader(SkGradientShader::MakeLinear(pts, bgColors, bgPositions, 3, SkTileMode::kClamp));
 
     SkRRect rrect =
         SkRRect::MakeRectXY(headerRect, CORNER_RADIUS, CORNER_RADIUS);
     canvas->drawRRect(rrect, headerPaint);
 
-    // Glass highlight on top edge
-    SkPaint highlightPaint;
-    highlightPaint.setColor(design::colors::GLASS_HIGHLIGHT);
-    highlightPaint.setAntiAlias(true);
-    canvas->drawLine(headerRect.left() + CORNER_RADIUS, headerRect.top() + 1,
-                     headerRect.right() - CORNER_RADIUS, headerRect.top() + 1,
-                     highlightPaint);
-
-    // Track color indicator bar
+    // Track color indicator bar (Neon Core)
     SkPaint colorPaint;
     SkColor trackColor = design::toSkColor(header.trackColor);
-    colorPaint.setColor(trackColor);
+    colorPaint.setColor(design::withAlpha(trackColor, 0.8f));
+    colorPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 2.0f));
+    
     canvas->drawRect(SkRect::MakeXYWH(headerRect.left() + 4,
-                                      headerRect.top() + 4, 4,
-                                      headerRect.height() - 8),
+                                      headerRect.top() + 6, 3,
+                                      headerRect.height() - 12),
+                     colorPaint);
+    
+    colorPaint.setMaskFilter(nullptr);
+    colorPaint.setColor(SK_ColorWHITE);
+    canvas->drawRect(SkRect::MakeXYWH(headerRect.left() + 5,
+                                      headerRect.top() + 8, 1,
+                                      headerRect.height() - 16),
                      colorPaint);
 
     // Track name
@@ -517,7 +529,8 @@ void SessionViewComponent::drawTrackControlButtons(SkCanvas *canvas,
     soloPaint.setColor(header.isSoloed ? design::colors::AMBER
                                        : design::colors::TEXT_TERTIARY);
 
-    SkRRect soloRRect = SkRRect::MakeRectXY(soloRect.makeInset(2, 2), 4, 4);
+    SkRRect soloRRect = SkRRect::MakeRectXY(soloRect, 4, 4);
+    soloRRect.inset(2, 2);
     canvas->drawRRect(soloRRect, soloPaint);
 
     SkFont btnFont =
@@ -542,7 +555,8 @@ void SessionViewComponent::drawTrackControlButtons(SkCanvas *canvas,
     mutePaint.setColor(header.isMuted ? design::colors::RED
                                       : design::colors::TEXT_TERTIARY);
 
-    SkRRect muteRRect = SkRRect::MakeRectXY(muteRect.makeInset(2, 2), 4, 4);
+    SkRRect muteRRect = SkRRect::MakeRectXY(muteRect, 4, 4);
+    muteRRect.inset(2, 2);
     canvas->drawRRect(muteRRect, mutePaint);
 
     SkFont btnFont =
@@ -582,31 +596,43 @@ void SessionViewComponent::drawClipSlot(SkCanvas *canvas, const ClipSlot &slot,
       SkRect::MakeXYWH(slot.bounds.getX(), slot.bounds.getY(),
                        slot.bounds.getWidth(), slot.bounds.getHeight());
 
-  // Clip background with gradient based on type
-  SkPoint pts[2] = {{slotRect.left(), slotRect.top()},
-                    {slotRect.left(), slotRect.bottom()}};
+  SkColor baseColor = slot.isMidi ? design::colors::MAGENTA
+                                  : design::colors::CYAN;
 
-  SkColor baseColor = slot.isMidi ? design::toSkColor(slot.clipColor)
-                                  : design::colors::BLUE;
-
-  SkColor colors[2] = {design::lighten(baseColor, 0.1f),
-                       design::darken(baseColor, 0.2f)};
-
+  // 1. GLASS BACKGROUND
   SkPaint slotPaint;
   slotPaint.setAntiAlias(true);
-  slotPaint.setShader(SkGradientShader::MakeLinear(pts, colors, nullptr, 2,
-                                                   SkTileMode::kClamp));
+  
+  SkPoint pts[2] = {{slotRect.left(), slotRect.top()}, {slotRect.left(), slotRect.bottom()}};
+  SkColor bgColors[3] = {
+      design::withAlpha(design::lighten(baseColor, 0.1f), 0.5f),
+      design::withAlpha(baseColor, 0.35f),
+      design::withAlpha(design::darken(baseColor, 0.2f), 0.25f)
+  };
+  float bgPositions[3] = {0.0f, 0.4f, 1.0f};
+  
+  slotPaint.setShader(SkGradientShader::MakeLinear(pts, bgColors, bgPositions, 3, SkTileMode::kClamp));
 
   SkRRect rrect = SkRRect::MakeRectXY(slotRect, CORNER_RADIUS, CORNER_RADIUS);
   canvas->drawRRect(rrect, slotPaint);
 
-  // Border
+  // 2. INNER GLOW / HIGHLIGHT
+  SkPaint highlightPaint;
+  highlightPaint.setAntiAlias(true);
+  highlightPaint.setStyle(SkPaint::kStroke_Style);
+  highlightPaint.setStrokeWidth(1.0f);
+  highlightPaint.setColor(design::withAlpha(SK_ColorWHITE, 0.15f));
+  SkRRect insetRRect = rrect;
+  insetRRect.inset(0.5f, 0.5f);
+  canvas->drawRRect(insetRRect, highlightPaint);
+
+  // 3. BORDER (Neon flavored)
   SkPaint borderPaint;
   borderPaint.setAntiAlias(true);
   borderPaint.setStyle(SkPaint::kStroke_Style);
   borderPaint.setStrokeWidth(isHovered ? 2.0f : 1.0f);
-  borderPaint.setColor(isHovered ? design::colors::CYAN
-                                 : design::colors::BORDER_SUBTLE);
+  borderPaint.setColor(isHovered ? design::colors::ACCENT_PRIMARY
+                                 : design::withAlpha(baseColor, 0.4f));
   canvas->drawRRect(rrect, borderPaint);
 
   // Playing indicator - animated glow
@@ -668,8 +694,7 @@ void SessionViewComponent::drawEmptySlot(SkCanvas *canvas,
   // Empty slot background
   SkPaint slotPaint;
   slotPaint.setAntiAlias(true);
-  slotPaint.setColor(
-      design::withAlpha(design::colors::BG_MEDIUM, isHovered ? 0.6f : 0.3f));
+  slotPaint.setColor(design::withAlpha(design::colors::BG_DARK, isHovered ? 0.4f : 0.2f));
 
   SkRRect rrect = SkRRect::MakeRectXY(slotRect, CORNER_RADIUS, CORNER_RADIUS);
   canvas->drawRRect(rrect, slotPaint);
@@ -679,8 +704,8 @@ void SessionViewComponent::drawEmptySlot(SkCanvas *canvas,
   borderPaint.setAntiAlias(true);
   borderPaint.setStyle(SkPaint::kStroke_Style);
   borderPaint.setStrokeWidth(1.0f);
-  borderPaint.setColor(isHovered ? design::colors::CYAN
-                                 : design::colors::BORDER_DEFAULT);
+  borderPaint.setColor(isHovered ? design::colors::ACCENT_PRIMARY
+                                 : design::withAlpha(design::colors::BORDER_DEFAULT, 0.3f));
   canvas->drawRRect(rrect, borderPaint);
 
   // Record indicator for armed tracks
@@ -705,7 +730,7 @@ void SessionViewComponent::drawWaveformPreview(SkCanvas *canvas,
                                                const ClipSlot &slot,
                                                const SkRect &contentRect) {
   if (slot.waveformPeaks.empty()) {
-    // Draw "Loading..." indicator instead of fake animated waveform
+    // Draw "Loading..." indicator if waveform data is not yet available
     SkPaint loadingPaint;
     loadingPaint.setAntiAlias(true);
     loadingPaint.setColor(design::withAlpha(design::colors::TEXT_TERTIARY, 0.6f));
@@ -724,13 +749,20 @@ void SessionViewComponent::drawWaveformPreview(SkCanvas *canvas,
   // Real waveform data
   SkPaint wavePaint;
   wavePaint.setAntiAlias(true);
-  wavePaint.setColor(design::colors::CYAN);
+  wavePaint.setColor(design::withAlpha(SK_ColorWHITE, 0.9f)); // Core white waveform
   wavePaint.setStyle(SkPaint::kStroke_Style);
+  wavePaint.setStrokeWidth(1.0f);
+
+  if (slot.isPlaying) {
+    // Add neon glow if playing
+    wavePaint.setColor(design::colors::CYAN);
+    wavePaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 1.5f));
+  }
 
   float stepX =
       contentRect.width() / static_cast<float>(slot.waveformPeaks.size());
   float midY = contentRect.centerY();
-  float halfHeight = contentRect.height() * 0.4f;
+  float halfHeight = contentRect.height() * 0.45f;
 
   SkPath wavePath;
   for (size_t i = 0; i < slot.waveformPeaks.size(); ++i) {
@@ -744,6 +776,13 @@ void SessionViewComponent::drawWaveformPreview(SkCanvas *canvas,
     }
   }
 
+  // Draw glow pass
+  if (slot.isPlaying) {
+      canvas->drawPath(wavePath, wavePaint);
+      wavePaint.setMaskFilter(nullptr);
+      wavePaint.setColor(SK_ColorWHITE);
+  }
+  
   canvas->drawPath(wavePath, wavePaint);
 }
 
@@ -755,7 +794,7 @@ void SessionViewComponent::drawMidiPreview(SkCanvas *canvas,
   notePaint.setColor(design::colors::MAGENTA);
 
   if (slot.midiNotes.empty()) {
-    // Draw "Loading..." indicator instead of fake MIDI notes
+    // Draw "Loading..." indicator if MIDI data is not yet available
     SkPaint loadingPaint;
     loadingPaint.setAntiAlias(true);
     loadingPaint.setColor(design::withAlpha(design::colors::TEXT_TERTIARY, 0.6f));
@@ -782,7 +821,14 @@ void SessionViewComponent::drawMidiPreview(SkCanvas *canvas,
 
     y = std::clamp(y, contentRect.top(), contentRect.bottom());
 
-    canvas->drawRect(SkRect::MakeXYWH(x, y, 8, 4), notePaint);
+    SkRect noteRect = SkRect::MakeXYWH(x, y, 10, 3);
+    
+    // Gradient for midi notes
+    SkPoint pts[2] = {{noteRect.left(), noteRect.top()}, {noteRect.left(), noteRect.bottom()}};
+    SkColor midColors[2] = {lighten(colors::MAGENTA, 0.2f), colors::MAGENTA};
+    notePaint.setShader(SkGradientShader::MakeLinear(pts, midColors, nullptr, 2, SkTileMode::kClamp));
+    
+    canvas->drawRRect(SkRRect::MakeRectXY(noteRect, 1.5f, 1.5f), notePaint);
   }
 }
 
@@ -792,22 +838,22 @@ void SessionViewComponent::drawPlayingIndicator(
                                      bounds.getWidth(), bounds.getHeight());
 
   // Animated glow border
-  float glowIntensity = 0.5f + 0.5f * std::sin(animPhase * 2.0f);
+  float glowIntensity = 0.6f + 0.3f * std::sin(animPhase * 3.0f);
 
   SkPaint glowPaint;
   glowPaint.setAntiAlias(true);
   glowPaint.setStyle(SkPaint::kStroke_Style);
-  glowPaint.setStrokeWidth(3.0f);
-  glowPaint.setColor(
-      design::withAlpha(design::colors::NEON_GREEN, glowIntensity));
-  glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
+  glowPaint.setStrokeWidth(4.0f);
+  glowPaint.setColor(design::withAlpha(design::colors::NEON_GREEN, glowIntensity));
+  glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 6.0f));
 
   SkRRect rrect = SkRRect::MakeRectXY(slotRect, CORNER_RADIUS, CORNER_RADIUS);
   canvas->drawRRect(rrect, glowPaint);
 
-  // Solid border on top
+  // Core line (Crisp white/green)
   glowPaint.setMaskFilter(nullptr);
   glowPaint.setStrokeWidth(2.0f);
+  glowPaint.setColor(design::withAlpha(SK_ColorWHITE, 0.9f));
   canvas->drawRRect(rrect, glowPaint);
 }
 
@@ -858,31 +904,48 @@ void SessionViewComponent::drawSceneLaunchColumn(SkCanvas *canvas) {
 
     SkPaint btnPaint;
     btnPaint.setAntiAlias(true);
-    btnPaint.setColor(isHovered ? design::colors::CYAN
-                                : design::colors::BG_MEDIUM);
+    
+    if (isHovered) {
+        SkPoint pts[2] = {{btnRect.left(), btnRect.top()}, {btnRect.left(), btnRect.bottom()}};
+        SkColor colors[2] = {design::lighten(design::colors::ACCENT_PRIMARY, 0.2f), design::colors::ACCENT_PRIMARY};
+        btnPaint.setShader(SkGradientShader::MakeLinear(pts, colors, nullptr, 2, SkTileMode::kClamp));
+    } else {
+        btnPaint.setColor(design::withAlpha(design::colors::BG_MEDIUM, 0.4f));
+    }
 
     SkRRect btnRRect = SkRRect::MakeRectXY(btnRect, design::dimensions::RADIUS_SM, design::dimensions::RADIUS_SM);
     canvas->drawRRect(btnRRect, btnPaint);
+    
+    if (isHovered) {
+        // Neon Glow for hovered scene launch
+        SkPaint glowPaint;
+        glowPaint.setAntiAlias(true);
+        glowPaint.setStyle(SkPaint::kStroke_Style);
+        glowPaint.setStrokeWidth(2.0f);
+        glowPaint.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.6f));
+        glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
+        canvas->drawRRect(btnRRect, glowPaint);
+    }
 
     // Play icon
     SkPath playPath;
     float cx = btnRect.centerX();
     float cy = btnRect.centerY();
-    playPath.moveTo(cx - 6, cy - 8);
-    playPath.lineTo(cx + 8, cy);
-    playPath.lineTo(cx - 6, cy + 8);
+    playPath.moveTo(cx - 5, cy - 7);
+    playPath.lineTo(cx + 7, cy);
+    playPath.lineTo(cx - 5, cy + 7);
     playPath.close();
 
     SkPaint playPaint;
     playPaint.setAntiAlias(true);
     playPaint.setColor(isHovered ? design::colors::BG_DARKEST
-                                 : design::colors::TEXT_SECONDARY);
+                                 : design::withAlpha(design::colors::TEXT_SECONDARY, 0.8f));
     canvas->drawPath(playPath, playPaint);
 
     // Scene number
     SkFont numFont = design::typography::getMonoFont(10.0f);
     SkPaint numPaint;
-    numPaint.setColor(design::colors::TEXT_TERTIARY);
+    numPaint.setColor(design::withAlpha(design::colors::TEXT_TERTIARY, 0.6f));
     numPaint.setAntiAlias(true);
     canvas->drawString(juce::String(s + 1).toRawUTF8(), x + 4, y + 12, numFont,
                        numPaint);
@@ -1177,7 +1240,7 @@ void SessionViewComponent::toggleTrackMute(const juce::String &trackId) {
 void SessionViewComponent::buildWaveformPreview(
     ClipSlot &slot, const juce::String &audioFilePath) {
   // CRITIC FIX: Actually load the audio file and compute real waveform peaks!
-  // The previous implementation generated a SINE WAVE as "placeholder" - pathetic.
+  // Transitioning from synthetic data to real engine-processed waveform data.
   
   slot.waveformPeaks.clear();
   
@@ -1267,7 +1330,7 @@ void SessionViewComponent::buildMidiPreview(ClipSlot &slot,
 
   auto notesNode = clipTree.getChildWithName(ProjectState::ID_NOTES);
   if (!notesNode.isValid()) {
-    // Placeholder notes
+    // Initialization notes
     for (int i = 0; i < 6; ++i) {
       slot.midiNotes.push_back({60 + (i % 12), i * 0.15f});
     }

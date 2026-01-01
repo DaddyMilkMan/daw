@@ -83,19 +83,22 @@ juce::Colour ZenithTheme::Colors::darken(const juce::Colour &color,
 //==============================================================================
 
 juce::Font ZenithTheme::Typography::getFont(float size, Weight weight) {
-  auto fontName = juce::Font::getDefaultSansSerifFontName();
-
+  juce::FontOptions options;
+  options = options.withHeight(size);
+  options = options.withName("Inter");
+  
   switch (weight) {
   case Weight::Regular:
-    return juce::Font(juce::FontOptions(fontName, size, juce::Font::plain));
+     break;
   case Weight::Medium:
-    return juce::Font(juce::FontOptions(fontName, size, juce::Font::plain))
-        .withExtraKerningFactor(0.05f);
+    options = options.withStyle("Medium");
+    break;
   case Weight::Bold:
-    return juce::Font(juce::FontOptions(fontName, size, juce::Font::bold));
-  default:
-    return juce::Font(juce::FontOptions(fontName, size, juce::Font::plain));
+    options = options.withStyle("Bold");
+    break;
   }
+  
+  return juce::Font(options);
 }
 
 juce::Font ZenithTheme::Typography::getTinyFont(Weight weight) {

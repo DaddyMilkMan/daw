@@ -20,6 +20,7 @@ namespace zenith {
 //==============================================================================
 
 void Engine::syncWithProjectState() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   DBG("Engine: Syncing with project state");
 
   // Lock for exclusive access during sync
@@ -175,6 +176,7 @@ Engine::tracks() const noexcept {
 }
 
 void Engine::addTestTracks(int count) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   if (count <= 0)
     return;
 
@@ -255,7 +257,6 @@ juce::String Engine::createTrack(const juce::String &name,
 // Accept shared_ptr for RT-safe snapshot sharing across threads
 void Engine::addTrack(std::shared_ptr<zenith::Track> track) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   jassert(track != nullptr);
 
   const juce::ScopedWriteLock lock(tracksLock_);
@@ -310,8 +311,6 @@ void Engine::addTrack(std::shared_ptr<zenith::Track> track) {
 void Engine::removeTrack(int index) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-
   const juce::ScopedWriteLock lock(tracksLock_);
 
   if (index >= 0 && index < static_cast<int>(tracks_.size())) {
@@ -353,6 +352,7 @@ Track* Engine::getTrackById(const juce::String& trackId) {
 }
 
 void Engine::updateTrackSnapshot() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   // Create new snapshot
   // Include Aux Buses in snapshot for consistent audio thread access
   auto newSnapshot = std::make_shared<TrackSnapshot>(tracks_, auxBuses_);
@@ -385,6 +385,7 @@ void Engine::updateTrackSnapshot() {
 }
 
 void Engine::prepareTracks(int samplesPerBlockExpected, double sampleRate) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   DBG("Engine: Preparing " + juce::String(tracks_.size()) + " tracks");
 
   // Prepare each track
@@ -401,6 +402,7 @@ void Engine::prepareTracks(int samplesPerBlockExpected, double sampleRate) {
 }
 
 void Engine::updateSoloState() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   bool anySolo = false;
   for (const auto &track : tracks_) {
     if (track && track->isSolo()) {

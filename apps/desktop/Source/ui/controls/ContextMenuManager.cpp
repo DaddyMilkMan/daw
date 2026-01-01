@@ -160,7 +160,9 @@ void ContextMenuManager::mouseDown(const juce::MouseEvent& e) {
 
 void ContextMenuManager::componentBeingDeleted(juce::Component& component) {
   if (&component == activeMenu_.get()) {
-    activeMenu_.release();  // Don't delete, it's already being deleted
+    // BUG FIX #4: Component is being deleted externally - release ownership
+    // to avoid double-delete. Explicit void cast documents intent.
+    (void)activeMenu_.release();
     if (hostWindow_) {
       hostWindow_->setVisible(false);
     }

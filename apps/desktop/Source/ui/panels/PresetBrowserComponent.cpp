@@ -125,32 +125,28 @@ void PresetBrowserComponent::saveCurrentPreset() {
   if (captureCallback) {
     auto preset = captureCallback();
 
-    // TODO: Replace with ZenithDialog (Skia-based)
-    // auto *window = new juce::AlertWindow(...);
-    // For now, just log that save is not implemented in UI
-    DBG("Save Preset requested (Dialog TODO)");
-
-    /*
-    auto *window = new juce::AlertWindow(
+    // BUG FIX #13: Implement actual save functionality
+    // Use JUCE's simple text input until ZenithDialog is implemented
+    auto* asyncBox = new juce::AlertWindow(
         "Save Preset",
-        "Enter a name for your preset:", juce::AlertWindow::QuestionIcon, this);
-    window->addTextEditor("presetName", preset.name, "Preset Name:");
-    window->addButton("Save", 1,
-                      juce::KeyPress(juce::KeyPress::returnKey, 0, 0));
-    window->addButton("Cancel", 0,
-                      juce::KeyPress(juce::KeyPress::escapeKey, 0, 0));
-
-    window->enterModalState(
-        true, juce::ModalCallbackFunction::create([this, window,
-                                                   preset](int result) mutable {
+        "Enter a name for your preset:",
+        juce::MessageBoxIconType::QuestionIcon);
+    
+    asyncBox->addTextEditor("presetName", preset.name, "Preset Name:");
+    asyncBox->addButton("Save", 1, juce::KeyPress(juce::KeyPress::returnKey, 0, 0));
+    asyncBox->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey, 0, 0));
+    
+    asyncBox->enterModalState(true, juce::ModalCallbackFunction::create(
+        [this, asyncBox, preset](int result) mutable {
           if (result == 1) {
-            preset.name = window->getTextEditorContents("presetName");
-            zenith::ZenithPresetManager::getInstance().savePreset(preset, true);
+            auto updatedPreset = preset;
+            updatedPreset.name = asyncBox->getTextEditorContents("presetName");
+            zenith::ZenithPresetManager::getInstance().savePreset(updatedPreset, true);
             refreshPresets();
+            DBG("Saved preset: " + updatedPreset.name);
           }
-          delete window;
-        }));
-    */
+          delete asyncBox;
+        }), true);
   }
 }
 

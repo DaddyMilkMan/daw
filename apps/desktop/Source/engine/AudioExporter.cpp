@@ -57,8 +57,10 @@ juce::AudioFormat* AudioExporter::getFormatForType(ExportFormat format) {
 bool AudioExporter::exportProject(const ExportOptions &options) {
   DBG("AudioExporter: Starting export...");
 
-  if (options.sampleRate <= 0)
+  if (options.sampleRate <= 0) {
+    DBG("AudioExporter: ERROR - Invalid sample rate: " + juce::String(options.sampleRate));
     return false;
+  }
 
   isExporting_.store(true);
   shouldCancel_.store(false);
@@ -148,17 +150,23 @@ bool AudioExporter::exportProject(const ExportOptions &options) {
   juce::File outputFile = options.outputFile;
   outputFile.deleteFile();
 
-  std::unique_ptr<juce::FileOutputStream> fileStream(outputFile.createOutputStream());
+  std::unique_ptr<juce::OutputStream> fileStream(outputFile.createOutputStream());
   if (!fileStream) {
+    DBG("AudioExporter: ERROR - Failed to create output stream for: " + outputFile.getFullPathName());
     isExporting_.store(false);
     return false;
   }
 
-  std::unique_ptr<juce::OutputStream> streamPtr(std::move(fileStream));
+  auto writerOptions = juce::AudioFormatWriterOptions()
+                           .withSampleRate(options.sampleRate)
+                           .withNumChannels(2)
+                           .withBitsPerSample(options.bitDepth);
+
   std::unique_ptr<juce::AudioFormatWriter> writer(
-      format->createWriterFor(streamPtr.release(), options.sampleRate, 2, options.bitDepth, {}, 0));
+      format->createWriterFor(fileStream, writerOptions));
 
   if (!writer) {
+    DBG("AudioExporter: ERROR - Failed to create audio format writer for format");
     isExporting_.store(false);
     return false;
   }
@@ -307,21 +315,24 @@ bool AudioExporter::renderToTempFile(const juce::File &tempFile,
   tempFile.deleteFile();
 
   juce::WavAudioFormat wavFormat;
-  std::unique_ptr<juce::FileOutputStream> stream(tempFile.createOutputStream());
+  std::unique_ptr<juce::OutputStream> stream(tempFile.createOutputStream());
   if (!stream)
     return false;
 
   std::unique_ptr<juce::OutputStream> streamPtr(std::move(stream));
+  auto writerOptions = juce::AudioFormatWriterOptions()
+                           .withSampleRate(sampleRate)
+                           .withNumChannels(2)
+                           .withBitsPerSample(32);
+
   std::unique_ptr<juce::AudioFormatWriter> writer(
-      wavFormat.createWriterFor(streamPtr.release(), sampleRate, 2, 32, {}, 0));
+      wavFormat.createWriterFor(streamPtr, writerOptions));
 
   if (!writer)
     return false;
 
   const int blockSize = 4096;
   juce::AudioBuffer<float> buffer(2, blockSize);
-
-  // Note: Engine manages render context internally
 
   // Note: Engine playback should already be suspended here by wrapper
 
@@ -381,13 +392,18 @@ bool AudioExporter::writeFinalFile(const juce::File &tempFile,
   juce::File outputFile = options.outputFile;
   outputFile.deleteFile();
 
-  std::unique_ptr<juce::FileOutputStream> outStream(outputFile.createOutputStream());
+  std::unique_ptr<juce::OutputStream> outStream(outputFile.createOutputStream());
   if (!outStream)
     return false;
 
   std::unique_ptr<juce::OutputStream> streamPtr(std::move(outStream));
+  auto writerOptions = juce::AudioFormatWriterOptions()
+                           .withSampleRate(options.sampleRate)
+                           .withNumChannels(2)
+                           .withBitsPerSample(options.bitDepth);
+
   std::unique_ptr<juce::AudioFormatWriter> writer(
-      targetFormat->createWriterFor(streamPtr.release(), options.sampleRate, 2, options.bitDepth, {}, 0));
+      targetFormat->createWriterFor(streamPtr, writerOptions));
   if (!writer)
     return false;
 
@@ -705,15 +721,20 @@ bool AudioExporter::exportSingleStemInternal(int trackIndex, const ExportOptions
   juce::File outputFile = stemOutputFile;
   outputFile.deleteFile();
 
-  std::unique_ptr<juce::FileOutputStream> fileStream(outputFile.createOutputStream());
+  std::unique_ptr<juce::OutputStream> fileStream(outputFile.createOutputStream());
   if (!fileStream) {
     DBG("AudioExporter: Could not create output stream");
     return false;
   }
 
   std::unique_ptr<juce::OutputStream> streamPtr(std::move(fileStream));
+  auto writerOptions = juce::AudioFormatWriterOptions()
+                           .withSampleRate(options.sampleRate)
+                           .withNumChannels(2)
+                           .withBitsPerSample(options.bitDepth);
+
   std::unique_ptr<juce::AudioFormatWriter> writer(
-      format->createWriterFor(streamPtr.release(), options.sampleRate, 2, options.bitDepth, {}, 0));
+      format->createWriterFor(streamPtr, writerOptions));
 
   if (!writer) {
     DBG("AudioExporter: Could not create writer");

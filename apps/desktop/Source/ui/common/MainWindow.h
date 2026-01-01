@@ -8,24 +8,13 @@
 #pragma once
 
 #include "../Source/engine/RecentProjectManager.h"
-#include "../arranger/ArrangerClipManager.h"
-#include "../browser/BrowserPanel.h"
-#include "../controls/SkiaButton.h"
+#include "../../commands/CommandAPI.h"
 #include "../framework/SkiaMainWindowIntegration.h"
 #include "../framework/AuroraBackground.h"
-#include "../mixer/MixerComponent.h"
-#include "../views/SessionViewComponent.h"
 #include "../design-system/ZenithLookAndFeel.h"
-#include "../transport/TransportBar.h"
-#include "ArrangementComponent.h"
-#include "BottomBar.h"
-#include "ClipSynchronizer.h"
 #include "Engine.h"
-#include "PianoKeyboardViewSkia.h"
 #include "ProjectState.h"
-#include "RightSidePanel.h"
-#include "TrackAutomationSynchronizer.h"
-#include "TrackStateSynchronizer.h"
+#include "../transport/TransportBar.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -35,40 +24,35 @@
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_events/juce_events.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "TitleBarComponent.h"
 #include <memory>
+#include "../dialogs/ExportDialog.h"
+#include "../settings/GlobalSettingsPanel.h"
+#include "../dialogs/ProjectRecoveryModal.h"
+#include "../dialogs/UnsavedChangesModal.h"
 
 namespace zenith {
-class InstrumentBrowserPanel;
-class CommandAPI;
+
+class ProjectRecoveryModal;
 class MainLayoutComponent;
-class WingmanPanel;
-class ZenithMenuBar;
+class RightSidePanel;
 class ZenithHubComponent;
-class ZenithKnob;
 class ProjectFileIO;
-class CollaborationPresenceBar;
-namespace ai {
-class UXDirectorAgent;
-class PresetGeneticistAgent;
-} // namespace ai
-namespace mcp {
-class MCPServer;
-} // namespace mcp
 
 //==============================================================================
 /**
  * @class MainComponent
  * @brief Main content component that holds the UI
  */
-class MainComponent : public zenith::SkiaMainWindowIntegration,
+class MainComponent : public SkiaMainWindowIntegration,
                       public juce::KeyListener {
 public:
   using LoadProjectCallback = std::function<void(const juce::File &)>;
   using NewProjectCallback = std::function<void()>;
 
-  MainComponent(zenith::Engine &engine, zenith::CommandAPI &api,
-                zenith::ProjectState &state,
-                zenith::RecentProjectManager &recentProjects,
+  MainComponent(Engine &engine, CommandAPI &api,
+                ProjectState &state,
+                RecentProjectManager &recentProjects,
                 LoadProjectCallback onLoadProject,
                 NewProjectCallback onNewProject);
   ~MainComponent() override;
@@ -82,6 +66,7 @@ public:
   void mouseUp(const juce::MouseEvent &e) override;
   
   void handleAnimationTimer();
+  void startAnimations();
 
 protected:
   void drawSkiaContent(SkCanvas *canvas) override;
@@ -107,23 +92,19 @@ private:
   void openPianoRoll(const juce::String &trackId, const juce::String &clipId);
   void setMainUiVisible(bool shouldBeVisible);
 
-  zenith::Engine &engine;
-  zenith::ProjectState &projectState;
-  zenith::RecentProjectManager &recentProjectManager_;
+  Engine &engine;
+  ProjectState &projectState;
+  RecentProjectManager &recentProjectManager_;
   LoadProjectCallback onLoadProject_;
   NewProjectCallback onNewProject_;
 
-  std::unique_ptr<zenith::TransportBar> transportBar;
-  std::unique_ptr<zenith::MainLayoutComponent> mainLayout;
-  std::unique_ptr<zenith::RightSidePanel> rightSidePanel;
-  std::unique_ptr<zenith::BottomBar> bottomBar;
-  std::unique_ptr<CollaborationPresenceBar> presenceBar;
-
-  juce::MidiKeyboardState midiKeyboardState;
-
-  void handleImportAudio();
-
   std::unique_ptr<ZenithHubComponent> hubComponent;
+  std::unique_ptr<TransportBar> transportBar;
+  std::unique_ptr<TitleBarComponent> titleBar;
+  std::unique_ptr<MainLayoutComponent> mainLayout;
+  
+  std::unique_ptr<ExportDialog> exportDialog;
+  std::unique_ptr<GlobalSettingsPanel> settingsPanel;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
@@ -139,6 +120,7 @@ public:
   ~MainWindow() override;
 
   void closeButtonPressed() override;
+  void resized() override;
 
   zenith::ProjectState *getProjectState() const { return projectState.get(); }
 
@@ -151,6 +133,9 @@ public:
   zenith::RecentProjectManager &getRecentProjectManager() {
     return *recentProjectManager_;
   }
+  
+  // Requests a quit check (checks dirty state, shows modal if needed)
+  void checkUnsavedAndQuit(); 
 
 private:
   void showAboutDialog();
@@ -160,21 +145,18 @@ private:
   void updateWindowTitle();
 
   juce::File currentProjectFile;
-  std::unique_ptr<zenith::Engine> engine;
-  std::unique_ptr<zenith::ProjectState> projectState;
-  std::unique_ptr<zenith::ProjectFileIO> fileIO_;
-  std::unique_ptr<zenith::TrackStateSynchronizer> trackSynchronizer;
-  std::unique_ptr<zenith::TrackAutomationSynchronizer> automationSync;
-  std::unique_ptr<zenith::CommandAPI> commandAPI;
-  std::unique_ptr<zenith::ClipSynchronizer> clipSynchronizer;
-  std::unique_ptr<zenith::RecentProjectManager> recentProjectManager_;
-  std::unique_ptr<zenith::ZenithLookAndFeel> lookAndFeel;
+  std::unique_ptr<Engine> engine;
+  std::unique_ptr<ProjectState> projectState;
+  std::unique_ptr<ProjectFileIO> fileIO_;
+  std::unique_ptr<CommandAPI> commandAPI;
+  std::unique_ptr<RecentProjectManager> recentProjectManager_;
+  std::unique_ptr<ZenithLookAndFeel> lookAndFeel;
 
   std::unique_ptr<MainComponent> mainComponent;
 
-  std::unique_ptr<ai::UXDirectorAgent> uxDirector;
-  std::unique_ptr<ai::PresetGeneticistAgent> presetGeneticist;
-  std::unique_ptr<mcp::MCPServer> mcpServer;
+  std::unique_ptr<ProjectRecoveryModal> recoveryModal_;
+  std::unique_ptr<UnsavedChangesModal> unsavedChangesModal_;
+
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };

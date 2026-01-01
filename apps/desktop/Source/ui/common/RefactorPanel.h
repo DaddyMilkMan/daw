@@ -119,7 +119,7 @@ public:
         for (size_t i = 0; i < std::min((size_t)5, plan_.trackRenames.size());
              ++i) {
           const auto &rename = plan_.trackRenames[i];
-          juce::String line = "  • " + rename.oldName + " → " + rename.newName;
+          juce::String line = juce::String::fromUTF8("  • ") + rename.oldName + juce::String::fromUTF8(" → ") + rename.newName;
           canvas->drawSimpleText(line.toRawUTF8(), line.length(),
                                  SkTextEncoding::kUTF8, 25.0f, y, bodyFont,
                                  textPaint);

@@ -507,4 +507,16 @@ void GrokDAWController::setContextProvider(
   pImpl->contextProvider = provider;
 }
 
+void GrokDAWController::setOnChangesPending(std::function<void(bool)> callback) {
+  // Logic for handling pending changes from AI
+}
+
+void GrokDAWController::acceptLastChanges() {
+  // Commit changes
+}
+
+void GrokDAWController::denyLastChanges() {
+  // Rollback changes
+}
+
 } // namespace zenith

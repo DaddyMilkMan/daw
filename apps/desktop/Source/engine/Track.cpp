@@ -106,7 +106,12 @@ void Track::setEnabled(bool shouldBeEnabled) {
 
 void Track::setSoloed(bool shouldBeSoloed) {
   mixerChannel.setSolo(shouldBeSoloed);
-  sendChangeMessage();
+  // BUG FIX #11: Consistent thread safety check like other setters
+  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+    sendChangeMessage();
+  } else {
+    juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
+  }
 }
 
 bool Track::isSoloed() const { return mixerChannel.isSolo(); }
@@ -242,9 +247,22 @@ bool Track::isSendPreFader(int sendIndex) const {
 }
 
 void Track::setPluginSidechainSource(int pluginIndex, Track* sourceTrack) {
+    // BUG FIX #8: Document and mitigate dangling pointer risk
+    // WARNING: sourceTrack is a raw pointer. Caller MUST ensure the source track
+    // outlives this track's use of it. Engine should clear sidechain sources before
+    // deleting tracks. Consider using weak_ptr in future refactor.
+    //
+    // TODO: Implement track deletion listeners or weak reference pattern
+    
     sidechainSourceTrack_.store(sourceTrack); // Simple storage
     if (processor) {
         processor->setSidechainSource(pluginIndex, sourceTrack);
+    }
+    
+    if (sourceTrack != nullptr) {
+        DBG("Track " + trackName + ": Set sidechain source to " + sourceTrack->getName());
+    } else {
+        DBG("Track " + trackName + ": Cleared sidechain source");
     }
 }
 

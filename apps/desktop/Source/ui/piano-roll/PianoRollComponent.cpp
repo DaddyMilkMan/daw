@@ -30,6 +30,7 @@
 #include <vector>
 
 using namespace zenith;
+namespace juce = ::juce;  // FIX: Ensure juce resolves to global ::juce, not zenith::juce
 
 // Magic numbers moved to constants/theme
 static constexpr float NOTE_CORNER_RADIUS = design::dimensions::RADIUS_SM; // 8px for modern look
@@ -3270,15 +3271,13 @@ void PianoRollComponent::refreshGhostNotes() {
 void PianoRollComponent::drawGhostNotes(SkCanvas *canvas, const SkRect &rect) {
     if (!canvas || !ghostNotesEnabled || ghostNotes.empty()) return;
     
-    using namespace zenith::design;
-    
     SkPaint ghostPaint;
-    ghostPaint.setColor(withAlpha(colors::TEXT_SECONDARY, ghostNoteOpacity));
+    ghostPaint.setColor(design::withAlpha(design::colors::TEXT_SECONDARY, ghostNoteOpacity));
     ghostPaint.setAntiAlias(true);
     
     SkPaint borderPaint;
     borderPaint.setStyle(SkPaint::kStroke_Style);
-    borderPaint.setColor(withAlpha(colors::TEXT_SECONDARY, ghostNoteOpacity * 1.5f));
+    borderPaint.setColor(design::withAlpha(design::colors::TEXT_SECONDARY, ghostNoteOpacity * 1.5f));
     borderPaint.setStrokeWidth(1.0f);
     borderPaint.setAntiAlias(true);
     
@@ -3304,7 +3303,6 @@ void PianoRollComponent::drawGhostNotes(SkCanvas *canvas, const SkRect &rect) {
 void PianoRollComponent::drawPlayhead(SkCanvas *canvas, const SkRect &rect) {
    if (!canvas) return;
    
-   using namespace zenith::design;
    float width = (float)getLocalBounds().getWidth();
    float height = (float)getLocalBounds().getHeight();
 
@@ -3312,7 +3310,7 @@ void PianoRollComponent::drawPlayhead(SkCanvas *canvas, const SkRect &rect) {
     if (playheadX >= PIANO_WIDTH && playheadX <= width) {
       // Playhead line
       SkPaint playheadPaint;
-      playheadPaint.setColor(colors::TEXT_PRIMARY);
+      playheadPaint.setColor(design::colors::TEXT_PRIMARY);
       playheadPaint.setStrokeWidth(2.0f);
       playheadPaint.setAntiAlias(true);
       canvas->drawLine(playheadX, RULER_HEIGHT, playheadX, height,

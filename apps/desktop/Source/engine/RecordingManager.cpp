@@ -14,6 +14,7 @@
 #include "ProjectState.h"
 #include "AudioRecorder.h"
 #include "Track.h"
+#include "TempoMap.h"
 
 namespace zenith {
 
@@ -65,7 +66,12 @@ void RecordingManager::prepareRecordingForTrack(
 
 //==============================================================================
 void RecordingManager::setRecordingDirectory(const juce::File &recordDir) {
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  // Thread safety check - return if not on message thread
+  if (!juce::MessageManager::getInstanceWithoutCreating() ||
+      !juce::MessageManager::getInstanceWithoutCreating()->isThisTheMessageThread()) {
+    DBG("RecordingManager: Method called from wrong thread - ignoring");
+    return;
+  }
 
   // Store recording directory for later use
   recordingDirectory_ = recordDir;
@@ -84,7 +90,12 @@ void RecordingManager::setRecordingDirectory(const juce::File &recordDir) {
 void RecordingManager::startRecording(
     juce::int64 startPosition,
     const std::vector<std::shared_ptr<Track>> &tracks) {
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  // Thread safety check - return if not on message thread
+  if (!juce::MessageManager::getInstanceWithoutCreating() ||
+      !juce::MessageManager::getInstanceWithoutCreating()->isThisTheMessageThread()) {
+    DBG("RecordingManager: Method called from wrong thread - ignoring");
+    return;
+  }
 
   if (isRecording_.load()) {
     DBG("RecordingManager: Already recording");
@@ -119,11 +130,32 @@ void RecordingManager::startRecording(
     const juce::ScopedLock sl(sessionLock_);
     midiSessions_.clear();
 
+    // Add defensive null check for tracks vector
+    if (tracks.empty()) {
+      DBG("RecordingManager: No tracks provided, cannot start recording");
+      return;
+    }
+
     for (size_t i = 0; i < tracks.size(); ++i) {
       auto &track = tracks[i];
-      if (track && track->isArmed()) {
-        if (track->getType() == Track::Type::MIDI ||
-            track->getType() == Track::Type::Instrument) {
+      
+      // Check for null track pointer
+      if (!track) {
+        DBG("RecordingManager: Null track at index " + juce::String(i));
+        continue;
+      }
+      
+      if (track->isArmed()) {
+        Track::Type trackType = Track::Type::Audio;
+        try {
+          trackType = track->getType();
+        } catch (...) {
+          DBG("RecordingManager: Invalid track type for index " + juce::String(i));
+          continue;
+        }
+        
+        if (trackType == Track::Type::MIDI ||
+            trackType == Track::Type::Instrument) {
           MidiRecordingSession midiSession;
           midiSession.trackId = track->getTrackId();
           midiSession.trackIndex = static_cast<int>(i);
@@ -132,8 +164,15 @@ void RecordingManager::startRecording(
           midiSession.sequence.clear();
           midiSessions_.push_back(std::move(midiSession));
 
+          juce::String trackName = "Unknown";
+          try {
+            trackName = track->getName();
+          } catch (...) {
+            trackName = "Invalid Track " + juce::String(i);
+          }
+          
           DBG("RecordingManager: Created MIDI session for track " +
-              juce::String(i) + " (" + track->getName() + ")");
+              juce::String(i) + " (" + trackName + ")");
         }
       }
     }
@@ -146,8 +185,14 @@ void RecordingManager::startRecording(
 
 //==============================================================================
 void RecordingManager::stopRecording(
-    const std::vector<std::shared_ptr<Track>> &tracks) {
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    const std::vector<std::shared_ptr<Track>> &tracks,
+    const TempoMap& tempoMap) {
+  // Thread safety check - return if not on message thread
+  if (!juce::MessageManager::getInstanceWithoutCreating() ||
+      !juce::MessageManager::getInstanceWithoutCreating()->isThisTheMessageThread()) {
+    DBG("RecordingManager: Method called from wrong thread - ignoring");
+    return;
+  }
 
   if (!isRecording_.load()) {
     return;
@@ -159,20 +204,41 @@ void RecordingManager::stopRecording(
   // Drain MIDI fifo first
   drainMidiFifo();
 
-  // Finalize recordings and create clips
-  finalizeRecordings(tracks);
+  // Stop AudioRecorder and finalize clips with results
+  if (audioRecorder_) {
+    audioRecorder_->stopRecording([this, &tracks, &tempoMap](std::vector<RecordingResult> results) {
+      // Finalize recordings and create clips with the actual results
+      finalizeRecordings(results, tracks, tempoMap);
+      
+      // Clear MIDI sessions
+      {
+        const juce::ScopedLock sl(sessionLock_);
+        midiSessions_.clear();
+      }
 
-  // Clear MIDI sessions
-  {
-    const juce::ScopedLock sl(sessionLock_);
-    midiSessions_.clear();
+      DBG("RecordingManager: Recording stopped");
+    });
+  } else {
+    // No audio recorder, just finalize MIDI
+    finalizeRecordings({}, tracks, tempoMap);
+    
+    // Clear MIDI sessions
+    {
+      const juce::ScopedLock sl(sessionLock_);
+      midiSessions_.clear();
+    }
+
+    DBG("RecordingManager: Recording stopped (no audio recorder)");
   }
-
-  DBG("RecordingManager: Recording stopped");
 }
 
 void RecordingManager::discardCurrentRecording() {
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  // Thread safety check - return if not on message thread
+  if (!juce::MessageManager::getInstanceWithoutCreating() ||
+      !juce::MessageManager::getInstanceWithoutCreating()->isThisTheMessageThread()) {
+    DBG("RecordingManager: Method called from wrong thread - ignoring");
+    return;
+  }
 
   if (!isRecording_.load()) {
     return;
@@ -183,13 +249,14 @@ void RecordingManager::discardCurrentRecording() {
 
   // Stop AudioRecorder and delete generated files
   if (audioRecorder_) {
-    auto results = audioRecorder_->stopRecording();
-    for (const auto &result : results) {
-      if (result.file.exists()) {
-        result.file.deleteFile();
-        DBG("RecordingManager: Deleted discarded recording file: " + result.file.getFileName());
+    audioRecorder_->stopRecording([](std::vector<RecordingResult> results) {
+      for (const auto &result : results) {
+        if (result.file.exists()) {
+          result.file.deleteFile();
+          DBG("RecordingManager: Deleted discarded recording file: " + result.file.getFileName());
+        }
       }
-    }
+    });
   }
 
   // Clear MIDI sessions
@@ -240,7 +307,12 @@ void RecordingManager::captureMidi(const juce::MidiMessage &message,
 
 //==============================================================================
 void RecordingManager::drainMidiFifo() {
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  // Thread safety check - return if not on message thread
+  if (!juce::MessageManager::getInstanceWithoutCreating() ||
+      !juce::MessageManager::getInstanceWithoutCreating()->isThisTheMessageThread()) {
+    DBG("RecordingManager: Method called from wrong thread - ignoring");
+    return;
+  }
 
   int start1, size1, start2, size2;
   const int numReady = midiFifoIndex_.getNumReady();
@@ -295,7 +367,9 @@ void RecordingManager::drainMidiFifo() {
 
 //==============================================================================
 void RecordingManager::finalizeRecordings(
-    const std::vector<std::shared_ptr<Track>> &tracks) {
+    const std::vector<RecordingResult>& results,
+    const std::vector<std::shared_ptr<Track>> &tracks,
+    const TempoMap& tempoMap) {
 
   if (projectState_ == nullptr) {
     DBG("RecordingManager: No project state, cannot create clips");
@@ -303,23 +377,20 @@ void RecordingManager::finalizeRecordings(
   }
 
   // Finalize audio recordings and create clips
-  if (audioRecorder_) {
-    auto audioResults = audioRecorder_->stopRecording();
+  // Note: The 'results' parameter now contains the recording results passed from stopRecording
+  for (const auto &result : results) {
+    juce::String trackId = result.trackId;
 
-    for (const auto &result : audioResults) {
-      juce::String trackId = result.trackId;
+    // Fallback to index if ID missing (legacy safety)
+    if (trackId.isEmpty() && result.trackIndex >= 0 &&
+        result.trackIndex < static_cast<int>(tracks.size()) &&
+        tracks[result.trackIndex]) {
+      trackId = tracks[result.trackIndex]->getTrackId();
+    }
 
-      // Fallback to index if ID missing (legacy safety)
-      if (trackId.isEmpty() && result.trackIndex >= 0 &&
-          result.trackIndex < static_cast<int>(tracks.size()) &&
-          tracks[result.trackIndex]) {
-        trackId = tracks[result.trackIndex]->getTrackId();
-      }
-
-      if (trackId.isNotEmpty() && result.samplesRecorded > 0) {
-        createAudioClip(result.file, trackId, result.startSamplePosition,
-                        result.samplesRecorded, result.sampleRate);
-      }
+    if (trackId.isNotEmpty() && result.samplesRecorded > 0) {
+      createAudioClip(result.file, trackId, result.startSamplePosition,
+                      result.samplesRecorded, tempoMap);
     }
   }
 
@@ -339,7 +410,7 @@ void RecordingManager::finalizeRecordings(
       session.sequence.updateMatchedPairs();
 
       createMidiClip(session.sequence, session.trackId,
-                     session.startSamplePosition, sampleRate_);
+                     session.startSamplePosition, tempoMap);
 
       DBG("RecordingManager: Created MIDI clip with " +
           juce::String(session.sequence.getNumEvents()) + " events for track " +
@@ -353,19 +424,18 @@ void RecordingManager::createAudioClip(const juce::File &audioFile,
                                        const juce::String &trackId,
                                        juce::int64 startSamplePosition,
                                        juce::int64 lengthSamples,
-                                       double sampleRate) {
+                                       const TempoMap& tempoMap) {
   if (projectState_ == nullptr || trackId.isEmpty()) {
     return;
   }
 
-  // Convert samples to beats for ProjectState
-  // Using simple formula: beats = samples / (sampleRate * 60 / tempo)
+  // Convert samples to beats for ProjectState using sampleRate_ member
   double tempo = projectState_->getTempo();
   if (tempo <= 0.0) {
       DBG("RecordingManager: Invalid tempo, defaulting to 120 BPM");
       tempo = 120.0;
   }
-  const double samplesPerBeat = sampleRate * 60.0 / tempo;
+  const double samplesPerBeat = sampleRate_ * 60.0 / tempo;
 
   const double startBeats =
       static_cast<double>(startSamplePosition) / samplesPerBeat;
@@ -401,7 +471,7 @@ void RecordingManager::createAudioClip(const juce::File &audioFile,
 void RecordingManager::createMidiClip(const juce::MidiMessageSequence &sequence,
                                       const juce::String &trackId,
                                       juce::int64 startSamplePosition,
-                                      double sampleRate) {
+                                      const TempoMap& tempoMap) {
   if (projectState_ == nullptr || trackId.isEmpty()) {
     return;
   }
@@ -420,13 +490,18 @@ void RecordingManager::createMidiClip(const juce::MidiMessageSequence &sequence,
   }
 
   // Add small padding at end (1 beat worth)
-  const double tempo = projectState_->getTempo();
-  const double samplesPerBeat = sampleRate * 60.0 / tempo;
+  // BUG FIX #9: Validate tempo to prevent division by zero
+  double tempo = projectState_->getTempo();
+  if (tempo <= 0.0) {
+    DBG("RecordingManager: Invalid tempo, defaulting to 120 BPM");
+    tempo = 120.0;
+  }
+  const double samplesPerBeat = sampleRate_ * 60.0 / tempo;
   const double paddingSeconds = 60.0 / tempo; // 1 beat
   endTimeSeconds += paddingSeconds;
 
   const juce::int64 lengthSamples =
-      static_cast<juce::int64>(endTimeSeconds * sampleRate);
+      static_cast<juce::int64>(endTimeSeconds * sampleRate_);
 
   // Convert to beats
   const double startBeats =

@@ -123,11 +123,9 @@ void MiniMapComponent::updateCachedImage() {
     if (clip.isSelected) {
       clipPaint.setColor(design::colors::CYAN); // Use CYAN for selected
     } else if (clip.isMidi) {
-      // Teal for MIDI clips
-      clipPaint.setColor(SkColorSetARGB(200, 80, 200, 180));
+      clipPaint.setColor(design::withAlpha(design::colors::MAGENTA, 0.7f));
     } else {
-      // Orange/amber for Audio clips
-      clipPaint.setColor(SkColorSetARGB(200, 200, 150, 60));
+      clipPaint.setColor(design::withAlpha(design::colors::CYAN, 0.5f));
     }
 
     canvas.drawRect(SkRect::MakeXYWH(x, y, w, h), clipPaint);
@@ -184,16 +182,24 @@ void MiniMapComponent::drawSkia(SkCanvas *canvas) {
   SkRect viewportRect =
       SkRect::MakeXYWH(viewportX, viewportY, viewportW, viewportH);
 
-  // Semi-transparent fill
+  // Semi-transparent fill (Glass effect)
   SkPaint viewportPaint;
-  viewportPaint.setColor(SkColorSetARGB(50, 255, 255, 255));
+  viewportPaint.setColor(design::withAlpha(SK_ColorWHITE, 0.15f));
   viewportPaint.setStyle(SkPaint::kFill_Style);
   canvas->drawRect(viewportRect, viewportPaint);
 
-  // Bright border - use NEON_GREEN for accent
+  // Bright border - use NEON_GREEN for accent (Live viewport)
   viewportPaint.setStyle(SkPaint::kStroke_Style);
-  viewportPaint.setStrokeWidth(1.5f);
+  viewportPaint.setStrokeWidth(2.0f);
   viewportPaint.setColor(design::colors::NEON_GREEN);
+  
+  // Outer glow for viewport
+  viewportPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
+  canvas->drawRect(viewportRect, viewportPaint);
+  
+  viewportPaint.setMaskFilter(nullptr);
+  viewportPaint.setStrokeWidth(1.0f);
+  viewportPaint.setColor(design::withAlpha(SK_ColorWHITE, 0.8f));
   canvas->drawRect(viewportRect, viewportPaint);
 
   // Optional: Draw thin border around the entire mini-map

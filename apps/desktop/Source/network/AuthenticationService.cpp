@@ -66,7 +66,8 @@ void AuthenticationService::performGoogleLogin(AuthCallback callback) {
     // Start listening on port 8888
     // The callback will be executed on the message thread
     fprintf(stderr, "[Auth] Calling oauthServer_->startAndWait...\n");
-    oauthServer_->startAndWait(8888, [this, callback](const juce::String& code, const juce::String& error) {
+    oauthServer_->startAndWait(8888, [this, callback](const juce::String& code, const juce::String& token, const juce::String& error) {
+        juce::ignoreUnused(token);
         if (error.isNotEmpty()) {
             callback(false, "OAuth Error: " + error);
         } else if (code.isNotEmpty()) {
@@ -99,6 +100,184 @@ void AuthenticationService::performGoogleLogin(AuthCallback callback) {
             });
         } else {
             fprintf(stderr, "[Auth] Browser launched successfully\n");
+        }
+    });
+}
+
+//==============================================================================
+// Web Login (SylorLabs.com)
+//==============================================================================
+
+void AuthenticationService::loginWithWeb(AuthCallback callback) {
+    ZENITH_LOG_INFO("[Auth] Initiating Web Login flow...");
+    performWebLogin(std::move(callback));
+}
+
+void AuthenticationService::performWebLogin(AuthCallback callback) {
+    // 1. Start local server
+    if (!oauthServer_) {
+        oauthServer_ = std::make_unique<OAuthRedirectServer>();
+    }
+    
+    if (oauthServer_->isRunning()) {
+        oauthServer_->stop();
+    }
+    
+    // Start listening on port 8888
+    oauthServer_->startAndWait(8888, [this, callback](const juce::String& code, const juce::String& token, const juce::String& error) {
+        if (error.isNotEmpty()) {
+            callback(false, "Web Login Error: " + error);
+        } else if (token.isNotEmpty()) {
+            ZENITH_LOG_INFO("[Auth] Web auth token received directly");
+            accessToken_ = token;
+            fetchWebUserInfo(token, callback);
+        } else if (code.isNotEmpty()) {
+            ZENITH_LOG_INFO("[Auth] Web auth code received, exchanging for real token...");
+            exchangeWebAuthCodeForToken(code, callback);
+        }
+    });
+
+    // 2. Construct Web URL
+    // Use the production domain as requested
+    juce::String webLoginUrl = "https://sylorlabs.com/login?redirect_uri=http://127.0.0.1:8888/callback";
+    juce::URL url(webLoginUrl);
+
+    // 3. Launch Browser
+    juce::Thread::launch([url, callback]() {
+        bool launched = url.launchInDefaultBrowser();
+        if (!launched) {
+            juce::MessageManager::callAsync([callback]() {
+                callback(false, "Failed to launch browser");
+            });
+        }
+    });
+}
+
+//==============================================================================
+// Web Signup (SylorLabs.com)
+//==============================================================================
+
+void AuthenticationService::signupWithWeb(AuthCallback callback) {
+    ZENITH_LOG_INFO("[Auth] Initiating Web Signup flow...");
+    performWebSignup(std::move(callback));
+}
+
+void AuthenticationService::performWebSignup(AuthCallback callback) {
+    // 1. Start local server
+    if (!oauthServer_) {
+        oauthServer_ = std::make_unique<OAuthRedirectServer>();
+    }
+    
+    if (oauthServer_->isRunning()) {
+        oauthServer_->stop();
+    }
+    
+    // Start listening on port 8888
+    oauthServer_->startAndWait(8888, [this, callback](const juce::String& code, const juce::String& token, const juce::String& error) {
+        if (error.isNotEmpty()) {
+            callback(false, "Web Signup Error: " + error);
+        } else if (token.isNotEmpty()) {
+            ZENITH_LOG_INFO("[Auth] Web auth token received directly");
+            accessToken_ = token;
+            fetchWebUserInfo(token, callback);
+        } else if (code.isNotEmpty()) {
+            ZENITH_LOG_INFO("[Auth] Web signup auth code received, exchanging for real token...");
+            exchangeWebAuthCodeForToken(code, callback);
+        }
+    });
+
+    // 2. Construct Web URL
+    juce::String webSignupUrl = "https://sylorlabs.com/signup?redirect_uri=http://127.0.0.1:8888/callback";
+    juce::URL url(webSignupUrl);
+
+    // 3. Launch Browser
+    juce::Thread::launch([url, callback]() {
+        bool launched = url.launchInDefaultBrowser();
+        if (!launched) {
+            juce::MessageManager::callAsync([callback]() {
+                callback(false, "Failed to launch browser");
+            });
+        }
+    });
+}
+
+void AuthenticationService::exchangeWebAuthCodeForToken(const juce::String& code, AuthCallback callback) {
+    juce::Thread::launch([this, code, callback]() mutable {
+        juce::URL url(juce::String(kSylorLabsBaseUrl) + "/oauth/token");
+        
+        juce::DynamicObject* payload = new juce::DynamicObject();
+        payload->setProperty("code", code);
+        payload->setProperty("grant_type", "authorization_code");
+        payload->setProperty("redirect_uri", "http://127.0.0.1:8888/callback");
+        
+        auto jsonString = juce::JSON::toString(payload);
+        url = url.withPOSTData(jsonString);
+        
+        auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
+                .withConnectionTimeoutMs(8000)
+                .withExtraHeaders("Content-Type: application/json");
+        
+        std::unique_ptr<juce::InputStream> stream(url.createInputStream(options));
+        
+        if (stream != nullptr) {
+            auto response = stream->readEntireStreamAsString();
+            auto jsonVar = juce::JSON::parse(response);
+            
+            if (jsonVar.hasProperty("token")) {
+                accessToken_ = jsonVar["token"].toString();
+                fetchWebUserInfo(accessToken_, callback);
+            } else {
+                 juce::MessageManager::callAsync([callback, response]() {
+                    callback(false, "Token exchange failed: " + response);
+                });
+            }
+        } else {
+            juce::MessageManager::callAsync([callback]() {
+                callback(false, "Failed to connect to SylorLabs auth server");
+            });
+        }
+    });
+}
+
+void AuthenticationService::fetchWebUserInfo(const juce::String& token, AuthCallback callback) {
+    juce::Thread::launch([this, token, callback]() mutable {
+        juce::URL url(juce::String(kSylorLabsBaseUrl) + "/me");
+        
+        auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
+                .withConnectionTimeoutMs(8000)
+                .withExtraHeaders("Authorization: Bearer " + token)
+                .withExtraHeaders("Content-Type: application/json");
+        
+        std::unique_ptr<juce::InputStream> stream(url.createInputStream(options));
+        
+        if (stream != nullptr) {
+            auto response = stream->readEntireStreamAsString();
+            auto jsonVar = juce::JSON::parse(response);
+            
+            auto* obj = jsonVar.getDynamicObject();
+            if (obj) {
+                currentUser_.userId = obj->getProperty("userId").toString();
+                currentUser_.displayName = obj->getProperty("displayName").toString();
+                currentUser_.email = obj->getProperty("email").toString();
+                currentUser_.avatarUrl = obj->getProperty("avatarUrl").toString();
+                currentUser_.provider = AuthProvider::SylorLabs;
+                
+                accessToken_ = token;
+                saveSession();
+                
+                juce::MessageManager::callAsync([this, callback]() {
+                    notifyListeners();
+                    callback(true, "");
+                });
+            } else {
+                 juce::MessageManager::callAsync([callback]() {
+                    callback(false, "Invalid user info response format");
+                });
+            }
+        } else {
+            juce::MessageManager::callAsync([callback]() {
+                callback(false, "Failed to fetch user info from SylorLabs");
+            });
         }
     });
 }

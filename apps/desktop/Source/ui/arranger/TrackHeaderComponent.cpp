@@ -96,9 +96,9 @@ void TrackHeaderComponent::drawSkia(SkCanvas *canvas) {
   // 1. Background - PREMIUM GLASSMORPHIC GRADIENT (Distinct Cyan Tint)
   SkPoint bgPts[2] = {{0, 0}, {0, skBounds.height()}};
   SkColor bgColors[3] = {
-      SkColorSetRGB(35, 45, 55), // Top - lighter cyan/blue tint
-      SkColorSetRGB(25, 30, 35), // Middle
-      SkColorSetRGB(18, 18, 22)  // Bottom - darkest
+      withAlpha(colors::BG_MEDIUM, 0.4f),
+      withAlpha(colors::BG_DARK, 0.3f),
+      withAlpha(colors::BG_DARKEST, 0.5f)
   };
   float bgPos[3] = {0.0f, 0.4f, 1.0f};
 
@@ -138,9 +138,22 @@ void TrackHeaderComponent::drawSkia(SkCanvas *canvas) {
   stripePaint.setColor(stripeColor);
   stripePaint.setAntiAlias(true);
 
-  // Rounded left side
+  // Rounded left side (Neon Stripe)
   SkRRect stripeRRect = SkRRect::MakeRectXY(stripeRect, 4.0f, 4.0f);
-  canvas->drawRRect(stripeRRect, stripePaint);
+  
+  // Neon glow for stripe
+  SkPaint glowPaint;
+  glowPaint.setAntiAlias(true);
+  glowPaint.setColor(withAlpha(stripeColor, 0.6f));
+  glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f));
+  canvas->drawRRect(stripeRRect, glowPaint);
+  
+  // Core stripe
+  stripePaint.setColor(withAlpha(SK_ColorWHITE, 0.9f));
+  canvas->drawRRect(stripeRRect.makeInset(1.0f, 1.0f), stripePaint);
+  
+  stripePaint.setColor(stripeColor);
+  canvas->drawRRect(stripeRRect.makeInset(2.0f, 2.0f), stripePaint);
 
   // Subtle glow on stripe
   if (isSoloed_ || isArmed_) {
@@ -263,7 +276,7 @@ void TrackHeaderComponent::updateFromState() {
     juce::String colorStr = trackNode_[ProjectState::PROP_COLOR].toString();
     trackColour_ = juce::Colour::fromString(colorStr);
   } else {
-    trackColour_ = juce::Colours::grey;
+    trackColour_ = design::toJuceColor(colors::ACCENT_SECONDARY);
   }
 
   // Update button states
@@ -279,10 +292,10 @@ void TrackHeaderComponent::updateFromState() {
   // Update button styles based on state
   // Muted: grey out name, set button to Danger style
   if (isMuted_) {
-    nameLabel_.setColour(juce::Label::textColourId, juce::Colours::grey);
+    nameLabel_.setColour(juce::Label::textColourId, design::toJuceColor(colors::TEXT_TERTIARY));
     muteButton_.setStyle(zenith::SkiaButton::Style::Danger);
   } else {
-    nameLabel_.setColour(juce::Label::textColourId, juce::Colours::white);
+    nameLabel_.setColour(juce::Label::textColourId, design::toJuceColor(colors::TEXT_PRIMARY));
     muteButton_.setStyle(zenith::SkiaButton::Style::Secondary);
   }
 

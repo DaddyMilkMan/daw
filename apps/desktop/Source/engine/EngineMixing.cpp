@@ -223,6 +223,7 @@ float Engine::getAuxBusPeakLevel(int auxIndex) const {
 //==============================================================================
 
 void Engine::setMasterLimiterEnabled(bool enabled) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   masterLimiter_.setEnabled(enabled);
   DBG("Engine: Master limiter " +
       juce::String(enabled ? "enabled" : "disabled"));
@@ -233,6 +234,7 @@ bool Engine::isMasterLimiterEnabled() const {
 }
 
 void Engine::setMasterLimiterCeiling(float ceilingDb) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   masterLimiter_.setCeiling(ceilingDb);
   DBG("Engine: Master limiter ceiling set to " + juce::String(ceilingDb, 1) +
       " dB");
@@ -326,6 +328,7 @@ bool Engine::isTrackFrozen(int trackIndex) const {
 double Engine::getCpuUsage() const { return deviceManager.getCpuUsage(); }
 
 void Engine::cancelFreeze() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   if (freezeManager_) {
     freezeManager_->cancelFreeze();
     DBG("Engine: Cancelled active freeze operation");
@@ -370,6 +373,7 @@ int Engine::getMasterLatency() const {
 }
 
 void Engine::setPDCEnabled(bool enabled) {
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     if (audioRenderer_) {
         audioRenderer_->setPDCEnabled(enabled);
         DBG("Engine: PDC " + juce::String(enabled ? "Enabled" : "Disabled"));

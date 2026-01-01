@@ -4,38 +4,28 @@
  */
 
 #include "MainWindow.h"
-#include "../../commands/CommandAPI.h"
-#include "../engine/Clip.h"
-#include "../engine/Track.h"
-#include "../engine/MixerController.h"
-#include <memory>
-#include <utility>
-#include <vector>
-//
-#include "../../network/MCPServer.h"
-#include "../../ai/PresetGeneticistAgent.h"
-#include "../engine/ZenithLogger.h"
-#include "../design-system/ZenithDesignSystem.h"
-#include "../design-system/ColorBridge.h"
-#include "MainLayoutComponent.h"
-#include "../transport/TransportBar.h"
-#include "../collaboration/CollaborationPresenceBar.h"
-#include "RightSidePanel.h"
-#include "BottomBar.h"
-#include "../../network/CollaborationManager.h"
+#include "engine/Engine.h"
+#include "engine/ProjectState.h"
+#include "engine/ProjectFileIO.h" // Fix incomplete type
+#include "engine/RecentProjectManager.h"
+#include "engine/ZenithLogger.h"
+#include "network/MCPServer.h"
+#include "ui/framework/GlassmorphicPanel.h"
+#include "utils/PlatformSystemUtils.h"
+#include "commands/CommandAPI.h"
+#include "ui/dialogs/ExportDialog.h"
+#include "ui/settings/GlobalSettingsPanel.h"
+#include "ui/dialogs/ProjectRecoveryModal.h"
+#include "ui/dialogs/UnsavedChangesModal.h"
+
+// AI Agents
+#include "ai/UXDirectorAgent.h"
+#include "ai/PresetGeneticistAgent.h"
 #include "ZenithHubComponent.h"
-#include "../dialogs/SettingsComponent.h"
-#include "../piano-roll/PianoRollComponent.h"
-#include "../../ai/UXDirectorAgent.h"
-#include <core/SkFont.h>
-#include <core/SkImage.h>
-#include <core/SkImageInfo.h>
-#include <core/SkPixmap.h>
-#include <core/SkSamplingOptions.h>
-#include <core/SkSurface.h>
-#include <core/SkTextBlob.h>
-#include "../../engine/ProjectFileIO.h"
-#include "../controls/SkiaAlertWindow.h"
+#include "MainLayoutComponent.h"
+#include "RightSidePanel.h"
+#include "TitleBarComponent.h"
+#include <memory>
 
 namespace zenith {
 
@@ -61,121 +51,12 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   setWantsKeyboardFocus(true);
 
   setSize(1400, 800);
+  setOpaque(true);
+  setVisible(true);
 
   ZENITH_LOG_INFO("========================================");
-  ZENITH_LOG_INFO("MainComponent Constructor - Modern DAW Layout");
+  ZENITH_LOG_INFO("MainComponent Constructor - Simplified UI");
   ZENITH_LOG_INFO("========================================");
-
-  // Initialize Skia rendering system
-  // Skia initialization is handled by SkiaMainWindowIntegration
-
-  // ============================================================================
-  // Create Modern DAW Layout Panels
-  // ============================================================================
-
-  // Top: Transport Bar
-  ZENITH_LOG_INFO("-> Creating TransportBar...");
-  
-  transportBar = std::make_unique<zenith::TransportBar>();
-  
-  transportBar->setProjectName("Zenith DAW");
-  transportBar->setTempo(120.0);
-  transportBar->setTimeSignature(4, 4);
-
-  // Hook up transport callbacks
-  transportBar->onPlayClicked = [this]() {
-    engine.play();
-    ZENITH_LOG_DEBUG("Play clicked");
-  };
-  transportBar->onStopClicked = [this]() {
-    engine.stop();
-    ZENITH_LOG_DEBUG("Stop clicked");
-  };
-  transportBar->onRecordClicked = [this]() {
-    engine.toggleRecording();
-    bool isRec = engine.isRecording();
-    transportBar->setRecording(isRec);
-    if (isRec) {
-      ZENITH_LOG_DEBUG("Recording started");
-    } else {
-      ZENITH_LOG_DEBUG("Recording stopped");
-    }
-  };
-
-  transportBar->onLoopToggled = [this]() {
-      bool loop = !engine.isLooping();
-      engine.setLooping(loop);
-      ZENITH_LOG_DEBUG("Looping toggled: " + juce::String(loop ? "ON" : "OFF"));
-  };
-
-  transportBar->onRewind = [this]() {
-      engine.stop();
-      engine.setPlayheadSamples(0);
-      ZENITH_LOG_DEBUG("Rewound to 0");
-  };
-
-  transportBar->onClearAllSolos = [this]() {
-      engine.getMixerController().clearAllSolos();
-      ZENITH_LOG_DEBUG("Cleared all solos");
-  };
-
-  addAndMakeVisible(transportBar.get());
-  
-  // Collaboration Presence
-  presenceBar = std::make_unique<zenith::CollaborationPresenceBar>();
-  addAndMakeVisible(presenceBar.get());
-  
-  ZENITH_LOG_INFO("[OK] TransportBar created");
-  DBG("MainComponent: TransportBar created");
-
-  // The "Perfect DAW" Tri-Pane Layout Manager
-  ZENITH_LOG_INFO("-> Creating MainLayoutComponent...");
-  mainLayout =
-      std::make_unique<zenith::MainLayoutComponent>(engine, projectState);
-  addAndMakeVisible(mainLayout.get());
-  ZENITH_LOG_INFO("[OK] MainLayoutComponent created");
-
-  // Right: AI Assistant Panel (Wingman) - Pure Skia
-  ZENITH_LOG_INFO("-> Creating RightSidePanel...");
-  rightSidePanel = std::make_unique<zenith::RightSidePanel>(api, engine, state);
-  addAndMakeVisible(rightSidePanel.get());
-  ZENITH_LOG_INFO("[OK] RightSidePanel created");
-
-  // Bottom: Piano Keyboard + Mixer Strip
-  ZENITH_LOG_INFO("-> Creating BottomBar...");
-  bottomBar = std::make_unique<zenith::BottomBar>(midiKeyboardState, engine,
-                                                  projectState);
-  bottomBar->setKeyboardVisible(false); // Hidden by default
-
-  // Connect Session Debugger
-  if (auto *debugger = engine.getSessionDebugger()) {
-    bottomBar->setDebugger(debugger);
-    ZENITH_LOG_INFO("[OK] Session Debugger connected to BottomBar");
-  }
-
-  addAndMakeVisible(bottomBar.get());
-  ZENITH_LOG_INFO("[OK] BottomBar created");
-
-  // Connect view toggle callback
-  transportBar->onViewToggleClicked = [this]() {
-    if (mainLayout) {
-      mainLayout->toggleView();
-      DBG("View toggled via MainLayout");
-    }
-  };
-
-  // Connect settings callback
-  transportBar->onSettingsClicked = [this]() {
-    juce::DialogWindow::LaunchOptions options;
-    options.content.setOwned(new zenith::SettingsComponent(engine));
-    options.content->setSize(600, 500);
-    options.dialogTitle = "Zenith DAW Settings";
-    options.dialogBackgroundColour = design::toJuceColour(design::colors::BG_00);
-    options.escapeKeyTriggersCloseButton = true;
-    options.useNativeTitleBar = true;
-    options.resizable = true;
-    options.launchAsync();
-  };
 
   // Create Zenith Hub with real project manager
   hubComponent = std::make_unique<zenith::ZenithHubComponent>(
@@ -198,18 +79,89 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
           setMainUiVisible(true);
         }
       });
+  // hubComponent = std::make_unique<zenith::ZenithHubComponent>(...);
   addAndMakeVisible(hubComponent.get());
-  hubComponent->show();
-  hubComponent->toFront(true);  // CRITICAL: Ensure hub is on top of all other components for z-order
 
-  // Hide Main UI initially so Hub is exclusive
+  // Create Transport Bar
+  // Create Transport Bar
+  transportBar = std::make_unique<TransportBar>();
+  transportBar->setVisible(false); // Hide instead of commenting out to keep pointer valid
+  /*
+  transportBar->onPlayClicked = [this] {
+      if (engine.isPlaying()) engine.stop(); 
+      else engine.play();
+      transportBar->setPlaying(engine.isPlaying());
+  };
+  // ... other callbacks ...
+  // addAndMakeVisible(transportBar.get()); 
+  */ 
+  
+  // Create Title Bar
+  titleBar = std::make_unique<TitleBarComponent>();
+  titleBar->onClose = [this] {
+      if (auto* app = juce::JUCEApplication::getInstance())
+          app->systemRequestedQuit(); 
+  };
+  titleBar->onMinimize = [this] {
+      if (auto* peer = getPeer()) peer->setMinimised(true);
+  };
+  titleBar->onMaximize = [this] {
+      if (auto* peer = getPeer()) {
+          bool fs = peer->isFullScreen();
+          peer->setFullScreen(!fs);
+      }
+  };
+  addAndMakeVisible(titleBar.get());
+  addAndMakeVisible(transportBar.get()); // Transport MUST BE ON TOP of TitleBar
+  
+  hubComponent->show();
+  hubComponent->toFront(true);
+
+  // Create Main Layout (DAW Interface)
+  mainLayout = std::make_unique<MainLayoutComponent>(engine, api, projectState);
+  addChildComponent(mainLayout.get());
+
+  // Ensure Top Bar is at the absolute front
+  titleBar->toFront(false);
+  transportBar->toFront(false);
+
+  // Create Export Dialog
+  exportDialog = std::make_unique<ExportDialog>(api);
+  addChildComponent(exportDialog.get());
+
+  // Create Settings Panel
+  settingsPanel = std::make_unique<GlobalSettingsPanel>(engine.getDeviceManager());
+  addChildComponent(settingsPanel.get());
+
+  transportBar->onViewToggleClicked = [this] {
+      if (mainLayout) mainLayout->toggleView();
+  };
+  transportBar->onExportClicked = [this] {
+      if (exportDialog) {
+          exportDialog->setVisible(true);
+          exportDialog->toFront(true);
+          resized(); // Ensure centered
+      }
+  };
+  transportBar->onSettingsClicked = [this] {
+      if (settingsPanel) {
+          settingsPanel->setVisible(true);
+          settingsPanel->toFront(true);
+          resized(); // Ensure centered
+      }
+  };
+
+  // Set initial visibility
+  exportDialog->setVisible(false);
+  settingsPanel->setVisible(false);
+
   setMainUiVisible(false);
 
   ZENITH_LOG_INFO("MainComponent Constructor COMPLETE");
   
   // Start timer for animations/updates
   animationTimer_ = std::make_unique<AnimationTimer>(*this);
-  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) animationTimer_->startTimerHz(60);
+  // DISABLED FOR DEBUG: if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) animationTimer_->startTimerHz(60);
 }
 
 MainComponent::~MainComponent() {
@@ -226,16 +178,46 @@ bool MainComponent::keyPressed(const juce::KeyPress &key, Component *originating
     projectState.redo();
     return true;
   }
+  
+  // Wingman Toggle (Cmd+W)
+  if (key == juce::KeyPress('w', juce::ModifierKeys::commandModifier, 0)) {
+    if (mainLayout) {
+        mainLayout->toggleWingman();
+        return true;
+    }
+  }
+
   return false;
 }
 
 void MainComponent::handleAnimationTimer() {
+  static int tickCount = 0;
+  if (tickCount++ % 60 == 0) ZENITH_LOG_INFO("Tick: " + std::to_string(tickCount));
   // Update animation time
   animationTime_ += 0.016f; // approx 60fps
   if (animationTime_ > 1000.0f) animationTime_ = 0.0f;
   
   // Trigger repaint via Skia
   triggerRepaint();
+  
+  // Update Transport CPU Meter (only after engine is initialized)
+  if (transportBar && transportBar->isVisible() && engine.getSampleRate() > 0) {
+      transportBar->setCPU(engine.getCpuUsage() * 100.0f);
+      transportBar->setPlaying(engine.isPlaying());
+      transportBar->setRecording(engine.isRecording());
+      transportBar->setTempo(projectState.getTempo());
+  }
+  
+  if (titleBar && hubComponent) {
+      titleBar->setTransparentBackground(hubComponent->isVisible());
+  }
+}
+
+void MainComponent::startAnimations() {
+  if (animationTimer_ && !animationTimer_->isTimerRunning()) {
+      ZENITH_LOG_INFO("MainComponent: Starting animation timer...");
+      animationTimer_->startTimerHz(60);
+  }
 }
 
 void MainComponent::paint(juce::Graphics &g) {
@@ -243,41 +225,53 @@ void MainComponent::paint(juce::Graphics &g) {
 }
 
 void MainComponent::drawSkiaContent(SkCanvas *canvas) {
-  // Amazing Wow Factor: Animated Aurora Background
+  ZENITH_LOG_INFO("MainComponent: drawSkiaContent() called");
   auto bounds = getLocalBounds().toFloat();
   SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
-  aurora_.draw(canvas, skBounds, animationTime_);
-
-  // Get pointer to hubComponent once for comparison
+  
   auto* hub = hubComponent.get();
-
-  // Draw all children that are SkiaComponents, but SKIP hubComponent
-  // We'll draw hubComponent last to ensure proper z-order (hub on top of everything)
-  for (auto* child : getChildren()) {
-    if (child == nullptr) continue;
-    if (!child->isVisible()) continue;
-    if (child == hub) continue;  // Skip hub, we draw it last
-    
-    if (auto* skiaChild = dynamic_cast<zenith::SkiaComponent*>(child)) {
-      canvas->save();
-      auto childBounds = child->getBounds();
-      canvas->translate((float)childBounds.getX(), (float)childBounds.getY());
-      canvas->clipRect(
-          SkRect::MakeWH((float)childBounds.getWidth(), (float)childBounds.getHeight()));
-      skiaChild->drawSkia(canvas);
-      canvas->restore();
-    }
-  }
-
-  // CRITICAL: Always draw hubComponent LAST to ensure it's on top of everything
+  
   if (hub != nullptr && hub->isVisible()) {
-    canvas->save();
-    auto childBounds = hub->getBounds();
-    canvas->translate((float)childBounds.getX(), (float)childBounds.getY());
-    canvas->clipRect(
-        SkRect::MakeWH((float)childBounds.getWidth(), (float)childBounds.getHeight()));
-    hub->drawSkia(canvas);
-    canvas->restore();
+      // --- HUB MODE ---
+      // 1. Animated Aurora Background (Fills the whole window)
+      aurora_.draw(canvas, skBounds, animationTime_);
+      
+      // 2. Draw Hub Content
+      // Since Hub is full-screen (0,0), we don't need translation
+      hub->drawSkia(canvas);
+      
+      // 3. Draw Title Bar (Transparent) on top if visible
+      if (titleBar && titleBar->isVisible()) {
+          canvas->save();
+          canvas->translate(titleBar->getX(), titleBar->getY());
+          titleBar->drawSkia(canvas);
+          canvas->restore();
+      }
+      
+  } else {
+      // --- MAIN DAW MODE ---
+      // 1. Static Background (White/Dark toggle)
+      SkPaint bgPaint;
+      bgPaint.setColor(SK_ColorWHITE); // Or projectState.getTheme().background
+      canvas->drawRect(skBounds, bgPaint);
+      
+      // 2. Draw Main Layout (if it's a SkiaComponent, otherwise JUCE handles it?)
+      // Assuming MainLayout handles its own rendering or is a container of standard Components
+      
+      // 3. Draw Top Bar Elements
+      if (titleBar && titleBar->isVisible()) {
+          canvas->save();
+          canvas->translate(titleBar->getX(), titleBar->getY());
+          titleBar->drawSkia(canvas);
+          canvas->restore();
+      }
+      
+      if (transportBar && transportBar->isVisible()) {
+          canvas->save();
+          canvas->translate(transportBar->getX(), transportBar->getY());
+          transportBar->drawSkia(canvas);
+          canvas->restore();
+      }
   }
 }
 
@@ -305,11 +299,45 @@ void MainComponent::parentHierarchyChanged() {
 }
 
 void MainComponent::setMainUiVisible(bool shouldBeVisible) {
-  if (transportBar) transportBar->setVisible(shouldBeVisible);
-  if (mainLayout) mainLayout->setVisible(shouldBeVisible);
-  if (rightSidePanel) rightSidePanel->setVisible(shouldBeVisible);
-  if (bottomBar) bottomBar->setVisible(shouldBeVisible);
+  if (mainLayout) {
+      mainLayout->setVisible(shouldBeVisible);
+  }
   
+  if (transportBar) {
+      transportBar->setVisible(shouldBeVisible);
+  }
+  
+  // Hub should be visible when DAW is NOT visible
+  if (hubComponent) {
+      ZENITH_LOG_INFO("MainComponent::setMainUiVisible - Setting Hub visible=" + juce::String(!shouldBeVisible ? "true" : "false"));
+      if (!shouldBeVisible) {
+          hubComponent->show();
+          hubComponent->toFront(true);
+      } else {
+          hubComponent->setVisible(false);
+      }
+  }
+  
+  if (titleBar) {
+      titleBar->setTransparentBackground(!shouldBeVisible);
+      titleBar->setShowTitle(shouldBeVisible);
+      // titleBar->toFront(false); // blocked interaction
+  }
+  
+  // CRITICAL: TransportBar must be ON TOP of TitleBar to receive mouse events
+  // Its hitTest() ensures clicks pass through empty areas to TitleBar for dragging
+  if (transportBar && shouldBeVisible) {
+      transportBar->toFront(false);
+  }
+  
+  if (titleBar) {
+       titleBar->toBack(); // Ensure it's behind transport but above content? 
+       // Actually, we just need Transport > Title. 
+       // If Title is at back, it might be behind Hub?
+       // Let's just rely on Transport::toFront()
+  }
+  
+  resized();
   repaint();
 }
 
@@ -321,78 +349,52 @@ void MainComponent::visibilityChanged() {
 
 void MainComponent::resized() {
   auto bounds = getLocalBounds();
+  
+  // Hub Mode check
+  bool isHubVisible = hubComponent && hubComponent->isVisible();
+  ZENITH_LOG_INFO(juce::String::formatted("MainComponent::resized() - bounds: %d x %d, isHubVisible: %s", 
+                  bounds.getWidth(), bounds.getHeight(), isHubVisible ? "YES" : "NO"));
+  
+  auto topArea = bounds.removeFromTop(52); // Unified Top Bar height
 
+  // Layout Title Bar
+  if (titleBar) {
+      titleBar->setBounds(topArea);
+  }
+
+  // Layout Transport Bar
   if (transportBar) {
-    auto tBounds = bounds.removeFromTop(60);
-    transportBar->setBounds(tBounds);
-    if (presenceBar) {
-        presenceBar->setBounds(tBounds.removeFromRight(200).withTrimmedTop(14).withTrimmedBottom(14));
-    }
+      transportBar->setBounds(topArea);
   }
-
-  if (bottomBar) {
-    bottomBar->setBounds(bounds.removeFromBottom(128));
-  }
-
-  if (rightSidePanel) {
-    rightSidePanel->setBounds(bounds.removeFromRight(400));
-  }
-
-  if (mainLayout) {
-    mainLayout->setBounds(bounds);
-  }
-
+  
+  // ALWAYS size components, even if hidden, to ensure layout transition is smooth
   if (hubComponent) {
-    hubComponent->setBounds(getLocalBounds());
+      // Hub always wants full window bounds
+      hubComponent->setBounds(getLocalBounds());
   }
+  ZENITH_LOG_INFO("MainComponent::resized() - Hub bounds set");
+  
+  if (mainLayout) {
+      // Main DAW always wants area below top bar
+      mainLayout->setBounds(bounds);
+  }
+  ZENITH_LOG_INFO("MainComponent::resized() - MainLayout bounds set");
+
+  // Center Dialogs
+  if (exportDialog) {
+      exportDialog->centreWithSize(550, 520);
+  }
+  if (settingsPanel) {
+      settingsPanel->centreWithSize(600, 500);
+  }
+  ZENITH_LOG_INFO("MainComponent::resized() - COMPLETE");
 }
 
 void MainComponent::openPianoRoll(const juce::String &trackId,
                                   const juce::String &clipId) {
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-  new PianoRollWindow(projectState, engine, trackId, clipId);
-}
-
-void MainComponent::handleImportAudio() {
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-
-  auto chooser = std::make_shared<::juce::FileChooser>(
-      "Import Audio File",
-      ::juce::File::getSpecialLocation(::juce::File::userDocumentsDirectory),
-      "*.wav;*.aiff;*.aif;*.flac;*.mp3;*.ogg");
-
-  auto chooserFlags = ::juce::FileBrowserComponent::openMode |
-                      ::juce::FileBrowserComponent::canSelectFiles;
-
-  chooser->launchAsync(chooserFlags,
-                       [this, chooser](const ::juce::FileChooser &fc) {
-                         auto file = fc.getResult();
-                         if (!file.existsAsFile())
-                           return;
-
-                         if (engine.getNumTracks() == 0) {
-                           engine.addTestTracks(1);
-                         }
-
-                         const auto &tracks = engine.tracks();
-                         if (tracks.empty())
-                           return;
-
-                         auto *track = tracks[0].get();
-                         if (track == nullptr)
-                           return;
-
-                         auto clip = std::make_unique<zenith::Clip>();
-                         clip->setType(zenith::Clip::Type::Audio);
-                         clip->setName(file.getFileNameWithoutExtension());
-
-                         auto &pool = engine.getAudioFilePool();
-                         clip->setAudioFileFromPool(file, pool);
-                         clip->setStartPosition(0);
-                         clip->setPlaying(true);
-
-                         track->addClip(std::move(clip));
-                       });
+  // Piano roll disabled in simplified UI
+  juce::ignoreUnused(trackId);
+  juce::ignoreUnused(clipId);
 }
 
 //==============================================================================
@@ -405,6 +407,9 @@ MainWindow::MainWindow(const juce::String &name)
           juce::Desktop::getInstance().getDefaultLookAndFeel().findColour(
               juce::ResizableWindow::backgroundColourId),
           DocumentWindow::allButtons) {
+  setUsingNativeTitleBar(true);
+  setOpaque(true);
+  setResizable(true, true);
   engine = std::make_unique<zenith::Engine>();
   projectState = std::make_unique<zenith::ProjectState>();
 
@@ -414,25 +419,23 @@ MainWindow::MainWindow(const juce::String &name)
   fileIO_->setMaxBackups(10);
   if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(30000);
 
-  automationSync = std::make_unique<zenith::TrackAutomationSynchronizer>(
-      *projectState, *engine);
   commandAPI = std::make_unique<zenith::CommandAPI>(*projectState, *engine);
   engine->setProjectState(projectState.get());
-  clipSynchronizer =
-      std::make_unique<zenith::ClipSynchronizer>(*projectState, *engine);
   recentProjectManager_ = std::make_unique<zenith::RecentProjectManager>();
 
   // Apply Global LookAndFeel
   lookAndFeel = std::make_unique<zenith::ZenithLookAndFeel>();
   juce::LookAndFeel::setDefaultLookAndFeel(lookAndFeel.get());
 
-  // Initialize Native CRDT Collaboration
-  CollaborationManager::getInstance().initializeCRDT(projectState->getState());
-
   mainComponent = std::make_unique<MainComponent>(
       *engine, *commandAPI, *projectState, *recentProjectManager_,
       [this](const juce::File &file) { loadProject(file); },
       [this]() { newProject(); });
+
+  // Initialize Modal (Hidden)
+  unsavedChangesModal_ = std::make_unique<UnsavedChangesModal>();
+  unsavedChangesModal_->setVisible(false);
+  addChildComponent(unsavedChangesModal_.get());
   
   // TEMPORARILY DISABLED for debugging constructor completion:
   // uxDirector = std::make_unique<ai::UXDirectorAgent>(*engine, *projectState,
@@ -447,7 +450,9 @@ MainWindow::MainWindow(const juce::String &name)
   //     *commandAPI, *projectState, *engine, this);
   // mcpServer->start();
 
-  setUsingNativeTitleBar(true);
+  // Disable Native Title Bar (Use custom TitleBarComponent)
+  setUsingNativeTitleBar(false);
+  setTitleBarHeight(0); // Frameless content area
   
   // CRITICAL: Set window size BEFORE adding content
   // This ensures the content component gets proper bounds
@@ -457,7 +462,7 @@ MainWindow::MainWindow(const juce::String &name)
 #if JUCE_IOS || JUCE_ANDROID
   setFullScreen(true);
 #else
-  setResizable(true, true);
+  setResizable(true, false); // Resizable, NO Native Title Bar
   setResizeLimits(800, 600, 4096, 2160); // Min and max sizes
   
   // Set the DocumentWindow size FIRST
@@ -468,29 +473,40 @@ MainWindow::MainWindow(const juce::String &name)
   mainComponent->setSize(defaultWidth - 2, defaultHeight - getTitleBarHeight() - 2);
   
   // Now add the content component  
-  setContentOwned(mainComponent.get(), false); // false = don't resize to content
+  // Use setContentNonOwned (setContentComponent) because MainWindow holds unique_ptr
+  setContentNonOwned(mainComponent.get(), false); // false = don't resize to content
   
   // Ensure window is centered
-  centreWithSize(getWidth(), getHeight());
+  // centreWithSize(getWidth(), getHeight());
+  setDropShadowEnabled(false);
 
   ZENITH_LOG_INFO("MainWindow: Window sized to " + std::to_string(getWidth()) + "x" + std::to_string(getHeight()));
   ZENITH_LOG_INFO("MainWindow: MainComponent size: " + std::to_string(mainComponent->getWidth()) + "x" + std::to_string(mainComponent->getHeight()));
 
   // Make visible - this will trigger peer creation and OpenGL context attachment
   juce::Component::setVisible(true);
+  toFront(true);
   ZENITH_LOG_INFO("MainWindow: setVisible(true) called");
+  
+  // centreWithSize(getWidth(), getHeight());
   
   // Force OpenGL context attachment now that the window is visible
   // The MainComponent inherits from SkiaMainWindowIntegration which has OpenGL
   if (mainComponent && mainComponent->getPeer()) {
-    ZENITH_LOG_INFO("MainWindow: Manually calling attachContextNow on MainComponent");
-    mainComponent->attachContextNow();
+    ZENITH_LOG_INFO("MainWindow: Manually scheduling deferred attachment on MainComponent");
+    mainComponent->scheduleAttachmentCheck();
   } else {
     ZENITH_LOG_INFO("MainWindow: WARNING: MainComponent has no peer after setVisible!");
   }
   
+  ZENITH_LOG_INFO("MainWindow: Initializing Engine...");
   engine->initialize();
-  automationSync->start(60);
+  ZENITH_LOG_INFO("MainWindow: Engine initialized successfully.");
+
+  // Start UI animations now that Engine is ready
+  if (mainComponent) {
+      mainComponent->startAnimations();
+  }
 
   checkForRecovery();
   updateWindowTitle();
@@ -500,16 +516,8 @@ MainWindow::~MainWindow() {
   ZENITH_LOG_INFO("MainWindow::Destructor STARTED");
   stopTimer();
   
-  if (automationSync) {
-      ZENITH_LOG_INFO("MainWindow: Stopping redundant automationSync...");
-      automationSync->stop();
-      automationSync.reset();
-  }
-
-  if (engine) {
-    ZENITH_LOG_INFO("MainWindow: Shutting down engine...");
-    engine->shutdown();
-  }
+  ZENITH_LOG_INFO("MainWindow: Shutting down engine...");
+  engine->shutdown();
   
   ZENITH_LOG_INFO("MainWindow: Resetting mainComponent...");
   setContentOwned(nullptr, true);
@@ -518,6 +526,8 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::closeButtonPressed() {
+  ZENITH_LOG_INFO("MainWindow::closeButtonPressed() CALLED");
+  
   if (projectState->hasUnsavedChanges()) {
     int result = juce::NativeMessageBox::showYesNoCancelBox(
         juce::AlertWindow::WarningIcon, "Unsaved Changes",
@@ -533,6 +543,7 @@ void MainWindow::closeButtonPressed() {
     // Result 2 is No (discard)
   }
 
+  ZENITH_LOG_INFO("MainWindow: Calling systemRequestedQuit()");
   juce::JUCEApplication::getInstance()->systemRequestedQuit();
 }
 
@@ -558,26 +569,45 @@ void MainWindow::checkForRecovery() {
   if (recoveries.empty())
     return;
 
-  // Use JUCE native dialog for recovery (SkiaAlertWindow has rendering issues)
-  int result = juce::NativeMessageBox::showYesNoBox(
-      juce::AlertWindow::QuestionIcon,
-      "Project Recovery",
-      "Zenith detected unsaved work from a previous session.\n\nWould you like to recover it?",
-      this,
-      nullptr);
+  // Show premium Skia-based recovery modal
+  recoveryModal_ = std::make_unique<ProjectRecoveryModal>(
+      recoveries,
+      // On Recover callback
+      [this](const RecoveryInfo& selected) {
+        FileIOError error = fileIO_->recoverFromFile(selected.recoveryFile);
+        if (error == FileIOError::Success) {
+          updateWindowTitle();
+          if (mainComponent) mainComponent->repaint();
+        } else {
+          juce::NativeMessageBox::showMessageBoxAsync(
+              juce::AlertWindow::WarningIcon,
+              "Recovery Failed",
+              "Failed to recover the project. The backup may be corrupted.");
+        }
+        recoveryModal_.reset();
+      },
+      // On Discard callback
+      [this, recoveries]() {
+        // Delete all recovery files
+        for (const auto& info : recoveries) {
+          fileIO_->deleteRecoveryFile(info.recoveryFile);
+        }
+        recoveryModal_.reset();
+        recoveryModal_.reset();
+      });
 
-  if (result == 1) { // Yes
-    FileIOError error = fileIO_->recoverFromFile(recoveries.back().recoveryFile);
-    if (error == FileIOError::Success) {
-      updateWindowTitle();
-      repaint();
-    } else {
-      juce::NativeMessageBox::showMessageBoxAsync(
-          juce::AlertWindow::WarningIcon,
-          "Recovery Failed",
-          "Failed to recover the project. The backup may be corrupted.");
-    }
+  if (mainComponent) {
+    mainComponent->addAndMakeVisible(recoveryModal_.get());
+    recoveryModal_->setBounds(mainComponent->getLocalBounds());
+    recoveryModal_->show();
   }
+}
+
+void MainWindow::resized() {
+    DocumentWindow::resized(); // Call base
+    if (unsavedChangesModal_) {
+        unsavedChangesModal_->setBounds(getLocalBounds());
+    }
 }
 
 void MainWindow::createManualBackup() {
@@ -607,6 +637,52 @@ void MainWindow::updateWindowTitle() {
   }
 
   setName(title);
+}
+
+void MainWindow::checkUnsavedAndQuit() {
+    if (!unsavedChangesModal_) return; // Safety
+
+    // Configure callbacks
+    unsavedChangesModal_->onSaveAndQuit = [this] {
+        saveProject(); // This is async usually, but we need to ensure it finishes or triggers quit after.
+        // Actually saveProject is async. We might need a blocking save here OR modify saveProject to take a callback.
+        // For now, let's assume save is fast enough or use internal fileIO logic.
+        // BETTER: saveProject calls fileIO_->saveToFileAsync.
+        // We should chain the quit.
+        
+        // Quick dirty fix: Trigger save logic manually here to chain quit.
+         if (fileIO_) {
+             juce::File file = fileIO_->getCurrentProjectFile();
+             if (file.existsAsFile()) {
+                  fileIO_->saveToFileAsync(file, {}, [this](bool success, juce::String) {
+                      if (success) {
+                          projectState->markSaved(); // Ensure dirty flag is cleared
+                          juce::JUCEApplication::getInstance()->systemRequestedQuit(); 
+                      }
+                  });
+             } else {
+                 saveProjectAs(); // This is complex to chain. User likely has a file if "Unsaved Changes" is confusing.
+                 // If never saved, saveProjectAs opens dialog.
+             }
+         }
+         
+         unsavedChangesModal_->setVisible(false);
+     };
+ 
+     unsavedChangesModal_->onDiscardAndQuit = [this] {
+         // Clear dirty flag so next systemRequestedQuit passes
+         if (projectState) projectState->markSaved(); 
+         unsavedChangesModal_->setVisible(false);
+         juce::JUCEApplication::getInstance()->systemRequestedQuit();
+     };
+
+    unsavedChangesModal_->onCancel = [this] {
+        unsavedChangesModal_->setVisible(false);
+    };
+
+    unsavedChangesModal_->setVisible(true);
+    unsavedChangesModal_->toFront(true);
+    resized(); // Ensure bounds
 }
 
 void MainWindow::newProject() {

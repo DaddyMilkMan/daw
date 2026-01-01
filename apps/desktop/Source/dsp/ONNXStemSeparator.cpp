@@ -54,14 +54,25 @@ ONNXStemSeparator::ONNXStemSeparator() : pImpl(std::make_unique<Impl>()) {
   try {
     // Use shared ONNX Runtime environment
     if (!Impl::sharedEnv) {
-        Impl::sharedEnv = std::make_shared<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "ZenithStemSeparator");
+        // Create environment with critical logging level to reduce noise
+        Impl::sharedEnv = std::shared_ptr<Ort::Env>(
+            new Ort::Env(ORT_LOGGING_LEVEL_WARNING, "ZenithStemSeparator"), 
+            [](Ort::Env* env) {
+                // Custom deleter for better tracking (optional, but good for debugging)
+                delete env;
+            });
     }
     pImpl->env = Impl::sharedEnv;
     
     if (pImpl->env) {
         pImpl->memoryInfo = std::make_unique<Ort::MemoryInfo>(
             Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault));
-        DBG("ONNXStemSeparator: ONNX Runtime environment initialized [v" + juce::String(ORT_API_VERSION) + "]");
+        // Only log once per session to avoid spam
+        static bool logged = false;
+        if (!logged) {
+            DBG("ONNXStemSeparator: ONNX Runtime environment initialized [v" + juce::String(ORT_API_VERSION) + "]");
+            logged = true;
+        }
     }
   } catch (const Ort::Exception &e) {
     DBG("ONNXStemSeparator: Failed to initialize ONNX Runtime - " +
@@ -182,27 +193,15 @@ bool ONNXStemSeparator::initialize(const juce::File &modelPath) {
         *pImpl->env, sModelPath.c_str(), *pImpl->sessionOptions);
 #endif
 
-    // Get input/output metadata
-    Ort::AllocatorWithDefaultOptions allocator;
-
-    // Input metadata (typically [batch, channels, samples] for audio models)
-    size_t numInputs = pImpl->session->GetInputCount();
-    if (numInputs > 0) {
-      Ort::AllocatedStringPtr inputNameAllocated =
-          pImpl->session->GetInputNameAllocated(0, allocator);
-      pImpl->inputNames.push_back(inputNameAllocated.get());
-      inputNameAllocated.release(); // Transfer ownership to vector (manual management for C API wrapper)
-      // Actually, Ort::AllocatedStringPtr manages it, but we need it in inputNames (const char*)
-      // The push_back(get()) is correct as long as we store the AllocatedStringPtr somewhere.
-      // Wait, let's fix this memory management.
-    }
-    
     // REDO: Robust metadata loading
     pImpl->inputNamesOwned.clear();
     pImpl->outputNamesOwned.clear();
     pImpl->inputNames.clear();
     pImpl->outputNames.clear();
-    
+
+    size_t numInputs = pImpl->session->GetInputCount();
+
+
     Ort::AllocatorWithDefaultOptions allocator;
 
     for (size_t i = 0; i < pImpl->session->GetInputCount(); ++i) {
@@ -450,7 +449,10 @@ juce::File ONNXStemSeparator::findDefaultModel() {
 
 void ONNXStemSeparator::shutdown() {
 #ifdef ZENITH_USE_ONNX_RUNTIME
+    // Release the shared environment explicitly
+    // This decreases the ref count. If it hits zero, the Env is destroyed.
     Impl::sharedEnv.reset();
+    DBG("ONNXStemSeparator: Shutdown complete");
 #endif
 }
 

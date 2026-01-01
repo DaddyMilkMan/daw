@@ -122,13 +122,6 @@ private:
   void onArmClicked();
 
   //==========================================================================
-  // Drawing helpers
-  //==========================================================================
-
-  void drawInsertSlots(SkCanvas *canvas, const SkRect &bounds);
-  void drawSendIndicators(SkCanvas *canvas, const SkRect &bounds);
-
-  //==========================================================================
   // Internal nested class: LevelMeter
   //==========================================================================
 

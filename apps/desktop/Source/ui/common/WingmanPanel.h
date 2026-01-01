@@ -2,49 +2,56 @@
   ==============================================================================
 
     WingmanPanel.h
-    Created: 2025-11-29 (Updated for Grok Integration)
-    Author:  Marcus Williams (UX Team)
+    Created: 2025-11-29 (Rewritten: 2025-12-30)
+    Author:  Marcus Williams (Original) / AI Assistant (Redesign)
 
-    Wingman AI Assistant Panel with Grok Integration
-    - Natural language command input
-    - Mode selector (Fast/Thinking)
-    - Conversation history
-    - Preset generation interface
+    Modern Wingman AI Assistant Panel with Glassmorphism
+    - Pure Skia rendering via SkiaComponent
+    - Sharp rectangle container, hairline borders
+    - Brain icon (pink when reasoning ON)
+    - Send icon (blue on click)
 
   ==============================================================================
 */
 
 #pragma once
 
-#include "../ai/SampleHunterAgent.h"
+#include "../framework/SkiaComponent.h"
+#include "../controls/ZenithButton.h"
 #include "../network/GrokDAWController.h"
-#include "Engine.h"
-// #include "../network/AIBridgeClient.h" // File missing - disabled temporarily
 #include "../../commands/CommandAPI.h"
-#include "../controls/MarkdownComponent.h"
+#include "Engine.h"
+#include "WingmanChatBubble.h"
+#include "WingmanPillEditor.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 namespace zenith {
 
 /**
-    Wingman AI Assistant Panel
+    Wingman AI Assistant Panel - Modern Redesign
 
-    Provides a chat-like interface for controlling the DAW with natural
-   language. Now includes Sample Hunter integration for finding sounds via chat.
+    Premium glassmorphic chat interface for DAW AI control.
+    Features:
+    - Sharp rectangular panel (pop-out look)
+    - Hairline 0.5px borders
+    - Brain toggle for reasoning mode (pink glow)
+    - Send button with blue feedback
+    - Thread-safe async Grok integration
 */
-class WingmanPanel : public juce::Component,
-                     private juce::TextEditor::Listener,
-                     private juce::Button::Listener,
-                     public ai::SampleHunterAgent::Listener {
+class WingmanPanel : public SkiaComponent {
 public:
   //==========================================================================
   WingmanPanel(CommandAPI &api, Engine &engine);
   ~WingmanPanel() override;
 
   //==========================================================================
+  // SkiaComponent override
+  void drawSkia(SkCanvas *canvas) override;
+  void onShow() override;
+
   // Component overrides
-  void paint(juce::Graphics &g) override;
   void resized() override;
+  void visibilityChanged() override;
 
   //==========================================================================
   /**
@@ -63,73 +70,49 @@ public:
 
 private:
   //==========================================================================
-  // TextEditor::Listener
-  void textEditorReturnKeyPressed(juce::TextEditor &editor) override;
-
-  // Button::Listener
-  void buttonClicked(juce::Button *button) override;
-
-  //==========================================================================
-  // SampleHunterAgent::Listener
-  void sampleDownloaded(const ai::FoundSample &sample) override;
-  void sampleAnalyzed(const ai::FoundSample &sample) override;
-  void sampleImported(const juce::File &file) override;
-  void huntingProgressChanged(float progress,
-                              const juce::String &status) override;
-  void huntingComplete(const ai::HuntingStats &stats, bool success) override;
-
-  //==========================================================================
   // UI Components
 
-  // ...
-  std::unique_ptr<juce::TextEditor> inputField;
-  std::unique_ptr<widgets::MarkdownComponent> conversationDisplay;
-  std::unique_ptr<juce::TextButton> sendButton;
-  std::unique_ptr<juce::TextButton> acceptButton;
-  std::unique_ptr<juce::TextButton> denyButton;
-  std::unique_ptr<juce::ComboBox> modeSelector;
-  std::unique_ptr<juce::Label> modeLabel;
-  std::unique_ptr<juce::Label> statusLabel;
-  std::unique_ptr<juce::TextButton> clearButton;
-  std::unique_ptr<juce::TextButton> settingsButton;
+  std::unique_ptr<WingmanPillEditor> inputField_;
+  std::unique_ptr<juce::Viewport> chatViewport_;
+  std::unique_ptr<juce::Component> chatContainer_;
+  std::vector<std::unique_ptr<WingmanChatBubble>> chatBubbles_;
+
+  std::unique_ptr<ZenithButton> brainToggle_;  // Reasoning mode toggle
+  std::unique_ptr<ZenithButton> sendButton_;   // Send message
+  std::unique_ptr<ZenithButton> settingsButton_; // Settings (header)
 
   //==========================================================================
   // Backend
 
-  CommandAPI &commandAPI;
+  CommandAPI &commandAPI_;
   Engine &engine_;
-  std::unique_ptr<GrokDAWController> grokController;
+  std::unique_ptr<GrokDAWController> grokController_;
 
   //==========================================================================
   // State
 
-  bool isProcessing = false;
-  GrokMode currentMode = GrokMode::Fast;
+  bool isProcessing_ = false;
+  bool reasoningMode_ = false;  // true = Thinking mode (grok-4.1), false = Fast mode
 
-  // Sample Hunter state
-  bool isSampleSearchActive_ = false;
-  std::vector<ai::FoundSample> lastSearchResults_;
-  juce::String lastSearchQuery_;
+  //==========================================================================
+  // Layout Constants
+  
+  static constexpr int HEADER_HEIGHT = 48;
+  static constexpr int INPUT_ROW_HEIGHT = 56;
+  static constexpr int BUTTON_SIZE = 40;
+  static constexpr int PADDING = 12;
 
   //==========================================================================
   // Methods
 
-  void sendCommand();
-  void appendToConversation(const juce::String &speaker,
-                            const juce::String &message);
-  void setStatus(const juce::String &status,
-                 juce::Colour colour = juce::Colours::white);
-  void updateModeFromSelector();
-  void showSettings();
+  void sendMessage();
+  void appendMessage(const juce::String &speaker, const juce::String &message);
+  void layoutChatBubbles();
+  void scrollToBottom();
 
-  // Sample Hunter methods (Stateless logic)
-  static bool detectSampleSearchIntent(const juce::String &message,
-                                       juce::String &outQuery);
-  static juce::String cleanQueryFiller(const juce::String &rawQuery);
-
-  // Sample Hunter methods (Stateful)
-  bool handleImportCommand(const juce::String &message);
-  void displaySearchResults(const std::vector<ai::FoundSample> &results);
+  void setupBrainToggle();
+  void setupSendButton();
+  void setupSettingsButton();
 
   //==========================================================================
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WingmanPanel)

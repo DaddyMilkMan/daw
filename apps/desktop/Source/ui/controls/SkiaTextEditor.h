@@ -42,6 +42,11 @@ public:
   void setFont(const SkFont &font);
   void setTextColour(SkColor colour);
   void setBackgroundColour(SkColor colour);
+  
+  // Pill styling for premium look
+  void setPillStyle(bool enabled);
+  void setPillCornerRadius(float radius);
+  bool isPillStyle() const { return pillStyle_; }
 
   // Scrollbars
   void setScrollbarsShown(bool show);
@@ -49,6 +54,8 @@ public:
   // Event callbacks
   std::function<void()> onTextChange;
   std::function<void()> onReturnKey;
+  std::function<void()> onEscapeKey;
+  std::function<void()> onFocusLost;
 
   // Component interface
   void drawSkia(SkCanvas *canvas) override;
@@ -59,6 +66,7 @@ public:
   void mouseDoubleClick(const juce::MouseEvent &e) override;
   bool keyPressed(const juce::KeyPress &key, juce::Component *origin) override;
   void timerCallback() override;
+  void focusLost(FocusChangeType cause) override;
 
 private:
   juce::String text_;
@@ -81,6 +89,10 @@ private:
   // Scroll offset
   float scrollX_ = 0.0f;
   float scrollY_ = 0.0f;
+  
+  // Pill styling
+  bool pillStyle_ = false;
+  float pillCornerRadius_ = 14.0f;
 
   // Internal methods
   void insertText(const juce::String &text);

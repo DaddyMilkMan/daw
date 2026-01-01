@@ -91,32 +91,16 @@ public:
   void systemRequestedQuit() override {
     if (mainWindow != nullptr) {
       auto *projectState = mainWindow->getProjectState();
+      
+      // If dirty, ask user via our custom modal
       if (projectState != nullptr && projectState->hasUnsavedChanges()) {
-        int result = juce::NativeMessageBox::showYesNoCancelBox(
-            juce::AlertWindow::WarningIcon, "Unsaved Changes",
-            "You have unsaved changes. Do you want to save before quitting?",
-            static_cast<juce::Component*>(mainWindow.get()), nullptr);
-
-        // JUCE NativeMessageBox return values:
-        // 1 = Yes, 2 = No, 0 = Cancel
-        const int RESULT_YES = 1;
-        const int RESULT_NO = 2;
-        const int RESULT_CANCEL = 0;
-
-        if (result == RESULT_YES) // Yes
-        {
-          // Save and quit
-          mainWindow->saveProject();
-          quit();
-        } else if (result == RESULT_NO) // No
-        {
-          // User explicitly consented to data loss (discard changes).
-          quit();
-        }
-        // Cancel (result == RESULT_CANCEL) -> do nothing
-      } else {
-        quit();
+        mainWindow->checkUnsavedAndQuit();
+        // Do NOT call quit() here; waiting for modal response.
+        return;
       }
+      
+      // If clean (or after Discard chosen), actually quit.
+      quit();
     } else {
       quit();
     }

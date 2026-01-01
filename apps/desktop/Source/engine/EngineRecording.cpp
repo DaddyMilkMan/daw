@@ -6,6 +6,7 @@
 
 #include "Engine.h"
 #include "ProjectState.h"
+#include "TempoMap.h"
 #include "../engine/RecordingManager.h"
 #include "../engine/TransportController.h"
 #include "../engine/Track.h"
@@ -17,7 +18,18 @@ namespace zenith {
 //==============================================================================
 
 void Engine::record() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   DBG("Engine: Record");
+
+  if (!transportController_) {
+    DBG("Engine::record() called with null transport controller");
+    return;
+  }
+
+  if (!recordingManager_) {
+    DBG("Engine::record() called with null recording manager");
+    return;
+  }
 
   if (!transportController_->isPlaying()) {
     play();
@@ -49,11 +61,14 @@ void Engine::record() {
 }
 
 void Engine::stopRecording() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   DBG("Engine: Stop recording");
-  recordingManager_->stopRecording(tracks_);
+  TempoMap tempoMap; // Use default tempo map for now
+  recordingManager_->stopRecording(tracks_, tempoMap);
 }
 
 void Engine::toggleRecording() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   if (recordingManager_) {
     if (recordingManager_->isRecording()) {
       stopRecording();

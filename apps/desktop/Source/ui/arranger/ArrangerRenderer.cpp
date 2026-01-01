@@ -14,11 +14,13 @@
 #include "Engine.h"
 #include "ProjectState.h"
 #include "ZenithDesignSystem.h"
+#include "ColorBridge.h"
 
 // Skia Includes
 #include "ZenithSkia.h"
-#include <core/SkBlurTypes.h>
-#include <core/SkMaskFilter.h>
+#include "../arranger/ArrangerRenderer.h"
+#include "../design-system/ColorBridge.h"
+#include <include/core/SkMaskFilter.h>
 #include <core/SkSpan.h>
 #include <effects/SkDashPathEffect.h>
 #include <effects/SkGradientShader.h>
@@ -31,6 +33,7 @@
 #include <algorithm>
 
 namespace zenith {
+using namespace design;
 
 //==============================================================================
 // Layout Constants 
@@ -155,12 +158,12 @@ void ArrangerRenderer::drawGrid(SkCanvas* canvas, float width, float height) {
             float barEndX = gridUtils_.beatsToX((bar + 1) * beatsPerBar);
             
             SkPoint pts[2] = {{barStartX, SECTION_HEIGHT}, {barStartX, height}};
-            SkColor gradColors[2] = {
-                SkColorSetARGB(kBarHighlightAlphaTop, 255, 255, 255),
-                SkColorSetARGB(kBarHighlightAlphaBottom, 255, 255, 255)
-            };
+            SkColor colors[2] = {
+            withAlpha(SK_ColorWHITE, kBarHighlightAlphaTop),
+            withAlpha(SK_ColorWHITE, kBarHighlightAlphaBottom)
+        };
             barHighlightPaint.setShader(SkGradientShader::MakeLinear(
-                pts, gradColors, nullptr, 2, SkTileMode::kClamp));
+                pts, colors, nullptr, 2, SkTileMode::kClamp));
             
             canvas->drawRect(SkRect::MakeXYWH(barStartX, SECTION_HEIGHT,
                                                barEndX - barStartX, height - SECTION_HEIGHT),
@@ -184,16 +187,15 @@ void ArrangerRenderer::drawGrid(SkCanvas* canvas, float width, float height) {
         gridPaint.setAntiAlias(true);
         
         if (isBarLine) {
-            gridPaint.setColor(SkColorSetARGB(kBarLineAlpha, 255, 255, 255));
+            gridPaint.setColor(withAlpha(colors::ACCENT_PRIMARY, 0.25f)); // Neon primary for bars
             gridPaint.setStrokeWidth(kBarLineWidth);
         } else if (isBeatLine) {
-            gridPaint.setColor(SkColorSetARGB(kBeatLineAlpha, 255, 255, 255));
+            gridPaint.setColor(withAlpha(SK_ColorWHITE, kBeatLineAlpha));
             gridPaint.setStrokeWidth(kBeatLineWidth);
         } else {
             // Sub-beat (e.g. 1/4, 1/8)
-            gridPaint.setColor(SkColorSetARGB(kBeatLineAlpha / 2, 255, 255, 255));
+            gridPaint.setColor(withAlpha(SK_ColorWHITE, kBeatLineAlpha / 2));
             gridPaint.setStrokeWidth(0.5f);
-             // Make them solid but faint for clean look
         }
         
         canvas->drawLine(x, SECTION_HEIGHT, x, height, gridPaint);
@@ -203,14 +205,14 @@ void ArrangerRenderer::drawGrid(SkCanvas* canvas, float width, float height) {
     
     // C. HEADER/TIMELINE BOUNDARY GLOW
     SkPaint boundaryGlowPaint;
-    SkPoint glowPts[2] = {{HEADER_WIDTH, 0}, {HEADER_WIDTH + 30, 0}};
+    SkPoint glowPts[2] = {{HEADER_WIDTH, 0}, {HEADER_WIDTH + 40, 0}}; // Wider glow
     SkColor glowColors[2] = {
-        SkColorSetARGB(40, 0, 200, 255),
-        SkColorSetARGB(0, 0, 200, 255)
+        withAlpha(colors::ACCENT_PRIMARY, 0.25f),
+        withAlpha(colors::ACCENT_PRIMARY, 0.0f)
     };
     boundaryGlowPaint.setShader(SkGradientShader::MakeLinear(
         glowPts, glowColors, nullptr, 2, SkTileMode::kClamp));
-    canvas->drawRect(SkRect::MakeXYWH(HEADER_WIDTH, SECTION_HEIGHT, 30,
+    canvas->drawRect(SkRect::MakeXYWH(HEADER_WIDTH, SECTION_HEIGHT, 40,
                                        height - SECTION_HEIGHT), boundaryGlowPaint);
 }
 
@@ -239,7 +241,7 @@ void ArrangerRenderer::drawSectionHighlight(SkCanvas* canvas, float height) {
     juce::Colour c = section->color;
     if (c.isTransparent())
         c = juce::Colours::cyan;
-    SkColor sc = SkColorSetARGB(40, c.getRed(), c.getGreen(), c.getBlue());
+    SkColor sc = design::withAlpha(design::toSkColor(c), 0.15f);
     
     highlightPaint.setColor(sc);
     highlightPaint.setStyle(SkPaint::kFill_Style);
@@ -289,7 +291,7 @@ void ArrangerRenderer::drawSingleClip(SkCanvas* canvas, const ClipView& clipView
     {
         SkPaint shadowPaint;
         shadowPaint.setAntiAlias(true);
-        shadowPaint.setColor(SkColorSetARGB(60, 0, 0, 0));
+        shadowPaint.setColor(withAlpha(SK_ColorBLACK, 0.25f));
         shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
         SkRect shadowRect = r;
         shadowRect.offset(0, 2);
@@ -317,7 +319,7 @@ void ArrangerRenderer::drawSingleClip(SkCanvas* canvas, const ClipView& clipView
     {
         SkPaint texturePaint;
         texturePaint.setAntiAlias(true);
-        texturePaint.setColor(SkColorSetARGB(8, 255, 255, 255));
+        texturePaint.setColor(withAlpha(SK_ColorWHITE, 0.03f));
         texturePaint.setBlendMode(SkBlendMode::kOverlay);
         canvas->drawRRect(rr, texturePaint);
     }
@@ -331,8 +333,8 @@ void ArrangerRenderer::drawSingleClip(SkCanvas* canvas, const ClipView& clipView
         
         SkPoint rimPts[2] = {{r.left(), r.top()}, {r.right() * 0.6f, r.top() + r.height() * 0.3f}};
         SkColor rimColors[2] = {
-            SkColorSetARGB(120, 255, 255, 255),
-            SkColorSetARGB(0, 255, 255, 255)
+            withAlpha(SK_ColorWHITE, 0.45f),
+            withAlpha(SK_ColorWHITE, 0.0f)
         };
         rimPaint.setShader(SkGradientShader::MakeLinear(rimPts, rimColors, nullptr, 2, SkTileMode::kClamp));
         
@@ -360,16 +362,16 @@ void ArrangerRenderer::drawSingleClip(SkCanvas* canvas, const ClipView& clipView
         SkPaint glowPaint;
         glowPaint.setAntiAlias(true);
         glowPaint.setStyle(SkPaint::kStroke_Style);
-        glowPaint.setStrokeWidth(3.0f);
-        glowPaint.setColor(withAlpha(colors::NEON_CYAN, 0.6f));
-        glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 6.0f));
+        glowPaint.setStrokeWidth(4.0f); // Slightly thicker
+        glowPaint.setColor(withAlpha(baseColor, 0.7f)); // Match clip base color
+        glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 8.0f)); // More blur
         canvas->drawRRect(rr, glowPaint);
         
         SkPaint corePaint;
         corePaint.setAntiAlias(true);
         corePaint.setStyle(SkPaint::kStroke_Style);
-        corePaint.setStrokeWidth(1.5f);
-        corePaint.setColor(colors::NEON_CYAN);
+        corePaint.setStrokeWidth(2.0f); // Crisper core
+        corePaint.setColor(withAlpha(SK_ColorWHITE, 0.9f)); // Bright core line
         canvas->drawRRect(rr, corePaint);
     }
     
@@ -467,7 +469,7 @@ void ArrangerRenderer::drawSingleClip(SkCanvas* canvas, const ClipView& clipView
     {
         SkPaint pillPaint;
         pillPaint.setAntiAlias(true);
-        pillPaint.setColor(SkColorSetARGB(140, 0, 0, 0));
+        pillPaint.setColor(withAlpha(SK_ColorBLACK, 0.55f));
         
         SkRect pillRect = SkRect::MakeXYWH(r.left() + 4, r.top() + 4,
                                            std::min(r.width() - 8, 100.0f), 14);
@@ -527,7 +529,7 @@ void ArrangerRenderer::drawClipWaveform(SkCanvas* canvas, const ClipView& clip, 
     const WaveformCache* cache = gridUtils_.getWaveformCache(clip.audioFilePath);
     
     if (!cache || !cache->isValid || cache->minPeaks.empty()) {
-        // Draw "Loading..." indicator instead of fake waveform
+        // Draw "Loading..." indicator while waveform is being processed
         SkPaint loadingPaint;
         loadingPaint.setColor(design::withAlpha(design::colors::TEXT_TERTIARY, 0.6f));
         loadingPaint.setAntiAlias(true);
@@ -547,8 +549,14 @@ void ArrangerRenderer::drawClipWaveform(SkCanvas* canvas, const ClipView& clip, 
     }
     
     SkPaint wavePaint;
-    wavePaint.setColor(SkColorSetARGB(220, 200, 255, 255));
+    wavePaint.setColor(withAlpha(SK_ColorWHITE, 0.85f)); // Crisp white waveform
     wavePaint.setAntiAlias(true);
+    
+    // Add subtle neon glow to waveform if selected
+    if (clip.isSelected) {
+        wavePaint.setColor(withAlpha(colors::CYAN, 0.9f));
+        wavePaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 1.5f));
+    }
     
     float midY = clipRect.centerY();
     float heightScale = clipRect.height() * 0.45f;
@@ -569,7 +577,7 @@ void ArrangerRenderer::drawClipWaveform(SkCanvas* canvas, const ClipView& clip, 
     
     // Center line for reference
     SkPaint centerLinePaint;
-    centerLinePaint.setColor(SkColorSetARGB(40, 255, 255, 255));
+    centerLinePaint.setColor(withAlpha(SK_ColorWHITE, 0.15f));
     centerLinePaint.setStrokeWidth(0.5f);
     canvas->drawLine(clipRect.left(), midY, clipRect.right(), midY, centerLinePaint);
 }
@@ -582,7 +590,7 @@ void ArrangerRenderer::drawClipMidiBlobs(SkCanvas* canvas, const ClipView& clip,
     using namespace zenith::design;
     
     if (clip.noteBlobs.empty() || clip.lengthBeats <= 0.001) {
-        // Draw "Loading..." indicator instead of fake MIDI blobs
+        // Draw "Loading..." indicator while MIDI is being processed
         SkPaint loadingPaint;
         loadingPaint.setColor(design::withAlpha(design::colors::TEXT_TERTIARY, 0.6f));
         loadingPaint.setAntiAlias(true);
@@ -634,8 +642,8 @@ void ArrangerRenderer::drawClipMidiBlobs(SkCanvas* canvas, const ClipView& clip,
         // Gradient for 3D effect
         SkPoint pts[2] = {{noteRect.left(), noteRect.top()}, {noteRect.left(), noteRect.bottom()}};
         SkColor noteColors[2] = {
-            SkColorSetARGB(255, 255, 200, 255),
-            SkColorSetARGB(200, 200, 100, 200)
+            withAlpha(colors::MAGENTA, 0.9f),
+            withAlpha(colors::VIOLET, 0.8f)
         };
         notePaint.setShader(SkGradientShader::MakeLinear(pts, noteColors, nullptr, 2, SkTileMode::kClamp));
         
@@ -706,17 +714,19 @@ void ArrangerRenderer::drawPlayhead(SkCanvas* canvas, float width, float height)
         
     SkPaint playheadPaint;
     playheadPaint.setColor(colors::NEON_RED);
-    playheadPaint.setStrokeWidth(2.0f);
+    playheadPaint.setStrokeWidth(3.0f); // Wider glow stroke
     playheadPaint.setAntiAlias(true);
     
-    // Glow Effect
-    playheadPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
+    // Outer Glow
+    playheadPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 6.0f));
+    playheadPaint.setAlphaf(0.6f);
     canvas->drawLine(playheadX, 0, playheadX, height, playheadPaint);
     
     // Core Line
     playheadPaint.setMaskFilter(nullptr);
     playheadPaint.setColor(SK_ColorWHITE);
     playheadPaint.setStrokeWidth(1.0f);
+    playheadPaint.setAlphaf(1.0f);
     canvas->drawLine(playheadX, 0, playheadX, height, playheadPaint);
     
     // Triangle Cap

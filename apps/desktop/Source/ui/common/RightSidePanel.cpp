@@ -12,6 +12,8 @@
 #include "UndoHistoryPanel.h"
 #include "../engine/ZenithLogger.h"
 #include "../design-system/ZenithLayout.h"
+#include "../design-system/ZenithDesignSystem.h"
+#include "../framework/GlassmorphicPanel.h"
 #include "../controls/SpectraAnalyzerComponent.h"
 
 #ifdef ZENITH_USE_SKIA
@@ -28,15 +30,14 @@ namespace zenith {
 #ifdef ZENITH_USE_SKIA
 
 RightSidePanel::RightSidePanel(CommandAPI &api, Engine &engine, ProjectState &projectState) {
-  ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: Constructor started");
-  setSize(300, 600);
-
+  ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: Constructor started"); // Initialize WingmanPanel
   ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: Creating WingmanPanel...");
   wingmanPanel_ = std::make_unique<WingmanPanel>(api, engine);
   ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: WingmanPanel created. Adding child...");
   addChildComponent(wingmanPanel_.get());
   wingmanPanel_->setVisible(true);
 
+  /*
   // Initialize SpectraAnalyzer
   spectraAnalyzer_ = std::make_unique<SpectraAnalyzerComponent>(engine);
   addChildComponent(spectraAnalyzer_.get());
@@ -46,94 +47,50 @@ RightSidePanel::RightSidePanel(CommandAPI &api, Engine &engine, ProjectState &pr
   undoHistoryPanel_ = std::make_unique<UndoHistoryPanel>(projectState);
   addChildComponent(undoHistoryPanel_.get());
   undoHistoryPanel_->setVisible(true);
+  */
 
-  ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: Starting timer...");
-  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60); // Animation timer
+  setSize(300, 600);
   ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: Constructor complete");
 }
 
-RightSidePanel::~RightSidePanel() { stopTimer(); }
-
-void RightSidePanel::timerCallback() {
-  animationPhase_ += 0.05f;
-  repaint();
-}
+RightSidePanel::~RightSidePanel() {}
 
 void RightSidePanel::drawSkia(SkCanvas *canvas) {
+  if (canvas == nullptr) return;
+  ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: drawSkia() called");
+  
   auto bounds = getLocalBounds().toFloat();
   SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
 
-  // Lazy update of cached resources on the Render Thread
-  if (skBounds != cachedBounds_) {
-    updateCachedPaints(skBounds);
-    cachedBounds_ = skBounds;
-  }
+  // Glassmorphic background
+  GlassmorphicPanel::Options opts;
+  opts.style = GlassmorphicPanel::Style::Elevated;
+  opts.cornerRadius = 0.0f; // Sharp rectangle for pop-out
+  GlassmorphicPanel::drawWithOptions(canvas, skBounds, opts);
 
-  // Glassmorphism Background (Frame)
-  canvas->drawRect(skBounds, bgPaint_);
-
-  // Left border glow
-  canvas->drawLine(0.0f, 0.0f, 0.0f, skBounds.height(), borderPaint_);
-
-  // Note: Old meter code removed. Visualizer handles it now.
-}
-
-void RightSidePanel::updateCachedPaints(const SkRect &bounds) {
-  juce::ignoreUnused(bounds);
+  // Left accent border highlight (the "pop out" edge)
+  SkPaint accentPaint;
+  accentPaint.setAntiAlias(true);
+  accentPaint.setStrokeWidth(0.8f);
+  accentPaint.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.4f));
+  canvas->drawLine(0.4f, 0.0f, 0.4f, skBounds.height(), accentPaint);
   
-  // 1. Background Paint
-  bgPaint_.setAntiAlias(true);
-  bgPaint_.setColor(SkColorSetARGB(240, 20, 20, 20)); // Almost opaque dark grey
-  bgPaint_.setStyle(SkPaint::kFill_Style);
-
-  // 2. Border Paint
-  borderPaint_.setAntiAlias(true);
-  borderPaint_.setStyle(SkPaint::kStroke_Style);
-  borderPaint_.setStrokeWidth(1.0f);
-  borderPaint_.setColor(SkColorSetARGB(100, 0, 170, 255)); // Cyan accent
-
-  // 3. Text Paints
-  textPaint_.setAntiAlias(true);
-  textPaint_.setStyle(SkPaint::kFill_Style);
-  textPaint_.setColor(SkColorSetARGB(255, 255, 255, 255)); // White text
-
-  subTextPaint_.setAntiAlias(true);
-  subTextPaint_.setStyle(SkPaint::kFill_Style);
-  subTextPaint_.setColor(SkColorSetARGB(180, 200, 200, 200)); // Light grey text
-
-  // 4. Fonts
-  headerFont_.setSize(16.0f);
-  headerFont_.setEmbolden(true);
-  headerFont_.setSubpixel(true);
-
-  bodyFont_.setSize(12.0f);
-  bodyFont_.setEmbolden(false);
-  bodyFont_.setSubpixel(true);
-
-  labelFont_.setSize(10.0f);
-  labelFont_.setSubpixel(true);
-
-  // 5. Meter Paints
-  meterBgPaint_.setAntiAlias(true);
-  meterBgPaint_.setColor(SkColorSetARGB(100, 10, 10, 10));
-  meterBgPaint_.setStyle(SkPaint::kFill_Style);
-
-  meterPeakPaint_.setAntiAlias(true);
-  meterPeakPaint_.setStyle(SkPaint::kFill_Style);
-
-  meterRmsPaint_.setAntiAlias(true);
-  meterRmsPaint_.setColor(SkColorSetARGB(200, 255, 255, 255));
-  meterRmsPaint_.setStyle(SkPaint::kFill_Style);
+  // Draw children (WingmanPanel, etc.)
+  drawChildren(canvas);
 }
 
 void RightSidePanel::resized() {
+  if (!wingmanPanel_) return; // Null check only Wingman for now
+  // if (!wingmanPanel_ || !spectraAnalyzer_ || !undoHistoryPanel_) return;
+  
+  ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: resized() called");
   auto bounds = getLocalBounds();
 
   ZenithLayout::begin()
       .withBounds(bounds)
       .withGap(5.0f)
-      .addFixedItem(spectraAnalyzer_.get(), (float)bounds.getWidth(), 150.0f)
-      .addFixedItem(undoHistoryPanel_.get(), (float)bounds.getWidth(), 180.0f)
+      //.addFixedItem(spectraAnalyzer_.get(), (float)bounds.getWidth(), 150.0f)
+      //.addFixedItem(undoHistoryPanel_.get(), (float)bounds.getWidth(), 180.0f)
       .addItem(wingmanPanel_.get())
       .applyColumn();
 }

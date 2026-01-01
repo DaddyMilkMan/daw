@@ -23,10 +23,12 @@ class RemoteCursorOverlay;
 class SampleEditorComponent;
 class ViewSwitcher;
 class MidiEditorContainer;
+class RightSidePanel;
+class CommandAPI;
 
 class MainLayoutComponent : public SkiaComponent {
 public:
-  MainLayoutComponent(Engine &engine, ProjectState &state);
+  MainLayoutComponent(Engine &engine, CommandAPI &api, ProjectState &state);
   ~MainLayoutComponent() override;
 
   void resized() override;
@@ -35,6 +37,7 @@ public:
   void toggleView();
   void toggleBrowser();
   void toggleSampleEditor();
+  void toggleWingman();
 
   bool isSessionView() const;
   bool isBrowserVisible() const;
@@ -57,6 +60,7 @@ private:
   ViewSwitcher *editorSwitcher_ = nullptr;
   SampleEditorComponent *sampleEditor_ = nullptr;
   MidiEditorContainer *midiEditor_ = nullptr;
+  RightSidePanel *rightSidePanel_ = nullptr;
 
   std::unique_ptr<RemoteCursorOverlay> cursorOverlay_;
 
