@@ -44,7 +44,7 @@ public:
   // SkiaComponent overrides
   void drawSkia(SkCanvas *canvas) override;
   void resized() override;
-  void timerCallback() override;
+  void onAnimationTick(float deltaMs) override;
 
   // ChangeListener override
   void changeListenerCallback(juce::ChangeBroadcaster *source) override;

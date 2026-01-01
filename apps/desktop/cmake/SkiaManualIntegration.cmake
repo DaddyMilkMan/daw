@@ -77,6 +77,29 @@ else()
     message(FATAL_ERROR "Skia library not found in ${SKIA_LIB_DIR}")
 endif()
 
+if(UNIX AND NOT APPLE)
+    # EGL is required for Skia GL backend on Linux (Wayland/X11)
+    find_library(EGL_LIBRARY NAMES EGL libEGL)
+    find_library(GLESV2_LIBRARY NAMES GLESv2 libGLESv2)
+    
+    if(EGL_LIBRARY)
+        message(STATUS "  Linking EGL: ${EGL_LIBRARY}")
+        target_link_libraries(ZenithDAW PRIVATE ${EGL_LIBRARY})
+        if(TARGET ZenithDAWTests)
+            target_link_libraries(ZenithDAWTests PRIVATE ${EGL_LIBRARY})
+        endif()
+    else()
+        message(WARNING "EGL library not found - Skia GL backend may fail to link metho eglGetProcAddress")
+    endif()
+    
+    if(GLESV2_LIBRARY)
+         target_link_libraries(ZenithDAW PRIVATE ${GLESV2_LIBRARY})
+         if(TARGET ZenithDAWTests)
+            target_link_libraries(ZenithDAWTests PRIVATE ${GLESV2_LIBRARY})
+        endif()
+    endif()
+endif()
+
 # Auto-copy Shared Libraries (DLL/SO/DYLIB)
 file(GLOB SKIA_SHARED_LIBS 
     "${SKIA_BIN_DIR}/*.dll" 

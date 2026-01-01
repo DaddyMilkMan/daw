@@ -225,7 +225,6 @@ void MainComponent::paint(juce::Graphics &g) {
 }
 
 void MainComponent::drawSkiaContent(SkCanvas *canvas) {
-  ZENITH_LOG_INFO("MainComponent: drawSkiaContent() called");
   auto bounds = getLocalBounds().toFloat();
   SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
   

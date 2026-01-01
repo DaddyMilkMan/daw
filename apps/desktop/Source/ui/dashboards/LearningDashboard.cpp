@@ -6,6 +6,7 @@
 */
 
 #include "LearningDashboard.h"
+#include "../../ui/design-system/ZenithDesignSystem.h"
 #include <algorithm>
 #include <numeric>
 
@@ -519,26 +520,41 @@ void LearningDashboard::createVisualizationComponents() {
 
 void LearningDashboard::createAccuracyChart() {
     accuracyChart = std::make_unique<MetricsChart>(MetricsChart::ChartType::Line);
-    accuracyChart->setLineColor(juce::Colours::green);
-    accuracyChart->setYRange(0.0f, 1.0f);
-    accuracyChart->setYLabel("Accuracy");
-    accuracyChart->setXLabel("Epoch");
+    // Use primary cyan for accuracy (positive metric)
+    if (auto* chart = dynamic_cast<MetricsChart*>(accuracyChart.get())) {
+        chart->setLineColor(zenith::design::colors::CYAN);
+        chart->setYRange(0.0f, 1.0f);
+        chart->setYLabel("Accuracy");
+        chart->setXLabel("Epoch");
+        chart->setShowGlow(true);
+        chart->setShowGradientFill(true);
+    }
     addAndMakeVisible(*accuracyChart);
 }
 
 void LearningDashboard::createLossChart() {
     lossChart = std::make_unique<MetricsChart>(MetricsChart::ChartType::Line);
-    lossChart->setLineColor(juce::Colours::red);
-    lossChart->setYRange(0.0f, 2.0f);
-    lossChart->setYLabel("Loss");
-    lossChart->setXLabel("Epoch");
+    // Use neon pink/magenta for loss (metric to minimize)
+    if (auto* chart = dynamic_cast<MetricsChart*>(lossChart.get())) {
+        chart->setLineColor(zenith::design::colors::NEON_PINK);
+        chart->setYRange(0.0f, 2.0f);
+        chart->setYLabel("Loss");
+        chart->setXLabel("Epoch");
+        chart->setShowGlow(true);
+        chart->setShowGradientFill(true);
+    }
     addAndMakeVisible(*lossChart);
 }
 
 void LearningDashboard::createPerformanceChart() {
     performanceChart = std::make_unique<MetricsChart>(MetricsChart::ChartType::Bar);
-    performanceChart->setLineColor(juce::Colours::blue);
-    performanceChart->setYLabel("Performance");
+    // Use violet for performance metrics
+    if (auto* chart = dynamic_cast<MetricsChart*>(performanceChart.get())) {
+        chart->setLineColor(zenith::design::colors::VIOLET);
+        chart->setYLabel("Performance");
+        chart->setShowGlow(true);
+        chart->setShowGradientFill(true);
+    }
     addAndMakeVisible(*performanceChart);
 }
 
@@ -752,593 +768,6 @@ void LearningDashboard::notifyMetricsUpdated(const LearningMetrics& metrics) {
     }
 }
 
-// MetricsChart Implementation
-MetricsChart::MetricsChart(ChartType type) : chartType(type) {
-    setOpaque(true);
-}
-
-MetricsChart::~MetricsChart() = default;
-
-void MetricsChart::addDataPoint(float x, float y) {
-    dataPoints.push_back({x, y});
-    
-    // Keep only last 1000 points
-    if (dataPoints.size() > 1000) {
-        dataPoints.erase(dataPoints.begin());
-    }
-    
-    repaint();
-}
-
-void MetricsChart::setDataPoints(const std::vector<std::pair<float, float>>& points) {
-    dataPoints = points;
-    repaint();
-}
-
-void MetricsChart::clearData() {
-    dataPoints.clear();
-    repaint();
-}
-
-void MetricsChart::setChartType(ChartType type) {
-    chartType = type;
-    repaint();
-}
-
-void MetricsChart::setLineColor(const juce::Colour& color) {
-    lineColor = color;
-    repaint();
-}
-
-void MetricsChart::setBackgroundColor(const juce::Colour& color) {
-    backgroundColor = color;
-    repaint();
-}
-
-void MetricsChart::setShowGrid(bool show) {
-    showGrid = show;
-    repaint();
-}
-
-void MetricsChart::setShowLabels(bool show) {
-    showLabels = show;
-    repaint();
-}
-
-void MetricsChart::setXRange(float min, float max) {
-    xMin = min;
-    xMax = max;
-    repaint();
-}
-
-void MetricsChart::setYRange(float min, float max) {
-    yMin = min;
-    yMax = max;
-    repaint();
-}
-
-void MetricsChart::setXLabel(const juce::String& label) {
-    xLabel = label;
-    repaint();
-}
-
-void MetricsChart::setYLabel(const juce::String& label) {
-    yLabel = label;
-    repaint();
-}
-
-void MetricsChart::paint(juce::Graphics& g) {
-    g.fillAll(backgroundColor);
-    
-    if (showGrid) {
-        drawGrid(g);
-    }
-    
-    drawAxes(g);
-    drawData(g);
-    
-    if (showLabels) {
-        drawLabels(g);
-    }
-    
-    // Draw tooltip on top of everything
-    if (isHovering && hoveredPointIndex >= 0) {
-        drawTooltip(g);
-    }
-}
-
-void MetricsChart::resized() {
-    // Chart will be redrawn on paint
-}
-
-void MetricsChart::drawGrid(juce::Graphics& g) {
-    g.setColour(juce::Colours::grey.withAlpha(0.3f));
-    
-    auto bounds = getLocalBounds().reduced(40, 20);
-    
-    // Vertical grid lines
-    for (int i = 0; i <= 10; ++i) {
-        float x = bounds.getX() + (bounds.getWidth() * i) / 10.0f;
-        g.drawVerticalLine(static_cast<int>(x), bounds.getY(), bounds.getBottom());
-    }
-    
-    // Horizontal grid lines
-    for (int i = 0; i <= 10; ++i) {
-        float y = bounds.getY() + (bounds.getHeight() * i) / 10.0f;
-        g.drawHorizontalLine(static_cast<int>(y), bounds.getX(), bounds.getRight());
-    }
-}
-
-void MetricsChart::drawAxes(juce::Graphics& g) {
-    g.setColour(juce::Colours::white);
-    
-    auto bounds = getLocalBounds().reduced(40, 20);
-    
-    // X axis
-    g.drawHorizontalLine(bounds.getBottom(), bounds.getX(), bounds.getRight());
-    
-    // Y axis
-    g.drawVerticalLine(bounds.getX(), bounds.getY(), bounds.getBottom());
-}
-
-void MetricsChart::drawData(juce::Graphics& g) {
-    if (dataPoints.empty()) return;
-    
-    g.setColour(lineColor);
-    
-    auto bounds = getLocalBounds().reduced(40, 20);
-    
-    switch (chartType) {
-        case ChartType::Line:
-            {
-                juce::Path path;
-                bool started = false;
-                
-                for (const auto& point : dataPoints) {
-                    float x = xToScreen(point.first);
-                    float y = yToScreen(point.second);
-                    
-                    if (!started) {
-                        path.startNewSubPath(x, y);
-                        started = true;
-                    } else {
-                        path.lineTo(x, y);
-                    }
-                }
-                
-                g.strokePath(path, juce::PathStrokeType(2.0f));
-            }
-            break;
-            
-        case ChartType::Bar:
-            {
-                float barWidth = bounds.getWidth() / static_cast<float>(dataPoints.size());
-                
-                for (size_t i = 0; i < dataPoints.size(); ++i) {
-                    float x = bounds.getX() + i * barWidth;
-                    float y = yToScreen(dataPoints[i].second);
-                    float height = bounds.getBottom() - y;
-                    
-                    g.fillRect(x, y, barWidth * 0.8f, height);
-                }
-            }
-            break;
-            
-        case ChartType::Scatter:
-            {
-                for (const auto& point : dataPoints) {
-                    float x = xToScreen(point.first);
-                    float y = yToScreen(point.second);
-                    
-                    g.fillEllipse(x - 3, y - 3, 6, 6);
-                }
-            }
-            break;
-    }
-}
-
-void MetricsChart::drawLabels(juce::Graphics& g) {
-    g.setColour(juce::Colours::white);
-    g.setFont(12.0f);
-    
-    auto bounds = getLocalBounds().reduced(40, 20);
-    
-    // X label
-    if (!xLabel.isEmpty()) {
-        g.drawText(xLabel, bounds.getX(), bounds.getBottom() + 5, 
-                   bounds.getWidth(), 15, juce::Justification::centred);
-    }
-    
-    // Y label
-    if (!yLabel.isEmpty()) {
-        g.drawText(yLabel, 5, bounds.getY(), 30, bounds.getHeight(), 
-                   juce::Justification::centred);
-    }
-}
-
-float MetricsChart::xToScreen(float x) const {
-    auto bounds = getLocalBounds().reduced(40, 20);
-    float normalized = (x - xMin) / (xMax - xMin);
-    return bounds.getX() + normalized * bounds.getWidth();
-}
-
-float MetricsChart::yToScreen(float y) const {
-    auto bounds = getLocalBounds().reduced(40, 20);
-    float normalized = (y - yMin) / (yMax - yMin);
-    return bounds.getBottom() - normalized * bounds.getHeight();
-}
-
-void MetricsChart::mouseMove(const juce::MouseEvent& event) {
-    mousePosition = event.position;
-    int nearestPoint = findNearestPoint(mousePosition);
-    
-    if (nearestPoint != hoveredPointIndex) {
-        hoveredPointIndex = nearestPoint;
-        isHovering = (nearestPoint >= 0);
-        repaint();
-    } else if (isHovering) {
-        // Still hovering, update position for tooltip
-        repaint();
-    }
-}
-
-void MetricsChart::mouseExit(const juce::MouseEvent& event) {
-    isHovering = false;
-    hoveredPointIndex = -1;
-    repaint();
-}
-
-int MetricsChart::findNearestPoint(juce::Point<float> pos, float maxDistance) const {
-    if (dataPoints.empty()) return -1;
-    
-    int nearestIndex = -1;
-    float nearestDistanceSq = maxDistance * maxDistance;
-    
-    for (size_t i = 0; i < dataPoints.size(); ++i) {
-        float screenX = xToScreen(dataPoints[i].first);
-        float screenY = yToScreen(dataPoints[i].second);
-        
-        float dx = pos.x - screenX;
-        float dy = pos.y - screenY;
-        float distSq = dx * dx + dy * dy;
-        
-        if (distSq < nearestDistanceSq) {
-            nearestDistanceSq = distSq;
-            nearestIndex = static_cast<int>(i);
-        }
-    }
-    
-    return nearestIndex;
-}
-
-void MetricsChart::drawTooltip(juce::Graphics& g) {
-    if (hoveredPointIndex < 0 || hoveredPointIndex >= static_cast<int>(dataPoints.size())) 
-        return;
-    
-    const auto& point = dataPoints[hoveredPointIndex];
-    float screenX = xToScreen(point.first);
-    float screenY = yToScreen(point.second);
-    
-    // Draw highlight circle on the hovered point
-    g.setColour(lineColor.brighter(0.5f));
-    g.fillEllipse(screenX - 5, screenY - 5, 10, 10);
-    g.setColour(juce::Colours::white);
-    g.drawEllipse(screenX - 5, screenY - 5, 10, 10, 1.5f);
-    
-    // Format tooltip text
-    juce::String tooltipText;
-    if (!xLabel.isEmpty()) {
-        tooltipText += xLabel + ": ";
-    } else {
-        tooltipText += "X: ";
-    }
-    tooltipText += juce::String(point.first, 2);
-    tooltipText += "\n";
-    if (!yLabel.isEmpty()) {
-        tooltipText += yLabel + ": ";
-    } else {
-        tooltipText += "Y: ";
-    }
-    tooltipText += juce::String(point.second, 4);
-    
-    // Calculate tooltip dimensions
-    juce::Font tooltipFont(12.0f);
-    g.setFont(tooltipFont);
-    
-    float textWidth = tooltipFont.getStringWidthFloat(tooltipText.upToFirstOccurrenceOf("\n", false, false));
-    float secondLineWidth = tooltipFont.getStringWidthFloat(tooltipText.fromLastOccurrenceOf("\n", false, false));
-    textWidth = juce::jmax(textWidth, secondLineWidth);
-    
-    float tooltipWidth = textWidth + 16.0f;
-    float tooltipHeight = 36.0f;
-    
-    // Position tooltip near cursor but avoid going off-screen
-    float tooltipX = mousePosition.x + 12.0f;
-    float tooltipY = mousePosition.y - tooltipHeight - 5.0f;
-    
-    auto bounds = getLocalBounds();
-    if (tooltipX + tooltipWidth > bounds.getRight()) {
-        tooltipX = mousePosition.x - tooltipWidth - 12.0f;
-    }
-    if (tooltipY < bounds.getY()) {
-        tooltipY = mousePosition.y + 20.0f;
-    }
-    
-    juce::Rectangle<float> tooltipBounds(tooltipX, tooltipY, tooltipWidth, tooltipHeight);
-    
-    // Draw tooltip background with glassmorphic style
-    g.setColour(juce::Colour(0xE0202020));  // Semi-transparent dark background
-    g.fillRoundedRectangle(tooltipBounds, 6.0f);
-    
-    // Draw subtle border
-    g.setColour(lineColor.withAlpha(0.6f));
-    g.drawRoundedRectangle(tooltipBounds, 6.0f, 1.0f);
-    
-    // Draw text
-    g.setColour(juce::Colours::white);
-    g.drawFittedText(tooltipText, tooltipBounds.reduced(8.0f, 4.0f).toNearestInt(),
-                     juce::Justification::centredLeft, 2);
-}
-
-// ==================== Multi-Series API Implementation ====================
-
-void MetricsChart::addSeries(const juce::String& name, const juce::Colour& color) {
-    DataSeries newSeries;
-    newSeries.name = name;
-    newSeries.color = color;
-    series_[name] = newSeries;
-    repaint();
-}
-
-void MetricsChart::addDataPointToSeries(const juce::String& name, float x, float y) {
-    auto it = series_.find(name);
-    if (it != series_.end()) {
-        it->second.points.push_back({x, y});
-        
-        // Keep only last 1000 points per series
-        if (it->second.points.size() > 1000) {
-            it->second.points.erase(it->second.points.begin());
-        }
-        
-        // Auto-scale if enabled
-        if (autoScale_) {
-            calculateAutoScale();
-        }
-        
-        repaint();
-    }
-}
-
-void MetricsChart::setSeriesData(const juce::String& name, const std::vector<std::pair<float, float>>& points) {
-    auto it = series_.find(name);
-    if (it != series_.end()) {
-        it->second.points = points;
-        
-        // Update animated points for smooth transition
-        if (animated_) {
-            it->second.animatedPoints = it->second.points;
-        }
-        
-        if (autoScale_) {
-            calculateAutoScale();
-        }
-        
-        repaint();
-    }
-}
-
-void MetricsChart::clearSeries(const juce::String& name) {
-    auto it = series_.find(name);
-    if (it != series_.end()) {
-        it->second.points.clear();
-        it->second.animatedPoints.clear();
-        repaint();
-    }
-}
-
-void MetricsChart::clearAllSeries() {
-    series_.clear();
-    repaint();
-}
-
-// ==================== Additional Appearance Methods ====================
-
-void MetricsChart::setShowGlow(bool show) {
-    showGlow_ = show;
-    repaint();
-}
-
-void MetricsChart::setShowGradientFill(bool show) {
-    showGradientFill_ = show;
-    repaint();
-}
-
-void MetricsChart::setAnimated(bool animated) {
-    animated_ = animated;
-    if (animated) {
-        startTimer(1000 / animationFPS_);
-    } else {
-        stopTimer();
-    }
-    repaint();
-}
-
-void MetricsChart::setAutoScale(bool autoScale) {
-    autoScale_ = autoScale;
-    if (autoScale) {
-        calculateAutoScale();
-    }
-    repaint();
-}
-
-void MetricsChart::timerCallback() {
-    updateAnimation();
-    repaint();
-}
-
-// ==================== Legend Drawing ====================
-
-void MetricsChart::drawLegend(juce::Graphics& g) {
-    if (series_.empty()) return;
-    
-    auto chartArea = getChartArea();
-    
-    // Calculate legend dimensions
-    const float legendPadding = 8.0f;
-    const float swatchSize = 12.0f;
-    const float rowHeight = 18.0f;
-    const float textPadding = 6.0f;
-    
-    float maxTextWidth = 0.0f;
-    juce::Font legendFont(11.0f);
-    g.setFont(legendFont);
-    
-    for (const auto& [name, series] : series_) {
-        float width = legendFont.getStringWidthFloat(name);
-        maxTextWidth = juce::jmax(maxTextWidth, width);
-    }
-    
-    float legendWidth = legendPadding * 2 + swatchSize + textPadding + maxTextWidth;
-    float legendHeight = legendPadding * 2 + series_.size() * rowHeight;
-    
-    // Position legend in top-right corner of chart area
-    float legendX = chartArea.getRight() - legendWidth - 10.0f;
-    float legendY = chartArea.getY() + 10.0f;
-    
-    juce::Rectangle<float> legendBounds(legendX, legendY, legendWidth, legendHeight);
-    
-    // Draw glassmorphic legend background
-    g.setColour(juce::Colour(0xD0151520));  // Semi-transparent dark
-    g.fillRoundedRectangle(legendBounds, 6.0f);
-    
-    // Draw subtle border
-    g.setColour(juce::Colour(0x30FFFFFF));
-    g.drawRoundedRectangle(legendBounds, 6.0f, 1.0f);
-    
-    // Draw legend entries
-    float currentY = legendY + legendPadding;
-    for (const auto& [name, series] : series_) {
-        // Draw color swatch
-        juce::Rectangle<float> swatchBounds(legendX + legendPadding, 
-                                            currentY + (rowHeight - swatchSize) / 2.0f,
-                                            swatchSize, swatchSize);
-        g.setColour(series.color);
-        g.fillRoundedRectangle(swatchBounds, 2.0f);
-        
-        // Draw series name
-        g.setColour(labelColor);
-        g.drawText(name, 
-                   swatchBounds.getRight() + textPadding,
-                   currentY,
-                   maxTextWidth,
-                   rowHeight,
-                   juce::Justification::centredLeft);
-        
-        currentY += rowHeight;
-    }
-}
-
-// ==================== Animation Helpers ====================
-
-void MetricsChart::startAnimation() {
-    animationProgress_ = 0.0f;
-    if (animated_) {
-        startTimer(1000 / animationFPS_);
-    }
-}
-
-void MetricsChart::updateAnimation() {
-    if (animationProgress_ < 1.0f) {
-        animationProgress_ += animationSpeed_;
-        if (animationProgress_ > 1.0f) {
-            animationProgress_ = 1.0f;
-        }
-        
-        // Interpolate animated points
-        float t = easeOutCubic(animationProgress_);
-        
-        // Interpolate primary data points
-        if (previousPoints.size() == dataPoints.size()) {
-            animatedPoints.resize(dataPoints.size());
-            for (size_t i = 0; i < dataPoints.size(); ++i) {
-                animatedPoints[i] = interpolatePoint(previousPoints[i], dataPoints[i], t);
-            }
-        } else {
-            animatedPoints = dataPoints;
-        }
-        
-        // Interpolate series points
-        for (auto& [name, series] : series_) {
-            if (series.animatedPoints.size() != series.points.size()) {
-                series.animatedPoints = series.points;
-            }
-        }
-    }
-}
-
-std::pair<float, float> MetricsChart::interpolatePoint(const std::pair<float, float>& from,
-                                                        const std::pair<float, float>& to,
-                                                        float t) const {
-    return {
-        from.first + (to.first - from.first) * t,
-        from.second + (to.second - from.second) * t
-    };
-}
-
-// ==================== Chart Area Helper ====================
-
-juce::Rectangle<int> MetricsChart::getChartArea() const {
-    return getLocalBounds().reduced(marginLeft_, marginTop_)
-                          .withTrimmedRight(marginRight_ - marginLeft_)
-                          .withTrimmedBottom(marginBottom_ - marginTop_);
-}
-
-// ==================== Auto-Scale Calculation ====================
-
-void MetricsChart::calculateAutoScale() {
-    float minX = std::numeric_limits<float>::max();
-    float maxX = std::numeric_limits<float>::lowest();
-    float minY = std::numeric_limits<float>::max();
-    float maxY = std::numeric_limits<float>::lowest();
-    
-    bool hasData = false;
-    
-    // Check primary data points
-    for (const auto& point : dataPoints) {
-        minX = juce::jmin(minX, point.first);
-        maxX = juce::jmax(maxX, point.first);
-        minY = juce::jmin(minY, point.second);
-        maxY = juce::jmax(maxY, point.second);
-        hasData = true;
-    }
-    
-    // Check all series
-    for (const auto& [name, series] : series_) {
-        for (const auto& point : series.points) {
-            minX = juce::jmin(minX, point.first);
-            maxX = juce::jmax(maxX, point.first);
-            minY = juce::jmin(minY, point.second);
-            maxY = juce::jmax(maxY, point.second);
-            hasData = true;
-        }
-    }
-    
-    if (hasData) {
-        // Add some padding to the range
-        float xPadding = (maxX - minX) * 0.05f;
-        float yPadding = (maxY - minY) * 0.1f;
-        
-        if (xPadding < 0.001f) xPadding = 1.0f;
-        if (yPadding < 0.001f) yPadding = 0.1f;
-        
-        xMin = minX - xPadding;
-        xMax = maxX + xPadding;
-        yMin = juce::jmax(0.0f, minY - yPadding);  // Don't go below 0 for most metrics
-        yMax = maxY + yPadding;
-    }
-}
-
-
 // TrainingSessionListModel Implementation
 TrainingSessionListModel::TrainingSessionListModel(const std::vector<TrainingSession>& sessions)
     : sessions(sessions) {
@@ -1348,7 +777,7 @@ int TrainingSessionListModel::getNumRows() {
     return static_cast<int>(sessions.size());
 }
 
-void TrainingSessionListModel::paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height) {
+void TrainingSessionListModel::paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) {
     if (rowNumber >= sessions.size()) return;
     
     const auto& session = sessions[rowNumber];
@@ -1399,7 +828,7 @@ int ModelListModel::getNumRows() {
     return static_cast<int>(models.size());
 }
 
-void ModelListModel::paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height) {
+void ModelListModel::paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) {
     if (rowNumber >= models.size()) return;
     
     const auto& model = models[rowNumber];

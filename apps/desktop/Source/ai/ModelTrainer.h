@@ -20,79 +20,7 @@
 namespace zenith {
 namespace ai {
 
-// Training dataset structure
-struct TrainingSample {
-    std::vector<float> features;
-    std::vector<float> targets;
-    juce::String label;
-    float weight = 1.0f;
-    juce::String metadata;
-    juce::Time timestamp;
-};
-
-// Training configuration
-struct TrainingConfig {
-    int epochs = 100;
-    float learningRate = 0.01f;
-    float batchSize = 32.0f;
-    float validationSplit = 0.2f;
-    float testSplit = 0.1f;
-    bool earlyStopping = true;
-    int patience = 10;
-    float minDelta = 0.001f;
-    bool shuffleData = true;
-    int randomSeed = 42;
-    
-    // Regularization
-    float l2Regularization = 0.0f;
-    float dropoutRate = 0.0f;
-    
-    // Optimization
-    juce::String optimizer = "adam";  // "sgd", "adam", "rmsprop"
-    float beta1 = 0.9f;
-    float beta2 = 0.999f;
-    float epsilon = 1e-8f;
-};
-
-// Training progress callback
-using TrainingProgressCallback = std::function<void(int epoch, float loss, float accuracy, float validationLoss)>;
-
-// Model validation metrics
-struct ValidationMetrics {
-    float accuracy = 0.0f;
-    float precision = 0.0f;
-    float recall = 0.0f;
-    float f1Score = 0.0f;
-    float loss = 0.0f;
-    int totalSamples = 0;
-    int correctPredictions = 0;
-    
-    float getConfidence() const {
-        return (precision + recall) / 2.0f;
-    }
-};
-
-// Model training results
-struct TrainingResults {
-    bool success = false;
-    float finalLoss = 0.0f;
-    float finalAccuracy = 0.0f;
-    float bestValidationLoss = 0.0f;
-    int bestEpoch = 0;
-    int totalEpochs = 0;
-    float trainingTime = 0.0f;  // seconds
-    
-    ValidationMetrics validationMetrics;
-    ValidationMetrics testMetrics;
-    
-    std::vector<float> lossHistory;
-    std::vector<float> accuracyHistory;
-    std::vector<float> validationLossHistory;
-    std::vector<float> validationAccuracyHistory;
-    
-    juce::String error;
-    juce::String warnings;
-};
+#include "AICommon.h"
 
 // Dataset loader
 class DatasetLoader {
@@ -231,70 +159,7 @@ private:
 };
 
 // Production model manager
-class ProductionModelManager {
-public:
-    struct ModelInfo {
-        juce::String name;
-        juce::String version;
-        juce::String description;
-        juce::Time trainedAt;
-        TrainingResults trainingResults;
-        ValidationMetrics performanceMetrics;
-        juce::String filePath;
-        bool isActive = false;
-    };
-    
-    ProductionModelManager();
-    ~ProductionModelManager();
-    
-    // Model management
-    bool registerModel(const ModelInfo& modelInfo);
-    bool activateModel(const juce::String& modelName, const juce::String& version);
-    bool deactivateModel(const juce::String& modelName);
-    
-    // Model access
-    std::unique_ptr<NeuralNetwork> getActiveModel(const juce::String& modelName) const;
-    std::vector<ModelInfo> getAvailableModels() const;
-    ModelInfo getModelInfo(const juce::String& modelName, const juce::String& version) const;
-    
-    // Model deployment
-    bool deployModel(const juce::String& modelName, const juce::String& version);
-    bool rollbackModel(const juce::String& modelName);
-    
-    // Model comparison
-    std::vector<ModelInfo> compareModels(const std::vector<juce::String>& modelNames) const;
-    ModelInfo getBestModel(const juce::String& modelType) const;
-    
-    // Model validation
-    bool validateModel(const juce::String& modelName, const juce::String& version);
-    ValidationMetrics testModelPerformance(const juce::String& modelName, const juce::String& version);
-    
-    // Persistence
-    bool saveModelRegistry(const juce::File& filePath) const;
-    bool loadModelRegistry(const juce::File& filePath);
-    
-    // Analytics
-    juce::String getModelUsageStatistics() const;
-    float getAverageModelPerformance() const;
-    std::vector<juce::String> getUnderperformingModels() const;
-    
-private:
-    std::unordered_map<juce::String, std::vector<ModelInfo>> modelRegistry;
-    std::unordered_map<juce::String, juce::String> activeModels;  // name -> version
-    
-    juce::File modelDirectory;
-    juce::File registryFile;
-    
-    // Registry management
-    void initializeRegistry();
-    void updateRegistry();
-    
-    // Model validation
-    bool isValidModel(const ModelInfo& modelInfo) const;
-    bool isModelCompatible(const ModelInfo& modelInfo) const;
-    
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ProductionModelManager)
-};
+#include "ProductionModelManager.h"
 
 // Training pipeline orchestrator
 class TrainingPipeline {
@@ -331,7 +196,7 @@ public:
     
     // Results
     TrainingResults getTrainingResults() const { return trainingResults; }
-    ModelInfo getTrainedModel() const { return trainedModel; }
+    ProductionModelManager::ModelInfo getTrainedModel() const { return trainedModel; }
     
     // Pipeline control
     void pausePipeline();
@@ -351,7 +216,7 @@ private:
     std::atomic<bool> isPaused{false};
     
     TrainingResults trainingResults;
-    ModelInfo trainedModel;
+    ProductionModelManager::ModelInfo trainedModel;
     
     // Pipeline stages
     bool executeDataLoading(const PipelineConfig& config);

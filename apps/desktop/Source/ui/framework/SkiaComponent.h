@@ -30,6 +30,7 @@ extern "C++" {
 
 #include "SkiaAccessibility.h"
 #include "ZenithDesignSystem.h"
+#include "DirtyRectManager.h"
 #include "../design-system/ZenithTheme.h"
 #include <functional>
 #include <map>
@@ -37,12 +38,14 @@ extern "C++" {
 #include <vector>
 
 #include "Animation.h"
+#include "AnimationCoordinator.h"
 
 namespace zenith {
 
   using AnimatedValue = animation::AnimatedValue<float>;
 
   template <typename T> class ValueHistory {
+  // ... (keep ValueHistory as is)
   public:
     void push(T value) {
       // Remove redo history
@@ -90,7 +93,8 @@ namespace zenith {
 
   class SkiaComponent : public juce::Component,
                         public virtual juce::Timer,
-                        public juce::KeyListener {
+                        public juce::KeyListener,
+                        public zenith::animation::AnimationListener {
   public:
     struct AIElementInfo {
       SkRect bounds;
@@ -171,11 +175,61 @@ namespace zenith {
     }
     bool isFocused() const { return juce::Component::hasKeyboardFocus(true); }
 
+    /**
+     * @brief Mark entire component as needing repaint
+     * 
+     * Use markDirtyRect() for localized updates when possible.
+     */
     void markDirty() {
       needsRepaint_ = true;
+      dirtyManager_.markFullDirty(static_cast<float>(getWidth()), 
+                                   static_cast<float>(getHeight()));
       repaint();
     }
-    bool isDirty() const { return needsRepaint_; }
+    
+    /**
+     * @brief Mark specific region as needing repaint (PREFERRED)
+     * @param rect The dirty region in local coordinates
+     * 
+     * Use this instead of markDirty() for efficient partial repaints.
+     * The dirty region will be clipped during rendering.
+     */
+    void markDirtyRect(const juce::Rectangle<float>& rect) {
+      dirtyManager_.addDirtyRect(rect);
+      repaint(rect.toNearestInt());
+    }
+    
+    void markDirtyRect(const SkRect& rect) {
+      dirtyManager_.addDirtyRect(rect);
+      juce::Rectangle<int> juceRect(
+          static_cast<int>(rect.fLeft), static_cast<int>(rect.fTop),
+          static_cast<int>(rect.width()), static_cast<int>(rect.height()));
+      repaint(juceRect);
+    }
+    
+    /**
+     * @brief Get accumulated dirty regions for rendering
+     */
+    std::vector<SkRect> getDirtyRects() const {
+      return dirtyManager_.getDirtyRects();
+    }
+    
+    /**
+     * @brief Check if any dirty regions exist
+     */
+    bool hasDirtyRegions() const {
+      return dirtyManager_.hasDirtyRegions();
+    }
+    
+    /**
+     * @brief Clear dirty regions after rendering
+     */
+    void clearDirtyRects() {
+      dirtyManager_.clearDirtyRects();
+      needsRepaint_ = false;
+    }
+    
+    bool isDirty() const { return needsRepaint_ || dirtyManager_.hasDirtyRegions(); }
 
     void paint(juce::Graphics &g) override;
     void resized() override;
@@ -184,6 +238,15 @@ namespace zenith {
     void focusGained(juce::Component::FocusChangeType cause) override;
     void focusLost(juce::Component::FocusChangeType cause) override;
     void timerCallback() override;
+
+    // AnimationListener interface
+    void onAnimationTick(float deltaMs) override;
+
+    /**
+     * @brief Update internal property animations.
+     * @return true if animations are still active, false if finished.
+     */
+    bool updateInternalAnimations(float deltaMs);
 
     // Avoid hiding Component::keyPressed
     using juce::Component::keyPressed;
@@ -235,6 +298,7 @@ namespace zenith {
     static int targetFPS_;
     static int getSystemRefreshRate();
 
+    DirtyRectManager dirtyManager_;
     std::map<juce::String, std::unique_ptr<AnimatedValue>> animations_;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SkiaComponent)
   };

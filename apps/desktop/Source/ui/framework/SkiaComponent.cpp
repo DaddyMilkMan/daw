@@ -194,7 +194,7 @@ void SkiaComponent::animateTo(const juce::String &property, float target,
   }
 
   it->second->setTarget(target, durationMs, ::zenith::animation::Easing::EaseOut);
-  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(1000 / targetFPS_);
+  ZENITH_REGISTER_ANIMATION(zenith::animation::Priority::High);
 }
 
 void SkiaComponent::animateWithSpring(const juce::String &property,
@@ -211,7 +211,7 @@ void SkiaComponent::animateWithSpring(const juce::String &property,
   config.damping = damping * 100.0f;     // Scale to match new engine range
   
   it->second->setTargetSpring(target, config);
-  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(1000 / targetFPS_);
+  ZENITH_REGISTER_ANIMATION(zenith::animation::Priority::High);
 }
 
 void SkiaComponent::stopAnimation(const juce::String &property) {
@@ -225,7 +225,8 @@ void SkiaComponent::stopAllAnimations() {
   for (auto &pair : animations_) {
     pair.second->cancel();
   }
-  stopTimer();
+  ZENITH_UNREGISTER_ANIMATION();
+  stopTimer(); // Ensure legacy timer is also stopped if running
 }
 
 float SkiaComponent::getAnimatedValue(const juce::String &property) const {
@@ -239,9 +240,14 @@ bool SkiaComponent::isAnimating(const juce::String &property) const {
 }
 
 void SkiaComponent::timerCallback() {
-  bool anyAnimating = false;
-  float deltaTimeMs = 1000.0f / (float)targetFPS_;
+  // Legacy timer support. 
+  // We no longer update internal animations here, they use AnimationCoordinator.
+  // Subclasses calling startTimerHz() will still have their overrides called.
+}
 
+bool SkiaComponent::updateInternalAnimations(float deltaTimeMs) {
+  bool anyAnimating = false;
+  
   for (auto &pair : animations_) {
     if (pair.second->isAnimating()) {
       pair.second->update(deltaTimeMs);
@@ -251,8 +257,14 @@ void SkiaComponent::timerCallback() {
 
   if (anyAnimating) {
     markDirty();
-  } else {
-    stopTimer();
+  }
+  
+  return anyAnimating;
+}
+
+void SkiaComponent::onAnimationTick(float deltaMs) {
+  if (!updateInternalAnimations(deltaMs)) {
+    ZENITH_UNREGISTER_ANIMATION();
   }
 }
 

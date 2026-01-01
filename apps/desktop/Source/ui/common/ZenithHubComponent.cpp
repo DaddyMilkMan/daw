@@ -113,19 +113,18 @@ ZenithHubComponent::ZenithHubComponent(
   greetingEditor_->onFocusLost = safeDismiss;
   greetingEditor_->onReturnKey = [this]() { hideGreetingEditor(true); };
 
-  // Initialize Aurora Background
-  auroraBackground_ = std::make_unique<AuroraBackground>();
-
   // FIX: Start fully visible (1.0) instead of transparent (0.0)
   // The animation from 0.0 wasn't completing before rendering, causing blank screen
   alpha_.set(1.0f);
 
-  // Restart timer - critical for Hub interactivity and animations
-  startTimerHz(60);
+  // Register with central AnimationCoordinator (replaces individual timer)
+  zenith::animation::AnimationCoordinator::getInstance().registerListener(
+      static_cast<SkiaComponent*>(this), zenith::animation::Priority::High);
 }
 
 ZenithHubComponent::~ZenithHubComponent() {
-  stopTimer();
+  // Unregister from AnimationCoordinator
+  zenith::animation::AnimationCoordinator::getInstance().unregisterListener(static_cast<SkiaComponent*>(this));
   recentProjectManager_.removeListener(this);
   if (auto* auth = AuthenticationService::getInstance()) {
       auth->removeListener(this);
@@ -134,6 +133,9 @@ ZenithHubComponent::~ZenithHubComponent() {
 
 void ZenithHubComponent::mouseExit(const juce::MouseEvent &e) {
   SkiaComponent::mouseExit(e);
+  
+  std::lock_guard<std::mutex> lock(projectsMutex_);
+  
   isNewProjectHovered_ = false;
   isProfileIconHovered_ = false;
   isGreetingHovered_ = false;
@@ -141,7 +143,6 @@ void ZenithHubComponent::mouseExit(const juce::MouseEvent &e) {
     p.isHovered = false;
   for (auto &t : templates_)
     t.isHovered = false;
-  repaint();
 }
 
 void ZenithHubComponent::authStateChanged(bool isLoggedIn, const AuthUser& user) {
@@ -150,15 +151,11 @@ void ZenithHubComponent::authStateChanged(bool isLoggedIn, const AuthUser& user)
 }
 
 bool ZenithHubComponent::hitTest(int x, int y) {
-  juce::ignoreUnused(x, y);
-  return true;
-#if 0
   float fx = (float)x;
   float fy = (float)y;
 
   if (mainCardBounds_.contains(fx, fy))
     return true;
-#endif
 
   // Always allow profile icon interaction (handles rounding edges)
   if (!profileIconBounds_.isEmpty() && profileIconBounds_.contains(fx, fy))
@@ -255,9 +252,6 @@ void ZenithHubComponent::updateLayout() {
   auto bounds = getLocalBounds().toFloat();
   float w = bounds.getWidth();
   float h = bounds.getHeight();
-
-  // DEBUG: Always print this to confirm function is called
-  ZENITH_LOG_INFO(juce::String::formatted("[ZenithHub] updateLayout() called, bounds: %.1f x %.1f", w, h));
 
   // Ensure the component bounds are valid
   if (w < 400 || h < 300) {
@@ -427,37 +421,33 @@ void ZenithHubComponent::updateLayout() {
   if (greetingEditor_ && greetingEditor_->isVisible()) {
     showGreetingEditor(); // Re-layout editor
   }
-  ZENITH_LOG_INFO("[ZenithHub] updateLayout() COMPLETE");
 }
 
-void ZenithHubComponent::timerCallback() {
-  animationTime_ += 0.016f;
-  alpha_.update(16.0f);
+void ZenithHubComponent::onAnimationTick(float deltaMs) {
+  // Update animations using the coordinator-provided deltaMs
+  animationTime_ += deltaMs * 0.001f; // Convert ms to seconds
+  alpha_.update(deltaMs);
   
-  // Profile Menu Animation
-  if (isProfileMenuOpen_) {
-      // Entrance: Fast & Smooth (Critical damping)
-      // Damping 1.0 = No bounce.
-      menuSpring_.update(0.45f, 1.0f);
-      menuSpring_.setTarget(1.0f);
-  } else {
-      // Exit: Instant Snap (Quick Exit)
-      menuSpring_.update(0.6f, 0.5f); 
-      menuSpring_.setTarget(0.0f);
+  {
+      std::lock_guard<std::mutex> lock(projectsMutex_);
+      if (isProfileMenuOpen_.load()) {
+          menuSpring_.setTarget(1.0f);
+          menuSpring_.update(0.15f, 0.85f); // Use standard damping to prevent infinite oscillation
+      } else {
+          menuSpring_.setTarget(0.0f);
+          menuSpring_.update(0.3f, 0.7f);   // Snappier exit
+      }
   }
   
-  // FIX: Only repaint when truly needed to avoid flicker.
-  // Check if any animations are actively running.
-  bool needsRepaint = alpha_.isAnimating() || !menuSpring_.isResting();
-  
-  // Also check if we need to keep the aurora background animated
-  if (auroraBackground_ && isVisible()) {
-      needsRepaint = true;
+  // Only repaint if animations are active
+  if (alpha_.isAnimating() || !menuSpring_.isResting()) {
+      repaint();
   }
-  
-  if (needsRepaint) {
-    repaint();
-  }
+}
+
+bool ZenithHubComponent::isAnimating() const {
+  // Report animation state to coordinator for idle detection
+  return alpha_.isAnimating() || !menuSpring_.isResting() || isVisible();
 }
 
 
@@ -499,7 +489,13 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
     return;
   }
 
-  canvas->saveLayerAlpha(nullptr, (U8CPU)(opacity * 255));
+  // OPTIMIZATION: Only use saveLayerAlpha if we are actually fading.
+  // Otherwise, we avoid a full offscreen buffer allocation and copy every frame.
+  if (opacity < 0.999f) {
+      canvas->saveLayerAlpha(nullptr, (U8CPU)(opacity * 255));
+  } else {
+      canvas->save(); // Just safe save/restore
+  }
   drawBackground(canvas);
 
   GlassmorphicPanel::draw(canvas, mainCardBounds_,
@@ -806,22 +802,16 @@ void ZenithHubComponent::drawProfileIcon(SkCanvas *canvas) {
 }
 
 void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
-  static int moveLogCount = 0;
-  if (moveLogCount++ % 100 == 0) {
-      ZENITH_LOG_INFO("[ZenithHub] mouseMove: " + juce::String(e.x) + ", " + juce::String(e.y));
-  }
   SkPoint pt = {(float)e.x, (float)e.y};
-  bool needsUpdate = false;
 
   if (selectedSection_ != SelectionSection::None) {
     selectedSection_ = SelectionSection::None;
     selectedIndex_ = -1;
-    needsUpdate = true;
   }
 
   // Check if hovering over profile menu to block background items
   bool menuHover = false;
-  if (isProfileMenuOpen_) {
+  if (isProfileMenuOpen_.load()) {
     float menuWidth = 220.0f;
     bool isLoggedIn = false;
     if (auto* auth = AuthenticationService::getInstance()) {
@@ -842,53 +832,30 @@ void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
   // OPTIMIZATION: Early-exit bounding box check for recent projects
   // Only perform inner contains check if point is within the recentGridBounds_
   bool inRecentArea = !menuHover && recentGridBounds_.contains(pt.fX, pt.fY);
-  for (auto &proj : recentProjects_) {
-    bool h = inRecentArea && proj.bounds.contains(pt.fX, pt.fY);
-    if (h != proj.isHovered) {
-      proj.isHovered = h;
-      needsUpdate = true;
-      // ZENITH_LOG_INFO("Hover Update: Recent Project " + proj.name);
+  
+  // Lock ONLY for accessing the vector size/structure, but hover itself is atomic
+  {
+    std::lock_guard<std::mutex> lock(projectsMutex_);
+    for (auto &proj : recentProjects_) {
+      proj.isHovered = inRecentArea && proj.bounds.contains(pt.fX, pt.fY);
+    }
+
+    // Check template hover
+    for (auto &tmpl : templates_) {
+      tmpl.isHovered = !menuHover && tmpl.bounds.contains(pt.fX, pt.fY);
     }
   }
 
-  // Check template hover
-  for (auto &tmpl : templates_) {
-    bool h = !menuHover && tmpl.bounds.contains(pt.fX, pt.fY);
-    if (h != tmpl.isHovered) {
-      tmpl.isHovered = h;
-      needsUpdate = true;
-      // ZENITH_LOG_INFO("Hover Update: Template " + tmpl.title);
-    }
-  }
-
-
-
-  bool nph = !menuHover && newProjectButtonBounds_.contains(pt.fX, pt.fY);
-  if (nph != isNewProjectHovered_) {
-    isNewProjectHovered_ = nph;
-    needsUpdate = true;
-  }
-
-  bool pih = profileIconBounds_.contains(pt.fX, pt.fY);
-  if (pih != isProfileIconHovered_) {
-    isProfileIconHovered_ = pih;
-    needsUpdate = true;
-  }
-
-  bool gh = !menuHover && (greetingTextBounds_.contains(pt.fX, pt.fY) ||
-            greetingEditIconBounds_.contains(pt.fX, pt.fY));
-  if (gh != isGreetingHovered_) {
-    isGreetingHovered_ = gh;
-    needsUpdate = true;
-  }
-
-  if (needsUpdate)
-    repaint();
+  isNewProjectHovered_ = !menuHover && newProjectButtonBounds_.contains(pt.fX, pt.fY);
+  isProfileIconHovered_ = profileIconBounds_.contains(pt.fX, pt.fY);
+  isGreetingHovered_ = !menuHover && (greetingTextBounds_.contains(pt.fX, pt.fY) ||
+                      greetingEditIconBounds_.contains(pt.fX, pt.fY));
 }
 
 void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
-  ZENITH_LOG_INFO("[ZenithHub] mouseDown: " + juce::String(e.x) + ", " + juce::String(e.y));
   SkPoint pt = {(float)e.x, (float)e.y};
+  
+  std::lock_guard<std::mutex> lock(projectsMutex_);
   
   // Checking specific elements instead of generic mainCardBounds_
   // to support elements extending outside (like popout menu)
@@ -951,7 +918,6 @@ void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
                   });
               }
               isProfileMenuOpen_ = false;
-              repaint();
           }
           // Create Account (Second Item)
           else if (pt.fY >= itemY + 40.0f && pt.fY < itemY + 80.0f) {
@@ -967,21 +933,18 @@ void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
                   });
               }
               isProfileMenuOpen_ = false;
-              repaint();
           }
        } else {
           // Sign Out (Bottom area)
           if (pt.fY > menuBounds.fBottom - 60.0f) {
               if (auth) auth->logout();
               isProfileMenuOpen_ = false;
-              repaint();
           }
        }
        return; // Consume click
     } else if (!profileIconBounds_.contains(pt.fX, pt.fY)) {
         // Click outside menu AND icon -> Close menu
         isProfileMenuOpen_ = false;
-        repaint();
         return;
     }
   }
@@ -989,7 +952,6 @@ void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
   if (profileIconBounds_.contains(pt.fX, pt.fY)) {
     // Toggle profile menu
     isProfileMenuOpen_ = !isProfileMenuOpen_;
-    repaint();
     return;
   }
 
@@ -1149,6 +1111,8 @@ void ZenithHubComponent::triggerSelection() {
 void ZenithHubComponent::drawText(SkCanvas *canvas, const juce::String &text,
                                   const SkRect &bounds, const SkFont &font,
                                   const SkPaint &paint, bool centerVertical) {
+  if (text.isEmpty() || bounds.width() <= 0) return;
+
   SkString skText(text.toRawUTF8());
   SkScalar width = font.measureText(skText.c_str(), skText.size(), SkTextEncoding::kUTF8);
   
@@ -1161,9 +1125,17 @@ void ZenithHubComponent::drawText(SkCanvas *canvas, const juce::String &text,
     if (ellipsisWidth > bounds.width()) {
       skText = ellipsis; 
     } else {
-      // Linear reduction - simple and effective for short titles
+      // OPTIMIZED: Use average character width to estimate truncation point
+      // This drastically reduces the number of measureText calls for long strings
       juce::String jStr = text;
+      float avgCharWidth = width / (float)jStr.length();
+      int estimatedChars = static_cast<int>((bounds.width() - ellipsisWidth) / avgCharWidth);
       
+      // Refine truncation (usually 0-2 iterations)
+      jStr = jStr.substring(0, std::clamp(estimatedChars, 0, jStr.length()));
+      skText = SkString(jStr.toRawUTF8());
+      width = font.measureText(skText.c_str(), skText.size(), SkTextEncoding::kUTF8);
+
       while (jStr.length() > 0 && width + ellipsisWidth > bounds.width()) {
         jStr = jStr.substring(0, jStr.length() - 1);
         skText = SkString(jStr.toRawUTF8());
@@ -1188,7 +1160,12 @@ void ZenithHubComponent::drawText(SkCanvas *canvas, const juce::String &text,
 }
 
 void ZenithHubComponent::drawProfileMenu(SkCanvas* canvas) {
-  float rawProgress = menuSpring_.getCurrent();
+  float rawProgress = 0.0f;
+  {
+      std::lock_guard<std::mutex> lock(projectsMutex_);
+      rawProgress = menuSpring_.getCurrent();
+  }
+  
   if (rawProgress <= 0.001f) return;
 
   // Menu dimensions
@@ -1212,28 +1189,33 @@ void ZenithHubComponent::drawProfileMenu(SkCanvas* canvas) {
       menuHeight
   );
 
-  // FIX: Don't use saveLayerAlpha - causes flicker with parent layer
-  // Instead, apply alpha directly to colors
   float alpha = juce::jlimit(0.0f, 1.0f, rawProgress);
   
-  // Only save/restore for clipping, not alpha
-  canvas->save();
+  // Scoped layer for smooth alpha transition of the entire menu
+  // Using outset bounds to ensure shadows and glows are NOT clipped
+  if (alpha < 0.995f) {
+      SkPaint layerPaint;
+      layerPaint.setAlphaf(alpha);
+      SkRect layerBounds = menuBounds;
+      layerBounds.outset(40.0f, 40.0f); // Room for shadow/glow
+      canvas->saveLayer(&layerBounds, &layerPaint);
+  } else {
+      canvas->save();
+  }
 
   // FIX: Disable backdrop blur for menu - it causes flicker with constant repaints
   // Use solid background instead for stable rendering
   GlassmorphicPanel::Options opts;
   opts.style = GlassmorphicPanel::Style::Floating;
   opts.cornerRadius = 16.0f;
-  opts.drawShadow = alpha > 0.5f;
-  opts.glowIntensity = alpha;
+  opts.drawShadow = true; 
+  opts.glowIntensity = 1.0f;
   opts.useBackdropBlur = false; // KEY FIX: Disable backdrop blur to stop flicker
   
   GlassmorphicPanel::drawWithOptions(canvas, menuBounds, opts);
 
-  // Content - apply alpha to text colors directly
-  SkPaint textPaint;
-  textPaint.setAntiAlias(true);
-  textPaint.setColor(design::withAlpha(colors::TEXT_PRIMARY, alpha));
+  // Content - drawn fully opaque here as saveLayer handles the overall transparency
+  textPaint_.setColor(colors::TEXT_PRIMARY);
 
   float itemHeight = 40.0f;
   float currentY = menuBounds.fTop + 16.0f;
@@ -1242,9 +1224,9 @@ void ZenithHubComponent::drawProfileMenu(SkCanvas* canvas) {
   auto drawMenuItem = [&](const char* text, bool isDestructive = false) {
       SkRect itemBounds = SkRect::MakeXYWH(contentLeft, currentY, menuWidth - 32, itemHeight);
       
-      SkPaint itemTextPaint = textPaint;
+      SkPaint itemTextPaint = textPaint_;
       if (isDestructive) {
-        itemTextPaint.setColor(design::withAlpha(colors::RED, alpha));
+        itemTextPaint.setColor(colors::RED);
       }
       
       drawText(canvas, text, itemBounds, buttonFont_, itemTextPaint, false);
@@ -1252,17 +1234,17 @@ void ZenithHubComponent::drawProfileMenu(SkCanvas* canvas) {
   };
 
   if (isLoggedIn) {
-      SkPaint subPaint = textPaint;
-      subPaint.setColor(design::withAlpha(colors::TEXT_SECONDARY, 0.7f * alpha));
+      SkPaint subLabelPaint = textPaint_;
+      subLabelPaint.setColor(withAlpha(colors::TEXT_SECONDARY, 0.7f));
       
       juce::String userName = currentUser.displayName.isNotEmpty() ? currentUser.displayName : currentUser.email;
       if (userName.isEmpty()) userName = "User";
       
-      drawText(canvas, "Signed in as " + userName, SkRect::MakeXYWH(contentLeft, currentY, menuWidth, 20), subFont_, subPaint, false);
+      drawText(canvas, "Signed in as " + userName, SkRect::MakeXYWH(contentLeft, currentY, menuWidth, 20), subFont_, subLabelPaint, false);
       currentY += 24.0f;
 
       SkPaint divPaint;
-      divPaint.setColor(design::withAlpha(colors::TEXT_SECONDARY, 0.1f * alpha));
+      divPaint.setColor(withAlpha(colors::TEXT_SECONDARY, 0.1f));
       canvas->drawLine(menuBounds.fLeft, currentY, menuBounds.fRight, currentY, divPaint);
       currentY += 12.0f;
 

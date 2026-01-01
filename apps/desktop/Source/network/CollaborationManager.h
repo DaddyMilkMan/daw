@@ -6,12 +6,13 @@
 #include <vector>
 #include <atomic>
 #include "ZenithCRDT.h"
-#include "LoroCRDTBridge.h"
+#include "DTLSSocket.h"
 
 namespace zenith {
 
 struct RemoteUser {
   juce::String id;
+
   juce::String name;
   juce::Colour color;
   juce::Point<float> mousePosition;
@@ -23,8 +24,6 @@ enum class PacketType {
   Hello = 0,
   CursorMove = 1,
   EditCommand = 2,
-  Challenge = 3,
-  ChallengeResponse = 4,
   CRDTUpdate = 5,
   SelectionUpdate = 6,
   KeepAlive = 99
@@ -43,7 +42,7 @@ public:
     Registering, // Getting Code from TCP
     Connecting,  // Joiner waiting for connection
     Punching,    // Sending UDP to Server to open ports
-    Handshaking, // Challenge-Response Auth
+    Handshaking, // DTLS Handshake in progress
     Hosting,     // Acting as session host
     Connected,   // P2P UDP Stream Active
     Error
@@ -76,10 +75,12 @@ public:
   std::function<void(const juce::String &)> onEditReceived;
 
   // --- CRDT Integration ---
+#ifdef ZENITH_ENABLE_COLLAB
   void initializeCRDT(juce::ValueTree& projectTree);
   void syncCRDT();
   void shutdownCRDT(); // Release CRDT bridge (must be called before ProjectState is destroyed)
   Zenith::ValueTreeCRDTBridge* getCRDTBridge() const { return crdtBridge.get(); }
+#endif
 
 private:
   CollaborationManager();
@@ -96,7 +97,7 @@ private:
   mutable juce::CriticalSection usersLock;
 
   // --- Networking ---
-  const juce::String SIGNALING_SERVER_IP = "216.126.231.46"; // Production VPS
+  juce::String signalingServerIP;
   const int SIGNALING_TCP_PORT = 54320;
   const int SIGNALING_UDP_PORT = 54321;
 
@@ -105,13 +106,12 @@ private:
 
   // --- The Magic UDP Socket ---
   // We use ONE socket for both Signaling (Punching) and Peer Communication
-  juce::DatagramSocket p2pSocket;
+  DTLSSocket p2pSocket;
 
   juce::String peerIP;
   int peerPort = 0;
   bool isHost = false;
   bool allowRemoteEditing = false;
-  int sentChallenge = 0; // The challenge we sent
 
 
   // TCP Helper
@@ -128,8 +128,10 @@ private:
   void startHolePunching();
   void reportError(const juce::String& error);
 
+#ifdef ZENITH_ENABLE_COLLAB
   std::unique_ptr<Zenith::LoroDoc> crdtDoc;
   std::unique_ptr<Zenith::ValueTreeCRDTBridge> crdtBridge;
+#endif
 
   struct PeerConnection {
       juce::String ip;

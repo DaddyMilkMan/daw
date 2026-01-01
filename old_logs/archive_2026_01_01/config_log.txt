@@ -1,0 +1,76 @@
+-- The CXX compiler identification is GNU 13.3.0
+-- The C compiler identification is GNU 13.3.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Zenith DAW: Building for Linux (x64)
+-- Using local JUCE from external/JUCE
+-- Found PkgConfig: /usr/bin/pkg-config (found version "1.8.1") 
+-- Checking for module 'alsa'
+--   Found alsa, version 1.2.11
+-- Checking for modules 'freetype2;fontconfig'
+--   Found freetype2, version 26.1.20
+--   Found fontconfig, version 2.15.0
+-- Checking for module 'gl'
+--   Found gl, version 1.2
+-- Checking for module 'libcurl'
+--   Found libcurl, version 8.5.0
+-- Checking for modules 'webkit2gtk-4.1;gtk+-x11-3.0'
+--   Found webkit2gtk-4.1, version 2.50.2
+--   Found gtk+-x11-3.0, version 3.24.41
+-- Configuring juceaide
+-- Building juceaide
+-- Exporting juceaide
+-- Finished setting up juceaide
+-- Zenith DAW: JUCE 8.0.0 configured
+-- Zenith DAW:  source files organized
+-- ============================================
+-- Configuring Skia Integration (Audited)
+-- ============================================
+--   SKIA_ROOT: Using platform default fallback (vcpkg)
+--   SKIA_ROOT: /home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux
+--   Strategy: Manual Search (unofficial-skia not found)
+--   Skia headers: /home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia
+--   Skia library: /home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/lib/libskia.a
+--   Skia graphics library: LINKED (Manual)
+--   Skia UI Components: Managed by ui/CMakeLists.txt
+--   Skia UI components: ENABLED
+-- ============================================
+-- Zenith DAW: Skia rendering ENABLED
+-- Zenith DAW: ONNX Runtime support ENABLED (Linux)
+-- ============================================
+-- Configuring Build Optimizations
+-- ============================================
+--   ccache: NOT FOUND (install for faster rebuilds)
+--   Generator: Unix Makefiles
+-- ============================================
+--   Applying build optimizations to: ZenithDAW
+--     GCC/Clang: Detected 12 processors
+--   Build optimizations applied to: ZenithDAW
+-- ============================================
+-- Configuring Precompiled Headers (PCH)
+-- ============================================
+--   PCH Header: /home/micah/Desktop/zenith/daw/apps/desktop/Source/pch/ZenithPCH.h
+--   PCH: ENABLED for ZenithDAW target
+-- ============================================
+-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+-- Found Python 3: /usr/bin/python3
+-- Collaboration features enabled. Use target 'run_signaling_server' to start the server.
+-- Zenith DAW Configuration:
+--   Build Type: Release
+--   Platform: Linux
+--   Architecture: x64
+--   Skia: ON
+--   ONNX: ON
+--   IPO: 
+--   Tests: OFF
+-- Configuring done (72.7s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/micah/Desktop/zenith/daw/build

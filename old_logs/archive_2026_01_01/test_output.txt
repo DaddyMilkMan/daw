@@ -1,0 +1,38 @@
+JUCE v8.0.9
+Available Unit Tests:
+ - [AudioEngine] Track Processing
+ - [AudioEngine] Clip Playback
+ - [AudioEngine] MIDI Routing
+ - [AudioEngine] Mixer Channel
+ - [AudioEngine] Plugin Hosting
+ - [AudioEngine] Basic Audio Processing
+ - [Stability] Audio Stability (NaN/Inf)
+ - [ProjectState] ValueTree Integrity
+ - [ProjectState] Undo/Redo
+ - [ProjectState] Track Manipulation
+ - [ProjectState] Clip Manipulation
+ - [ProjectState] Automation Data
+ - [ProjectState] Project Serialization
+ - [ProjectState] Piano Roll Features
+ - [AudioEngine] Core Engine
+ - [Concurrency] Lock-Free Stress Test
+ - [Concurrency] Master Plugin RCU Stress Test
+ - [Concurrency] Engine Plugin Management Stress Test
+ - [] Theme System Tests
+ - [] UITests
+ - [MIDI] MIDI 2.0 Property Exchange
+ - [AI] AI Integration
+ - [Accessibility] AccessibilityTests
+ - [Network] CRDT Synchronization
+ - [DSP] ONNX Pipeline
+ - [Automation] PluginAutomationTests
+ - [] SampleEditorRecordingTests
+ - [Networking] Collaboration Multi-Peer
+ - [] CollaborationSecurityTest
+ - [DSP] DSP Voice Changer
+ - [AudioEngine] Recording Tempo
+ - [AudioEngine] Recording
+ - [] RoutingGraph Feedback Loop Stability
+-----------------------------------
+Running tests in category: --category=AudioEngine
+Random seed: 0xbb3d4f

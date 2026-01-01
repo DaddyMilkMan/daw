@@ -6,6 +6,7 @@
 
 #include "Engine.h"
 #include "../engine/AudioRenderer.h"
+#include "../engine/AudioExporter.h"
 #include "../engine/Track.h"
 #include "../engine/Clip.h"
 #include "../engine/AuxBus.h"
@@ -70,7 +71,12 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
   std::unique_ptr<juce::OutputStream> fileStream = std::make_unique<juce::FileOutputStream>(outputFile);
   if (fileStream == nullptr || static_cast<juce::FileOutputStream*>(fileStream.get())->failedToOpen()) return false;
 
-  std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(fileStream.release(), sampleRate, numChannels, bitDepth, {}, 0));
+  auto writerOptions = juce::AudioFormatWriterOptions()
+      .withSampleRate(sampleRate)
+      .withNumChannels(numChannels)
+      .withBitsPerSample(bitDepth);
+      
+  std::unique_ptr<juce::AudioFormatWriter> writer = wavFormat.createWriterFor(fileStream, writerOptions);
 
   if (!writer)
     return false;
@@ -136,6 +142,24 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
   return true;
 }
 
+bool Engine::exportProjectToWavSync(const juce::File &outputFile, double sampleRate,
+                                    int bitDepth, double duration, double startTime) {
+    if (!audioExporter_)
+        return false;
+
+    zenith::ExportOptions options; // Explicitly use AudioExporter's options struct
+    options.outputFile = outputFile;
+    options.sampleRate = sampleRate;
+    options.bitDepth = bitDepth;
+    options.duration = duration;
+    options.startTime = startTime;
+    options.format = zenith::ExportFormat::WAV; // Explicitly use zenith::ExportFormat
+    options.enableDither = true;
+    options.normalize = false;
+
+    return audioExporter_->exportProject(options);
+}
+
 bool Engine::exportProject(const ExportOptions &options) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   DBG("Engine: Starting Advanced Export...");
@@ -173,8 +197,12 @@ bool Engine::exportProject(const ExportOptions &options) {
   if (fileStream == nullptr || static_cast<juce::FileOutputStream*>(fileStream.get())->failedToOpen())
     return false;
 
-  std::unique_ptr<juce::AudioFormatWriter> writer(format->createWriterFor(
-      fileStream.release(), options.sampleRate, 2, options.bitDepth, {}, 0));
+  auto writerOptions = juce::AudioFormatWriterOptions()
+      .withSampleRate(options.sampleRate)
+      .withNumChannels(2)
+      .withBitsPerSample(options.bitDepth);
+
+  std::unique_ptr<juce::AudioFormatWriter> writer = format->createWriterFor(fileStream, writerOptions);
 
   if (!writer)
     return false;

@@ -85,6 +85,19 @@ void CollabPanel::drawSkia(SkCanvas* canvas) {
                   activeField_ == Field::Name);
     yOffset += 50.0f;
 
+    // --- Security Warning ---
+    SkFont warningFont;
+    warningFont.setSize(11.0f);
+    paint.setColor(design::unified::warning());
+    const char* warningIcon = "⚠️";
+    const char* warningText = " Warning: Connection is not encrypted.";
+    const char* warningText2 = "Do not use on untrusted networks.";
+    canvas->drawString(warningIcon, padding, yOffset, warningFont, paint);
+    canvas->drawString(warningText, padding + 20, yOffset, warningFont, paint);
+    yOffset += 15.0f;
+    canvas->drawString(warningText2, padding + 20, yOffset, warningFont, paint);
+    yOffset += 25.0f;
+
     // --- Host Section ---
     drawSection(canvas, "Host Session", yOffset, w);
     yOffset += 25.0f;

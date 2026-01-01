@@ -63,7 +63,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: test-results-linux
-        path: zenith-core/build/Testing/
+        path: build/Testing/
 
   test-macos:
     name: Test on macOS
@@ -81,30 +81,26 @@ jobs:
 
     - name: Configure CMake
       run: |
-        cd zenith-core
         mkdir -p build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON
 
     - name: Build Tests
       run: |
-        cd zenith-core/build
-        cmake --build . --target ProjectStateTests -j$(sysctl -n hw.ncpu)
-        cmake --build . --target RecordingAutomationTests -j$(sysctl -n hw.ncpu)
-        cmake --build . --target InstrumentValidationTests -j$(sysctl -n hw.ncpu)
-        cmake --build . --target PresetRegressionTests -j$(sysctl -n hw.ncpu)
+        cd build
+        cmake --build . --target ZenithDAWTests -j$(sysctl -n hw.ncpu)
 
     - name: Run Tests
       run: |
-        cd zenith-core/build
-        ctest --output-on-failure --verbose
+        cd build
+        ./ZenithDAWTests_artefacts/Release/ZenithDAWTests
 
     - name: Upload test results
       if: failure()
       uses: actions/upload-artifact@v4
       with:
         name: test-results-macos
-        path: zenith-core/build/Testing/
+        path: build/Testing/
 
   test-windows:
     name: Test on Windows
@@ -130,11 +126,11 @@ jobs:
     - name: Run Tests
       run: |
         cd build
-        .\ZenithDAWTests.exe
+        .\ZenithDAWTests_artefacts\Release\ZenithDAWTests.exe
 
     - name: Upload test results
       if: failure()
       uses: actions/upload-artifact@v4
       with:
         name: test-results-windows
-        path: zenith-core/build/Testing/
+        path: build/Testing/

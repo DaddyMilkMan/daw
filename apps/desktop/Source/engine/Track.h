@@ -149,22 +149,22 @@ public:
   //==============================================================================
   // Mixer controls (thread-safe using atomics)
   // Mixer controls (thread-safe using atomics)
-  void setVolume(float newVolume) { mixerChannel.setVolume(newVolume); }
-  float getVolume() const { return mixerChannel.getVolume(); }
+  void setVolume(float newVolume) { processor->getMixerChannel().setVolume(newVolume); }
+  float getVolume() const { return processor->getMixerChannel().getVolume(); }
 
-  void setPan(float newPan) { mixerChannel.setPan(newPan); }
-  float getPan() const { return mixerChannel.getPan(); }
+  void setPan(float newPan) { processor->getMixerChannel().setPan(newPan); }
+  float getPan() const { return processor->getMixerChannel().getPan(); }
 
-  void setMuted(bool shouldBeMuted) { mixerChannel.setMuted(shouldBeMuted); }
-  bool isMuted() const { return mixerChannel.isMuted(); }
+  void setMuted(bool shouldBeMuted) { processor->getMixerChannel().setMuted(shouldBeMuted); }
+  bool isMuted() const { return processor->getMixerChannel().isMuted(); }
 
-  void setSolo(bool shouldBeSolo) { mixerChannel.setSolo(shouldBeSolo); }
-  bool isSolo() const { return mixerChannel.isSolo(); }
+  void setSolo(bool shouldBeSolo) { processor->getMixerChannel().setSolo(shouldBeSolo); }
+  bool isSolo() const { return processor->getMixerChannel().isSolo(); }
 
   void setSilencedBySolo(bool silenced) {
-    mixerChannel.setSilencedBySolo(silenced);
+    processor->getMixerChannel().setSilencedBySolo(silenced);
   }
-  bool isSilencedBySolo() const { return mixerChannel.isSilencedBySolo(); }
+  bool isSilencedBySolo() const { return processor->getMixerChannel().isSilencedBySolo(); }
 
   void setArmed(bool shouldBeArmed); // For recording
   bool isArmed() const { return armed.load(); }
@@ -212,8 +212,8 @@ public:
   juce::AudioBuffer<float> &getSidechainBuffer() { return processor->getSidechainBuffer(); }
   TrackProcessor* getProcessor() const { return processor.get(); }
 
-  MixerChannel &getMixerChannel() { return mixerChannel; }
-  const MixerChannel &getMixerChannel() const { return mixerChannel; }
+  MixerChannel &getMixerChannel() { return processor->getMixerChannel(); }
+  const MixerChannel &getMixerChannel() const { return processor->getMixerChannel(); }
 
   // Instrument management (moved to InstrumentTrack)
 
@@ -274,9 +274,9 @@ public:
   //==============================================================================
   // Monitoring
   // Monitoring
-  float getCurrentLevel() const { return mixerChannel.getOutputLevel(); }
-  float getPeakLevel() const { return mixerChannel.getOutputPeak(); }
-  void resetPeakLevel() { mixerChannel.resetPeaks(); }
+  float getCurrentLevel() const { return processor->getMixerChannel().getOutputLevel(); }
+  float getPeakLevel() const { return processor->getMixerChannel().getOutputPeak(); }
+  void resetPeakLevel() { processor->getMixerChannel().resetPeaks(); }
 
   //==============================================================================
   // State management
@@ -320,7 +320,7 @@ public:
    * @return Vector of parameter info
    */
   std::vector<PluginChain::ParameterInfo> getPluginParameters(int pluginIndex) const {
-    return pluginChain.getAutomatableParameters(pluginIndex);
+    return processor->getPluginChain().getAutomatableParameters(pluginIndex);
   }
 
   /**
@@ -328,7 +328,7 @@ public:
    * @return Vector of parameter info for all plugins
    */
   std::vector<PluginChain::ParameterInfo> getAllPluginParameters() const {
-    return pluginChain.getAllAutomatableParameters();
+    return processor->getPluginChain().getAllAutomatableParameters();
   }
 
   /**
@@ -339,7 +339,7 @@ public:
    * @note Message thread only - will be applied RT-safely via setValueNotifyingHost
    */
   void setPluginParameterValue(int pluginIndex, int paramIndex, float normalizedValue) {
-    pluginChain.setParameterValue(pluginIndex, paramIndex, normalizedValue);
+    processor->getPluginChain().setParameterValue(pluginIndex, paramIndex, normalizedValue);
   }
 
   /**
@@ -348,7 +348,7 @@ public:
    * @return Number of parameters
    */
   int getPluginNumParameters(int pluginIndex) const {
-    return pluginChain.getNumParameters(pluginIndex);
+    return processor->getPluginChain().getNumParameters(pluginIndex);
   }
 
   /**
@@ -358,7 +358,7 @@ public:
    * @return Parameter name
    */
   juce::String getPluginParameterName(int pluginIndex, int paramIndex) const {
-    return pluginChain.getParameterName(pluginIndex, paramIndex);
+    return processor->getPluginChain().getParameterName(pluginIndex, paramIndex);
   }
 
 protected:
@@ -410,17 +410,8 @@ protected:
 
   //==============================================================================
   //==============================================================================
-  // Processor - MUST be declared before mixerChannel and pluginChain references
+  // Processor - Contains mixer channel and plugin chain
   std::unique_ptr<TrackProcessor> processor;
-
-  //==============================================================================
-  // Mixer Channel Strip (EQ, Comp, Sends, Volume, Pan)
-  // These are references to members within processor, so processor must be initialized first
-  MixerChannel& mixerChannel;
-
-  //==============================================================================
-  // Plugin chain and Automation management (delegated)
-  PluginChain& pluginChain;
   AutomationManager automationManager;
 
   // Thread-safe FIFO for live MIDI injection

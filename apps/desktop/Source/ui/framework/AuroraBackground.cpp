@@ -48,13 +48,8 @@ void AuroraBackground::initShaders() {
 
 void AuroraBackground::draw(SkCanvas *canvas, const SkRect &bounds,
                             float time) {
-  // 1. Prepare Base Mesh Gradient (The "Content")
-  // We record the "blobs" moving into a shader.
-  SkPictureRecorder recorder;
-  SkCanvas *recCanvas = recorder.beginRecording(bounds);
-
   // Clear with base dark color
-  recCanvas->clear(design::colors::BG_DARKEST);
+  canvas->drawColor(design::colors::BG_DARKEST);
 
   // Draw Moving Blobs (The "Mesh")
   const int numBlobs = 5;
@@ -74,10 +69,6 @@ void AuroraBackground::draw(SkCanvas *canvas, const SkRect &bounds,
       {0.1f, 0.8f, 0.1f, 0.15f, 0.3f, 0.3f, 500.0f, design::colors::MAGENTA},
       {0.9f, 0.6f, 0.15f, 0.1f, 0.25f, 0.35f, 550.0f,
        design::colors::NEON_PURPLE}};
-
-  SkPaint blobPaint;
-  blobPaint.setAntiAlias(true);
-  blobPaint.setBlendMode(SkBlendMode::kScreen); // Blend blobs additively-ish
 
   float w = bounds.width();
   float h = bounds.height();
@@ -100,20 +91,15 @@ void AuroraBackground::draw(SkCanvas *canvas, const SkRect &bounds,
 
     SkPaint p;
     p.setShader(radialShader);
+    p.setAntiAlias(true);
     p.setBlendMode(SkBlendMode::kScreen);
-    recCanvas->drawRect(bounds, p);
+    
+    // OPTIMIZATION: Draw a circle instead of a full-screen rectangle
+    // This reduces pixel shading work significantly
+    canvas->drawCircle(x, y, radius, p);
   }
 
-  sk_sp<SkPicture> pic = recorder.finishRecordingAsPicture();
-  sk_sp<SkShader> contentShader =
-      pic->makeShader(SkTileMode::kClamp, SkTileMode::kClamp,
-                      SkFilterMode::kLinear, nullptr, nullptr);
-
-  // 2. Draw the blobs directly (SkPerlinNoiseShader not available in this Skia
-  // build) Just draw the picture without noise distortion - still looks great
-  canvas->drawPicture(pic, nullptr, nullptr);
-
-  // 4. Overlay Vignette (Darken corners)
+  // Overlay Vignette (Darken corners)
   drawVignette(canvas, bounds);
 }
 

@@ -29,6 +29,7 @@
 #include "../controls/SkiaPopupMenu.h"
 #include "../controls/ContextMenuManager.h"
 #include "../design-system/ColorBridge.h"
+#include "../design-system/MeterRenderer.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include <effects/SkGradientShader.h>
 
@@ -177,6 +178,8 @@ TransportBar::TransportBar() {
   
   timeSigDenLabel_ = std::move(denEd);
   // addChildComponent(timeSigDenLabel_.get());
+  
+  ZENITH_REGISTER_ANIMATION(zenith::animation::Priority::High);
 }
 
 void TransportBar::visibilityChanged() {
@@ -493,58 +496,8 @@ void TransportBar::drawMeter(SkCanvas *canvas,
       SkRect::MakeXYWH((float)bounds.getX(), (float)bounds.getY(),
                        (float)bounds.getWidth(), (float)bounds.getHeight());
 
-  // "Linear" modern meter - a horizontal glossy bar
-  
-  // 1. Label (Tiny, on top or left)
-  SkPaint textPaint;
-  textPaint.setColor(design::colors::TEXT_SECONDARY);
-  textPaint.setAntiAlias(true);
-  
-  // Draw label on left of bar?
-  // Let's draw it small inside the bar on left? No, cleaner outside.
-  // Actually, user wants "Accurate info".
-  // Let's draw value as text next to it.
-  
-  juce::String valStr = juce::String((int)(value * 100)) + "% CPU";
-  canvas->drawString(valStr.toStdString().c_str(), rect.left(), rect.centerY() + 4, smallFont_, textPaint);
-  
-  // Shift rect for bar 
-  SkRect barRect = rect;
-  float textWidth = 60.0f; // Approx
-  barRect.fLeft += textWidth;
-  
-  if (barRect.width() > 10) {
-      // Background track
-      SkPaint bgPaint;
-      bgPaint.setColor(SkColorSetA(design::colors::BG_03, 150));
-      bgPaint.setAntiAlias(true);
-      canvas->drawRoundRect(barRect, 4.0f, 4.0f, bgPaint);
-      
-      // Fill
-      float fillW = barRect.width() * value;
-      if (fillW > 0) {
-          SkRect fillRect = barRect;
-          fillRect.fRight = fillRect.fLeft + fillW;
-          
-          SkPaint fillPaint;
-          // Gradient from green to red based on load
-          SkColor color = design::colors::NEON_GREEN;
-          if (value > 0.5f) color = design::colors::AMBER;
-          if (value > 0.8f) color = design::colors::RED;
-          
-          fillPaint.setColor(color);
-          fillPaint.setAntiAlias(true);
-          
-          // Add glow
-          fillPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 2.0f));
-          canvas->drawRoundRect(fillRect, 4.0f, 4.0f, fillPaint);
-          
-          // Solid core
-          fillPaint.setMaskFilter(nullptr);
-          fillPaint.setAlpha(255);
-          canvas->drawRoundRect(fillRect, 4.0f, 4.0f, fillPaint);
-      }
-  }
+  juce::String valStr = juce::String((int)(value * 100)) + "% " + label;
+  zenith::design::MeterRenderer::drawHorizontalMeter(canvas, rect, value, valStr);
 }
 
 void TransportBar::mouseDown(const juce::MouseEvent &e) {
@@ -730,10 +683,10 @@ void TransportBar::mouseMove(const juce::MouseEvent &e) {
   }
 }
 
-void TransportBar::timerCallback() {
-  SkiaComponent::timerCallback(); // Call base for global animations
+void TransportBar::onAnimationTick(float deltaMs) {
+  SkiaComponent::updateInternalAnimations(deltaMs);
 
-  float dt = 1.0f / 60.0f;
+  float dt = deltaMs / 1000.0f;
   // Update animations
   playState_.update(dt);
   stopState_.update(dt);
@@ -757,7 +710,9 @@ TransportBar::createAccessibilityHandler() {
       *this, juce::AccessibilityRole::group);
 }
 
-TransportBar::~TransportBar() = default;
+TransportBar::~TransportBar() {
+  ZENITH_UNREGISTER_ANIMATION();
+}
 
 
 bool TransportBar::hitTest(int x, int y) {

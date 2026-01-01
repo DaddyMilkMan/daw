@@ -1,358 +1,156 @@
 /**
  * @file SkiaRenderer.cpp
- * @brief Implementation of Skia rendering engine
+ * @brief Hardware-accelerated Skia rendering via EGL/Wayland for Pop!_OS
  */
 
 #include "SkiaRenderer.h"
-
-// Skia headers
-
 #include <core/SkCanvas.h>
 #include <core/SkColorSpace.h>
 #include <core/SkSurface.h>
-#include <gpu/GpuTypes.h>
-// #include <gpu/ganesh/GrBackendSurface.h> // Triggers D3D headers on some
-// configs
 #include <gpu/ganesh/GrDirectContext.h>
 #include <gpu/ganesh/SkSurfaceGanesh.h>
-
-// Platform-specific headers
-#if JUCE_MAC
-#define SK_METAL 1
-#include <dlfcn.h>
-#include <gpu/ganesh/mtl/GrMtlBackendContext.h>
-#include <gpu/ganesh/mtl/GrMtlTypes.h>
-#include <objc/message.h>
-#include <objc/runtime.h>
-#elif 0 // JUCE_LINUX
-// #define SK_VULKAN 1
-#include <gpu/ganesh/vk/GrVkBackendContext.h>
-#include <gpu/ganesh/vk/GrVkTypes.h>
-#include <vulkan/vulkan.h>
-#elif JUCE_WINDOWS
-#include <d3d12.h>
-#include <dxgi1_4.h>
-#include <gpu/ganesh/d3d/GrD3DBackendContext.h>
-#include <wrl/client.h>
-
-using Microsoft::WRL::ComPtr;
-#endif
-
-// OpenGL backend (always available as fallback)
 #include <gpu/ganesh/gl/GrGLDirectContext.h>
 #include <gpu/ganesh/gl/GrGLInterface.h>
+#include <gpu/ganesh/gl/GrGLAssembleInterface.h>
+
+#if JUCE_LINUX
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#endif
 
 namespace zenith {
 
 //==============================================================================
-// Constructor / Destructor
-//==============================================================================
-
-SkiaRenderer::SkiaRenderer(juce::Component &component, Backend backend,
-                           bool enableVSync)
+SkiaRenderer::SkiaRenderer(juce::Component &component, Backend backend, bool enableVSync)
     : component_(component), backend_(backend), vsyncEnabled_(enableVSync) {
-  if (backend_ == Backend::Auto) {
-    backend_ = detectBestBackend();
-  }
-  DBG("SkiaRenderer created with backend: " << getBackendName(backend_));
+    if (backend_ == Backend::Auto) {
+        backend_ = detectBestBackend();
+    }
 }
 
-SkiaRenderer::~SkiaRenderer() { shutdown(); }
-
-//==============================================================================
-// Initialization
-//==============================================================================
+SkiaRenderer::~SkiaRenderer() {
+    shutdown();
+}
 
 bool SkiaRenderer::initialize() {
-  if (initialized_)
+    if (initialized_) return true;
+
+    // 1. Create GPU Context
+    if (!createGpuContext()) {
+        // Fallback to software if GPU fails
+        backend_ = Backend::Software;
+    }
+
+    // 2. Create Initial Surface
+    int w = component_.getWidth();
+    int h = component_.getHeight();
+    if (w > 0 && h > 0) {
+        if (!createSurface(w, h)) {
+            return false;
+        }
+    }
+
+    initialized_ = true;
     return true;
-
-  DBG("Initializing SkiaRenderer...");
-
-  bool contextCreated = createGpuContext();
-
-  // Fallback chain if primary backend fails
-  if (!contextCreated) {
-    DBG("ERROR: Failed to create GPU context, trying fallback...");
-
-    if (backend_ != Backend::OpenGL) {
-      backend_ = Backend::OpenGL;
-      contextCreated = createGpuContext();
-    }
-
-    if (!contextCreated) {
-      backend_ = Backend::Software;
-      // Software doesn't need GPU context
-    }
-  }
-
-  auto bounds = component_.getLocalBounds();
-  if (!createSurface(bounds.getWidth(), bounds.getHeight())) {
-    DBG("ERROR: Failed to create surface");
-    shutdown();
-    return false;
-  }
-
-  initialized_ = true;
-  lastFrameTime_ = juce::Time::getCurrentTime();
-  return true;
 }
 
 void SkiaRenderer::shutdown() {
-  if (!initialized_)
-    return;
-
-  surface_.reset();
-  grContext_.reset();
-
-  initialized_ = false;
-}
-
-//==============================================================================
-// Rendering
-//==============================================================================
-
-void SkiaRenderer::render(std::function<void(SkCanvas *)> drawCallback) {
-  if (!initialized_ || !surface_)
-    return;
-
-  auto startTime = juce::Time::getCurrentTime();
-  SkCanvas *canvas = surface_->getCanvas();
-  canvas->clear(SK_ColorBLACK);
-
-  if (drawCallback)
-    drawCallback(canvas);
-
-  if (grContext_)
-    grContext_->flushAndSubmit();
-
-#if JUCE_MAC && defined(SK_METAL)
-  // Metal present handled by layer automatically (usually)
-#endif
-
-  updateStats();
-
-  if (vsyncEnabled_) {
-    // VSync should be handled by the backend (swap buffers), not by sleeping on the message thread.
-    // Sleeping here causes UI freezes.
-    // auto frameTime = juce::Time::getCurrentTime() - startTime;
-    // auto targetFrameTime =
-    //    juce::RelativeTime::milliseconds((juce::int64)(1000.0 / targetFPS_));
-    // if (frameTime < targetFrameTime)
-    //   juce::Thread::sleep((int)(targetFrameTime - frameTime).inMilliseconds());
-  }
+    surface_.reset();
+    grContext_.reset();
+    initialized_ = false;
 }
 
 void SkiaRenderer::resize(int width, int height) {
-  if (initialized_)
+    if (!initialized_) return;
     createSurface(width, height);
 }
 
-//==============================================================================
-// Backend Selection
-//==============================================================================
-
 SkiaRenderer::Backend SkiaRenderer::detectBestBackend() const {
-#if JUCE_WINDOWS
-  // Default to OpenGL for maximum compatibility on Windows
-  return Backend::OpenGL; 
+#if JUCE_LINUX
+    return Backend::OpenGL; // EGL/OpenGL is standard for Linux currently
 #elif JUCE_MAC
-  return Backend::OpenGL;
-#elif JUCE_LINUX
-  return Backend::OpenGL;
+    return Backend::Metal;
+#elif JUCE_WINDOWS
+    return Backend::Direct3D;
 #else
-  return Backend::OpenGL;
+    return Backend::Software;
 #endif
 }
 
-const char *SkiaRenderer::getBackendName(Backend backend) {
-  switch (backend) {
-  case Backend::Direct3D:
-    return "Direct3D 12";
-  case Backend::Metal:
-    return "Metal";
-  case Backend::Vulkan:
-    return "Vulkan";
-  case Backend::OpenGL:
-    return "OpenGL";
-  case Backend::Software:
-    return "Software";
-  default:
-    return "Unknown";
-  }
-}
-
-void SkiaRenderer::setTargetFPS(int fps) {
-  targetFPS_ = juce::jlimit(1, 300, fps);
-}
-void SkiaRenderer::setVSyncEnabled(bool enable) { vsyncEnabled_ = enable; }
-
 //==============================================================================
-// GPU Context Creation
-//==============================================================================
-
 bool SkiaRenderer::createGpuContext() {
-  switch (backend_) {
-#if JUCE_MAC
-  case Backend::Metal:
-    return createMetalContext();
-#endif
-#if 0 // JUCE_LINUX
-  case Backend::Vulkan:
-    return createVulkanContext();
-#endif
-  case Backend::Direct3D:
-#if JUCE_WINDOWS
-    return createD3DContext();
-#else
-    return false;
-#endif
-  case Backend::OpenGL: {
-    auto glInterface = GrGLMakeNativeInterface();
-    if (!glInterface)
-      return false;
-    grContext_ = GrDirectContexts::MakeGL(glInterface);
-    return grContext_ != nullptr;
-  }
-  case Backend::Software:
-    return true;
-  default:
-    return false;
-  }
+    if (backend_ == Backend::OpenGL) {
+        // Wayland/Pop!_OS specific EGL Bootstrapping
+        auto interface = GrGLMakeAssembledInterface(nullptr, [](void* ctx, const char* name) -> GrGLFuncPtr {
+            return (GrGLFuncPtr)eglGetProcAddress(name);
+        });
+
+        if (!interface) {
+            // Fallback to native
+            interface = GrGLMakeNativeInterface();
+        }
+
+        if (interface) {
+            grContext_ = GrDirectContexts::MakeGL(interface);
+            return grContext_ != nullptr;
+        }
+    }
+    
+    // Fallback to Software if GPU fails, or if Software requested
+    return backend_ == Backend::Software;
 }
 
 bool SkiaRenderer::createSurface(int width, int height) {
-  if (width <= 0 || height <= 0)
-    return false;
-  surface_.reset();
+    if (width <= 0 || height <= 0) return false;
+    surface_.reset();
 
-  if (backend_ == Backend::Software) {
-    SkImageInfo info = SkImageInfo::MakeN32Premul(width, height);
-    surface_ = SkSurfaces::Raster(info);
-  } else {
-    if (!grContext_)
-      return false;
-
-    SkImageInfo info =
-        SkImageInfo::MakeN32Premul(width, height, SkColorSpace::MakeSRGB());
-
-    // Generic GPU surface (offscreen)
-    surface_ =
-        SkSurfaces::RenderTarget(grContext_.get(), skgpu::Budgeted::kNo, info);
-  }
-  return surface_ != nullptr;
+    if (backend_ == Backend::Software || !grContext_) {
+        SkImageInfo info = SkImageInfo::MakeN32Premul(width, height);
+        surface_ = SkSurfaces::Raster(info);
+    } else {
+        SkImageInfo info = SkImageInfo::MakeN32Premul(width, height, SkColorSpace::MakeSRGB());
+        
+        // This creates a GPU-backed surface. 
+        // In Jan Week 1, we map this to the JUCE OpenGL Framebuffer.
+        surface_ = SkSurfaces::RenderTarget(grContext_.get(), skgpu::Budgeted::kNo, info);
+    }
+    return surface_ != nullptr;
 }
 
-void SkiaRenderer::updateStats() {
-  // Simple stats update
-  stats_.frameTime =
-      (juce::Time::getCurrentTime() - lastFrameTime_).inMilliseconds();
-  lastFrameTime_ = juce::Time::getCurrentTime();
+void SkiaRenderer::render(std::function<void(SkCanvas*)> drawCallback) {
+    if (!initialized_ || !surface_) return;
+
+    SkCanvas* canvas = surface_->getCanvas();
+    if (canvas) {
+        // We don't clear to BLACK here because Zenith uses AuroraBackground
+        // canvas->clear(SK_ColorBLACK); 
+        
+        if (drawCallback) drawCallback(canvas);
+        
+        if (grContext_) {
+            grContext_->flush();
+        }
+    }
 }
 
-//==============================================================================
-// Platform Implementations
-//==============================================================================
-
-#if JUCE_MAC && defined(SK_METAL)
-bool SkiaRenderer::createMetalContext() {
-  // Pure C++ Metal Initialization via Obj-C Runtime
-  // Avoids needing .mm files
-
-  // id<MTLDevice> device = MTLCreateSystemDefaultDevice();
-  void *device =
-      ((void *(*)())dlsym(RTLD_DEFAULT, "MTLCreateSystemDefaultDevice"))();
-  if (!device)
-    return false;
-
-  // id<MTLCommandQueue> queue = [device newCommandQueue];
-  void *queue = nullptr;
-
-  // objc_msgSend(device, @selector(newCommandQueue))
-  typedef void *(*SendMsgFn)(void *, void *);
-  SendMsgFn sendMsg = (SendMsgFn)objc_msgSend;
-  SEL newCommandQueueSel = sel_registerName("newCommandQueue");
-  queue = sendMsg(device, newCommandQueueSel);
-
-  if (!queue)
-    return false;
-
-  GrMtlBackendContext backendContext;
-  backendContext.fDevice.retain(device);
-  backendContext.fQueue.retain(queue);
-
-  grContext_ = GrDirectContext::MakeMetal(backendContext);
-  return grContext_ != nullptr;
+void SkiaRenderer::setTargetFPS(int fps) {
+    targetFPS_ = fps;
 }
-#endif
 
-#if JUCE_LINUX && defined(SK_VULKAN)
-bool SkiaRenderer::createVulkanContext() {
-  // Minimal Vulkan Instance
-  VkApplicationInfo appInfo = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
-  appInfo.pApplicationName = "ZenithDAW";
-  appInfo.apiVersion = VK_API_VERSION_1_0;
-
-  VkInstanceCreateInfo createInfo = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
-  createInfo.pApplicationInfo = &appInfo;
-
-  VkInstance instance;
-  if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS)
-    return false;
-
-  // Pick physical device (first one)
-  uint32_t deviceCount = 0;
-  vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
-  if (deviceCount == 0)
-    return false;
-
-  VkPhysicalDevice physicalDevice;
-  vkEnumeratePhysicalDevices(instance, &deviceCount, &physicalDevice);
-
-  // Create logical device
-  float queuePriority = 1.0f;
-  VkDeviceQueueCreateInfo queueCreateInfo = {
-      VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO};
-  queueCreateInfo.queueFamilyIndex =
-      0; // Assuming graphics queue at 0 for simplicity
-  queueCreateInfo.queueCount = 1;
-  queueCreateInfo.pQueuePriorities = &queuePriority;
-
-  VkDeviceCreateInfo deviceInfo = {VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
-  deviceInfo.queueCreateInfoCount = 1;
-  deviceInfo.pQueueCreateInfos = &queueCreateInfo;
-
-  VkDevice device;
-  if (vkCreateDevice(physicalDevice, &deviceInfo, nullptr, &device) !=
-      VK_SUCCESS)
-    return false;
-
-  VkQueue queue;
-  vkGetDeviceQueue(device, 0, 0, &queue);
-
-  skgpu::VulkanBackendContext backendContext;
-  backendContext.fInstance = instance;
-  backendContext.fPhysicalDevice = physicalDevice;
-  backendContext.fDevice = device;
-  backendContext.fQueue = queue;
-  backendContext.fGraphicsQueueIndex = 0;
-  backendContext.fGetProc = [](const char *name, VkInstance i, VkDevice d) {
-    if (d)
-      return vkGetDeviceProcAddr(d, name);
-    return vkGetInstanceProcAddr(i, name);
-  };
-
-  grContext_ = GrDirectContext::MakeVulkan(backendContext);
-  return grContext_ != nullptr;
+void SkiaRenderer::setVSyncEnabled(bool enable) {
+    vsyncEnabled_ = enable;
 }
-#endif
 
-#if JUCE_WINDOWS
-bool SkiaRenderer::createD3DContext() {
-  // D3D12 backend requires valid headers and linkage.
-  // Returning false triggers automatic fallback to OpenGL/Software.
-  return false;
+const char* SkiaRenderer::getBackendName(Backend backend) {
+    switch (backend) {
+        case Backend::Auto: return "Auto";
+        case Backend::Direct3D: return "Direct3D";
+        case Backend::Metal: return "Metal";
+        case Backend::Vulkan: return "Vulkan";
+        case Backend::OpenGL: return "OpenGL";
+        case Backend::Software: return "Software";
+        default: return "Unknown";
+    }
 }
-#endif
 
 } // namespace zenith

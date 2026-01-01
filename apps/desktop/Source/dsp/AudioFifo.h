@@ -37,8 +37,17 @@ public:
         // This ensures that only one producer writes to the FIFO at a time,
         // maintaining the integrity of the write index and buffer contents.
         while (writeLock_.test_and_set(std::memory_order_acquire)) {
-            // Busy wait - acceptable for short critical sections in audio
-             juce::Thread::yield(); 
+            // RT-SAFE busy wait with CPU pause hint for hyper-threading efficiency
+            // NOTE: juce::Thread::yield() was removed - it's a syscall that breaks RT safety
+            #if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
+                #ifdef _MSC_VER
+                    _mm_pause();  // MSVC intrinsic
+                #else
+                    __builtin_ia32_pause();  // GCC/Clang intrinsic
+                #endif
+            #elif defined(__arm__) || defined(__aarch64__)
+                __asm__ __volatile__("yield" ::: "memory");  // ARM yield instruction
+            #endif
         }
         
         // Critical Section

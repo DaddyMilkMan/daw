@@ -115,14 +115,13 @@ private:
     std::vector<std::unique_ptr<std::atomic<float>>> channelLevels;
     std::vector<std::unique_ptr<std::atomic<bool>>> channelClipping;
     
-    // Latency tracking
+    // RT-SAFE Latency estimation (calculated from buffer fill level, not timing)
+    // NOTE: Removed std::mutex timingMutex and std::queue writeTimes/readTimes
+    // because they were RT-unsafe (mutex locks in writeAudio/readAudio)
     std::atomic<float> averageLatency{0.0f};
-    std::queue<juce::Time> writeTimes;
-    std::queue<juce::Time> readTimes;
-    mutable std::mutex timingMutex;
     
     void updateLevels(const juce::AudioBuffer<float>& buffer);
-    void updateLatency();
+    void estimateLatencyFromBufferLevel();
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RealTimeAudioBuffer)
 };

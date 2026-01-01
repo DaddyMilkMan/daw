@@ -14,6 +14,8 @@
 
 #include "RoutingGraph.h"
 #include "RealTimeGarbageCollector.h"
+#include "Track.h"
+#include "AuxBus.h"
 
 namespace zenith {
 
@@ -101,6 +103,10 @@ void RoutingGraph::updateSnapshot() {
   // Create new snapshot
   auto newSnapshot = std::make_shared<Snapshot>(nodes_, currentTopology_);
 
+  // Note: renderList will be empty here until updateSnapshotWithPointers is called
+  // because we don't have the Track/AuxBus pointers yet.
+  // Actually, we should probably trigger a pointer update from Engine whenever topology changes.
+
   // Atomic swap
   activeSnapshot_.store(newSnapshot.get(), std::memory_order_release);
   RealTimeGarbageCollector::getInstance().deferDelete(currentSnapshot_);
@@ -118,12 +124,58 @@ void RoutingGraph::updateSnapshotWithPointers(
   auto newSnapshot = std::make_shared<Snapshot>(nodes_, currentTopology_);
   
   // Convert shared_ptr to weak_ptr for non-owning references
-  // This prevents potential reference cycles and ensures proper cleanup
   for (const auto& [key, value] : trackMap) {
-    newSnapshot->trackLookup[key] = value;  // Implicit shared_ptr -> weak_ptr
+    newSnapshot->trackLookup[key] = value;
   }
   for (const auto& [key, value] : auxBusMap) {
-    newSnapshot->auxBusLookup[key] = value;  // Implicit shared_ptr -> weak_ptr
+    newSnapshot->auxBusLookup[key] = value;
+  }
+
+  // Precompute render list
+  newSnapshot->renderList.reserve(newSnapshot->topology->processingOrder.size());
+  
+  // Create a fast lookup for aux bus indices
+  std::unordered_map<AuxBus*, int> auxBusIndices;
+  int busIdx = 0;
+  // We need to know the order of aux buses as they appear in the engine's auxBuses_ vector
+  // but we don't have that here. 
+  // WAIT: AudioRenderer receives std::span<AuxBus* const> auxBuses.
+  // The index in that span is what matters.
+  // However, updateSnapshotWithPointers is called with a map.
+  
+  // Let's assume for now that we can determine the index from the track/bus itself if they stored it.
+  // Tracks HAVE trackIndex. AuxBuses DON'T.
+  
+  // Let's refine the plan: the Engine should probably provide the ordered lists.
+  
+  for (const auto& nodeId : newSnapshot->topology->processingOrder) {
+      RenderNode rn;
+      auto trackIt = trackMap.find(nodeId);
+      if (trackIt != trackMap.end()) {
+          rn.type = RenderNode::Type::Track;
+          rn.track = trackIt->second.get();
+          rn.bufferIndex = rn.track->getTrackIndex();
+      } else {
+          auto busIt = auxBusMap.find(nodeId);
+          if (busIt != auxBusMap.end()) {
+              rn.type = RenderNode::Type::Bus;
+              rn.auxBus = busIt->second.get();
+              rn.bufferIndex = rn.auxBus->getBusIndex();
+          } else {
+              continue; // Not a track or bus (could be Master or something else)
+          }
+      }
+      
+      // Precompute master send
+      for (const auto& conn : newSnapshot->topology->connections) {
+          if (conn.sourceId == nodeId && conn.destId == "master") {
+              rn.hasMasterSend = true;
+              rn.masterGain = conn.gain;
+              break;
+          }
+      }
+      
+      newSnapshot->renderList.push_back(rn);
   }
 
   // Atomic swap

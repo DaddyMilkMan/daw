@@ -21,12 +21,12 @@ PluginHost::PluginHost() {
 
   // Add VST3 format
 #if JUCE_PLUGINHOST_VST3
-  formatManager.addFormat(new juce::VST3PluginFormat());
+  formatManager.addFormat(std::make_unique<juce::VST3PluginFormat>());
 #endif
 #if JUCE_MAC && JUCE_PLUGINHOST_AU
-  formatManager.addFormat(new juce::AudioUnitPluginFormat());
+  formatManager.addFormat(std::make_unique<juce::AudioUnitPluginFormat>());
 #endif
-  formatManager.addFormat(new InternalPluginFormat());
+  formatManager.addFormat(std::make_unique<InternalPluginFormat>());
 
   // Get VST3 format pointer for later use
   for (int i = 0; i < formatManager.getNumFormats(); ++i) {

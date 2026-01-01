@@ -90,13 +90,15 @@ void ZenithDropdown::mouseDown(const juce::MouseEvent &e) {
 void ZenithDropdown::mouseEnter(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
   hovered_ = true;
-  repaint();
+  int duration = design::Settings::isReducedMotionEnabled() ? 0 : design::animation::DURATION_FAST;
+  animateTo("hover", 1.0f, duration);
 }
 
 void ZenithDropdown::mouseExit(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
   hovered_ = false;
-  repaint();
+  int duration = design::Settings::isReducedMotionEnabled() ? 0 : design::animation::DURATION_FAST;
+  animateTo("hover", 0.0f, duration);
 }
 
 void ZenithDropdown::showPopupMenu() {
@@ -152,9 +154,10 @@ void ZenithDropdown::drawBackground(SkCanvas *canvas) {
   paint.setAntiAlias(true);
 
   // Background gradient (glass effect)
+  float hoverAnim = getAnimatedValue("hover");
   SkPoint pts[2] = {{0, 0}, {0, bounds.getHeight()}};
-  SkColor colors[2] = {SkColorSetARGB(hovered_ ? 160 : 140, 40, 40, 50),
-                       SkColorSetARGB(hovered_ ? 120 : 100, 30, 30, 40)};
+  SkColor colors[2] = {SkColorSetARGB((uint8_t)(140 + 20 * hoverAnim), 40, 40, 50),
+                       SkColorSetARGB((uint8_t)(100 + 20 * hoverAnim), 30, 30, 40)};
 
   paint.setStyle(SkPaint::kFill_Style);
   paint.setShader(SkGradientShader::MakeLinear(pts, colors, nullptr, 2,
@@ -162,11 +165,12 @@ void ZenithDropdown::drawBackground(SkCanvas *canvas) {
   canvas->drawRRect(rrect, paint);
   paint.setShader(nullptr);
 
-  // Hover/open glow
-  if (hovered_ || isOpen_) {
+  // Hover/open glow - use animated value
+  float glowOpacity = std::max(hoverAnim, isOpen_ ? 1.0f : 0.0f);
+  if (glowOpacity > 0.01f) {
     paint.setStyle(SkPaint::kStroke_Style);
     paint.setStrokeWidth(1.0f);
-    paint.setColor(SkColorSetA(accentColor_, 150));
+    paint.setColor(SkColorSetA(accentColor_, (uint8_t)(150 * glowOpacity)));
     paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
     canvas->drawRRect(rrect, paint);
     paint.setMaskFilter(nullptr);

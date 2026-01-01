@@ -130,6 +130,18 @@ void ZenithSlider::mouseDrag(const juce::MouseEvent &e) {
   }
 }
 
+void ZenithSlider::mouseEnter(const juce::MouseEvent &e) {
+  ZenithControl::mouseEnter(e);
+  int duration = design::Settings::isReducedMotionEnabled() ? 0 : design::animation::DURATION_FAST;
+  animateTo("hover", 1.0f, duration);
+}
+
+void ZenithSlider::mouseExit(const juce::MouseEvent &e) {
+  ZenithControl::mouseExit(e);
+  int duration = design::Settings::isReducedMotionEnabled() ? 0 : design::animation::DURATION_FAST;
+  animateTo("hover", 0.0f, duration);
+}
+
 void ZenithSlider::drawFillBar(SkCanvas *canvas, float handlePos) {
   auto bounds = getLocalBounds().toFloat();
   SkPaint paint;
@@ -171,6 +183,16 @@ void ZenithSlider::drawHandle(SkCanvas *canvas, float handlePos) {
     cx =
         w * marginStart_ + (w * (1.0f - marginStart_ - marginEnd_) * handlePos);
     cy = bounds.getCentreY();
+  }
+
+  // Handle glow on hover
+  float hoverAnim = getAnimatedValue("hover");
+  if (hoverAnim > 0.01f) {
+    SkPaint glowPaint;
+    glowPaint.setAntiAlias(true);
+    glowPaint.setColor(SkColorSetA(accentColor_, (uint8_t)(100 * hoverAnim)));
+    glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f * hoverAnim));
+    canvas->drawCircle(cx, cy, 6.0f, glowPaint);
   }
 
   canvas->drawCircle(cx, cy, 6.0f, paint);

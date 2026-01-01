@@ -16,13 +16,20 @@ set(ONNX_RUNTIME_LIB ${CMAKE_SOURCE_DIR}/../build/build-ort-linux/MinSizeRel/lib
 set(LIBNYQUIST_BUILD_EXAMPLE OFF CACHE BOOL "Disable libnyquist example")
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../vendor/libnyquist ${CMAKE_CURRENT_BINARY_DIR}/libnyquist_build)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../vendor/onnxruntime/include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../onnx-models/model)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../vendor/eigen)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../vendor/libnyquist/include)
+file(GLOB SOURCES 
+    "${CMAKE_CURRENT_SOURCE_DIR}/../src/*.cpp" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/../src_cli/*.cpp" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/../onnx-models/model/*.ort.c"
+)
 
-file(GLOB SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/../src/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/../src_cli/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/../onnx-models/model/*.ort.c")
 add_executable(demucs ${SOURCES})
 
-target_link_libraries(demucs ${ONNX_RUNTIME_LIB} libnyquist)
+target_include_directories(demucs PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/onnxruntime/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../onnx-models/model
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/eigen
+    ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/libnyquist/include
+)
+
+target_link_libraries(demucs PRIVATE ${ONNX_RUNTIME_LIB} libnyquist)

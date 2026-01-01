@@ -3,6 +3,7 @@
 #include "Clip.h"
 #include "TakeFolder.h"
 #include "Track.h"
+#include <algorithm>
 
 namespace zenith {
 
@@ -151,6 +152,13 @@ protected:
       clips.reserve(ownedClips.size());
       for (const auto &clip : ownedClips)
         clips.push_back(clip.get());
+      
+      // Sort clips by start position for optimized audio thread lookup
+      std::sort(clips.begin(), clips.end(), [](Clip* a, Clip* b) {
+          if (!a || !b) return a < b;
+          return a->getStartPosition() < b->getStartPosition();
+      });
+
       takeFolders.reserve(ownedFolders.size());
       for (const auto &folder : ownedFolders)
         takeFolders.push_back(folder.get());

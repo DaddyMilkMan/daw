@@ -56,16 +56,8 @@ bool RealTimeAudioBuffer::writeAudio(const juce::AudioBuffer<float>& source) {
     // Update levels
     updateLevels(source);
     
-    // Update latency tracking
-    {
-        std::lock_guard<std::mutex> lock(timingMutex);
-        writeTimes.push(juce::Time::getCurrentTime());
-        if (writeTimes.size() > 100) {
-            writeTimes.pop();
-        }
-    }
-    
-    updateLatency();
+    // RT-SAFE: Estimate latency from buffer fill level instead of timing
+    estimateLatencyFromBufferLevel();
     
     return success;
 }
@@ -89,16 +81,7 @@ bool RealTimeAudioBuffer::readAudio(juce::AudioBuffer<float>& destination) {
         }
     }
     
-    // Update latency tracking
-    {
-        std::lock_guard<std::mutex> lock(timingMutex);
-        readTimes.push(juce::Time::getCurrentTime());
-        if (readTimes.size() > 100) {
-            readTimes.pop();
-        }
-    }
-    
-    updateLatency();
+    // RT-SAFE: No latency tracking here (removed mutex)
     
     return success;
 }
@@ -191,17 +174,15 @@ void RealTimeAudioBuffer::updateLevels(const juce::AudioBuffer<float>& buffer) {
     }
 }
 
-void RealTimeAudioBuffer::updateLatency() {
-    std::lock_guard<std::mutex> lock(timingMutex);
-    
-    if (!writeTimes.empty() && !readTimes.empty()) {
-        auto writeTime = writeTimes.front();
-        auto readTime = readTimes.back();
-        
-        if (readTime > writeTime) {
-            auto latency = readTime - writeTime;
-            averageLatency.store(static_cast<float>(latency.inMilliseconds()));
-        }
+void RealTimeAudioBuffer::estimateLatencyFromBufferLevel() {
+    // RT-SAFE: Calculate latency from ring buffer fill level
+    // This is an approximation but doesn't require mutex or syscalls
+    if (numChannels > 0 && channelBuffers[0]) {
+        size_t fillLevel = channelBuffers[0]->size();
+        // Estimate latency in ms based on buffer fill level
+        // Assuming ~44.1kHz sample rate, each sample = ~0.0227ms
+        float estimatedLatencyMs = static_cast<float>(fillLevel) * 0.0227f;
+        averageLatency.store(estimatedLatencyMs);
     }
 }
 

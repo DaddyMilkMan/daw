@@ -104,12 +104,22 @@ public:
 
   void mouseDown(const juce::MouseEvent &e) override;
 
+  //==========================================================================
+  // Focus & Accessibility (WCAG 2.1)
+  //==========================================================================
+
+  void focusGained(juce::Component::FocusChangeType cause) override;
+  void focusLost(juce::Component::FocusChangeType cause) override;
+  bool keyPressed(const juce::KeyPress& key, juce::Component* origin) override;
+  
+  std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
+
 private:
   //==========================================================================
   // Timer callback for meter updates
   //==========================================================================
 
-  void timerCallback() override;
+  void onAnimationTick(float deltaMs) override;
 
   //==========================================================================
   // Control callbacks
@@ -132,8 +142,8 @@ private:
     void drawSkia(SkCanvas *canvas) override;
     void mouseDown(const juce::MouseEvent& e) override;
     void setLevel(float level);
-    void timerCallback() override;
-
+    void onAnimationTick(float deltaMs) override;
+    
     /** Set stereo mode for dual meters */
     void setStereo(bool stereo) { stereo_ = stereo; }
     void setLeftLevel(float level) {
@@ -142,11 +152,11 @@ private:
     void setRightLevel(float level) {
       targetLevelR_.store(juce::jlimit(0.0f, 1.0f, level));
     }
-
+    
   private:
     void drawMeterBar(SkCanvas *canvas, const SkRect &bounds, float level,
                       float peak);
-
+                      
     std::atomic<float> targetLevel_{0.0f};
     std::atomic<float> targetLevelL_{0.0f};
     std::atomic<float> targetLevelR_{0.0f};
@@ -156,9 +166,9 @@ private:
     float peakLevel_{0.0f};
     float peakLevelL_{0.0f};
     float peakLevelR_{0.0f};
-    int peakHoldCounter_{0};
-    int peakHoldCounterL_{0};
-    int peakHoldCounterR_{0};
+    float peakHoldMs_{0.0f};
+    float peakHoldMsL_{0.0f};
+    float peakHoldMsR_{0.0f};
 
     float velocity_{0.0f};
     float velocityL_{0.0f};
@@ -244,6 +254,7 @@ private:
 
   // State
   bool updatingControls_{false};
+  bool hasFocus_{false};
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerChannelComponent)
 };

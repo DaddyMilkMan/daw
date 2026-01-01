@@ -320,6 +320,7 @@ void ArrangerComponent::updatePlayheadFromEngine() {
 
     // Check if playhead moved significantly
     if (std::abs(newPlayheadBeats - playheadBeats_) > 0.01 || wasPlaying != isPlaying_) {
+        double oldPlayheadBeats = playheadBeats_;
         playheadBeats_ = newPlayheadBeats;
 
         // Auto-scroll if following and playing
@@ -332,12 +333,36 @@ void ArrangerComponent::updatePlayheadFromEngine() {
                 viewStartBeats = playheadBeats_ - (visibleWidth * 0.15f / pixelsPerBeat);
                 viewStartBeats = juce::jmax(0.0, viewStartBeats);
                 clipManager_->recomputeClipBounds();
+                repaint(); // Full repaint needed when scrolling
+            } else {
+                 // Optimization: localized repaint
+                 float oldX = gridUtils_->beatsToX(oldPlayheadBeats);
+                 float newX = gridUtils_->beatsToX(playheadBeats_);
+                 
+                 // Playhead is ~16px wide (triangle cap is +/- 6px, glow is +/- 6px)
+                 // Let's dirty a 24px wide strip around both old and new positions
+                 int dirtyW = 24;
+                 
+                 juce::Rectangle<int> oldR(static_cast<int>(oldX) - dirtyW/2, 0, dirtyW, getHeight());
+                 juce::Rectangle<int> newR(static_cast<int>(newX) - dirtyW/2, 0, dirtyW, getHeight());
+                 
+                 repaint(oldR);
+                 repaint(newR);
+                 
+                 // Also repaint ruler area specifically if needed, but it's included in getHeight()
             }
+        } else {
+             // Not scrolling, just moving
+             float oldX = gridUtils_->beatsToX(oldPlayheadBeats);
+             float newX = gridUtils_->beatsToX(playheadBeats_);
+             
+             int dirtyW = 24;
+             juce::Rectangle<int> oldR(static_cast<int>(oldX) - dirtyW/2, 0, dirtyW, getHeight());
+             juce::Rectangle<int> newR(static_cast<int>(newX) - dirtyW/2, 0, dirtyW, getHeight());
+             
+             repaint(oldR);
+             repaint(newR);
         }
-        
-        timelineRuler.setVisibleRange(viewStartBeats, (getWidth() - HEADER_WIDTH) / pixelsPerBeat);
-
-        repaint();
     }
 
     if (wasLoopEnabled != loopEnabled_) {

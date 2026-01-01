@@ -111,6 +111,9 @@ MixerComponent::MixerComponent(Engine &engine, ProjectState &state)
 
   // Build initial track strips
   rebuildChannels();
+  
+  // Accessibility: Allow keyboard focus for navigation
+  setWantsKeyboardFocus(true);
 }
 
 void MixerComponent::rebuildChannels() {
@@ -289,6 +292,164 @@ Track *MixerComponent::findTrackById(const juce::String &trackId) {
     }
   }
   return nullptr;
+}
+
+//==============================================================================
+// Keyboard Navigation
+//==============================================================================
+
+bool MixerComponent::keyPressed(const juce::KeyPress& key, juce::Component* origin) {
+  juce::ignoreUnused(origin);
+
+  if (key == juce::KeyPress::leftKey || key == juce::KeyPress::upKey) {
+    selectPreviousChannel();
+    return true;
+  }
+  
+  if (key == juce::KeyPress::rightKey || key == juce::KeyPress::downKey) {
+    selectNextChannel();
+    return true;
+  }
+  
+  if (key == juce::KeyPress::homeKey) {
+    if (trackContainer_->getChannelCount() > 0) {
+      if (auto* first = trackContainer_->getChannel(0)) {
+        if (auto* t = first->getTrack()) {
+          selectChannel(t->getTrackId());
+          trackViewport_.setViewPosition(0, 0);
+        }
+      }
+    }
+    return true;
+  }
+  
+  if (key == juce::KeyPress::endKey) {
+    if (masterChannel_) {
+      if (auto* t = masterChannel_->getTrack()) {
+        selectChannel(t->getTrackId());
+      }
+    }
+    return true;
+  }
+  
+  return false;
+}
+
+int MixerComponent::getSelectedChannelIndex() const {
+  if (masterChannel_ && masterChannel_->isSelected()) {
+    return trackContainer_->getChannelCount(); // Index = N means master
+  }
+  
+  for (int i = 0; i < trackContainer_->getChannelCount(); ++i) {
+    auto* ch = trackContainer_->getChannel(i);
+    if (ch && ch->isSelected()) return i;
+  }
+  
+  return -1;
+}
+
+void MixerComponent::selectNextChannel() {
+  int current = getSelectedChannelIndex();
+  int numTracks = trackContainer_->getChannelCount();
+  
+  // If nothing selected, select first
+  if (current == -1) {
+    if (numTracks > 0) {
+      if (auto* ch = trackContainer_->getChannel(0)) {
+        if (auto* t = ch->getTrack()) selectChannel(t->getTrackId());
+      }
+    } else if (masterChannel_) {
+      if (auto* t = masterChannel_->getTrack()) selectChannel(t->getTrackId());
+    }
+    return;
+  }
+  
+  // If master selected, do nothing (it's the end)
+  if (current >= numTracks) return;
+  
+  // If last track selected, go to master
+  if (current == numTracks - 1) {
+    if (masterChannel_) {
+      if (auto* t = masterChannel_->getTrack()) selectChannel(t->getTrackId());
+    }
+    return;
+  }
+  
+  // Otherwise select next track
+  if (current < numTracks - 1) {
+    if (auto* ch = trackContainer_->getChannel(current + 1)) {
+      if (auto* t = ch->getTrack()) {
+        selectChannel(t->getTrackId());
+        
+        // Auto-scroll
+        if (ch) {
+          int x = ch->getX();
+          int w = ch->getWidth();
+          int vx = trackViewport_.getViewPositionX();
+          int vw = trackViewport_.getViewWidth();
+          
+          if (x + w > vx + vw) {
+            trackViewport_.setViewPosition(x + w - vw + sideMargin, 0);
+          } else if (x < vx) {
+            trackViewport_.setViewPosition(x - sideMargin, 0);
+          }
+        }
+      }
+    }
+  }
+}
+
+void MixerComponent::selectPreviousChannel() {
+  int current = getSelectedChannelIndex();
+  int numTracks = trackContainer_->getChannelCount();
+  
+  // If nothing selected, select last (or master)
+  if (current == -1) {
+    if (masterChannel_) {
+      if (auto* t = masterChannel_->getTrack()) selectChannel(t->getTrackId());
+    } else if (numTracks > 0) {
+      if (auto* ch = trackContainer_->getChannel(numTracks - 1)) {
+        if (auto* t = ch->getTrack()) selectChannel(t->getTrackId());
+      }
+    }
+    return;
+  }
+  
+  // If master selected, go to last track
+  if (current >= numTracks) {
+    if (numTracks > 0) {
+      if (auto* ch = trackContainer_->getChannel(numTracks - 1)) {
+        if (auto* t = ch->getTrack()) {
+          selectChannel(t->getTrackId());
+          int targetX = ch->getRight() - trackViewport_.getViewWidth() + sideMargin;
+          trackViewport_.setViewPosition(std::max(0, targetX), 0);
+        }
+      }
+    }
+    return;
+  }
+  
+  // If first track, do nothing
+  if (current <= 0) return;
+  
+  // Select previous track
+  if (auto* ch = trackContainer_->getChannel(current - 1)) {
+    if (auto* t = ch->getTrack()) {
+      selectChannel(t->getTrackId());
+      
+      // Auto-scroll
+      if (ch) {
+        int x = ch->getX();
+        int vx = trackViewport_.getViewPositionX();
+        
+        if (x < vx) {
+            trackViewport_.setViewPosition(x - sideMargin, 0);
+        } else if (x + ch->getWidth() > vx + trackViewport_.getViewWidth()) {
+            trackViewport_.setViewPosition(x + ch->getWidth() - trackViewport_.getViewWidth() + sideMargin, 0);
+        }
+      }
+    }
+  }
 }
 
 //==============================================================================

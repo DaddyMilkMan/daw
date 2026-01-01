@@ -106,6 +106,7 @@ const juce::String PROJECT_DEFAULT_BUFFER_SIZE = "project.defaultBufferSize";
 
 // Collaboration
 const juce::String COLLAB_SALT = "collab.salt";
+const juce::String COLLAB_SERVER_IP = "collab.serverIP";
 } // namespace keys
 
 // ============================================================================

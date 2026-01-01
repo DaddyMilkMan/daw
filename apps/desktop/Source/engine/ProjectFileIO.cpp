@@ -595,12 +595,12 @@ bool ProjectFileIO::readMetadataFromXml(const juce::XmlElement &root,
 }
 
 bool ProjectFileIO::validateXmlStructure(const juce::XmlElement &root) const {
-  if (root.getTagName() != "ZenithProject") {
+  if (root.getTagName() != ProjectState::ID_PROJECT.toString()) {
     return false;
   }
 
   // Must have tracks node
-  if (root.getChildByName("Tracks") == nullptr) {
+  if (root.getChildByName(ProjectState::ID_TRACKS.toString()) == nullptr) {
     return false;
   }
 

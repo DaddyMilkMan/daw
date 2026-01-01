@@ -24,11 +24,11 @@ public:
         g.fillRect(0, 0, getWidth(), 30);
         
         g.setColour(ZenithTheme::Colors::text_primary);
-        g.setFont(juce::Font(16.0f, juce::Font::bold));
+        g.setFont(juce::Font(juce::FontOptions(16.0f, juce::Font::bold)));
         g.drawText("Instruments", 10, 0, getWidth() - 20, 30, juce::Justification::centredLeft, true);
 
         // List
-        g.setFont(juce::Font(14.0f));
+        g.setFont(juce::Font(juce::FontOptions(14.0f)));
         int y = 40;
         
         if (instrumentIds_.isEmpty()) {

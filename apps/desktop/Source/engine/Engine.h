@@ -70,6 +70,7 @@ class AuxBus;
 class InstrumentRegistry;
 class TrackFreezeManager;
 class AudioRenderer;
+class AudioExporter;
 class RecordingManager;
 class TransportController;
 class MeteringSystem;
@@ -286,7 +287,8 @@ public:
   /**
    * @brief Get current playback position in samples (legacy accessor)
    */
-  JUCE_DEPRECATED juce::int64 getPlaybackPosition() const;
+  // [[deprecated("Use getPlayheadSamples() instead")]]
+  juce::int64 getPlaybackPosition() const;
 
   /**
    * @brief Get current playback position in beats
@@ -840,6 +842,13 @@ public:
   bool exportProjectToWav(const juce::File &outputFile, double sampleRate,
                           int bitDepth, double durationInSeconds);
 
+  /**
+   * @brief Synchronous version of WAV export with start time support
+   * @note Thread-safe (can be called from background threads)
+   */
+  bool exportProjectToWavSync(const juce::File &outputFile, double sampleRate,
+                              int bitDepth, double duration, double startTime = 0.0);
+
   enum class ExportFormat { WAV, FLAC, OGG, AIFF };
 
   /// Progress callback type for export operations
@@ -1075,6 +1084,7 @@ private:
   //==========================================================================
 
   std::unique_ptr<AudioRenderer> audioRenderer_;
+  std::unique_ptr<AudioExporter> audioExporter_;
   // Context for live playback
   AudioRenderContext renderContext_;
   std::atomic<bool> isSuspended_{false}; // Suspend flag
@@ -1121,6 +1131,9 @@ private:
 
   // Macro Bank
   MacroBank macroBank_;
+
+  juce::WeakReference<Engine>::Master masterReference;
+  friend class juce::WeakReference<Engine>;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

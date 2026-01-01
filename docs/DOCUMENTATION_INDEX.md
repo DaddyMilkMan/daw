@@ -1,6 +1,6 @@
 # Zenith DAW - Documentation Index
 
-**Last Updated:** 2025-12-11 PST
+**Last Updated:** 2025-12-31 PST
 
 ---
 
@@ -28,8 +28,8 @@
 - [CodeReviewFeedback.md](CodeReviewFeedback.md) - Review results
 
 #### Build & Development
-- [BUILD_WITH_SKIA.bat](BUILD_WITH_SKIA.bat) - Primary build script
-- [REBUILD_WITH_SKIA.bat](REBUILD_WITH_SKIA.bat) - Clean rebuild script
+- [BUILD_WITH_SKIA.bat](BUILD_WITH_SKIA.bat) - Legacy build script
+- [CMakeLists.txt](CMakeLists.txt) - **Primary Build Configuration (CMake)**
 
 ---
 
@@ -86,6 +86,7 @@
 - [planning/roadmaps/](planning/roadmaps/) - Roadmaps
   - MASTER_IMPLEMENTATION_ROADMAP.md
   - ZENITH_UNIFICATION_PLAN.md
+- [planning/WEEK_1_PLAN.md](planning/WEEK_1_PLAN.md) - **Active Week 1 Development Plan**
 
 #### UI/UX Design
 - [planning/ui-ux/PERFECT_DAW_UI_DESIGN.md](planning/ui-ux/PERFECT_DAW_UI_DESIGN.md)
@@ -96,6 +97,13 @@
 - [docs/WINDOWS_AUDIO_APIS_GUIDE.md](docs/WINDOWS_AUDIO_APIS_GUIDE.md) - Windows audio
 - [docs/DEVELOPER_WORKFLOW.md](docs/DEVELOPER_WORKFLOW.md) - Development workflow
 - [docs/INSTALL_WINDOWS.md](docs/INSTALL_WINDOWS.md) - Windows installation
+
+#### Save/Load System ✅ NEW
+- [SAVE_LOAD_IMPLEMENTATION.md](SAVE_LOAD_IMPLEMENTATION.md) - Step-by-step integration guide
+- [SAVE_LOAD_EXAMPLES.cpp](SAVE_LOAD_EXAMPLES.cpp) - Working code examples
+- [../SAVE_LOAD_README.md](../SAVE_LOAD_README.md) - Architecture overview
+- [../SAVE_LOAD_INDEX.md](../SAVE_LOAD_INDEX.md) - Complete documentation index
+- [../SAVE_LOAD_CHECKLIST.md](../SAVE_LOAD_CHECKLIST.md) - Integration checklist
 
 #### Tech Briefs
 - [docs/tech-briefs/01-juce-framework-guide.md](docs/tech-briefs/01-juce-framework-guide.md)
@@ -172,6 +180,9 @@ All documents reviewed by documentation team (Dave, Fred, Sarah) on **2025-11-28
 
 **...install on Windows**
 → Read [docs/INSTALL_WINDOWS.md](docs/INSTALL_WINDOWS.md)
+
+**...implement save/load for projects**
+→ Read [SAVE_LOAD_IMPLEMENTATION.md](SAVE_LOAD_IMPLEMENTATION.md) for step-by-step guide
 
 ---
 

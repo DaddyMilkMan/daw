@@ -79,16 +79,17 @@ BrowserPanel::BrowserPanel(BrowserModel &model) : model_(model) {
     listView_->updateDisplayItems();
   };
 
-  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(30);
+  ZENITH_REGISTER_ANIMATION(zenith::animation::Priority::Medium);
 }
 
 BrowserPanel::~BrowserPanel() {
-  stopTimer();
+  ZENITH_UNREGISTER_ANIMATION();
   scanner_.cancelScan();
   model_.removeChangeListener(this);
 }
 
-void BrowserPanel::timerCallback() {
+void BrowserPanel::onAnimationTick(float deltaMs) {
+  SkiaComponent::updateInternalAnimations(deltaMs);
   if (scanner_.isScanning() || previewEngine_.isPlaying()) {
     repaint();
   }

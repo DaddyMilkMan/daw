@@ -94,35 +94,40 @@ void PluginChain::process(juce::AudioBuffer<float> &buffer,
       
       // If the plugin has more inputs than our main bus, assume the rest are sidechain/aux
       if (sidechain != nullptr && numTotalInputChannels > numMainChannels) {
-        // Ensure proxy buffer is big enough
+        // Ensure proxy buffer is big enough (try to resize without reallocating)
         if (sidechainProxyBuffer_.getNumChannels() < numTotalInputChannels || 
             sidechainProxyBuffer_.getNumSamples() < numSamples) {
             sidechainProxyBuffer_.setSize(numTotalInputChannels, numSamples, false, true, true);
         }
 
-        // Copy main channels
-        for (int i = 0; i < numMainChannels; ++i)
+        // Safety clamp: If resize failed (due to no allocation allowed), we must not write beyond bounds
+        const int validProxyChannels = sidechainProxyBuffer_.getNumChannels();
+
+        // Copy main channels (clamped)
+        const int numMainToCopy = juce::jmin(numMainChannels, validProxyChannels);
+        for (int i = 0; i < numMainToCopy; ++i)
           sidechainProxyBuffer_.copyFrom(i, 0, buffer, i, 0, numSamples);
           
-        // Silence any gaps between main channels and sidechain start if any?
-        // Assuming sidechain inputs start immediately after main inputs.
-        
         // Copy sidechain channels
-        const int numSidechainChansToCopy = juce::jmin(sidechain->getNumChannels(),
-                                                       numTotalInputChannels - numMainChannels);
-        
-        for (int i = 0; i < numSidechainChansToCopy; ++i)
-          sidechainProxyBuffer_.copyFrom(numMainChannels + i, 0, *sidechain, i, 0,
-                                     numSamples);
-                                     
-        // Clear any remaining unconnected channels
-        for (int i = numMainChannels + numSidechainChansToCopy; i < numTotalInputChannels; ++i)
-           sidechainProxyBuffer_.clear(i, 0, numSamples);
+        const int remainingProxyChannels = validProxyChannels - numMainChannels;
+        if (remainingProxyChannels > 0) {
+            const int numSidechainChansToCopy = juce::jmin(sidechain->getNumChannels(),
+                                                           numTotalInputChannels - numMainChannels);
+            const int safeSidechainCopyCount = juce::jmin(numSidechainChansToCopy, remainingProxyChannels);
+            
+            for (int i = 0; i < safeSidechainCopyCount; ++i)
+              sidechainProxyBuffer_.copyFrom(numMainChannels + i, 0, *sidechain, i, 0,
+                                         numSamples);
+                                         
+            // Clear any remaining unconnected channels
+            for (int i = numMainChannels + safeSidechainCopyCount; i < validProxyChannels; ++i)
+               sidechainProxyBuffer_.clear(i, 0, numSamples);
+        }
 
         plugin->processBlock(sidechainProxyBuffer_, midi);
 
         // Copy back main channels
-        for (int i = 0; i < numMainChannels; ++i)
+        for (int i = 0; i < numMainToCopy; ++i)
           buffer.copyFrom(i, 0, sidechainProxyBuffer_, i, 0, numSamples);
       } else {
         plugin->processBlock(buffer, midi);
@@ -148,7 +153,10 @@ void PluginChain::prepareToPlay(double sampleRate, int blockSize) {
       b->prepare(sampleRate);
   }
 
-  sidechainProxyBuffer_.setSize(maxChannels, blockSize, false, true, true);
+  // Pre-allocate to global max channels (32) to prevent allocation in process()
+  int allocationChannels = std::max(32, maxChannels);
+  sidechainProxyBuffer_.setSize(allocationChannels, blockSize);
+  sidechainProxyBuffer_.clear();
 }
 
 void PluginChain::releaseResources() {
