@@ -41,6 +41,7 @@ npm-debug.log
 # 5. Local Env
 .env
 *.local
+.venv/
 
 # 6. Build Logs and Error Files
 build_errors*.txt
@@ -89,3 +90,29 @@ __pycache__/
 /find_brace_level.py
 /launch.sh
 /apps/scanner/
+
+# Build artifacts (added Jan 1, 2026)
+build/
+*.txt
+!CMakeLists.txt
+!*/CMakeLists.txt
+compile_commands.json
+Testing/
+*.log
+daw_gui_log*.txt
+
+# IDE files
+.vscode/settings.json
+.idea/
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*~
+
+# Node modules
+node_modules/

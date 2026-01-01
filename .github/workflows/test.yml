@@ -56,7 +56,7 @@ jobs:
     - name: Run Tests
       run: |
         cd build
-        ./ZenithDAWTests
+        ./ZenithDAWTests_artefacts/Release/ZenithDAWTests
 
     - name: Upload test results
       if: failure()
