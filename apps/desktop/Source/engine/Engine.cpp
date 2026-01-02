@@ -644,12 +644,14 @@ void Engine::applyEvent(const zenith::EngineEvent &e,
         if (plugin) {
           auto params = plugin->getParameters();
           if (e.paramIndex >= 0 && e.paramIndex < (int)params.size()) {
-            params[e.paramIndex]->setValueNotifyingHost(e.value);
-          }
-        }
-      }
-    }
-  } else if (e.type == zenith::EngineEvent::Type::SetTrackVolume) {
+             // RT-SAFE FIX: Use setValueWithoutNotification to avoid triggering plugin
+             // UI updates/notifications from audio thread. setValueNotifyingHost can
+             // cause locks, allocations, and blocking operations.
+              params[e.paramIndex]->setValueWithoutNotification(e.value);
+           }
+       }
+     }
+   } else if (e.type == zenith::EngineEvent::Type::SetTrackVolume) {
     if (snapshot && e.trackIndex >= 0 &&
         e.trackIndex < (int)snapshot->tracks.size()) {
       if (auto *track = snapshot->tracks[e.trackIndex]) {
