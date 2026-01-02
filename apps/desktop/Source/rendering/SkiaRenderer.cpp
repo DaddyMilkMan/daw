@@ -1,156 +1,346 @@
 /**
  * @file SkiaRenderer.cpp
- * @brief Hardware-accelerated Skia rendering via EGL/Wayland for Pop!_OS
+ * @brief Implementation of SkiaRenderer
  */
 
-#include "SkiaRenderer.h"
+#include "rendering/SkiaRenderer.h"
+#include <juce_opengl/juce_opengl.h> // For GL types and constants
+
+// Check if Skia is enabled
+#ifdef ZENITH_USE_SKIA
+
+// Skia Headers
 #include <core/SkCanvas.h>
 #include <core/SkColorSpace.h>
 #include <core/SkSurface.h>
-#include <gpu/ganesh/GrDirectContext.h>
-#include <gpu/ganesh/SkSurfaceGanesh.h>
-#include <gpu/ganesh/gl/GrGLDirectContext.h>
-#include <gpu/ganesh/gl/GrGLInterface.h>
-#include <gpu/ganesh/gl/GrGLAssembleInterface.h>
+#include <include/gpu/ganesh/GrBackendSurface.h> // Defines GrBackendRenderTarget
+#include <include/gpu/ganesh/GrDirectContext.h>
+#include <include/gpu/ganesh/gl/GrGLDirectContext.h> // For GrDirectContexts::MakeGL
+#include <include/gpu/ganesh/gl/GrGLBackendSurface.h> // For GrBackendRenderTargets::MakeGL
+#include <include/gpu/ganesh/SkSurfaceGanesh.h> // For SkSurfaces::WrapBackendRenderTarget
+#include <include/gpu/ganesh/gl/GrGLInterface.h>
 
-#if JUCE_LINUX
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
+using namespace juce::gl; // Use JUCE's GL bindings
+
 #endif
 
 namespace zenith {
 
 //==============================================================================
-SkiaRenderer::SkiaRenderer(juce::Component &component, Backend backend, bool enableVSync)
-    : component_(component), backend_(backend), vsyncEnabled_(enableVSync) {
-    if (backend_ == Backend::Auto) {
-        backend_ = detectBestBackend();
-    }
+// Construction / Destruction
+//==============================================================================
+
+SkiaRenderer::SkiaRenderer(juce::Component& component, Backend backend, bool enableVSync)
+    : component_(component)
+    , backend_(backend)
+    , vsyncEnabled_(enableVSync)
+{
 }
 
-SkiaRenderer::~SkiaRenderer() {
+SkiaRenderer::~SkiaRenderer()
+{
     shutdown();
 }
 
-bool SkiaRenderer::initialize() {
-    if (initialized_) return true;
+//==============================================================================
+// Initialization
+//==============================================================================
 
-    // 1. Create GPU Context
-    if (!createGpuContext()) {
-        // Fallback to software if GPU fails
-        backend_ = Backend::Software;
+bool SkiaRenderer::initialize()
+{
+#ifdef ZENITH_USE_SKIA
+    if (initialized_)
+        return true;
+
+    // Create the GPU context
+    if (!createGpuContext())
+    {
+        DBG("SkiaRenderer: Failed to create GPU context. Check GPU drivers.");
+        jassertfalse;
+        return false;
     }
 
-    // 2. Create Initial Surface
-    int w = component_.getWidth();
-    int h = component_.getHeight();
-    if (w > 0 && h > 0) {
-        if (!createSurface(w, h)) {
-            return false;
-        }
-    }
-
+    DBG("SkiaRenderer: GPU Context Initialized Successfully.");
     initialized_ = true;
     return true;
-}
-
-void SkiaRenderer::shutdown() {
-    surface_.reset();
-    grContext_.reset();
-    initialized_ = false;
-}
-
-void SkiaRenderer::resize(int width, int height) {
-    if (!initialized_) return;
-    createSurface(width, height);
-}
-
-SkiaRenderer::Backend SkiaRenderer::detectBestBackend() const {
-#if JUCE_LINUX
-    return Backend::OpenGL; // EGL/OpenGL is standard for Linux currently
-#elif JUCE_MAC
-    return Backend::Metal;
-#elif JUCE_WINDOWS
-    return Backend::Direct3D;
 #else
-    return Backend::Software;
+    DBG("SkiaRenderer: ZENITH_USE_SKIA not defined - Skia disabled.");
+    return false;
+#endif
+}
+
+void SkiaRenderer::shutdown()
+{
+#ifdef ZENITH_USE_SKIA
+    // Release GPU resources in reverse order of creation
+    surface_.reset();
+    
+    if (grContext_)
+    {
+        // Invalidate the context - required for Wayland where contexts can be lost
+        grContext_->abandonContext();
+        grContext_.reset();
+    }
+    
+    // Reset cache metadata
+    fboCache_ = FboMetadata{};
+    
+    initialized_ = false;
+    DBG("SkiaRenderer: Shutdown complete.");
 #endif
 }
 
 //==============================================================================
-bool SkiaRenderer::createGpuContext() {
-    if (backend_ == Backend::OpenGL) {
-        // Wayland/Pop!_OS specific EGL Bootstrapping
-        auto interface = GrGLMakeAssembledInterface(nullptr, [](void* ctx, const char* name) -> GrGLFuncPtr {
-            return (GrGLFuncPtr)eglGetProcAddress(name);
-        });
+// Rendering
+//==============================================================================
 
-        if (!interface) {
-            // Fallback to native
-            interface = GrGLMakeNativeInterface();
-        }
+void SkiaRenderer::render(std::function<void(SkCanvas*)> drawCallback)
+{
+#ifdef ZENITH_USE_SKIA
+    if (!initialized_)
+    {
+        if (!initialize())
+            return;
+    }
 
-        if (interface) {
-            grContext_ = GrDirectContexts::MakeGL(interface);
-            return grContext_ != nullptr;
+    // 1. Context Validation (Wayland/Mac Sleep Handling)
+    // CRITICAL: On Wayland, the GL context can be lost at any time (window resize, monitor sleep).
+    // We check grContext_->abandoned() every frame and attempt recovery.
+    if (!grContext_ || grContext_->abandoned())
+    {
+        DBG("SkiaRenderer: Context lost or abandoned. Attempting recovery...");
+        shutdown();
+        if (!initialize())
+        {
+            DBG("SkiaRenderer: Context recovery FAILED.");
+            return;
         }
+        DBG("SkiaRenderer: Context recovery successful.");
+    }
+
+    // 2. Stats Update
+    auto now = juce::Time::getCurrentTime();
+    double frameDelta = (now - lastFrameTime_).inMilliseconds();
+    lastFrameTime_ = now;
+    
+    if (frameDelta > 0)
+    {
+        frameTimes_.push_back(frameDelta);
+        if (frameTimes_.size() > 60)
+            frameTimes_.erase(frameTimes_.begin());
+        
+        double sum = 0;
+        for (auto t : frameTimes_) sum += t;
+        stats_.averageFrameTime = sum / frameTimes_.size();
+        stats_.frameTime = frameDelta;
+        stats_.fps = (stats_.averageFrameTime > 0) ? (int)(1000.0 / stats_.averageFrameTime) : 0;
+    }
+
+    // 3. Delegate to Internal Render Frame
+    renderFrame(drawCallback);
+
+#endif
+}
+
+void SkiaRenderer::renderFrame(std::function<void(SkCanvas *)>& drawCallback)
+{
+#ifdef ZENITH_USE_SKIA
+    // 4. Handle Resize / Surface Creation
+    int width = component_.getWidth();
+    int height = component_.getHeight();
+    
+    GLint viewport[4];
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    int renderWidth = (viewport[2] > 0) ? viewport[2] : width;
+    int renderHeight = (viewport[3] > 0) ? viewport[3] : height;
+
+    GLint currentFbo = 0;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &currentFbo);
+
+    // Optimized surface recreation
+    if (!surface_ || !fboCache_.matches(currentFbo, renderWidth, renderHeight))
+    {
+        surface_.reset(); 
+        if (!createSurface(renderWidth, renderHeight))
+            return;
     }
     
-    // Fallback to Software if GPU fails, or if Software requested
-    return backend_ == Backend::Software;
-}
-
-bool SkiaRenderer::createSurface(int width, int height) {
-    if (width <= 0 || height <= 0) return false;
-    surface_.reset();
-
-    if (backend_ == Backend::Software || !grContext_) {
-        SkImageInfo info = SkImageInfo::MakeN32Premul(width, height);
-        surface_ = SkSurfaces::Raster(info);
-    } else {
-        SkImageInfo info = SkImageInfo::MakeN32Premul(width, height, SkColorSpace::MakeSRGB());
+    // 5. Drawing Step
+    if (surface_)
+    {
+        auto* canvas = surface_->getCanvas();
+        if (canvas)
+        {
+            drawCallback(canvas);
         
-        // This creates a GPU-backed surface. 
-        // In Jan Week 1, we map this to the JUCE OpenGL Framebuffer.
-        surface_ = SkSurfaces::RenderTarget(grContext_.get(), skgpu::Budgeted::kNo, info);
-    }
-    return surface_ != nullptr;
-}
-
-void SkiaRenderer::render(std::function<void(SkCanvas*)> drawCallback) {
-    if (!initialized_ || !surface_) return;
-
-    SkCanvas* canvas = surface_->getCanvas();
-    if (canvas) {
-        // We don't clear to BLACK here because Zenith uses AuroraBackground
-        // canvas->clear(SK_ColorBLACK); 
-        
-        if (drawCallback) drawCallback(canvas);
-        
-        if (grContext_) {
+            // 6. Flush (Zero-allocation path)
             grContext_->flush();
         }
     }
+#endif
 }
 
-void SkiaRenderer::setTargetFPS(int fps) {
+void SkiaRenderer::resize(int width, int height)
+{
+    // The actual resize logic happens in render() where we act on dimensions.
+    (void)width; (void)height;
+}
+
+void SkiaRenderer::setTargetFPS(int fps)
+{
     targetFPS_ = fps;
 }
 
-void SkiaRenderer::setVSyncEnabled(bool enable) {
+void SkiaRenderer::setVSyncEnabled(bool enable)
+{
     vsyncEnabled_ = enable;
 }
 
-const char* SkiaRenderer::getBackendName(Backend backend) {
-    switch (backend) {
-        case Backend::Auto: return "Auto";
-        case Backend::Direct3D: return "Direct3D";
-        case Backend::Metal: return "Metal";
-        case Backend::Vulkan: return "Vulkan";
-        case Backend::OpenGL: return "OpenGL";
+const char* SkiaRenderer::getBackendName(Backend backend)
+{
+    switch (backend)
+    {
+        case Backend::Auto:     return "Auto";
+        case Backend::Direct3D: return "Direct3D 12";
+        case Backend::Metal:    return "Metal";
+        case Backend::Vulkan:   return "Vulkan";
+        case Backend::OpenGL:   return "OpenGL";
         case Backend::Software: return "Software";
-        default: return "Unknown";
+        default:                return "Unknown";
     }
+}
+
+//==============================================================================
+// Internal Methods
+//==============================================================================
+
+SkiaRenderer::Backend SkiaRenderer::detectBestBackend() const
+{
+#if JUCE_WINDOWS
+    return Backend::Direct3D; // Or OpenGL if preferred
+#elif JUCE_MAC
+    return Backend::Metal;
+#elif JUCE_LINUX
+    // Wayland/X11 usually implies OpenGL or Vulkan
+    return Backend::OpenGL; 
+#else
+    return Backend::OpenGL;
+#endif
+}
+
+bool SkiaRenderer::createGpuContext()
+{
+#ifdef ZENITH_USE_SKIA
+    // 1. Create the native GL interface
+    // Skia needs to abstract over the specific GL driver (Mesa, Nvidia, etc.)
+    auto interface = GrGLMakeNativeInterface();
+    if (!interface)
+    {
+        DBG("SkiaRenderer: Failed to create native GL interface. Check GPU drivers.");
+        jassertfalse;
+        return false;
+    }
+
+    // 2. Create the GrDirectContext (The GPU Manager)
+    grContext_ = GrDirectContexts::MakeGL(interface);
+    if (!grContext_)
+    {
+        DBG("SkiaRenderer: Failed to create GrDirectContext.");
+        jassertfalse;
+        return false;
+    }
+
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool SkiaRenderer::createSurface(int width, int height)
+{
+#ifdef ZENITH_USE_SKIA
+    if (!grContext_) return false;
+
+    // 1. Query Current FBO Metadata
+    GLint fboId = 0;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &fboId);
+
+    GLint samples = 0;
+    glGetIntegerv(GL_SAMPLES, &samples);
+    
+    GLint stencil = 0;
+    glGetIntegerv(GL_STENCIL_BITS, &stencil);
+
+    // 2. Prepare Backend Render Target
+    GrGLFramebufferInfo fbInfo;
+    fbInfo.fFBOID = (GrGLuint)fboId;
+    fbInfo.fFormat = GL_RGBA8; 
+
+    GrBackendRenderTarget backendRT = GrBackendRenderTargets::MakeGL(
+        width, height, samples, stencil, fbInfo
+    );
+
+    // 3. Create Surface Wrapper
+    // Wrap the backend render target in a Skia Surface
+    // kBottomLeft_GrSurfaceOrigin: OpenGL uses bottom-left origin
+    // kRGBA_8888_SkColorType: Standard byte order for cross-platform compatibility
+    surface_ = SkSurfaces::WrapBackendRenderTarget(
+        grContext_.get(),
+        backendRT,
+        kBottomLeft_GrSurfaceOrigin, // OpenGL uses bottom-left origin
+        kRGBA_8888_SkColorType,      // Standard byte order
+        SkColorSpace::MakeSRGB(),    // sRGB color space
+        nullptr
+    );
+    
+    if (!surface_)
+    {
+        // Fallback: Try RGB8 if RGBA8 fails
+        fbInfo.fFormat = GL_RGB8;
+        backendRT = GrBackendRenderTargets::MakeGL(width, height, samples, stencil, fbInfo);
+        
+        surface_ = SkSurfaces::WrapBackendRenderTarget(
+            grContext_.get(),
+            backendRT,
+            kBottomLeft_GrSurfaceOrigin,
+            kRGBA_8888_SkColorType,
+            SkColorSpace::MakeSRGB(),
+            nullptr
+        );
+    }
+    
+    if (surface_)
+    {
+        // Update Metadata Cache (Optimizes surface recreation on subsequent frames)
+        fboCache_.fboId = fboId;
+        fboCache_.width = width;
+        fboCache_.height = height;
+        fboCache_.samples = samples;
+        fboCache_.stencilBits = stencil;
+        fboCache_.format = fbInfo.fFormat;
+        return true;
+    }
+    
+    DBG("SkiaRenderer: Critical Error - Failed to create SkSurface.");
+    jassertfalse;
+
+    return false;
+#else
+    return false;
+#endif
+}
+
+#if JUCE_WINDOWS
+bool SkiaRenderer::createD3DContext() { return false; } 
+#elif JUCE_MAC
+bool SkiaRenderer::createMetalContext() { return false; } 
+#elif JUCE_LINUX
+bool SkiaRenderer::createVulkanContext() { return false; } 
+#endif
+
+void SkiaRenderer::updateStats()
+{
+    // implemented inside render()
 }
 
 } // namespace zenith
