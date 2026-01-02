@@ -120,7 +120,7 @@ juce::var MCPServer::routeRequest(const juce::String &method,
   }
 
   if (method == "ping")
-    return juce::var(new juce::DynamicObject());
+    return juce::var(new juce::DynamicObject()); // Replaced with ReferenceCountedObjectPtr implicitly by juce::var constructor if it takes ownership
 
   sendError(juce::var(), ErrorCode::MethodNotFound,
             "Method not found: " + method);
