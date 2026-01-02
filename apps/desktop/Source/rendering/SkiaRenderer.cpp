@@ -55,16 +55,16 @@ bool SkiaRenderer::initialize()
     // Create the GPU context
     if (!createGpuContext())
     {
-        DBG("SkiaRenderer: Failed to create GPU context. Check GPU drivers.");
+        juce::Logger::writeToLog("SkiaRenderer: Failed to create GPU context. Check GPU drivers.");
         jassertfalse;
         return false;
     }
 
-    DBG("SkiaRenderer: GPU Context Initialized Successfully.");
+    juce::Logger::writeToLog("SkiaRenderer: GPU Context Initialized Successfully.");
     initialized_ = true;
     return true;
 #else
-    DBG("SkiaRenderer: ZENITH_USE_SKIA not defined - Skia disabled.");
+    juce::Logger::writeToLog("SkiaRenderer: ZENITH_USE_SKIA not defined - Skia disabled.");
     return false;
 #endif
 }
@@ -86,7 +86,7 @@ void SkiaRenderer::shutdown()
     fboCache_ = FboMetadata{};
     
     initialized_ = false;
-    DBG("SkiaRenderer: Shutdown complete.");
+    juce::Logger::writeToLog("SkiaRenderer: Shutdown complete.");
 #endif
 }
 
@@ -108,14 +108,14 @@ void SkiaRenderer::render(std::function<void(SkCanvas*)> drawCallback)
     // We check grContext_->abandoned() every frame and attempt recovery.
     if (!grContext_ || grContext_->abandoned())
     {
-        DBG("SkiaRenderer: Context lost or abandoned. Attempting recovery...");
+        juce::Logger::writeToLog("SkiaRenderer: Context lost or abandoned. Attempting recovery...");
         shutdown();
         if (!initialize())
         {
-            DBG("SkiaRenderer: Context recovery FAILED.");
+            juce::Logger::writeToLog("SkiaRenderer: Context recovery FAILED.");
             return;
         }
-        DBG("SkiaRenderer: Context recovery successful.");
+        juce::Logger::writeToLog("SkiaRenderer: Context recovery successful.");
     }
 
     // 2. Stats Update
@@ -236,7 +236,7 @@ bool SkiaRenderer::createGpuContext()
     auto interface = GrGLMakeNativeInterface();
     if (!interface)
     {
-        DBG("SkiaRenderer: Failed to create native GL interface. Check GPU drivers.");
+        juce::Logger::writeToLog("SkiaRenderer: Failed to create native GL interface. Check GPU drivers.");
         jassertfalse;
         return false;
     }
@@ -245,7 +245,7 @@ bool SkiaRenderer::createGpuContext()
     grContext_ = GrDirectContexts::MakeGL(interface);
     if (!grContext_)
     {
-        DBG("SkiaRenderer: Failed to create GrDirectContext.");
+        juce::Logger::writeToLog("SkiaRenderer: Failed to create GrDirectContext.");
         jassertfalse;
         return false;
     }
@@ -321,7 +321,7 @@ bool SkiaRenderer::createSurface(int width, int height)
         return true;
     }
     
-    DBG("SkiaRenderer: Critical Error - Failed to create SkSurface.");
+    juce::Logger::writeToLog("SkiaRenderer: Critical Error - Failed to create SkSurface.");
     jassertfalse;
 
     return false;
