@@ -261,6 +261,7 @@ void TransportBar::resized() {
   leftBox.alignItems = FlexBox::AlignItems::center;
   
   leftBox.items.add(FlexItem(*viewToggleBtn_).withWidth(smallButtonSize).withHeight(smallButtonSize).withMargin({0, 20, 0, 0}));
+  leftBox.performLayout(area.withTrimmedLeft(20)); // Apply left box layout
   
   // Center Group Container
   FlexBox centerBox;
@@ -273,49 +274,56 @@ void TransportBar::resized() {
   centerBox.items.add(FlexItem(*stopBtn_).withWidth(buttonSize).withHeight(buttonSize).withMargin({0, (float)spacing, 0, 0}));
   centerBox.items.add(FlexItem(*playBtn_).withWidth(buttonSize).withHeight(buttonSize).withMargin({0, (float)spacing, 0, 0}));
   centerBox.items.add(FlexItem(*recordBtn_).withWidth(buttonSize).withHeight(buttonSize).withMargin({0, (float)spacing, 0, 0}));
+  centerBox.items.add(FlexItem(*loopBtn_).withWidth(buttonSize).withHeight(buttonSize).withMargin({0, (float)spacing, 0, 0}));
+  centerBox.items.add(FlexItem(*metroBtn_).withWidth(buttonSize).withHeight(buttonSize).withMargin({0, (float)spacing, 0, 0}));
   
   // Separator/Gap
   centerBox.items.add(FlexItem().withWidth(groupSpacing));
   
-  // LCD (Placeholder for layout, we draw it manually but need bounds)
-  // We'll treat the LCD bounds as a FlexItem too, but since it's not a component, we need a dummy or manual calcs.
-  // Actually, let's just reserve space for it.
+  // LCD Placeholder logic... 
+  // We'll treat the LCD bounds as a space in FlexBox or just center the box around it.
+  // Actually, let's just center the box in the component.
+  centerBox.performLayout(area);
   
-  // Helper to layout:
-  // We can't put "LCD" in FlexBox items easily if it's not a component.
-  // But we can calculate the center area manually.
-  
-  // Let's layout the buttons relative to the center.
-  
+  // LCD Bounds (Manually calculated to be exactly center)
   auto centerPoint = area.getCentre();
   lcdBounds_ = Rectangle<int>(0, 0, lcdWidth, 42).withCentre(centerPoint);
   
-  // Position Transport Buttons to the LEFT of LCD
-  int btnX = lcdBounds_.getX() - groupSpacing;
+  // Since FlexBox centered everything, but we want the buttons LEFT of the LCD...
+  // The FlexBox above just centered the buttons in the whole area, overlapping the LCD probably.
+  // Let's use the manual calculation I had, but clean it up, OR correct the FlexBox.
+  // Correction: Put buttons in a container to the left of LCD.
   
-  auto layoutBtnLeft = [&](Component* c) {
+  // Let's stick to the manual layout for the center group because we want precise positioning relative to the LCD center,
+  // and FlexBox "Center" centers based on available space, not absolute window center (which might be offset if side panels exist).
+  // Wait, `TransportBar` spans the whole width? Yes.
+  
+  // RE-DOING LAYOUT TO BE SAFE AND SIMPLE
+  // 1. LCD is Anchor.
+  lcdBounds_ = Rectangle<int>(0, 0, lcdWidth, 42).withCentre(area.getCentre());
+  
+  // 2. Buttons Left of LCD
+  int btnX = lcdBounds_.getX() - groupSpacing;
+  auto layoutLeft = [&](Component* c) {
       btnX -= buttonSize;
       c->setBounds(btnX, area.getCentreY() - buttonSize/2, buttonSize, buttonSize);
       btnX -= spacing;
   };
+  layoutLeft(metroBtn_.get());
+  layoutLeft(loopBtn_.get());
+  layoutLeft(recordBtn_.get());
+  layoutLeft(playBtn_.get());
+  layoutLeft(stopBtn_.get());
+  layoutLeft(rewindBtn_.get());
   
-  layoutBtnLeft(metroBtn_.get()); // Metro closest to LCD?
-  layoutBtnLeft(loopBtn_.get());
-  layoutBtnLeft(recordBtn_.get());
-  layoutBtnLeft(playBtn_.get());
-  layoutBtnLeft(stopBtn_.get());
-  layoutBtnLeft(rewindBtn_.get());
-  
-  // Position Tools to the RIGHT of LCD
+  // 3. Buttons Right of LCD
   int toolX = lcdBounds_.getRight() + groupSpacing;
-  
-  auto layoutBtnRight = [&](Component* c) {
+  auto layoutRight = [&](Component* c) {
       c->setBounds(toolX, area.getCentreY() - smallButtonSize/2, smallButtonSize, smallButtonSize);
       toolX += smallButtonSize + spacing;
   };
-  
-  layoutBtnRight(settingsBtn_.get());
-  layoutBtnRight(exportBtn_.get());
+  layoutRight(settingsBtn_.get());
+  layoutRight(exportBtn_.get());
   
   // CPU Meter
   cpuMeterBounds_ = Rectangle<int>(toolX + 10, area.getCentreY() - 6, 60, 12);
@@ -707,18 +715,7 @@ TransportBar::~TransportBar() {
   ZENITH_UNREGISTER_ANIMATION();
 }
 
-// Legacy HitTest (Mostly replaced by Child Components, but kept for LCD)
-bool TransportBar::hitTest(int x, int y) {
-    // Let children handle their own hit tests
-    if (playBtn_->getBounds().contains(x,y)) return true; // Actually children hit test happens before this
-    
-    // Explicitly allow LCD
-    if (lcdBounds_.contains(x, y)) return true;
-    
-    // If not on LCD and not on a child component (handled by JUCE architecture), return false?
-    // Actually hitTest is for THIS component.
-    return lcdBounds_.contains(x, y); 
-}
+
 
 } // namespace zenith
 

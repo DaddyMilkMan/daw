@@ -52,46 +52,43 @@ public:
 class AudioSettingsPanel : public SettingsSubPanel {
 public:
     AudioSettingsPanel(juce::AudioDeviceManager& dm) : deviceManager(dm) {
-        // 1. Device Selector (Standard JUCE Component for robustness)
-        // We wrap it to style it or just use it directly.
-        // For a PRO DAW, we need the channel matrix. The JUCE AudioDeviceSelectorComponent provides this.
-        
-        deviceSelector = std::make_unique<juce::AudioDeviceSelectorComponent>(
-            deviceManager,
-            0, 256,  // Input channels
-            0, 256,  // Output channels
-            true,    // Show MIDI input
-            true,    // Show MIDI output
-            true,    // Show channels as stereo pairs
-            false    // Hide advanced settings? No, show them.
-        );
-        
-        addAndMakeVisible(deviceSelector.get());
-        
-        // 2. Latency Display
+        // Latency Display
         latencyLabel = std::make_unique<SkiaLabel>();
         addAndMakeVisible(latencyLabel.get());
         
-        updateLatencyDisplay();
-        
-        // Timer to update latency
-        startTimer(1000);
+        // Timer to update latency (only runs when visible)
+        // startTimer(1000); // Moved to visibilityChanged
+    }
+    
+    void visibilityChanged() override {
+        if (isVisible()) {
+            if (!deviceSelector) {
+                deviceSelector = std::make_unique<juce::AudioDeviceSelectorComponent>(
+                    deviceManager,
+                    0, 256, 0, 256, true, true, true, false
+                );
+                addAndMakeVisible(deviceSelector.get());
+                resized(); // Ensure layout
+            }
+            startTimer(1000);
+            updateLatencyDisplay();
+        } else {
+            // Optional: Destroy to free resources, or keep it. 
+            // Keeping it is safer for state, but destroying avoids background polling.
+            // Let's keep it for now but stop timer.
+            stopTimer();
+        }
     }
     
     void resized() override {
         auto area = getLocalBounds();
-        
-        // Latency at top
         latencyLabel->setBounds(area.removeFromTop(30));
-        
-        // Device Selector takes the rest
-        deviceSelector->setBounds(area);
+        if (deviceSelector) {
+            deviceSelector->setBounds(area);
+        }
     }
     
-    void drawSkia(SkCanvas* canvas) override {
-        // Device selector draws itself via JUCE Graphics, not Skia.
-        // We just draw the latency label background if needed.
-    }
+    void drawSkia(SkCanvas* canvas) override {}
     
     void timerCallback() override {
         updateLatencyDisplay();
@@ -444,9 +441,43 @@ void GlobalSettingsPanel::changeListenerCallback(juce::ChangeBroadcaster*) {
 void GlobalSettingsPanel::show() {
     setVisible(true);
     toFront(true);
+    
+    // Guard against immediate closing (bounce protection)
+    canCloseAfter_ = juce::Time::getMillisecondCounter() + 500;
+    
+    // Ensure we are sized/centered properly
+    // Fallback to 800x600 if parent is small
+    int targetW = 800;
+    int targetH = 600;
+    
+    if (auto* parent = getParentComponent()) {
+        auto bounds = parent->getLocalBounds();
+        if (bounds.getWidth() > 100) {
+            targetW = juce::roundToInt(bounds.getWidth() * 0.8);
+            targetH = juce::roundToInt(bounds.getHeight() * 0.85);
+        }
+    }
+    
+    // Enforce minimums
+    targetW = std::max(targetW, 800);
+    targetH = std::max(targetH, 600);
+    
+    centreWithSize(targetW, targetH);
+    
+    // FIX: Clamp negative positions (if parent is smaller than modal)
+    // This prevents the "Top-Left Tiny Box" where the modal is shifted off-screen
+    auto bounds = getBounds();
+    if (bounds.getX() < 0) bounds.setX(0);
+    if (bounds.getY() < 0) bounds.setY(0);
+    setBounds(bounds);
 }
 
 void GlobalSettingsPanel::hide() {
+    // Bounce guard
+    if (juce::Time::getMillisecondCounter() < canCloseAfter_) {
+        return;
+    }
+
     setVisible(false);
     if(onClose) onClose();
 }

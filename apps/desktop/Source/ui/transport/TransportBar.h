@@ -48,11 +48,9 @@ public:
   void mouseMove(const juce::MouseEvent &e) override;
   void mouseEnter(const juce::MouseEvent &e) override;
   void mouseExit(const juce::MouseEvent &e) override;
-  bool hitTest(int x, int y) override;
-  
-  void visibilityChanged() override;
-  
+
   void onAnimationTick(float deltaMs) override;
+  void visibilityChanged() override;
   std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
   
   // State setters
