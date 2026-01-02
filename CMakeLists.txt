@@ -1,517 +1,420 @@
 # =============================================================================
-# ZENITH DAW - MODULAR CMAKE CONFIGURATION
-# =============================================================================
-#
-# Welcome to the Zenith DAW build system!
-#
-# Quick Start:
-#   mkdir build && cd build
-#   cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release
-#   cmake --build .
-#
-# For detailed instructions, see BUILDING.md
+# CMAKE MODULARIZATION
 # =============================================================================
 
-cmake_minimum_required(VERSION 3.25)
+# Platform detection
+
+
+# Build optimizations
+include(cmake/BuildOptimizations.cmake OPTIONAL)
 
 # =============================================================================
 # PROJECT DEFINITION
 # =============================================================================
 
-project(ZenithDAW
+cmake_minimum_required(VERSION 3.25)
+
+project(ZenithDAW 
     VERSION 0.1.0
     DESCRIPTION "Zenith DAW - Professional Digital Audio Workstation"
     LANGUAGES CXX C
 )
 
-# Set Global C++ Standard
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
-# Print welcome message
-message(STATUS "")
-message(STATUS "🎵 Welcome to Zenith DAW Build System!")
-message(STATUS "========================================")
-message(STATUS "")
-message(STATUS "For detailed build instructions, see: BUILDING.md")
-message(STATUS "For development guide, see: docs/DEVELOPER.md")
-message(STATUS "")
+# Platform detection
+include(cmake/PlatformDetection.cmake OPTIONAL)
 
 # =============================================================================
-# LICENSE INFORMATION
+# BUILD CONFIGURATION
 # =============================================================================
 
-# License information
-set(CMAKE_PROJECT_DESCRIPTION "${CMAKE_PROJECT_DESCRIPTION} (AGPL v3)")
-set(CMAKE_PROJECT_HOMEPAGE_URL "https://www.gnu.org/licenses/agpl-3.0.html")
-
-# Add license file to installation
-install(FILES LICENSE NOTICE
-    DESTINATION share/doc/zenithdaw
-)
-
-# =============================================================================
-# CONTRIBUTOR-FRIENDLY BUILD OPTIONS
-# =============================================================================
-
-# User-friendly option descriptions with help text
-option(ZENITH_BUILD_APP "Build the main application (ZenithDAW executable)" ON)
-
-option(ZENITH_BUILD_UI_UNIFIED
-    "Build the experimental unified UI library (zenith_ui_unified)"
-    OFF
-)
-
-option(ZENITH_BUILD_TESTS
-    "Build test suite (ZenithTests executable)"
-    OFF
-)
-# "Enable building of unit and integration tests. Use with -DCMAKE_BUILD_TYPE=Debug for best results"
-
-option(ZENITH_ENABLE_SKIA
-    "Enable Skia GPU-accelerated rendering"
-    OFF
-)
-# "Disabling Skia will fallback to basic rendering. Not recommended for production use"
-
-option(ZENITH_ENABLE_COVERAGE
-    "Enable code coverage reporting (requires gcov/lcov)"
-    OFF
-)
-# "Enables coverage reports. Use with -DCMAKE_BUILD_TYPE=Debug for best results"
-
-option(ZENITH_ENABLE_WCET
-    "Enable Worst-Case Execution Time monitoring for real-time audio threads"
-    ON
-)
-# "WCET monitoring helps identify real-time audio thread violations. Should remain ON for production"
-
-option(ZENITH_FETCH_DEPS
-    "Fetch dependencies automatically if not found locally"
-    ON
-)
-
-option(ENABLE_TESTS
-    "Enable unit testing"
-    ON
-)
-# "When enabled, the build system will automatically download missing dependencies"
-
-option(ZENITH_ENABLE_DEBUG_SYMBOLS
-    "Generate debug symbols even in Release builds"
-    OFF
-)
-# "When enabled, adds debug symbols to Release builds for production debugging"
-
-option(ZENITH_ENABLE_ASSERTIONS
-    "Enable runtime assertions for debugging"
-    ON
-)
-# "Disabling assertions may improve performance but reduces debuggability"
-
-option(ZENITH_ENABLE_SANITIZERS
-    "Enable AddressSanitizer and ThreadSanitizer for debugging"
-    OFF
-)
-# "When enabled, adds memory and thread safety checking - significantly impacts performance but provides detailed error reports"
-
-option(ZENITH_ENABLE_THREAD_SANITIZER
-    "Enable ThreadSanitizer specifically for data race detection"
-    OFF
-)
-# "ThreadSanitizer detects data races and deadlocks in multithreaded code"
-
-option(ZENITH_ENABLE_ADDRESS_SANITIZER
-    "Enable AddressSanitizer for memory error detection"
-    OFF
-)
-# "AddressSanitizer detects memory errors like buffer overflows, use-after-free, etc."
-
-option(ZENITH_ENABLE_LUA_SCRIPTING
-    "Enable experimental Lua scripting processor (NOT RT-safe)"
-    OFF
-)
-
-# =============================================================================
-# BUILD CONFIGURATION HELPERS
-# =============================================================================
-
-# Function to provide user-friendly build information
-function(print_build_info)
-    message(STATUS "")
-    message(STATUS "📋 Zenith DAW Build Configuration:")
-    message(STATUS "─────────────────────────────────────────")
-    message(STATUS "  Build type: ${CMAKE_BUILD_TYPE}")
-    message(STATUS "  Build application: ${ZENITH_BUILD_APP}")
-    message(STATUS "  Build tests: ${ZENITH_BUILD_TESTS}")
-    message(STATUS "  Enable Skia rendering: ${ZENITH_ENABLE_SKIA}")
-    message(STATUS "  Enable coverage: ${ZENITH_ENABLE_COVERAGE}")
-    message(STATUS "  Enable WCET monitoring: ${ZENITH_ENABLE_WCET}")
-    message(STATUS "  Auto-fetch dependencies: ${ZENITH_FETCH_DEPS}")
-    message(STATUS "  Debug symbols: ${ZENITH_ENABLE_DEBUG_SYMBOLS}")
-    message(STATUS "  Assertions: ${ZENITH_ENABLE_ASSERTIONS}")
-    message(STATUS "")
-endfunction()
-
-# Function to print build targets
-function(print_build_targets)
-    message(STATUS "🎯 Available build targets:")
-    message(STATUS "────────────────────────────")
-    message(STATUS "  - all: Build everything (default)")
-    message(STATUS "  - ZenithDAW: Main application executable")
-    message(STATUS "  - zenith_core: Core library")
-    message(STATUS "  - zenith_engine_core: Engine core library")
-    message(STATUS "  - zenith_ui_unified: UI framework library")
-    message(STATUS "  - zenith_audio_utils: Audio utilities library")
-    message(STATUS "  - zenith_dsp: DSP processing library")
-    message(STATUS "  - install: Install the application to system")
-    message(STATUS "  - package: Create distributable packages")
-
-    if(ZENITH_BUILD_TESTS)
-        message(STATUS "  - ZenithTests: Test suite executable")
-        message(STATUS "  - run_tests: Run all tests")
-        message(STATUS "  - test_<name>: Run specific test (e.g., test_Core)")
-    endif()
-
-    message(STATUS "  - zenith_help: Print available targets and options")
-    message(STATUS "  - rebuild: Clean and rebuild everything")
-    message(STATUS "")
-endfunction()
-
-# Function to print build commands
-function(print_build_commands)
-    message(STATUS "💡 Common build commands:")
-    message(STATUS "────────────────────────────")
-    message(STATUS "  Configure CMake:")
-    message(STATUS "    cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release")
-    message(STATUS "    cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON")
-    message(STATUS "")
-    message(STATUS "  Build the project:")
-    message(STATUS "    cmake --build . -j$(nproc)")
-    message(STATUS "    cmake --build . --config Release -- /m  # Windows")
-    message(STATUS "")
-    message(STATUS "  Run tests:")
-    message(STATUS "    ctest --output-on-failure")
-    message(STATUS "    cmake --build . --target run_tests")
-    message(STATUS "")
-    message(STATUS "  Clean build:")
-    message(STATUS "    cmake --build . --target clean")
-    message(STATUS "    rm -rf build/*")
-    message(STATUS "")
-endfunction()
-
-# =============================================================================
-# PLATFORM CONFIGURATION
-# =============================================================================
-
-# Set build type with user-friendly message
+# Default to Release build for Skia compatibility
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (Release, Debug, RelWithDebInfo)" FORCE)
-    message(STATUS "🔧 Build type set to: ${CMAKE_BUILD_TYPE}")
+    message(STATUS "No build type selected, defaulting to Release (Skia requirement)")
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
 endif()
 
-# Add build type options for easy configuration
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG=1 -g3")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG=1 -g3")
-    message(STATUS "🔍 Debug build with full debug info")
-elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -g3")
-    set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -g3")
-    message(STATUS "🎯 Release build with debug symbols")
+# Skia debug build warning
+if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND ZENITH_ENABLE_SKIA)
+    message(WARNING "Debug build with Skia may cause DLL issues. Use Release for stability.")
 endif()
 
-# Platform-specific flags with helpful comments
+# Platform-specific flags
 if(MSVC)
-    # MSVC specific settings
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /FS /bigobj /W3" CACHE STRING "" FORCE)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /FS /bigobj /W3" CACHE STRING "" FORCE)
-    message(STATUS "🪟 Using MSVC compiler flags")
-else()
-    # GCC/Clang settings
-    add_compile_options(-Wno-attributes -Wno-unknown-attributes)
-
-    # Add debug flags for debug builds
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        add_compile_options(-g3 -O0 -DDEBUG=1)
-        message(STATUS "🐛 Debug: -g3 -O0 -DDEBUG=1")
-    elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-        add_compile_options(-O3 -DNDEBUG)
-        message(STATUS "⚡ Release: -O3 -DNDEBUG")
-    endif()
-
-    message(STATUS "🐧 Using GCC/Clang compiler flags")
-endif()
-
-# Add assertions control
-if(ZENITH_ENABLE_ASSERTIONS)
-    add_compile_definitions(ENABLE_ASSERTIONS=1)
-    message(STATUS "✅ Runtime assertions enabled")
-else()
-    add_compile_definitions(ENABLE_ASSERTIONS=0)
-    message(STATUS "❌ Runtime assertions disabled")
-endif()
-
-# Add sanitizer support
-if(ZENITH_ENABLE_SANITIZERS)
-    # Enable all sanitizers by default when general flag is set
-    set(ZENITH_ENABLE_ADDRESS_SANITIZER ON CACHE BOOL "Enable AddressSanitizer" FORCE)
-    set(ZENITH_ENABLE_THREAD_SANITIZER ON CACHE BOOL "Enable ThreadSanitizer" FORCE)
-endif()
-
-if(ZENITH_ENABLE_THREAD_SANITIZER)
-    add_compile_definitions(ENABLE_THREAD_SANITIZER=1)
-    set(SANITIZER_FLAGS "${SANITIZER_FLAGS} -fsanitize=thread -g")
-    set(SANITIZER_LINKER_FLAGS "${SANITIZER_LINKER_FLAGS} -fsanitize=thread")
-    message(STATUS "🔍 ThreadSanitizer enabled for data race detection")
-endif()
-
-if(ZENITH_ENABLE_ADDRESS_SANITIZER)
-    add_compile_definitions(ENABLE_ADDRESS_SANITIZER=1)
-    set(SANITIZER_FLAGS "${SANITIZER_FLAGS} -fsanitize=address -fsanitize=leak -fsanitize=undefined -g")
-    set(SANITIZER_LINKER_FLAGS "${SANITIZER_LINKER_FLAGS} -fsanitize=address -fsanitize=leak -fsanitize=undefined")
-    message(STATUS "🔍 AddressSanitizer enabled for memory error detection")
-endif()
-
-if(ZENITH_ENABLE_SANITIZERS)
-    # Apply sanitizer flags to all targets
-    add_compile_options(${SANITIZER_FLAGS})
-    add_link_options(${SANITIZER_LINKER_FLAGS})
-    message(STATUS "🔍 All sanitizers enabled - performance will be impacted")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /FS /bigobj" CACHE STRING "" FORCE)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /FS /bigobj" CACHE STRING "" FORCE)
 endif()
 
 # =============================================================================
 # DEPENDENCIES
 # =============================================================================
 
-# JUCE is configured in Dependencies.cmake
-# Add JUCE modules to our targets
-set(ZENITH_JUCE_MODULES
-    juce_core
-    juce_cryptography
-    juce_events
-    juce_graphics
-    juce_data_structures
-    juce_gui_basics
-    juce_gui_extra
-    juce_audio_basics
-    juce_audio_devices
-    juce_audio_formats
-    juce_audio_processors
-    juce_audio_utils
-    juce_dsp
-    juce_opengl
-)
-
-# Auto-fetch dependencies if enabled
-if(ZENITH_FETCH_DEPS)
-    message(STATUS "📦 Automatic dependency fetching enabled")
+# JUCE Setup - prefer local directory if available
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/CMakeLists.txt")
+    message(STATUS "Using local JUCE from external/JUCE")
+    add_subdirectory(external/JUCE)
 else()
-    message(STATUS "📦 Automatic dependency fetching disabled")
+    message(STATUS "Fetching JUCE from GitHub...")
+    include(FetchContent)
+    FetchContent_Declare(
+        JUCE
+        GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
+        GIT_TAG 8.0.0
+    )
+    FetchContent_MakeAvailable(JUCE)
 endif()
 
-# =============================================================================
-# MODULES
-# =============================================================================
-
-# Add cmake directory to include path
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
-
-# Detect platform/arch before including modules that key off ZENITH_PLATFORM_* variables.
-include(PlatformDetection)
-
-# Include module definitions and dependencies
-include(Dependencies)
-include(ZenithCore)
-include(ZenithDSP)
-include(ZenithAudioUtils)
-include(ZenithEngineCore)
-include(ZenithAI)
-include(ZenithCommands)
-include(ZenithEffects)
-if(ZENITH_BUILD_UI_UNIFIED)
-    include(ZenithUIUnified)
-endif()
-include(ZenithNetwork)
-
-# Removed conflicting ZenithTesting include
-# include(ZenithTesting)
-
-# Add help target for user-friendly information (RENAMED to zenith_help)
-add_custom_target(zenith_help
-    COMMAND ${CMAKE_COMMAND} -E echo ""
-    COMMAND ${CMAKE_COMMAND} -E echo "🎵 Zenith DAW Build Information"
-    COMMAND ${CMAKE_COMMAND} -E echo "========================================"
-    COMMAND ${CMAKE_COMMAND} -E echo ""
-    COMMAND ${CMAKE_COMMAND} -E echo "Configuration options:"
-    COMMAND ${CMAKE_COMMAND} -ECHO "  -DCMAKE_BUILD_TYPE=Release/Debug/RelWithDebInfo"
-    COMMAND ${CMAKE_COMMAND} -ECHO "  -DBUILD_TESTS=ON/OFF"
-    COMMAND ${CMAKE_COMMAND} -ECHO "  -DZENITH_ENABLE_SKIA=ON/OFF"
-    COMMAND ${CMAKE_COMMAND} -ECHO "  -DZENITH_ENABLE_COVERAGE=ON/OFF"
-    COMMAND ${CMAKE_COMMAND} -ECHO "  -DZENITH_ENABLE_WCET=ON/OFF"
-    COMMAND ${CMAKE_COMMAND} -ECHO "  -DZENITH_FETCH_DEPS=ON/OFF"
-    COMMAND ${CMAKE_COMMAND} -ECHO "  -DZENITH_ENABLE_DEBUG_SYMBOLS=ON/OFF"
-    COMMAND ${CMAKE_COMMAND} -ECHO "  -DZENITH_ENABLE_ASSERTIONS=ON/OFF"
-    COMMAND ${CMAKE_COMMAND} -ECHO ""
-    COMMAND print_build_info
-    COMMAND print_build_targets
-    COMMAND print_build_commands
-    COMMAND ${CMAKE_COMMAND} -E echo ""
-    COMMAND ${CMAKE_COMMAND} -E echo "For more information, see: BUILDING.md"
-    VERBATIM
+# Core JUCE modules for Zenith DAW
+set(ZENITH_JUCE_MODULES
+    juce::juce_core
+    juce::juce_cryptography
+    juce::juce_events
+    juce::juce_graphics
+    juce::juce_data_structures
+    juce::juce_gui_basics
+    juce::juce_gui_extra
+    juce::juce_audio_basics
+    juce::juce_audio_devices
+    juce::juce_audio_formats
+    juce::juce_audio_processors
+    juce::juce_audio_utils
+    juce::juce_dsp
+    juce::juce_opengl
 )
 
-# Add rebuild target
-add_custom_target(rebuild
-    COMMAND ${CMAKE_COMMAND} -E echo "🔄 Cleaning and rebuilding..."
-    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}
-    COMMAND ${CMAKE_COMMAND} -E echo ""
-    COMMAND ${CMAKE_COMMAND} --build .
-    VERBATIM
-)
+message(STATUS "Zenith DAW: JUCE 8.0.0 configured")
 
 # =============================================================================
-# MAIN APPLICATION
+# SOURCE FILES
 # =============================================================================
 
-if(ZENITH_BUILD_APP)
-    # Create main executable
-    add_executable(ZenithDAW
-        apps/desktop/Source/Main.cpp
-        apps/desktop/Source/ui/common/MainWindow.cpp
+# Include organized source files
+include(cmake/SourceFiles.cmake OPTIONAL)
+
+# Fallback if modular file not found
+if(NOT DEFINED ZENITH_ALL_SOURCES)
+    message(STATUS "Using fallback source collection")
+    file(GLOB_RECURSE ZENITH_ALL_SOURCES 
+        "apps/desktop/Source/*.cpp"
+        "apps/desktop/Source/engine/*.cpp"
+        "apps/desktop/Source/ui/*.cpp"
     )
-
-    # Add debug symbols if requested
-    if(ZENITH_ENABLE_DEBUG_SYMBOLS)
-        set_target_properties(ZenithDAW PROPERTIES
-            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
-        )
-    endif()
-
-    # Set include directories
-    target_include_directories(ZenithDAW
-        PRIVATE
-            ${CMAKE_SOURCE_DIR}/apps/desktop/Source
-            ${CMAKE_SOURCE_DIR}/modules
-    )
-
-    # Link libraries
-    target_link_libraries(ZenithDAW
-        zenith_commands
-        zenith_effects
-        zenith_ai
-        zenith_network
-        zenith_engine_core
-        zenith_core
-        zenith_audio_utils
-        ${ZENITH_JUCE_MODULES}
-    )
-
-    if(ZENITH_BUILD_UI_UNIFIED)
-        target_link_libraries(ZenithDAW
-            zenith_ui_unified
-        )
-    endif()
-
-    # Platform-specific linking
-    if(APPLE)
-        target_link_libraries(ZenithDAW
-            "-framework Cocoa -framework IOKit -framework CoreAudio -framework CoreMIDI"
-        )
-        message(STATUS "🍎 macOS: linking Cocoa, IOKit, CoreAudio, CoreMIDI")
-    elseif(UNIX)
-        target_link_libraries(ZenithDAW
-            "-lpthread -lasound -ldl"
-        )
-        message(STATUS "🐧 Linux: linking pthread, alsa, dl")
-    elseif(WIN32)
-        target_link_libraries(ZenithDAW
-            "kernel32.lib" "user32.lib" "gdi32.lib" "winspool.lib"
-            "comdlg32.lib" "advapi32.lib" "shell32.lib" "ole32.lib"
-            "oleaut32.lib" "uuid.lib" "odbc32.lib" "odbccp32.lib"
-        )
-        message(STATUS "🪟 Windows: linking Windows libraries")
-    endif()
-
-    # Installation
-    install(TARGETS ZenithDAW
-        RUNTIME DESTINATION bin
-    )
-
-    message(STATUS "✅ Main application target created: ZenithDAW")
 endif()
 
-# =============================================================================
-# TESTS
-# =============================================================================
-
-if(ZENITH_BUILD_TESTS)
-    enable_testing()
-
-    # Add test executable
-    add_executable(ZenithTests
-        apps/desktop/Source/tests/TestMain.cpp
-        ${ZENITH_TEST_SOURCES}
-    )
-
-    target_link_libraries(ZenithTests
-        zenith_network
-        zenith_core
-        zenith_audio_utils
-        ${ZENITH_JUCE_MODULES}
-        GTest::gtest
-        GTest::gtest_main
-    )
-
-    if(ZENITH_BUILD_UI_UNIFIED)
-        target_link_libraries(ZenithTests
-            zenith_ui_unified
-        )
-    endif()
-
-    # Add tests
-    add_test(NAME ZenithCoreTests COMMAND ZenithTests)
-    add_test(NAME ZenithUITests COMMAND ZenithTests)
-    add_test(NAME ZenithEngineTests COMMAND ZenithTests)
-
-    # Add test target (renamed to run_tests to avoid conflict)
-    add_custom_target(run_tests
-        COMMAND ctest --output-on-failure
-        VERBATIM
-    )
-
-    message(STATUS "✅ Test suite target created: ZenithTests")
-endif()
-
-# =============================================================================
-# PACKAGE TARGET
-# =============================================================================
-
-# Create package target for distribution
-add_custom_target(package
-    COMMAND ${CMAKE_COMMAND} -E echo "📦 Creating packages..."
-    COMMAND ${CMAKE_COMMAND} --build . --config Release
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/package
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/Release ${CMAKE_BINARY_DIR}/package/ZenithDAW
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/LICENSE ${CMAKE_BINARY_DIR}/package/
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/README.md ${CMAKE_BINARY_DIR}/package/
-    COMMAND ${CMAKE_COMMAND} -E tar -czf ${CMAKE_BINARY_DIR}/ZenithDAW-${CMAKE_PROJECT_VERSION}-${CMAKE_SYSTEM_PROCESSOR}.tar.gz -C ${CMAKE_BINARY_DIR}/package .
-    VERBATIM
+# Test sources (optional)
+set(ZENITH_TEST_SOURCES
+    apps/desktop/Source/tests/TestMain.cpp
+    apps/desktop/Source/tests/AudioEngineTests.cpp
+    apps/desktop/Source/tests/ProjectStateTests.cpp
+    apps/desktop/Source/tests/EngineTests.cpp
+    apps/desktop/Source/tests/ConcurrencyTests.cpp
+    apps/desktop/Source/tests/ThemeTests.cpp
+    apps/desktop/Source/tests/UITests.cpp
+    apps/desktop/Source/tests/Midi2Tests.cpp
+    apps/desktop/Source/tests/AITests.cpp
+    apps/desktop/Source/tests/AccessibilityTests.cpp
+    apps/desktop/Source/tests/CRDTSyncTests.cpp
+    apps/desktop/Source/tests/OnnxPipelineTests.cpp
+    apps/desktop/Source/tests/PluginAutomationTests.cpp
+    apps/desktop/Source/tests/SampleEditorRecordingTests.cpp
+    apps/desktop/Source/tests/CollaborationMultiPeerTest.cpp
 )
 
 # =============================================================================
-# FINAL SUMMARY
+# TARGET DEFINITION
 # =============================================================================
 
-# Print build information
-print_build_info()
-print_build_targets()
+# Create main executable
+juce_add_gui_app(ZenithDAW
+    PRODUCT_NAME "Zenith DAW"
+    COMPANY_NAME "Zenith Audio"
+    VERSION ${PROJECT_VERSION}
+    BUNDLE_ID com.zenithaudio.daw
+)
 
-# Final welcome message
-message(STATUS "")
-message(STATUS "🎉 Zenith DAW configuration complete!")
-message(STATUS "   Use 'make help' for more information")
-message(STATUS "")
-message(STATUS "Happy building! 🎵")
+# Generate JuceHeader.h
+juce_generate_juce_header(ZenithDAW)
+
+# Add source files
+target_sources(ZenithDAW PRIVATE ${ZENITH_ALL_SOURCES})
+
+# =============================================================================
+# INCLUDE DIRECTORIES
+# =============================================================================
+
+target_include_directories(ZenithDAW PUBLIC
+    ${CMAKE_BINARY_DIR}/ZenithDAW_artefacts/JuceLibraryCode
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source
+    apps/desktop/Source/engine
+    apps/desktop/Source/ui
+    apps/desktop/Source/ui/framework
+    apps/desktop/Source/ui/design-system
+    apps/desktop/Source/ui/arranger
+    apps/desktop/Source/ui/mixer
+    apps/desktop/Source/ui/piano-roll
+    apps/desktop/Source/ui/transport
+    apps/desktop/Source/ui/common
+    apps/desktop/Source/ui/widgets
+    apps/desktop/Source/ui/session
+    apps/desktop/Source/ui/instruments
+    apps/desktop/Source/ui/dialogs
+    apps/desktop/Source/ui/sample-editor
+    apps/desktop/Source/commands
+    apps/desktop/Source/instruments
+    apps/desktop/Source/network
+    apps/desktop/Source/dsp
+    apps/desktop/Source/rendering
+    apps/desktop/Source/ai
+    apps/desktop/Source/ui/skia
+    apps/desktop/Source/utils
+    ${CMAKE_PREFIX_PATH}/include
+    ${CMAKE_BINARY_DIR}/JuceLibraryCode
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
+)
+
+# =============================================================================
+# LIBRARY LINKING
+# =============================================================================
+
+# Link JUCE modules
+target_link_libraries(ZenithDAW PRIVATE ${ZENITH_JUCE_MODULES})
+
+# =============================================================================
+# SKIA INTEGRATION (after target creation)
+# =============================================================================
+
+# Skia rendering option (Release recommended)
+option(ZENITH_ENABLE_SKIA "Enable Skia Hardware-Accelerated Rendering" ON)
+
+if(ZENITH_ENABLE_SKIA)
+    # Manual Skia integration
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/cmake/SkiaManualIntegration.cmake")
+        include(apps/desktop/cmake/SkiaManualIntegration.cmake)
+        target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_SKIA=1)
+        message(STATUS "Zenith DAW: Skia rendering ENABLED")
+        
+        # Platform-specific graphics libraries
+        if(WIN32)
+            target_link_libraries(ZenithDAW PRIVATE d3d12 dxgi dcomp uuid)
+        elseif(APPLE)
+            target_link_libraries(ZenithDAW PRIVATE "-framework Metal" "-framework Foundation" "-framework QuartzCore")
+        elseif(UNIX AND NOT APPLE)
+            find_package(Vulkan QUIET)
+            if(Vulkan_FOUND)
+                target_link_libraries(ZenithDAW PRIVATE Vulkan::Vulkan)
+            else()
+                target_link_libraries(ZenithDAW PRIVATE vulkan)
+                message(STATUS "Vulkan not found - using system fallback")
+            endif()
+        endif()
+    else()
+        message(WARNING "Skia integration file not found. Skia will be disabled.")
+        set(ZENITH_ENABLE_SKIA OFF)
+    endif()
+else()
+    message(STATUS "Zenith DAW: Skia rendering DISABLED")
+endif()
+
+# =============================================================================
+# ONNX RUNTIME INTEGRATION (after target creation)
+# =============================================================================
+
+# ONNX Runtime for AI features (Linux only currently)
+option(ENABLE_ONNX "Enable ONNX Runtime for AI features" ON)
+
+if(ENABLE_ONNX)
+    if(UNIX AND NOT APPLE)
+        include(FetchContent)
+        FetchContent_Declare(
+            onnxruntime
+            URL https://github.com/microsoft/onnxruntime/releases/download/v1.17.1/onnxruntime-linux-x64-1.17.1.tgz
+        )
+        FetchContent_MakeAvailable(onnxruntime)
+        
+        # Global compile definitions
+        target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_ONNX_RUNTIME=1)
+        target_link_libraries(ZenithDAW PRIVATE ${onnxruntime_SOURCE_DIR}/lib/libonnxruntime.so)
+        target_include_directories(ZenithDAW PRIVATE ${onnxruntime_SOURCE_DIR}/include)
+        
+        # Copy ONNX library to output directory
+        add_custom_command(TARGET ZenithDAW POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${onnxruntime_SOURCE_DIR}/lib/libonnxruntime.so.1.17.1"
+            "$<TARGET_FILE_DIR:ZenithDAW>/libonnxruntime.so.1.17.1"
+            COMMAND ${CMAKE_COMMAND} -E create_symlink
+            "libonnxruntime.so.1.17.1"
+            "$<TARGET_FILE_DIR:ZenithDAW>/libonnxruntime.so.1"
+            COMMAND ${CMAKE_COMMAND} -E create_symlink
+            "libonnxruntime.so.1.17.1"
+            "$<TARGET_FILE_DIR:ZenithDAW>/libonnxruntime.so"
+            COMMENT "Copying ONNX Runtime library to output directory"
+        )
+        
+        message(STATUS "Zenith DAW: ONNX Runtime support ENABLED (Linux)")
+    else()
+        message(STATUS "Zenith DAW: ONNX Runtime support disabled on this platform")
+        set(ENABLE_ONNX OFF)
+    endif()
+else()
+    message(STATUS "Zenith DAW: ONNX Runtime support disabled by user")
+endif()
+
+# =============================================================================
+# COMPILE DEFINITIONS
+# =============================================================================
+
+target_compile_definitions(ZenithDAW PRIVATE
+    JUCE_WEB_BROWSER=0
+    JUCE_USE_CURL=0
+    JUCE_VST3_CAN_REPLACE_VST2=0
+    JUCE_REPORT_APP_USAGE=0
+)
+
+# =============================================================================
+# COMPILER FEATURES
+# =============================================================================
+
+target_compile_features(ZenithDAW PRIVATE cxx_std_20)
+set_target_properties(ZenithDAW PROPERTIES
+    CXX_STANDARD_REQUIRED ON
+    CXX_EXTENSIONS OFF
+    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
+)
+
+# =============================================================================
+# INTERPROCEDURAL OPTIMIZATION
+# =============================================================================
+
+if(ENABLE_IPO)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT result OUTPUT output)
+    if(result)
+        set_target_properties(ZenithDAW PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+        message(STATUS "IPO/LTO enabled for ZenithDAW")
+    else()
+        message(WARNING "IPO is not supported: ${output}")
+    endif()
+endif()
+
+# =============================================================================
+# BUILD OPTIMIZATIONS
+# =============================================================================
+
+# Apply build optimizations if available
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/cmake/BuildOptimizations.cmake")
+    include(apps/desktop/cmake/BuildOptimizations.cmake)
+    enable_zenith_build_optimizations(ZenithDAW)
+endif()
+
+# =============================================================================
+# PRECOMPILED HEADERS
+# =============================================================================
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/cmake/PrecompiledHeaders.cmake")
+    include(apps/desktop/cmake/PrecompiledHeaders.cmake)
+endif()
+
+# =============================================================================
+# OPTIONAL TESTS
+# =============================================================================
+
+option(BUILD_TESTS "Build unit tests" OFF)
+if(BUILD_TESTS)
+    juce_add_gui_app(ZenithDAWTests
+        PRODUCT_NAME "ZenithDAWTests"
+    )
+    
+    juce_generate_juce_header(ZenithDAWTests)
+    
+    target_sources(ZenithDAWTests PRIVATE ${ZENITH_TEST_SOURCES} ${ZENITH_ALL_SOURCES})
+    
+    target_include_directories(ZenithDAWTests PRIVATE 
+        ${CMAKE_BINARY_DIR}/ZenithDAWTests_artefacts/JuceLibraryCode
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/framework
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/design-system
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/arranger
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/mixer
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/piano-roll
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/transport
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/common
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/widgets
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/session
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/instruments
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/dialogs
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/sample-editor
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/commands
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/instruments
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/network
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/dsp
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/rendering
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ai
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/skia
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/utils
+        ${CMAKE_PREFIX_PATH}/include
+        ${CMAKE_BINARY_DIR}/JuceLibraryCode
+        "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
+    )
+    
+    target_link_libraries(ZenithDAWTests PRIVATE ${ZENITH_JUCE_MODULES})
+    
+    target_compile_definitions(ZenithDAWTests PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+    )
+    
+    target_compile_features(ZenithDAWTests PRIVATE cxx_std_20)
+    
+    if(ZENITH_ENABLE_SKIA)
+        # Re-use SKIA_ROOT/SKIA_INCLUDE_DIR detected by SkiaManualIntegration.cmake
+        target_include_directories(ZenithDAWTests PRIVATE ${SKIA_ROOT}/include ${SKIA_INCLUDE_DIR} ${SKIA_INCLUDE_DIR}/include)
+        if(SKIA_LIBRARY)
+            target_link_libraries(ZenithDAWTests PRIVATE ${SKIA_LIBRARY})
+        endif()
+        target_compile_definitions(ZenithDAWTests PRIVATE ZENITH_USE_SKIA=1)
+        
+        # Platform libs similar to ZenithDAW
+        if(WIN32)
+            target_link_libraries(ZenithDAWTests PRIVATE d3d12 dxgi dcomp uuid)
+        elseif(APPLE)
+            target_link_libraries(ZenithDAWTests PRIVATE "-framework Metal" "-framework Foundation" "-framework QuartzCore")
+        elseif(UNIX AND NOT APPLE)
+            target_link_libraries(ZenithDAWTests PRIVATE vulkan) 
+        endif()
+    endif()
+endif()
+
+# =============================================================================
+# INSTALLATION
+# =============================================================================
+
+install(TARGETS ZenithDAW
+    BUNDLE DESTINATION .
+    RUNTIME DESTINATION bin
+)
+
+# =============================================================================
+# RESOURCE COPYING
+# =============================================================================
+
+# Copy Resources (Fonts) to Output Directory
+add_custom_command(TARGET ZenithDAW POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/apps/desktop/Resources/fonts
+    $<TARGET_FILE_DIR:ZenithDAW>/Resources/fonts
+    COMMENT "Copying Fonts to Output Directory"
+)
+
+# =============================================================================
+# BUILD INFORMATION
+# =============================================================================
+
+message(STATUS "Zenith DAW Configuration:")
+message(STATUS "  Build Type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "  Platform: ${ZENITH_PLATFORM_NAME}")
+message(STATUS "  Architecture: ${ZENITH_ARCH_NAME}")
+message(STATUS "  Skia: ${ZENITH_ENABLE_SKIA}")
+message(STATUS "  ONNX: ${ENABLE_ONNX}")
+message(STATUS "  IPO: ${ENABLE_IPO}")
+message(STATUS "  Tests: ${BUILD_TESTS}")

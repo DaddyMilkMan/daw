@@ -21,6 +21,14 @@
 
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
+#include <include/core/SkImage.h>
+#include <include/core/SkRect.h>
+#include <include/core/SkRefCnt.h>
+#include <include/core/SkFont.h>
+#include <include/core/SkFontMgr.h>
+#include <include/core/SkTypeface.h>
+#include <juce_core/juce_core.h>
+#include <include/core/SkCanvas.h>
 
 #include <core/SkImage.h>
 #include <core/SkRect.h>
