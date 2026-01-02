@@ -387,6 +387,9 @@ void MainComponent::resized() {
       settingsPanel->centreWithSize(600, 500);
   }
   ZENITH_LOG_INFO("MainComponent::resized() - COMPLETE");
+  
+  // CRITICAL: Call base class to update OpenGL dimensions!
+  SkiaMainWindowIntegration::resized();
 }
 
 void MainComponent::openPianoRoll(const juce::String &trackId,

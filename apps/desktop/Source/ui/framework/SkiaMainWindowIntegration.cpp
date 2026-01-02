@@ -41,9 +41,8 @@ SkiaOpenGLRenderer::SkiaOpenGLRenderer(juce::Component *componentToAttach)
       openGLContext_.setRenderer(this);
       openGLContext_.setOpenGLVersionRequired(juce::OpenGLContext::openGL3_2);
       
-      // Demand-driven rendering: only repaint when triggerRepaint() is called
-      // This saves CPU/GPU when nothing is animating
-      openGLContext_.setContinuousRepainting(false);
+      // Following JUCE OpenGLAppComponent pattern: continuous repainting
+      openGLContext_.setContinuousRepainting(true);
       
       // Check if component already has a peer (rare but possible)
       if (targetComponent_->isShowing() && targetComponent_->getPeer() != nullptr) {
@@ -107,17 +106,13 @@ void SkiaOpenGLRenderer::timerCallback() {
 }
 
 void SkiaOpenGLRenderer::attachContextNow() {
-  // Force Software Fallback by skipping OpenGL attachment
-  ZENITH_LOG_INFO("SkiaOpenGLRenderer: attachContextNow() - SKIPPED FOR SOFTWARE FALLBACK");
-  return;
-  
   ZENITH_LOG_INFO("SkiaOpenGLRenderer: Attaching OpenGL context to component...");
   
   try {
     openGLContext_.attachTo(*targetComponent_);
     
-    // Disable JUCE component painting - we handle everything via Skia
-    openGLContext_.setComponentPaintingEnabled(false);
+    // Keep component painting enabled - JUCE handles presentation
+    // openGLContext_.setComponentPaintingEnabled(false);
     
     ZENITH_LOG_INFO("SkiaOpenGLRenderer: OpenGL context attached!");
   } catch (const std::exception& e) {
@@ -126,6 +121,7 @@ void SkiaOpenGLRenderer::attachContextNow() {
     ZENITH_LOG_ERROR("SkiaOpenGLRenderer: Unknown exception during attachTo!");
   }
 }
+
 
 SkiaOpenGLRenderer::~SkiaOpenGLRenderer() {
   surface_.reset();
@@ -143,6 +139,15 @@ void SkiaOpenGLRenderer::triggerRepaint() {
 
 void SkiaOpenGLRenderer::newOpenGLContextCreated() {
   ZENITH_LOG_INFO("SkiaOpenGLRenderer: newOpenGLContextCreated called");
+  
+  // LOG OpenGL version info for diagnostics
+  const char* glVersion = (const char*)juce::gl::glGetString(juce::gl::GL_VERSION);
+  const char* glVendor = (const char*)juce::gl::glGetString(juce::gl::GL_VENDOR);
+  const char* glRenderer = (const char*)juce::gl::glGetString(juce::gl::GL_RENDERER);
+  ZENITH_LOG_INFO("OpenGL Version: " + juce::String(glVersion ? glVersion : "unknown"));
+  ZENITH_LOG_INFO("OpenGL Vendor: " + juce::String(glVendor ? glVendor : "unknown"));
+  ZENITH_LOG_INFO("OpenGL Renderer: " + juce::String(glRenderer ? glRenderer : "unknown"));
+
   try {
     ZENITH_LOG_INFO("SkiaOpenGLRenderer: Creating GL interface...");
     // Create platform-specific native interface
@@ -179,6 +184,10 @@ void SkiaOpenGLRenderer::newOpenGLContextCreated() {
 }
 
 void SkiaOpenGLRenderer::renderOpenGL() {
+  // Ensure context is current on this thread
+  if (!openGLContext_.makeActive())
+    return;
+
   if (!contextInitialized_)
     return;
 
@@ -189,18 +198,28 @@ void SkiaOpenGLRenderer::renderOpenGL() {
   if (width <= 0 || height <= 0)
     return;
 
+  // Set viewport
+  juce::gl::glViewport(0, 0, width, height);
+  
+  // Recreate Skia surface if size changed
   if (lastWidth_ != width || lastHeight_ != height) {
     recreateSurface();
     lastWidth_ = width;
     lastHeight_ = height;
   }
 
+  // Render Skia content
   if (surface_) {
     SkCanvas *canvas = surface_->getCanvas();
     if (canvas) {
-      canvas->clear(SK_ColorTRANSPARENT);
+      // Clear to dark background 
+      canvas->clear(SkColorSetARGB(255, 20, 20, 25));
+      
+      // Draw actual UI content
       drawSkiaContent(canvas);
-      grContext_->flush();
+      
+      // Flush Skia commands to OpenGL
+      grContext_->flushAndSubmit();
     }
   }
 }
@@ -273,12 +292,21 @@ void SkiaOpenGLRenderer::recreateSurface() {
 // ============================================================================
 
 SkiaMainWindowIntegration::SkiaMainWindowIntegration()
-    : SkiaOpenGLRenderer(this) {}
+    : SkiaOpenGLRenderer(this) {
+  // CRITICAL: Following JUCE OpenGLAppComponent pattern
+  // setOpaque(true) is required for OpenGL rendering on Linux!
+  setOpaque(true);
+}
 
 SkiaMainWindowIntegration::~SkiaMainWindowIntegration() {}
 
 void SkiaMainWindowIntegration::paint(juce::Graphics &g) {
-  // Software fallback rendering
+  // If OpenGL is attached, it handles rendering - skip software fallback
+  if (openGLContext_.isAttached()) {
+    return;
+  }
+
+  // Software fallback rendering (only when OpenGL fails)
   static int frameCount = 0;
   frameCount++;
   
@@ -320,7 +348,9 @@ void SkiaMainWindowIntegration::paint(juce::Graphics &g) {
 }
 
 void SkiaMainWindowIntegration::resized() {
-  // Surface will be recreated in renderOpenGL if size changed
+  // Update dimensions for OpenGL rendering
+  auto bounds = getLocalBounds();
+  updateDimensions(bounds.getWidth(), bounds.getHeight());
 }
 
 void SkiaMainWindowIntegration::parentHierarchyChanged() {
