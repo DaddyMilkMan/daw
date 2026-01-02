@@ -83,18 +83,9 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   addAndMakeVisible(hubComponent.get());
 
   // Create Transport Bar
-  // Create Transport Bar
   transportBar = std::make_unique<TransportBar>();
-  transportBar->setVisible(false); // Hide instead of commenting out to keep pointer valid
-  /*
-  transportBar->onPlayClicked = [this] {
-      if (engine.isPlaying()) engine.stop(); 
-      else engine.play();
-      transportBar->setPlaying(engine.isPlaying());
-  };
-  // ... other callbacks ...
-  // addAndMakeVisible(transportBar.get()); 
-  */ 
+  transportBar->setVisible(false);
+  // addAndMakeVisible(transportBar.get()); // Added later with TitleBar
   
   // Create Title Bar
   titleBar = std::make_unique<TitleBarComponent>();
@@ -143,17 +134,26 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
           resized(); // Ensure centered
       }
   };
+  
   transportBar->onSettingsClicked = [this] {
       if (settingsPanel) {
-          settingsPanel->setVisible(true);
+          // Position at 80% of viewport, centered
+          int w = juce::roundToInt(getWidth() * 0.8);
+          int h = juce::roundToInt(getHeight() * 0.85);
+          settingsPanel->centreWithSize(w, h);
+          settingsPanel->show(); // Animated show
           settingsPanel->toFront(true);
-          resized(); // Ensure centered
       }
   };
 
   // Set initial visibility
   exportDialog->setVisible(false);
   settingsPanel->setVisible(false);
+  
+  // Settings close callback
+  settingsPanel->onClose = [this] {
+      // Optional cleanup when settings closes
+  };
 
   setMainUiVisible(false);
 
@@ -272,6 +272,29 @@ void MainComponent::drawSkiaContent(SkCanvas *canvas) {
           canvas->restore();
       }
   }
+  
+  // --- MODAL OVERLAYS (Always on top) ---
+  // Draw settings modal if visible
+  if (settingsPanel && settingsPanel->isVisible()) {
+      // Draw semi-transparent backdrop
+      SkPaint backdropPaint;
+      backdropPaint.setColor(SkColorSetA(SK_ColorBLACK, 150));
+      canvas->drawRect(skBounds, backdropPaint);
+      
+      // Draw settings panel
+      canvas->save();
+      canvas->translate(settingsPanel->getX(), settingsPanel->getY());
+      settingsPanel->drawSkia(canvas);
+      canvas->restore();
+  }
+  
+  // Draw export dialog if visible
+  if (exportDialog && exportDialog->isVisible()) {
+      canvas->save();
+      canvas->translate(exportDialog->getX(), exportDialog->getY());
+      exportDialog->drawSkia(canvas);
+      canvas->restore();
+  }
 }
 
 void MainComponent::mouseDown(const juce::MouseEvent &e) {
@@ -383,9 +406,20 @@ void MainComponent::resized() {
   if (exportDialog) {
       exportDialog->centreWithSize(550, 520);
   }
-  if (settingsPanel) {
-      settingsPanel->centreWithSize(600, 500);
+  
+  if (settingsPanel && settingsPanel->isVisible()) {
+      // 80% of viewport, centered (Min 800x600)
+      int w = std::max(800, juce::roundToInt(bounds.getWidth() * 0.8));
+      int h = std::max(600, juce::roundToInt(bounds.getHeight() * 0.85));
+      settingsPanel->centreWithSize(w, h);
+      
+      // FIX: Clamp negative positions
+      auto sBounds = settingsPanel->getBounds();
+      if (sBounds.getX() < 0) sBounds.setX(0);
+      if (sBounds.getY() < 0) sBounds.setY(0);
+      settingsPanel->setBounds(sBounds);
   }
+  
   ZENITH_LOG_INFO("MainComponent::resized() - COMPLETE");
   
   // CRITICAL: Call base class to update OpenGL dimensions!
