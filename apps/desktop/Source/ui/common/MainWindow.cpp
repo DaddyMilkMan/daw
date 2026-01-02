@@ -254,8 +254,13 @@ void MainComponent::drawSkiaContent(SkCanvas *canvas) {
       bgPaint.setColor(SK_ColorWHITE); // Or projectState.getTheme().background
       canvas->drawRect(skBounds, bgPaint);
       
-      // 2. Draw Main Layout (if it's a SkiaComponent, otherwise JUCE handles it?)
-      // Assuming MainLayout handles its own rendering or is a container of standard Components
+      // 2. Draw Main Layout
+      if (mainLayout && mainLayout->isVisible()) {
+          canvas->save();
+          canvas->translate(mainLayout->getX(), mainLayout->getY());
+          mainLayout->drawSkia(canvas);
+          canvas->restore();
+      }
       
       // 3. Draw Top Bar Elements
       if (titleBar && titleBar->isVisible()) {
