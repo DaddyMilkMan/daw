@@ -182,6 +182,10 @@ TransportBar::TransportBar() {
   
   ZENITH_REGISTER_ANIMATION(zenith::animation::Priority::High);
   
+  // Initialize fonts immediately for cache updates
+  monoFont_ = design::getMonoFont(18.0f, design::FontWeight::Medium);
+  labelFont_ = design::getSkFont(14.0f, design::FontWeight::Regular);
+  
   // Initial Cache Update
   updateBpmCache();
   updateTimeSigCache();
