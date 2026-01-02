@@ -4,6 +4,7 @@
 #include "../ai/AudioFitnessEvaluator.h"
 #include "../network/GrokUtils.h"
 #include "../utils/StemSeparationJob.h"
+#include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_core/juce_core.h>
 #include <juce_events/juce_events.h>
 
@@ -205,13 +206,9 @@ public:
               buffer.setSample(ch, i, rng.nextFloat() * 0.1f);
 
       juce::WavAudioFormat wavFormat;
-      auto options = juce::AudioFormatWriterOptions()
-                         .withSampleRate(44100.0)
-                         .withNumChannels(2)
-                         .withBitsPerSample(16);
-      std::unique_ptr<juce::OutputStream> fileStream(new juce::FileOutputStream(testFile));
+      std::unique_ptr<juce::OutputStream> fileStream(testFile.createOutputStream());
       std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(
-          fileStream, options));
+          fileStream.release(), 44100.0, 2, 16, {}, 0));
       if (writer) {
           writer->writeFromAudioSampleBuffer(buffer, 0, buffer.getNumSamples());
           writer.reset();
