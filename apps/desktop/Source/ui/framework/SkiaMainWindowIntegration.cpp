@@ -184,39 +184,20 @@ void SkiaOpenGLRenderer::newOpenGLContextCreated() {
 }
 
 void SkiaOpenGLRenderer::renderOpenGL() {
-  // LOG to confirm rendering is happening
-  static int renderCount = 0;
-  if (renderCount++ % 300 == 0) { // Every ~5 seconds
-    ZENITH_LOG_INFO("renderOpenGL frame " + std::to_string(renderCount) +
-      " bounds: " + std::to_string(targetComponent_->getWidth()) + "x" + 
-      std::to_string(targetComponent_->getHeight()) + 
-      " screen: " + std::to_string(targetComponent_->getScreenX()) + "," + 
-      std::to_string(targetComponent_->getScreenY()));
-  }
-
   // Ensure context is current on this thread
-  if (!openGLContext_.makeActive()) {
-    ZENITH_LOG_ERROR("renderOpenGL: Failed to make context active!");
+  if (!openGLContext_.makeActive())
     return;
-  }
 
-  if (!contextInitialized_) {
-    static int skipCount = 0;
-    if (skipCount++ % 300 == 0)
-      ZENITH_LOG_INFO("renderOpenGL: contextInitialized_ is FALSE, skipping. skipCount=" + std::to_string(skipCount));
+  if (!contextInitialized_)
     return;
-  }
 
   // Use thread-safe dimensions
   int width = safeWidth_.load();
   int height = safeHeight_.load();
 
-  if (width <= 0 || height <= 0) {
-    static int dimSkip = 0;
-    if (dimSkip++ % 300 == 0)
-      ZENITH_LOG_INFO("renderOpenGL: Invalid dimensions " + std::to_string(width) + "x" + std::to_string(height) + ", skipCount=" + std::to_string(dimSkip));
+  if (width <= 0 || height <= 0)
     return;
-  }
+
   // Set viewport
   juce::gl::glViewport(0, 0, width, height);
   

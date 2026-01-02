@@ -1,77 +1,134 @@
 # --- The Citadel Strict Ignore Policy ---
+# Combined comprehensive .gitignore for Zenith DAW
 
+# ============================================
 # 1. Build Artifacts (Aggressive)
+# ============================================
 /build*/
 /out/
 /bin/
 /lib/
+/obj/
+/Debug/
+/Release/
+/_deps/
 cmake-build-*/
 .cache/
 **/CMakeFiles/
 **/cmake_install.cmake
-*.vcxproj.filters
+CMakeCache.txt
+compile_commands.json
+Testing/
 build_output*.txt
 
-# 1b. Logs Directory
-/logs/
-
-# 1c. Leftover & Nested Build Folders
+# Build logs
 build_fix*/
 build_manual/
 build_skia/
 build_trash/
 modules/*/build/
 
-# 2. OS Junk
+# Logs Directory
+/logs/
+
+# ============================================
+# 2. Compiled Binaries
+# ============================================
+*.so
+*.a
+*.lib
+*.dll
+*.exe
+*.o
+*.obj
+*.pch
+pch.h.gch
+
+# ============================================
+# 3. OS Junk
+# ============================================
 .DS_Store
 Thumbs.db
 Desktop.ini
 
-# 3. IDE Clutter
+# ============================================
+# 4. IDE Clutter
+# ============================================
 .vscode/
 .idea/
 *.sln
 *.vcxproj
 *.vcxproj.user
+*.vcxproj.filters
+*.swp
+*.swo
+*.code-workspace
+.clangd
 
-# 4. Node Dependencies
-node_modules/
-npm-debug.log
-
-# 5. Local Env
+# ============================================
+# 5. Local Environment
+# ============================================
 .env
 *.local
 .venv/
 
-# 6. Build Logs and Error Files
+# ============================================
+# 6. Node Dependencies
+# ============================================
+node_modules/
+npm-debug.log
+
+# ============================================
+# 7. Build Logs and Error Files
+# ============================================
+*.log
 build_errors*.txt
+build_error*.txt
 build_log*.txt
 build_verbose.txt
+build_tree.txt
 cmake_error*.log
 msbuild_*.log
-*.log
 debug_log.txt
+daw_gui_log*.txt
+output.txt
+server_log.txt
 
-# 7. Backup Files
+# ============================================
+# 8. Backup and Temporary Files
+# ============================================
 *.bak
 *.old
 *.tmp
 *.backup
 *.orig
+*~
 
-# 8. Python Artifacts
+# ============================================
+# 9. Python Artifacts
+# ============================================
 *.pyc
 __pycache__/
 *.pyo
 *.pyd
 .Python
 
-# 9. Images in root (stray artifacts)
+# ============================================
+# 10. Script and Patch Files
+# ============================================
+*.ps1
+*.patch
+
+# ============================================
+# 11. Images in Root (stray artifacts)
+# ============================================
 /*.png
 /*.jpg
 /*.gif
 
-# 10. Zenith DAW Specific transients
+# ============================================
+# 12. Zenith DAW Specific Transients
+# ============================================
 /final_test_results*.txt
 /test_critic_fix.txt
 /test_debug.txt
@@ -85,34 +142,17 @@ __pycache__/
 /all_linked_objects.txt
 /linked_objects.txt
 /obj_list.txt
-/*.log
 /apps/desktop/Source/zenith_headers.txt
 /find_brace_level.py
 /launch.sh
 /apps/scanner/
 
-# Build artifacts (added Jan 1, 2026)
-build/
+# ============================================
+# 13. Text Files (except CMakeLists)
+# ============================================
 *.txt
 !CMakeLists.txt
-!*/CMakeLists.txt
-compile_commands.json
-Testing/
-*.log
-daw_gui_log*.txt
-
-# IDE files
-.vscode/settings.json
-.idea/
-*.swp
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Temporary files
-*.tmp
-*~
-
-# Node modules
-node_modules/
+!**/CMakeLists.txt
+!README.txt
+!LICENSE.txt
+!docs/**/*.txt
