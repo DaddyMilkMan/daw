@@ -6,6 +6,7 @@ and health checking functionality.
 """
 
 import os
+import socket
 import sys
 import time
 import threading
@@ -394,8 +395,7 @@ class TestCheckTcpPort:
     @patch('socket.create_connection')
     def test_check_timeout(self, mock_connect):
         """Test connection timeout."""
-        import socket as sock_module
-        mock_connect.side_effect = sock_module.timeout()
+        mock_connect.side_effect = socket.timeout()
         
         result = check_tcp_port("slow.host.local", 80, timeout=0.1)
         assert result is False
