@@ -16,15 +16,12 @@
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_events/juce_events.h>
-#include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#ifdef ZENITH_USE_SKIA
 #include "../framework/SkiaComponent.h"
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
-#endif
 
 namespace zenith {
 
@@ -37,12 +34,7 @@ namespace zenith {
  * Features flat design with theme colors, hover feedback, and smooth
  * animations.
  */
-#ifdef ZENITH_USE_SKIA
 class TimelineRuler : public SkiaComponent
-#else
-class TimelineRuler : public juce::Component,
-                      public juce::Timer
-#endif
 {
 public:
   TimelineRuler();
@@ -93,11 +85,7 @@ public:
   // Component interface
   //==========================================================================
 
-#ifdef ZENITH_USE_SKIA
   void drawSkia(SkCanvas *canvas) override;
-#else
-  void paint(juce::Graphics &g) override;
-#endif
   void resized() override;
   void mouseMove(const juce::MouseEvent &event) override;
   void mouseEnter(const juce::MouseEvent &event) override;
@@ -131,10 +119,6 @@ private:
   double initialLoopEnd = 0.0;
 
   // Helper methods
-  void drawBackground(juce::Graphics &g, const juce::Rectangle<int> &bounds);
-  void drawBeatMarkers(juce::Graphics &g, const juce::Rectangle<int> &bounds);
-  void drawHoverFeedback(juce::Graphics &g, const juce::Rectangle<int> &bounds);
-  void drawTooltip(juce::Graphics &g);
   juce::String formatTimePosition(double beat) const;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TimelineRuler)
