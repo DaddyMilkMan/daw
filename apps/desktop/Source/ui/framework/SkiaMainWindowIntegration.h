@@ -9,7 +9,6 @@
 #include <juce_opengl/juce_opengl.h>
 #include <atomic>
 
-#ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
 #include <core/SkColorSpace.h>
 #include <core/SkRefCnt.h>
@@ -20,7 +19,7 @@
 #include <gpu/ganesh/gl/GrGLBackendSurface.h>
 #include <gpu/ganesh/gl/GrGLDirectContext.h>
 
-#endif
+
 
 namespace zenith {
 

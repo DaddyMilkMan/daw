@@ -22,12 +22,11 @@
 #include "../framework/SkiaComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
 #include <core/SkImage.h>
 #include <core/SkPath.h>
 #include <core/SkTextBlob.h>
-#endif
+
 
 namespace zenith {
 
@@ -147,11 +146,9 @@ private:
   juce::String text_;
   juce::String tooltip_;
   juce::String iconText_;
-#ifdef ZENITH_USE_SKIA
   sk_sp<SkImage> icon_;
   SkPath iconPath_;
   sk_sp<SkTextBlob> textBlob_;
-#endif
 
   // Style
   Style style_ = Style::Secondary;
@@ -176,10 +173,8 @@ private:
   // Layout cache
   bool layoutDirty_ = true;
   bool textDirty_ = true;
-#ifdef ZENITH_USE_SKIA
   SkRect iconRect_;
   SkRect textRect_;
-#endif
 
   float getButtonHeight() const;
   float getCornerRadius() const;

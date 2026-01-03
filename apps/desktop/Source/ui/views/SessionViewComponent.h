@@ -109,9 +109,7 @@ public:
   void
   itemDropped(const juce::DragAndDropTarget::SourceDetails &details) override;
 
-#ifdef ZENITH_USE_SKIA
   void drawSkia(SkCanvas *canvas) override;
-#endif
 
   //==========================================================================
   // Session Control

@@ -40,9 +40,7 @@ public:
   bool hitTest(int x, int y) override;
 
 private:
-#ifdef ZENITH_USE_SKIA
   void drawTooltipCard(SkCanvas *canvas, const SkRect &targetRect);
-#endif
 
   ZenithControl *target_ = nullptr;
 

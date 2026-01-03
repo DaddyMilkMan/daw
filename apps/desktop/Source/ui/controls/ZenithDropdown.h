@@ -76,11 +76,9 @@ protected:
 private:
   void showPopupMenu();
 
-#ifdef ZENITH_USE_SKIA
   void drawBackground(SkCanvas *canvas);
   void drawText(SkCanvas *canvas);
   void drawChevron(SkCanvas *canvas);
-#endif
 
   struct Item {
     juce::String text;

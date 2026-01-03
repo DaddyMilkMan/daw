@@ -16,14 +16,13 @@
 #include "../framework/GlassmorphicPanel.h"
 #include "../controls/SpectraAnalyzerComponent.h"
 
-#ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
 #include <core/SkRect.h>
 
-#endif
+
 
 namespace zenith {
 

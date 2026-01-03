@@ -39,10 +39,8 @@ public:
   void timerCallback() override;
 
 private:
-#ifdef ZENITH_USE_SKIA
   void drawWaveform(SkCanvas *canvas);
   void drawSpectrum(SkCanvas *canvas);
-#endif
 
   ZenithPolySynthProcessor &processor_;
   std::vector<float> audioBuffer_;

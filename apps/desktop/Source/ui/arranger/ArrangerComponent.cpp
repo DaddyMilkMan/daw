@@ -275,7 +275,6 @@ juce::String ArrangerComponent::getTooltip() {
 // Skia Rendering
 //=============================================================================
 
-#ifdef ZENITH_USE_SKIA
 void ArrangerComponent::drawSkia(SkCanvas* canvas) {
     renderer_->drawSkia(canvas);
 }

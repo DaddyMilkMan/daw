@@ -105,11 +105,9 @@ private:
   void incrementValue(double delta);
   juce::String formatValue(double value) const;
 
-#ifdef ZENITH_USE_SKIA
   void drawBackground(SkCanvas *canvas);
   void drawText(SkCanvas *canvas);
   void drawLabel(SkCanvas *canvas);
-#endif
 
   juce::String text_;
   double value_ = 0.0;

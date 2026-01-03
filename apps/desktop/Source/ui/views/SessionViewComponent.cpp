@@ -382,8 +382,6 @@ void SessionViewComponent::stopAllClips() {
 // Skia Drawing
 //==============================================================================
 
-#ifdef ZENITH_USE_SKIA
-
 void SessionViewComponent::drawSkia(SkCanvas *canvas) {
   drawBackground(canvas);
   drawTrackHeaders(canvas);

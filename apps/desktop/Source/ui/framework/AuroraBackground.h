@@ -33,9 +33,7 @@ public:
    * @param bounds The bounds of the area to fill.
    * @param time   Current animation time in seconds.
    */
-#ifdef ZENITH_USE_SKIA
   void draw(SkCanvas *canvas, const SkRect &bounds, float time);
-#endif
 
 private:
 #ifdef ZENITH_USE_SKIA
