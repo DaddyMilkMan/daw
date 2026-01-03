@@ -12,7 +12,6 @@
 
 #include "ZenithButton.h"
 
-#ifdef ZENITH_USE_SKIA
 #include "../design-system/ZenithDesignSystem.h" // Add design system include
 #include "../design-system/ZenithIcons.h" // Add icons include
 #include <core/SkBlurTypes.h>
@@ -20,8 +19,6 @@
 #include <core/SkMaskFilter.h>
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
-
-#endif
 
 namespace zenith {
 
@@ -62,7 +59,6 @@ void ZenithButton::setButtonSize(Size size) {
   }
 }
 
-#ifdef ZENITH_USE_SKIA
 void ZenithButton::setIcon(sk_sp<SkImage> icon) {
   icon_ = icon;
   layoutDirty_ = true;
@@ -74,7 +70,6 @@ void ZenithButton::setIconPath(const SkPath& path) {
   layoutDirty_ = true;
   repaint();
 }
-#endif
 
 void ZenithButton::setIconText(const juce::String &iconText) {
   iconText_ = iconText;
@@ -210,7 +205,6 @@ float ZenithButton::getFontSize() const {
 }
 
 void ZenithButton::drawSkia(SkCanvas *canvas) {
-#ifdef ZENITH_USE_SKIA
   if (canvas == nullptr)
     return;
 
@@ -247,9 +241,7 @@ void ZenithButton::drawSkia(SkCanvas *canvas) {
 
   // Draw icon
   if (iconPosition_ != IconPosition::Only || iconText_.isNotEmpty()
-#ifdef ZENITH_USE_SKIA
       || icon_ != nullptr
-#endif
   ) {
     drawIcon(canvas, iconRect_);
   }
@@ -258,12 +250,7 @@ void ZenithButton::drawSkia(SkCanvas *canvas) {
   if (iconPosition_ != IconPosition::Only && text_.isNotEmpty()) {
     drawText(canvas, textRect_);
   }
-#else
-  juce::ignoreUnused(canvas);
-#endif
 }
-
-#ifdef ZENITH_USE_SKIA
 
 SkColor ZenithButton::getBackgroundColor() const {
   SkColor base;
@@ -541,6 +528,5 @@ void ZenithButton::calculateLayout() {
   layoutDirty_ = false;
 }
 
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

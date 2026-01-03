@@ -12,18 +12,13 @@
 
 #include "SkiaMainWindowIntegration.h"
 
-#ifdef ZENITH_USE_SKIA
 #include "../../engine/ZenithLogger.h"
 #include "PlatformWindowUtils.h"
 #include <cstring>
 #include <include/gpu/ganesh/gl/GrGLDirectContext.h>
 #include <juce_opengl/juce_opengl.h>
 
-#endif
-
 namespace zenith {
-
-#ifdef ZENITH_USE_SKIA
 
 // ============================================================================
 // SkiaOpenGLRenderer Implementation
@@ -376,7 +371,5 @@ void SkiaMainWindowIntegration::visibilityChanged() {
     scheduleAttachmentCheck();
   }
 }
-
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

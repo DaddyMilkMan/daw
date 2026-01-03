@@ -9,7 +9,6 @@
 #include <juce_opengl/juce_opengl.h>
 #include <atomic>
 
-#ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
 #include <core/SkColorSpace.h>
 #include <core/SkRefCnt.h>
@@ -20,11 +19,7 @@
 #include <gpu/ganesh/gl/GrGLBackendSurface.h>
 #include <gpu/ganesh/gl/GrGLDirectContext.h>
 
-#endif
-
 namespace zenith {
-
-#ifdef ZENITH_USE_SKIA
 /**
  * @brief Reusable Skia OpenGL Renderer that manages OpenGL context and Skia
  * Surface.
@@ -140,7 +135,5 @@ private:
   sk_sp<SkSurface> softwareSurface_;
   juce::Image softwareImage_;
 };
-
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith
