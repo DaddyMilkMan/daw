@@ -44,8 +44,8 @@ class HealthHandler(BaseHTTPRequestHandler):
             status = self.sentinel.get_status() if self.sentinel else {"status": "initializing"}
             self.wfile.write(json.dumps(status).encode("utf-8"))
         except Exception as e:
+            # Log the error but don't try to send error response as headers may be partially sent
             logging.getLogger("zenith.backend").error("Health check failed: %s", e, exc_info=True)
-            self.send_error(500, "Internal Server Error")
 
     def log_message(self, format: str, *args: object) -> None:
         """Suppress default HTTP access logs."""

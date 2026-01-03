@@ -13,6 +13,10 @@ from typing import Callable, Dict, List, Optional
 # Replaced structlog with standard logging
 log = logging.getLogger("zenith.orchestrator")
 
+# Constants for process management
+GRACEFUL_SHUTDOWN_TIMEOUT_SEC = 5
+FORCE_KILL_TIMEOUT_SEC = 2
+
 class ServiceState(Enum):
     STOPPED = auto()
     STARTING = auto()
@@ -150,12 +154,12 @@ class ServiceSentinel:
                     log.info(f"Terminating service {name} (pid={rt.process.pid})")
                     rt.process.terminate()
                     try:
-                        rt.process.wait(timeout=5)
+                        rt.process.wait(timeout=GRACEFUL_SHUTDOWN_TIMEOUT_SEC)
                         log.info(f"Service {name} terminated gracefully")
                     except subprocess.TimeoutExpired:
                         log.warning(f"Service {name} did not terminate, killing")
                         rt.process.kill()
-                        rt.process.wait(timeout=2)  # Wait for kill to complete
+                        rt.process.wait(timeout=FORCE_KILL_TIMEOUT_SEC)  # Wait for kill to complete
             except Exception as e:
                 log.error(f"Error stopping service {name}: {e}", exc_info=True)
             finally:
