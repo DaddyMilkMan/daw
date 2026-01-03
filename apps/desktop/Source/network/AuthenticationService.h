@@ -7,6 +7,25 @@
 
     Authentication service supporting Google OAuth and SylorLabs username/password.
     Uses mock backend for development, ready for real API integration.
+    
+    SECURITY REQUIREMENTS FOR BACKEND (sylorlabs.com):
+    
+    1. REDIRECT_URI VALIDATION:
+       - The backend MUST maintain a whitelist of allowed redirect URIs
+       - For desktop app: Allow http://127.0.0.1:<any-port>/callback and /oauth2callback
+       - NEVER accept arbitrary redirect_uri values (open redirect vulnerability)
+       - Validate that the port is in the ephemeral range (49152-65535)
+    
+    2. STATE PARAMETER VALIDATION:
+       - The backend MUST store the state parameter when initiating OAuth flow
+       - The backend MUST verify the state parameter matches on callback
+       - Reject any requests with missing or mismatched state (CSRF protection)
+       - State should be cryptographically random (256 bits minimum)
+    
+    3. HTTPS REQUIREMENTS:
+       - All sylorlabs.com endpoints MUST use HTTPS
+       - Validate SSL certificates properly
+       - Never downgrade to HTTP
 
   ==============================================================================
 */
@@ -54,7 +73,7 @@ static constexpr const char* kSylorLabsBaseUrl = "https://sylorlabs.com/api/v1";
 static constexpr const char* kGoogleAuthUrl = "https://accounts.google.com/o/oauth2/v2/auth";
 static constexpr const char* kGoogleTokenUrl = "https://oauth2.googleapis.com/token";
 static constexpr const char* kGoogleClientId = "299395583046-536666ntt3lpku0jneqj7751hurfvfl7.apps.googleusercontent.com";
-static constexpr const char* kGoogleRedirectUri = "http://127.0.0.1:8888/oauth2callback";
+// NOTE: kGoogleRedirectUri is no longer hardcoded - we use dynamic ports for security
 
 /**
  * @class AuthenticationService
@@ -182,6 +201,11 @@ private:
     void exchangeWebAuthCodeForToken(const juce::String& code, AuthCallback callback);
     void fetchWebUserInfo(const juce::String& token, AuthCallback callback);
     std::unique_ptr<OAuthRedirectServer> oauthServer_;
+    
+    // Security: Generate cryptographically strong random state for CSRF protection
+    juce::String generateSecureState();
+    juce::String currentOAuthState_;
+    juce::String currentRedirectUri_;  // Store for token exchange
     
     // Storage
     void saveSession();

@@ -51,7 +51,20 @@ void AuthenticationService::loginWithGoogle(AuthCallback callback) {
 
 void AuthenticationService::performGoogleLogin(AuthCallback callback) {
     fprintf(stderr, "[Auth] performGoogleLogin START\n");
-    // 1. Start local server to listen for redirect
+    
+    // SECURITY: Generate a cryptographically strong random state for CSRF protection
+    currentOAuthState_ = generateSecureState();
+    ZENITH_LOG_INFO("[Auth] Generated OAuth state: " + currentOAuthState_.substring(0, 8) + "...");
+    
+    // 1. Find a free ephemeral port for the local OAuth server
+    int port = OAuthRedirectServer::findFreePort();
+    if (port == -1) {
+        ZENITH_LOG_ERROR("[Auth] Could not find a free port for OAuth server");
+        callback(false, "Failed to allocate a local port for authentication. Please close some applications and try again.");
+        return;
+    }
+    
+    // 2. Start local server to listen for redirect
     if (!oauthServer_) {
         fprintf(stderr, "[Auth] Creating OAuthRedirectServer...\n");
         oauthServer_ = std::make_unique<OAuthRedirectServer>();
@@ -63,11 +76,11 @@ void AuthenticationService::performGoogleLogin(AuthCallback callback) {
         oauthServer_->stop();
     }
     
-    // Start listening on port 8888
+    // Start listening on the dynamically allocated port with state validation
     // The callback will be executed on the message thread
-    fprintf(stderr, "[Auth] Calling oauthServer_->startAndWait...\n");
-    oauthServer_->startAndWait(8888, [this, callback](const juce::String& code, const juce::String& token, const juce::String& error) {
-        juce::ignoreUnused(token);
+    fprintf(stderr, "[Auth] Calling oauthServer_->startAndWait on port %d...\n", port);
+    oauthServer_->startAndWait(port, currentOAuthState_, [this, callback](const juce::String& code, const juce::String& token, const juce::String& error, const juce::String& state) {
+        juce::ignoreUnused(token, state);
         if (error.isNotEmpty()) {
             callback(false, "OAuth Error: " + error);
         } else if (code.isNotEmpty()) {
@@ -77,17 +90,20 @@ void AuthenticationService::performGoogleLogin(AuthCallback callback) {
     });
     fprintf(stderr, "[Auth] oauthServer_->startAndWait returned\n");
 
-    // 2. Construct the OAuth URL
+    // 3. Construct the OAuth URL with dynamic redirect_uri and state
+    // IMPORTANT: The backend MUST validate that redirect_uri is whitelisted
+    juce::String redirectUri = "http://127.0.0.1:" + juce::String(port) + "/oauth2callback";
     juce::URL url(kGoogleAuthUrl);
     url = url.withParameter("client_id", kGoogleClientId)
-             .withParameter("redirect_uri", kGoogleRedirectUri)
+             .withParameter("redirect_uri", redirectUri)
              .withParameter("response_type", "code")
              .withParameter("scope", "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email")
-             .withParameter("access_type", "offline");
+             .withParameter("access_type", "offline")
+             .withParameter("state", currentOAuthState_);  // CSRF protection
              
     fprintf(stderr, "[Auth] Launching browser thread...\n");
     
-    // Launch browser in background to prevent UI freeze
+    // 4. Launch browser in background to prevent UI freeze
     juce::Thread::launch([url, this, callback]() {
         fprintf(stderr, "[Auth] Browser launch thread started for URL: %s\n", url.toString(true).toRawUTF8());
         bool launched = url.launchInDefaultBrowser();
@@ -96,7 +112,7 @@ void AuthenticationService::performGoogleLogin(AuthCallback callback) {
             fprintf(stderr, "[Auth] Failed to launch browser\n");
             oauthServer_->stop();
             juce::MessageManager::callAsync([callback]() {
-                callback(false, "Failed to launch browser");
+                callback(false, "Failed to launch browser. Please ensure you have a default web browser configured.");
             });
         } else {
             fprintf(stderr, "[Auth] Browser launched successfully\n");
@@ -114,7 +130,19 @@ void AuthenticationService::loginWithWeb(AuthCallback callback) {
 }
 
 void AuthenticationService::performWebLogin(AuthCallback callback) {
-    // 1. Start local server
+    // SECURITY: Generate a cryptographically strong random state for CSRF protection
+    currentOAuthState_ = generateSecureState();
+    ZENITH_LOG_INFO("[Auth] Generated Web Login state: " + currentOAuthState_.substring(0, 8) + "...");
+    
+    // 1. Find a free ephemeral port for the local OAuth server
+    int port = OAuthRedirectServer::findFreePort();
+    if (port == -1) {
+        ZENITH_LOG_ERROR("[Auth] Could not find a free port for OAuth server");
+        callback(false, "Failed to allocate a local port for authentication. Please close some applications and try again.");
+        return;
+    }
+    
+    // 2. Start local server
     if (!oauthServer_) {
         oauthServer_ = std::make_unique<OAuthRedirectServer>();
     }
@@ -123,8 +151,9 @@ void AuthenticationService::performWebLogin(AuthCallback callback) {
         oauthServer_->stop();
     }
     
-    // Start listening on port 8888
-    oauthServer_->startAndWait(8888, [this, callback](const juce::String& code, const juce::String& token, const juce::String& error) {
+    // Start listening on dynamically allocated port with state validation
+    oauthServer_->startAndWait(port, currentOAuthState_, [this, callback](const juce::String& code, const juce::String& token, const juce::String& error, const juce::String& state) {
+        juce::ignoreUnused(state);
         if (error.isNotEmpty()) {
             callback(false, "Web Login Error: " + error);
         } else if (token.isNotEmpty()) {
@@ -137,17 +166,25 @@ void AuthenticationService::performWebLogin(AuthCallback callback) {
         }
     });
 
-    // 2. Construct Web URL
-    // Use the production domain as requested
-    juce::String webLoginUrl = "https://sylorlabs.com/login?redirect_uri=http://127.0.0.1:8888/callback";
+    // 3. Construct Web URL with dynamic redirect_uri and state
+    // IMPORTANT: The sylorlabs.com backend MUST:
+    //   1. Validate that the redirect_uri is in the allowed list (http://127.0.0.1:<any-port>/callback)
+    //   2. Include the state parameter in the redirect back to the app
+    //   3. Not accept redirect_uri pointing to arbitrary domains (security risk)
+    juce::String redirectUri = "http://127.0.0.1:" + juce::String(port) + "/callback";
+    currentRedirectUri_ = redirectUri;  // Store for token exchange
+    juce::String webLoginUrl = "https://sylorlabs.com/login?redirect_uri=" + 
+                               juce::URL::addEscapeChars(redirectUri, false) + 
+                               "&state=" + currentOAuthState_;
     juce::URL url(webLoginUrl);
 
-    // 3. Launch Browser
-    juce::Thread::launch([url, callback]() {
+    // 4. Launch Browser
+    juce::Thread::launch([url, callback, this]() {
         bool launched = url.launchInDefaultBrowser();
         if (!launched) {
+            oauthServer_->stop();
             juce::MessageManager::callAsync([callback]() {
-                callback(false, "Failed to launch browser");
+                callback(false, "Failed to launch browser. Please ensure you have a default web browser configured.");
             });
         }
     });
@@ -163,7 +200,19 @@ void AuthenticationService::signupWithWeb(AuthCallback callback) {
 }
 
 void AuthenticationService::performWebSignup(AuthCallback callback) {
-    // 1. Start local server
+    // SECURITY: Generate a cryptographically strong random state for CSRF protection
+    currentOAuthState_ = generateSecureState();
+    ZENITH_LOG_INFO("[Auth] Generated Web Signup state: " + currentOAuthState_.substring(0, 8) + "...");
+    
+    // 1. Find a free ephemeral port for the local OAuth server
+    int port = OAuthRedirectServer::findFreePort();
+    if (port == -1) {
+        ZENITH_LOG_ERROR("[Auth] Could not find a free port for OAuth server");
+        callback(false, "Failed to allocate a local port for authentication. Please close some applications and try again.");
+        return;
+    }
+    
+    // 2. Start local server
     if (!oauthServer_) {
         oauthServer_ = std::make_unique<OAuthRedirectServer>();
     }
@@ -172,8 +221,9 @@ void AuthenticationService::performWebSignup(AuthCallback callback) {
         oauthServer_->stop();
     }
     
-    // Start listening on port 8888
-    oauthServer_->startAndWait(8888, [this, callback](const juce::String& code, const juce::String& token, const juce::String& error) {
+    // Start listening on dynamically allocated port with state validation
+    oauthServer_->startAndWait(port, currentOAuthState_, [this, callback](const juce::String& code, const juce::String& token, const juce::String& error, const juce::String& state) {
+        juce::ignoreUnused(state);
         if (error.isNotEmpty()) {
             callback(false, "Web Signup Error: " + error);
         } else if (token.isNotEmpty()) {
@@ -186,16 +236,25 @@ void AuthenticationService::performWebSignup(AuthCallback callback) {
         }
     });
 
-    // 2. Construct Web URL
-    juce::String webSignupUrl = "https://sylorlabs.com/signup?redirect_uri=http://127.0.0.1:8888/callback";
+    // 3. Construct Web URL with dynamic redirect_uri and state
+    // IMPORTANT: The sylorlabs.com backend MUST:
+    //   1. Validate that the redirect_uri is in the allowed list (http://127.0.0.1:<any-port>/callback)
+    //   2. Include the state parameter in the redirect back to the app
+    //   3. Not accept redirect_uri pointing to arbitrary domains (security risk)
+    juce::String redirectUri = "http://127.0.0.1:" + juce::String(port) + "/callback";
+    currentRedirectUri_ = redirectUri;  // Store for token exchange
+    juce::String webSignupUrl = "https://sylorlabs.com/signup?redirect_uri=" + 
+                                juce::URL::addEscapeChars(redirectUri, false) + 
+                                "&state=" + currentOAuthState_;
     juce::URL url(webSignupUrl);
 
-    // 3. Launch Browser
-    juce::Thread::launch([url, callback]() {
+    // 4. Launch Browser
+    juce::Thread::launch([url, callback, this]() {
         bool launched = url.launchInDefaultBrowser();
         if (!launched) {
+            oauthServer_->stop();
             juce::MessageManager::callAsync([callback]() {
-                callback(false, "Failed to launch browser");
+                callback(false, "Failed to launch browser. Please ensure you have a default web browser configured.");
             });
         }
     });
@@ -208,7 +267,8 @@ void AuthenticationService::exchangeWebAuthCodeForToken(const juce::String& code
         juce::DynamicObject* payload = new juce::DynamicObject();
         payload->setProperty("code", code);
         payload->setProperty("grant_type", "authorization_code");
-        payload->setProperty("redirect_uri", "http://127.0.0.1:8888/callback");
+        // Use the same redirect_uri that was sent in the initial auth request
+        payload->setProperty("redirect_uri", currentRedirectUri_);
         
         auto jsonString = juce::JSON::toString(payload);
         url = url.withPOSTData(jsonString);
@@ -543,6 +603,24 @@ void AuthenticationService::notifyListeners() {
 //==============================================================================
 // Crypto
 //==============================================================================
+
+juce::String AuthenticationService::generateSecureState() {
+    // Generate a cryptographically strong random state value for CSRF protection
+    // This should be at least 128 bits (16 bytes) of entropy
+    // We'll generate 32 random bytes and hex-encode them for a 64-character string
+    
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, 255);
+    
+    juce::String stateHex;
+    for (int i = 0; i < 32; ++i) {
+        int byte = dis(gen);
+        stateHex += juce::String::toHexString(byte).paddedLeft('0', 2);
+    }
+    
+    return stateHex;
+}
 
 juce::String AuthenticationService::calculateStretchedKey(const juce::String& password, const juce::String& username) {
     // Client-Side Key Stretching

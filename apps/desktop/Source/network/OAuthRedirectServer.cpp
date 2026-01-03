@@ -20,18 +20,43 @@ OAuthRedirectServer::~OAuthRedirectServer() {
     stop();
 }
 
-void OAuthRedirectServer::startAndWait(int port, CodeReceivedCallback callback, int timeoutSeconds) {
+int OAuthRedirectServer::findFreePort() {
+    // Try to find a free ephemeral port in the range 49152-65535
+    // This is more secure than using a hardcoded port
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(49152, 65535);
+    
+    // Try up to 10 random ports
+    for (int attempt = 0; attempt < 10; ++attempt) {
+        int port = dis(gen);
+        
+        // Try to bind to this port temporarily to check if it's available
+        juce::StreamingSocket testSocket;
+        if (testSocket.createListener(port, "127.0.0.1")) {
+            testSocket.close();
+            ZENITH_LOG_INFO("[OAuth] Found free port: " + juce::String(port));
+            return port;
+        }
+    }
+    
+    ZENITH_LOG_ERROR("[OAuth] Failed to find a free ephemeral port after 10 attempts");
+    return -1;
+}
+
+void OAuthRedirectServer::startAndWait(int port, const juce::String& expectedState, CodeReceivedCallback callback, int timeoutSeconds) {
     if (running_.load()) {
         ZENITH_LOG_WARNING("[OAuth] Server already running");
         return;
     }
     
+    expectedState_ = expectedState;
     shouldStop_.store(false);
     running_.store(true);
     
     // Run server on background thread
-    serverThread_ = std::make_unique<std::thread>([this, port, callback, timeoutSeconds]() {
-        runServer(port, callback, timeoutSeconds);
+    serverThread_ = std::make_unique<std::thread>([this, port, expectedState, callback, timeoutSeconds]() {
+        runServer(port, expectedState, callback, timeoutSeconds);
     });
 }
 
@@ -49,19 +74,19 @@ void OAuthRedirectServer::stop() {
     running_.store(false);
 }
 
-void OAuthRedirectServer::runServer(int port, CodeReceivedCallback callback, int timeoutSeconds) {
+void OAuthRedirectServer::runServer(int port, const juce::String& expectedState, CodeReceivedCallback callback, int timeoutSeconds) {
     ZENITH_LOG_INFO("[OAuth] Starting redirect server on port " + juce::String(port));
     
     serverSocket_ = std::make_unique<juce::StreamingSocket>();
     
     if (!serverSocket_->createListener(port, "127.0.0.1")) {
         ZENITH_LOG_ERROR("[OAuth] Failed to bind to port " + juce::String(port));
-        callback("", "", "Failed to bind to port " + juce::String(port));
+        callback("", "", "Failed to bind to port " + juce::String(port) + ". Port may already be in use.", "");
         running_.store(false);
         return;
     }
     
-    ZENITH_LOG_INFO("[OAuth] Waiting for Google callback on port " + juce::String(port) + "...");
+    ZENITH_LOG_INFO("[OAuth] Waiting for OAuth callback on port " + juce::String(port) + "...");
     
     // Wait for connection with timeout
     auto startTime = juce::Time::getMillisecondCounter();
@@ -77,7 +102,7 @@ void OAuthRedirectServer::runServer(int port, CodeReceivedCallback callback, int
     if (clientSocket == nullptr) {
         if (!shouldStop_.load()) {
             ZENITH_LOG_WARNING("[OAuth] Accept timed out or failed");
-            callback("", "", "Timeout waiting for OAuth callback");
+            callback("", "", "Timeout waiting for OAuth callback. Please try again.", "");
         }
         running_.store(false);
         return;
@@ -93,7 +118,7 @@ void OAuthRedirectServer::runServer(int port, CodeReceivedCallback callback, int
         ZENITH_LOG_INFO("[OAuth] Received callback request");
         
         // Extract the path and query part from the HTTP request
-        // Request usually starts with "GET /oauth2callback?code=... HTTP/1.1"
+        // Request usually starts with "GET /oauth2callback?code=...&state=... HTTP/1.1"
         int firstSpace = request.indexOf(" ");
         int secondSpace = request.indexOf(firstSpace + 1, " ");
         
@@ -104,6 +129,7 @@ void OAuthRedirectServer::runServer(int port, CodeReceivedCallback callback, int
             juce::String code;
             juce::String token;
             juce::String error;
+            juce::String state;
             
             auto paramNames = url.getParameterNames();
             auto paramValues = url.getParameterValues();
@@ -112,41 +138,64 @@ void OAuthRedirectServer::runServer(int port, CodeReceivedCallback callback, int
                 if (paramNames[i] == "code") code = paramValues[i];
                 else if (paramNames[i] == "token") token = paramValues[i];
                 else if (paramNames[i] == "error") error = paramValues[i];
+                else if (paramNames[i] == "state") state = paramValues[i];
+            }
+            
+            // SECURITY: Verify state parameter to prevent CSRF attacks
+            // The state parameter MUST match the one we generated before starting OAuth flow
+            // The backend at sylorlabs.com MUST also verify this on their side
+            if (state != expectedState) {
+                ZENITH_LOG_ERROR("[OAuth] State mismatch! Expected: '" + expectedState + "', got: '" + state + "'");
+                sendStaticResponse(clientSocket.get(), false);
+                
+                juce::MessageManager::callAsync([callback]() {
+                    callback("", "", "Security validation failed: state parameter mismatch. This could indicate a CSRF attack. Please try again.", "");
+                });
+                
+                clientSocket->close();
+                serverSocket_->close();
+                running_.store(false);
+                return;
             }
             
             if (code.isNotEmpty() || token.isNotEmpty()) {
-                ZENITH_LOG_INFO("[OAuth] Authorization received!");
+                ZENITH_LOG_INFO("[OAuth] Authorization received and validated!");
                 sendStaticResponse(clientSocket.get(), true);
                 
-                juce::MessageManager::callAsync([callback, code, token]() {
-                    callback(code, token, "");
+                juce::MessageManager::callAsync([callback, code, token, state]() {
+                    callback(code, token, "", state);
                 });
             } else if (error.isNotEmpty()) {
                 ZENITH_LOG_ERROR("[OAuth] Error received: " + error);
                 sendStaticResponse(clientSocket.get(), false);
                 
                 juce::MessageManager::callAsync([callback, error]() {
-                    callback("", "", error);
+                    callback("", "", error, "");
                 });
             } else {
                 ZENITH_LOG_ERROR("[OAuth] No code or error in callback");
                 sendStaticResponse(clientSocket.get(), false);
                 
                 juce::MessageManager::callAsync([callback]() {
-                    callback("", "", "Invalid OAuth callback response");
+                    callback("", "", "Invalid OAuth callback response", "");
+                });
+            }
+                
+                juce::MessageManager::callAsync([callback]() {
+                    callback("", "", "Invalid OAuth callback response", "");
                 });
             }
         } else {
             ZENITH_LOG_ERROR("[OAuth] Malformed HTTP request");
             sendStaticResponse(clientSocket.get(), false);
             juce::MessageManager::callAsync([callback]() {
-                callback("", "", "Malformed HTTP request");
+                callback("", "", "Malformed HTTP request", "");
             });
         }
     } else {
         ZENITH_LOG_ERROR("[OAuth] Failed to read from client socket");
         juce::MessageManager::callAsync([callback]() {
-            callback("", "", "Failed to read OAuth callback");
+            callback("", "", "Failed to read OAuth callback", "");
         });
     }
     
