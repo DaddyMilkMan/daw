@@ -4,8 +4,6 @@ from typing import Optional
 import socket
 
 import typer
-import structlog
-from typing_extensions import Annotated
 
 from backend.config import ZenithConfig
 from backend.logger import configure_logging, get_logger
