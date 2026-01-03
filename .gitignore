@@ -1,9 +1,14 @@
-# --- The Citadel Strict Ignore Policy ---
-# Combined comprehensive .gitignore for Zenith DAW
+# =============================================================================
+# Zenith DAW - Comprehensive .gitignore
+# =============================================================================
+# This file excludes build artifacts, logs, cache, IDE files, OS clutter,
+# and temporary files from version control while preserving essential source,
+# documentation, and configuration files.
 
-# ============================================
-# 1. Build Artifacts (Aggressive)
-# ============================================
+# =============================================================================
+# 1. Build Artifacts and CMake Generated Files
+# =============================================================================
+# Build output directories
 /build*/
 build/
 /out/
@@ -12,10 +17,12 @@ build/
 /obj/
 /Debug/
 /Release/
-/_deps/
-_deps/
 cmake-build-*/
 .cache/
+
+# CMake generated files
+/_deps/
+_deps/
 **/CMakeFiles/
 CMakeFiles/
 **/cmake_install.cmake
@@ -24,68 +31,41 @@ CMakeCache.txt
 compile_commands.json
 Testing/
 build_output*.txt
+CTestTestfile.cmake
+install_manifest.txt
 
-# Build logs
+# Build-related directories
 build_fix*/
 build_manual/
 build_skia/
 build_trash/
 modules/*/build/
 
-# Logs Directory
-/logs/
-
-# ============================================
-# 2. Compiled Binaries
-# ============================================
+# =============================================================================
+# 2. Compiled Binaries and Object Files
+# =============================================================================
 *.so
+*.so.*
 *.a
 *.lib
 *.dll
 *.exe
+*.out
 *.o
 *.obj
+*.dylib
 *.pch
 pch.h.gch
 
-# ============================================
-# 3. OS Junk
-# ============================================
-.DS_Store
-Thumbs.db
-Desktop.ini
-
-# ============================================
-# 4. IDE Clutter
-# ============================================
-.vscode/
-.idea/
-*.sln
-*.vcxproj
-*.vcxproj.user
-*.vcxproj.filters
-*.swp
-*.swo
-*.code-workspace
-.clangd
-
-# ============================================
-# 5. Local Environment
-# ============================================
-.env
-*.local
-.venv/
-
-# ============================================
-# 6. Node Dependencies
-# ============================================
-node_modules/
-npm-debug.log
-
-# ============================================
-# 7. Build Logs and Error Files
-# ============================================
+# =============================================================================
+# 3. Logs and Debug Output
+# =============================================================================
+# Log directories
+/logs/
+/old_logs/
 *.log
+
+# Build and error logs
 build_errors*.txt
 build_error*.txt
 build_log*.txt
@@ -97,42 +77,212 @@ debug_log.txt
 daw_gui_log*.txt
 output.txt
 server_log.txt
+npm-debug.log
+yarn-error.log
+yarn-debug.log
 
-# ============================================
-# 8. Backup and Temporary Files
-# ============================================
+# =============================================================================
+# 4. Backup, Temporary, and Archive Files
+# =============================================================================
 *.bak
 *.old
 *.tmp
 *.backup
 *.orig
+*.swp
+*.swo
+*~
+\#*\#
+.#*
+
+# Archives (unless explicitly needed in source)
+/*.tar.gz
+/*.zip
+/*.7z
+/*.rar
+
+# =============================================================================
+# 5. Operating System Files
+# =============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory
+.Trash-*
+
+# =============================================================================
+# 6. IDE and Editor Configuration
+# =============================================================================
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# IntelliJ IDEA / CLion / WebStorm
+.idea/
+*.iml
+*.iws
+
+# Visual Studio
+*.sln
+*.vcxproj
+*.vcxproj.user
+*.vcxproj.filters
+*.suo
+*.user
+.vs/
+
+# Vim
+*.swp
+*.swo
 *~
 
-# ============================================
-# 9. Python Artifacts
-# ============================================
+# Emacs
+\#*\#
+.#*
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# clangd
+.clangd/
+.clangd
+compile_commands.json
+
+# =============================================================================
+# 7. Language-Specific Artifacts
+# =============================================================================
+
+# --- Python ---
 *.pyc
-__pycache__/
 *.pyo
 *.pyd
+__pycache__/
 .Python
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+.env
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
 
-# ============================================
-# 10. Script and Patch Files
-# ============================================
-*.ps1
-*.patch
+# --- Node.js / JavaScript ---
+node_modules/
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+.npm
+.yarn
+.pnp.*
+dist/
+.next/
+.nuxt/
 
-# ============================================
-# 11. Images in Root (stray artifacts)
-# ============================================
-/*.png
-/*.jpg
-/*.gif
+# --- Rust (if applicable) ---
+Cargo.lock
+target/
 
-# ============================================
-# 12. Zenith DAW Specific Transients
-# ============================================
+# --- Go (if applicable) ---
+*.test
+*.out
+
+# =============================================================================
+# 8. Package Manager and Dependency Directories
+# =============================================================================
+node_modules/
+bower_components/
+vendor/
+backend/.venv/
+
+# =============================================================================
+# 9. Local Environment and Secrets
+# =============================================================================
+.env
+.env.local
+.env.*.local
+*.local
+secrets.json
+
+# =============================================================================
+# 10. Build Artifacts and Generated Code (Zenith-Specific)
+# =============================================================================
+# JUCE build artifacts
+*_artefacts/
+ZenithDAW_artefacts/
+ZenithDAWTests_artefacts/
+JuceLibraryCode/Builds/
+
+# Scanner artifacts (if applicable)
+/apps/scanner/
+
+# =============================================================================
+# 11. Temporary Scripts and Patches (Root-Level Only)
+# =============================================================================
+# Temporary PowerShell scripts in root
+/*.ps1
+
+# Temporary patch files in root
+/*.patch
+
+# Temporary Python test/debug scripts in root
+/test_*.py
+/verify_*.py
+/fix_*.py
+/update_*.py
+/find_*.py
+
+# Temporary shell scripts in root
+/launch.sh
+
+# =============================================================================
+# 12. Temporary Status and AI-Generated Files (Root-Level)
+# =============================================================================
+# AI status reports and temporary documentation
+/AI_*.md
+/ROAST_*.md
+/AUDIT_*.md
+/BUILD_*.md
+/BRANCHES_*.md
+/CLEANUP_*.md
+/COMMIT_*.md
+/CONFLICT_*.md
+/CRITICAL_*.md
+/DELIVERY_*.md
+/FINAL_*.md
+/MANIFEST.md
+/OPUS_*.md
+/PR_*.md
+/TEST_*.md
+/UI_*.md
+/ALL_*.md
+/SAVE_LOAD_CHECKLIST.md
+/SAVE_LOAD_INDEX.md
+/QUICK_REFERENCE.md
+/READ_ME_FIRST.md
+/START_HERE.md
+/WHATS_INCLUDED.md
+
+# =============================================================================
+# 13. Miscellaneous Test and Debug Files
+# =============================================================================
+# Root-level test output files
 /final_test_results*.txt
 /test_critic_fix.txt
 /test_debug.txt
@@ -146,17 +296,44 @@ __pycache__/
 /all_linked_objects.txt
 /linked_objects.txt
 /obj_list.txt
-/apps/desktop/Source/zenith_headers.txt
-/find_brace_level.py
-/launch.sh
-/apps/scanner/
+/config_log.txt
+/current_files.txt
 
-# ============================================
-# 13. Text Files (except CMakeLists)
-# ============================================
-*.txt
+# App-specific test files
+/apps/desktop/Source/zenith_headers.txt
+
+# =============================================================================
+# 14. Images and Media (Root-Level Only)
+# =============================================================================
+# Stray images in root (documentation images should be in docs/ or assets/)
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+/*.bmp
+/*.ico
+
+# =============================================================================
+# Exceptions (Files to KEEP in version control)
+# =============================================================================
+# CMake files
 !CMakeLists.txt
 !**/CMakeLists.txt
+
+# Documentation
 !README.txt
+!README.md
 !LICENSE.txt
+!LICENSE.md
 !docs/**/*.txt
+!docs/**/*.md
+
+# Essential resource files
+!**/Resources/**/*.png
+!**/Resources/**/*.jpg
+!**/assets/**/*.png
+!**/assets/**/*.jpg
+
+# PowerShell scripts in scripts/ directory (not root)
+!scripts/**/*.ps1
+!tools/**/*.ps1
