@@ -161,7 +161,10 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   
   // Start timer for animations/updates
   animationTimer_ = std::make_unique<AnimationTimer>(*this);
-  // DISABLED FOR DEBUG: if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) animationTimer_->startTimerHz(60);
+  if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) {
+      animationTimer_->startTimerHz(60);
+      ZENITH_LOG_INFO("MainComponent: Animation Timer STARTED at 60Hz");
+  }
 }
 
 MainComponent::~MainComponent() {
@@ -190,9 +193,39 @@ bool MainComponent::keyPressed(const juce::KeyPress &key, Component *originating
   return false;
 }
 
+void MainComponent::logHierarchy() {
+    static bool logged = false;
+    if (logged) return;
+    logged = true;
+
+    std::function<void(Component*, int)> logComp = [&](Component* c, int depth) {
+        if (!c) return;
+        juce::String indent;
+        for (int i = 0; i < depth; ++i) indent += "  ";
+        
+        juce::String msg = indent + c->getName() + " [" + typeid(*c).name() + "]";
+        msg += " Bounds: " + c->getBounds().toString();
+        msg += " Visible: " + juce::String(c->isVisible() ? "YES" : "NO");
+        msg += " Opaque: " + juce::String(c->isOpaque() ? "YES" : "NO");
+        
+        ZENITH_LOG_INFO(msg);
+        
+        for (auto* child : c->getChildren()) {
+            logComp(child, depth + 1);
+        }
+    };
+    
+    ZENITH_LOG_INFO("=== COMPONENT HIERARCHY LOG START ===");
+    logComp(this, 0);
+    ZENITH_LOG_INFO("=== COMPONENT HIERARCHY LOG END ===");
+}
+
 void MainComponent::handleAnimationTimer() {
   static int tickCount = 0;
-  if (tickCount++ % 60 == 0) ZENITH_LOG_INFO("Tick: " + std::to_string(tickCount));
+  if (tickCount++ % 60 == 0) {
+      ZENITH_LOG_INFO("Tick: " + std::to_string(tickCount));
+      logHierarchy(); // Log once
+  }
   // Update animation time
   animationTime_ += 0.016f; // approx 60fps
   if (animationTime_ > 1000.0f) animationTime_ = 0.0f;
@@ -255,6 +288,14 @@ void MainComponent::drawSkiaContent(SkCanvas *canvas) {
       
   } else {
       // --- MAIN DAW MODE ---
+      ZENITH_LOG_INFO(juce::String::formatted("[drawSkiaContent] MAIN DAW MODE - mainLayout=%s visible=%s bounds=%d,%d,%dx%d",
+          mainLayout ? "EXISTS" : "NULL",
+          (mainLayout && mainLayout->isVisible()) ? "YES" : "NO",
+          mainLayout ? mainLayout->getX() : -1,
+          mainLayout ? mainLayout->getY() : -1,
+          mainLayout ? mainLayout->getWidth() : -1,
+          mainLayout ? mainLayout->getHeight() : -1));
+      
       // 1. Background
       SkPaint bgPaint;
       bgPaint.setColor(SK_ColorWHITE); // Or theme background

@@ -65,6 +65,9 @@ public:
   void mouseDrag(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
   
+  // Diagnostic
+  void logHierarchy();
+  
   void handleAnimationTimer();
   void startAnimations();
 

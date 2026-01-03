@@ -38,22 +38,18 @@ SkiaOpenGLRenderer::SkiaOpenGLRenderer(juce::Component *componentToAttach)
       ZENITH_LOG_INFO("SkiaOpenGLRenderer: Setting renderer...");
       openGLContext_.setRenderer(this);
       openGLContext_.setOpenGLVersionRequired(juce::OpenGLContext::openGL3_2);
+      // Following JUCE OpenGLAppComponent pattern: continuous repainting
       openGLContext_.setContinuousRepainting(true);
       
-      // FORCE DISABLE OPENGL FOR DIAGNOSTICS/STABILITY on Linux
-      // If we don't attach, the paint(g) method will use software fallback.
-      ZENITH_LOG_WARNING("SkiaOpenGLRenderer: FORCING SOFTWARE RENDERING (OpenGL Disabled)");
-      return; 
-
-      /*
+      // Check if component already has a peer (rare but possible)
       if (targetComponent_->isShowing() && targetComponent_->getPeer() != nullptr) {
         ZENITH_LOG_INFO("SkiaOpenGLRenderer: Component already has peer, scheduling deferred attachment...");
         scheduleAttachmentCheck();
       } else {
         ZENITH_LOG_INFO("SkiaOpenGLRenderer: Component has no peer yet, scheduling deferred attachment...");
+        // Schedule periodic checks via MessageManager
         scheduleAttachmentCheck();
       }
-      */
       
       ZENITH_LOG_INFO("SkiaOpenGLRenderer: Constructor complete");
     } catch (const std::exception &e) {
@@ -288,13 +284,13 @@ void SkiaMainWindowIntegration::resized() {
 
 void SkiaMainWindowIntegration::parentHierarchyChanged() {
   if (isShowing() && getPeer() != nullptr && !openGLContext_.isAttached()) {
-    // scheduleAttachmentCheck(); // DISABLED to force software rendering
+    scheduleAttachmentCheck();
   }
 }
 
 void SkiaMainWindowIntegration::visibilityChanged() {
   if (isShowing() && getPeer() != nullptr && !openGLContext_.isAttached()) {
-    // scheduleAttachmentCheck(); // DISABLED to force software rendering
+    scheduleAttachmentCheck();
   }
 }
 
