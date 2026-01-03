@@ -74,8 +74,7 @@ ZenithSamplerEditor::~ZenithSamplerEditor()
 
 void ZenithSamplerEditor::paint(juce::Graphics& g)
 {
-    // Rendering handled by Skia in parent window integration
-    juce::ignoreUnused(g);
+    g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
 }
 
 void ZenithSamplerEditor::resized()

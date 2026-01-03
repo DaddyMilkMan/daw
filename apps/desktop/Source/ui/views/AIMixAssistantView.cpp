@@ -53,8 +53,25 @@ AIMixAssistantView::AIMixAssistantView(Engine &engine) : engine_(engine) {
 AIMixAssistantView::~AIMixAssistantView() {}
 
 void AIMixAssistantView::paint(juce::Graphics &g) {
-  // Skia rendering used - no JUCE rendering needed
-  juce::ignoreUnused(g);
+  auto bounds = getLocalBounds();
+
+  // Background
+  g.fillAll(zenith::design::colors::BG_PANEL);
+
+  // Header
+  g.setFont(zenith::design::typography::getFont(
+      zenith::design::typography::FONT_LG,
+      zenith::design::typography::FontWeight::Bold));
+  g.setColour(zenith::design::colors::TEXT_PRIMARY);
+  g.drawText("AI Mix Assistant", bounds.removeFromTop(40).reduced(10, 0),
+             juce::Justification::left, true);
+
+  // Status
+  g.setFont(
+      zenith::design::typography::getFont(zenith::design::typography::FONT_MD));
+  g.setColour(zenith::design::colors::TEXT_SECONDARY);
+  g.drawText(mixStatus, bounds.removeFromTop(30).reduced(10, 0),
+             juce::Justification::left, true);
 }
 
 void AIMixAssistantView::resized() {

@@ -531,8 +531,7 @@ GrokAIEditor::~GrokAIEditor() {
 }
 
 void GrokAIEditor::paint(juce::Graphics& g) {
-    // Rendering handled by Skia in parent window integration
-    juce::ignoreUnused(g);
+    g.fillAll(juce::Colours::darkgrey);
 }
 
 void GrokAIEditor::resized() {

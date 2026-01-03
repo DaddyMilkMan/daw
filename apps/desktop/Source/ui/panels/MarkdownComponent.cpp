@@ -60,8 +60,9 @@ MarkdownComponent::MarkdownComponent() {
 MarkdownComponent::~MarkdownComponent() = default;
 
 void MarkdownComponent::paint(juce::Graphics &g) {
-    // Skia rendering used - no JUCE rendering needed
-    juce::ignoreUnused(g);
+    g.fillAll(design::toJuceColour(design::unified::bg_02()));
+    g.setColour(design::toJuceColour(design::unified::border_default()));
+    g.drawRect(getLocalBounds(), 1);
 }
 
 void MarkdownComponent::resized() {
