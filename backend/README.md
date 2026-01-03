@@ -2,6 +2,11 @@
 
 This directory contains the signaling server and UPnP helpers that keep the peer-to-peer backend working.
 
+## Documentation
+
+- **[Logging Guide](LOGGING.md)** - Standardized logging approach for contributors
+- Health monitoring and service management details below
+
 ## Running
 
 Use the CLI entry point to start the signaling server together with the optional UPnP port mapper:

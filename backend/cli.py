@@ -116,7 +116,7 @@ def status():
     # This would talk to the health endpoint or check PIDs
     log.info("Checking service status...")
     # TODO: Implement actual HTTP check to config.health_port
-    print("Services: UNKNOWN (Not implemented)")
+    log.warning("Service status check not implemented", status="UNKNOWN")
 
 @app.command()
 def hotfix():
