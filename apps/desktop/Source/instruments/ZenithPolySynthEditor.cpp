@@ -455,26 +455,8 @@ zenith::Preset ZenithPolySynthEditor::captureCurrentState() const {
 //==============================================================================
 
 void ZenithPolySynthEditor::paint(juce::Graphics &g) {
-  // Background
-  g.fillAll(juce::Colour(0xff1a1a1a));
-
-  // Title
-  g.setColour(juce::Colours::white);
-  g.setFont(juce::FontOptions(24.0f).withStyle("Bold"));
-  g.drawText("Zenith PolySynth", 0, 10, getWidth(), 35,
-             juce::Justification::centred);
-
-  // Macro section header
-  if (!macroKnobs_.empty()) {
-    g.setColour(juce::Colour(0xff4a9eff));
-    g.setFont(juce::FontOptions(16.0f).withStyle("Bold"));
-    g.drawText("SMART MACROS", 0, getHeight() - 140, getWidth(), 20,
-               juce::Justification::centred);
-
-    // Separator line
-    g.setColour(juce::Colour(0xff333333));
-    g.fillRect(20, getHeight() - 145, getWidth() - 40, 2);
-  }
+  // Rendering handled by Skia in parent window integration
+  juce::ignoreUnused(g);
 }
 
 void ZenithPolySynthEditor::resized() {

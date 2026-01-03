@@ -17,37 +17,8 @@ public:
     }
 
     void paint(juce::Graphics& g) override {
-        g.fillAll(ZenithTheme::Colors::bg_00); // Dark background
-        
-        // Header
-        g.setColour(ZenithTheme::Colors::bg_02);
-        g.fillRect(0, 0, getWidth(), 30);
-        
-        g.setColour(ZenithTheme::Colors::text_primary);
-        g.setFont(juce::Font(juce::FontOptions(16.0f, juce::Font::bold)));
-        g.drawText("Instruments", 10, 0, getWidth() - 20, 30, juce::Justification::centredLeft, true);
-
-        // List
-        g.setFont(juce::Font(juce::FontOptions(14.0f)));
-        int y = 40;
-        
-        if (instrumentIds_.isEmpty()) {
-             g.setColour(ZenithTheme::Colors::text_secondary);
-             g.drawText("No instruments found.", 0, 40, getWidth(), 40, juce::Justification::centred, true);
-             return;
-        }
-
-        for (const auto& id : instrumentIds_) {
-            // Simple hover effect could be added here if we tracked mouse
-            g.setColour(ZenithTheme::Colors::text_primary);
-            g.drawText(id, 20, y, getWidth() - 40, 24, juce::Justification::left, true);
-            
-            // Separator
-            g.setColour(ZenithTheme::Colors::border_subtle);
-            g.fillRect(10, y + 24, getWidth() - 20, 1);
-            
-            y += 28;
-        }
+        // Skia rendering used - no JUCE rendering needed
+        juce::ignoreUnused(g);
     }
     
     void refreshInstruments() {

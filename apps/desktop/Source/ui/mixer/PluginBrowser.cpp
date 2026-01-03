@@ -43,8 +43,8 @@ void PluginBrowser::resized() {
 }
 
 void PluginBrowser::paint(juce::Graphics& g) {
-    // Fallback if skia not active (but this component is SkiaComponent)
-    g.fillAll(juce::Colours::black);
+    // Skia rendering used - see drawSkia()
+    juce::ignoreUnused(g);
 }
 
 void PluginBrowser::drawSkia(SkCanvas* canvas) {

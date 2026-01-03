@@ -26,11 +26,8 @@ PresetBrowserComponent::PresetBrowserComponent() {
 PresetBrowserComponent::~PresetBrowserComponent() {}
 
 void PresetBrowserComponent::paint(juce::Graphics &g) {
-  g.fillAll(juce::Colour(0xff2a2a2a)); // Dark background
-
-  // Draw a border
-  g.setColour(juce::Colours::black);
-  g.drawRect(getLocalBounds(), 1);
+  // Skia rendering used - no JUCE rendering needed
+  juce::ignoreUnused(g);
 }
 
 void PresetBrowserComponent::resized() {
