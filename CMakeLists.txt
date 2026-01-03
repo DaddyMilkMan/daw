@@ -152,15 +152,15 @@ target_link_libraries(ZenithDAW PRIVATE ${ZENITH_JUCE_MODULES})
 # SKIA INTEGRATION (after target creation)
 # =============================================================================
 
-# Skia rendering option (Release recommended)
-option(ZENITH_ENABLE_SKIA "Enable Skia Hardware-Accelerated Rendering" ON)
+# Skia rendering is mandatory for Zenith DAW
+set(ZENITH_ENABLE_SKIA ON CACHE BOOL "Enable Skia Hardware-Accelerated Rendering (mandatory)" FORCE)
 
 if(ZENITH_ENABLE_SKIA)
     # Manual Skia integration
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/cmake/SkiaManualIntegration.cmake")
         include(apps/desktop/cmake/SkiaManualIntegration.cmake)
         target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_SKIA=1)
-        message(STATUS "Zenith DAW: Skia rendering ENABLED")
+        message(STATUS "Zenith DAW: Skia rendering ENABLED (mandatory)")
 
         # Platform-specific graphics libraries
         if(WIN32)
@@ -177,11 +177,10 @@ if(ZENITH_ENABLE_SKIA)
             endif()
         endif()
     else()
-        message(WARNING "Skia integration file not found. Skia will be disabled.")
-        set(ZENITH_ENABLE_SKIA OFF)
+        message(FATAL_ERROR "Skia integration file not found. Skia is mandatory for Zenith DAW.")
     endif()
 else()
-    message(STATUS "Zenith DAW: Skia rendering DISABLED")
+    message(FATAL_ERROR "Skia rendering cannot be disabled. It is mandatory for Zenith DAW.")
 endif()
 
 # =============================================================================
