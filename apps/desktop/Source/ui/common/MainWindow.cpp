@@ -230,16 +230,22 @@ void MainComponent::drawSkiaContent(SkCanvas *canvas) {
   
   auto* hub = hubComponent.get();
   
+  // LOGGING (Limited)
+  static int drawCount = 0;
+  if (drawCount++ % 60 == 0) {
+      bool hubVis = (hub && hub->isVisible());
+      ZENITH_LOG_INFO(juce::String("drawSkiaContent: Hub Visible = ") + (hubVis ? "YES" : "NO"));
+  }
+  
   if (hub != nullptr && hub->isVisible()) {
       // --- HUB MODE ---
-      // 1. Animated Aurora Background (Fills the whole window)
+      // 1. Animated Aurora Background
       aurora_.draw(canvas, skBounds, animationTime_);
       
       // 2. Draw Hub Content
-      // Since Hub is full-screen (0,0), we don't need translation
       hub->drawSkia(canvas);
       
-      // 3. Draw Title Bar (Transparent) on top if visible
+      // 3. Draw Title Bar
       if (titleBar && titleBar->isVisible()) {
           canvas->save();
           canvas->translate(titleBar->getX(), titleBar->getY());
@@ -249,9 +255,9 @@ void MainComponent::drawSkiaContent(SkCanvas *canvas) {
       
   } else {
       // --- MAIN DAW MODE ---
-      // 1. Static Background (White/Dark toggle)
+      // 1. Background
       SkPaint bgPaint;
-      bgPaint.setColor(SK_ColorWHITE); // Or projectState.getTheme().background
+      bgPaint.setColor(SK_ColorWHITE); // Or theme background
       canvas->drawRect(skBounds, bgPaint);
       
       // 2. Draw Main Layout
@@ -262,7 +268,7 @@ void MainComponent::drawSkiaContent(SkCanvas *canvas) {
           canvas->restore();
       }
       
-      // 3. Draw Top Bar Elements
+      // 3. Draw Top Bar Elements (TitleBar, Transport)
       if (titleBar && titleBar->isVisible()) {
           canvas->save();
           canvas->translate(titleBar->getX(), titleBar->getY());
@@ -326,6 +332,7 @@ void MainComponent::parentHierarchyChanged() {
 }
 
 void MainComponent::setMainUiVisible(bool shouldBeVisible) {
+  ZENITH_LOG_INFO("MainComponent::setMainUiVisible called with: " + juce::String(shouldBeVisible ? "TRUE" : "FALSE"));
   if (mainLayout) {
       mainLayout->setVisible(shouldBeVisible);
   }
