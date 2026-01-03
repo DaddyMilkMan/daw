@@ -12,9 +12,8 @@
 
 #include "ZenithTooltipOverlay.h"
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
-#endif
+
 
 namespace zenith {
 

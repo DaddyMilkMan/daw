@@ -16,13 +16,12 @@
 #include "../design-system/ZenithDesignSystem.h"
 // #include "../design-system/ZenithTheme.h" // Deprecated
 
-#ifdef ZENITH_USE_SKIA
 #include <core/SkBlurTypes.h>
 #include <core/SkFont.h>
 #include <core/SkMaskFilter.h>
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
-#endif
+
 
 namespace zenith {
 

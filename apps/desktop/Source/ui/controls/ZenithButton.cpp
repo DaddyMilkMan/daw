@@ -62,7 +62,6 @@ void ZenithButton::setButtonSize(Size size) {
   }
 }
 
-#ifdef ZENITH_USE_SKIA
 void ZenithButton::setIcon(sk_sp<SkImage> icon) {
   icon_ = icon;
   layoutDirty_ = true;
@@ -74,7 +73,6 @@ void ZenithButton::setIconPath(const SkPath& path) {
   layoutDirty_ = true;
   repaint();
 }
-#endif
 
 void ZenithButton::setIconText(const juce::String &iconText) {
   iconText_ = iconText;
@@ -247,9 +245,7 @@ void ZenithButton::drawSkia(SkCanvas *canvas) {
 
   // Draw icon
   if (iconPosition_ != IconPosition::Only || iconText_.isNotEmpty()
-#ifdef ZENITH_USE_SKIA
       || icon_ != nullptr
-#endif
   ) {
     drawIcon(canvas, iconRect_);
   }

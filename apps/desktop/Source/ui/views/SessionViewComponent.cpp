@@ -16,12 +16,11 @@
 #include "../engine/Track.h"
 #include "FontManager.h"
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
 #include <core/SkPath.h>
 #include <effects/SkGradientShader.h>
-#endif
+
 
 namespace zenith {
 using namespace design;

@@ -5,11 +5,10 @@
 #include "../arranger/ArrangerComponent.h" // For context if needed
 
 // Skia Includes
-#ifdef ZENITH_USE_SKIA
 #include "ZenithDesignSystem.h"
 #include "ZenithSkia.h"
 #include <effects/SkRuntimeEffect.h>
-#endif
+
 
 namespace zenith {
 

@@ -16,9 +16,8 @@
 #include "ArrangerInputHandler.h"
 #include "ArrangerTrackComponent.h"
 
-#ifdef ZENITH_USE_SKIA
 #include "ArrangerRenderer.h"
-#endif
+
 
 // Zenith Includes
 #include "../browser/BrowserDragSource.h"
@@ -55,9 +54,7 @@ ArrangerComponent::ArrangerComponent(Engine& eng, ProjectState& ps)
     clipManager_ = std::make_unique<ArrangerClipManager>(*this, projectState, *gridUtils_);
     inputHandler_ = std::make_unique<ArrangerInputHandler>(*this, projectState, *clipManager_, *gridUtils_);
     
-#ifdef ZENITH_USE_SKIA
     renderer_ = std::make_unique<ArrangerRenderer>(*this, engine_, projectState, *clipManager_, *gridUtils_);
-#endif
 
     // Listen to ProjectState changes
     projectState.getState().addListener(this);
@@ -278,7 +275,6 @@ juce::String ArrangerComponent::getTooltip() {
 void ArrangerComponent::drawSkia(SkCanvas* canvas) {
     renderer_->drawSkia(canvas);
 }
-#endif
 
 //==============================================================================
 // Grid Resolution

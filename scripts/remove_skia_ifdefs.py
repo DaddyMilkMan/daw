@@ -80,15 +80,14 @@ def process_cpp_file(filepath):
     original_content = content
     changed = False
     
-    # Pattern 1: Remove #else ... #endif blocks that contain JUCE Graphics paint() implementations
-    # This is complex and risky, so we'll be conservative
-    
-    # Remove conditional Skia includes
-    pattern1 = r'#ifdef ZENITH_USE_SKIA\s*\n((?:#include\s+<(?:core|gpu)/[^>]+>\s*\n)+)#endif'
-    if re.search(pattern1, content):
-        content = re.sub(pattern1, r'\1', content)
-        changed = True
-        print(f"  - Removed conditional Skia includes")
+    # Remove conditional Skia includes (same as header files)
+    pattern1 = r'#ifdef ZENITH_USE_SKIA\s*\n((?:#include\s+[^\n]+\n)+)#endif'
+    matches1 = list(re.finditer(pattern1, content))
+    if matches1:
+        for match in reversed(matches1):
+            content = content[:match.start()] + match.group(1) + content[match.end():]
+            changed = True
+        print(f"  - Removed conditional includes")
     
     # Remove #ifdef ZENITH_USE_SKIA before drawSkia implementation
     pattern2 = r'#ifdef ZENITH_USE_SKIA\s*\n(void\s+\w+::drawSkia\(SkCanvas\s*\*\s*canvas\))'
@@ -96,6 +95,27 @@ def process_cpp_file(filepath):
         content = re.sub(pattern2, r'\1', content)
         changed = True
         print(f"  - Removed #ifdef before drawSkia implementation")
+    
+    # Remove #endif after complete drawSkia implementations
+    # Look for: method implementation followed by }#endif
+    pattern3 = r'(\w+::drawSkia\([^)]*\)[^{]*\{(?:[^{}]|\{[^{}]*\})*\})\s*#endif'
+    if re.search(pattern3, content):
+        content = re.sub(pattern3, r'\1', content)
+        changed = True
+        print(f"  - Removed #endif after drawSkia implementation")
+    
+    # Remove small #ifdef ZENITH_USE_SKIA blocks (similar to headers)
+    pattern4 = r'#ifdef ZENITH_USE_SKIA\s*\n([^#]+?)\n#endif'
+    matches4 = list(re.finditer(pattern4, content))
+    if matches4:
+        for match in reversed(matches4):
+            block_content = match.group(1).strip()
+            # Allow blocks up to 15 lines for cpp files (can have more implementation code)
+            if len(block_content.split('\n')) <= 15:
+                content = content[:match.start()] + match.group(1) + content[match.end():]
+                changed = True
+        if changed:
+            print(f"  - Removed standalone #ifdef guards")
     
     if changed:
         with open(filepath, 'w', encoding='utf-8') as f:

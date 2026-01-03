@@ -17,10 +17,9 @@
 #include <cmath>
 #include <string>
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #include <utils/SkTextUtils.h>
-#endif
+
 
 namespace zenith {
 

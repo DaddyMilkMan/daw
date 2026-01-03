@@ -18,9 +18,8 @@
 
 // RenderTree.h depends on Skia types (SkRect, SkColor), only include when Skia
 // enabled
-#ifdef ZENITH_USE_SKIA
 #include "../ui/framework/RenderTree.h"
-#endif
+
 
 class UITests : public juce::UnitTest {
 public:

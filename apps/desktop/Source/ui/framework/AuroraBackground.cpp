@@ -10,21 +10,18 @@
 
 #include "AuroraBackground.h"
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithDesignSystem.h"
 #include <cmath>
 #include <core/SkPicture.h>
 #include <core/SkPictureRecorder.h>
 #include <core/SkString.h>
 #include <core/SkSurface.h>
-#endif
+
 
 namespace zenith {
 
 AuroraBackground::AuroraBackground() {
-#ifdef ZENITH_USE_SKIA
   initShaders();
-#endif
 }
 
 AuroraBackground::~AuroraBackground() {}
