@@ -152,36 +152,30 @@ target_link_libraries(ZenithDAW PRIVATE ${ZENITH_JUCE_MODULES})
 # SKIA INTEGRATION (after target creation)
 # =============================================================================
 
-# Skia rendering option (Release recommended)
-option(ZENITH_ENABLE_SKIA "Enable Skia Hardware-Accelerated Rendering" ON)
+# Skia rendering is now REQUIRED for Zenith DAW
+message(STATUS "Zenith DAW: Skia rendering ENABLED (required)")
 
-if(ZENITH_ENABLE_SKIA)
-    # Manual Skia integration
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/cmake/SkiaManualIntegration.cmake")
-        include(apps/desktop/cmake/SkiaManualIntegration.cmake)
-        target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_SKIA=1)
-        message(STATUS "Zenith DAW: Skia rendering ENABLED")
+# Manual Skia integration
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/cmake/SkiaManualIntegration.cmake")
+    include(apps/desktop/cmake/SkiaManualIntegration.cmake)
+    target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_SKIA=1)
 
-        # Platform-specific graphics libraries
-        if(WIN32)
-            target_link_libraries(ZenithDAW PRIVATE d3d12 dxgi dcomp uuid)
-        elseif(APPLE)
-            target_link_libraries(ZenithDAW PRIVATE "-framework Metal" "-framework Foundation" "-framework QuartzCore")
-        elseif(UNIX AND NOT APPLE)
-            find_package(Vulkan QUIET)
-            if(Vulkan_FOUND)
-                target_link_libraries(ZenithDAW PRIVATE Vulkan::Vulkan)
-            else()
-                target_link_libraries(ZenithDAW PRIVATE vulkan)
-                message(STATUS "Vulkan not found - using system fallback")
-            endif()
+    # Platform-specific graphics libraries
+    if(WIN32)
+        target_link_libraries(ZenithDAW PRIVATE d3d12 dxgi dcomp uuid)
+    elseif(APPLE)
+        target_link_libraries(ZenithDAW PRIVATE "-framework Metal" "-framework Foundation" "-framework QuartzCore")
+    elseif(UNIX AND NOT APPLE)
+        find_package(Vulkan QUIET)
+        if(Vulkan_FOUND)
+            target_link_libraries(ZenithDAW PRIVATE Vulkan::Vulkan)
+        else()
+            target_link_libraries(ZenithDAW PRIVATE vulkan)
+            message(STATUS "Vulkan not found - using system fallback")
         endif()
-    else()
-        message(WARNING "Skia integration file not found. Skia will be disabled.")
-        set(ZENITH_ENABLE_SKIA OFF)
     endif()
 else()
-    message(STATUS "Zenith DAW: Skia rendering DISABLED")
+    message(FATAL_ERROR "Skia integration file not found. Skia is required for Zenith DAW rendering.")
 endif()
 
 # =============================================================================
@@ -315,22 +309,21 @@ if(BUILD_TESTS)
 
     target_compile_features(ZenithDAWTests PRIVATE cxx_std_20)
 
-    if(ZENITH_ENABLE_SKIA)
-        # Re-use SKIA_ROOT/SKIA_INCLUDE_DIR detected by SkiaManualIntegration.cmake
-        target_include_directories(ZenithDAWTests PRIVATE ${SKIA_ROOT}/include ${SKIA_INCLUDE_DIR})
-        if(SKIA_LIBRARY)
-            target_link_libraries(ZenithDAWTests PRIVATE ${SKIA_LIBRARY})
-        endif()
-        target_compile_definitions(ZenithDAWTests PRIVATE ZENITH_USE_SKIA=1)
+    # Skia is always enabled for tests
+    # Re-use SKIA_ROOT/SKIA_INCLUDE_DIR detected by SkiaManualIntegration.cmake
+    target_include_directories(ZenithDAWTests PRIVATE ${SKIA_ROOT}/include ${SKIA_INCLUDE_DIR})
+    if(SKIA_LIBRARY)
+        target_link_libraries(ZenithDAWTests PRIVATE ${SKIA_LIBRARY})
+    endif()
+    target_compile_definitions(ZenithDAWTests PRIVATE ZENITH_USE_SKIA=1)
 
-        # Platform libs similar to ZenithDAW
-        if(WIN32)
-            target_link_libraries(ZenithDAWTests PRIVATE d3d12 dxgi dcomp uuid)
-        elseif(APPLE)
-            target_link_libraries(ZenithDAWTests PRIVATE "-framework Metal" "-framework Foundation" "-framework QuartzCore")
-        elseif(UNIX AND NOT APPLE)
-            target_link_libraries(ZenithDAWTests PRIVATE vulkan EGL GLESv2)
-        endif()
+    # Platform libs similar to ZenithDAW
+    if(WIN32)
+        target_link_libraries(ZenithDAWTests PRIVATE d3d12 dxgi dcomp uuid)
+    elseif(APPLE)
+        target_link_libraries(ZenithDAWTests PRIVATE "-framework Metal" "-framework Foundation" "-framework QuartzCore")
+    elseif(UNIX AND NOT APPLE)
+        target_link_libraries(ZenithDAWTests PRIVATE vulkan EGL GLESv2)
     endif()
 
     # =========================================================================
@@ -360,13 +353,11 @@ if(BUILD_TESTS)
         zenith_juce_includes
     )
 
-    # Skia includes (if enabled)
-    if(ZENITH_ENABLE_SKIA)
-        target_include_directories(MetricsChartTests PRIVATE 
-            ${SKIA_ROOT}/include 
-            ${SKIA_INCLUDE_DIR}
-        )
-    endif()
+    # Skia includes (always enabled)
+    target_include_directories(MetricsChartTests PRIVATE 
+        ${SKIA_ROOT}/include 
+        ${SKIA_INCLUDE_DIR}
+    )
 
     target_link_libraries(MetricsChartTests PRIVATE
         juce::juce_core
@@ -377,17 +368,16 @@ if(BUILD_TESTS)
     )
 
 
-    if(ZENITH_ENABLE_SKIA)
-        target_link_libraries(MetricsChartTests PRIVATE ${SKIA_LIBRARY})
-        target_compile_definitions(MetricsChartTests PRIVATE ZENITH_USE_SKIA=1)
-        
-        if(WIN32)
-            target_link_libraries(MetricsChartTests PRIVATE d3d12 dxgi dcomp uuid)
-        elseif(APPLE)
-            target_link_libraries(MetricsChartTests PRIVATE "-framework Metal" "-framework Foundation" "-framework QuartzCore")
-        elseif(UNIX AND NOT APPLE)
-            target_link_libraries(MetricsChartTests PRIVATE vulkan)
-        endif()
+    # Skia is always linked for tests
+    target_link_libraries(MetricsChartTests PRIVATE ${SKIA_LIBRARY})
+    target_compile_definitions(MetricsChartTests PRIVATE ZENITH_USE_SKIA=1)
+    
+    if(WIN32)
+        target_link_libraries(MetricsChartTests PRIVATE d3d12 dxgi dcomp uuid)
+    elseif(APPLE)
+        target_link_libraries(MetricsChartTests PRIVATE "-framework Metal" "-framework Foundation" "-framework QuartzCore")
+    elseif(UNIX AND NOT APPLE)
+        target_link_libraries(MetricsChartTests PRIVATE vulkan)
     endif()
 
     target_compile_definitions(MetricsChartTests PRIVATE
@@ -471,7 +461,7 @@ message(STATUS "Zenith DAW Configuration:")
 message(STATUS "  Build Type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "  Platform: ${ZENITH_PLATFORM_NAME}")
 message(STATUS "  Architecture: ${ZENITH_ARCH_NAME}")
-message(STATUS "  Skia: ${ZENITH_ENABLE_SKIA}")
+message(STATUS "  Skia: REQUIRED (always enabled)")
 message(STATUS "  ONNX: ${ENABLE_ONNX}")
 message(STATUS "  IPO: ${ENABLE_IPO}")
 message(STATUS "  Tests: ${BUILD_TESTS}")
