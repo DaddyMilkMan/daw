@@ -145,7 +145,8 @@ void OAuthRedirectServer::runServer(int port, const juce::String& expectedState,
             // The state parameter MUST match the one we generated before starting OAuth flow
             // The backend at sylorlabs.com MUST also verify this on their side
             if (state != expectedState) {
-                ZENITH_LOG_ERROR("[OAuth] State mismatch! Expected: '" + expectedState + "', got: '" + state + "'");
+                // Only log partial state values to avoid leaking secrets in logs
+                ZENITH_LOG_ERROR("[OAuth] State mismatch! Expected: '" + expectedState.substring(0, 8) + "...', got: '" + state.substring(0, 8) + "...'");
                 sendStaticResponse(clientSocket.get(), false);
                 
                 juce::MessageManager::callAsync([callback]() {
@@ -175,11 +176,6 @@ void OAuthRedirectServer::runServer(int port, const juce::String& expectedState,
             } else {
                 ZENITH_LOG_ERROR("[OAuth] No code or error in callback");
                 sendStaticResponse(clientSocket.get(), false);
-                
-                juce::MessageManager::callAsync([callback]() {
-                    callback("", "", "Invalid OAuth callback response", "");
-                });
-            }
                 
                 juce::MessageManager::callAsync([callback]() {
                     callback("", "", "Invalid OAuth callback response", "");

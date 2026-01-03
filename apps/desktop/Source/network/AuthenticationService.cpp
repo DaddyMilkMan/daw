@@ -104,6 +104,8 @@ void AuthenticationService::performGoogleLogin(AuthCallback callback) {
     fprintf(stderr, "[Auth] Launching browser thread...\n");
     
     // 4. Launch browser in background to prevent UI freeze
+    // NOTE: Capturing 'this' is safe here because AuthenticationService is a singleton
+    // that lives for the entire application lifetime
     juce::Thread::launch([url, this, callback]() {
         fprintf(stderr, "[Auth] Browser launch thread started for URL: %s\n", url.toString(true).toRawUTF8());
         bool launched = url.launchInDefaultBrowser();
@@ -179,6 +181,8 @@ void AuthenticationService::performWebLogin(AuthCallback callback) {
     juce::URL url(webLoginUrl);
 
     // 4. Launch Browser
+    // NOTE: Capturing 'this' is safe here because AuthenticationService is a singleton
+    // that lives for the entire application lifetime
     juce::Thread::launch([url, callback, this]() {
         bool launched = url.launchInDefaultBrowser();
         if (!launched) {
@@ -249,6 +253,8 @@ void AuthenticationService::performWebSignup(AuthCallback callback) {
     juce::URL url(webSignupUrl);
 
     // 4. Launch Browser
+    // NOTE: Capturing 'this' is safe here because AuthenticationService is a singleton
+    // that lives for the entire application lifetime
     juce::Thread::launch([url, callback, this]() {
         bool launched = url.launchInDefaultBrowser();
         if (!launched) {
