@@ -6,6 +6,14 @@
     Authors: Sarah Chen (lead), with input from ENTIRE TEAM
 
     Base class for all Skia-rendered components in Zenith DAW.
+    
+    RENDERING ARCHITECTURE:
+    - Zenith DAW uses Skia EXCLUSIVELY for all UI rendering
+    - All components inherit from SkiaComponent and implement drawSkia(SkCanvas*)
+    - JUCE's paint(juce::Graphics&) is NOT used for rendering - it's an empty stub
+    - JUCE provides only: windowing, events, audio, and layout
+    - See docs/RENDERING_ARCHITECTURE.md for full details
+    
   ==============================================================================
 */
 

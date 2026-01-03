@@ -1,7 +1,16 @@
 /**
  * @file ZenithLookAndFeel.h
- * @brief Modern LookAndFeel with proper micro-interactions and visual polish
+ * @brief DEPRECATED: Modern LookAndFeel with proper micro-interactions and visual polish
  * @author Fixed by Claude - December 2025
+ * 
+ * NOTE: This LookAndFeel is maintained for backward compatibility with legacy JUCE
+ * components. All new UI components should use Skia rendering via SkiaComponent.
+ * JUCE rendering is no longer the primary rendering path - Skia is used for all
+ * custom UI components.
+ * 
+ * MIGRATION PATH: Replace juce::TextButton -> ZenithButton/SkiaButton
+ *                Replace juce::Slider -> ZenithSlider/SkiaSlider
+ *                Replace juce::ComboBox -> ZenithDropdown/SkiaComboBox
  */
 
 #pragma once
@@ -13,7 +22,11 @@ namespace zenith {
 
 /**
  * @class ZenithLookAndFeel
- * @brief Custom LookAndFeel implementing modern design system
+ * @brief LEGACY: Custom LookAndFeel for backward compatibility with standard JUCE components
+ * 
+ * This class provides JUCE-based rendering for any remaining standard JUCE components
+ * (juce::TextButton, juce::Slider, juce::ComboBox, etc.). It should NOT be used for
+ * new components - use Skia-based components instead (SkiaComponent, ZenithButton, etc.).
  */
 class ZenithLookAndFeel : public juce::LookAndFeel_V4 {
 public:

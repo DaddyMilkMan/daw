@@ -152,15 +152,23 @@ target_link_libraries(ZenithDAW PRIVATE ${ZENITH_JUCE_MODULES})
 # SKIA INTEGRATION (after target creation)
 # =============================================================================
 
-# Skia rendering option (Release recommended)
-option(ZENITH_ENABLE_SKIA "Enable Skia Hardware-Accelerated Rendering" ON)
+# Skia rendering option (REQUIRED for production - default ON)
+option(ZENITH_ENABLE_SKIA "Enable Skia GPU-Accelerated Rendering (REQUIRED)" ON)
 
 if(ZENITH_ENABLE_SKIA)
+    message(STATUS "========================================")
+    message(STATUS "Zenith DAW: Skia Rendering Architecture")
+    message(STATUS "========================================")
+    message(STATUS "  Skia is the EXCLUSIVE rendering engine for Zenith DAW")
+    message(STATUS "  JUCE is used only for windowing, audio, and events")
+    message(STATUS "  All UI components use SkiaComponent and drawSkia()")
+    message(STATUS "========================================")
+    
     # Manual Skia integration
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/cmake/SkiaManualIntegration.cmake")
         include(apps/desktop/cmake/SkiaManualIntegration.cmake)
         target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_SKIA=1)
-        message(STATUS "Zenith DAW: Skia rendering ENABLED")
+        message(STATUS "Zenith DAW: Skia rendering ENABLED via manual integration")
 
         # Platform-specific graphics libraries
         if(WIN32)
@@ -177,11 +185,10 @@ if(ZENITH_ENABLE_SKIA)
             endif()
         endif()
     else()
-        message(WARNING "Skia integration file not found. Skia will be disabled.")
-        set(ZENITH_ENABLE_SKIA OFF)
+        message(FATAL_ERROR "Skia integration file not found. Skia is REQUIRED for Zenith DAW.")
     endif()
 else()
-    message(STATUS "Zenith DAW: Skia rendering DISABLED")
+    message(FATAL_ERROR "Zenith DAW REQUIRES Skia rendering. Set ZENITH_ENABLE_SKIA=ON")
 endif()
 
 # =============================================================================

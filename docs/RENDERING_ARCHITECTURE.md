@@ -1,18 +1,31 @@
 # Zenith DAW Rendering Architecture
 
-**Last Updated:** 2025-12-11  
-**Version:** 1.0
+**Last Updated:** 2026-01-03  
+**Version:** 2.0 - Skia-First Architecture
 
 ---
 
 ## Overview
 
-Zenith DAW uses **Skia** as its primary 2D graphics rendering engine, integrated with JUCE for windowing, event handling, and audio functionality. This hybrid approach provides:
+Zenith DAW uses **Skia** as its **exclusive** 2D graphics rendering engine. JUCE is retained only for non-rendering functionality including windowing, audio processing, and event handling.
 
-- 🎨 **Hardware-accelerated rendering** via OpenGL/Metal backends
-- 🚀 **60 FPS smooth animations** for timeline scrubbing, waveforms, and meters
-- 🎭 **Custom "Neon Noir Glassmorphism" design system** with glow effects and gradients
-- 🔧 **Familiar JUCE component model** for layout and event handling
+### Architecture Principles
+
+- 🎨 **Skia-Only Rendering**: All UI rendering uses Skia (SkCanvas, SkPaint, SkFont, SkImage)
+- 🚀 **Hardware Acceleration**: GPU-accelerated via Metal (macOS), Direct3D 12 (Windows), Vulkan (Linux)
+- 🎭 **Modern Design System**: Custom design system with glassmorphism, gradients, and effects
+- 🔧 **JUCE Integration**: JUCE provides windowing, audio, and events only - no JUCE graphics rendering
+- ⚡ **60+ FPS Performance**: Smooth animations for timeline, waveforms, meters, and all UI elements
+
+### Key Components Responsibilities
+
+| Component | Responsibility | Rendering Engine |
+|-----------|----------------|------------------|
+| **SkiaComponent** | Base class for all UI components | Skia (drawSkia) |
+| **SkiaMainWindowIntegration** | OpenGL/Skia context management | Skia |
+| **ZenithButton, ZenithSlider, etc.** | Custom UI controls | Skia |
+| **JUCE Components** | Window, audio, events | JUCE (no rendering) |
+| **ZenithLookAndFeel** | DEPRECATED - Legacy only | JUCE (to be phased out) |
 
 ---
 
@@ -45,6 +58,48 @@ Zenith DAW uses **Skia** as its primary 2D graphics rendering engine, integrated
 │  └──────────────────────────────────────────────────────────────┘  │
 └────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Rendering Flow
+
+### 1. Window System (JUCE)
+JUCE provides the native window and OpenGL context:
+- **juce::Component**: Base class providing layout and event handling
+- **juce::OpenGLContext**: Manages GPU context
+- **Platform Window**: Native OS window (NSWindow, HWND, X11 Window)
+
+### 2. Skia Integration (SkiaMainWindowIntegration)
+Bridges JUCE windowing with Skia rendering:
+- Creates `GrDirectContext` for GPU acceleration
+- Creates `SkSurface` backed by GPU framebuffer
+- Provides `SkCanvas` for all drawing operations
+- **NO juce::Graphics rendering** - purely Skia
+
+### 3. Component Hierarchy (SkiaComponent)
+All UI components inherit from `SkiaComponent`:
+```cpp
+class MyComponent : public SkiaComponent {
+public:
+    void drawSkia(SkCanvas* canvas) override {
+        // All rendering uses Skia API
+        SkPaint paint;
+        paint.setColor(SK_ColorBLUE);
+        canvas->drawRect(SkRect::MakeWH(100, 100), paint);
+    }
+    
+    // JUCE paint() is a no-op for Skia components
+    void paint(juce::Graphics& g) override {
+        // Empty - rendering handled by drawSkia()
+    }
+};
+```
+
+### 4. No JUCE Graphics Rendering
+- **juce::Graphics is NOT used** for any UI rendering
+- `paint(juce::Graphics& g)` methods are empty stubs
+- **ZenithLookAndFeel** is deprecated - kept only for legacy compatibility
+- Standard JUCE components (juce::TextButton, juce::Slider) should be replaced with Skia equivalents
 
 ---
 
@@ -749,3 +804,159 @@ class MySkiaComponent : public SkiaComponent {
 - [Skia API Reference](https://api.skia.org/)
 - [JUCE OpenGLContext](https://docs.juce.com/master/classOpenGLContext.html)
 - [Zenith Design System](./DESIGN_SYSTEM.md)
+
+---
+
+## Migration Guide: JUCE Components to Skia
+
+### Component Replacement Table
+
+| Legacy JUCE Component | Skia Replacement | File Location |
+|-----------------------|------------------|---------------|
+| `juce::TextButton` | `ZenithButton` or `SkiaButton` | `ui/controls/ZenithButton.h` |
+| `juce::Slider` | `ZenithSlider` or `SkiaSlider` | `ui/controls/ZenithSlider.h` |
+| `juce::ComboBox` | `ZenithDropdown` or `SkiaComboBox` | `ui/controls/ZenithDropdown.h` |
+| `juce::Label` | `SkiaLabel` | `ui/controls/SkiaLabel.h` |
+| `juce::TextEditor` | `SkiaTextEditor` | `ui/controls/SkiaTextEditor.h` |
+| `juce::ToggleButton` | `ZenithToggle` | `ui/controls/ZenithToggle.h` |
+
+### Migration Steps
+
+#### Step 1: Replace Component Type
+
+**Before (JUCE):**
+```cpp
+std::unique_ptr<juce::TextButton> myButton;
+
+myButton = std::make_unique<juce::TextButton>("Click Me");
+myButton->onClick = [this] { handleClick(); };
+addAndMakeVisible(myButton.get());
+```
+
+**After (Skia):**
+```cpp
+std::unique_ptr<ZenithButton> myButton;
+
+myButton = std::make_unique<ZenithButton>("Click Me", [this] { handleClick(); });
+addAndMakeVisible(myButton.get());
+```
+
+#### Step 2: Update Callbacks
+
+**JUCE:**
+```cpp
+button->onClick = []() { /* handler */ };
+slider->onValueChange = []() { /* handler */ };
+comboBox->onChange = []() { /* handler */ };
+```
+
+**Skia:**
+```cpp
+button->onClick = []() { /* handler */ };
+slider->onValueChange = [](float value) { /* handler */ };
+dropdown->onSelectionChange = [](int index, const juce::String& text) { /* handler */ };
+```
+
+#### Step 3: Replace Custom Drawing
+
+**Before (JUCE):**
+```cpp
+class MyComponent : public juce::Component {
+public:
+    void paint(juce::Graphics& g) override {
+        g.setColour(juce::Colours::blue);
+        g.fillRect(getLocalBounds());
+        g.setColour(juce::Colours::white);
+        g.drawText("Hello", getLocalBounds(), juce::Justification::centred);
+    }
+};
+```
+
+**After (Skia):**
+```cpp
+class MyComponent : public SkiaComponent {
+public:
+    void drawSkia(SkCanvas* canvas) override {
+        auto bounds = getLocalBounds().toFloat();
+        
+        // Fill background
+        SkPaint bgPaint;
+        bgPaint.setColor(SK_ColorBLUE);
+        canvas->drawRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()), bgPaint);
+        
+        // Draw text
+        SkFont font(nullptr, 14.0f);
+        SkPaint textPaint;
+        textPaint.setColor(SK_ColorWHITE);
+        canvas->drawString("Hello", bounds.getWidth() / 2, bounds.getHeight() / 2, font, textPaint);
+    }
+    
+    void paint(juce::Graphics& g) override {
+        // Empty - rendering handled by drawSkia()
+    }
+};
+```
+
+### Known Issues to Migrate
+
+The following components still use standard JUCE components and should be migrated:
+
+1. **MixingAssistant** (apps/desktop/Source/ai/MixingAssistant.cpp)
+   - Multiple `juce::TextButton` instances
+   - `juce::Slider` for controls
+   - Should use `ZenithButton` and `ZenithSlider`
+
+2. **LearningDashboard** (apps/desktop/Source/ui/dashboards/LearningDashboard.cpp)
+   - `juce::ComboBox` for model selection
+   - Multiple `juce::TextButton` and `juce::Slider` instances
+   - Should use `ZenithDropdown`, `ZenithButton`, and `ZenithSlider`
+
+### Best Practices
+
+1. **Always use SkiaComponent base class** for new components
+2. **Never implement paint(juce::Graphics&)** with actual rendering code
+3. **Use ZenithTheme/design::colors** for colors instead of juce::Colours
+4. **Prefer Skia types** (SkColor, SkRect, SkFont) over JUCE types
+5. **Test rendering** on all platforms (Windows/Metal/Vulkan backends)
+
+### Verification Checklist
+
+- [ ] No `juce::Graphics` rendering code in `paint()` methods
+- [ ] All custom components extend `SkiaComponent`
+- [ ] Standard JUCE UI components replaced with Skia equivalents
+- [ ] ZenithLookAndFeel only used for backward compatibility
+- [ ] Colors use Skia types (SkColor) or design::colors constants
+- [ ] Build succeeds with ZENITH_USE_SKIA=1
+- [ ] UI renders correctly on target platform(s)
+
+---
+
+## Architecture Decision Record
+
+**Date:** 2026-01-03  
+**Decision:** Use Skia exclusively for all UI rendering
+
+**Context:**
+- JUCE's graphics API is CPU-based and not hardware accelerated
+- Skia provides GPU acceleration via Metal/D3D/Vulkan
+- Modern UI requires 60+ FPS performance for smooth animations
+- Custom design system needs advanced effects (glassmorphism, blurs, gradients)
+
+**Decision:**
+Migrate all UI rendering to Skia, keeping JUCE only for:
+- Windowing and OS integration
+- Audio device management and DSP
+- MIDI and plugin hosting
+- File I/O and utilities
+- Event handling (mouse, keyboard)
+
+**Consequences:**
+- ✅ 60+ FPS GPU-accelerated rendering
+- ✅ Advanced visual effects (blurs, shadows, gradients)
+- ✅ Consistent rendering across platforms
+- ✅ Better performance for complex UIs
+- ⚠️ Need to migrate legacy JUCE components
+- ⚠️ Developers need to learn Skia API
+- ⚠️ Maintain compatibility layer temporarily
+
+**Status:** ✅ Implemented - All core UI uses Skia rendering

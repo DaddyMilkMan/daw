@@ -50,8 +50,15 @@ SkiaComponent::~SkiaComponent() { stopAllAnimations(); }
 
 void SkiaComponent::paint(juce::Graphics &g) {
   juce::ignoreUnused(g);
-  // Skia components are rendered via drawSkia() by the parent renderer.
-  // No JUCE painting or fallback.
+  // -------------------------------------------------------------------------
+  // IMPORTANT: Skia components do NOT use juce::Graphics for rendering!
+  // -------------------------------------------------------------------------
+  // All rendering is handled via drawSkia(SkCanvas*) which is called by the
+  // parent SkiaMainWindowIntegration or SkiaComponent.
+  // 
+  // This paint() method is kept as an empty stub for JUCE compatibility.
+  // DO NOT add any rendering code here.
+  // -------------------------------------------------------------------------
 }
 
 SkCanvas *SkiaComponent::getSkiaCanvas(juce::Graphics &g) {

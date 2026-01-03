@@ -1,7 +1,11 @@
 /**
  * @file ZenithLookAndFeel.cpp
- * @brief Modern LookAndFeel implementation with micro-interactions
+ * @brief DEPRECATED: Modern LookAndFeel implementation with micro-interactions
  * @author Fixed by Claude - December 2025
+ * 
+ * NOTE: This file provides JUCE-based rendering for legacy/standard JUCE components.
+ * All new UI should use Skia rendering (SkiaComponent, ZenithButton, ZenithSlider, etc.).
+ * This is maintained only for backward compatibility.
  */
 
 #include "ZenithLookAndFeel.h"
