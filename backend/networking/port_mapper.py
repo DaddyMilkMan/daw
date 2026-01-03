@@ -102,7 +102,7 @@ class UPnPPortMapper:
                 logger.warning("Router discovery error: %s", exc)
                 return None, None
 
-    def _extract_location(self, data: str) -> str | None:
+    def _extract_location(self, data: str) -> Optional[str]:
         """
         Extract the LOCATION URL from SSDP response.
         
@@ -110,12 +110,12 @@ class UPnPPortMapper:
             data: Raw SSDP response string.
             
         Returns:
-            str | None: The location URL if found, None otherwise.
+            Optional[str]: The location URL if found, None otherwise.
         """
         match = re.search(r"LOCATION:\s*(.*)", data, re.IGNORECASE)
         return match.group(1).strip() if match else None
 
-    def _get_control_url(self, location: str) -> str | None:
+    def _get_control_url(self, location: str) -> Optional[str]:
         """
         Fetch device description and extract control URL.
         
@@ -126,7 +126,7 @@ class UPnPPortMapper:
             location: URL to the device description XML.
             
         Returns:
-            str | None: Full control URL if found, None otherwise.
+            Optional[str]: Full control URL if found, None otherwise.
         """
         try:
             with urllib.request.urlopen(location, timeout=self.timeout) as response:

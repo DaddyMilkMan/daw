@@ -17,7 +17,7 @@ Commands:
 
 import sys
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Any
 
 import typer
 import structlog
@@ -35,7 +35,7 @@ app = typer.Typer(
 log = get_logger()
 
 # Global config state
-state: Dict[str, Any] = {"config": None}
+state: dict[str, Any] = {"config": None}
 
 
 @app.callback()
