@@ -18,15 +18,25 @@ if __package__ is None:
         sys.path.insert(0, root)
 
 try:
-    from .session_store import SessionStore
+    from .session_store import SessionStore, DiskBackend, MemoryBackend, RedisBackend
 except ImportError:  # pragma: no cover - script run outside package
-    from session_store import SessionStore
+    from session_store import SessionStore, DiskBackend, MemoryBackend, RedisBackend
 
 HOST = os.environ.get("ZENITH_SIGNALING_HOST", "0.0.0.0")
 PORT = int(os.environ.get("ZENITH_SIGNALING_PORT", "54320"))
 UDP_PORT = int(os.environ.get("ZENITH_SIGNALING_UDP_PORT", "54321"))
 SESSION_TTL = int(os.environ.get("ZENITH_SIGNALING_SESSION_TTL", "300"))
 SESSION_CLEAN_INTERVAL = int(os.environ.get("ZENITH_SIGNALING_CLEAN_FREQ", "60"))
+
+# Persistence configuration
+PERSISTENCE_BACKEND = os.environ.get("ZENITH_PERSISTENCE_BACKEND", "memory")  # memory, disk, redis
+PERSISTENCE_DISK_PATH = os.environ.get("ZENITH_PERSISTENCE_DISK_PATH", "/tmp/zenith_sessions.json")
+PERSISTENCE_REDIS_URL = os.environ.get("ZENITH_PERSISTENCE_REDIS_URL", "redis://localhost:6379/0")
+
+# Rate limiting configuration
+RATE_LIMIT_ENABLED = os.environ.get("ZENITH_RATE_LIMIT_ENABLED", "true").lower() == "true"
+RATE_LIMIT_WINDOW = int(os.environ.get("ZENITH_RATE_LIMIT_WINDOW", "60"))
+RATE_LIMIT_MAX = int(os.environ.get("ZENITH_RATE_LIMIT_MAX", "10"))
 
 
 def configure_logging(level: int = logging.INFO) -> None:
@@ -94,9 +104,14 @@ def handle_tcp_client(conn: socket.socket, addr: tuple, store: SessionStore) -> 
         action = request.get("action")
 
         if action == "REGISTER":
-            code = store.create_session()
-            response = {"status": "OK", "code": code}
-            logger.info("TCP: Registered session %s from %s", code, addr)
+            client_ip = addr[0] if RATE_LIMIT_ENABLED else None
+            code = store.create_session(client_ip=client_ip)
+            if code is None:
+                response = {"status": "ERROR", "msg": "Rate limit exceeded"}
+                logger.warning("TCP: Rate limit exceeded for %s", addr)
+            else:
+                response = {"status": "OK", "code": code}
+                logger.info("TCP: Registered session %s from %s", code, addr)
 
         elif action == "LOOKUP":
             code = request.get("code")
@@ -155,7 +170,37 @@ def tcp_server(store: SessionStore) -> None:
 
 
 def run_signaling() -> None:
-    store = SessionStore(ttl=SESSION_TTL)
+    # Configure persistence backend
+    backend = None
+    if PERSISTENCE_BACKEND == "disk":
+        backend = DiskBackend(PERSISTENCE_DISK_PATH)
+        logger.info("Using disk persistence: %s", PERSISTENCE_DISK_PATH)
+    elif PERSISTENCE_BACKEND == "redis":
+        try:
+            backend = RedisBackend(PERSISTENCE_REDIS_URL)
+            logger.info("Using Redis persistence: %s", PERSISTENCE_REDIS_URL)
+        except ImportError:
+            logger.error("Redis backend requested but redis-py not installed. Falling back to memory-only.")
+            backend = MemoryBackend()
+        except Exception as e:
+            logger.error("Failed to initialize Redis backend: %s. Falling back to memory-only.", e)
+            backend = MemoryBackend()
+    else:
+        backend = MemoryBackend()
+        logger.info("Using memory-only persistence (sessions will be lost on restart)")
+
+    # Create session store with configured backend and rate limiting
+    store = SessionStore(
+        ttl=SESSION_TTL,
+        backend=backend,
+        rate_limit_window=RATE_LIMIT_WINDOW if RATE_LIMIT_ENABLED else 60,
+        rate_limit_max=RATE_LIMIT_MAX if RATE_LIMIT_ENABLED else 10,
+    )
+
+    if RATE_LIMIT_ENABLED:
+        logger.info("Rate limiting enabled: max %d requests per %d seconds per IP", RATE_LIMIT_MAX, RATE_LIMIT_WINDOW)
+    else:
+        logger.info("Rate limiting disabled")
 
     threading.Thread(target=cleanup_loop, args=(store,), daemon=True).start()
     threading.Thread(target=udp_listener, args=(store,), daemon=True).start()

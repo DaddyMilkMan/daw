@@ -31,6 +31,44 @@ The signaling component respects these environment variables as well:
 | `ZENITH_SIGNALING_UDP_PORT` | UDP port for hole punching | `54321` |
 | `ZENITH_SIGNALING_SESSION_TTL` | Seconds before sessions expire | `300` |
 | `ZENITH_SIGNALING_CLEAN_FREQ` | Cleanup interval (seconds) | `60` |
+| `ZENITH_PERSISTENCE_BACKEND` | Session persistence backend: `memory`, `disk`, or `redis` | `memory` |
+| `ZENITH_PERSISTENCE_DISK_PATH` | Path for disk-based persistence | `/tmp/zenith_sessions.json` |
+| `ZENITH_PERSISTENCE_REDIS_URL` | Redis connection URL (requires redis-py) | `redis://localhost:6379/0` |
+| `ZENITH_RATE_LIMIT_ENABLED` | Enable per-IP rate limiting | `true` |
+| `ZENITH_RATE_LIMIT_WINDOW` | Rate limit window in seconds | `60` |
+| `ZENITH_RATE_LIMIT_MAX` | Max session creations per window per IP | `10` |
+
+### Session Persistence
+
+By default, sessions are stored in memory only and will be lost on restart. For production deployments, enable persistence:
+
+**Disk-based persistence** (single instance):
+```bash
+export ZENITH_PERSISTENCE_BACKEND=disk
+export ZENITH_PERSISTENCE_DISK_PATH=/var/lib/zenith/sessions.json
+```
+
+**Redis-based persistence** (multi-instance):
+```bash
+pip install redis
+export ZENITH_PERSISTENCE_BACKEND=redis
+export ZENITH_PERSISTENCE_REDIS_URL=redis://localhost:6379/0
+```
+
+Sessions will automatically be restored after restart. See `signaling/SESSION_STORE_REFACTORING.md` for detailed documentation.
+
+### Security Features
+
+The signaling server includes security hardening:
+
+- **Cryptographically secure session codes**: Uses Python's `secrets` module for unpredictable 6-digit codes (900K possibilities)
+- **Rate limiting**: Prevents brute-force attacks by limiting session creation to 10 requests per minute per IP (configurable)
+- **Thread-safe operations**: All session operations are protected with reentrant locks
+
+To disable rate limiting for internal trusted networks:
+```bash
+export ZENITH_RATE_LIMIT_ENABLED=false
+```
 
 TLS certificates must live in this directory as `cert.pem`/`key.pem` before starting the service.
 

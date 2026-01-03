@@ -1,3 +1,9 @@
-# This file is for listing Python dependencies for the signaling server.
-# Although the current script uses only standard libraries,
-# any future dependencies like websockets or aiohttp should be added here.
+# Python dependencies for the signaling server
+
+# Optional: Redis backend for session persistence (multi-instance deployments)
+# Uncomment if using ZENITH_PERSISTENCE_BACKEND=redis
+# redis>=5.0.0
+
+# Note: The signaling server primarily uses standard library modules.
+# Redis is only required if you enable Redis-based session persistence.
+# For disk-based persistence or memory-only storage, no additional dependencies are needed.
