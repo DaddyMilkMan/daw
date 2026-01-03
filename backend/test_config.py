@@ -146,10 +146,22 @@ class TestHostValidation:
     
     def test_valid_hosts(self):
         """Test that valid host addresses are accepted."""
-        valid_hosts = ["0.0.0.0", "127.0.0.1", "localhost"]
+        valid_hosts = ["0.0.0.0", "127.0.0.1", "localhost", "192.168.1.100"]
         for host in valid_hosts:
             config = ZenithConfig(signaling_host=host)
             assert config.signaling_host == host
+    
+    def test_valid_ipv6_hosts(self):
+        """Test that valid IPv6 addresses are accepted."""
+        valid_ipv6 = ["::1", "::", "::ffff:192.0.2.1", "2001:db8::1"]
+        for host in valid_ipv6:
+            config = ZenithConfig(signaling_host=host)
+            assert config.signaling_host == host
+    
+    def test_invalid_host_rejected(self):
+        """Test that invalid host addresses are rejected."""
+        with pytest.raises(ValueError, match="valid IP address"):
+            ZenithConfig(signaling_host="invalid.host.name")
     
     def test_empty_host_rejected(self):
         """Test that empty host string is rejected."""

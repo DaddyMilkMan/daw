@@ -22,6 +22,8 @@ Default Values:
     non-privileged ports (>1024) to avoid requiring root privileges.
 """
 
+import ipaddress
+from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -250,6 +252,9 @@ class ZenithConfig(BaseSettings):
     def validate_host(cls, v: str) -> str:
         """Validate host binding address format.
         
+        Uses the ipaddress module for proper IPv4 and IPv6 validation.
+        Also accepts 'localhost' as a special case.
+        
         Args:
             v: The host string to validate.
             
@@ -262,22 +267,25 @@ class ZenithConfig(BaseSettings):
         if not v or not isinstance(v, str):
             raise ValueError("signaling_host must be a non-empty string")
         
-        # Basic validation - allow common patterns
-        # 0.0.0.0 = all interfaces, 127.0.0.1 = localhost, or specific IP
-        if v not in ('0.0.0.0', 'localhost', '127.0.0.1'):
-            # For other values, just ensure it's a reasonable string
-            # Full IP validation would require ipaddress module
-            if not v.replace('.', '').replace(':', '').replace('[', '').replace(']', '').isalnum():
-                raise ValueError(
-                    f"signaling_host appears invalid: '{v}'. "
-                    "Use '0.0.0.0', 'localhost', '127.0.0.1', or a valid IP address."
-                )
+        # Allow 'localhost' as special case
+        if v == 'localhost':
+            return v
         
-        return v
+        # Validate as IPv4 or IPv6 address
+        try:
+            ipaddress.ip_address(v)
+            return v
+        except ValueError:
+            raise ValueError(
+                f"signaling_host must be 'localhost' or a valid IP address, got '{v}'. "
+                "Examples: '0.0.0.0', '127.0.0.1', '::1', '192.168.1.100'"
+            )
     
     @model_validator(mode='after')
     def validate_port_conflicts(self) -> 'ZenithConfig':
         """Validate that different services don't use the same port.
+        
+        Uses Counter for efficient O(n) conflict detection.
         
         Returns:
             The validated config instance.
@@ -293,16 +301,15 @@ class ZenithConfig(BaseSettings):
         if self.upnp_enabled:
             ports['upnp_port'] = self.upnp_port
         
-        # Check for duplicates
-        port_values = list(ports.values())
-        if len(port_values) != len(set(port_values)):
-            # Find which ports conflict
-            conflicts = []
-            for name, port in ports.items():
-                if port_values.count(port) > 1:
-                    conflicts.append(f"{name}={port}")
+        # Use Counter for efficient duplicate detection
+        port_counts = Counter(ports.values())
+        duplicates = {port for port, count in port_counts.items() if count > 1}
+        
+        if duplicates:
+            # Find which port names conflict
+            conflicts = [f"{name}={port}" for name, port in ports.items() if port in duplicates]
             raise ValueError(
-                f"Port conflict detected: {', '.join(set(conflicts))}. "
+                f"Port conflict detected: {', '.join(conflicts)}. "
                 "Each service must use a unique port."
             )
         
