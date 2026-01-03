@@ -152,10 +152,6 @@ public:
   static void drawSeparator(juce::Graphics &g, juce::Rectangle<float> bounds,
                             bool vertical = false);
 
-private:
-  // Singleton instance
-  static std::unique_ptr<ZenithLookAndFeel> instance_;
-
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithLookAndFeel)
 };
 

@@ -464,17 +464,26 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(UndoRedoManager)
 };
 
-// Global undo/redo instance
+// Global undo/redo instance with thread-safe Meyer's singleton
 class GlobalUndoRedo {
 public:
+    /**
+     * @brief Get the global UndoRedoSystem instance
+     * 
+     * Thread-safe Meyer's singleton. The instance is created on first access
+     * and lives for the entire program lifetime.
+     */
     static UndoRedoSystem& getInstance();
+    
+    /**
+     * @brief Get the global UndoRedoManager instance
+     * 
+     * Thread-safe Meyer's singleton. The instance is created on first access
+     * and lives for the entire program lifetime.
+     */
     static UndoRedoManager& getManager();
     
 private:
-    static std::unique_ptr<UndoRedoSystem> instance;
-    static std::unique_ptr<UndoRedoManager> manager;
-    static std::mutex mutex;
-    
     GlobalUndoRedo() = delete;
 };
 

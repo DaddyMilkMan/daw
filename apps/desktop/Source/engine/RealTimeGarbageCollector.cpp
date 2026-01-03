@@ -12,17 +12,11 @@
 
 namespace zenith {
 
-static RealTimeGarbageCollector* gInstance = nullptr;
-
+// Thread-safe Meyer's singleton pattern (C++11 and later)
+// The static local variable is initialized exactly once, even with concurrent access
 RealTimeGarbageCollector& RealTimeGarbageCollector::getInstance() {
-  if (gInstance == nullptr)
-      gInstance = new RealTimeGarbageCollector();
-  return *gInstance;
-}
-
-void RealTimeGarbageCollector::deleteInstance() {
-    delete gInstance;
-    gInstance = nullptr;
+  static RealTimeGarbageCollector instance;
+  return instance;
 }
 
 RealTimeGarbageCollector::RealTimeGarbageCollector() {

@@ -42,8 +42,8 @@ extern "C" int main(int argc, char *argv[]) {
   }
 
   // C5: Flush garbage collector to avoid false positive leaks from deferred deletion
+  // Note: With Meyer's singleton, the instance is automatically destroyed at program exit
   zenith::RealTimeGarbageCollector::getInstance().ensureClean();
-  zenith::RealTimeGarbageCollector::deleteInstance();
   
   // C6: Shutdown ONNX environment
   zenith::ONNXStemSeparator::shutdown();

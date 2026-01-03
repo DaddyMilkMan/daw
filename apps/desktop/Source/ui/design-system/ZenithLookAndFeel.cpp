@@ -30,9 +30,10 @@ const juce::Colour &ZenithLookAndFeel::Colors::border =
 const juce::Colour &ZenithLookAndFeel::Colors::accent =
     design::toJuceColour(design::colors::ACCENT_PRIMARY);
 
-std::unique_ptr<ZenithLookAndFeel> ZenithLookAndFeel::instance_ = nullptr;
-
-ZenithLookAndFeel::ZenithLookAndFeel() {
+ZenithLookAndFeel &ZenithLookAndFeel::getInstance() {
+  static ZenithLookAndFeel instance;
+  return instance;
+}
   auto getCol = [](SkColor c) { return design::toJuceColour(c); };
 
   // Window backgrounds
@@ -84,16 +85,8 @@ ZenithLookAndFeel::ZenithLookAndFeel() {
   setColour(juce::PopupMenu::highlightedBackgroundColourId,
             getCol(design::colors::ACCENT_PRIMARY).withAlpha(0.2f));
   setColour(juce::PopupMenu::highlightedTextColourId, getCol(design::colors::ACCENT_PRIMARY));
-}
 
-ZenithLookAndFeel &ZenithLookAndFeel::getInstance() {
-  if (!instance_) {
-    instance_ = std::make_unique<ZenithLookAndFeel>();
-  }
-  return *instance_;
-}
-
-//==============================================================================
+ZenithLookAndFeel::ZenithLookAndFeel() {
 // Button Rendering with Hover/Press States
 //==============================================================================
 

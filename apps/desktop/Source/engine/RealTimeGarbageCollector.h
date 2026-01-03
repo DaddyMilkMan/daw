@@ -44,9 +44,16 @@ namespace zenith {
  */
 class RealTimeGarbageCollector : private juce::Timer {
 public:
-  // Singleton instance for global access
+  /**
+   * @brief Get the singleton instance (thread-safe Meyer's singleton)
+   * 
+   * This uses C++11's thread-safe static initialization. The instance is
+   * created on first access and lives for the entire program lifetime.
+   * 
+   * @note The garbage collector should be accessed early in the application
+   * lifecycle to ensure proper initialization before any audio threads start.
+   */
   static RealTimeGarbageCollector& getInstance();
-  static void deleteInstance();
 
   RealTimeGarbageCollector();
   ~RealTimeGarbageCollector() override;

@@ -1156,25 +1156,16 @@ void UndoRedoManager::updateAll() {
     updateStatusLabel();
 }
 
-// Global instance management
-std::unique_ptr<UndoRedoSystem> GlobalUndoRedo::instance;
-std::unique_ptr<UndoRedoManager> GlobalUndoRedo::manager;
-std::mutex GlobalUndoRedo::mutex;
-
+// Global instance management using thread-safe Meyer's singleton
+// This avoids static initialization order issues and provides proper cleanup
 UndoRedoSystem& GlobalUndoRedo::getInstance() {
-    std::lock_guard<std::mutex> lock(mutex);
-    if (!instance) {
-        instance = std::make_unique<UndoRedoSystem>();
-    }
-    return *instance;
+    static UndoRedoSystem instance;
+    return instance;
 }
 
 UndoRedoManager& GlobalUndoRedo::getManager() {
-    std::lock_guard<std::mutex> lock(mutex);
-    if (!manager) {
-        manager = std::make_unique<UndoRedoManager>();
-    }
-    return *manager;
+    static UndoRedoManager manager;
+    return manager;
 }
 
 } // namespace ui
