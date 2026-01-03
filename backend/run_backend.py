@@ -49,7 +49,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--upnp-port", type=int, default=DEFAULT_PORT, help="TCP port to map via UPnP")
     parser.add_argument("--upnp-timeout", type=int, default=DEFAULT_TIMEOUT, help="UPnP discovery timeout")
     parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Log level")
-    parser.add_argument("--log-file", help="Path to log file (not yet implemented)")
+    parser.add_argument("--log-file", help="Path to log file (Note: file logging not yet implemented, logs go to stdout)")
     parser.add_argument("--health-port", type=int, default=8000, help="Health check port")
     parser.add_argument("--log-json", action="store_true", help="Output logs as JSON")
     return parser.parse_args()
