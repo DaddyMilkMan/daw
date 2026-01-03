@@ -68,7 +68,8 @@ SettingsPanel::~SettingsPanel() {
 }
 
 void SettingsPanel::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colours::darkgrey);
+    // Skia rendering used - no JUCE rendering needed
+    juce::ignoreUnused(g);
 }
 
 void SettingsPanel::resized() {

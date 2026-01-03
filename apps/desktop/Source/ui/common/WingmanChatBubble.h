@@ -143,42 +143,8 @@ public:
   }
 
   void paint(juce::Graphics &g) override {
-      auto bounds = getLocalBounds().toFloat();
-      float radius = design::dimensions::RADIUS_LG;
-
-      // Background
-      if (isUser_) {
-          g.setGradientFill(juce::ColourGradient(
-              juce::Colour(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.20f)), 0, 0,
-              juce::Colour(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.08f)), 0, bounds.getHeight(), false));
-      } else {
-          g.setGradientFill(juce::ColourGradient(
-              juce::Colour(design::withAlpha(design::colors::BG_03, 0.65f)), 0, 0,
-              juce::Colour(design::withAlpha(design::colors::BG_02, 0.45f)), 0, bounds.getHeight(), false));
-      }
-      g.fillRoundedRectangle(bounds, radius);
-
-      // Border
-      juce::Colour borderColor = isUser_
-          ? juce::Colour(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.35f))
-          : juce::Colour(design::withAlpha(design::colors::BORDER_SUBTLE, 0.5f));
-      g.setColour(borderColor);
-      g.drawRoundedRectangle(bounds, radius, 0.5f);
-
-      // Text
-      g.setColour(juce::Colour(design::colors::TEXT_PRIMARY));
-      g.setFont(design::typography::getJuceFont(design::typography::FONT_MD));
-
-      float padding = design::spacing::MD;
-      float maxWidth = bounds.getWidth() - padding * 2.5f;
-      
-      juce::StringArray paragraphs;
-      paragraphs.addLines(text_);
-      
-      float y = padding;
-      for (const auto& p : paragraphs) {
-          g.drawText(p, padding * 1.25f, y, maxWidth, 1000, juce::Justification::topLeft, true);
-      }
+      // Skia rendering used - see drawSkia()
+      juce::ignoreUnused(g);
   }
 
   int getRequiredHeight(int width) {
