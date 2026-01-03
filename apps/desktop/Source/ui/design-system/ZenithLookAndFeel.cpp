@@ -34,6 +34,8 @@ ZenithLookAndFeel &ZenithLookAndFeel::getInstance() {
   static ZenithLookAndFeel instance;
   return instance;
 }
+
+ZenithLookAndFeel::ZenithLookAndFeel() {
   auto getCol = [](SkColor c) { return design::toJuceColour(c); };
 
   // Window backgrounds
@@ -85,8 +87,9 @@ ZenithLookAndFeel &ZenithLookAndFeel::getInstance() {
   setColour(juce::PopupMenu::highlightedBackgroundColourId,
             getCol(design::colors::ACCENT_PRIMARY).withAlpha(0.2f));
   setColour(juce::PopupMenu::highlightedTextColourId, getCol(design::colors::ACCENT_PRIMARY));
+}
 
-ZenithLookAndFeel::ZenithLookAndFeel() {
+//==============================================================================
 // Button Rendering with Hover/Press States
 //==============================================================================
 
