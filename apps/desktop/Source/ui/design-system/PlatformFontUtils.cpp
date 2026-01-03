@@ -19,8 +19,8 @@
 #elif defined(__APPLE__)
 #include <include/ports/SkTypeface_mac.h>
 #elif defined(__linux__)
-#include <include/ports/SkFontMgr_fontconfig.h>
 #include <include/core/SkFontScanner.h>
+#include <include/ports/SkFontMgr_fontconfig.h>
 #include <include/ports/SkFontScanner_FreeType.h>
 #else
 #include <include/ports/SkFontMgr_empty.h>
