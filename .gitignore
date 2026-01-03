@@ -259,7 +259,7 @@ JuceLibraryCode/Builds/
 /ROAST_*.md
 /AUDIT_*.md
 /BUILD_*.md
-/BRANCHES_*.md
+/BRANCH*.md
 /CLEANUP_*.md
 /COMMIT_*.md
 /CONFLICT_*.md
@@ -272,8 +272,7 @@ JuceLibraryCode/Builds/
 /TEST_*.md
 /UI_*.md
 /ALL_*.md
-/SAVE_LOAD_CHECKLIST.md
-/SAVE_LOAD_INDEX.md
+/SAVE_LOAD*.md
 /QUICK_REFERENCE.md
 /READ_ME_FIRST.md
 /START_HERE.md
