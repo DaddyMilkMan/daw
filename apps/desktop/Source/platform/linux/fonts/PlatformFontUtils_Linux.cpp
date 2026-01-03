@@ -10,9 +10,9 @@
 #include "../../../ui/design-system/PlatformFontUtils.h"
 
 #ifdef __linux__
-#include <include/core/SkFontMgr.h>
-#include <include/ports/SkFontMgr_fontconfig.h>
-#include <include/ports/SkFontScanner_FreeType.h>
+#include <core/SkFontMgr.h>
+#include <ports/SkFontMgr_fontconfig.h>
+#include <ports/SkFontScanner_FreeType.h>
 #include <juce_core/juce_core.h>
 #include <memory>
 

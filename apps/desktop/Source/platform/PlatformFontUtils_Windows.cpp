@@ -10,7 +10,7 @@
 #include "ui/design-system/PlatformFontUtils.h"
 
 #ifdef _WIN32
-#include <include/ports/SkTypeface_win.h>
+#include <ports/SkTypeface_win.h>
 #include <juce_core/juce_core.h>
 
 namespace zenith {

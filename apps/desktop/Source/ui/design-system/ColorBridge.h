@@ -22,7 +22,7 @@
 #pragma once
 
 #include "ZenithDesignSystem.h"
-#include <include/core/SkColor.h>
+#include <core/SkColor.h>
 #include <juce_graphics/juce_graphics.h>
 
 namespace zenith {

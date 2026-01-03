@@ -12,8 +12,8 @@
 
 #include "FontManager.h"
 #include <core/SkFontTypes.h>
-#include <include/core/SkData.h>
-#include <include/core/SkStream.h>
+#include <core/SkData.h>
+#include <core/SkStream.h>
 
 // Platform-specific font manager includes
 #include "PlatformFontUtils.h"

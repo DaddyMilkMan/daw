@@ -28,7 +28,7 @@
 #include "SkiaComponent.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../design-system/ZenithTheme.h"
-#include <include/core/SkColor.h>
+#include <core/SkColor.h>
 #include "HardwareControlPanel.h"
 
 #include <juce_audio_utils/juce_audio_utils.h>

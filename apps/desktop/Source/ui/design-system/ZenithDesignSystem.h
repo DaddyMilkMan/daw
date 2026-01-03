@@ -15,8 +15,8 @@
 #pragma once
 #include "FontManager.h"
 #include <core/SkBlurTypes.h>
-#include <include/core/SkColor.h>
-#include <include/core/SkFont.h>
+#include <core/SkColor.h>
+#include <core/SkFont.h>
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_events/juce_events.h>

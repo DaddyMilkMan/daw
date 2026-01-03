@@ -11,7 +11,7 @@
 */
 
 #include "ProjectRecoveryModal.h"
-#include <include/core/SkTextBlob.h>
+#include <core/SkTextBlob.h>
 #include <core/SkBlurTypes.h>
 #include <core/SkMaskFilter.h>
 #include <core/SkPath.h>

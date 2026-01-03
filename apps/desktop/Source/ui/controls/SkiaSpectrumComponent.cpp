@@ -9,7 +9,7 @@
 */
 
 #include "SkiaSpectrumComponent.h"
-#include <include/effects/SkGradientShader.h>
+#include <effects/SkGradientShader.h>
 
 namespace zenith {
 

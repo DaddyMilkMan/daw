@@ -8,10 +8,9 @@
 */
 
 #include "../../../ui/framework/PlatformWindowUtils.h"
-#include <include/gpu/ganesh/gl/GrGLInterface.h>
-#include <include/core/SkRefCnt.h>
-#include <include/gpu/ganesh/gl/GrGLInterface.h>
-#include <include/gpu/ganesh/gl/GrGLAssembleInterface.h>
+#include <core/SkRefCnt.h>
+#include <gpu/ganesh/gl/GrGLAssembleInterface.h>
+#include <gpu/ganesh/gl/GrGLInterface.h>
 #include <juce_opengl/juce_opengl.h>
 #include "../../../engine/ZenithLogger.h"
 

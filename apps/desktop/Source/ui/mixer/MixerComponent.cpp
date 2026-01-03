@@ -16,7 +16,7 @@
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
-#include <include/core/SkColor.h>
+#include <core/SkColor.h>
 
 namespace zenith {
 
