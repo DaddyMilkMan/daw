@@ -1,7 +1,18 @@
 /**
  * @file ZenithLookAndFeel.h
- * @brief Modern LookAndFeel with proper micro-interactions and visual polish
+ * @brief Custom LookAndFeel for standard JUCE widgets (not Skia components)
  * @author Fixed by Claude - December 2025
+ * 
+ * NOTE: This LookAndFeel is ONLY used for standard JUCE widgets (TextButton, Slider,
+ * ComboBox, etc.) that are rendered internally by JUCE. It uses juce::Graphics because
+ * JUCE's widget rendering system requires it.
+ * 
+ * For custom Zenith DAW UI components, use SkiaComponent and drawSkia() instead.
+ * This ensures hardware-accelerated rendering via Skia.
+ * 
+ * ARCHITECTURE SPLIT:
+ * - ZenithLookAndFeel -> For JUCE standard widgets (legacy support)
+ * - SkiaComponent     -> For all custom Zenith DAW UI (primary rendering)
  */
 
 #pragma once
@@ -13,7 +24,18 @@ namespace zenith {
 
 /**
  * @class ZenithLookAndFeel
- * @brief Custom LookAndFeel implementing modern design system
+ * @brief Custom LookAndFeel for standard JUCE widgets only
+ * 
+ * This class implements rendering for JUCE's standard widget types (buttons, sliders, etc.)
+ * using juce::Graphics. It exists solely to provide visual consistency when standard JUCE
+ * widgets are used.
+ * 
+ * IMPORTANT: Do NOT use this for custom Zenith DAW components. Instead:
+ * 1. Inherit from SkiaComponent
+ * 2. Override drawSkia(SkCanvas* canvas)
+ * 3. Use Skia rendering APIs directly
+ * 
+ * This LookAndFeel is only used by the AI style applicator for legacy JUCE widgets.
  */
 class ZenithLookAndFeel : public juce::LookAndFeel_V4 {
 public:
