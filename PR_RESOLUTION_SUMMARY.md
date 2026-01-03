@@ -123,7 +123,7 @@ cmake --preset=default
 cmake --build build --config Release 2>&1 | tee build.log
 
 # Check for Skia-related errors
-grep -i "skia\|include/core" build.log
+grep -i -e "skia" -e "include/core" build.log
 
 # Verify zero warnings
 grep "warning:" build.log
