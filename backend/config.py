@@ -33,7 +33,13 @@ class ZenithConfig(BaseSettings):
     upnp_timeout: int = 30
 
     def get_service_env(self) -> dict[str, str]:
-        """Returns environment variables to pass to child services."""
+        """
+        Get environment variables for child services.
+        
+        Returns:
+            dict[str, str]: Dictionary of environment variables to pass to spawned services.
+                          Includes signaling host/port and log level configuration.
+        """
         return {
             "ZENITH_SIGNALING_HOST": self.signaling_host,
             "ZENITH_SIGNALING_PORT": str(self.signaling_port),

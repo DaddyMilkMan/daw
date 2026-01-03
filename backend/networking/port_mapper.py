@@ -1,4 +1,19 @@
-"""UPnP port mapper for automatic NAT punch-through assistance."""
+"""
+UPnP port mapper for automatic NAT punch-through assistance.
+
+This module implements Universal Plug and Play (UPnP) port mapping functionality
+to automatically configure port forwarding on routers that support UPnP. This
+enables peer-to-peer connections without manual router configuration.
+
+Security Note: UPnP has known security implications. This implementation:
+- Only maps specific ports as configured
+- Uses standard UPnP protocols (SSDP discovery, SOAP control)
+- Does not expose additional services beyond the specified port
+- Requires router UPnP support to be enabled
+
+For production deployments, consider manual port forwarding or more secure
+alternatives like STUN/TURN servers.
+"""
 
 import logging
 import os
@@ -21,7 +36,26 @@ logger = logging.getLogger("zenith.port_mapper")
 
 
 class UPnPPortMapper:
+    """
+    UPnP-based automatic port mapper for NAT traversal.
+    
+    Discovers UPnP-enabled routers on the local network and creates port
+    mappings to enable external connections to the specified port.
+    
+    Attributes:
+        port: The TCP port to map.
+        timeout: Timeout in seconds for network operations.
+        ssdp_request: The SSDP discovery request message.
+    """
+
     def __init__(self, port: int = DEFAULT_PORT, timeout: int = DEFAULT_TIMEOUT) -> None:
+        """
+        Initialize the UPnP port mapper.
+        
+        Args:
+            port: TCP port number to map (default: from ZENITH_UPNP_PORT env or 54321).
+            timeout: Network operation timeout in seconds (default: from ZENITH_UPNP_TIMEOUT env or 3).
+        """
         self.port = port
         self.timeout = timeout
         self.ssdp_request = """M-SEARCH * HTTP/1.1\r\n""" + \
@@ -31,6 +65,14 @@ class UPnPPortMapper:
             f"ST: {SSDP_ST}\r\n\r\n"
 
     def _get_local_ip(self) -> str:
+        """
+        Get the local IP address of this machine.
+        
+        Uses a dummy connection to determine the local network interface IP.
+        
+        Returns:
+            str: Local IP address, or "127.0.0.1" if detection fails.
+        """
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             try:
                 sock.connect(("10.255.255.255", 1))
@@ -39,6 +81,15 @@ class UPnPPortMapper:
                 return "127.0.0.1"
 
     def _discover_router(self) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Discover UPnP-enabled router via SSDP multicast.
+        
+        Sends an SSDP M-SEARCH request and waits for router response.
+        
+        Returns:
+            Tuple[Optional[str], Optional[str]]: SSDP response data and router IP,
+                                                 or (None, None) if no router found.
+        """
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             sock.settimeout(self.timeout)
             sock.sendto(self.ssdp_request.encode("utf-8"), (SSDP_ADDR, SSDP_PORT))
@@ -52,10 +103,31 @@ class UPnPPortMapper:
                 return None, None
 
     def _extract_location(self, data: str) -> str | None:
+        """
+        Extract the LOCATION URL from SSDP response.
+        
+        Args:
+            data: Raw SSDP response string.
+            
+        Returns:
+            str | None: The location URL if found, None otherwise.
+        """
         match = re.search(r"LOCATION:\s*(.*)", data, re.IGNORECASE)
         return match.group(1).strip() if match else None
 
     def _get_control_url(self, location: str) -> str | None:
+        """
+        Fetch device description and extract control URL.
+        
+        Retrieves the UPnP device description XML from the location URL and
+        parses it to find the WANIPConnection control URL.
+        
+        Args:
+            location: URL to the device description XML.
+            
+        Returns:
+            str | None: Full control URL if found, None otherwise.
+        """
         try:
             with urllib.request.urlopen(location, timeout=self.timeout) as response:
                 xml = response.read().decode("utf-8", errors="ignore")
@@ -79,6 +151,18 @@ class UPnPPortMapper:
         return urllib.parse.urljoin(base, path)
 
     def _add_port_mapping(self, control_url: str, local_ip: str) -> bool:
+        """
+        Add port mapping via UPnP SOAP request.
+        
+        Sends a SOAP AddPortMapping request to the router's control URL.
+        
+        Args:
+            control_url: Full URL to the UPnP control endpoint.
+            local_ip: Local IP address to map the port to.
+            
+        Returns:
+            bool: True if mapping succeeded, False otherwise.
+        """
         soap_body = f"""<?xml version=\"1.0\"?>
 <s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">
 <s:Body>
@@ -113,6 +197,15 @@ class UPnPPortMapper:
         return False
 
     def run(self) -> bool:
+        """
+        Execute the complete UPnP port mapping process.
+        
+        Performs the full sequence: discover router, fetch control URL, and
+        request port mapping.
+        
+        Returns:
+            bool: True if port mapping succeeded, False otherwise.
+        """
         logger.info("Starting UPnP port mapper for TCP port %d", self.port)
         local_ip = self._get_local_ip()
         logger.info("Local IP: %s", local_ip)

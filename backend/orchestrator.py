@@ -1,3 +1,13 @@
+"""
+Service orchestration and supervision for Zenith DAW backend.
+
+This module provides a supervision tree pattern for managing backend services
+with automatic restart, health checking, and exponential backoff. The 
+ServiceSentinel class monitors services and ensures they remain running,
+automatically restarting failed processes with configurable retry logic.
+
+Thread Safety: All operations are protected by RLock for concurrent access.
+"""
 
 import logging
 import os
@@ -14,6 +24,16 @@ from typing import Callable, Dict, List, Optional
 log = logging.getLogger("zenith.orchestrator")
 
 class ServiceState(Enum):
+    """
+    Represents the current state of a managed service.
+    
+    States:
+        STOPPED: Service is not running.
+        STARTING: Service is being launched.
+        RUNNING: Service is actively running.
+        FAILED: Service has failed and is not restarting.
+        BACKOFF: Service is waiting to restart after a failure.
+    """
     STOPPED = auto()
     STARTING = auto()
     RUNNING = auto()
@@ -22,6 +42,19 @@ class ServiceState(Enum):
 
 @dataclass
 class ServiceDefinition:
+    """
+    Configuration for a managed service.
+    
+    Attributes:
+        name: Human-readable service name.
+        command: Command and arguments to execute.
+        env: Additional environment variables for the service.
+        cwd: Working directory for the service process.
+        health_check: Optional callable to check service health.
+        max_retries: Maximum restart attempts (-1 for infinite).
+        backoff_base_sec: Base delay for exponential backoff.
+        backoff_max_sec: Maximum backoff delay in seconds.
+    """
     name: str
     command: List[str]
     env: Dict[str, str] = field(default_factory=dict)
@@ -35,6 +68,17 @@ class ServiceDefinition:
 
 @dataclass
 class RuntimeState:
+    """
+    Runtime state for a managed service.
+    
+    Attributes:
+        process: The subprocess.Popen object if running.
+        state: Current ServiceState.
+        restart_count: Number of restarts performed.
+        next_restart_time: Unix timestamp for next restart attempt.
+        last_exit_code: Exit code from last process termination.
+        last_health_status: Result of last health check.
+    """
     process: Optional[subprocess.Popen] = None
     state: ServiceState = ServiceState.STOPPED
     restart_count: int = 0
@@ -44,11 +88,27 @@ class RuntimeState:
 
 class ServiceSentinel:
     """
-    The Sentinel responsible for orchestrating backend services.
-    It starts, monitors, and auto_heals services using a supervision tree pattern.
+    Service supervisor implementing a supervision tree pattern.
+    
+    The Sentinel orchestrates backend services by starting, monitoring, and
+    automatically healing them using exponential backoff for retries. It
+    provides health checking and graceful shutdown capabilities.
+    
+    Thread Safety: All public methods are thread-safe via RLock protection.
+    
+    Attributes:
+        services: Registered service definitions.
+        state: Runtime state for each service.
+        check_interval: Monitoring loop interval in seconds.
     """
 
     def __init__(self, check_interval: float = 1.0):
+        """
+        Initialize the ServiceSentinel.
+        
+        Args:
+            check_interval: How often to check service health in seconds (default: 1.0).
+        """
         self.services: Dict[str, ServiceDefinition] = {}
         self.state: Dict[str, RuntimeState] = {}
         self.check_interval = check_interval
@@ -57,14 +117,24 @@ class ServiceSentinel:
         self._lock = threading.RLock()
 
     def add_service(self, service: ServiceDefinition) -> None:
-        """Register a service to be managed."""
+        """
+        Register a service to be managed.
+        
+        Args:
+            service: ServiceDefinition describing the service to manage.
+        """
         with self._lock:
             self.services[service.name] = service
             self.state[service.name] = RuntimeState()
             log.info(f"Registered service: {service.name}")
 
     def start_all(self) -> None:
-        """Start all registered services and the monitoring loop."""
+        """
+        Start all registered services and begin monitoring.
+        
+        Spawns each service process and starts the monitoring thread that
+        handles health checks and automatic restarts.
+        """
         with self._lock:
             if self._monitor_thread and self._monitor_thread.is_alive():
                 log.warning("Sentinel already running")
@@ -80,7 +150,12 @@ class ServiceSentinel:
             log.info("Sentinel started monitoring")
 
     def stop_all(self) -> None:
-        """Gracefully stop all services."""
+        """
+        Gracefully stop all managed services.
+        
+        Terminates all running services with SIGTERM, falling back to SIGKILL
+        if they don't respond within the timeout period.
+        """
         log.info("Stopping all services...")
         self._stop_event.set()
         
@@ -98,7 +173,13 @@ class ServiceSentinel:
         log.info("All managed services stopped")
 
     def get_status(self) -> Dict[str, dict]:
-        """Return a snapshot of system health."""
+        """
+        Get current status snapshot of all services.
+        
+        Returns:
+            Dict[str, dict]: Dictionary mapping service names to status info
+                           including state, PID, restart count, and health.
+        """
         status = {}
         with self._lock:
             for name, rt in self.state.items():
@@ -111,7 +192,12 @@ class ServiceSentinel:
         return status
 
     def _spawn_service(self, name: str) -> None:
-        """Internal: Start a service process."""
+        """
+        Internal: Start a service process.
+        
+        Args:
+            name: Name of the service to spawn.
+        """
         svc = self.services[name]
         rt = self.state[name]
         
@@ -139,7 +225,12 @@ class ServiceSentinel:
             self._schedule_backoff(name)
 
     def _stop_service(self, name: str) -> None:
-        """Internal: Stop a single service."""
+        """
+        Internal: Stop a single service gracefully.
+        
+        Args:
+            name: Name of the service to stop.
+        """
         with self._lock:
             rt = self.state.get(name)
             if not rt or not rt.process:
@@ -158,7 +249,12 @@ class ServiceSentinel:
             rt.state = ServiceState.STOPPED
 
     def _schedule_backoff(self, name: str) -> None:
-        """Calculate next restart time based on exponential backoff."""
+        """
+        Calculate next restart time using exponential backoff.
+        
+        Args:
+            name: Name of the service to schedule for restart.
+        """
         svc = self.services[name]
         rt = self.state[name]
         
@@ -172,7 +268,11 @@ class ServiceSentinel:
         log.warning(f"Service {name} entered backoff (count={rt.restart_count}, delay={delay})")
 
     def _monitor_loop(self) -> None:
-        """Main supervision loop."""
+        """
+        Main supervision loop.
+        
+        Continuously monitors service health and handles restarts.
+        """
         while not self._stop_event.is_set():
             with self._lock:
                 now = time.time()
@@ -210,7 +310,17 @@ class ServiceSentinel:
 # --- Helper Health Checks ---
 
 def check_tcp_port(host: str, port: int, timeout: float = 1.0) -> bool:
-    """True if efficient TCP connect succeeds."""
+    """
+    Check if a TCP port is accepting connections.
+    
+    Args:
+        host: Hostname or IP address to check.
+        port: TCP port number to test.
+        timeout: Connection timeout in seconds (default: 1.0).
+        
+    Returns:
+        bool: True if connection succeeds, False otherwise.
+    """
     try:
         with socket.create_connection((host, port), timeout=timeout):
             return True

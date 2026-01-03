@@ -9,7 +9,19 @@ from backend.config import ZenithConfig
 
 
 def configure_logging(config: ZenithConfig) -> None:
-    """Configures structlog and standard logging based on the configuration."""
+    """
+    Configure structlog and standard logging based on the configuration.
+    
+    Sets up logging processors for structured logging with timestamp, log level,
+    and stack info. Supports both JSON (production) and console (development)
+    output formats.
+    
+    Args:
+        config: ZenithConfig instance containing log level, format preferences.
+    
+    Returns:
+        None
+    """
     
     # Configure standard logging first (for libraries that use it)
     logging.basicConfig(level=config.log_level, format="%(message)s", stream=sys.stdout)
@@ -39,4 +51,13 @@ def configure_logging(config: ZenithConfig) -> None:
     # For now, we keep standard logging simple and use structlog for our app code.
 
 def get_logger(name: str = "zenith") -> structlog.stdlib.BoundLogger:
+    """
+    Get a configured structlog logger instance.
+    
+    Args:
+        name: Logger name for identification (default: "zenith").
+        
+    Returns:
+        structlog.stdlib.BoundLogger: Configured logger instance for structured logging.
+    """
     return structlog.get_logger(name)
