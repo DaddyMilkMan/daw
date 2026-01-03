@@ -255,6 +255,12 @@ class ZenithConfig(BaseSettings):
         Uses the ipaddress module for proper IPv4 and IPv6 validation.
         Also accepts 'localhost' as a special case.
         
+        Note:
+            This validator only accepts IP addresses and 'localhost', not
+            arbitrary hostnames or FQDNs. This is intentional for binding
+            addresses to ensure the server binds to a specific interface.
+            If you need to bind to a hostname, resolve it to an IP first.
+        
         Args:
             v: The host string to validate.
             
@@ -278,7 +284,8 @@ class ZenithConfig(BaseSettings):
         except ValueError:
             raise ValueError(
                 f"signaling_host must be 'localhost' or a valid IP address, got '{v}'. "
-                "Examples: '0.0.0.0', '127.0.0.1', '::1', '192.168.1.100'"
+                "Examples: '0.0.0.0', '127.0.0.1', '::1', '192.168.1.100'. "
+                "Note: Hostnames are not supported for binding; use IP addresses only."
             )
     
     @model_validator(mode='after')
@@ -347,6 +354,12 @@ class ZenithConfig(BaseSettings):
         This method can be called after configuration to perform checks that
         require system state (e.g., port availability, file permissions).
         
+        Important:
+            This method has side effects - it will create the log file parent
+            directory if it doesn't exist and test write permissions. This is
+            intentional to catch configuration errors early. If you need
+            read-only validation, use Pydantic's built-in validators only.
+        
         Returns:
             True if all validation checks pass.
             
@@ -356,6 +369,10 @@ class ZenithConfig(BaseSettings):
         Note:
             This is an optional validation method. The Pydantic validators
             run automatically during initialization.
+            
+        Side Effects:
+            - Creates parent directories for log_file if they don't exist
+            - Tests write permissions by opening log_file in append mode
         """
         # Check log file is writable if specified
         if self.log_file:
