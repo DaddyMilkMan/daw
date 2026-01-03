@@ -10,7 +10,6 @@
 #include "../../../ui/framework/PlatformWindowUtils.h"
 #include <gpu/ganesh/gl/GrGLInterface.h>
 #include <core/SkRefCnt.h>
-#include <gpu/ganesh/gl/GrGLInterface.h>
 #include <gpu/ganesh/gl/GrGLAssembleInterface.h>
 #include <juce_opengl/juce_opengl.h>
 #include "../../../engine/ZenithLogger.h"
