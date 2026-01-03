@@ -219,7 +219,7 @@ class ZenithConfig(BaseSettings):
     @field_validator('log_file')
     @classmethod
     def validate_log_file(cls, v: Optional[Path]) -> Optional[Path]:
-        """Validate log file path and ensure parent directory exists if possible.
+        """Validate log file path and ensure parent directory is valid.
         
         Args:
             v: The log file path to validate.
@@ -228,8 +228,8 @@ class ZenithConfig(BaseSettings):
             The validated Path object or None.
             
         Note:
-            This validator does not create the directory, but checks if the
-            parent is accessible when it exists.
+            This validator checks if the parent directory is valid when it exists.
+            It does NOT create the directory - that happens in validate_config().
         """
         if v is None:
             return v
@@ -238,7 +238,8 @@ class ZenithConfig(BaseSettings):
         if not v.is_absolute():
             v = Path.cwd() / v
         
-        # Check if parent directory exists (don't create it)
+        # Check if parent directory exists and is actually a directory
+        # (validation-time checking only, no creation)
         parent = v.parent
         if parent.exists() and not parent.is_dir():
             raise ValueError(

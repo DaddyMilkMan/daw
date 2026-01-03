@@ -220,14 +220,18 @@ class TestLogFileValidation:
     
     def test_invalid_parent_directory(self):
         """Test that log file with non-directory parent is rejected."""
-        with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as tmpfile:
+            tmpfile_path = tmpfile.name
+        
+        try:
             # Try to use a file as parent directory (invalid)
-            invalid_path = Path(tmpfile.name) / "test.log"
-            try:
-                with pytest.raises(ValueError, match="is not a directory"):
-                    ZenithConfig(log_file=invalid_path)
-            finally:
-                os.unlink(tmpfile.name)
+            invalid_path = Path(tmpfile_path) / "test.log"
+            with pytest.raises(ValueError, match="is not a directory"):
+                ZenithConfig(log_file=invalid_path)
+        finally:
+            # Clean up
+            if os.path.exists(tmpfile_path):
+                os.unlink(tmpfile_path)
 
 
 class TestServiceEnvironment:
