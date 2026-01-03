@@ -15,6 +15,7 @@ The CLI now exposes log file controls and a health endpoint for monitoring:
 - `--log-file`: path for a rotating logfile (default keeps console-only).
 - `--log-max-bytes` / `--log-backups`: configure rotation limits.
 - `--health-port`: serves the `/health` JSON endpoint (default `8000`).
+- `--health-bind`: network interface to bind the health endpoint (default `127.0.0.1` for security).
 
 To skip the UPnP step, pass `--disable-upnp`. Other flags remain:
 
@@ -36,7 +37,9 @@ TLS certificates must live in this directory as `cert.pem`/`key.pem` before star
 
 ### Health endpoint
 
-The service exposes `/health` on the supplied port (default `8000`). Querying it returns JSON with the signaling and UPnP status, e.g.:
+The service exposes `/health` on the supplied port (default `8000`). By default, the health endpoint binds to `127.0.0.1` (localhost only) for security. To allow external access (e.g., in containers or monitoring setups), use `--health-bind 0.0.0.0`.
+
+Querying it returns JSON with the signaling and UPnP status, e.g.:
 
 ```json
 {"signaling": "running", "upnp": "mapped"}

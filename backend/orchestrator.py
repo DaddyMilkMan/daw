@@ -145,17 +145,22 @@ class ServiceSentinel:
             if not rt or not rt.process:
                 return
 
-            if rt.process.poll() is None:
-                log.info(f"Terminating service {name} (pid={rt.process.pid})")
-                rt.process.terminate()
-                try:
-                    rt.process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    log.warning(f"Service {name} did not terminate, killing")
-                    rt.process.kill()
-            
-            rt.process = None
-            rt.state = ServiceState.STOPPED
+            try:
+                if rt.process.poll() is None:
+                    log.info(f"Terminating service {name} (pid={rt.process.pid})")
+                    rt.process.terminate()
+                    try:
+                        rt.process.wait(timeout=5)
+                        log.info(f"Service {name} terminated gracefully")
+                    except subprocess.TimeoutExpired:
+                        log.warning(f"Service {name} did not terminate, killing")
+                        rt.process.kill()
+                        rt.process.wait(timeout=2)  # Wait for kill to complete
+            except Exception as e:
+                log.error(f"Error stopping service {name}: {e}", exc_info=True)
+            finally:
+                rt.process = None
+                rt.state = ServiceState.STOPPED
 
     def _schedule_backoff(self, name: str) -> None:
         """Calculate next restart time based on exponential backoff."""
@@ -173,39 +178,49 @@ class ServiceSentinel:
 
     def _monitor_loop(self) -> None:
         """Main supervision loop."""
-        while not self._stop_event.is_set():
-            with self._lock:
-                now = time.time()
-                for name, svc in self.services.items():
-                    rt = self.state[name]
+        log.info("Monitor loop started")
+        try:
+            while not self._stop_event.is_set():
+                try:
+                    with self._lock:
+                        now = time.time()
+                        for name, svc in self.services.items():
+                            rt = self.state[name]
 
-                    # 1. Check running processes
-                    if rt.state == ServiceState.RUNNING:
-                        if rt.process:
-                            exit_code = rt.process.poll()
-                            if exit_code is not None:
-                                log.error(f"Service {name} crashed (exit_code={exit_code})")
-                                rt.last_exit_code = exit_code
-                                rt.process = None
-                                self._schedule_backoff(name)
-                            else:
-                                # Health Check
-                                if svc.health_check:
-                                    try:
-                                        is_healthy = svc.health_check()
-                                        if is_healthy != rt.last_health_status:
-                                            log.info(f"Health status changed for {name}: {is_healthy}")
-                                        rt.last_health_status = is_healthy
-                                    except Exception:
-                                        rt.last_health_status = False
+                            # 1. Check running processes
+                            if rt.state == ServiceState.RUNNING:
+                                if rt.process:
+                                    exit_code = rt.process.poll()
+                                    if exit_code is not None:
+                                        log.error(f"Service {name} crashed (exit_code={exit_code})")
+                                        rt.last_exit_code = exit_code
+                                        rt.process = None
+                                        self._schedule_backoff(name)
+                                    else:
+                                        # Health Check
+                                        if svc.health_check:
+                                            try:
+                                                is_healthy = svc.health_check()
+                                                if is_healthy != rt.last_health_status:
+                                                    log.info(f"Health status changed for {name}: {is_healthy}")
+                                                rt.last_health_status = is_healthy
+                                            except Exception as e:
+                                                log.warning(f"Health check failed for {name}: {e}")
+                                                rt.last_health_status = False
 
-                    # 2. Check backoff restarts
-                    elif rt.state == ServiceState.BACKOFF:
-                        if now >= rt.next_restart_time:
-                            log.info(f"Backoff expired, restarting {name}")
-                            self._spawn_service(name)
+                            # 2. Check backoff restarts
+                            elif rt.state == ServiceState.BACKOFF:
+                                if now >= rt.next_restart_time:
+                                    log.info(f"Backoff expired, restarting {name}")
+                                    self._spawn_service(name)
+                except Exception as e:
+                    log.error(f"Error in monitor loop iteration: {e}", exc_info=True)
 
-            time.sleep(self.check_interval)
+                time.sleep(self.check_interval)
+        except Exception as e:
+            log.error(f"Fatal error in monitor loop: {e}", exc_info=True)
+        finally:
+            log.info("Monitor loop exited")
 
 # --- Helper Health Checks ---
 
