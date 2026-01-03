@@ -57,8 +57,9 @@ def configure_logging(config: ZenithConfig) -> None:
         directly calling logging.getLogger() or structlog.get_logger().
     """
     # Configure standard logging first (for libraries that use it)
+    log_level = getattr(logging, config.log_level.upper(), logging.INFO)
     logging.basicConfig(
-        level=config.log_level,
+        level=log_level,
         format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
         stream=sys.stdout
     )
@@ -80,7 +81,7 @@ def configure_logging(config: ZenithConfig) -> None:
     structlog.configure(
         processors=processors,
         logger_factory=structlog.PrintLoggerFactory(),
-        wrapper_class=structlog.make_filtering_bound_logger(logging.getLevelName(config.log_level)),
+        wrapper_class=structlog.make_filtering_bound_logger(log_level),
         cache_logger_on_first_use=True,
     )
 

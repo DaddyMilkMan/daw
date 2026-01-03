@@ -14,6 +14,9 @@ from backend.networking.port_mapper import DEFAULT_PORT, DEFAULT_TIMEOUT
 from backend.config import ZenithConfig
 from backend.logger import configure_logging, get_logger
 
+# Module-level logger
+log = get_logger(__name__)
+
 # Global sentinel instance for health checks
 SENTINEL: Optional[ServiceSentinel] = None
 
@@ -39,8 +42,7 @@ def start_health_server(port: int) -> ThreadingHTTPServer:
     import threading
     t = threading.Thread(target=server.serve_forever, daemon=True)
     t.start()
-    logger = get_logger(__name__)
-    logger.info("Health endpoint listening on port", port=port)
+    log.info("Health endpoint listening on port", port=port)
     return server
 
 def parse_args() -> argparse.Namespace:
@@ -62,10 +64,8 @@ def main() -> None:
     config.log_level = args.log_level
     config.log_json = args.log_json
     configure_logging(config)
-    
-    logger = get_logger(__name__)
 
-    logger.info("Initializing Service Sentinel...")
+    log.info("Initializing Service Sentinel...")
     SENTINEL = ServiceSentinel(check_interval=1.0)
 
     # 1. Define Signaling Service
@@ -134,7 +134,7 @@ def main() -> None:
 
     # Install Signal Handlers
     def handle_stop(signum, frame):
-        logger.info("Received signal, stopping...", signal=signum)
+        log.info("Received signal, stopping...", signal=signum)
         SENTINEL.stop_all()
         sys.exit(0)
 
