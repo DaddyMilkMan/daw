@@ -328,19 +328,17 @@ class ServiceManager:
     
     def wait_forever(self) -> None:
         """Block until interrupted, keeping services running."""
-        import signal as sig
-        
         def handle_shutdown(signum, frame):
             self.logger.info("Shutdown signal received", extra={"signal": signum})
             self.stop_services()
             sys.exit(0)
         
         # Set up signal handlers atomically
-        sig.signal(sig.SIGINT, handle_shutdown)
-        sig.signal(sig.SIGTERM, handle_shutdown)
+        signal.signal(signal.SIGINT, handle_shutdown)
+        signal.signal(signal.SIGTERM, handle_shutdown)
         
         try:
             while True:
                 time.sleep(1)
         except KeyboardInterrupt:
-            handle_shutdown(sig.SIGINT, None)
+            handle_shutdown(signal.SIGINT, None)

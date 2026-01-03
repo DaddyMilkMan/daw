@@ -2,6 +2,8 @@ import sys
 from pathlib import Path
 from typing import Optional
 import socket
+import http.client
+import json
 
 import typer
 
@@ -280,9 +282,6 @@ def status(ctx: typer.Context):
     
     # Try to query health endpoint if available
     try:
-        import http.client
-        import json
-        
         conn = http.client.HTTPConnection("127.0.0.1", config.health_port, timeout=2)
         conn.request("GET", "/health")
         response = conn.getresponse()
