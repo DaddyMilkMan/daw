@@ -19,10 +19,9 @@
 #include "SkiaComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
-#endif
+
 
 namespace zenith {
 
@@ -85,12 +84,10 @@ protected:
   void mouseExit(const juce::MouseEvent &e) override;
 
 private:
-#ifdef ZENITH_USE_SKIA
   void drawSwitch(SkCanvas *canvas);
   void drawCheckbox(SkCanvas *canvas);
   void drawRadio(SkCanvas *canvas);
   void drawLabel(SkCanvas *canvas);
-#endif
 
   Style style_ = Style::Switch;
   bool toggleState_ = false;

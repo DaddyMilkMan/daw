@@ -13,12 +13,11 @@
 
 #pragma once
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #include <core/SkShader.h>
 #include <effects/SkGradientShader.h>
 #include <effects/SkRuntimeEffect.h>
-#endif
+
 
 namespace zenith {
 
@@ -36,7 +35,6 @@ public:
   void draw(SkCanvas *canvas, const SkRect &bounds, float time);
 
 private:
-#ifdef ZENITH_USE_SKIA
   // Runtime Effect for the "Smoke" displacement (if initialized)
   sk_sp<SkRuntimeEffect> noiseEffect_;
   bool hasRuntimeEffect_ = false;
@@ -46,7 +44,6 @@ private:
   // Helpers for fallback rendering
   void drawMeshGradient(SkCanvas *canvas, const SkRect &bounds, float time);
   void drawVignette(SkCanvas *canvas, const SkRect &bounds);
-#endif
 };
 
 } // namespace zenith

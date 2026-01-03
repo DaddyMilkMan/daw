@@ -30,12 +30,11 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
 #include <core/SkPath.h>
 #include <effects/SkGradientShader.h>
-#endif
+
 
 #include <unordered_map>
 #include <vector>

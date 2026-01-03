@@ -15,9 +15,8 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_formats/juce_audio_formats.h>
 
-#ifdef ZENITH_USE_SKIA
 #include <include/core/SkCanvas.h>
-#endif
+
 
 namespace zenith {
 

@@ -24,11 +24,10 @@
 #include "ZenithSlider.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
-#endif
+
 
 namespace zenith {
 

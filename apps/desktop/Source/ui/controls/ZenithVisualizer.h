@@ -18,11 +18,10 @@
 #include <juce_dsp/juce_dsp.h>
 #include <vector>
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #include <core/SkPath.h>
 #include <effects/SkGradientShader.h>
-#endif
+
 
 namespace zenith {
 

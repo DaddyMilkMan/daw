@@ -21,14 +21,16 @@ def process_header_file(filepath):
     original_content = content
     changed = False
     
-    # Pattern 1: Remove conditional Skia includes
-    # Replace: #ifdef ZENITH_USE_SKIA\n#include <core/SkCanvas.h>\n...\n#endif
-    # With: #include <core/SkCanvas.h>\n...
-    pattern1 = r'#ifdef ZENITH_USE_SKIA\s*\n((?:#include\s+<(?:core|gpu)/[^>]+>\s*\n)+)#endif'
-    if re.search(pattern1, content):
-        content = re.sub(pattern1, r'\1', content)
-        changed = True
-        print(f"  - Removed conditional Skia includes")
+    # Pattern 1: Remove conditional Skia includes (any Skia-related include)
+    # Replace: #ifdef ZENITH_USE_SKIA\n#include ...\n#endif
+    # With: #include ...
+    pattern1 = r'#ifdef ZENITH_USE_SKIA\s*\n((?:#include\s+[^\n]+\n)+)#endif'
+    matches1 = list(re.finditer(pattern1, content))
+    if matches1:
+        for match in reversed(matches1):
+            content = content[:match.start()] + match.group(1) + content[match.end():]
+            changed = True
+        print(f"  - Removed conditional includes")
     
     # Pattern 2: Remove conditional class inheritance
     # Replace: #ifdef ZENITH_USE_SKIA\nclass Foo : public SkiaComponent\n#else\nclass Foo : public juce::Component\n#endif
@@ -48,19 +50,21 @@ def process_header_file(filepath):
         changed = True
         print(f"  - Removed conditional drawSkia/paint declarations")
     
-    # Pattern 4: Remove standalone #ifdef ZENITH_USE_SKIA guards around single items
+    # Pattern 4: Remove standalone #ifdef ZENITH_USE_SKIA guards around methods or members
+    # This handles: #ifdef ZENITH_USE_SKIA\n  void drawFoo();\n  void drawBar();\n#endif
     pattern4 = r'#ifdef ZENITH_USE_SKIA\s*\n([^#]+?)\n#endif'
-    matches = list(re.finditer(pattern4, content))
-    if matches:
+    matches4 = list(re.finditer(pattern4, content))
+    if matches4:
         # Process in reverse to maintain positions
-        for match in reversed(matches):
-            # Check if this is a small block (likely a single line or declaration)
+        for match in reversed(matches4):
+            # Check if this is a reasonable block
             block_content = match.group(1).strip()
-            if len(block_content.split('\n')) <= 3:  # Small blocks only
+            # Allow blocks up to 10 lines (method declarations, member variables)
+            if len(block_content.split('\n')) <= 10:
                 content = content[:match.start()] + match.group(1) + content[match.end():]
                 changed = True
         if changed:
-            print(f"  - Removed standalone #ifdef ZENITH_USE_SKIA guards")
+            print(f"  - Removed standalone #ifdef guards")
     
     if changed:
         with open(filepath, 'w', encoding='utf-8') as f:
