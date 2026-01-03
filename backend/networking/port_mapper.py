@@ -79,6 +79,10 @@ UPNP_PROTOCOL = "TCP"
 UPNP_LEASE_DURATION = 0  # 0 = permanent until router reboot
 UPNP_DESCRIPTION = "ZenithDAW"
 
+# HTTP Status Code Constants
+HTTP_OK = 200
+HTTP_SERVER_ERROR_THRESHOLD = 500  # Server errors (5xx) start at this code
+
 # Network Constants
 LOCAL_IP_PROBE_ADDRESS = "10.255.255.255"  # Non-routable address for local IP detection
 LOCAL_IP_PROBE_PORT = 1
@@ -414,7 +418,7 @@ class UPnPPortMapper:
                 status = resp.status
                 logger.debug("SOAP response status: %d", status)
                 
-                if status == 200:
+                if status == HTTP_OK:
                     logger.info(
                         "Successfully mapped TCP port %d to %s",
                         self.port, local_ip
@@ -425,7 +429,7 @@ class UPnPPortMapper:
                     return False
         except urllib.error.HTTPError as exc:
             logger.error("HTTP error during port mapping: %s %s", exc.code, exc.reason)
-            if exc.code >= 500:
+            if exc.code >= HTTP_SERVER_ERROR_THRESHOLD:
                 # Server errors might be transient
                 raise PortMappingError(f"Server error: {exc.code}") from exc
             return False
