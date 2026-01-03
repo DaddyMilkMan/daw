@@ -17,7 +17,6 @@
 #include <core/SkMaskFilter.h>
 #include <core/SkPath.h>
 #include <effects/SkGradientShader.h>
-#endif
 
 namespace zenith {
 
@@ -136,9 +135,6 @@ void ZenithDropdown::drawSkia(SkCanvas *canvas) {
   drawBackground(canvas);
   drawText(canvas);
   drawChevron(canvas);
-#else
-  juce::ignoreUnused(canvas);
-#endif
 }
 
 
