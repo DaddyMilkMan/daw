@@ -19,7 +19,6 @@
 #include "SkiaComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
 #endif
@@ -85,7 +84,6 @@ protected:
   void mouseExit(const juce::MouseEvent &e) override;
 
 private:
-#ifdef ZENITH_USE_SKIA
   void drawSwitch(SkCanvas *canvas);
   void drawCheckbox(SkCanvas *canvas);
   void drawRadio(SkCanvas *canvas);

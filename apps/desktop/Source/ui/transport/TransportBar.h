@@ -22,7 +22,6 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #include <core/SkPath.h>
 
@@ -30,7 +29,6 @@
 
 namespace zenith {
 
-#ifdef ZENITH_USE_SKIA
 
 class TransportBar : public SkiaComponent {
 public:
@@ -189,6 +187,5 @@ public:
     std::function<void()> onSettingsClicked;
 };
 
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

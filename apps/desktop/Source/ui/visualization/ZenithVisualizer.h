@@ -18,7 +18,6 @@
 #include <juce_dsp/juce_dsp.h>
 #include <vector>
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #include <core/SkPath.h>
 #include <effects/SkGradientShader.h>
@@ -39,7 +38,6 @@ public:
   void timerCallback() override;
 
 private:
-#ifdef ZENITH_USE_SKIA
   void drawWaveform(SkCanvas *canvas);
   void drawSpectrum(SkCanvas *canvas);
 #endif

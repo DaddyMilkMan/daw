@@ -20,7 +20,6 @@
 #include <mutex>
 #include <algorithm>
 
-#ifdef ZENITH_USE_SKIA
 #include <core/SkRect.h>
 #else
 // Fallback when Skia is disabled

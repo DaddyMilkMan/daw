@@ -12,7 +12,6 @@
 
 #include "ZenithModMatrix.h"
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #endif
 
@@ -95,7 +94,6 @@ void ZenithModMatrix::updateHover(const juce::MouseEvent &e) {
 }
 
 void ZenithModMatrix::drawSkia(SkCanvas *canvas) {
-#ifdef ZENITH_USE_SKIA
   if (canvas == nullptr)
     return;
 
@@ -116,7 +114,6 @@ void ZenithModMatrix::drawSkia(SkCanvas *canvas) {
 #endif
 }
 
-#ifdef ZENITH_USE_SKIA
 
 void ZenithModMatrix::drawGrid(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
@@ -197,6 +194,5 @@ void ZenithModMatrix::drawHeaders(SkCanvas *canvas) {
   juce::ignoreUnused(canvas);
 }
 
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

@@ -16,7 +16,6 @@
 #include "../design-system/ZenithDesignSystem.h"
 // #include "../design-system/ZenithTheme.h" // Deprecated
 
-#ifdef ZENITH_USE_SKIA
 #include <core/SkBlurTypes.h>
 #include <core/SkFont.h>
 #include <core/SkMaskFilter.h>
@@ -268,7 +267,6 @@ juce::String ZenithTextInput::formatValue(double value) const {
 }
 
 void ZenithTextInput::drawSkia(SkCanvas *canvas) {
-#ifdef ZENITH_USE_SKIA
   if (canvas == nullptr)
     return;
 
@@ -286,7 +284,6 @@ void ZenithTextInput::drawSkia(SkCanvas *canvas) {
 #endif
 }
 
-#ifdef ZENITH_USE_SKIA
 
 void ZenithTextInput::drawBackground(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
@@ -357,7 +354,6 @@ void ZenithTextInput::drawLabel(SkCanvas *canvas) {
   juce::ignoreUnused(canvas);
 }
 
-#endif // ZENITH_USE_SKIA
 
 
 

@@ -3,7 +3,6 @@
  * @brief Implementation of Skia rendering for ArrangerComponent
  */
 
-#ifdef ZENITH_USE_SKIA
 
 #include "ArrangerRenderer.h"
 #include "ArrangerComponent.h"
@@ -902,4 +901,3 @@ void ArrangerRenderer::drawInsertionGuide(SkCanvas* canvas, float height) {
 
 } // namespace zenith
 
-#endif // ZENITH_USE_SKIA

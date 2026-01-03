@@ -12,7 +12,6 @@
 #include "../design-system/ZenithTypography.h"
 
 // Skia Includes
-#ifdef ZENITH_USE_SKIA
 #include "ZenithDesignSystem.h"
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
@@ -103,7 +102,6 @@ void FreezeProgressOverlay::paint(juce::Graphics &g) {
 }
 
 void FreezeProgressOverlay::drawSkia(SkCanvas *canvas) {
-#ifdef ZENITH_USE_SKIA
   using namespace zenith::design;
 
   auto bounds = getLocalBounds();

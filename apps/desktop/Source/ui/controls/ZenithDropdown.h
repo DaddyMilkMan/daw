@@ -19,7 +19,6 @@
 #include "SkiaPopupMenu.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #endif
 
@@ -76,7 +75,6 @@ protected:
 private:
   void showPopupMenu();
 
-#ifdef ZENITH_USE_SKIA
   void drawBackground(SkCanvas *canvas);
   void drawText(SkCanvas *canvas);
   void drawChevron(SkCanvas *canvas);

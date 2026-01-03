@@ -19,7 +19,6 @@
 
 namespace zenith {
 
-#ifdef ZENITH_USE_SKIA
 
 class PianoKeyboardViewSkia : public SkiaComponent,
                               public juce::MidiKeyboardState::Listener {
@@ -64,6 +63,5 @@ private:
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoKeyboardViewSkia)
 };
 
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

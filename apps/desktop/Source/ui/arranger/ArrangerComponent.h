@@ -46,7 +46,6 @@ class ArrangerTrackComponent;
 class GridResolutionDropdown;
 struct ClipView;
 
-#ifdef ZENITH_USE_SKIA
 class ArrangerRenderer;
 #endif
 
@@ -166,7 +165,6 @@ private:
   friend class ArrangerGridUtils;
   friend class ArrangerClipManager;
   friend class ArrangerInputHandler;
-#ifdef ZENITH_USE_SKIA
   friend class ArrangerRenderer;
 #endif
 
@@ -185,7 +183,6 @@ private:
   std::unique_ptr<ArrangerGridUtils> gridUtils_;
   std::unique_ptr<ArrangerClipManager> clipManager_;
   std::unique_ptr<ArrangerInputHandler> inputHandler_;
-#ifdef ZENITH_USE_SKIA
   std::unique_ptr<ArrangerRenderer> renderer_;
 #endif
 

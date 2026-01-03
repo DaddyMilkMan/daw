@@ -30,7 +30,6 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
 #include <core/SkPath.h>
@@ -109,7 +108,6 @@ public:
   void
   itemDropped(const juce::DragAndDropTarget::SourceDetails &details) override;
 
-#ifdef ZENITH_USE_SKIA
   void drawSkia(SkCanvas *canvas) override;
 #endif
 
@@ -212,7 +210,6 @@ private:
   // Drawing Methods
   //==========================================================================
 
-#ifdef ZENITH_USE_SKIA
   void drawBackground(SkCanvas *canvas);
   void drawTrackHeaders(SkCanvas *canvas);
   void drawClipGrid(SkCanvas *canvas);

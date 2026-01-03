@@ -5,7 +5,6 @@
 #include "../arranger/ArrangerComponent.h" // For context if needed
 
 // Skia Includes
-#ifdef ZENITH_USE_SKIA
 #include "ZenithDesignSystem.h"
 #include "ZenithSkia.h"
 #include <effects/SkRuntimeEffect.h>
@@ -85,7 +84,6 @@ void MacroToolbar::paint(juce::Graphics &g) {
 }
 
 void MacroToolbar::drawSkia(SkCanvas *canvas) {
-#ifdef ZENITH_USE_SKIA
   using namespace zenith::design;
 
   if (currentOpacity_ <= 0.01f)

@@ -21,7 +21,6 @@
 
 #include "ZenithControl.h"
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
 #include <core/SkPath.h>
@@ -138,7 +137,6 @@ protected:
   void mouseExit(const juce::MouseEvent &e) override;
 
 private:
-#ifdef ZENITH_USE_SKIA
   void drawTrack(SkCanvas *canvas, float cx, float cy, float radius);
   void drawTickMarks(SkCanvas *canvas, float cx, float cy, float radius);
   void drawValueArc(SkCanvas *canvas, float cx, float cy, float radius);

@@ -16,7 +16,6 @@
 #include "../engine/Track.h"
 #include "FontManager.h"
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
 #include <core/SkPath.h>
@@ -382,7 +381,6 @@ void SessionViewComponent::stopAllClips() {
 // Skia Drawing
 //==============================================================================
 
-#ifdef ZENITH_USE_SKIA
 
 void SessionViewComponent::drawSkia(SkCanvas *canvas) {
   drawBackground(canvas);
@@ -952,7 +950,6 @@ void SessionViewComponent::drawSceneLaunchColumn(SkCanvas *canvas) {
   }
 }
 
-#endif // ZENITH_USE_SKIA
 
 //==============================================================================
 // Layout Methods

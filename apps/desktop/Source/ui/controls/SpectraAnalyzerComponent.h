@@ -20,7 +20,6 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <vector>
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 
 #include <core/SkPath.h>

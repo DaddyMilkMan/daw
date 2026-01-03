@@ -32,7 +32,6 @@ class CommandAPI;
 class Engine;
 class ProjectState;
 
-#ifdef ZENITH_USE_SKIA
 
 class RightSidePanel : public SkiaComponent {
 public:
@@ -66,6 +65,5 @@ private:
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RightSidePanel)
 };
 
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

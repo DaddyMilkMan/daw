@@ -13,7 +13,6 @@
 #include "ZenithDropdown.h"
 #include "SkiaPopupMenu.h"
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
 #include <core/SkPath.h>
@@ -131,7 +130,6 @@ void ZenithDropdown::showPopupMenu() {
 }
 
 void ZenithDropdown::drawSkia(SkCanvas *canvas) {
-#ifdef ZENITH_USE_SKIA
   if (canvas == nullptr)
     return;
 
@@ -143,7 +141,6 @@ void ZenithDropdown::drawSkia(SkCanvas *canvas) {
 #endif
 }
 
-#ifdef ZENITH_USE_SKIA
 
 void ZenithDropdown::drawBackground(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
@@ -237,6 +234,5 @@ void ZenithDropdown::drawChevron(SkCanvas *canvas) {
   canvas->drawPath(chevronPath, paint);
 }
 
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

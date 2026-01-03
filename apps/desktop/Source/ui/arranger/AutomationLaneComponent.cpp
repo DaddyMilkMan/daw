@@ -8,7 +8,6 @@
 
 #include "AutomationLaneComponent.h"
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithDesignSystem.h"
 #include <include/core/SkFont.h>
 #include <include/core/SkImageInfo.h>

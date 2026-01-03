@@ -22,7 +22,6 @@
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
 
-#ifdef ZENITH_USE_SKIA
 #include "../design-system/ZenithIcons.h"
 #include "../framework/GlassmorphicPanel.h"
 #include "../framework/NeonGlow.h"
@@ -731,4 +730,3 @@ bool TransportBar::hitTest(int x, int y) {
 
 } // namespace zenith
 
-#endif // ZENITH_USE_SKIA

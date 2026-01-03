@@ -10,7 +10,6 @@
 
 #include "AuroraBackground.h"
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithDesignSystem.h"
 #include <cmath>
 #include <core/SkPicture.h>
@@ -22,14 +21,12 @@
 namespace zenith {
 
 AuroraBackground::AuroraBackground() {
-#ifdef ZENITH_USE_SKIA
   initShaders();
 #endif
 }
 
 AuroraBackground::~AuroraBackground() {}
 
-#ifdef ZENITH_USE_SKIA
 void AuroraBackground::initShaders() {
   // NOTE: Advanced SKSL noise distortion was planned but not implemented.
   // SkPerlinNoiseShader is not available in this Skia build configuration.
@@ -129,6 +126,5 @@ void AuroraBackground::drawVignette(SkCanvas *canvas, const SkRect &bounds) {
   canvas->drawRect(bounds, p);
 }
 
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

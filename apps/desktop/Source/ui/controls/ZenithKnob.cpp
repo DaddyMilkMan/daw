@@ -17,7 +17,6 @@
 #include <cmath>
 #include <string>
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #include <utils/SkTextUtils.h>
 #endif
@@ -97,7 +96,6 @@ void ZenithKnob::mouseExit(const juce::MouseEvent &e) {
 }
 
 void ZenithKnob::drawSkia(SkCanvas *canvas) {
-#ifdef ZENITH_USE_SKIA
   if (canvas == nullptr)
     return;
 
@@ -152,7 +150,6 @@ void ZenithKnob::drawSkia(SkCanvas *canvas) {
 #endif
 }
 
-#ifdef ZENITH_USE_SKIA
 
 void ZenithKnob::drawTrack(SkCanvas *canvas, float cx, float cy, float radius) {
   SkPaint paint;
@@ -426,6 +423,5 @@ sk_sp<SkShader> ZenithKnob::createArcGradient(float cx, float cy,
                                      &matrix);
 }
 
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

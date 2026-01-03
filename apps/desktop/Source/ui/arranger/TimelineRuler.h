@@ -19,7 +19,6 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#ifdef ZENITH_USE_SKIA
 #include "../framework/SkiaComponent.h"
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
@@ -37,7 +36,6 @@ namespace zenith {
  * Features flat design with theme colors, hover feedback, and smooth
  * animations.
  */
-#ifdef ZENITH_USE_SKIA
 class TimelineRuler : public SkiaComponent
 #else
 class TimelineRuler : public juce::Component,
@@ -93,7 +91,6 @@ public:
   // Component interface
   //==========================================================================
 
-#ifdef ZENITH_USE_SKIA
   void drawSkia(SkCanvas *canvas) override;
 #else
   void paint(juce::Graphics &g) override;

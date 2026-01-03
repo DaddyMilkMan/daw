@@ -15,7 +15,6 @@
 #include "../controls/ContextMenuManager.h"
 #include <effects/SkGradientShader.h>
 
-#ifdef ZENITH_USE_SKIA
 
 namespace zenith {
 
@@ -202,4 +201,3 @@ void BrowserPanel::showAddFolderDialog() {
 
 } // namespace zenith
 
-#endif // ZENITH_USE_SKIA

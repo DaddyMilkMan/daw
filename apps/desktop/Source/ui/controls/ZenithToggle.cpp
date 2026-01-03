@@ -12,7 +12,6 @@
 
 #include "ZenithToggle.h"
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #include <core/SkPath.h>
 #endif
@@ -73,7 +72,6 @@ void ZenithToggle::mouseExit(const juce::MouseEvent &e) {
 }
 
 void ZenithToggle::drawSkia(SkCanvas *canvas) {
-#ifdef ZENITH_USE_SKIA
   if (canvas == nullptr)
     return;
 
@@ -97,7 +95,6 @@ void ZenithToggle::drawSkia(SkCanvas *canvas) {
 #endif
 }
 
-#ifdef ZENITH_USE_SKIA
 
 void ZenithToggle::drawSwitch(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
@@ -265,6 +262,5 @@ void ZenithToggle::drawLabel(SkCanvas *canvas) {
                          textX, textY, font, paint);
 }
 
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

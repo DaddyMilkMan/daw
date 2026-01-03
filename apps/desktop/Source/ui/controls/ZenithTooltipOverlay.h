@@ -16,7 +16,6 @@
 #include "SkiaComponent.h"
 #include "ZenithControl.h"
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
 #include <core/SkPath.h>
@@ -40,7 +39,6 @@ public:
   bool hitTest(int x, int y) override;
 
 private:
-#ifdef ZENITH_USE_SKIA
   void drawTooltipCard(SkCanvas *canvas, const SkRect &targetRect);
 #endif
 

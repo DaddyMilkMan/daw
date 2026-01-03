@@ -24,7 +24,6 @@
 
 namespace zenith {
 
-#ifdef ZENITH_USE_SKIA
 
 /**
     Debug Console Component - Displays session health in the bottom bar
@@ -118,6 +117,5 @@ private:
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DebugConsoleComponent)
 };
 
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

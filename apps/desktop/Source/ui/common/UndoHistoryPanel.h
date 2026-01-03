@@ -21,7 +21,6 @@
 
 namespace zenith {
 
-#ifdef ZENITH_USE_SKIA
 
 /**
  * @brief Visual history panel showing undo/redo stack
@@ -99,6 +98,5 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(UndoHistoryPanel)
 };
 
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

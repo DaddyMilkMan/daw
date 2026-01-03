@@ -11,7 +11,6 @@
 
 #include "PianoKeyboardViewSkia.h"
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #include <core/SkPath.h>
 #include <core/SkPoint.h>
@@ -21,7 +20,6 @@
 
 namespace zenith {
 
-#ifdef ZENITH_USE_SKIA
 
 PianoKeyboardViewSkia::PianoKeyboardViewSkia(juce::MidiKeyboardState& state, 
                                              juce::MidiKeyboardComponent::Orientation orientation)
@@ -194,6 +192,5 @@ int PianoKeyboardViewSkia::getNoteAtPosition(juce::Point<float> pos)
     return -1;
 }
 
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

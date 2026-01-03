@@ -15,7 +15,6 @@
 #include "../design-system/ColorBridge.h"
 // #include "../design-system/ZenithTheme.h" // Deprecated
 
-#ifdef ZENITH_USE_SKIA
 #include <core/SkMaskFilter.h>
 #include <effects/SkGradientShader.h>
 

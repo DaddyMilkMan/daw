@@ -12,7 +12,6 @@
 
 #include "ZenithTooltipOverlay.h"
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #endif
 
@@ -31,7 +30,6 @@ bool ZenithTooltipOverlay::hitTest(int x, int y) {
 }
 
 void ZenithTooltipOverlay::drawSkia(SkCanvas *canvas) {
-#ifdef ZENITH_USE_SKIA
   if (canvas == nullptr || target_ == nullptr)
     return;
 
@@ -76,7 +74,6 @@ void ZenithTooltipOverlay::drawSkia(SkCanvas *canvas) {
 #endif
 }
 
-#ifdef ZENITH_USE_SKIA
 
 void ZenithTooltipOverlay::drawTooltipCard(SkCanvas *canvas,
                                            const SkRect &targetRect) {
@@ -189,6 +186,5 @@ void ZenithTooltipOverlay::drawTooltipCard(SkCanvas *canvas,
   }
 }
 
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

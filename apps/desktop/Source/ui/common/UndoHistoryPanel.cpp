@@ -15,7 +15,6 @@
 #include "../framework/GlassmorphicPanel.h"
 #include "../framework/NeonGlow.h"
 
-#ifdef ZENITH_USE_SKIA
 
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
@@ -394,4 +393,3 @@ void UndoHistoryPanel::jumpToHistoryIndex(int index) {
 
 } // namespace zenith
 
-#endif // ZENITH_USE_SKIA

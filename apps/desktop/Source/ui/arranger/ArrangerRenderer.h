@@ -11,7 +11,6 @@
  */
 #pragma once
 
-#ifdef ZENITH_USE_SKIA
 
 #include "ZenithSkia.h"
 
@@ -167,4 +166,3 @@ private:
 
 } // namespace zenith
 
-#endif // ZENITH_USE_SKIA

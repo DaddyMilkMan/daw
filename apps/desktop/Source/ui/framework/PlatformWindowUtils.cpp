@@ -13,7 +13,6 @@
 #include "PlatformWindowUtils.h"
 #include "../../engine/ZenithLogger.h"
 
-#ifdef ZENITH_USE_SKIA
 #include <include/gpu/ganesh/gl/GrGLAssembleInterface.h>
 #include <include/gpu/ganesh/gl/GrGLDirectContext.h>
 #include <include/gpu/ganesh/gl/GrGLInterface.h>
@@ -32,7 +31,6 @@ PlatformWindowUtils::createNativeGLInterface(juce::OpenGLContext &context) {
   juce::ignoreUnused(context); // Might be used in future or other platforms
   ZENITH_LOG_INFO("PlatformWindowUtils: Attempting to create GL interface...");
 
-#ifdef ZENITH_USE_SKIA
 
   // 1. Native Interface Attempt
   // GrGLMakeNativeInterface is a global function in modern Skia

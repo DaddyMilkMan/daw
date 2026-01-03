@@ -18,7 +18,6 @@
 
 #define ZENITH_USE_SKIA 1 // FORCE DEFINITION FOR DEBUGGING
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #include <core/SkPoint.h>
 #include <effects/SkGradientShader.h>
@@ -30,7 +29,6 @@
 
 namespace zenith {
 
-#ifdef ZENITH_USE_SKIA
 
 BottomBar::BottomBar(juce::MidiKeyboardState &state, Engine &engine,
                      ProjectState &projectState)
@@ -235,6 +233,5 @@ void BottomBar::setKeyboardVisible(bool visible) {
   repaint();
 }
 
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

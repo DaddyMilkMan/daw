@@ -16,7 +16,6 @@
 #include "../framework/GlassmorphicPanel.h"
 #include "../controls/SpectraAnalyzerComponent.h"
 
-#ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
 #include <core/SkFont.h>
@@ -27,7 +26,6 @@
 
 namespace zenith {
 
-#ifdef ZENITH_USE_SKIA
 
 RightSidePanel::RightSidePanel(CommandAPI &api, Engine &engine, ProjectState &projectState) {
   ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: Constructor started"); // Initialize WingmanPanel
@@ -93,6 +91,5 @@ void RightSidePanel::resized() {
       .applyColumn();
 }
 
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

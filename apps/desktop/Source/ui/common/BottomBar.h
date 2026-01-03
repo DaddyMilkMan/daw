@@ -42,7 +42,6 @@ class SessionDebuggerAgent;
 class DebugConsoleComponent;
 class AutoSaveIndicator;
 
-#ifdef ZENITH_USE_SKIA
 
 class BottomBar : public SkiaComponent {
 public:
@@ -92,6 +91,5 @@ private:
   void updateCachedPaints(const ::SkRect &bounds);
 };
 
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

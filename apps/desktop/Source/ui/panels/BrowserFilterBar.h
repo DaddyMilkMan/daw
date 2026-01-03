@@ -13,7 +13,6 @@
 #include "SkiaComponent.h"
 #include "../../browser/BrowserModel.h"
 
-#ifdef ZENITH_USE_SKIA
 #include <include/core/SkCanvas.h>
 #endif
 

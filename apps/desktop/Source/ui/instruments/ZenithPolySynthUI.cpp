@@ -183,7 +183,6 @@ void ZenithPolySynthUI::timerCallback() {
 
 //==============================================================================
 // Skia Integration (Render callback for SkiaRenderer)
-#ifdef ZENITH_USE_SKIA
 void ZenithPolySynthUI::drawSkiaContent(SkCanvas *canvas) {
   auto bounds = getLocalBounds();
   int width = bounds.getWidth();

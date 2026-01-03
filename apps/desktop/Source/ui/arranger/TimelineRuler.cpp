@@ -11,7 +11,6 @@
 #include "../design-system/ZenithDesignSystem.h"
 #include "../design-system/ColorBridge.h"
 
-#ifdef ZENITH_USE_SKIA
 #include "../Theme.h"
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
@@ -192,7 +191,6 @@ void TimelineRuler::mouseUp(const juce::MouseEvent &) {
     currentDragMode = DragMode::None;
 }
 
-#ifdef ZENITH_USE_SKIA
 void TimelineRuler::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds();
   using namespace zenith::design;

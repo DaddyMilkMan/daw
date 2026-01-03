@@ -14,7 +14,6 @@
 
 #define ZENITH_USE_SKIA 1 // Force for debugging
 
-#ifdef ZENITH_USE_SKIA
 #include "../design-system/ZenithDesignSystem.h"
 #include "../design-system/ColorBridge.h"
 #include <core/SkCanvas.h>
@@ -29,7 +28,6 @@
 
 namespace zenith {
 
-#ifdef ZENITH_USE_SKIA
 
 //==============================================================================
 DebugConsoleComponent::DebugConsoleComponent(ai::SessionDebuggerAgent &debugger)
@@ -441,6 +439,5 @@ void DebugConsoleComponent::updateCachedPaints() {
   smallFont_.setSubpixel(true);
 }
 
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

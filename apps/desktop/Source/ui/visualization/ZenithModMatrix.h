@@ -18,7 +18,6 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
 #endif
@@ -43,7 +42,6 @@ protected:
 private:
   void updateHover(const juce::MouseEvent &e);
 
-#ifdef ZENITH_USE_SKIA
   void drawGrid(SkCanvas *canvas);
   void drawCell(SkCanvas *canvas, int row, int col, float x, float y,
                 float cellWidth, float cellHeight, float value);

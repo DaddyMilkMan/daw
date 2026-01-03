@@ -17,13 +17,11 @@
 #include <juce_graphics/juce_graphics.h>
 #include "SkiaComponent.h"
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #endif
 
 namespace zenith {
 
-#ifdef ZENITH_USE_SKIA
 
 class SkiaSliderComponent : public SkiaComponent {
 public:
@@ -124,6 +122,5 @@ private:
     TextBoxPos textBoxPos_ = TextBoxPos::NoTextBox;
 };
 
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

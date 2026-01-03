@@ -19,7 +19,6 @@
 #include "SkiaComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #endif
 
@@ -105,7 +104,6 @@ private:
   void incrementValue(double delta);
   juce::String formatValue(double value) const;
 
-#ifdef ZENITH_USE_SKIA
   void drawBackground(SkCanvas *canvas);
   void drawText(SkCanvas *canvas);
   void drawLabel(SkCanvas *canvas);

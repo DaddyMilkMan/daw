@@ -100,7 +100,6 @@ void ZenithVisualizer::updateAudioData() {
 }
 
 void ZenithVisualizer::drawSkia(SkCanvas *canvas) {
-#ifdef ZENITH_USE_SKIA
   if (canvas == nullptr)
     return;
 
@@ -117,7 +116,6 @@ void ZenithVisualizer::drawSkia(SkCanvas *canvas) {
 #endif
 }
 
-#ifdef ZENITH_USE_SKIA
 
 void ZenithVisualizer::drawWaveform(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
@@ -198,6 +196,5 @@ void ZenithVisualizer::drawSpectrum(SkCanvas *canvas) {
   }
 }
 
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

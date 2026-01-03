@@ -28,7 +28,6 @@
 
 namespace zenith {
 
-#ifdef ZENITH_USE_SKIA
 
 /**
  * Main Universal Browser Panel.
@@ -83,6 +82,5 @@ private:
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BrowserPanel)
 };
 
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

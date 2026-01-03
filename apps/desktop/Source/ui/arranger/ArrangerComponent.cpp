@@ -16,7 +16,6 @@
 #include "ArrangerInputHandler.h"
 #include "ArrangerTrackComponent.h"
 
-#ifdef ZENITH_USE_SKIA
 #include "ArrangerRenderer.h"
 #endif
 
@@ -55,7 +54,6 @@ ArrangerComponent::ArrangerComponent(Engine& eng, ProjectState& ps)
     clipManager_ = std::make_unique<ArrangerClipManager>(*this, projectState, *gridUtils_);
     inputHandler_ = std::make_unique<ArrangerInputHandler>(*this, projectState, *clipManager_, *gridUtils_);
     
-#ifdef ZENITH_USE_SKIA
     renderer_ = std::make_unique<ArrangerRenderer>(*this, engine_, projectState, *clipManager_, *gridUtils_);
 #endif
 
@@ -275,7 +273,6 @@ juce::String ArrangerComponent::getTooltip() {
 // Skia Rendering
 //=============================================================================
 
-#ifdef ZENITH_USE_SKIA
 void ArrangerComponent::drawSkia(SkCanvas* canvas) {
     renderer_->drawSkia(canvas);
 }
