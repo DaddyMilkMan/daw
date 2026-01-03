@@ -28,7 +28,7 @@ import threading
 import time
 from abc import ABC, abstractmethod
 from collections import defaultdict, deque
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Deque, Dict, Optional, Tuple
 
@@ -155,8 +155,13 @@ class DiskBackend(PersistenceBackend):
             self.filepath.parent.mkdir(parents=True, exist_ok=True)
             with open(self.filepath, "w") as f:
                 json.dump(data, f)
-        except IOError:
-            pass  # Fail silently to avoid crashing the server
+        except IOError as e:
+            # Log at module level if available, otherwise pass silently
+            # This prevents server crashes while allowing debugging
+            import logging
+            logging.getLogger(__name__).warning(
+                "Failed to persist sessions to disk: %s", e
+            )
 
 
 class RedisBackend(PersistenceBackend):
@@ -254,9 +259,12 @@ class SessionStore:
             for code, entry in persisted.items():
                 if now - entry.timestamp <= self._ttl:
                     self._sessions[code] = entry
-        except Exception:
-            # Fail silently if persistence fails during initialization
-            pass
+        except Exception as e:
+            # Log the error but don't crash on startup
+            import logging
+            logging.getLogger(__name__).warning(
+                "Failed to load persisted sessions: %s", e
+            )
 
     def create_session(self, client_ip: Optional[str] = None) -> Optional[str]:
         """
@@ -386,11 +394,25 @@ class SessionStore:
                 return candidate
 
         # Fallback: if we can't find a unique code after max_attempts,
-        # fall back to a longer code to avoid infinite loop
-        while True:
+        # try cleanup first to free up space, then use longer codes
+        self.cleanup()
+        
+        # Try again with same range after cleanup
+        for _ in range(max_attempts):
+            candidate = str(100000 + secrets.randbelow(900000))
+            if candidate not in self._sessions:
+                return candidate
+        
+        # Final fallback: use longer codes (7-8 digits) to guarantee uniqueness
+        fallback_attempts = 10000
+        for _ in range(fallback_attempts):
             candidate = str(100000 + secrets.randbelow(10000000))
             if candidate not in self._sessions:
                 return candidate
+        
+        # If we still can't generate a code, something is very wrong
+        # This should never happen in practice
+        raise RuntimeError("Unable to generate unique session code after extensive attempts")
 
 
 __all__ = ["SessionStore", "SessionEntry", "PersistenceBackend", "MemoryBackend", "DiskBackend", "RedisBackend"]

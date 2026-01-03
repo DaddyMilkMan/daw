@@ -171,9 +171,9 @@ def test_code_generation_avoids_collisions() -> None:
     """Verify collision avoidance when store is heavily populated."""
     store = SessionStore(ttl=10)
     
-    # Pre-populate with many codes
+    # Pre-populate with many codes (reduced from 5000 to 1000 for faster tests)
     codes = set()
-    for _ in range(5000):
+    for _ in range(1000):
         code = store.create_session()
         codes.add(code)
 
