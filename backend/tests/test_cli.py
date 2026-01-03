@@ -16,7 +16,8 @@ from unittest.mock import MagicMock, Mock, patch, call
 import pytest
 from typer.testing import CliRunner
 
-# Add parent directory to path for imports
+# Ensure backend module is importable in test environment
+# This is necessary for pytest to find the backend package
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if root not in sys.path:
     sys.path.insert(0, root)
@@ -135,7 +136,7 @@ class TestMainCallback:
         result = runner.invoke(app, ["--json", "--log-level", "DEBUG", "status"])
         
         # Verify overrides were applied
-        assert mock_config.log_json == True
+        assert mock_config.log_json is True
         assert mock_config.log_level == "DEBUG"
     
     @patch('backend.cli.ZenithConfig')

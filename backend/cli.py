@@ -49,7 +49,7 @@ def main(
     config_file: Optional[Path] = typer.Option(None, envvar="ZENITH_CONFIG", help="Path to config file"),
 ):
     """
-    Main entry point for Gemini CLI.
+    Main entry point for Zenith Backend CLI.
     
     Initializes configuration, logging, and service management infrastructure.
     State is passed to subcommands via Typer's context object for dependency injection.
@@ -116,7 +116,7 @@ def start(
         state.config.upnp_enabled = False
         log.info("UPnP disabled via CLI flag")
 
-    log.info("Starting Gemini backend", 
+    log.info("Starting Zenith backend", 
             dry_run=dry_run,
             upnp_enabled=state.config.upnp_enabled)
 
