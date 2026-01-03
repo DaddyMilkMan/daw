@@ -16,7 +16,7 @@
 #include "../../engine/ZenithLogger.h"
 #include "PlatformWindowUtils.h"
 #include <cstring>
-#include <include/gpu/ganesh/gl/GrGLDirectContext.h>
+#include <gpu/ganesh/gl/GrGLDirectContext.h>
 #include <juce_opengl/juce_opengl.h>
 
 #endif

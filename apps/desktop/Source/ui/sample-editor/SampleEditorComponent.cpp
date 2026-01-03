@@ -8,9 +8,9 @@
 #include "SampleEditorComponent.h"
 #include "SampleEditorActions.h"
 #include "ZenithDesignSystem.h"
-#include <include/core/SkFont.h>
-#include <include/core/SkRRect.h>
-#include <include/effects/SkGradientShader.h>
+#include <core/SkFont.h>
+#include <core/SkRRect.h>
+#include <effects/SkGradientShader.h>
 #include <juce_audio_formats/juce_audio_formats.h>
 #include "../../dsp/TimeStretcher.h"
 #include "../../dsp/SpectralProcessor.h"

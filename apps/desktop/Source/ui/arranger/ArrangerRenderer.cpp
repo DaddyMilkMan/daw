@@ -20,7 +20,7 @@
 #include "ZenithSkia.h"
 #include "../arranger/ArrangerRenderer.h"
 #include "../design-system/ColorBridge.h"
-#include <include/core/SkMaskFilter.h>
+#include <core/SkMaskFilter.h>
 #include <core/SkSpan.h>
 #include <effects/SkDashPathEffect.h>
 #include <effects/SkGradientShader.h>

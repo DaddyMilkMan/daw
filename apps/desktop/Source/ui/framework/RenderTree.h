@@ -15,7 +15,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
 
-#include <include/core/SkImage.h>
+#include <core/SkImage.h>
 #include "../design-system/ZenithDesignSystem.h"
 
 #include <atomic>
