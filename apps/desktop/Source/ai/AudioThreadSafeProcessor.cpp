@@ -20,26 +20,21 @@ AudioThreadSafeProcessor::AudioThreadSafeProcessor() {
 
 AudioThreadSafeProcessor::~AudioThreadSafeProcessor() = default;
 
+// RT-SAFE: This function is called from the audio thread and must not allocate
 void AudioThreadSafeProcessor::processAudioBlock(const juce::AudioBuffer<float>& buffer,
                                                 double sampleRate,
                                                 int numSamples) {
-    // Copy buffer to lock-free queue for background analysis
-    juce::AudioBuffer<float> bufferCopy(buffer.getNumChannels(), buffer.getNumSamples());
-    bufferCopy.makeCopyOf(buffer);
-    
-    if (!audioBuffer.push(bufferCopy)) {
-        // Buffer full, drop oldest
-        juce::AudioBuffer<float> dropped;
-        audioBuffer.pop(dropped);
-        audioBuffer.push(bufferCopy);
-    }
+    // WARNING: Copying AudioBuffer allocates memory - NOT RT-SAFE!
+    // This should be refactored to use a lock-free FIFO or pointer queue
+    // For now, we skip the buffer copy to maintain RT-safety and only perform
+    // in-place analysis on the provided buffer reference
     
     // Perform real-time analysis at specified rate
-    samplesSinceAnalysis.fetch_add(numSamples);
+    samplesSinceAnalysis.fetch_add(numSamples, std::memory_order_relaxed);
     
-    if (samplesSinceAnalysis.load() >= samplesPerAnalysis.load()) {
+    if (samplesSinceAnalysis.load(std::memory_order_relaxed) >= samplesPerAnalysis.load(std::memory_order_relaxed)) {
         performAnalysis(buffer);
-        samplesSinceAnalysis.store(0);
+        samplesSinceAnalysis.store(0, std::memory_order_relaxed);
     }
 }
 
@@ -70,8 +65,10 @@ void AudioThreadSafeProcessor::performAnalysis(const juce::AudioBuffer<float>& b
     analysis.peakLevel = peak;
     analysis.rmsLevel = rms;
     
-    // Timestamp
-    analysis.timestamp = juce::Time::getCurrentTime().toMilliseconds();
+    // RT-SAFE: Use atomic counter instead of system time call
+    // juce::Time::getCurrentTime() may allocate or make system calls - NOT RT-SAFE!
+    static std::atomic<uint64_t> rtSafeTimestamp{0};
+    analysis.timestamp = rtSafeTimestamp.fetch_add(1, std::memory_order_relaxed);
     analysis.isValid = true;
     
     // 1. Push to analysis buffer
@@ -229,27 +226,33 @@ RealTimeSuggestionEngine::~RealTimeSuggestionEngine() = default;
 void RealTimeSuggestionEngine::processAudio(const AudioAnalysisData& analysis) {
     if (!analysis.isValid) return;
     
-    // Add to history
-    size_t writePos = historyWritePos.fetch_add(1) % HISTORY_SIZE;
+    // Add to history (RT-safe with relaxed memory ordering)
+    size_t writePos = historyWritePos.fetch_add(1, std::memory_order_relaxed) % HISTORY_SIZE;
     analysisHistory[writePos] = analysis;
     
-    // Generate suggestions
+    // Generate suggestions (RT-safe)
     generateSuggestions(analysis);
     
-    // Remove old suggestions
+    // Remove old suggestions (RT-safe)
     removeOldSuggestions();
 }
 
 void RealTimeSuggestionEngine::generateSuggestions(const AudioAnalysisData& current) {
-    // Check for various issues and generate suggestions
+    // RT-SAFE: All string operations now use fixed-size buffers with no allocations
     
     // Loudness issues
     if (detectLoudnessTrend(current)) {
         Suggestion suggestion;
-        suggestion.id = "loudness_" + juce::String(current.timestamp);
-        suggestion.type = "loudness";
-        suggestion.message = "Loudness is trending " + juce::String(current.loudness < -20.0f ? "low" : "high");
-        suggestion.parameters = juce::var(current.loudness);
+        // Use snprintf for RT-safe string formatting (no allocation)
+        char idBuf[32];
+        std::snprintf(idBuf, sizeof(idBuf), "loud_%llu", 
+                     static_cast<unsigned long long>(current.timestamp));
+        suggestion.setId(idBuf);
+        suggestion.setType("loudness");
+        suggestion.setMessage(current.loudness < -20.0f ? 
+                             "Loudness is trending low" : 
+                             "Loudness is trending high");
+        suggestion.parameterValue = current.loudness;
         suggestion.confidence = 0.8f;
         suggestion.timestamp = current.timestamp;
         suggestion.isActive = true;
@@ -260,10 +263,15 @@ void RealTimeSuggestionEngine::generateSuggestions(const AudioAnalysisData& curr
     // Dynamics issues
     if (detectDynamicsIssue(current)) {
         Suggestion suggestion;
-        suggestion.id = "dynamics_" + juce::String(current.timestamp);
-        suggestion.type = "dynamics";
-        suggestion.message = "Dynamic range is " + juce::String(current.dynamics < 6.0f ? "low" : "high");
-        suggestion.parameters = juce::var(current.dynamics);
+        char idBuf[32];
+        std::snprintf(idBuf, sizeof(idBuf), "dyn_%llu", 
+                     static_cast<unsigned long long>(current.timestamp));
+        suggestion.setId(idBuf);
+        suggestion.setType("dynamics");
+        suggestion.setMessage(current.dynamics < 6.0f ? 
+                             "Dynamic range is low" : 
+                             "Dynamic range is high");
+        suggestion.parameterValue = current.dynamics;
         suggestion.confidence = 0.7f;
         suggestion.timestamp = current.timestamp;
         suggestion.isActive = true;
@@ -274,10 +282,15 @@ void RealTimeSuggestionEngine::generateSuggestions(const AudioAnalysisData& curr
     // Stereo issues
     if (detectStereoIssue(current)) {
         Suggestion suggestion;
-        suggestion.id = "stereo_" + juce::String(current.timestamp);
-        suggestion.type = "stereo";
-        suggestion.message = "Stereo width is " + juce::String(current.stereoWidth < 0.5f ? "narrow" : "wide");
-        suggestion.parameters = juce::var(current.stereoWidth);
+        char idBuf[32];
+        std::snprintf(idBuf, sizeof(idBuf), "stereo_%llu", 
+                     static_cast<unsigned long long>(current.timestamp));
+        suggestion.setId(idBuf);
+        suggestion.setType("stereo");
+        suggestion.setMessage(current.stereoWidth < 0.5f ? 
+                             "Stereo width is narrow" : 
+                             "Stereo width is wide");
+        suggestion.parameterValue = current.stereoWidth;
         suggestion.confidence = 0.6f;
         suggestion.timestamp = current.timestamp;
         suggestion.isActive = true;
@@ -287,15 +300,15 @@ void RealTimeSuggestionEngine::generateSuggestions(const AudioAnalysisData& curr
 }
 
 bool RealTimeSuggestionEngine::detectLoudnessTrend(const AudioAnalysisData& current) {
-    // Check last 10 analyses for trend
-    int historyCount = std::min(10, static_cast<int>(historyWritePos.load()));
+    // RT-SAFE: Check last 10 analyses for trend
+    int historyCount = std::min(10, static_cast<int>(historyWritePos.load(std::memory_order_relaxed)));
     if (historyCount < 3) return false;
     
     float sum = 0.0f;
     int count = 0;
     
     for (int i = 0; i < historyCount; ++i) {
-        size_t pos = (historyWritePos.load() - 1 - i + HISTORY_SIZE) % HISTORY_SIZE;
+        size_t pos = (historyWritePos.load(std::memory_order_relaxed) - 1 - i + HISTORY_SIZE) % HISTORY_SIZE;
         const auto& analysis = analysisHistory[pos];
         
         if (analysis.isValid) {
@@ -309,31 +322,33 @@ bool RealTimeSuggestionEngine::detectLoudnessTrend(const AudioAnalysisData& curr
     float avg = sum / count;
     float diff = std::abs(current.loudness - avg);
     
-    return diff > (3.0f * sensitivity.load());  // Threshold based on sensitivity
+    return diff > (3.0f * sensitivity.load(std::memory_order_relaxed));
 }
 
 bool RealTimeSuggestionEngine::detectDynamicsIssue(const AudioAnalysisData& current) {
-    return current.dynamics < (4.0f * sensitivity.load()) || 
-           current.dynamics > (15.0f / sensitivity.load());
+    float sens = sensitivity.load(std::memory_order_relaxed);
+    return current.dynamics < (4.0f * sens) || 
+           current.dynamics > (15.0f / sens);
 }
 
 bool RealTimeSuggestionEngine::detectStereoIssue(const AudioAnalysisData& current) {
-    return current.stereoWidth < (0.3f * sensitivity.load()) || 
-           current.stereoWidth > (2.0f / sensitivity.load());
+    float sens = sensitivity.load(std::memory_order_relaxed);
+    return current.stereoWidth < (0.3f * sens) || 
+           current.stereoWidth > (2.0f / sens);
 }
 
 void RealTimeSuggestionEngine::addSuggestion(const Suggestion& suggestion) {
-    // Find inactive slot
+    // RT-SAFE: Find inactive slot
     for (auto& slot : suggestions) {
         if (!slot.isActive) {
             slot = suggestion;
-            suggestionCount.fetch_add(1);
+            suggestionCount.fetch_add(1, std::memory_order_relaxed);
             return;
         }
     }
     
     // Replace oldest suggestion if at capacity
-    if (suggestionCount.load() >= maxSuggestions.load()) {
+    if (suggestionCount.load(std::memory_order_relaxed) >= static_cast<size_t>(maxSuggestions.load(std::memory_order_relaxed))) {
         uint64_t oldestTime = UINT64_MAX;
         int oldestIndex = 0;
         
@@ -349,13 +364,16 @@ void RealTimeSuggestionEngine::addSuggestion(const Suggestion& suggestion) {
 }
 
 void RealTimeSuggestionEngine::removeOldSuggestions() {
-    uint64_t currentTime = juce::Time::getCurrentTime().toMilliseconds();
-    const uint64_t MAX_AGE = 30000;  // 30 seconds
+    // RT-SAFE: Use our atomic timestamp counter instead of system time
+    // Suggestions older than MAX_AGE counter increments are removed
+    static std::atomic<uint64_t> rtCurrentTime{0};
+    uint64_t currentTime = rtCurrentTime.fetch_add(1, std::memory_order_relaxed);
+    const uint64_t MAX_AGE = 30000;  // Arbitrary counter threshold
     
     for (auto& suggestion : suggestions) {
         if (suggestion.isActive && (currentTime - suggestion.timestamp) > MAX_AGE) {
             suggestion.isActive = false;
-            suggestionCount.fetch_sub(1);
+            suggestionCount.fetch_sub(1, std::memory_order_relaxed);
         }
     }
 }
@@ -372,11 +390,11 @@ std::vector<RealTimeSuggestionEngine::Suggestion> RealTimeSuggestionEngine::getA
     return active;
 }
 
-void RealTimeSuggestionEngine::dismissSuggestion(const juce::String& id) {
+void RealTimeSuggestionEngine::dismissSuggestion(const char* id) {
     for (auto& suggestion : suggestions) {
-        if (suggestion.isActive && suggestion.id == id) {
+        if (suggestion.isActive && std::strcmp(suggestion.id, id) == 0) {
             suggestion.isActive = false;
-            suggestionCount.fetch_sub(1);
+            suggestionCount.fetch_sub(1, std::memory_order_relaxed);
             break;
         }
     }
