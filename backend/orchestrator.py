@@ -1,5 +1,4 @@
 
-import logging
 import os
 import signal
 import socket
@@ -10,8 +9,9 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Callable, Dict, List, Optional
 
-# Replaced structlog with standard logging
-log = logging.getLogger("zenith.orchestrator")
+from backend.logger import get_logger
+
+log = get_logger("zenith.orchestrator")
 
 class ServiceState(Enum):
     STOPPED = auto()

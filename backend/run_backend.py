@@ -2,15 +2,15 @@
 
 import argparse
 import json
-import logging
 import signal
 import sys
 import time
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from logging.handlers import RotatingFileHandler
 from typing import Optional
 
+from backend.logger import configure_logging, get_logger
+from backend.config import ZenithConfig
 from backend.orchestrator import ServiceSentinel, ServiceDefinition, check_tcp_port
 from backend.networking.port_mapper import DEFAULT_PORT, DEFAULT_TIMEOUT
 
@@ -39,7 +39,8 @@ def start_health_server(port: int) -> ThreadingHTTPServer:
     import threading
     t = threading.Thread(target=server.serve_forever, daemon=True)
     t.start()
-    logging.getLogger("zenith.backend").info("Health endpoint listening on %d", port)
+    logger = get_logger("zenith.backend")
+    logger.info("Health endpoint listening on port", port=port)
     return server
 
 def parse_args() -> argparse.Namespace:
@@ -48,31 +49,24 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--upnp-port", type=int, default=DEFAULT_PORT, help="TCP port to map via UPnP")
     parser.add_argument("--upnp-timeout", type=int, default=DEFAULT_TIMEOUT, help="UPnP discovery timeout")
     parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Log level")
-    parser.add_argument("--log-file", help="Path to log file")
+    parser.add_argument("--log-file", help="Path to log file (not yet implemented)")
     parser.add_argument("--health-port", type=int, default=8000, help="Health check port")
+    parser.add_argument("--log-json", action="store_true", help="Output logs as JSON")
     return parser.parse_args()
-
-def setup_logging(level_str: str, log_file: Optional[str]) -> None:
-    level = getattr(logging, level_str.upper())
-    handlers = [logging.StreamHandler(sys.stdout)]
-    if log_file:
-        handlers.append(RotatingFileHandler(log_file, maxBytes=5_000_000, backupCount=3))
-    
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
-        handlers=handlers
-    )
-    # Configure structlog to wrap standard logging if needed, or just let it exist.
-    # For now, orchestrator uses structlog, which defaults to stdout.
 
 def main() -> None:
     global SENTINEL
     args = parse_args()
-    setup_logging(args.log_level, args.log_file)
-    logger = logging.getLogger("zenith.backend")
+    
+    # Create config and configure logging
+    config = ZenithConfig(
+        log_level=args.log_level,
+        log_json=args.log_json
+    )
+    configure_logging(config)
+    logger = get_logger("zenith.backend")
 
-    logger.info("Initializing Service Sentinel...")
+    logger.info("Initializing Service Sentinel")
     SENTINEL = ServiceSentinel(check_interval=1.0)
 
     # 1. Define Signaling Service
@@ -141,7 +135,7 @@ def main() -> None:
 
     # Install Signal Handlers
     def handle_stop(signum, frame):
-        logger.info("Received signal %d, stopping...", signum)
+        logger.info("Received signal, stopping", signal_number=signum)
         SENTINEL.stop_all()
         sys.exit(0)
 

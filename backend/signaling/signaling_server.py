@@ -1,7 +1,6 @@
 """Minimal TLS signaling server with UDP hole-punch coordination."""
 
 import json
-import logging
 import os
 import socket
 import ssl
@@ -9,8 +8,9 @@ import sys
 import threading
 import time
 
-LOG_FORMAT = "%(asctime)s %(levelname)s %(message)s"
-logger = logging.getLogger("zenith.signaling")
+from backend.logger import get_logger
+
+logger = get_logger("zenith.signaling")
 
 if __package__ is None:
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -29,22 +29,18 @@ SESSION_TTL = int(os.environ.get("ZENITH_SIGNALING_SESSION_TTL", "300"))
 SESSION_CLEAN_INTERVAL = int(os.environ.get("ZENITH_SIGNALING_CLEAN_FREQ", "60"))
 
 
-def configure_logging(level: int = logging.INFO) -> None:
-    logging.basicConfig(level=level, format=LOG_FORMAT)
-
-
 def cleanup_loop(store: SessionStore) -> None:
     while True:
         time.sleep(SESSION_CLEAN_INTERVAL)
         cleaned = store.cleanup()
         if cleaned:
-            logger.info("Cleaned up %d expired sessions", cleaned)
+            logger.info("Cleaned up expired sessions", count=cleaned)
 
 
 def udp_listener(store: SessionStore) -> None:
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.bind((HOST, UDP_PORT))
-        logger.info("Zenith UDP Hole Punch Listener on %d", UDP_PORT)
+        logger.info("Zenith UDP Hole Punch Listener started", port=UDP_PORT)
 
         while True:
             try:
@@ -54,9 +50,9 @@ def udp_listener(store: SessionStore) -> None:
                 if msg.startswith("REGISTER:"):
                     code = msg.split(":", 1)[1]
                     if store.register_host(code, addr):
-                        logger.info("Host %s UDP registered at %s", code, addr)
+                        logger.info("Host UDP registered", code=code, address=str(addr))
                     else:
-                        logger.warning("REGISTER failed: code %s not found", code)
+                        logger.warning("REGISTER failed, code not found", code=code)
 
                 elif msg.startswith("JOIN:"):
                     code = msg.split(":", 1)[1]
@@ -71,15 +67,15 @@ def udp_listener(store: SessionStore) -> None:
                             f"PEER:{host_addr[0]}:{host_addr[1]}".encode(), client_addr
                         )
                         logger.info(
-                            "Hole punch initiated for %s: %s <-> %s",
-                            code,
-                            host_addr,
-                            client_addr,
+                            "Hole punch initiated",
+                            code=code,
+                            host_addr=str(host_addr),
+                            client_addr=str(client_addr),
                         )
                     else:
-                        logger.warning("JOIN failed: code %s has no host recorded", code)
+                        logger.warning("JOIN failed, no host recorded", code=code)
             except Exception as exc:
-                logger.exception("UDP listener error: %s", exc)
+                logger.exception("UDP listener error", error=str(exc))
 
 
 def handle_tcp_client(conn: socket.socket, addr: tuple, store: SessionStore) -> None:
@@ -87,7 +83,7 @@ def handle_tcp_client(conn: socket.socket, addr: tuple, store: SessionStore) -> 
     try:
         payload = conn.recv(2048)
         if not payload:
-            logger.debug("Empty payload from %s", addr)
+            logger.debug("Empty payload received", address=str(addr))
             return
 
         request = json.loads(payload.decode("utf-8"))
@@ -96,7 +92,7 @@ def handle_tcp_client(conn: socket.socket, addr: tuple, store: SessionStore) -> 
         if action == "REGISTER":
             code = store.create_session()
             response = {"status": "OK", "code": code}
-            logger.info("TCP: Registered session %s from %s", code, addr)
+            logger.info("TCP session registered", code=code, address=str(addr))
 
         elif action == "LOOKUP":
             code = request.get("code")
@@ -104,23 +100,23 @@ def handle_tcp_client(conn: socket.socket, addr: tuple, store: SessionStore) -> 
                 response = {"status": "OK"}
             else:
                 response = {"status": "ERROR", "msg": "Code not found"}
-            logger.debug("TCP: LOOKUP %s -> %s", code, response["status"])
+            logger.debug("TCP LOOKUP", code=code, status=response["status"])
 
         else:
             response = {"status": "ERROR", "msg": "Unknown action"}
-            logger.warning("TCP: unknown action %s from %s", action, addr)
+            logger.warning("TCP unknown action", action=action, address=str(addr))
 
     except json.JSONDecodeError as exc:
         response = {"status": "ERROR", "msg": "Invalid JSON"}
-        logger.warning("TCP: invalid payload from %s: %s", addr, exc)
+        logger.warning("TCP invalid payload", address=str(addr), error=str(exc))
     except Exception:
         response = {"status": "ERROR", "msg": "Internal server error"}
-        logger.exception("TCP handler failure for %s", addr)
+        logger.exception("TCP handler failure", address=str(addr))
     finally:
         try:
             conn.send(json.dumps(response).encode("utf-8"))
         except Exception:
-            logger.debug("Could not send response to %s", addr)
+            logger.debug("Could not send response", address=str(addr))
         finally:
             conn.close()
 
@@ -136,20 +132,20 @@ def tcp_server(store: SessionStore) -> None:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind((HOST, PORT))
     sock.listen(10)
-    logger.info("Zenith Signaling TCP with TLS on %d", PORT)
+    logger.info("Zenith Signaling TCP with TLS started", port=PORT)
 
     with context.wrap_socket(sock, server_side=True) as secure_sock:
         while True:
             try:
                 conn, addr = secure_sock.accept()
-                logger.info("Accepted secure connection from %s", addr)
+                logger.info("Accepted secure connection", address=str(addr))
                 threading.Thread(
                     target=handle_tcp_client,
                     args=(conn, addr, store),
                     daemon=True,
                 ).start()
             except ssl.SSLError as exc:
-                logger.error("SSL error on accept: %s", exc)
+                logger.error("SSL error on accept", error=str(exc))
             except Exception:
                 logger.exception("TCP accept loop failure")
 
@@ -164,5 +160,11 @@ def run_signaling() -> None:
 
 
 if __name__ == "__main__":
-    configure_logging()
+    # When run as a standalone script, configure basic logging
+    # In production, logging is configured by the parent orchestrator
+    from backend.config import ZenithConfig
+    from backend.logger import configure_logging
+    
+    config = ZenithConfig()
+    configure_logging(config)
     run_signaling()
