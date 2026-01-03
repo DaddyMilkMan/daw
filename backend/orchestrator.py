@@ -330,18 +330,12 @@ class ServiceManager:
         """Block until interrupted, keeping services running."""
         import signal as sig
         
-        # Store original handlers to restore them
-        original_sigint = sig.signal(sig.SIGINT, sig.SIG_IGN)
-        original_sigterm = sig.signal(sig.SIGTERM, sig.SIG_IGN)
-        
         def handle_shutdown(signum, frame):
             self.logger.info("Shutdown signal received", extra={"signal": signum})
-            # Restore original handlers
-            sig.signal(sig.SIGINT, original_sigint)
-            sig.signal(sig.SIGTERM, original_sigterm)
             self.stop_services()
             sys.exit(0)
         
+        # Set up signal handlers atomically
         sig.signal(sig.SIGINT, handle_shutdown)
         sig.signal(sig.SIGTERM, handle_shutdown)
         

@@ -224,7 +224,7 @@ class TestStartCommand:
         result = runner.invoke(app, ["start", "--disable-upnp"])
         
         # Verify UPnP was disabled
-        assert mock_config.upnp_enabled == False
+        assert mock_config.upnp_enabled is False
     
     @patch('backend.cli.configure_logging')
     @patch('backend.cli.ServiceManager')
