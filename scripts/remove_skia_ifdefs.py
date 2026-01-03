@@ -13,6 +13,9 @@ import re
 import sys
 from pathlib import Path
 
+# Module-level regex patterns to avoid duplication
+PATTERN_CONDITIONAL_INCLUDES = r'#ifdef ZENITH_USE_SKIA\s*\n((?:#include\s+[^\n]+\n)+)#endif'
+
 def process_header_file(filepath):
     """Process a header file to remove JUCE Graphics conditionals."""
     with open(filepath, 'r', encoding='utf-8') as f:
@@ -24,7 +27,7 @@ def process_header_file(filepath):
     # Pattern 1: Remove conditional Skia includes (any Skia-related include)
     # Replace: #ifdef ZENITH_USE_SKIA\n#include ...\n#endif
     # With: #include ...
-    pattern1 = r'#ifdef ZENITH_USE_SKIA\s*\n((?:#include\s+[^\n]+\n)+)#endif'
+    pattern1 = PATTERN_CONDITIONAL_INCLUDES
     matches1 = list(re.finditer(pattern1, content))
     if matches1:
         for match in reversed(matches1):
@@ -81,7 +84,7 @@ def process_cpp_file(filepath):
     changed = False
     
     # Remove conditional Skia includes (same as header files)
-    pattern1 = r'#ifdef ZENITH_USE_SKIA\s*\n((?:#include\s+[^\n]+\n)+)#endif'
+    pattern1 = PATTERN_CONDITIONAL_INCLUDES
     matches1 = list(re.finditer(pattern1, content))
     if matches1:
         for match in reversed(matches1):
