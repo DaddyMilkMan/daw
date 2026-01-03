@@ -279,7 +279,8 @@ class ServiceSentinel:
         rt = self.state[name]
         
         # Check if we've exceeded max retries
-        if svc.max_retries >= 0 and rt.restart_count >= svc.max_retries:
+        # Note: restart_count tracks completed attempts, so we check > not >=
+        if svc.max_retries >= 0 and rt.restart_count > svc.max_retries:
             log.error(
                 f"Service {name} has exceeded max retries "
                 f"({rt.restart_count}/{svc.max_retries}), marking as FAILED"
@@ -307,17 +308,14 @@ class ServiceSentinel:
             log.info(f"Service {name} started with PID {rt.process.pid}")
         except FileNotFoundError as e:
             log.error(f"Service {name} command not found: {e}")
-            rt.state = ServiceState.FAILED
             rt.last_exit_code = -1
             self._schedule_backoff(name)
         except PermissionError as e:
             log.error(f"Service {name} permission denied: {e}")
-            rt.state = ServiceState.FAILED
             rt.last_exit_code = -1
             self._schedule_backoff(name)
         except Exception as e:
             log.error(f"Failed to spawn service {name}: {e}", exc_info=True)
-            rt.state = ServiceState.FAILED
             rt.last_exit_code = -1
             self._schedule_backoff(name)
 

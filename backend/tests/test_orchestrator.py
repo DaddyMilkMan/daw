@@ -258,15 +258,18 @@ class TestServiceSentinel:
         with sentinel._acquire_lock():
             rt = sentinel.state["retry_test"]
             
-            # Simulate 3 failures
+            # Simulate 3 failures (restart_count will go to 1, 2, 3)
             for i in range(3):
                 sentinel._spawn_service("retry_test")
+                # After each spawn failure, schedule_backoff increments restart_count
+                # and sets state to BACKOFF
                 assert rt.state == ServiceState.BACKOFF
+                assert rt.restart_count == i + 1
             
-            # 4th attempt should fail permanently
+            # 4th spawn should fail permanently (restart_count > max_retries)
             sentinel._spawn_service("retry_test")
             assert rt.state == ServiceState.FAILED
-            assert rt.restart_count == 3
+            assert rt.restart_count == 3  # Still 3, not incremented
     
     def test_backoff_with_jitter(self):
         """Test that jitter is applied to backoff delays."""
