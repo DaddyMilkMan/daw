@@ -68,15 +68,15 @@ SkiaOpenGLRenderer::SkiaOpenGLRenderer(juce::Component *componentToAttach)
 void SkiaOpenGLRenderer::scheduleAttachmentCheck() {
   if (!targetComponent_) return;  // Validate component exists
   
-  juce::Component* comp = targetComponent_;
-  juce::OpenGLContext* ctx = &openGLContext_;
+  // Use weak reference to avoid holding onto destroyed objects
+  juce::Component::SafePointer<juce::Component> safeComp(targetComponent_);
   
-  juce::MessageManager::callAsync([this, comp, ctx]() {
-    if (!comp || !ctx) return;
-    
-    if (comp->getPeer() != nullptr && !ctx->isAttached()) {
+  juce::MessageManager::callAsync([this, safeComp]() {
+    // Check if component still exists and has a peer
+    if (safeComp && safeComp->getPeer() != nullptr && !openGLContext_.isAttached()) {
       attachContextNow();
-    } else if (!ctx->isAttached()) {
+    } else if (safeComp && !openGLContext_.isAttached()) {
+      // Schedule another check after delay
       juce::Timer::callAfterDelay(100, [this]() {
         scheduleAttachmentCheck();
       });
@@ -94,6 +94,11 @@ void SkiaOpenGLRenderer::timerCallback() {
 }
 
 void SkiaOpenGLRenderer::attachContextNow() {
+  if (!targetComponent_) {
+    ZENITH_LOG_ERROR("SkiaOpenGLRenderer: Cannot attach - targetComponent is null!");
+    return;
+  }
+  
   ZENITH_LOG_INFO("SkiaOpenGLRenderer: Attaching OpenGL context to component...");
   try {
     openGLContext_.attachTo(*targetComponent_);
@@ -175,7 +180,9 @@ void SkiaOpenGLRenderer::renderOpenGL() {
       canvas->clear(SkColorSetARGB(255, 20, 20, 25));
       drawSkiaContent(canvas);
       canvas->restore();
-      grContext_->flushAndSubmit();
+      if (grContext_) {
+        grContext_->flushAndSubmit();
+      }
     }
   } else {
       juce::gl::glClearColor(1.0f, 0.0f, 0.0f, 1.0f);

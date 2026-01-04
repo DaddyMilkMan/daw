@@ -194,6 +194,7 @@ bool MainComponent::keyPressed(const juce::KeyPress &key, Component *originating
 }
 
 void MainComponent::logHierarchy() {
+    // Static flag ensures this only logs once per application lifetime
     static bool logged = false;
     if (logged) return;
     logged = true;
@@ -222,10 +223,19 @@ void MainComponent::logHierarchy() {
 
 void MainComponent::handleAnimationTimer() {
   static int tickCount = 0;
-  if (tickCount++ % 60 == 0) {
-      ZENITH_LOG_INFO("Tick: " + std::to_string(tickCount));
-      logHierarchy(); // Log once
+  static bool hierarchyLogged = false;
+  
+  // Log hierarchy only once on first timer tick
+  if (!hierarchyLogged && tickCount == 0) {
+      logHierarchy();
+      hierarchyLogged = true;
   }
+  
+  // Reduced logging - only every 5 minutes at 60fps
+  if (tickCount++ % 18000 == 0) {
+      ZENITH_LOG_INFO("Animation timer tick: " + std::to_string(tickCount));
+  }
+  
   // Update animation time
   animationTime_ += 0.016f; // approx 60fps
   if (animationTime_ > 1000.0f) animationTime_ = 0.0f;
@@ -258,14 +268,19 @@ void MainComponent::paint(juce::Graphics &g) {
 }
 
 void MainComponent::drawSkiaContent(SkCanvas *canvas) {
+  if (!canvas) {
+      ZENITH_LOG_ERROR("drawSkiaContent: canvas is null!");
+      return;
+  }
+  
   auto bounds = getLocalBounds().toFloat();
   SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
   
   auto* hub = hubComponent.get();
   
-  // LOGGING (Limited)
+  // LOGGING (Very limited to avoid performance impact)
   static int drawCount = 0;
-  if (drawCount++ % 60 == 0) {
+  if (drawCount++ % 300 == 0) {  // Log every 5 seconds at 60fps
       bool hubVis = (hub && hub->isVisible());
       ZENITH_LOG_INFO(juce::String("drawSkiaContent: Hub Visible = ") + (hubVis ? "YES" : "NO"));
   }
@@ -288,13 +303,17 @@ void MainComponent::drawSkiaContent(SkCanvas *canvas) {
       
   } else {
       // --- MAIN DAW MODE ---
-      ZENITH_LOG_INFO(juce::String::formatted("[drawSkiaContent] MAIN DAW MODE - mainLayout=%s visible=%s bounds=%d,%d,%dx%d",
-          mainLayout ? "EXISTS" : "NULL",
-          (mainLayout && mainLayout->isVisible()) ? "YES" : "NO",
-          mainLayout ? mainLayout->getX() : -1,
-          mainLayout ? mainLayout->getY() : -1,
-          mainLayout ? mainLayout->getWidth() : -1,
-          mainLayout ? mainLayout->getHeight() : -1));
+      // Diagnostic logging (limited to avoid performance impact)
+      static int dawDrawCount = 0;
+      if (dawDrawCount++ % 300 == 0) {  // Log every 5 seconds at 60fps
+          ZENITH_LOG_INFO(juce::String::formatted("[drawSkiaContent] MAIN DAW MODE - mainLayout=%s visible=%s bounds=%d,%d,%dx%d",
+              mainLayout ? "EXISTS" : "NULL",
+              (mainLayout && mainLayout->isVisible()) ? "YES" : "NO",
+              mainLayout ? mainLayout->getX() : -1,
+              mainLayout ? mainLayout->getY() : -1,
+              mainLayout ? mainLayout->getWidth() : -1,
+              mainLayout ? mainLayout->getHeight() : -1));
+      }
       
       // 1. Background
       SkPaint bgPaint;

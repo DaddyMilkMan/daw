@@ -107,6 +107,8 @@ void BrowserPanel::setSearchText(const juce::String &text) {
 }
 
 void BrowserPanel::drawSkia(SkCanvas *canvas) {
+  if (!canvas) return;  // Safety check
+  
   auto bounds = getLocalBounds();
   GlassmorphicPanel::fillBackground(canvas, SkRect::MakeWH((float)bounds.getWidth(), (float)bounds.getHeight()));
 
