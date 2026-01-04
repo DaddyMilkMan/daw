@@ -138,19 +138,6 @@ public:
                 }
             }
             ProjectState& projectState;
-           // Trigger callback on Message Thread
-    // The following code block appears to be misplaced from another context (e.g., AudioRecorder's stopRecording implementation)
-    // and would cause compilation errors if inserted here directly.
-    // It is being commented out to maintain syntactic correctness as per instructions.
-    /*
-    auto callback = std::move(completionCallback_);
-    juce::WeakReference<AudioRecorder> weakThis(this);
-    
-    printf("AudioRecorder: Scheduling callback on Message Thread...\n"); fflush(stdout);
-    juce::MessageManager::callAsync([weakThis, callback, results]() {
-      printf("AudioRecorder: Completing callback on Message Thread...\n"); fflush(stdout);
-      auto* strongThis = weakThis.get();
-    */
             int ticks = 0;
         };
 

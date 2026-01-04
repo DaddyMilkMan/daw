@@ -105,7 +105,6 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/tests/RoutingGraphTest.cpp
     apps/desktop/Source/tests/ExportTests.cpp
     apps/desktop/Source/tests/ArrangerValidationTests.cpp
-    apps/desktop/Source/ui/arranger/TrackHeaderComponent.cpp
 )
 
 # Common sources used by both DAW and Tests
@@ -240,6 +239,7 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/ui/arranger/TakeFolderComponent.cpp
     apps/desktop/Source/ui/arranger/TempoLaneComponent.cpp
     apps/desktop/Source/ui/arranger/TimelineRuler.cpp
+    apps/desktop/Source/ui/arranger/TrackHeaderComponent.cpp
 
     # Browser
     apps/desktop/Source/ui/panels/BrowserFilterBar.cpp

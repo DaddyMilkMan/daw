@@ -45,6 +45,13 @@
 //==============================================================================
 namespace zenith {
 
+// RCU-style snapshot management: Keep a grace period for the audio thread
+// to finish using old snapshots. The buffer size should be large enough to
+// cover potential stalls (e.g., audio thread delays, system interruptions).
+// With typical update rates, 50 provides a safe margin without requiring
+// heavy synchronization primitives.
+static constexpr size_t kSnapshotGarbageCollectorSize = 50;
+
 // Static singleton instance for async callback safety
 
 
@@ -1102,8 +1109,8 @@ void Engine::updateTrackSnapshot() {
   currentSnapshotHolder_ = newSnapshot;
   
   // Reverted reference counting check as Audio Thread uses raw pointers (RCU pattern with delayed deletion).
-  // Increased safety buffer from 5 to 50 to drastically reduce race condition risk without heavy mutexes.
-  if (snapshotTrash_.size() > 50) {
+  // Using a safety buffer to drastically reduce race condition risk without heavy mutexes.
+  if (snapshotTrash_.size() > kSnapshotGarbageCollectorSize) {
     snapshotTrash_.erase(snapshotTrash_.begin());
   }
   

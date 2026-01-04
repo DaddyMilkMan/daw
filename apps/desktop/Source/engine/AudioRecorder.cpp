@@ -631,14 +631,14 @@ int AudioRecorder::useTimeSlice() {
     printf("AudioRecorder: useTimeSlice - weak link captured\n"); fflush(stdout);
     
     printf("AudioRecorder: useTimeSlice - calling callAsync...\n"); fflush(stdout);
-    printf("AudioRecorder: useTimeSlice - executing finalization cleanup IMMEDIATELY (DEBUG)...\n"); fflush(stdout);
-    {
+    juce::MessageManager::callAsync([safeWeakThis, state]() {
+      printf("AudioRecorder: Finalization - executing on Message Thread\n"); fflush(stdout);
       auto* strongThis = safeWeakThis.get();
       if (strongThis) {
         printf("AudioRecorder: Finalization - strongThis found\n"); fflush(stdout);
         strongThis->sessions_.clear();
         strongThis->updateSessionSnapshot();
-        // Skip removeTimeSliceClient here as it might be dangerous from within useTimeSlice
+        strongThis->removeTimeSliceClient(strongThis);
         strongThis->state_.store(RecordingState::Idle);
       }
 
@@ -646,10 +646,9 @@ int AudioRecorder::useTimeSlice() {
         printf("AudioRecorder: Finalization - triggering user callback\n"); fflush(stdout);
         state->callback(std::move(state->results));
       }
-    }
-    printf("AudioRecorder: useTimeSlice - immediate cleanup FINISH\n"); fflush(stdout);
-    return -1;
-
+      printf("AudioRecorder: Finalization - FINISH\n"); fflush(stdout);
+    });
+    printf("AudioRecorder: useTimeSlice - callAsync scheduled\n"); fflush(stdout);
     return -1;
   }
 
