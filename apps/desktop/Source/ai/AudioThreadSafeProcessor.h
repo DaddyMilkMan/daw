@@ -204,7 +204,7 @@ private:
     // Suggestion generation (real-time safe)
     void generateSuggestions(const AudioAnalysisData& current);
     void addSuggestion(const Suggestion& suggestion);
-    void removeOldSuggestions();
+    void removeOldSuggestions(uint64_t currentTime);
     
     // Trend detection
     bool detectLoudnessTrend(const AudioAnalysisData& current);

@@ -322,17 +322,17 @@ bool RealTimeSuggestionEngine::detectLoudnessTrend(const AudioAnalysisData& curr
     float avg = sum / count;
     float diff = std::abs(current.loudness - avg);
     
-    return diff > (3.0f * sensitivity.load(std::memory_order_relaxed));
+    return diff > (3.0f * sensitivity.load(std::memory_order_acquire));
 }
 
 bool RealTimeSuggestionEngine::detectDynamicsIssue(const AudioAnalysisData& current) {
-    float sens = sensitivity.load(std::memory_order_relaxed);
+    float sens = sensitivity.load(std::memory_order_acquire);
     return current.dynamics < (4.0f * sens) || 
            current.dynamics > (15.0f / sens);
 }
 
 bool RealTimeSuggestionEngine::detectStereoIssue(const AudioAnalysisData& current) {
-    float sens = sensitivity.load(std::memory_order_relaxed);
+    float sens = sensitivity.load(std::memory_order_acquire);
     return current.stereoWidth < (0.3f * sens) || 
            current.stereoWidth > (2.0f / sens);
 }
@@ -363,17 +363,15 @@ void RealTimeSuggestionEngine::addSuggestion(const Suggestion& suggestion) {
     }
 }
 
-void RealTimeSuggestionEngine::removeOldSuggestions() {
-    // RT-SAFE: Use our atomic timestamp counter instead of system time
+void RealTimeSuggestionEngine::removeOldSuggestions(uint64_t currentTime) {
+    // RT-SAFE: Use timestamp passed from the analysis stage.
     // Suggestions older than MAX_AGE counter increments are removed
-    static std::atomic<uint64_t> rtCurrentTime{0};
-    uint64_t currentTime = rtCurrentTime.fetch_add(1, std::memory_order_relaxed);
     const uint64_t MAX_AGE = 30000;  // Arbitrary counter threshold
     
     for (auto& suggestion : suggestions) {
         if (suggestion.isActive && (currentTime - suggestion.timestamp) > MAX_AGE) {
             suggestion.isActive = false;
-            suggestionCount.fetch_sub(1, std::memory_order_acq_rel);
+            suggestionCount.fetch_sub(1, std::memory_order_relaxed);
         }
     }
 }
@@ -401,11 +399,11 @@ void RealTimeSuggestionEngine::dismissSuggestion(const char* id) {
 }
 
 void RealTimeSuggestionEngine::setSensitivity(float sensitivity) {
-    this->sensitivity.store(juce::jlimit(0.1f, 2.0f, sensitivity));
+    this->sensitivity.store(juce::jlimit(0.1f, 2.0f, sensitivity), std::memory_order_release);
 }
 
 void RealTimeSuggestionEngine::setMaxSuggestions(int maxSuggestions) {
-    this->maxSuggestions.store(juce::jlimit(1, static_cast<int>(MAX_SUGGESTIONS), maxSuggestions));
+    this->maxSuggestions.store(juce::jlimit(1, static_cast<int>(MAX_SUGGESTIONS), maxSuggestions), std::memory_order_release);
 }
 
 // RealTimeAudioProcessor Implementation
