@@ -348,7 +348,7 @@ void RealTimeSuggestionEngine::addSuggestion(const Suggestion& suggestion) {
     }
     
     // Replace oldest suggestion if at capacity
-    if (suggestionCount.load(std::memory_order_relaxed) >= static_cast<size_t>(maxSuggestions.load(std::memory_order_relaxed))) {
+    if (suggestionCount.load(std::memory_order_acquire) >= static_cast<size_t>(maxSuggestions.load(std::memory_order_acquire))) {
         uint64_t oldestTime = UINT64_MAX;
         int oldestIndex = 0;
         
