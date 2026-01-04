@@ -234,7 +234,7 @@ void RealTimeSuggestionEngine::processAudio(const AudioAnalysisData& analysis) {
     generateSuggestions(analysis);
     
     // Remove old suggestions (RT-safe)
-    removeOldSuggestions();
+    removeOldSuggestions(analysis.timestamp);
 }
 
 void RealTimeSuggestionEngine::generateSuggestions(const AudioAnalysisData& current) {
