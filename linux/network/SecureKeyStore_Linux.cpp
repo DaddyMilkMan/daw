@@ -87,6 +87,7 @@ namespace {
 
         for (int i = 0; i < numBlocks; ++i)
         {
+            // Read as little-endian integers
             juce::uint32 l = juce::ByteOrder::littleEndianInt (rawData + i * 8);
             juce::uint32 r = juce::ByteOrder::littleEndianInt (rawData + i * 8 + 4);
 
@@ -95,11 +96,13 @@ namespace {
             else
                 bf.decrypt (l, r);
 
-            // Write back using memcpy to avoid alignment issues
-            juce::uint32 lLittleEndian = juce::ByteOrder::swapIfBigEndian (l);
-            juce::uint32 rLittleEndian = juce::ByteOrder::swapIfBigEndian (r);
-            std::memcpy (rawData + i * 8, &lLittleEndian, sizeof(juce::uint32));
-            std::memcpy (rawData + i * 8 + 4, &rLittleEndian, sizeof(juce::uint32));
+            // Write back as little-endian integers
+            // Convert native endianness to little-endian and write byte-by-byte to avoid alignment issues
+            juce::uint32 lLE = juce::ByteOrder::swapIfBigEndian (l);
+            juce::uint32 rLE = juce::ByteOrder::swapIfBigEndian (r);
+            
+            std::memcpy (rawData + i * 8, &lLE, sizeof(juce::uint32));
+            std::memcpy (rawData + i * 8 + 4, &rLE, sizeof(juce::uint32));
         }
 
         // Remove PKCS7 padding after decryption
