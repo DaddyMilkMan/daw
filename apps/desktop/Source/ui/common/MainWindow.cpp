@@ -33,9 +33,11 @@ namespace zenith {
 // Constants
 //==============================================================================
 
-// Logging intervals to reduce log spam (in frames at 60fps)
-constexpr int LOGGING_INTERVAL_5_SECONDS = 300;    // 5 seconds at 60fps
-constexpr int LOGGING_INTERVAL_5_MINUTES = 18000;  // 5 minutes at 60fps (300 seconds * 60 frames)
+// Logging intervals to reduce log spam (in frames)
+// NOTE: These assume 60fps timer rate. If the actual framerate differs,
+// the actual time intervals will scale proportionally.
+constexpr int LOGGING_INTERVAL_5_SECONDS = 300;    // ~5 seconds at 60fps
+constexpr int LOGGING_INTERVAL_5_MINUTES = 18000;  // ~5 minutes at 60fps (300 seconds * 60 frames)
 constexpr int RESIZE_LOGGING_INTERVAL = 10;        // Log every 10th resize
 
 //==============================================================================
@@ -237,13 +239,16 @@ void MainComponent::handleAnimationTimer() {
   static bool hierarchyLogged = false;
   
   // Log hierarchy only once on first timer tick
-  if (!hierarchyLogged && tickCount == 0) {
+  if (!hierarchyLogged) {
       logHierarchy();
       hierarchyLogged = true;
   }
   
-  // Reduced logging - only every 5 minutes
-  if (tickCount++ % LOGGING_INTERVAL_5_MINUTES == 0) {
+  // Increment tick counter
+  tickCount++;
+  
+  // Reduced logging - every 5 minutes
+  if (tickCount % LOGGING_INTERVAL_5_MINUTES == 0) {
       ZENITH_LOG_INFO("Animation timer tick: " + std::to_string(tickCount));
   }
   
@@ -291,7 +296,8 @@ void MainComponent::drawSkiaContent(SkCanvas *canvas) {
   
   // Diagnostic logging (limited to avoid performance impact)
   static int drawCount = 0;
-  if (drawCount++ % LOGGING_INTERVAL_5_SECONDS == 0) {
+  drawCount++;
+  if (drawCount % LOGGING_INTERVAL_5_SECONDS == 0) {
       bool hubVis = (hub && hub->isVisible());
       ZENITH_LOG_INFO(juce::String("drawSkiaContent: Hub Visible = ") + (hubVis ? "YES" : "NO"));
   }
@@ -316,7 +322,8 @@ void MainComponent::drawSkiaContent(SkCanvas *canvas) {
       // --- MAIN DAW MODE ---
       // Diagnostic logging (limited to avoid performance impact)
       static int dawDrawCount = 0;
-      if (dawDrawCount++ % LOGGING_INTERVAL_5_SECONDS == 0) {
+      dawDrawCount++;
+      if (dawDrawCount % LOGGING_INTERVAL_5_SECONDS == 0) {
           ZENITH_LOG_INFO(juce::String::formatted("[drawSkiaContent] MAIN DAW MODE - mainLayout=%s visible=%s bounds=%d,%d,%dx%d",
               mainLayout ? "EXISTS" : "NULL",
               (mainLayout && mainLayout->isVisible()) ? "YES" : "NO",
@@ -457,7 +464,8 @@ void MainComponent::resized() {
   
   // Hub Mode check - log only occasionally to avoid spam during resize
   static int resizeCount = 0;
-  if (resizeCount++ % RESIZE_LOGGING_INTERVAL == 0) {
+  resizeCount++;
+  if (resizeCount % RESIZE_LOGGING_INTERVAL == 0) {
       bool isHubVisible = hubComponent && hubComponent->isVisible();
       ZENITH_LOG_INFO(juce::String::formatted("MainComponent::resized() - bounds: %d x %d, isHubVisible: %s", 
                       bounds.getWidth(), bounds.getHeight(), isHubVisible ? "YES" : "NO"));
