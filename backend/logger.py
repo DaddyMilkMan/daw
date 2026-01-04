@@ -61,7 +61,6 @@ def configure_logging(config: ZenithConfig) -> None:
     # Processors that structlog will use to process log records before passing to stdlib
     processors: list[Processor] = [
         structlog.contextvars.merge_contextvars,
-        structlog.stdlib.filter_by_level,
         structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,
         structlog.processors.TimeStamper(fmt="iso"),
@@ -107,7 +106,9 @@ def configure_logging(config: ZenithConfig) -> None:
         root_logger.handlers.clear()
         
     root_logger.addHandler(handler)
-    root_logger.setLevel(config.log_level.upper())
+    # Ensure the log level is valid, defaulting to INFO if invalid
+    log_level = getattr(logging, config.log_level.upper(), logging.INFO)
+    root_logger.setLevel(log_level)
 
 
 def get_logger(name: str = "zenith") -> structlog.stdlib.BoundLogger:
