@@ -238,72 +238,18 @@ void TransportBar::resized() {
   using namespace juce;
   auto area = getLocalBounds();
   
-  // --- FlexBox Layout ---
+  // Layout Constants
+  const int lcdWidth = 380;
+  const int buttonSize = 38;
+  const int smallButtonSize = 32;
+  const int spacing = 8;
+  const int groupSpacing = 24;
   
-  // 1. Center Section (LCD)
-  // We want the LCD to be exactly in the center of the bar if possible.
-  // The Transport controls (Buttons) should be to the left of the LCD.
-  // The Tools (Settings, Export) should be to the right.
-  // View Toggle on far left.
+  // Manual Layout: LCD-Centered Design
+  // The LCD is the anchor point in the center, with transport controls to the left
+  // and utility buttons (settings, export) to the right, view toggle on far left.
   
-  // We'll use a 3-part layout: Left, Center, Right.
-  
-  int lcdWidth = 380;
-  int buttonSize = 38;
-  int smallButtonSize = 32;
-  int spacing = 8;
-  int groupSpacing = 24;
-  
-  // Calculate Center Group Width
-  // [Rewind] [Stop] [Play] [Record] [Loop] [Metro] [ LCD ]
-  // Wait, Logic style: Controls -> LCD -> Tools
-  
-  // Left Group
-  FlexBox leftBox;
-  leftBox.flexDirection = FlexBox::Direction::row;
-  leftBox.justifyContent = FlexBox::JustifyContent::flexStart;
-  leftBox.alignItems = FlexBox::AlignItems::center;
-  
-  leftBox.items.add(FlexItem(*viewToggleBtn_).withWidth(smallButtonSize).withHeight(smallButtonSize).withMargin({0, 20, 0, 0}));
-  leftBox.performLayout(area.withTrimmedLeft(20)); // Apply left box layout
-  
-  // Center Group Container
-  FlexBox centerBox;
-  centerBox.flexDirection = FlexBox::Direction::row;
-  centerBox.justifyContent = FlexBox::JustifyContent::center;
-  centerBox.alignItems = FlexBox::AlignItems::center;
-  
-  // Transport Controls
-  centerBox.items.add(FlexItem(*rewindBtn_).withWidth(buttonSize).withHeight(buttonSize).withMargin({0, (float)spacing, 0, 0}));
-  centerBox.items.add(FlexItem(*stopBtn_).withWidth(buttonSize).withHeight(buttonSize).withMargin({0, (float)spacing, 0, 0}));
-  centerBox.items.add(FlexItem(*playBtn_).withWidth(buttonSize).withHeight(buttonSize).withMargin({0, (float)spacing, 0, 0}));
-  centerBox.items.add(FlexItem(*recordBtn_).withWidth(buttonSize).withHeight(buttonSize).withMargin({0, (float)spacing, 0, 0}));
-  centerBox.items.add(FlexItem(*loopBtn_).withWidth(buttonSize).withHeight(buttonSize).withMargin({0, (float)spacing, 0, 0}));
-  centerBox.items.add(FlexItem(*metroBtn_).withWidth(buttonSize).withHeight(buttonSize).withMargin({0, (float)spacing, 0, 0}));
-  
-  // Separator/Gap
-  centerBox.items.add(FlexItem().withWidth(groupSpacing));
-  
-  // LCD Placeholder logic... 
-  // We'll treat the LCD bounds as a space in FlexBox or just center the box around it.
-  // Actually, let's just center the box in the component.
-  centerBox.performLayout(area);
-  
-  // LCD Bounds (Manually calculated to be exactly center)
-  auto centerPoint = area.getCentre();
-  lcdBounds_ = Rectangle<int>(0, 0, lcdWidth, 42).withCentre(centerPoint);
-  
-  // Since FlexBox centered everything, but we want the buttons LEFT of the LCD...
-  // The FlexBox above just centered the buttons in the whole area, overlapping the LCD probably.
-  // Let's use the manual calculation I had, but clean it up, OR correct the FlexBox.
-  // Correction: Put buttons in a container to the left of LCD.
-  
-  // Let's stick to the manual layout for the center group because we want precise positioning relative to the LCD center,
-  // and FlexBox "Center" centers based on available space, not absolute window center (which might be offset if side panels exist).
-  // Wait, `TransportBar` spans the whole width? Yes.
-  
-  // RE-DOING LAYOUT TO BE SAFE AND SIMPLE
-  // 1. LCD is Anchor.
+  // 1. LCD is Anchor (centered in component)
   lcdBounds_ = Rectangle<int>(0, 0, lcdWidth, 42).withCentre(area.getCentre());
   
   // 2. Buttons Left of LCD
