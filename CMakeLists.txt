@@ -141,34 +141,39 @@ target_sources(ZenithDAW PRIVATE ${ZENITH_ALL_SOURCES})
 # INCLUDE DIRECTORIES
 # =============================================================================
 
-target_include_directories(ZenithDAW PUBLIC
-    ${CMAKE_BINARY_DIR}/ZenithDAW_artefacts/JuceLibraryCode
+# Common source include directories shared by main and test targets
+set(ZENITH_SOURCE_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source
-    apps/desktop/Source/engine
-    apps/desktop/Source/ui
-    apps/desktop/Source/ui/framework
-    apps/desktop/Source/ui/design-system
-    apps/desktop/Source/ui/arranger
-    apps/desktop/Source/ui/mixer
-    apps/desktop/Source/ui/piano-roll
-    apps/desktop/Source/ui/transport
-    apps/desktop/Source/ui/common
-    apps/desktop/Source/ui/widgets
-    apps/desktop/Source/ui/session
-    apps/desktop/Source/ui/instruments
-    apps/desktop/Source/ui/dialogs
-    apps/desktop/Source/ui/sample-editor
-    apps/desktop/Source/commands
-    apps/desktop/Source/instruments
-    apps/desktop/Source/network
-    apps/desktop/Source/dsp
-    apps/desktop/Source/rendering
-    apps/desktop/Source/ai
-    apps/desktop/Source/ui/skia
-    apps/desktop/Source/utils
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/framework
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/design-system
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/arranger
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/mixer
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/piano-roll
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/transport
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/common
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/widgets
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/session
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/instruments
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/dialogs
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/sample-editor
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/commands
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/instruments
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/network
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/dsp
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/rendering
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ai
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/skia
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/utils
     ${CMAKE_PREFIX_PATH}/include
     ${CMAKE_BINARY_DIR}/JuceLibraryCode
     "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
+)
+
+target_include_directories(ZenithDAW PUBLIC
+    ${CMAKE_BINARY_DIR}/ZenithDAW_artefacts/JuceLibraryCode
+    ${ZENITH_SOURCE_INCLUDE_DIRS}
 )
 
 # =============================================================================
@@ -329,32 +334,7 @@ if(BUILD_TESTS)
     
     target_include_directories(ZenithDAWTests PRIVATE 
         ${CMAKE_BINARY_DIR}/ZenithDAWTests_artefacts/JuceLibraryCode
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/framework
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/design-system
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/arranger
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/mixer
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/piano-roll
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/transport
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/common
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/widgets
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/session
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/instruments
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/dialogs
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/sample-editor
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/commands
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/instruments
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/network
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/dsp
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/rendering
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ai
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/skia
-        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/utils
-        ${CMAKE_PREFIX_PATH}/include
-        ${CMAKE_BINARY_DIR}/JuceLibraryCode
-        "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
+        ${ZENITH_SOURCE_INCLUDE_DIRS}
     )
     
     target_link_libraries(ZenithDAWTests PRIVATE ${ZENITH_JUCE_MODULES})
