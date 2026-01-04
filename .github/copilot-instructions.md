@@ -7,8 +7,8 @@
 ## General Project Guidelines
 
 - Write clean, modular, and well-documented code appropriate for DAW applications.
-- Prioritize real-time safety, especially for audio-thread code (no memory allocations or heavy computation in RT threads).
-- Follow PEP8 (Python) and C++ Core Guidelines.
+- Prioritize real-time safety, especially for audio-thread code (no memory allocations or heavy computation in RT threads). See `docs/THREADING_MODEL.md` and `docs/tech-briefs/06-audio-thread-safety-policy.md` for detailed rules.
+- Follow PEP8 (Python) and the C++ guidelines in `docs/CODING_CONVENTIONS.md`.
 - Avoid unsafe, blocking, or non-deterministic operations in audio-critical sections.
 - Prefer pure functions and immutable data for DSP operations.
 - Annotate all types (type hints for Python, explicit types for C++).
