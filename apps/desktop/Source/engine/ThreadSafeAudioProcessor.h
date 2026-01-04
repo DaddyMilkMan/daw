@@ -12,7 +12,8 @@ namespace zenith {
 
 /**
  * @class LockFreeRingBuffer
- * @brief Lock-free ring buffer for audio data
+ * @brief RT-SAFE Lock-free ring buffer for audio data
+ * Single-producer/single-consumer with proper memory ordering
  */
 template<typename T, size_t Size>
 class LockFreeRingBuffer {
@@ -21,11 +22,15 @@ public:
         size_t currentWrite = writePos_.load(std::memory_order_relaxed);
         size_t nextWrite = (currentWrite + 1) % Size;
         
+        // Check if buffer is full (acquire to sync with consumer)
         if (nextWrite == readPos_.load(std::memory_order_acquire)) {
             return false; // Buffer full
         }
         
+        // Write data
         buffer_[currentWrite] = item;
+        
+        // Publish write position (release to make data visible to consumer)
         writePos_.store(nextWrite, std::memory_order_release);
         return true;
     }
@@ -33,11 +38,15 @@ public:
     bool pop(T& item) {
         size_t currentRead = readPos_.load(std::memory_order_relaxed);
         
+        // Check if buffer is empty (acquire to sync with producer)
         if (currentRead == writePos_.load(std::memory_order_acquire)) {
             return false; // Buffer empty
         }
         
+        // Read data
         item = buffer_[currentRead];
+        
+        // Publish read position (release to make space visible to producer)
         readPos_.store((currentRead + 1) % Size, std::memory_order_release);
         return true;
     }
