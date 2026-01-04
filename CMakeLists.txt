@@ -55,6 +55,12 @@ endif()
 # Centralized dependency management (JUCE, ONNX, OpenSSL, etc.)
 include(cmake/Dependencies.cmake)
 
+# Disable JUCEAIDE to avoid build issues
+set(JUCE_DISABLE_JUCEAIDE ON CACHE BOOL "Disable JUCEAIDE build tool" FORCE)
+
+# Disable yaml-cpp to avoid CMake version conflicts
+set(YAML_CPP_BUILD OFF CACHE BOOL "Disable yaml-cpp build" FORCE)
+
 # =============================================================================
 # SOURCE FILES
 # =============================================================================
@@ -66,33 +72,32 @@ include(cmake/SourceFiles.cmake OPTIONAL)
 if(NOT DEFINED ZENITH_ALL_SOURCES)
     message(STATUS "Using fallback source collection")
     file(GLOB_RECURSE ZENITH_ALL_SOURCES
-        "apps/desktop/Source/*.cpp"
-        "apps/desktop/Source/engine/*.cpp"
-        "apps/desktop/Source/ui/*.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/*.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/*.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/*.cpp"
     )
 endif()
 
 # Test sources (optional)
 set(ZENITH_TEST_SOURCES
-    apps/desktop/Source/tests/TestMain.cpp
-    apps/desktop/Source/tests/AudioEngineTests.cpp
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/TestMain.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/AudioEngineTests.cpp"
 
-    apps/desktop/Source/tests/ProjectStateTests.cpp
-    apps/desktop/Source/tests/ProjectFileIOTests.cpp
-    apps/desktop/Source/tests/EngineTests.cpp
-    apps/desktop/Source/tests/ConcurrencyTests.cpp
-    apps/desktop/Source/tests/ThemeTests.cpp
-    apps/desktop/Source/tests/Midi2Tests.cpp
-    apps/desktop/Source/tests/AITests.cpp
-    apps/desktop/Source/tests/AccessibilityTests.cpp
-    apps/desktop/Source/tests/CRDTSyncTests.cpp
-    apps/desktop/Source/tests/OnnxPipelineTests.cpp
-    apps/desktop/Source/tests/PluginAutomationTests.cpp
-    apps/desktop/Source/tests/SampleEditorRecordingTests.cpp
-    apps/desktop/Source/tests/SampleEditorRecordingTests.cpp
-    apps/desktop/Source/tests/MixerChannelBenchmark.cpp
-    apps/desktop/Source/tests/TrackGroupHeaderTest.cpp
-    apps/desktop/Source/tests/SIMDHelpersTest.cpp
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/ProjectStateTests.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/ProjectFileIOTests.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/EngineTests.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/ConcurrencyTests.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/ThemeTests.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/Midi2Tests.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/AITests.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/AccessibilityTests.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/CRDTSyncTests.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/OnnxPipelineTests.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/PluginAutomationTests.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/SampleEditorRecordingTests.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/MixerChannelBenchmark.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/TrackGroupHeaderTest.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/SIMDHelpersTest.cpp"
 )
 
 # =============================================================================
@@ -112,6 +117,57 @@ juce_add_gui_app(ZenithDAW
 
 # Add source files
 target_sources(ZenithDAW PRIVATE ${ZENITH_ALL_SOURCES})
+
+# =============================================================================
+# PLUGIN SCANNER EXECUTABLE (Subprocess for crash isolation)
+# =============================================================================
+
+juce_add_console_app(ZenithPluginScanner
+    PRODUCT_NAME "ZenithPluginScanner"
+)
+
+# Generate JuceHeader.h for scanner
+juce_generate_juce_header(ZenithPluginScanner)
+
+# Add scanner source file
+target_sources(ZenithPluginScanner PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/PluginScanner.cpp"
+)
+
+# Use centralized interface libraries
+target_include_directories(ZenithPluginScanner PRIVATE
+    ${CMAKE_BINARY_DIR}/ZenithPluginScanner_artefacts/JuceLibraryCode
+    ${CMAKE_BINARY_DIR}/JuceLibraryCode
+)
+
+# Link interface libraries for source includes
+target_link_libraries(ZenithPluginScanner PRIVATE zenith_app_includes)
+
+# Link minimal JUCE modules needed for plugin scanning
+target_link_libraries(ZenithPluginScanner PRIVATE
+    juce::juce_core
+    juce::juce_audio_processors
+    juce::juce_audio_formats
+    juce::juce_events
+    juce::juce_gui_basics
+    juce::juce_data_structures
+)
+
+# Compile definitions for scanner
+target_compile_definitions(ZenithPluginScanner PRIVATE
+    JUCE_PLUGINHOST_VST3=1
+    JUCE_WEB_BROWSER=0
+    JUCE_USE_CURL=0
+)
+
+target_compile_features(ZenithPluginScanner PRIVATE cxx_std_20)
+
+# Install scanner alongside main app
+install(TARGETS ZenithPluginScanner
+    RUNTIME DESTINATION bin
+)
+
+message(STATUS "ZenithPluginScanner configured for out-of-process plugin scanning")
 
 # =============================================================================
 # COMPILE DEFINITIONS
@@ -285,7 +341,7 @@ endif()
 # OPTIONAL TESTS
 # =============================================================================
 
-option(BUILD_TESTS "Build unit tests" OFF)
+option(BUILD_TESTS "Build unit tests" ON)
 if(BUILD_TESTS)
     juce_add_console_app(ZenithDAWTests
         PRODUCT_NAME "ZenithDAWTests"
@@ -331,6 +387,18 @@ if(BUILD_TESTS)
         elseif(UNIX AND NOT APPLE)
             target_link_libraries(ZenithDAWTests PRIVATE vulkan EGL GLESv2)
         endif()
+
+        if(WIN32 AND DEFINED SKIA_BIN_DIR)
+            file(GLOB _zenith_skia_runtime_dlls "${SKIA_BIN_DIR}/*.dll")
+            foreach(_dll ${_zenith_skia_runtime_dlls})
+                get_filename_component(_dll_name ${_dll} NAME)
+                add_custom_command(TARGET ZenithDAWTests POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${_dll}"
+                    "$<TARGET_FILE_DIR:ZenithDAWTests>/${_dll_name}"
+                )
+            endforeach()
+        endif()
     endif()
 
     # =========================================================================
@@ -343,9 +411,9 @@ if(BUILD_TESTS)
     juce_generate_juce_header(MetricsChartTests)
 
     target_sources(MetricsChartTests PRIVATE
-        apps/desktop/Source/tests/TestRunner.cpp
-        apps/desktop/Source/tests/UITests.cpp
-        apps/desktop/Source/ui/dashboards/MetricsChart.cpp
+        "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/TestRunner.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/UITests.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/dashboards/MetricsChart.cpp"
     )
 
     # Use centralized interface libraries
