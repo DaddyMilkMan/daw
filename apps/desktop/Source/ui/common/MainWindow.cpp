@@ -168,7 +168,9 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
 }
 
 MainComponent::~MainComponent() {
-  animationTimer_->stopTimer();
+  if (animationTimer_) {
+    animationTimer_->stopTimer();
+  }
 }
 
 bool MainComponent::keyPressed(const juce::KeyPress &key, Component *originatingComponent) {
@@ -444,10 +446,13 @@ void MainComponent::visibilityChanged() {
 void MainComponent::resized() {
   auto bounds = getLocalBounds();
   
-  // Hub Mode check
-  bool isHubVisible = hubComponent && hubComponent->isVisible();
-  ZENITH_LOG_INFO(juce::String::formatted("MainComponent::resized() - bounds: %d x %d, isHubVisible: %s", 
-                  bounds.getWidth(), bounds.getHeight(), isHubVisible ? "YES" : "NO"));
+  // Hub Mode check - log only occasionally to avoid spam during resize
+  static int resizeCount = 0;
+  if (resizeCount++ % 10 == 0) {  // Log every 10th resize
+      bool isHubVisible = hubComponent && hubComponent->isVisible();
+      ZENITH_LOG_INFO(juce::String::formatted("MainComponent::resized() - bounds: %d x %d, isHubVisible: %s", 
+                      bounds.getWidth(), bounds.getHeight(), isHubVisible ? "YES" : "NO"));
+  }
   
   auto topArea = bounds.removeFromTop(52); // Unified Top Bar height
 
@@ -466,13 +471,11 @@ void MainComponent::resized() {
       // Hub always wants full window bounds
       hubComponent->setBounds(getLocalBounds());
   }
-  ZENITH_LOG_INFO("MainComponent::resized() - Hub bounds set");
   
   if (mainLayout) {
       // Main DAW always wants area below top bar
       mainLayout->setBounds(bounds);
   }
-  ZENITH_LOG_INFO("MainComponent::resized() - MainLayout bounds set");
 
   // Center Dialogs
   if (exportDialog) {
@@ -491,8 +494,6 @@ void MainComponent::resized() {
       if (sBounds.getY() < 0) sBounds.setY(0);
       settingsPanel->setBounds(sBounds);
   }
-  
-  ZENITH_LOG_INFO("MainComponent::resized() - COMPLETE");
   
   // CRITICAL: Call base class to update OpenGL dimensions!
   SkiaMainWindowIntegration::resized();

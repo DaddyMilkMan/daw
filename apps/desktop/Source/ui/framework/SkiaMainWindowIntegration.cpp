@@ -273,6 +273,11 @@ void SkiaMainWindowIntegration::paint(juce::Graphics &g) {
   }
 
   SkCanvas* canvas = softwareSurface_->getCanvas();
+  if (!canvas) {
+      g.fillAll(juce::Colours::darkred);
+      return;
+  }
+  
   canvas->clear(SkColorSetARGB(255, 20, 20, 25)); 
   drawSkiaContent(canvas);
 
