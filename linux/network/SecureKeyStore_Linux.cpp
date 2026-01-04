@@ -63,7 +63,9 @@ namespace {
         if (encrypt)
         {
             // Implement proper PKCS7 padding
-            // Calculate padding needed (always add padding, even if aligned)
+            // PKCS7 always adds padding, even if data is already aligned
+            // If data is N bytes over a multiple of 8, add (8-N) bytes of value (8-N)
+            // If data is exactly a multiple of 8, add 8 bytes of value 8
             size_t remainder = processedData.getSize() % 8;
             uint8_t paddingLength = static_cast<uint8_t>(8 - remainder);
             
@@ -108,11 +110,25 @@ namespace {
         // Remove PKCS7 padding after decryption
         if (!encrypt && processedData.getSize() > 0)
         {
+            // Extra safety check to prevent buffer underflow
+            if (processedData.getSize() < 8)
+            {
+                DBG("SecureKeyStore: Decrypted data too small for valid PKCS7 padding");
+                return {};
+            }
+            
             uint8_t paddingLength = static_cast<uint8_t*>(processedData.getData())[processedData.getSize() - 1];
             
             // Validate padding (PKCS7 validation)
             if (paddingLength > 0 && paddingLength <= 8)
             {
+                // Ensure we have enough data for the claimed padding length
+                if (paddingLength > processedData.getSize())
+                {
+                    DBG("SecureKeyStore: Invalid padding length exceeds data size");
+                    return {};
+                }
+                
                 bool validPadding = true;
                 for (size_t i = processedData.getSize() - paddingLength; i < processedData.getSize(); ++i)
                 {

@@ -58,7 +58,9 @@ recording_test_log.txt
 server_log.txt
 daw_gui_log*.txt
 cmake_log.txt
-cmake_*.txt
+cmake_noskia*.txt
+cmake_skia.txt
+cmake_hybrid.txt
 compile_result.txt
 output.txt
 
