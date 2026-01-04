@@ -56,7 +56,6 @@ bool SkiaRenderer::initialize()
     if (!createGpuContext())
     {
         juce::Logger::writeToLog("SkiaRenderer: Failed to create GPU context. Check GPU drivers.");
-        jassertfalse;
         return false;
     }
 
@@ -237,7 +236,6 @@ bool SkiaRenderer::createGpuContext()
     if (!interface)
     {
         juce::Logger::writeToLog("SkiaRenderer: Failed to create native GL interface. Check GPU drivers.");
-        jassertfalse;
         return false;
     }
 
@@ -246,7 +244,6 @@ bool SkiaRenderer::createGpuContext()
     if (!grContext_)
     {
         juce::Logger::writeToLog("SkiaRenderer: Failed to create GrDirectContext.");
-        jassertfalse;
         return false;
     }
 
@@ -322,7 +319,6 @@ bool SkiaRenderer::createSurface(int width, int height)
     }
     
     juce::Logger::writeToLog("SkiaRenderer: Critical Error - Failed to create SkSurface.");
-    jassertfalse;
 
     return false;
 #else
