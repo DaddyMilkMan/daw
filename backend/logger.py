@@ -26,6 +26,7 @@ Features:
     - ISO timestamp formatting
     - Exception info and stack traces
     - Context variable merging for request tracking
+    - Thread-safe logging via stdlib integration
 """
 
 import logging
@@ -44,7 +45,7 @@ def configure_logging(config: ZenithConfig) -> None:
     This function should be called once at application startup, before any
     logging occurs. It sets up structlog with appropriate processors for
     structured logging and configures the underlying standard library logging
-    to work seamlessly with structlog.
+    to work seamlessly with structlog in a thread-safe manner.
     
     Args:
         config: ZenithConfig instance containing logging preferences including
@@ -57,45 +58,56 @@ def configure_logging(config: ZenithConfig) -> None:
         >>> logger = get_logger("myapp")
         >>> logger.info("Application started")
     """
-    # Configure standard logging as a foundation for third-party libraries
-    # that use standard logging. Set to WARNING to reduce noise from libraries.
-    logging.basicConfig(
-        level=logging.WARNING,
-        format="%(message)s",
-        stream=sys.stdout
-    )
-    
-    # Build the structlog processor pipeline
+    # Processors that structlog will use to process log records before passing to stdlib
     processors: list[Processor] = [
-        # Merge in context variables from contextvars
         structlog.contextvars.merge_contextvars,
-        # Add log level to the event dict
-        structlog.processors.add_log_level,
-        # Render stack traces
-        structlog.processors.StackInfoRenderer(),
-        # Set exception info if present
-        structlog.dev.set_exc_info,
-        # Add ISO8601 timestamps
+        structlog.stdlib.filter_by_level,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
         structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.UnicodeDecoder(),
+        # ProcessorFormatter will pick it up from here
+        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
     ]
 
-    # Choose renderer based on configuration
-    if config.log_json:
-        # JSON output for production (structured, machine-readable)
-        processors.append(structlog.processors.JSONRenderer())
-    else:
-        # Console output for development (colored, human-readable)
-        processors.append(structlog.dev.ConsoleRenderer())
-
-    # Configure structlog globally
+    # Configure structlog to delegate handling to the standard logging module
+    # This ensures thread-safety by using stdlib's thread-safe logging infrastructure
     structlog.configure(
         processors=processors,
-        logger_factory=structlog.PrintLoggerFactory(),
-        wrapper_class=structlog.make_filtering_bound_logger(
-            logging.getLevelName(config.log_level)
-        ),
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        wrapper_class=structlog.stdlib.BoundLogger,
         cache_logger_on_first_use=True,
     )
+
+    # Configure the standard logging module to render structlog records
+    renderer: Processor
+    if config.log_json:
+        renderer = structlog.processors.JSONRenderer()
+    else:
+        renderer = structlog.dev.ConsoleRenderer()
+
+    formatter = structlog.stdlib.ProcessorFormatter(
+        processor=renderer,
+        # These processors are for logs from standard logging not using structlog
+        foreign_pre_chain=[
+            structlog.stdlib.add_log_level,
+            structlog.stdlib.add_logger_name,
+            structlog.processors.TimeStamper(fmt="iso"),
+        ],
+    )
+
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(formatter)
+    
+    root_logger = logging.getLogger()
+    # Clear any existing handlers to avoid duplicate logs
+    if root_logger.hasHandlers():
+        root_logger.handlers.clear()
+        
+    root_logger.addHandler(handler)
+    root_logger.setLevel(config.log_level.upper())
 
 
 def get_logger(name: str = "zenith") -> structlog.stdlib.BoundLogger:
