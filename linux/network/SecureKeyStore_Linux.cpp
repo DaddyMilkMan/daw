@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <fstream>
 #include <vector>
+#include <cstring>
 
 namespace zenith {
 
@@ -94,9 +95,11 @@ namespace {
             else
                 bf.decrypt (l, r);
 
-            // Write back using safe byte order functions to avoid alignment issues
-            juce::ByteOrder::littleEndianInt (rawData + i * 8, l);
-            juce::ByteOrder::littleEndianInt (rawData + i * 8 + 4, r);
+            // Write back using memcpy to avoid alignment issues
+            juce::uint32 lLittleEndian = juce::ByteOrder::swapIfBigEndian (l);
+            juce::uint32 rLittleEndian = juce::ByteOrder::swapIfBigEndian (r);
+            std::memcpy (rawData + i * 8, &lLittleEndian, sizeof(juce::uint32));
+            std::memcpy (rawData + i * 8 + 4, &rLittleEndian, sizeof(juce::uint32));
         }
 
         // Remove PKCS7 padding after decryption
