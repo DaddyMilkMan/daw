@@ -122,15 +122,16 @@ namespace {
             // Validate padding (PKCS7 validation)
             if (paddingLength > 0 && paddingLength <= 8)
             {
-                // Ensure we have enough data for the claimed padding length
-                if (paddingLength > processedData.getSize())
+                // Ensure we have enough data for the claimed padding length (cast to size_t for safe comparison)
+                if (static_cast<size_t>(paddingLength) > processedData.getSize())
                 {
                     DBG("SecureKeyStore: Invalid padding length exceeds data size");
                     return {};
                 }
                 
                 bool validPadding = true;
-                for (size_t i = processedData.getSize() - paddingLength; i < processedData.getSize(); ++i)
+                size_t startIdx = processedData.getSize() - static_cast<size_t>(paddingLength);
+                for (size_t i = startIdx; i < processedData.getSize(); ++i)
                 {
                     if (static_cast<uint8_t*>(processedData.getData())[i] != paddingLength)
                     {
@@ -140,7 +141,7 @@ namespace {
                 }
                 
                 if (validPadding)
-                    processedData.setSize (processedData.getSize() - paddingLength);
+                    processedData.setSize (processedData.getSize() - static_cast<size_t>(paddingLength));
                 else
                     return {}; // Invalid padding - decryption failed
             }
