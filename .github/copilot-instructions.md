@@ -22,10 +22,12 @@
 - Write docstrings for all functions and classes.
 
 ## C++ (30.7%)
-- Use RAII and smart pointers for resource management.
+- Use RAII and smart pointers (`std::unique_ptr`, `std::shared_ptr`) for resource management.
 - Minimize heap allocation in audio processing paths.
-- Use const-correctness, and mark functions noexcept where possible.
-- Write descriptive Doxygen-style comments.
+- Use const-correctness, and mark functions `noexcept` where possible.
+- Follow the naming conventions in `docs/CODING_CONVENTIONS.md` (e.g., `camelCase` for locals, `camelCase_` for members).
+- Use `jassert` to document invariants.
+- Write descriptive Doxygen-style comments (`///` or `/** */`).
 
 ## Build Scripts (Makefile, CMake, PowerShell)
 - Write portable, reproducible scripts for all supported platforms.
