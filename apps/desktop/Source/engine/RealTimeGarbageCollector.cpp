@@ -12,17 +12,29 @@
 
 namespace zenith {
 
-static RealTimeGarbageCollector* gInstance = nullptr;
+static std::atomic<RealTimeGarbageCollector*> gInstance{nullptr};
+static std::mutex gInstanceMutex;
 
 RealTimeGarbageCollector& RealTimeGarbageCollector::getInstance() {
-  if (gInstance == nullptr)
-      gInstance = new RealTimeGarbageCollector();
-  return *gInstance;
+  RealTimeGarbageCollector* instance = gInstance.load(std::memory_order_acquire);
+  if (instance == nullptr) {
+      std::lock_guard<std::mutex> lock(gInstanceMutex);
+      instance = gInstance.load(std::memory_order_relaxed);
+      if (instance == nullptr) {
+          instance = new RealTimeGarbageCollector();
+          gInstance.store(instance, std::memory_order_release);
+      }
+  }
+  return *instance;
 }
 
 void RealTimeGarbageCollector::deleteInstance() {
-    delete gInstance;
-    gInstance = nullptr;
+    std::lock_guard<std::mutex> lock(gInstanceMutex);
+    RealTimeGarbageCollector* instance = gInstance.load(std::memory_order_relaxed);
+    if (instance != nullptr) {
+        delete instance;
+        gInstance.store(nullptr, std::memory_order_release);
+    }
 }
 
 RealTimeGarbageCollector::RealTimeGarbageCollector() {

@@ -223,12 +223,15 @@ public:
    * @param sourceTrack Pointer to the source track (can be nullptr to disable)
    * @note Message thread only
    */
-  void setPluginSidechainSource(int pluginIndex, Track* sourceTrack);
+  void setPluginSidechainSource(int pluginIndex, std::shared_ptr<Track> sourceTrack);
   
   /**
-   * @brief Get the sidechain source track (simplified: assumes one source per track for now)
+   * @brief Get the sidechain source track (Thread-safe)
    */
-  Track* getSidechainSource() const { return sidechainSourceTrack_.load(); } 
+  std::shared_ptr<Track> getSidechainSource() const { 
+      const juce::SpinLock::ScopedLockType lock(sidechainLock_);
+      return sidechainSourceTrack_.lock(); 
+  } 
 
   //==============================================================================
   // Live MIDI Injection (Thread-safe)
@@ -401,8 +404,9 @@ protected:
   // Input routing
   std::atomic<int> inputChannelIndex{0};
   
-  // Sidechaining
-  std::atomic<Track*> sidechainSourceTrack_{nullptr};
+  // Sidechaining (Thread-safe with SpinLock)
+  mutable juce::SpinLock sidechainLock_;
+  std::weak_ptr<Track> sidechainSourceTrack_;
 
   //==============================================================================
   // Level monitoring (delegated to MixerChannel)

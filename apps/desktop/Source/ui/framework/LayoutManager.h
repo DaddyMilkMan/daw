@@ -48,6 +48,7 @@ struct PanelConfig {
   bool isCollapsed = false;  // Whether panel is collapsed
   bool isCollapsible = true; // Whether panel can be collapsed
   bool isVisible = true;     // Whether panel is visible
+  bool showHeader = true;    // Whether to show panel header
   int tabGroupIndex = -1;    // Tab group (-1 = not in tab group)
   juce::StringArray tabIds;  // IDs of tabs in this tab group
   juce::String activeTabId;  // Currently active tab ID

@@ -23,6 +23,8 @@
 #include "utils/PlatformSystemUtils.h"
 #include "ui/design-system/FontManager.h"
 #include "engine/ZenithLogger.h"
+#include "engine/RealTimeGarbageCollector.h"
+#include "engine/GrokServiceRegistry.h"
 
 
 //==============================================================================
@@ -71,7 +73,9 @@ public:
     DBG("FontManager initialized.");
 
     // Create main window
+    DBG("Creating MainWindow...");
     mainWindow = std::make_unique<::zenith::MainWindow>(getApplicationName());
+    DBG("MainWindow created.");
 
     DBG("Zenith DAW initialized successfully!");
   }
@@ -82,6 +86,10 @@ public:
 
     // Close main window (releases all resources)
     mainWindow.reset();
+
+    // Cleanup singletons and registries
+    ::zenith::GrokServiceRegistry::getInstance().clear();
+    ::zenith::RealTimeGarbageCollector::deleteInstance();
 
     ZENITH_LOG_INFO("ZenithApplication::shutdown() COMPLETE");
     DBG("Zenith DAW shutdown complete.");

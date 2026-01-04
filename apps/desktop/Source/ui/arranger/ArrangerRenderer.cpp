@@ -44,12 +44,12 @@ static constexpr float RULER_HEIGHT = 30.0f;
 static constexpr float TRACK_HEIGHT = 80.0f;
 static constexpr float TOP_MARGIN = SECTION_HEIGHT + RULER_HEIGHT;
 
-// Grid Visibility Constants
-static constexpr SkAlpha kBarHighlightAlphaTop = 15;
-static constexpr SkAlpha kBarHighlightAlphaBottom = 8;
-static constexpr SkAlpha kBarLineAlpha = 100;
+// Grid Visibility Constants (float 0.0-1.0 for withAlpha())
+static constexpr float kBarHighlightAlphaTop = 0.06f;
+static constexpr float kBarHighlightAlphaBottom = 0.03f;
+static constexpr float kBarLineAlpha = 0.4f;
 static constexpr float kBarLineWidth = 1.5f;
-static constexpr SkAlpha kBeatLineAlpha = 50;
+static constexpr float kBeatLineAlpha = 0.2f;
 static constexpr float kBeatLineWidth = 1.0f;
 
 //==============================================================================
@@ -65,6 +65,8 @@ ArrangerRenderer::ArrangerRenderer(ArrangerComponent& owner, Engine& engine, Pro
     , gridUtils_(gridUtils)
 {
 }
+
+ArrangerRenderer::~ArrangerRenderer() = default;
 
 //==============================================================================
 // Main Drawing Entry Point

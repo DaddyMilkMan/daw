@@ -327,10 +327,13 @@ void ZenithHubComponent::updateLayout() {
             sidebarRect.getX(), sidebarRect.getY(), sidebarRect.getWidth(), sidebarRect.getHeight());
 
     // Sidebar layout: New Project Button -> Templates (Collaborations REMOVED)
+    // Responsive Button Height (roughly 10% of sidebar, clamped)
+    float btnH = std::clamp(sidebarRect.getHeight() * 0.12f, 50.0f, 80.0f);
+    
     auto sidebarRows = ZenithLayout::begin()
                            .withFloatBounds(sidebarRect)
                            .withGap(24.0f)
-                           .addFlexItem(juce::FlexItem().withHeight(60.0f))   // New Project button
+                           .addFlexItem(juce::FlexItem().withHeight(btnH))    // Responsive New Project button
                            .addFlexItem(juce::FlexItem().withFlex(1.0f))      // Templates (gets all remaining space)
                            .layout(juce::FlexBox::Direction::column);
 
@@ -390,9 +393,15 @@ void ZenithHubComponent::updateLayout() {
   if (!recentGridBounds_.isEmpty()) {
     std::lock_guard<std::mutex> lock(projectsMutex_);
     float gridW = recentGridBounds_.width();
+    float gridH = recentGridBounds_.height();
     float cardGap = 16.0f;
     float pCardW = (gridW - cardGap) / 2.0f;
-    float pCardH = 110.0f;
+    
+    // Responsive Card Height: Try to fit 3 rows comfortably
+    // (Total Height - 2 gaps) / 3
+    float pCardH = (gridH - (cardGap * 2.0f)) / 3.0f;
+    // Clamp to reasonable limits
+    pCardH = std::clamp(pCardH, 90.0f, 130.0f);
 
     for (size_t i = 0; i < recentProjects_.size(); ++i) {
       int row = (int)i / 2;
@@ -407,8 +416,12 @@ void ZenithHubComponent::updateLayout() {
 
   // Update Template Cards (Larger with icons)
   if (!templatesContentBounds_.isEmpty()) {
-    float tCardH = 80.0f;  // Slightly smaller for better fit
+    float contentH = templatesContentBounds_.height();
     float cardGap = 12.0f;
+    
+    // Try to fit 3 items
+    float tCardH = (contentH - (cardGap * 2.0f)) / 3.0f;
+    tCardH = std::clamp(tCardH, 60.0f, 90.0f);
     
     for (size_t i = 0; i < templates_.size(); ++i) {
       float tx = templatesContentBounds_.fLeft;
@@ -421,6 +434,40 @@ void ZenithHubComponent::updateLayout() {
   if (greetingEditor_ && greetingEditor_->isVisible()) {
     showGreetingEditor(); // Re-layout editor
   }
+
+  // Calculate greeting bounds HERE (not in drawSkia) so clicking works immediately
+  float greetingPadding = 40.0f;
+  float greetingHeaderX = mainCardBounds_.fLeft + greetingPadding;
+  float greetingHeaderY = mainCardBounds_.fTop + greetingPadding + 60.0f;
+  float greetingSubX = greetingHeaderX;
+  float greetingSubY = greetingHeaderY + 32;
+
+  juce::String currentGreeting = greetingText_;
+  if (auto* auth = AuthenticationService::getInstance()) {
+      if (auth->isLoggedIn()) {
+          auto user = auth->getCurrentUser();
+          currentGreeting = "Welcome back, " + (user.displayName.isNotEmpty() ? user.displayName : user.email);
+      }
+  }
+
+  SkString greetingSkStr(currentGreeting.toRawUTF8());
+  SkRect greetingMeasure;
+  subFont_.measureText(greetingSkStr.c_str(), greetingSkStr.size(), SkTextEncoding::kUTF8, &greetingMeasure);
+
+  greetingTextBounds_ = SkRect::MakeXYWH(
+      greetingSubX,
+      greetingSubY - greetingMeasure.height(),
+      greetingMeasure.width(),
+      greetingMeasure.height() + 8.0f
+  );
+
+  constexpr float kGreetingIconSize = 16.0f;
+  greetingEditIconBounds_ = SkRect::MakeXYWH(
+      greetingSubX + greetingMeasure.width() + 10,
+      greetingSubY - greetingMeasure.height() / 2 - kGreetingIconSize / 2,
+      kGreetingIconSize,
+      kGreetingIconSize
+  );
 }
 
 void ZenithHubComponent::onAnimationTick(float deltaMs) {
@@ -432,17 +479,16 @@ void ZenithHubComponent::onAnimationTick(float deltaMs) {
       std::lock_guard<std::mutex> lock(projectsMutex_);
       if (isProfileMenuOpen_.load()) {
           menuSpring_.setTarget(1.0f);
-          menuSpring_.update(0.15f, 0.85f); // Use standard damping to prevent infinite oscillation
+          // FASTER spring physics for snappy menu (was 0.15, 0.85)
+          menuSpring_.update(0.5f, 0.75f);
       } else {
           menuSpring_.setTarget(0.0f);
-          menuSpring_.update(0.3f, 0.7f);   // Snappier exit
+          menuSpring_.update(0.6f, 0.7f);  // Snappier exit
       }
   }
   
-  // Only repaint if animations are active
-  if (alpha_.isAnimating() || !menuSpring_.isResting()) {
-      repaint();
-  }
+  // Always repaint when tick is called - coordinator throttles to 60fps
+  repaint();
 }
 
 bool ZenithHubComponent::isAnimating() const {
@@ -952,6 +998,9 @@ void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
   if (profileIconBounds_.contains(pt.fX, pt.fY)) {
     // Toggle profile menu
     isProfileMenuOpen_ = !isProfileMenuOpen_;
+    
+    // Wake coordinator for menu animation (throttled repaint)
+    zenith::animation::AnimationCoordinator::getInstance().wake();
     return;
   }
 

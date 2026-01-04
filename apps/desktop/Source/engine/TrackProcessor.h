@@ -58,13 +58,13 @@ public:
     juce::AudioBuffer<float>& getPluginBuffer() { return pluginBuffer; }
     juce::AudioBuffer<float>& getSidechainBuffer() { return sidechainBuffer; }
 
-    void setSidechainSource(int pluginIndex, Track* sourceTrack) {
+    void setSidechainSource(int pluginIndex, std::shared_ptr<Track> sourceTrack) {
         sidechainSources[pluginIndex] = sourceTrack;
     } 
 
-    Track* getSidechainSource(int pluginIndex) const {
+    std::shared_ptr<Track> getSidechainSource(int pluginIndex) const {
         auto it = sidechainSources.find(pluginIndex);
-        return it != sidechainSources.end() ? it->second : nullptr;
+        return it != sidechainSources.end() ? it->second.lock() : nullptr;
     }
 
 private:
@@ -79,7 +79,7 @@ private:
     double currentSampleRate = 48000.0;
     int currentBlockSize = 512;
 
-    std::unordered_map<int, Track*> sidechainSources;
+    std::unordered_map<int, std::weak_ptr<Track>> sidechainSources;
     std::vector<juce::AudioBuffer<float>*> emptyAux_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackProcessor)

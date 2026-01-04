@@ -521,8 +521,11 @@ void MetricsChart::drawTooltip(juce::Graphics& g) {
     g.setFont(tooltipFont);
     
     auto getLayoutWidth = [&](const juce::String& t) {
+        juce::AttributedString as;
+        as.setText(t);
+        as.setFont(tooltipFont);
         juce::TextLayout tl;
-        tl.createLayout(tooltipFont, t);
+        tl.createLayout(as, 500.0f); // max width for measurement
         return tl.getWidth();
     };
 
@@ -672,8 +675,11 @@ void MetricsChart::drawLegend(juce::Graphics& g) {
     
     float maxTextWidth = 0.0f;
     for (const auto& [name, series] : series_) {
+        juce::AttributedString as;
+        as.setText(name);
+        as.setFont(legendFont);
         juce::TextLayout tl;
-        tl.createLayout(legendFont, name);
+        tl.createLayout(as, 500.0f); // max width for measurement
         maxTextWidth = juce::jmax(maxTextWidth, tl.getWidth());
     }
     

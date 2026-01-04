@@ -220,6 +220,7 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, CommandAPI &api, Projec
   leftCfg.minSize = 200;
   leftCfg.flex = 0; 
   leftCfg.isCollapsible = true;
+  leftCfg.showHeader = false; // Hide header for sidebar container
 
   panelContainer_->addPanel(std::move(leftContainer), leftCfg);
 
@@ -277,6 +278,7 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, CommandAPI &api, Projec
   viewsCfg.name = "Main View";
   viewsCfg.flex = 1.0f;
   viewsCfg.minSize = 300;
+  viewsCfg.showHeader = false; // Hide header for main content area
 
   centerContainer->addPanel(std::move(switcher), viewsCfg);
 
@@ -321,6 +323,7 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, CommandAPI &api, Projec
   centerCfg.name = "Center";
   centerCfg.flex = 1.0f;
   centerCfg.minSize = 400;
+  centerCfg.showHeader = false; // Hide header for center container
 
   panelContainer_->addPanel(std::move(centerContainer), centerCfg);
 
@@ -360,6 +363,7 @@ MainLayoutComponent::~MainLayoutComponent() = default;
 void MainLayoutComponent::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
   SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
+  
   GlassmorphicPanel::fillBackground(canvas, skBounds);
 
   if (panelContainer_) {

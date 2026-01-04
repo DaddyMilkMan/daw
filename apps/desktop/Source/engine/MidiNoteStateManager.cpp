@@ -1,10 +1,13 @@
 #include "MidiNoteStateManager.h"
+#include "EngineConstants.h"
 #include "ProjectState.h"
 #include "ZenithLogger.h"
 #include <algorithm>
 #include <random>
 
 namespace zenith {
+
+using namespace zenith::constants;
 
 MidiNoteStateManager::MidiNoteStateManager(ProjectState& projectState)
     : projectState_(projectState)
@@ -163,7 +166,7 @@ void MidiNoteStateManager::legatoNotes(const juce::String& clipId, bool adjustOv
     if (notes.isEmpty()) return;
 
     std::sort(notes.begin(), notes.end(), [](const zenith::MidiNote& a, const zenith::MidiNote& b) {
-        if (std::abs(a.startBeats - b.startBeats) < 0.0001)
+        if (std::abs(a.startBeats - b.startBeats) < kEpsilonTime)
             return a.pitch < b.pitch;
         return a.startBeats < b.startBeats;
     });

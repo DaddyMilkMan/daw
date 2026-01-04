@@ -120,6 +120,9 @@ void BrowserPanel::drawSkia(SkCanvas *canvas) {
     SkPaint fill; fill.setColor(zenith::design::colors::ACCENT_PRIMARY);
     canvas->drawRect(SkRect::MakeXYWH(0, y, (float)getWidth() * prog, h), fill);
   }
+  
+  // Draw child components (SearchBar, FilterBar, ListView, etc.)
+  drawChildren(canvas);
 }
 
 void BrowserPanel::resized() {

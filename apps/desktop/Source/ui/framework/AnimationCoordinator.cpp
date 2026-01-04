@@ -119,6 +119,7 @@ void AnimationCoordinator::setPriority(AnimationListener* listener, Priority pri
 void AnimationCoordinator::wake() {
     idleTickCount_ = 0;
     if (!isTimerRunning() && juce::MessageManager::getInstanceWithoutCreating() != nullptr) {
+        lastTickTimeMs_ = juce::Time::getMillisecondCounterHiRes(); // Reset clock to prevent jump
         startTimerHz(60);
     }
 }

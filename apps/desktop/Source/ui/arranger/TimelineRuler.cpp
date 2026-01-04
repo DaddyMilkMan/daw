@@ -442,7 +442,7 @@ void TimelineRuler::drawBeatMarkers(juce::Graphics &g,
 
       // Measure number - clean and minimal
       juce::String text = juce::String(measure);
-      juce::Font monoFont(juce::Font::getDefaultMonospacedFontName(), 11.0f, juce::Font::plain);
+      juce::Font monoFont(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), 11.0f, juce::Font::plain));
       g.setFont(monoFont);
 
       g.setColour(isHoveredMeasure ? juce::Colour(0xff0A84FF).withAlpha(0.9f)
@@ -485,7 +485,7 @@ void TimelineRuler::drawTooltip(juce::Graphics &g) {
   juce::String timeText = formatTimePosition(beatAtMouse);
 
   // Tooltip styling - Apple-inspired
-  juce::Font tooltipFont(juce::Font::getDefaultMonospacedFontName(), 11.0f, juce::Font::plain);
+  juce::Font tooltipFont(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), 11.0f, juce::Font::plain));
   
   juce::GlyphArrangement ga;
   ga.addFittedText(tooltipFont, timeText, 0.0f, 0.0f, 1000.0f, 20.0f, juce::Justification::left, 1);

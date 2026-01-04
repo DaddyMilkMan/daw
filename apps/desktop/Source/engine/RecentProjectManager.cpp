@@ -171,6 +171,10 @@ RecentProjectManager::getRecentProjects(bool pruneInvalid) {
   return projects_;
 }
 
+std::vector<RecentProjectEntry> RecentProjectManager::getRecentProjectsFast() const {
+  return projects_;
+}
+
 const RecentProjectEntry *RecentProjectManager::getProject(int index) const {
   if (index >= 0 && index < static_cast<int>(projects_.size())) {
     return &projects_[static_cast<size_t>(index)];
