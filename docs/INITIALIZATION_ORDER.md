@@ -29,9 +29,10 @@ public:
     MyManager(const MyManager&) = delete;
     MyManager& operator=(const MyManager&) = delete;
     
+    ~MyManager() { /* Cleanup here */ }
+    
 private:
     MyManager() { /* Initialize here */ }
-    ~MyManager() { /* Cleanup here */ }
 };
 ```
 
