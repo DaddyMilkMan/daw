@@ -14,6 +14,7 @@
 #include <fstream>
 #include <vector>
 #include <cstring>
+#include <limits>
 
 namespace zenith {
 
@@ -56,6 +57,13 @@ namespace {
         auto keyStr = getMachineKey();
         juce::MemoryBlock keyData (keyStr.toRawUTF8(), keyStr.getNumBytesAsUTF8());
         
+        // Validate key size fits in int (JUCE BlowFish API requirement)
+        if (keyData.getSize() > static_cast<size_t>(std::numeric_limits<int>::max()))
+        {
+            DBG("SecureKeyStore: Key size too large");
+            return {};
+        }
+        
         // Prepare data with proper PKCS7 padding
         juce::MemoryBlock processedData;
         processedData.append (data, size);
@@ -85,9 +93,9 @@ namespace {
 
         // Perform in-place encryption/decryption
         auto* rawData = static_cast<juce::uint8*> (processedData.getData());
-        int numBlocks = (int)processedData.getSize() / 8;
+        size_t numBlocks = processedData.getSize() / 8;
 
-        for (int i = 0; i < numBlocks; ++i)
+        for (size_t i = 0; i < numBlocks; ++i)
         {
             // Read as little-endian integers
             juce::uint32 l = juce::ByteOrder::littleEndianInt (rawData + i * 8);
