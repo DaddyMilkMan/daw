@@ -101,12 +101,6 @@ void ArrangerTrackComponent::drawSkia(SkCanvas *canvas) {
 }
 
 // Header handled by TrackHeaderComponent
-/*
-void ArrangerTrackComponent::drawTrackHeader(SkCanvas *canvas,
-                                             const SkRect &bounds) {
-  // ...
-}
-*/
 
 void ArrangerTrackComponent::drawTrackBackground(SkCanvas *canvas,
                                                  const SkRect &bounds) {

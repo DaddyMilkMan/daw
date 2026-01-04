@@ -54,7 +54,8 @@ public:
   void initialise(const juce::String &commandLine) override {
     if (commandLine.contains("--render-test")) {
         DBG("Running verification render test mode...");
-        ::zenith::ArrangerRenderer::runRenderTest("/home/micah/.gemini/antigravity/brain/6610f9c0-632b-4566-8b20-8bfc371ad1f0/clip_verification.png");
+        auto testOutputFile = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("clip_verification.png");
+        ::zenith::ArrangerRenderer::runRenderTest(testOutputFile.getFullPathName().toRawUTF8());
         quit();
         return;
     }
