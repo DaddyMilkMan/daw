@@ -239,11 +239,11 @@ void TransportBar::resized() {
   auto area = getLocalBounds();
   
   // Layout Constants
-  const int lcdWidth = 380;
-  const int buttonSize = 38;
-  const int smallButtonSize = 32;
-  const int spacing = 8;
-  const int groupSpacing = 24;
+  constexpr int lcdWidth = 380;
+  constexpr int buttonSize = 38;
+  constexpr int smallButtonSize = 32;
+  constexpr int spacing = 8;
+  constexpr int groupSpacing = 24;
   
   // Manual Layout: LCD-Centered Design
   // The LCD is the anchor point in the center, with transport controls to the left
