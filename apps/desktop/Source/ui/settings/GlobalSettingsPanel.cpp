@@ -100,6 +100,8 @@ public:
     }
     
     void updateLatencyDisplay() {
+        if (!latencyLabel) return;
+        
         if (auto* device = deviceManager.getCurrentAudioDevice()) {
             double sampleRate = device->getCurrentSampleRate();
             int latencySamples = device->getOutputLatencyInSamples() + device->getInputLatencyInSamples();
