@@ -78,6 +78,9 @@ __pycache__/
 *.pyd
 .Python
 
+# 9. Security Scanning Artifacts
+_codeql_detected_source_root
+
 # 9. Images in root (stray artifacts)
 /*.png
 /*.jpg
