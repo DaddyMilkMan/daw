@@ -245,7 +245,7 @@ void MainComponent::handleAnimationTimer() {
   }
   
   // Increment tick counter
-  tickCount++;
+  ++tickCount;
   
   // Reduced logging - every 5 minutes
   if (tickCount % LOGGING_INTERVAL_5_MINUTES == 0) {
@@ -296,7 +296,7 @@ void MainComponent::drawSkiaContent(SkCanvas *canvas) {
   
   // Diagnostic logging (limited to avoid performance impact)
   static int drawCount = 0;
-  drawCount++;
+  ++drawCount;
   if (drawCount % LOGGING_INTERVAL_5_SECONDS == 0) {
       bool hubVis = (hub && hub->isVisible());
       ZENITH_LOG_INFO(juce::String("drawSkiaContent: Hub Visible = ") + (hubVis ? "YES" : "NO"));
@@ -322,7 +322,7 @@ void MainComponent::drawSkiaContent(SkCanvas *canvas) {
       // --- MAIN DAW MODE ---
       // Diagnostic logging (limited to avoid performance impact)
       static int dawDrawCount = 0;
-      dawDrawCount++;
+      ++dawDrawCount;
       if (dawDrawCount % LOGGING_INTERVAL_5_SECONDS == 0) {
           ZENITH_LOG_INFO(juce::String::formatted("[drawSkiaContent] MAIN DAW MODE - mainLayout=%s visible=%s bounds=%d,%d,%dx%d",
               mainLayout ? "EXISTS" : "NULL",
@@ -464,7 +464,7 @@ void MainComponent::resized() {
   
   // Hub Mode check - log only occasionally to avoid spam during resize
   static int resizeCount = 0;
-  resizeCount++;
+  ++resizeCount;
   if (resizeCount % RESIZE_LOGGING_INTERVAL == 0) {
       bool isHubVisible = hubComponent && hubComponent->isVisible();
       ZENITH_LOG_INFO(juce::String::formatted("MainComponent::resized() - bounds: %d x %d, isHubVisible: %s", 
