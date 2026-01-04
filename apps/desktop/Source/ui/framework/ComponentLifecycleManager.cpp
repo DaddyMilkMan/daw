@@ -527,11 +527,6 @@ LifecycleComponent::~LifecycleComponent() {
   ComponentLifecycleManager::getInstance().unregisterComponent(this);
 }
 
-void LifecycleComponent::paint(juce::Graphics &g) {
-  juce::ignoreUnused(g);
-  // Skia components handle their own painting
-}
-
 void LifecycleComponent::resized() {
   // Notify lifecycle manager of update
   ComponentLifecycleManager::getInstance().updateComponent(this);
