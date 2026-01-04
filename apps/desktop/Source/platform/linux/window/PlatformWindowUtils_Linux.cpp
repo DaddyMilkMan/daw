@@ -8,10 +8,12 @@
 */
 
 #include "../../../ui/framework/PlatformWindowUtils.h"
+
 #include <include/core/SkRefCnt.h>
 #include <include/gpu/ganesh/gl/GrGLAssembleInterface.h>
 #include <include/gpu/ganesh/gl/GrGLInterface.h>
 #include <juce_opengl/juce_opengl.h>
+
 #include "../../../engine/ZenithLogger.h"
 
 #ifdef __linux__

@@ -19,12 +19,13 @@
 #pragma once
 
 #include <array>
+#include <mutex>
+
 #include <include/core/SkFont.h>
 #include <include/core/SkFontMgr.h>
 #include <include/core/SkRefCnt.h>
 #include <include/core/SkTypeface.h>
 #include <juce_core/juce_core.h>
-#include <mutex>
 
 namespace zenith {
 namespace design {
