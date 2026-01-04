@@ -100,7 +100,11 @@ public:
     }
     
     void updateLatencyDisplay() {
-        if (!latencyLabel) return;
+        if (!latencyLabel)
+        {
+            juce::Logger::writeToLog("WARNING: AudioSettingsPanel::updateLatencyDisplay - latencyLabel is null. UI will not be updated.");
+            return;
+        }
         
         if (auto* device = deviceManager.getCurrentAudioDevice()) {
             double sampleRate = device->getCurrentSampleRate();
