@@ -884,11 +884,19 @@ public:
         bgPaint.setColor(SK_ColorBLUE);
         canvas->drawRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()), bgPaint);
         
-        // Draw text
+        // Draw text centered (Note: drawString uses baseline, not vertical center)
         SkFont font(nullptr, 14.0f);
         SkPaint textPaint;
         textPaint.setColor(SK_ColorWHITE);
-        canvas->drawString("Hello", bounds.getWidth() / 2, bounds.getHeight() / 2, font, textPaint);
+        
+        // For proper vertical centering, account for font metrics
+        SkFontMetrics metrics;
+        font.getMetrics(&metrics);
+        float textX = bounds.getWidth() / 2;
+        float textY = bounds.getHeight() / 2 - (metrics.fAscent + metrics.fDescent) / 2.0f;
+        
+        textPaint.setTextAlign(SkPaint::kCenter_Align);  // Center horizontally
+        canvas->drawString("Hello", textX, textY, font, textPaint);
     }
     
     void paint(juce::Graphics& g) override {
