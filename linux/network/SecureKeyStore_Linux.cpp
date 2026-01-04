@@ -53,55 +53,34 @@ namespace {
             return {};
 
         auto keyStr = getMachineKey();
-        // Hash the key to get a fixed length key for Blowfish (max 72 bytes usually, typically 56 or less is standard, but JUCE Blowfish handles up to 448 bits / 56 bytes)
-        // We'll use SHA-256 and truncate/use the first 56 bytes (or less).
-        // Actually SHA-256 is 32 bytes (256 bits). That fits perfectly in Blowfish key range (32-448 bits).
-        
-        // However, juce::BlowFish doesn't seem to have a SHA helper built-in easily accessible without `juce_cryptography` module which might not include SHA.
-        // Wait, juce_cryptography has SHA256. Assuming it's available.
-        // If not, we can just use the raw bytes of the string, maybe hashed with a simple hash if we want to be fancy, but raw bytes are fine if long enough.
-        // The machine-id is usually 32 hex chars (32 bytes effectively if hex decoded, or 32 chars).
-        
         juce::MemoryBlock keyData (keyStr.toRawUTF8(), keyStr.getNumBytesAsUTF8());
         
-        // Pad data to 8 bytes for Blowfish
+        // Prepare data with proper PKCS7 padding
         juce::MemoryBlock processedData;
         processedData.append (data, size);
 
         if (encrypt)
         {
-            // PKCS7-like padding or just simple null padding if we store size separately?
-            // Simplest for now: ensure multiple of 8.
-            int paddingParams = 8 - (processedData.getSize() % 8);
-            if (paddingParams < 8) // If it's 8, it's already aligned, but standard PKCS7 adds a full block.
-            {
-                 // We will just pad with zeros for simplicity as we are serializing var which stops at valid end usually?
-                 // Actually `juce::var` binary format ... 
-                 // Let's rely on storing the actual data size or just trusting the var parser to stop.
-                 // Better: Store size as first 4 bytes? 
-                 // Even better: Use PKCS7 padding where the value of padding byte is the number of padding bytes.
-                 processedData.ensureSize (processedData.getSize() + paddingParams);
-                 for (int i = 0; i < paddingParams; ++i)
-                     processedData.append (&paddingParams, 1); // Not quite PKCS7 correct logic if we don't start from 1, but close enough for self-contained. 
-                     // Wait, standard PKCS7: if 8 bytes needed, add 8 bytes of value 8. If 1 byte needed, 1 byte of value 1.
-            }
-            else
-            {
-                // If aligned, add a full block of 8s to distinguish from data ending in valid bytes?
-                // Let's Keep It Simple: Just pad with zeros to align to 8 bytes.
-                // Upon decryption, we try to read `var`. If it has trailing zeros, `var::readFromStream` usually works if it's based on internal structure, 
-                // but `MemoryBlock::fromBase64String` etc might be better.
-                // Let's stick to simple multiple of 8 size.
-                if (processedData.getSize() % 8 != 0)
-                    processedData.setSize (processedData.getSize() + (8 - (processedData.getSize() % 8)), true);
-            }
+            // Implement proper PKCS7 padding
+            // Calculate padding needed (always add padding, even if aligned)
+            size_t remainder = processedData.getSize() % 8;
+            uint8_t paddingLength = static_cast<uint8_t>(8 - remainder);
+            
+            // Add PKCS7 padding bytes (each byte has value equal to padding length)
+            for (uint8_t i = 0; i < paddingLength; ++i)
+                processedData.append (&paddingLength, 1);
+        }
+
+        // Validate size is multiple of 8
+        if (processedData.getSize() % 8 != 0)
+        {
+            jassertfalse; // Should never happen with proper padding
+            return {};
         }
 
         juce::BlowFish bf (keyData.getData(), (int)keyData.getSize());
 
         // Perform in-place encryption/decryption
-        // Blowfish processes 2x 32bit ints (8 bytes) at a time.
-        
         auto* rawData = static_cast<juce::uint8*> (processedData.getData());
         int numBlocks = (int)processedData.getSize() / 8;
 
@@ -115,17 +94,38 @@ namespace {
             else
                 bf.decrypt (l, r);
 
-            // Write back
-            // Note: BlowFish encrypt/decrypt takes reference and modifies.
-            // Wait, standard JUCE `BlowFish::encrypt(uint32&, uint32&)` handles endianness? 
-            // The JUCE docs say "The byte ordering of the 32-bit integers is irrelevant...".
-            // So we just need to pack/unpack correctly.
+            // Write back using safe byte order functions to avoid alignment issues
+            juce::ByteOrder::littleEndianInt (rawData + i * 8, l);
+            juce::ByteOrder::littleEndianInt (rawData + i * 8 + 4, r);
+        }
+
+        // Remove PKCS7 padding after decryption
+        if (!encrypt && processedData.getSize() > 0)
+        {
+            uint8_t paddingLength = static_cast<uint8_t*>(processedData.getData())[processedData.getSize() - 1];
             
-            // Actually, we must be careful. `juce::BlowFish` modifies the uint32s.
-            // When writing back to memory, we should consistent.
-            
-            *(juce::uint32*)(rawData + i * 8) = l;
-            *(juce::uint32*)(rawData + i * 8 + 4) = r;
+            // Validate padding (PKCS7 validation)
+            if (paddingLength > 0 && paddingLength <= 8)
+            {
+                bool validPadding = true;
+                for (size_t i = processedData.getSize() - paddingLength; i < processedData.getSize(); ++i)
+                {
+                    if (static_cast<uint8_t*>(processedData.getData())[i] != paddingLength)
+                    {
+                        validPadding = false;
+                        break;
+                    }
+                }
+                
+                if (validPadding)
+                    processedData.setSize (processedData.getSize() - paddingLength);
+                else
+                    return {}; // Invalid padding - decryption failed
+            }
+            else
+            {
+                return {}; // Invalid padding length
+            }
         }
 
         return processedData;
@@ -139,12 +139,23 @@ namespace {
             return std::make_unique<juce::DynamicObject>();
 
         juce::MemoryBlock encryptedData;
-        file.loadFileAsData (encryptedData);
+        if (!file.loadFileAsData (encryptedData))
+        {
+            DBG("SecureKeyStore: Failed to load keystore file");
+            return std::make_unique<juce::DynamicObject>();
+        }
 
         if (encryptedData.getSize() == 0)
              return std::make_unique<juce::DynamicObject>();
 
         auto decryptedData = performCrypto (encryptedData.getData(), encryptedData.getSize(), false);
+        
+        // Check if decryption failed
+        if (decryptedData.getSize() == 0)
+        {
+            DBG("SecureKeyStore: Decryption failed or invalid padding");
+            return std::make_unique<juce::DynamicObject>();
+        }
         
         // Try to read as var
         juce::MemoryInputStream input (decryptedData, false);
@@ -159,6 +170,7 @@ namespace {
         }
             
         // If failed or not an object, return empty
+        DBG("SecureKeyStore: Failed to parse decrypted data as DynamicObject");
         return std::make_unique<juce::DynamicObject>();
     }
 
@@ -172,16 +184,33 @@ namespace {
         propsVar.writeToStream (mos);
 
         auto encrypted = performCrypto (mos.getData(), mos.getDataSize(), true);
+        
+        // Check if encryption failed
+        if (encrypted.getSize() == 0)
+        {
+            DBG("SecureKeyStore: Encryption failed");
+            return;
+        }
 
         auto file = getKeystoreFile();
         if (!file.getParentDirectory().exists())
-            file.getParentDirectory().createDirectory();
+        {
+            if (!file.getParentDirectory().createDirectory())
+            {
+                DBG("SecureKeyStore: Failed to create keystore directory");
+                return;
+            }
+        }
 
         // Write
         if (file.replaceWithData (encrypted.getData(), encrypted.getSize()))
         {
             // Set permissions to 0600
             chmod (file.getFullPathName().toRawUTF8(), S_IRUSR | S_IWUSR);
+        }
+        else
+        {
+            DBG("SecureKeyStore: Failed to write keystore file");
         }
     }
 

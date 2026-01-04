@@ -44,12 +44,23 @@ npm-debug.log
 
 # 6. Build Logs and Error Files
 build_errors*.txt
+build_error*.txt
 build_log*.txt
 build_verbose.txt
 cmake_error*.log
 msbuild_*.log
 *.log
 debug_log.txt
+compile_commands.json
+full_test_trace.txt
+test_full_log.txt
+recording_test_log.txt
+server_log.txt
+daw_gui_log*.txt
+cmake_log.txt
+cmake_*.txt
+compile_result.txt
+output.txt
 
 # 7. Backup Files
 *.bak
