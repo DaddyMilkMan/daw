@@ -88,16 +88,17 @@ public:
         canvas->drawRect(SkRect::MakeWH(100, 100), paint);
     }
     
-    // JUCE paint() is a no-op for Skia components
+    // JUCE paint() triggers repaint requests to parent hierarchy
     void paint(juce::Graphics& g) override {
-        // Empty - rendering handled by drawSkia()
+        // Triggers repaint request to SkiaMainWindowIntegration
+        SkiaComponent::paint(g);
     }
 };
 ```
 
 ### 4. No JUCE Graphics Rendering
 - **juce::Graphics is NOT used** for any UI rendering
-- `paint(juce::Graphics& g)` methods are empty stubs
+- `paint(juce::Graphics& g)` methods trigger repaint requests up the hierarchy
 - **ZenithLookAndFeel** is deprecated - kept only for legacy compatibility
 - Standard JUCE components (juce::TextButton, juce::Slider) should be replaced with Skia equivalents
 
@@ -900,7 +901,8 @@ public:
     }
     
     void paint(juce::Graphics& g) override {
-        // Empty - rendering handled by drawSkia()
+        // Triggers repaint request up the hierarchy
+        SkiaComponent::paint(g);
     }
 };
 ```

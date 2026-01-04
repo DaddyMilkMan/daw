@@ -10,7 +10,7 @@ Migrate Zenith DAW to use **Skia exclusively** for all UI rendering, removing JU
 The codebase analysis revealed that **Skia rendering was already the primary path**:
 - All custom UI components inherit from `SkiaComponent`
 - Rendering happens via `drawSkia(SkCanvas*)` method
-- JUCE's `paint(juce::Graphics&)` methods are empty stubs
+- JUCE's `paint(juce::Graphics&)` methods trigger repaint requests
 - Main rendering flow goes through `SkiaMainWindowIntegration`
 
 **Action Taken:** Documented and enforced this architecture formally.
@@ -73,7 +73,7 @@ endif()
 | Aspect | Before | After |
 |--------|--------|-------|
 | Rendering Engine | Hybrid JUCE/Skia | 100% Skia |
-| paint() Methods | Some active, some stub | All empty stubs |
+| paint() Methods | Some active, some stub | Trigger repaint requests |
 | Skia Requirement | Optional | **REQUIRED** |
 | Documentation | Basic | Comprehensive |
 | Migration Guide | None | Complete with examples |
@@ -148,7 +148,7 @@ cmake -B build -DZENITH_ENABLE_SKIA=OFF  # ❌ FATAL_ERROR
 
 All objectives achieved:
 
-- ✅ **Refactored JUCE rendering** - All paint() methods are empty stubs
+- ✅ **Refactored JUCE rendering** - All paint() methods trigger repaint requests
 - ✅ **Removed JUCE from rendering paths** - Only Skia is used for UI
 - ✅ **JUCE for non-rendering only** - Audio, windowing, events
 - ✅ **Skia properly wired** - Via vcpkg, SkiaManualIntegration.cmake

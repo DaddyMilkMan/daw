@@ -21,7 +21,7 @@ The Zenith DAW codebase has been successfully configured to use **Skia exclusive
 ### 2. Code Updates
 
 **apps/desktop/Source/ui/framework/SkiaComponent.h/cpp:**
-- Added clear documentation that paint() is an empty stub
+- Added clear documentation that paint() triggers repaint requests
 - Emphasized that drawSkia() is the only rendering method
 - Added detailed comments about Skia-first architecture
 
@@ -76,7 +76,7 @@ The Zenith DAW codebase has been successfully configured to use **Skia exclusive
 ## Verification
 
 ### What Was Verified
-✅ All SkiaComponent paint() methods are empty stubs  
+✅ All SkiaComponent paint() methods trigger repaint requests  
 ✅ All rendering goes through drawSkia(SkCanvas*)  
 ✅ Documentation clearly states Skia-only architecture  
 ✅ CMakeLists.txt enforces Skia requirement  
