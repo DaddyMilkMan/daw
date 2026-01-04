@@ -66,7 +66,11 @@ SkiaOpenGLRenderer::SkiaOpenGLRenderer(juce::Component *componentToAttach)
 }
 
 void SkiaOpenGLRenderer::scheduleAttachmentCheck() {
-  if (!targetComponent_) return;  // Validate component exists
+  if (!targetComponent_)
+  {
+      juce::Logger::writeToLog("CRITICAL: SkiaOpenGLRenderer::scheduleAttachmentCheck called with null targetComponent. Skia rendering will not be initialized.");
+      return;
+  }
   
   juce::Component* comp = targetComponent_;
   juce::OpenGLContext* ctx = &openGLContext_;
