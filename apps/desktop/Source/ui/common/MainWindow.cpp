@@ -30,6 +30,15 @@
 namespace zenith {
 
 //==============================================================================
+// Constants
+//==============================================================================
+
+// Logging intervals to reduce log spam (in frames at 60fps)
+constexpr int LOGGING_INTERVAL_5_SECONDS = 300;    // 5 seconds at 60fps
+constexpr int LOGGING_INTERVAL_5_MINUTES = 18000;  // 5 minutes at 60fps (300 seconds * 60 frames)
+constexpr int RESIZE_LOGGING_INTERVAL = 10;        // Log every 10th resize
+
+//==============================================================================
 // MainComponent Implementation
 //==============================================================================
 
@@ -233,8 +242,8 @@ void MainComponent::handleAnimationTimer() {
       hierarchyLogged = true;
   }
   
-  // Reduced logging - only every 5 minutes at 60fps
-  if (tickCount++ % 18000 == 0) {
+  // Reduced logging - only every 5 minutes
+  if (tickCount++ % LOGGING_INTERVAL_5_MINUTES == 0) {
       ZENITH_LOG_INFO("Animation timer tick: " + std::to_string(tickCount));
   }
   
@@ -280,9 +289,9 @@ void MainComponent::drawSkiaContent(SkCanvas *canvas) {
   
   auto* hub = hubComponent.get();
   
-  // LOGGING (Very limited to avoid performance impact)
+  // Diagnostic logging (limited to avoid performance impact)
   static int drawCount = 0;
-  if (drawCount++ % 300 == 0) {  // Log every 5 seconds at 60fps
+  if (drawCount++ % LOGGING_INTERVAL_5_SECONDS == 0) {
       bool hubVis = (hub && hub->isVisible());
       ZENITH_LOG_INFO(juce::String("drawSkiaContent: Hub Visible = ") + (hubVis ? "YES" : "NO"));
   }
@@ -307,7 +316,7 @@ void MainComponent::drawSkiaContent(SkCanvas *canvas) {
       // --- MAIN DAW MODE ---
       // Diagnostic logging (limited to avoid performance impact)
       static int dawDrawCount = 0;
-      if (dawDrawCount++ % 300 == 0) {  // Log every 5 seconds at 60fps
+      if (dawDrawCount++ % LOGGING_INTERVAL_5_SECONDS == 0) {
           ZENITH_LOG_INFO(juce::String::formatted("[drawSkiaContent] MAIN DAW MODE - mainLayout=%s visible=%s bounds=%d,%d,%dx%d",
               mainLayout ? "EXISTS" : "NULL",
               (mainLayout && mainLayout->isVisible()) ? "YES" : "NO",
@@ -448,7 +457,7 @@ void MainComponent::resized() {
   
   // Hub Mode check - log only occasionally to avoid spam during resize
   static int resizeCount = 0;
-  if (resizeCount++ % 10 == 0) {  // Log every 10th resize
+  if (resizeCount++ % RESIZE_LOGGING_INTERVAL == 0) {
       bool isHubVisible = hubComponent && hubComponent->isVisible();
       ZENITH_LOG_INFO(juce::String::formatted("MainComponent::resized() - bounds: %d x %d, isHubVisible: %s", 
                       bounds.getWidth(), bounds.getHeight(), isHubVisible ? "YES" : "NO"));
