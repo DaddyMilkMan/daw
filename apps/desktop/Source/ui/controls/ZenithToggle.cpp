@@ -14,7 +14,6 @@
 
 #include "ZenithSkia.h"
 #include <core/SkPath.h>
-#endif
 
 namespace zenith {
 
@@ -90,9 +89,6 @@ void ZenithToggle::drawSkia(SkCanvas *canvas) {
   if (label_.isNotEmpty()) {
     drawLabel(canvas);
   }
-#else
-  juce::ignoreUnused(canvas);
-#endif
 }
 
 

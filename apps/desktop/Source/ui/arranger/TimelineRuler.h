@@ -23,7 +23,6 @@
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
-#endif
 
 namespace zenith {
 
@@ -37,10 +36,6 @@ namespace zenith {
  * animations.
  */
 class TimelineRuler : public SkiaComponent
-#else
-class TimelineRuler : public juce::Component,
-                      public juce::Timer
-#endif
 {
 public:
   TimelineRuler();
@@ -49,13 +44,7 @@ public:
   //==========================================================================
   // View control
   //==========================================================================
-
-  /**
-   * @brief Set the visible range in beats
    * @param start Start beat
-   * @param length Number of beats visible
-   */
-  void setVisibleRange(double start, double length);
 
   /**
    * @brief Get pixels per beat ratio
@@ -92,15 +81,9 @@ public:
   //==========================================================================
 
   void drawSkia(SkCanvas *canvas) override;
-#else
-  void paint(juce::Graphics &g) override;
-#endif
   void resized() override;
   void mouseMove(const juce::MouseEvent &event) override;
   void mouseEnter(const juce::MouseEvent &event) override;
-  void mouseExit(const juce::MouseEvent &event) override;
-  void mouseDown(const juce::MouseEvent &event) override;
-  void mouseDrag(const juce::MouseEvent &event) override;
   void mouseUp(const juce::MouseEvent &event) override;
   void timerCallback() override;
 

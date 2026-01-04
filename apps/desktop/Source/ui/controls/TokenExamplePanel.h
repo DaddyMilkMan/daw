@@ -27,7 +27,6 @@
 #include <core/SkCanvas.h>
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
-#endif
 
 namespace zenith {
 
@@ -164,9 +163,6 @@ public:
 
     // Note: Child components (buttons, slider) render themselves via their
     // own drawSkia() methods, which also use design tokens.
-#else
-    juce::ignoreUnused(canvas);
-#endif
   }
 
   /**

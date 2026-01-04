@@ -25,7 +25,6 @@
 #include "ZenithSkia.h"
 #include <core/SkPath.h>
 
-#endif
 
 namespace zenith {
 
@@ -85,9 +84,6 @@ public:
     timeSigNum_ = num;
     timeSigDen_ = den;
     repaint();
-  }
-
-  // Callbacks
   std::function<void()> onPlayClicked;
   std::function<void()> onStopClicked;
   std::function<void()> onRecordClicked;
@@ -168,24 +164,5 @@ private:
 };
 
 #else // ZENITH_USE_SKIA
-
-class TransportBar : public juce::Component {
-public:
-    TransportBar() {}
-    ~TransportBar() override = default;
-    void paint(juce::Graphics& g) override {} // Handled by Skia
-    void setPlaying(bool) {}
-    void setRecording(bool) {}
-    void setTempo(double) {}
-    void setCPU(float) {}
-    void setPosition(double) {}
-    void setTimeSignature(int, int) {}
-    std::function<void()> onPlayClicked;
-    std::function<void()> onStopClicked;
-    std::function<void()> onRecordClicked;
-    std::function<void()> onViewToggleClicked;
-    std::function<void()> onSettingsClicked;
-};
-
 
 } // namespace zenith

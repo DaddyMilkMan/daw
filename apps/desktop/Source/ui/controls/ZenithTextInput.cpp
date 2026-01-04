@@ -21,7 +21,6 @@
 #include <core/SkMaskFilter.h>
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
-#endif
 
 namespace zenith {
 
@@ -279,9 +278,6 @@ void ZenithTextInput::drawSkia(SkCanvas *canvas) {
   if (label_.isNotEmpty()) {
     drawLabel(canvas);
   }
-#else
-  juce::ignoreUnused(canvas);
-#endif
 }
 
 

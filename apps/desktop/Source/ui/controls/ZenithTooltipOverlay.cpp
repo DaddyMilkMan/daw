@@ -13,7 +13,6 @@
 #include "ZenithTooltipOverlay.h"
 
 #include "ZenithSkia.h"
-#endif
 
 namespace zenith {
 
@@ -69,9 +68,6 @@ void ZenithTooltipOverlay::drawSkia(SkCanvas *canvas) {
 
   // 3. Tooltip card
   drawTooltipCard(canvas, targetRect);
-#else
-  juce::ignoreUnused(canvas);
-#endif
 }
 
 

@@ -111,9 +111,6 @@ void ZenithVisualizer::drawSkia(SkCanvas *canvas) {
                    bgPaint);
 
   drawSpectrum(canvas);
-#else
-  juce::ignoreUnused(canvas);
-#endif
 }
 
 

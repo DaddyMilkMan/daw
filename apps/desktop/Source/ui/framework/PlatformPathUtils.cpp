@@ -22,10 +22,6 @@ juce::File PlatformPathUtils::getDefaultConfigurationFile()
         return appDataDir.getChildFile("Application Support")
                         .getChildFile("ZenithDAW")
                         .getChildFile("ZenithConfig.json");
-    #else
-        return appDataDir.getChildFile("ZenithDAW")
-                        .getChildFile("ZenithConfig.json");
-    #endif
 }
 
 } // namespace zenith

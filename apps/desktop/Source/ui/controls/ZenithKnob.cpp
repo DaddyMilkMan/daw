@@ -19,7 +19,6 @@
 
 #include "ZenithSkia.h"
 #include <utils/SkTextUtils.h>
-#endif
 
 namespace zenith {
 
@@ -145,9 +144,6 @@ void ZenithKnob::drawSkia(SkCanvas *canvas) {
   if (showLabel_) {
     drawLabel(canvas, cx, cy, radius);
   }
-#else
-  juce::ignoreUnused(canvas);
-#endif
 }
 
 

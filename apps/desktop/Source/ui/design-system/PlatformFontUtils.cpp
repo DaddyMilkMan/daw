@@ -22,11 +22,6 @@
 #include <include/ports/SkFontMgr_fontconfig.h>
 #include <include/core/SkFontScanner.h>
 #include <include/ports/SkFontScanner_FreeType.h>
-#else
-#include <include/ports/SkFontMgr_empty.h>
-#endif
-
-#endif
 
 namespace zenith {
 namespace design {
@@ -40,11 +35,6 @@ sk_sp<SkFontMgr> PlatformFontUtils::createDefaultFontManager()
     return SkFontMgr_New_CoreText(nullptr);
 #elif defined(__linux__)
     return SkFontMgr_New_FontConfig(nullptr, SkFontScanner_Make_FreeType());
-#else
-    return SkFontMgr_New_Custom_Empty();
-#endif
-}
-#endif
 
 } // namespace design
 } // namespace zenith

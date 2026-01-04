@@ -463,13 +463,6 @@ MainWindow::MainWindow(const juce::String &name)
   
 #if JUCE_IOS || JUCE_ANDROID
   setFullScreen(true);
-#else
-  setResizable(true, false); // Resizable, NO Native Title Bar
-  setResizeLimits(800, 600, 4096, 2160); // Min and max sizes
-  
-  // Set the DocumentWindow size FIRST
-  setBounds(100, 100, defaultWidth, defaultHeight);
-#endif
 
   // Set the content component size before adding it
   mainComponent->setSize(defaultWidth - 2, defaultHeight - getTitleBarHeight() - 2);

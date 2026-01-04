@@ -20,9 +20,6 @@
 
 #if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
 #include "ZenithSkia.h"
-#else
-// SkColor, SkRect, SkPaint, SkCanvas are defined in ZenithDesignSystem.h
-#endif
 
 namespace zenith {
 

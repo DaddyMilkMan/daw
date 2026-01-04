@@ -13,7 +13,6 @@
 #include "ZenithModMatrix.h"
 
 #include "ZenithSkia.h"
-#endif
 
 namespace zenith {
 
@@ -109,9 +108,6 @@ void ZenithModMatrix::drawSkia(SkCanvas *canvas) {
                    paint);
 
   drawGrid(canvas);
-#else
-  juce::ignoreUnused(canvas);
-#endif
 }
 
 

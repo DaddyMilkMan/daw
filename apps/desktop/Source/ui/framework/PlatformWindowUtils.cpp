@@ -16,12 +16,10 @@
 #include <include/gpu/ganesh/gl/GrGLAssembleInterface.h>
 #include <include/gpu/ganesh/gl/GrGLDirectContext.h>
 #include <include/gpu/ganesh/gl/GrGLInterface.h>
-#endif
 
 // Linux/Unix specific includes for dlsym
 #if JUCE_LINUX || (JUCE_MAC && !defined(__OBJC__))
 #include <dlfcn.h>
-#endif
 
 namespace zenith {
 
@@ -62,9 +60,6 @@ PlatformWindowUtils::createNativeGLInterface(juce::OpenGLContext &context) {
              return nullptr;
 #elif JUCE_MAC
              return (GrGLFuncPtr)dlsym(RTLD_DEFAULT, name);
-#else
-             return nullptr;
-#endif
       });
 
   if (assembledInterface != nullptr) {
@@ -77,11 +72,5 @@ PlatformWindowUtils::createNativeGLInterface(juce::OpenGLContext &context) {
       "PlatformWindowUtils: CRITICAL - Failed to create ANY GL interface!");
   return nullptr;
 
-#else
-  ZENITH_LOG_ERROR("PlatformWindowUtils: ZENITH_USE_SKIA not defined!");
-  return nullptr;
-#endif
-}
-#endif
 
 } // namespace zenith
