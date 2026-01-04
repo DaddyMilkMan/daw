@@ -373,7 +373,7 @@ void RealTimeSuggestionEngine::removeOldSuggestions() {
     for (auto& suggestion : suggestions) {
         if (suggestion.isActive && (currentTime - suggestion.timestamp) > MAX_AGE) {
             suggestion.isActive = false;
-            suggestionCount.fetch_sub(1, std::memory_order_relaxed);
+            suggestionCount.fetch_sub(1, std::memory_order_acq_rel);
         }
     }
 }
