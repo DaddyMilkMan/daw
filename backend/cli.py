@@ -281,6 +281,7 @@ def status(ctx: typer.Context):
     typer.echo("=" * 50)
     
     # Try to query health endpoint if available
+    conn = None
     try:
         conn = http.client.HTTPConnection("127.0.0.1", config.health_port, timeout=2)
         conn.request("GET", "/health")
@@ -294,8 +295,6 @@ def status(ctx: typer.Context):
         else:
             typer.echo(f"\n⚠️  Health endpoint returned status {response.status}")
             log.warning("Health endpoint returned non-200", status=response.status)
-            
-        conn.close()
         
     except (ConnectionRefusedError, OSError) as e:
         typer.echo(f"\n❌ Health endpoint (:{config.health_port}): NOT REACHABLE")
@@ -304,6 +303,9 @@ def status(ctx: typer.Context):
     except Exception as e:
         typer.echo(f"\n⚠️  Could not query health endpoint: {e}")
         log.warning("Health endpoint query failed", error=str(e))
+    finally:
+        if conn:
+            conn.close()
     
     typer.echo()
     

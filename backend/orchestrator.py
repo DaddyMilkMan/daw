@@ -11,6 +11,8 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Callable, Dict, List, Optional
 
+from backend.config import ZenithConfig
+
 # Replaced structlog with standard logging
 log = logging.getLogger("zenith.orchestrator")
 
@@ -230,14 +232,13 @@ class ServiceManager:
     Thread-safe for concurrent operations through internal locking.
     """
     
-    def __init__(self, config):
+    def __init__(self, config: ZenithConfig):
         """
         Initialize the ServiceManager with the given configuration.
         
         Args:
             config: ZenithConfig instance containing service configuration
         """
-        from backend.config import ZenithConfig
         if not isinstance(config, ZenithConfig):
             raise TypeError(f"Expected ZenithConfig, got {type(config)}")
             
@@ -337,8 +338,6 @@ class ServiceManager:
         signal.signal(signal.SIGINT, handle_shutdown)
         signal.signal(signal.SIGTERM, handle_shutdown)
         
-        try:
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            handle_shutdown(signal.SIGINT, None)
+        # The loop will be interrupted by a signal, and the handler will exit the process
+        while True:
+            time.sleep(1)
