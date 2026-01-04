@@ -394,7 +394,7 @@ void RealTimeSuggestionEngine::dismissSuggestion(const char* id) {
     for (auto& suggestion : suggestions) {
         if (suggestion.isActive && std::strcmp(suggestion.id, id) == 0) {
             suggestion.isActive = false;
-            suggestionCount.fetch_sub(1, std::memory_order_relaxed);
+            suggestionCount.fetch_sub(1, std::memory_order_acq_rel);
             break;
         }
     }
