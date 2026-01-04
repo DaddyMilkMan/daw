@@ -78,10 +78,8 @@ void MacroToolbar::resized() {
 }
 
 void MacroToolbar::paint(juce::Graphics &g) {
-  // Minimal fallback if Skia not enabled
-  g.setOpacity(currentOpacity_);
-  g.setColour(juce::Colours::black.withAlpha(0.5f));
-  g.fillRoundedRectangle(getLocalBounds().toFloat(), 24.0f);
+  // Skia rendering used - see drawSkia()
+  juce::ignoreUnused(g);
 }
 
 void MacroToolbar::drawSkia(SkCanvas *canvas) {

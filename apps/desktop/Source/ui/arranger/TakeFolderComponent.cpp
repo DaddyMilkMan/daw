@@ -69,9 +69,8 @@ void TakeFolderComponent::setHeightPerLane(int height) {
 //==============================================================================
 
 void TakeFolderComponent::paint(juce::Graphics &g) {
-  // Pure Skia component - minimal JUCE fallback
-  g.fillAll(ZenithTheme::Colors::bg_04);
-  DBG("TakeFolderComponent::paint - Skia rendering unavailable");
+  // Skia rendering used - see drawSkia()
+  juce::ignoreUnused(g);
 }
 
 void TakeFolderComponent::drawSkia(SkCanvas *canvas) {
