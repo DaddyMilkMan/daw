@@ -2,13 +2,10 @@
 """
 Demo script showing the standardized logging approach.
 This demonstrates the consistent logging patterns across the backend.
+
+Run this script as a module from the project root:
+    python -m backend.demo_logging
 """
-
-import sys
-import os
-
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from backend.config import ZenithConfig
 from backend.logger import configure_logging, get_logger
