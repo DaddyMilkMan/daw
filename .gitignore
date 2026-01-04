@@ -44,12 +44,25 @@ npm-debug.log
 
 # 6. Build Logs and Error Files
 build_errors*.txt
+build_error*.txt
 build_log*.txt
 build_verbose.txt
 cmake_error*.log
 msbuild_*.log
 *.log
 debug_log.txt
+compile_commands.json
+full_test_trace.txt
+test_full_log.txt
+recording_test_log.txt
+server_log.txt
+daw_gui_log*.txt
+cmake_log.txt
+cmake_noskia*.txt
+cmake_skia.txt
+cmake_hybrid.txt
+compile_result.txt
+output.txt
 
 # 7. Backup Files
 *.bak
@@ -64,6 +77,9 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
+
+# 9. Security Scanning Artifacts
+_codeql_detected_source_root
 
 # 9. Images in root (stray artifacts)
 /*.png
