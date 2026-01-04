@@ -112,6 +112,12 @@ public:
   std::vector<RecentProjectEntry> getRecentProjects(bool pruneInvalid = true);
 
   /**
+   * Get the list of recent projects WITHOUT pruning.
+   * Safe for calling from the Message Thread without blocking on I/O.
+   */
+  std::vector<RecentProjectEntry> getRecentProjectsFast() const;
+
+  /**
    * Get a specific project by index
    * @param index Zero-based index (0 = most recent)
    * @return Pointer to entry, or nullptr if index is out of range

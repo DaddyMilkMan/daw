@@ -406,8 +406,13 @@ juce::var TrackCommands::separateTrack(const juce::var &params) {
     auto fileStream = std::make_unique<juce::FileOutputStream>(stemFile);
 
     if (fileStream->openedOk()) {
+      std::unique_ptr<juce::OutputStream> outStream(fileStream.release());
       std::unique_ptr<juce::AudioFormatWriter> writer(
-          wavFormat.createWriterFor(fileStream.release(), sampleRate, 2, 24, juce::StringPairArray(), 0));
+          wavFormat.createWriterFor(outStream,
+            juce::AudioFormatWriterOptions()
+              .withSampleRate(sampleRate)
+              .withNumChannels(2)
+              .withBitsPerSample(24)));
 
       if (writer) {
         writer->writeFromAudioSampleBuffer(stem.buffer, 0,

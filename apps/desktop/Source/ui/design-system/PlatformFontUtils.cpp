@@ -15,15 +15,15 @@
 #if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
 
 #if defined(WIN32) || defined(_WIN32)
-#include <include/ports/SkTypeface_win.h>
+#include <ports/SkTypeface_win.h>
 #elif defined(__APPLE__)
-#include <include/ports/SkTypeface_mac.h>
+#include <ports/SkTypeface_mac.h>
 #elif defined(__linux__)
-#include <include/ports/SkFontMgr_fontconfig.h>
-#include <include/core/SkFontScanner.h>
-#include <include/ports/SkFontScanner_FreeType.h>
+#include <ports/SkFontMgr_fontconfig.h>
+#include <core/SkFontScanner.h>
+#include <ports/SkFontScanner_FreeType.h>
 #else
-#include <include/ports/SkFontMgr_empty.h>
+#include <ports/SkFontMgr_empty.h>
 #endif
 
 #endif

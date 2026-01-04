@@ -109,7 +109,7 @@ void AudioRenderer::renderAudioGraph(
                                               ? incomingMidi : nullptr;
 
       const juce::AudioBuffer<float>* sidechainBuffer = nullptr;
-      if (auto* sourceTrack = track->getSidechainSource()) {
+      if (auto sourceTrack = track->getSidechainSource()) {
           int sourceIdx = sourceTrack->getTrackIndex();
           if (sourceIdx >= 0 && sourceIdx < (int)context.trackBuffers.size()) {
               sidechainBuffer = &context.trackBuffers[sourceIdx];

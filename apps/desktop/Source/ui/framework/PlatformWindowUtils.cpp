@@ -14,9 +14,9 @@
 #include "../../engine/ZenithLogger.h"
 
 #ifdef ZENITH_USE_SKIA
-#include <include/gpu/ganesh/gl/GrGLAssembleInterface.h>
-#include <include/gpu/ganesh/gl/GrGLDirectContext.h>
-#include <include/gpu/ganesh/gl/GrGLInterface.h>
+#include <gpu/ganesh/gl/GrGLAssembleInterface.h>
+#include <gpu/ganesh/gl/GrGLDirectContext.h>
+#include <gpu/ganesh/gl/GrGLInterface.h>
 #endif
 
 // Linux/Unix specific includes for dlsym

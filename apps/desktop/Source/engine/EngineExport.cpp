@@ -192,6 +192,136 @@ bool Engine::exportProject(const ExportOptions &options) {
   if (!format)
     return false;
 
+  // Use auto-detect duration if not specified
+  double duration =
+      options.duration > 0 ? options.duration : autoDetectProjectDuration();
+  DBG("Engine: Export duration: " + juce::String(duration, 2) + " seconds");
+  juce::int64 totalSamples =
+      static_cast<juce::int64>(options.sampleRate * duration);
+
+  const int blockSize = 4096;
+  juce::AudioBuffer<float> renderBuffer(2, blockSize);
+  
+  // Prepare Engine for rendering
+  if (audioRenderer_) {
+    renderContext_.prepare(options.sampleRate, blockSize, tracks_.size(),
+                            auxBuses_.size());
+  }
+
+  //==============================================================================
+  // NORMALIZATION PATH (2-PASS)
+  //==============================================================================
+  if (options.normalize) {
+      DBG("Engine: Exporting with Normalization (2-Pass)...");
+
+      // Pass 1: Render to Temp File (32-bit Float)
+      juce::File tempFile = options.outputFile.getSiblingFile("temp_render_" + juce::Uuid().toString() + ".wav");
+      
+      juce::WavAudioFormat tempFormat;
+      // Always write temp file as 32-bit float to preserve headroom
+      std::unique_ptr<juce::OutputStream> tempStream(tempFile.createOutputStream());
+      std::unique_ptr<juce::AudioFormatWriter> tempWriter(tempFormat.createWriterFor(
+          tempStream, 
+          juce::AudioFormatWriterOptions()
+            .withSampleRate(options.sampleRate)
+            .withNumChannels(2)
+            .withBitsPerSample(32)));
+          
+      if (!tempWriter) {
+         DBG("Engine: Failed to create temp file for normalization pass 1");
+         return false;
+      }
+      
+      float maxPeak = 0.0f;
+      juce::int64 samplesRendered = 0;
+      
+      while (samplesRendered < totalSamples) {
+          int numSamples = (int)std::min((juce::int64)blockSize, totalSamples - samplesRendered);
+          
+          // Render graph
+          renderOfflineBlock(renderBuffer, numSamples, samplesRendered);
+          
+          // Analysis: Update Peak
+          float peak = renderBuffer.getMagnitude(0, numSamples);
+          maxPeak = std::max(maxPeak, peak);
+          
+          if (!tempWriter->writeFromAudioSampleBuffer(renderBuffer, 0, numSamples)) {
+             tempFile.deleteFile();
+             return false;
+          }
+          samplesRendered += numSamples;
+          
+           if (options.progressCallback) {
+              options.progressCallback(0.5f * (float)samplesRendered / totalSamples, "Pass 1: Analysis...");
+          }
+      }
+      tempWriter.reset(); // Flush and close temp file
+      
+      // Calculate Gain
+      float targetDb = -0.1f; // Standard normalization target
+      float targetLinear = juce::Decibels::decibelsToGain(targetDb);
+      float gain = (maxPeak > 0.00001f) ? (targetLinear / maxPeak) : 1.0f;
+      DBG("Engine: Normalize Analysis - Max Peak: " + juce::String(juce::Decibels::gainToDecibels(maxPeak)) + " dB");
+      DBG("Engine: Applying Gain: " + juce::String(juce::Decibels::gainToDecibels(gain)) + " dB");
+
+      // Pass 2: Transfer to Final Format
+      std::unique_ptr<juce::AudioFormatReader> reader(tempFormat.createReaderFor(tempFile.createInputStream().release(), true));
+      if (!reader) { 
+          tempFile.deleteFile(); 
+          return false; 
+      }
+      
+      std::unique_ptr<juce::OutputStream> outStream(options.outputFile.createOutputStream());
+      std::unique_ptr<juce::AudioFormatWriter> writer = format->createWriterFor(
+          outStream, 
+          juce::AudioFormatWriterOptions()
+            .withSampleRate(options.sampleRate)
+            .withNumChannels(2)
+            .withBitsPerSample(options.bitDepth));
+          
+      if (!writer) { 
+          tempFile.deleteFile(); 
+          return false; 
+      }
+      
+      if (options.enableDither && options.bitDepth < 32) dither.prepare(2);
+      
+      samplesRendered = 0;
+      juce::int64 readerPos = 0;
+      
+      while (readerPos < totalSamples) {
+          int numSamples = (int)std::min((juce::int64)blockSize, totalSamples - readerPos);
+          reader->read(&renderBuffer, 0, numSamples, readerPos, true, true);
+          
+          // Apply Normalization Gain
+          renderBuffer.applyGain(gain);
+          
+          // Dither (Final Stage)
+          if (options.enableDither && options.bitDepth < 32) {
+              dither.process(renderBuffer, options.bitDepth);
+          }
+          
+          if (!writer->writeFromAudioSampleBuffer(renderBuffer, 0, numSamples)) break;
+          
+          readerPos += numSamples;
+           if (options.progressCallback) {
+              options.progressCallback(0.5f + 0.5f * (float)readerPos / totalSamples, "Pass 2: Encoding...");
+          }
+      }
+      
+      writer.reset();
+      tempFile.deleteFile();
+      
+      if (options.progressCallback) {
+        options.progressCallback(1.0f, "Export complete!");
+      }
+      return true;
+  }
+
+  //==============================================================================
+  // DIRECT RENDER PATH (SINGLE PASS)
+  //==============================================================================
+  
   // Create file stream
   std::unique_ptr<juce::OutputStream> fileStream = std::make_unique<juce::FileOutputStream>(options.outputFile);
   if (fileStream == nullptr || static_cast<juce::FileOutputStream*>(fileStream.get())->failedToOpen())
@@ -207,22 +337,9 @@ bool Engine::exportProject(const ExportOptions &options) {
   if (!writer)
     return false;
 
-  const int blockSize = 4096;
-  juce::AudioBuffer<float> renderBuffer(2, blockSize);
-  if (audioRenderer_) {
-    renderContext_.prepare(options.sampleRate, blockSize, tracks_.size(),
-                            auxBuses_.size());
-  }
-
   if (options.enableDither)
     dither.prepare(2);
-
-  // Use auto-detect duration if not specified
-  double duration =
-      options.duration > 0 ? options.duration : autoDetectProjectDuration();
-  DBG("Engine: Export duration: " + juce::String(duration, 2) + " seconds");
-  juce::int64 totalSamples =
-      static_cast<juce::int64>(options.sampleRate * duration);
+    
   juce::int64 samplesWritten = 0;
 
   while (samplesWritten < totalSamples) {
@@ -236,15 +353,6 @@ bool Engine::exportProject(const ExportOptions &options) {
     if (options.enableDither && options.bitDepth < 32) {
       dither.process(renderBuffer, options.bitDepth);
     }
-
-    // Normalization (2-Pass: Find Peak -> Apply Gain)
-    // Normalization (Offline Render Refactor required for full track)
-    // NOTE: Per-block normalization is WRONG for full track export.
-    // Correct implementation requires render-to-temp-file -> scan -> write-to-final
-    // This is disabled pending a full offline-render refactor.
-    // See: applyNormalization() for when this gets properly implemented.
-    (void)options.normalize; // Suppress unused warning
-
 
     if (!writer->writeFromAudioSampleBuffer(renderBuffer, 0, numSamples)) {
       return false;

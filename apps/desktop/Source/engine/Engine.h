@@ -469,14 +469,8 @@ public:
    * @note Safe to iterate on any thread while tracks are being added/removed
    */
   std::vector<std::shared_ptr<Track>> getTracksSnapshot() const {
-      // If we are on the message thread, we can safely use the current snapshot holder
-      // which already contains a vector of shared_ptrs.
-      if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
-          if (currentSnapshotHolder_)
-              return currentSnapshotHolder_->lifecycle;
-      }
-      
-      // Fallback for other threads (e.g. background analysis)
+      // Always use lock for thread safety - the RCU optimization for message thread
+      // was causing a potential data race (accessing currentSnapshotHolder_ without lock)
       const juce::ScopedReadLock lock(tracksLock_);
       return tracks_;
   }

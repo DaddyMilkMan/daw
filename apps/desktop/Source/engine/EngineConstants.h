@@ -233,6 +233,36 @@ constexpr int kOversamplingFactor = 2;
 constexpr int kMaxOversamplingFactor = 4;
 
 //==============================================================================
+// Floating Point Comparison Constants
+//==============================================================================
+
+/// Epsilon for time/beat position comparisons (use for automation, tempo, etc.)
+constexpr double kEpsilonTime = 0.0001;
+
+/// Epsilon for stricter time comparisons (e.g., time delta validation)
+constexpr double kEpsilonTimeStrict = 0.00001;
+
+/// Epsilon for audio sample value comparisons
+constexpr float kEpsilonAudio = 1e-7f;
+
+//==============================================================================
+// File System Constants
+//==============================================================================
+
+/// Maximum file path length (safe cross-platform limit)
+constexpr int kMaxPathLength = 4096;
+
+//==============================================================================
+// FFT/Analysis Constants
+//==============================================================================
+
+/// Default FFT size for audio analysis
+constexpr int kDefaultFFTSize = 1024;
+
+/// Default hop size for FFT analysis (1/4 of FFT size)
+constexpr int kDefaultHopSize = 256;
+
+//==============================================================================
 // Timing Constants
 //==============================================================================
 

@@ -262,15 +262,39 @@ void Engine::setSidechainSource(int destTrackIndex, int pluginIndex, int sourceT
         return;
     }
 
-    Track* sourceTrack = nullptr;
+    auto destTrack = tracks_[destTrackIndex];
+    juce::String destId = destTrack->getId();
+
+    // 1. Clear existing sidechain connection for this specific plugin from the graph
+    // (Note: RoutingGraph::disconnect might need to be specific if we want to support multiple sidechains per track,
+    // but for now we follow the 'isSidechain' flag)
+    
+    // We get all connections to dest and remove only sidechains. 
+    // In a more complex DAW, we'd need to know specifically which source was for this plugin.
+    // For now, we assume one sidechain source per track or we clear all sidechains to this dest
+    // before re-adding.
+    auto currentConns = routingGraph_.getConnectionsTo(destId);
+    for (const auto& c : currentConns) {
+        if (c.isSidechain) {
+            routingGraph_.disconnect(c.sourceId, destId);
+        }
+    }
+
+    std::shared_ptr<Track> sourceTrack = nullptr;
     if (sourceTrackIndex >= 0 && sourceTrackIndex < static_cast<int>(tracks_.size())) {
-        sourceTrack = tracks_[sourceTrackIndex].get();
+        sourceTrack = tracks_[sourceTrackIndex];
+        
+        // 2. Add new sidechain connection to RoutingGraph
+        // This ensures the topological sort renders source before dest
+        routingGraph_.connect(sourceTrack->getId(), destId, 1.0f, true);
+        DBG("Engine: Added sidechain routing: " + sourceTrack->getName() + " -> " + destTrack->getName());
     } else if (sourceTrackIndex != -1) {
         DBG("Engine: Invalid sidechain source track index: " + juce::String(sourceTrackIndex));
         return;
     }
 
-    tracks_[destTrackIndex]->setPluginSidechainSource(pluginIndex, sourceTrack);
+    // 3. Update the track model
+    destTrack->setPluginSidechainSource(pluginIndex, sourceTrack);
 }
 
 //==============================================================================

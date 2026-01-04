@@ -175,9 +175,12 @@ PanelWrapper::PanelWrapper(const juce::String &panelId,
                            const layout::PanelConfig &config)
     : panelId_(panelId), content_(content), config_(config) {
 
-  header_ = std::make_unique<PanelHeader>(config.name, config.isCollapsible);
-  header_->onCollapseClicked = [this]() { toggleCollapse(true); };
-  addAndMakeVisible(header_.get());
+  // Only create header if showHeader is true
+  if (config.showHeader) {
+    header_ = std::make_unique<PanelHeader>(config.name, config.isCollapsible);
+    header_->onCollapseClicked = [this]() { toggleCollapse(true); };
+    addAndMakeVisible(header_.get());
+  }
 
   if (content_) {
     addAndMakeVisible(content_);
@@ -188,7 +191,7 @@ PanelWrapper::PanelWrapper(const juce::String &panelId,
   preCollapseSize_ = currentSize_;
   isCollapsed_ = config.isCollapsed;
 
-  if (isCollapsed_) {
+  if (isCollapsed_ && header_) {
     header_->setCollapsed(true);
     currentSize_ = static_cast<float>(collapsedHeight);
   }
@@ -269,7 +272,9 @@ void PanelWrapper::setCollapsed(bool collapsed, bool animate) {
     return;
 
   isCollapsed_ = collapsed;
-  header_->setCollapsed(collapsed);
+  if (header_) {
+    header_->setCollapsed(collapsed);
+  }
 
   if (collapsed) {
     preCollapseSize_ = currentSize_;

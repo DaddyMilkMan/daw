@@ -80,26 +80,8 @@ void FreezeProgressOverlay::mouseDown(const juce::MouseEvent &e) {
 }
 
 void FreezeProgressOverlay::paint(juce::Graphics &g) {
-  // Draw text (Skia handles the graphics background)
-  g.setFont(ZenithTypography::getHeaderFont().withHeight(20.0f));
-  g.setColour(juce::Colours::white);
-
-  auto bounds = getLocalBounds();
-  auto center = bounds.getCentre();
-
-  g.drawText(juce::String((int)(progress_ * 100)) + "%", center.x - 50,
-             center.y + layout::kTextYOffset, 100, 30,
-             juce::Justification::centred);
-
-  g.setFont(ZenithTypography::getBodyFont().withHeight(16.0f));
-  g.setColour(juce::Colours::lightgrey);
-  g.drawText(statusText_, bounds.getX(), center.y + layout::kStatusYOffset,
-             bounds.getWidth(), 30, juce::Justification::centred);
-
-  // Cancel Button Text
-  g.setColour(juce::Colours::white.withAlpha(0.8f));
-  g.drawRoundedRectangle(cancelButtonRect_, 4.0f, 1.0f);
-  g.drawText("Cancel", cancelButtonRect_, juce::Justification::centred);
+  // Skia rendering used - see drawSkia()
+  juce::ignoreUnused(g);
 }
 
 void FreezeProgressOverlay::drawSkia(SkCanvas *canvas) {

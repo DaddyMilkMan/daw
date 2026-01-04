@@ -4,6 +4,7 @@
  */
 
 #include "ProjectFileIO.h"
+#include "EngineConstants.h"
 #include "ProjectState.h"
 #include "TempoMap.h"
 #include "ZenithLogger.h"
@@ -15,6 +16,8 @@
 #include <string>
 
 namespace zenith {
+
+using namespace zenith::constants;
 
 // File format version - increment when changing XML structure
 static constexpr const char *PROJECT_FORMAT_VERSION = "1.0.0";
@@ -463,7 +466,7 @@ ProjectMetadata ProjectFileIO::readMetadata(const juce::File &file) const {
   meta.version = "unknown";
   meta.zenithVersion = "unknown";
   meta.savedTimestamp = 0;
-  meta.sampleRate = 48000.0;
+  meta.sampleRate = kDefaultSampleRate;
   meta.trackCount = 0;
   meta.durationSeconds = 0.0;
 
@@ -587,7 +590,7 @@ bool ProjectFileIO::readMetadataFromXml(const juce::XmlElement &root,
   outMeta.zenithVersion = root.getStringAttribute("zenithVersion", "unknown");
   outMeta.savedTimestamp =
       root.getStringAttribute("savedTimestamp", "0").getLargeIntValue();
-  outMeta.sampleRate = root.getDoubleAttribute("sampleRate", 48000.0);
+  outMeta.sampleRate = root.getDoubleAttribute("sampleRate", kDefaultSampleRate);
   outMeta.trackCount = root.getIntAttribute("trackCount", 0);
   outMeta.durationSeconds = root.getDoubleAttribute("duration", 0.0);
   outMeta.createdBy = root.getStringAttribute("createdBy", "unknown");

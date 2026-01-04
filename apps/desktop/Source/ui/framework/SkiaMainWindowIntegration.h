@@ -111,6 +111,7 @@ private:
   std::atomic<int> safeHeight_{0};
 
   void recreateSurface();
+  void recreateSurfaceWithSize(int width, int height);  // High-DPI aware version
 public:
   void updateDimensions(int width, int height) {
       safeWidth_.store(width);

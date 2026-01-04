@@ -15,13 +15,15 @@
 #pragma once
 #include "FontManager.h"
 #include <core/SkBlurTypes.h>
-#include <include/core/SkColor.h>
-#include <include/core/SkFont.h>
+#include <core/SkColor.h>
+#include <core/SkFont.h>
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
 #include <vector>
+
+class SkCanvas;
 
 namespace zenith {
 namespace design {
@@ -46,6 +48,14 @@ inline SkColor NEON_RED = 0xFFFF073A;    // Neon Red
 inline SkColor NEON_YELLOW = 0xFFFFFF00; // Yellow
 inline SkColor NEON_PURPLE = 0xFFAA00FF; // Purple
 inline SkColor CYAN_DARK = 0xFF008888;   // Dark Cyan
+
+// Glow Variations (Source Color + Alpha for Bloom Effects)
+inline SkColor CYAN_GLOW = 0x8000F0FF;     // 50% Primary
+inline SkColor MAGENTA_GLOW = 0x80FF00D4;  // 50% Secondary
+inline SkColor VIOLET_GLOW = 0x807000FF;   // 50% Violet
+inline SkColor ORANGE_GLOW = 0x80FF8800;   // 50% Orange
+inline SkColor GREEN_GLOW = 0x8010B981;    // 50% Success
+inline SkColor RED_GLOW = 0x80EF4444;      // 50% Error
 
 // Functional Palette
 inline SkColor BLUE = 0xFF3B82F6;        // Standard Blue (Info/Action)
@@ -548,6 +558,7 @@ constexpr float FONT_MD = 14.0f;  // Body text, default UI text
 constexpr float FONT_LG = 16.0f;  // Headings, emphasized text
 constexpr float FONT_XL = 20.0f;  // Large headings, section titles
 constexpr float FONT_XXL = 24.0f; // Display text, major titles
+constexpr float FONT_HUGE = 48.0f; // Hero headings, clock displays
 
 // ============================================================================
 // FONT WEIGHT CONSTANTS (for legacy code)
@@ -744,6 +755,26 @@ inline SkColor interpolateColor(SkColor c1, SkColor c2, float t) {
 }
 
 // ============================================================================
+// EFFECT HELPERS - High-level Skia drawing
+// ============================================================================
+// Implementation in ZenithDesignSystem.cpp
+
+/**
+ * Draw a glass panel with backdrop blur and rim light.
+ */
+void drawGlassPanel(SkCanvas* canvas, const juce::Rectangle<float>& bounds, float cornerRad, float panelOpacity);
+
+/**
+ * Draw a glowing line (bloom effect).
+ */
+void drawGlowLine(SkCanvas* canvas, float x1, float y1, float x2, float y2, SkColor glowColor, float thickness, float radius);
+
+/**
+ * Draw a glowing rectangle (bloom effect).
+ */
+void drawGlowRect(SkCanvas* canvas, const juce::Rectangle<float>& bounds, SkColor glowColor, float cornerRad, float radius);
+
+// ============================================================================
 // COMPONENT TOKENS - Button
 // ============================================================================
 // Component-level tokens wrap semantic tokens with DAW-specific accessors.
@@ -838,6 +869,65 @@ inline float getFaderHandleHeight() { return 24.0f; }
 // State opacities
 inline float getDisabledOpacity() { return opacity::DISABLED; }
 } // namespace slider
+
+// ============================================================================
+// COMPONENT TOKENS - Toggle & Checkbox
+// ============================================================================
+
+namespace toggle {
+inline float getWidth() { return 44.0f; }
+inline float getHeight() { return 24.0f; }
+inline float getRadius() { return dimensions::RADIUS_FULL; }
+inline SkColor getBgOff() { return colors::BG_03; }
+inline SkColor getBgOn() { return colors::CYAN; }
+inline SkColor getHandleColor() { return colors::TEXT_PRIMARY; }
+inline SkColor getGlowColor() { return colors::CYAN; }
+} // namespace toggle
+
+namespace checkbox {
+inline float getSize() { return 18.0f; }
+inline float getRadius() { return 4.0f; }
+inline SkColor getBgUnchecked() { return colors::BG_01; }
+inline SkColor getBgChecked() { return colors::CYAN; }
+inline SkColor getBorder() { return colors::BORDER_DEFAULT; }
+inline SkColor getCheckmark() { return colors::TEXT_INVERSE; }
+} // namespace checkbox
+
+// ============================================================================
+// COMPONENT TOKENS - Meters
+// ============================================================================
+
+namespace meter {
+inline SkColor getBg() { return colors::BG_00; }
+inline SkColor getTickDefault() { return colors::BORDER_DEFAULT; }
+inline SkColor getLevelSafe() { return colors::GREEN; }
+inline SkColor getLevelWarn() { return colors::AMBER; }
+inline SkColor getLevelHot() { return colors::RED; }
+inline SkColor getPeakHold() { return colors::TEXT_PRIMARY; }
+inline float getSpacing() { return 1.0f; }
+} // namespace meter
+
+// ============================================================================
+// COMPONENT TOKENS - Menu & Tooltip
+// ============================================================================
+
+namespace menu {
+inline SkColor getBg() { return colors::BG_04; }
+inline SkColor getSeparator() { return colors::BORDER_SUBTLE; }
+inline SkColor getText() { return colors::TEXT_PRIMARY; }
+inline SkColor getBgHover() { return withAlpha(colors::CYAN, opacity::HOVER); }
+inline SkColor getTextHover() { return colors::CYAN; }
+inline float getPadding() { return spacing::SM; }
+inline float getRadius() { return dimensions::RADIUS_SM; }
+} // namespace menu
+
+namespace tooltip {
+inline SkColor getBg() { return colors::BG_04; }
+inline SkColor getText() { return colors::TEXT_PRIMARY; }
+inline SkColor getBorder() { return colors::BORDER_STRONG; }
+inline float getRadius() { return dimensions::RADIUS_SM; }
+inline float getPadding() { return spacing::SM; }
+} // namespace tooltip
 
 // ============================================================================
 // COMPONENT TOKENS - Panel

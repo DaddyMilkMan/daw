@@ -13,50 +13,67 @@
 #include <atomic>
 #include <memory>
 #include <array>
+#include <cstring>
 
 namespace zenith {
 namespace ai {
 
-// Lock-free circular buffer for audio data
+// RT-SAFE Lock-free circular buffer for audio data
+// Uses proper memory ordering for thread-safe single-producer/single-consumer
 template<typename T, size_t Size>
 class LockFreeCircularBuffer {
 public:
     LockFreeCircularBuffer() : writePos(0), readPos(0) {}
     
+    // Producer thread: push data
     bool push(const T& item) {
-        size_t nextWrite = (writePos.load() + 1) % Size;
-        if (nextWrite == readPos.load()) {
+        size_t currentWrite = writePos.load(std::memory_order_relaxed);
+        size_t nextWrite = (currentWrite + 1) % Size;
+        
+        // Check if buffer is full (acquire to sync with consumer)
+        if (nextWrite == readPos.load(std::memory_order_acquire)) {
             return false;  // Buffer full
         }
         
-        buffer[writePos.load()] = item;
-        writePos.store(nextWrite);
+        // Write data
+        buffer[currentWrite] = item;
+        
+        // Publish write position (release to make data visible to consumer)
+        writePos.store(nextWrite, std::memory_order_release);
         return true;
     }
     
+    // Consumer thread: pop data
     bool pop(T& item) {
-        if (readPos.load() == writePos.load()) {
+        size_t currentRead = readPos.load(std::memory_order_relaxed);
+        
+        // Check if buffer is empty (acquire to sync with producer)
+        if (currentRead == writePos.load(std::memory_order_acquire)) {
             return false;  // Buffer empty
         }
         
-        item = buffer[readPos.load()];
-        readPos.store((readPos.load() + 1) % Size);
+        // Read data
+        item = buffer[currentRead];
+        
+        // Publish read position (release to make space visible to producer)
+        readPos.store((currentRead + 1) % Size, std::memory_order_release);
         return true;
     }
     
     bool isEmpty() const {
-        return readPos.load() == writePos.load();
+        return readPos.load(std::memory_order_relaxed) == 
+               writePos.load(std::memory_order_relaxed);
     }
     
     size_t size() const {
-        size_t w = writePos.load();
-        size_t r = readPos.load();
+        size_t w = writePos.load(std::memory_order_relaxed);
+        size_t r = readPos.load(std::memory_order_relaxed);
         return (w >= r) ? (w - r) : (Size - r + w);
     }
     
     void clear() {
-        writePos.store(0);
-        readPos.store(0);
+        writePos.store(0, std::memory_order_relaxed);
+        readPos.store(0, std::memory_order_relaxed);
     }
     
 private:
@@ -128,14 +145,31 @@ private:
 // Real-time suggestion system
 class RealTimeSuggestionEngine {
 public:
+    // RT-SAFE suggestion structure with fixed-size buffers
     struct Suggestion {
-        juce::String id;
-        juce::String type;
-        juce::String message;
-        juce::var parameters;
+        char id[32];           // Fixed-size buffer instead of juce::String
+        char type[16];         // Fixed-size buffer
+        char message[128];     // Fixed-size buffer
+        float parameterValue;  // Single float instead of juce::var
         float confidence;
         uint64_t timestamp;
         bool isActive;
+        
+        // Helper to set string fields safely
+        void setId(const char* str) {
+            std::strncpy(id, str, sizeof(id) - 1);
+            id[sizeof(id) - 1] = '\0';
+        }
+        
+        void setType(const char* str) {
+            std::strncpy(type, str, sizeof(type) - 1);
+            type[sizeof(type) - 1] = '\0';
+        }
+        
+        void setMessage(const char* str) {
+            std::strncpy(message, str, sizeof(message) - 1);
+            message[sizeof(message) - 1] = '\0';
+        }
     };
     
     RealTimeSuggestionEngine();
@@ -146,7 +180,7 @@ public:
     
     // Background thread interface
     std::vector<Suggestion> getActiveSuggestions() const;
-    void dismissSuggestion(const juce::String& id);
+    void dismissSuggestion(const char* id);
     
     // Configuration
     void setSensitivity(float sensitivity);
@@ -170,7 +204,7 @@ private:
     // Suggestion generation (real-time safe)
     void generateSuggestions(const AudioAnalysisData& current);
     void addSuggestion(const Suggestion& suggestion);
-    void removeOldSuggestions();
+    void removeOldSuggestions(uint64_t currentTime);
     
     // Trend detection
     bool detectLoudnessTrend(const AudioAnalysisData& current);

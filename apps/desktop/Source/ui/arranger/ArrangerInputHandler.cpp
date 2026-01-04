@@ -76,6 +76,30 @@ void ArrangerInputHandler::mouseDown(const juce::MouseEvent& e) {
         return; 
     }
 
+    // Pencil Tool Behavior
+    if (owner_.getTool() == ArrangerTool::Pencil) {
+        if (clip == nullptr) {
+            double beat = gridUtils_.xToBeats(e.position.x);
+            if (!e.mods.isShiftDown()) {
+                beat = gridUtils_.snapToGrid(beat);
+            }
+            
+            int trackIndex = gridUtils_.yToTrackIndex(e.position.y);
+            auto tracksNode = projectState_.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
+            if (tracksNode.isValid() && trackIndex >= 0 && trackIndex < tracksNode.getNumChildren()) {
+                auto track = tracksNode.getChild(trackIndex);
+                juce::String trackId = track[zenith::ProjectState::PROP_ID].toString();
+                juce::String type = track[zenith::ProjectState::PROP_TYPE].toString();
+                bool isMidi = (type != "audio");
+
+                projectState_.getUndoManager().beginNewTransaction("Draw Clip");
+                projectState_.createEmptyClip(trackId, beat, 4.0, isMidi, "New Clip", "Pencil Tool Draw");
+                owner_.repaint();
+            }
+        }
+        return;
+    }
+
     if (clip != nullptr) {
         // Check Fade Handles (Priority over move)
         float ppb = owner_.pixelsPerBeat;

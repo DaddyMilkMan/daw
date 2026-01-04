@@ -149,7 +149,6 @@ void Clip::setAudioFileFromPool(const juce::File &file, AudioFilePool &pool) {
   audioSource.reset();
 }
 
-// Legacy method (kept for backward compatibility, but not recommended)
 void Clip::setAudioFile(const juce::File &file) {
   const juce::ScopedLock sl(audioLock);
 
@@ -159,7 +158,8 @@ void Clip::setAudioFile(const juce::File &file) {
   juce::AudioFormatManager formatManager;
   formatManager.registerBasicFormats();
 
-  auto *reader = formatManager.createReaderFor(file);
+  // Use unique_ptr from the start to ensure proper cleanup in all paths
+  std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(file));
 
   if (reader != nullptr && reader->numChannels > 0 &&
       reader->lengthInSamples > 0) {
@@ -175,27 +175,18 @@ void Clip::setAudioFile(const juce::File &file) {
                      0, true, true);
 
     if (!readSuccess) {
-      // Read failed - clear the buffer
+      // Read failed - clear the buffer (reader cleaned up by unique_ptr)
       audioBuffer.setSize(0, 0);
-      // Bug 19: Use unique_ptr to ensure deletion (though raw delete was here)
-      delete reader;
       DBG("Clip: Failed to read audio file - file may be corrupted");
       return;
     }
 
-    // Bug 26: Fix ownership issue & Bug 19: Use unique_ptr
-    // AudioFormatReaderSource takes ownership of the reader
-    // We must extract length before passing it if we want to be safe,
-    // though reader pointer usually remains valid inside Source until Source is
-    // deleted. However, better safely wrap reader first.
-    std::unique_ptr<juce::AudioFormatReader> safeReader(reader);
-
     // Update clip length
-    clipLength.store(safeReader->lengthInSamples);
+    clipLength.store(reader->lengthInSamples);
 
     // Create audio source for playback - release ownership to Source
     audioSource.reset(
-        new juce::AudioFormatReaderSource(safeReader.release(), true));
+        new juce::AudioFormatReaderSource(reader.release(), true));
 
     if (currentSampleRate > 0) {
       audioSource->prepareToPlay(currentBlockSize, currentSampleRate);

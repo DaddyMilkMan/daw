@@ -6,10 +6,13 @@
 #include "TrackAutomationSynchronizer.h"
 #include "ProjectState.h"
 #include "Engine.h"
+#include "EngineConstants.h"
 #include "TempoMap.h"
 
 // Forward declare Track from namespace
 #include "../Source/engine/Track.h"
+
+using namespace zenith::constants;
 
 //==============================================================================
 namespace zenith {
@@ -262,7 +265,7 @@ double TrackAutomationSynchronizer::sampleEnvelope(const juce::ValueTree& envelo
 
     // Linear/Curved interpolation
     double timeDelta = nextTime - prevTime;
-    double t = (timeDelta > 0.0001) ? (timeBeats - prevTime) / timeDelta : 0.0;
+    double t = (timeDelta > kEpsilonTime) ? (timeBeats - prevTime) / timeDelta : 0.0;
     t = juce::jlimit(0.0, 1.0, t);
 
     // Apply tension if significant

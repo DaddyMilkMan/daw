@@ -41,7 +41,7 @@ void QuantizeSettingsComponent::drawSkia(SkCanvas* canvas) {
     bgPaint.setColor(colors::BG_DARKER);
     bgPaint.setAntiAlias(true);
     canvas->drawRoundRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()),
-                          dimensions::RADIUS_MD, dimensions::RADIUS_MD,
+                          dimensions::RADIUS_SM, dimensions::RADIUS_SM,
                           bgPaint);
 
     // Subtle border
@@ -51,7 +51,7 @@ void QuantizeSettingsComponent::drawSkia(SkCanvas* canvas) {
     borderPaint.setStrokeWidth(1.0f);
     borderPaint.setAntiAlias(true);
     canvas->drawRoundRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()),
-                          dimensions::RADIUS_MD, dimensions::RADIUS_MD,
+                          dimensions::RADIUS_SM, dimensions::RADIUS_SM,
                           borderPaint);
 
     // Title
@@ -318,7 +318,7 @@ void QuantizeSettingsComponent::drawButton(SkCanvas* canvas, const juce::Rectang
     bgPaint.setAntiAlias(true);
     SkRect rect = SkRect::MakeXYWH(bounds.getX(), bounds.getY(),
                                    bounds.getWidth(), bounds.getHeight());
-    canvas->drawRoundRect(rect, dimensions::RADIUS_MD, dimensions::RADIUS_MD,
+    canvas->drawRoundRect(rect, dimensions::RADIUS_SM, dimensions::RADIUS_SM,
                           bgPaint);
 
     // Text

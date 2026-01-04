@@ -11,6 +11,7 @@
 */
 
 #include "TransportBar.h"
+#include "../../engine/ZenithLogger.h"
 
 #include <core/SkBlurTypes.h> // Explicitly include
 #include <core/SkCanvas.h>
@@ -63,6 +64,9 @@ public:
 TransportBar::TransportBar() {
   setSize(800, 60);
   setOpaque(false);
+
+  // Initialize Buttons
+  createButtons();
   
   // Initialize Editors
   auto bpmEd = std::make_unique<TransportEditorLabel>("bpmLabel");
@@ -71,7 +75,7 @@ TransportBar::TransportBar() {
   bpmEd->setColour(juce::Label::textWhenEditingColourId, juce::Colours::white);
   bpmEd->setColour(juce::Label::backgroundWhenEditingColourId, juce::Colours::transparentBlack);
   bpmEd->setColour(juce::Label::outlineWhenEditingColourId, juce::Colours::transparentBlack);
-  bpmEd->setFont(juce::Font("Inter", 32.0f, juce::Font::bold));
+  bpmEd->setFont(juce::Font(juce::FontOptions("Inter", 32.0f, juce::Font::bold)));
   bpmEd->setVisible(false);
   bpmEd->setEditable(false, true, false);
   
@@ -103,7 +107,7 @@ TransportBar::TransportBar() {
   numEd->setColour(juce::Label::textWhenEditingColourId, juce::Colours::white);
   numEd->setColour(juce::Label::backgroundWhenEditingColourId, juce::Colours::transparentBlack);
   numEd->setColour(juce::Label::outlineWhenEditingColourId, juce::Colours::transparentBlack);
-  numEd->setFont(juce::Font("Inter", 24.0f, juce::Font::bold));
+  numEd->setFont(juce::Font(juce::FontOptions("Inter", 24.0f, juce::Font::bold)));
   numEd->setVisible(false);
   numEd->setEditable(false, true, false);
   
@@ -137,7 +141,6 @@ TransportBar::TransportBar() {
   };
   
   timeSigNumLabel_ = std::move(numEd);
-  // addChildComponent(timeSigNumLabel_.get());
   
   // Step 2: Denominator editor
   auto denEd = std::make_unique<TransportEditorLabel>("timeSigDen");
@@ -146,7 +149,7 @@ TransportBar::TransportBar() {
   denEd->setColour(juce::Label::textWhenEditingColourId, juce::Colours::white);
   denEd->setColour(juce::Label::backgroundWhenEditingColourId, juce::Colours::transparentBlack);
   denEd->setColour(juce::Label::outlineWhenEditingColourId, juce::Colours::transparentBlack);
-  denEd->setFont(juce::Font("Inter", 24.0f, juce::Font::bold));
+  denEd->setFont(juce::Font(juce::FontOptions("Inter", 24.0f, juce::Font::bold)));
   denEd->setVisible(false);
   denEd->setEditable(false, true, false);
   
@@ -177,84 +180,124 @@ TransportBar::TransportBar() {
   };
   
   timeSigDenLabel_ = std::move(denEd);
-  // addChildComponent(timeSigDenLabel_.get());
   
   ZENITH_REGISTER_ANIMATION(zenith::animation::Priority::High);
+  
+  // Initialize fonts immediately for cache updates
+  monoFont_ = design::getMonoFont(18.0f, design::FontWeight::Medium);
+  labelFont_ = design::getSkFont(14.0f, design::FontWeight::Regular);
+  
+  // Initial Cache Update
+  updateBpmCache();
+  updateTimeSigCache();
 }
 
-void TransportBar::visibilityChanged() {
-  // DEBUG: Disable timer to test for crash
-  // Only start timer when:
-  // 1. Component is visible
-  // 2. Component has a peer (is on desktop) - prevents blocking during construction
-  // 3. Timer isn't already running
-  // if (isVisible() && getPeer() != nullptr && !isTimerRunning()) {
-  //   if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60);
-  // }
+void TransportBar::createButtons() {
+    auto createBtn = [&](const juce::String& name, const juce::String& tooltip) {
+        auto btn = std::make_unique<GhostButton>(name);
+        setupButton(*btn, tooltip);
+        return btn;
+    };
+    
+    // Create Buttons
+    rewindBtn_ = createBtn("Rewind", "Return to Zero (Double-click stop)");
+    stopBtn_ = createBtn("Stop", "Stop Playback (Space)");
+    playBtn_ = createBtn("Play", "Start Playback (Space)");
+    recordBtn_ = createBtn("Record", "Record (R)");
+    loopBtn_ = createBtn("Loop", "Toggle Loop (L)");
+    metroBtn_ = createBtn("Metronome", "Metronome Click");
+    
+    viewToggleBtn_ = createBtn("ViewToggle", "Switch View (Tab)");
+    settingsBtn_ = createBtn("Settings", "Audio Settings");
+    exportBtn_ = createBtn("Export", "Export Audio");
+    
+    // Assign Callbacks
+    rewindBtn_->onClick = [this] { if (onRewindClicked) onRewindClicked(); };
+    stopBtn_->onClick = [this] { if (onStopClicked) onStopClicked(); };
+    playBtn_->onClick = [this] { if (onPlayClicked) onPlayClicked(); };
+    recordBtn_->onClick = [this] { if (onRecordClicked) onRecordClicked(); };
+    loopBtn_->onClick = [this] { if (onLoopToggled) onLoopToggled(); };
+    metroBtn_->onClick = [this] { if (onMetronomeToggled) onMetronomeToggled(); };
+    
+    viewToggleBtn_->onClick = [this] { if (onViewToggleClicked) onViewToggleClicked(); };
+    settingsBtn_->onClick = [this] { if (onSettingsClicked) onSettingsClicked(); };
+    exportBtn_->onClick = [this] { if (onExportClicked) onExportClicked(); };
+    
+    // Special Right Click logic needed? 
+    // JUCE Buttons handle standard clicks. Context menus can be attached to MouseDown/Up on components if needed,
+    // but standard behavior is onClick.
 }
+
+void TransportBar::setupButton(GhostButton& btn, const juce::String& tooltip) {
+    btn.setTooltip(tooltip);
+    addAndMakeVisible(btn);
+}
+
+void TransportBar::visibilityChanged() {}
 
 void TransportBar::resized() {
-  using namespace design;
+  // Early return if not fully initialized (can be called during construction)
+  if (!rewindBtn_) return;
+  
+  using namespace juce;
   auto area = getLocalBounds();
   
-  // LOGIC PRO STYLE LAYOUT
-  // 1. LCD Display (The Anchor) - Widened for interactivity
-  const int lcdWidth = 380; // Expanded to 380
-  const int lcdHeight = 42;
-  lcdBounds_ = area.withSizeKeepingCentre(lcdWidth, lcdHeight);
+  // Layout Constants
+  constexpr int lcdWidth = 380;
+  constexpr int buttonSize = 38;
+  constexpr int smallButtonSize = 32;
+  constexpr int spacing = 8;
+  constexpr int groupSpacing = 24;
   
-  // Define Hit Zones for LCD Interaction
-  // BPM: Left half (approx 170px)
-  // Time: Right half
+  // Manual Layout: LCD-Centered Design
+  // The LCD is the anchor point in the center, with transport controls to the left
+  // and utility buttons (settings, export) to the right, view toggle on far left.
+  
+  // 1. LCD is Anchor (centered in component)
+  lcdBounds_ = Rectangle<int>(0, 0, lcdWidth, 42).withCentre(area.getCentre());
+  
+  // 2. Buttons Left of LCD
+  int btnX = lcdBounds_.getX() - groupSpacing;
+  auto layoutLeft = [&](Component* c) {
+      btnX -= buttonSize;
+      c->setBounds(btnX, area.getCentreY() - buttonSize/2, buttonSize, buttonSize);
+      btnX -= spacing;
+  };
+  layoutLeft(metroBtn_.get());
+  layoutLeft(loopBtn_.get());
+  layoutLeft(recordBtn_.get());
+  layoutLeft(playBtn_.get());
+  layoutLeft(stopBtn_.get());
+  layoutLeft(rewindBtn_.get());
+  
+  // 3. Buttons Right of LCD
+  int toolX = lcdBounds_.getRight() + groupSpacing;
+  auto layoutRight = [&](Component* c) {
+      c->setBounds(toolX, area.getCentreY() - smallButtonSize/2, smallButtonSize, smallButtonSize);
+      toolX += smallButtonSize + spacing;
+  };
+  layoutRight(settingsBtn_.get());
+  layoutRight(exportBtn_.get());
+  
+  // CPU Meter
+  cpuMeterBounds_ = Rectangle<int>(toolX + 10, area.getCentreY() - 6, 60, 12);
+  
+  // View Toggle (Far Left)
+  viewToggleBtn_->setBounds(20, area.getCentreY() - smallButtonSize/2, smallButtonSize, smallButtonSize);
+
+  // Update Hit Zones for LCD Interaction
   auto tempLcd = lcdBounds_;
   bpmHitBounds_ = tempLcd.removeFromLeft(170).reduced(4, 4);
   timeSigHitBounds_ = tempLcd.removeFromRight(170).reduced(4, 4);
   
-  // Setup Editor Bounds (Hidden usually)
+  // Update Editors
   if (bpmLabel_) bpmLabel_->setBounds(bpmHitBounds_.expanded(4, 0));
   
-  // Split time sig hit area into numerator (left) and denominator (right)
   auto tsArea = timeSigHitBounds_;
   auto numArea = tsArea.removeFromLeft(tsArea.getWidth() / 2 - 10);
   auto denArea = tsArea.removeFromRight(tsArea.getWidth() - 10);
   if (timeSigNumLabel_) timeSigNumLabel_->setBounds(numArea.expanded(4, 0));
   if (timeSigDenLabel_) timeSigDenLabel_->setBounds(denArea.expanded(4, 0));
-  
-  // 2. Transport Controls (Immediately Left of LCD)
-  const int buttonSize = 38; // 36->38
-  const int spacing = 16;   // 12->16 (More breathing room)
-  
-  int tx = lcdBounds_.getX() - spacing - buttonSize;
-  
-  // Record
-  recordButtonBounds_ = juce::Rectangle<int>(tx, area.getCentreY() - (buttonSize/2), buttonSize, buttonSize);
-  tx -= (buttonSize + spacing);
-  
-  // Play
-  playButtonBounds_ = juce::Rectangle<int>(tx, area.getCentreY() - (buttonSize/2), buttonSize, buttonSize);
-  tx -= (buttonSize + spacing);
-  
-  // Stop
-  stopButtonBounds_ = juce::Rectangle<int>(tx, area.getCentreY() - (buttonSize/2), buttonSize, buttonSize);
-
-
-  // 3. Right Section: Tools (Pushed further out)
-  auto rightSection = area.removeFromRight(300).reduced(16, 8);
-  
-  // Settings
-  settingsButtonBounds_ = rightSection.removeFromRight(32).withSizeKeepingCentre(32, 32);
-  rightSection.removeFromRight(20);
-  
-  // Export
-  exportButtonBounds_ = rightSection.removeFromRight(32).withSizeKeepingCentre(32, 32);
-  rightSection.removeFromRight(20);
-  
-  // CPU Meter
-  cpuMeterBounds_ = rightSection.withHeight(12).withY(area.getCentreY() - 6);
-
-  // 4. Left Section: View Toggles
-  auto leftSection = area.removeFromLeft(200).reduced(16, 8);
-  viewToggleButtonBounds_ = leftSection.removeFromLeft(32).withSizeKeepingCentre(32, 32);
 
   // Update cached resources
   SkRect skBounds = SkRect::MakeWH((float)getWidth(), (float)getHeight());
@@ -266,98 +309,66 @@ void TransportBar::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
   SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
   
-  // 1. Main Background: Deep Glass
-  // "Gradient but also solid" -> Elevated style with dark tint
+  // 1. Main Background
   GlassmorphicPanel::Options barOpts;
   barOpts.style = GlassmorphicPanel::Style::Elevated;
-  barOpts.cornerRadius = 0.0f; // Full width bar = no corner radius
-  barOpts.customTintColor = SkColorSetA(design::colors::BG_DARKEST, 240); // Very opaque
+  barOpts.cornerRadius = 0.0f;
+  barOpts.customTintColor = SkColorSetA(design::colors::BG_DARKEST, 240);
   barOpts.useBackdropBlur = true;
   barOpts.drawShadow = true;
   GlassmorphicPanel::drawWithOptions(canvas, skBounds, barOpts);
+  GlassmorphicPanel::drawDivider(canvas, 0, skBounds.bottom(), skBounds.width());
   
-  // 1.5 Top Highlight / Rim for the whole bar
-  GlassmorphicPanel::drawDivider(canvas, 0, skBounds.bottom(), skBounds.width()); // Bottom separator
-  
-  // 2. LCD Display (Center)
+  // 2. LCD Display
   {
       SkRect lcdRect = SkRect::MakeXYWH(lcdBounds_.getX(), lcdBounds_.getY(), lcdBounds_.getWidth(), lcdBounds_.getHeight());
       
-      // Sunken Glass Effect
       GlassmorphicPanel::Options lcdOpts;
-      lcdOpts.style = GlassmorphicPanel::Style::Subtle; // Less blur
+      lcdOpts.style = GlassmorphicPanel::Style::Subtle;
       lcdOpts.cornerRadius = 6.0f;
-      lcdOpts.customTintColor = SkColorSetA(SK_ColorBLACK, 150); // Darker than bar
-      lcdOpts.drawTopHighlight = false; // Inset look
-      lcdOpts.drawShadow = false; // No drop shadow for inset
+      lcdOpts.customTintColor = SkColorSetA(SK_ColorBLACK, 150);
+      lcdOpts.drawTopHighlight = false;
+      lcdOpts.drawShadow = false;
       
-      // Draw LCD Background
       GlassmorphicPanel::drawWithOptions(canvas, lcdRect, lcdOpts);
       
-      // LCD Inner Border (Subtle inset glow)
       SkPaint insetPaint;
       insetPaint.setStyle(SkPaint::kStroke_Style);
       insetPaint.setStrokeWidth(1.0f);
       insetPaint.setColor(SkColorSetA(design::colors::ACCENT_PRIMARY, 30));
       canvas->drawRoundRect(lcdRect, 6.0f, 6.0f, insetPaint);
       
-      // LCD Content: BPM (Left Hit Zone) and Time Sig (Right/Split)
-      // Use Hit Bounds for centering
-      
-      // Divider
-      SkPaint divPaint;
-      divPaint.setColor(SkColorSetA(design::colors::BORDER_SUBTLE, 50));
-      float divX = lcdRect.centerX();
-      // canvas->drawLine(divX, lcdRect.top() + 6, divX, lcdRect.bottom() - 6, divPaint); 
-      // Maybe just a light separating line
-      
-      // BPM Section
+      // Draw Cached Text
       SkPaint textPaint;
       textPaint.setAntiAlias(true);
-      SkFont bpmFont = design::getMonoFont(22.0f, design::FontWeight::Bold);
-      SkFont labelFont = design::getSkFont(10.0f, design::FontWeight::Medium);
       
-      // Calculate layout for BPM
-      juce::String bpmStr = juce::String(tempo_, 1);
-      std::string bpmText = bpmStr.toStdString();
-      float bpmValueWidth = bpmFont.measureText(bpmText.c_str(), bpmText.length(), SkTextEncoding::kUTF8);
-      float bpmLabelWidth = labelFont.measureText("BPM", 3, SkTextEncoding::kUTF8);
-      float spacing = 8.0f;
-      float totalBpmWidth = bpmValueWidth + spacing + bpmLabelWidth;
-      
-      auto bpmCenter = bpmHitBounds_.getCentre();
-      float bpmStartX = bpmCenter.getX() - (totalBpmWidth / 2.0f);
       float centerY = lcdRect.centerY() + 8.0f; // Baseline approx
-      
-      // Draw BPM Value (Only if not being edited)
+
+      // BPM
       if (!bpmLabel_ || !bpmLabel_->isVisible()) {
-          // Draw BPM Value
-          textPaint.setColor(design::colors::TEXT_PRIMARY);
-          canvas->drawString(bpmText.c_str(), bpmStartX, centerY, bpmFont, textPaint);
+          auto bpmCenter = bpmHitBounds_.getCentre();
+          float bpmStartX = bpmCenter.getX() - (cachedBpm_.width / 2.0f);
           
-          // Draw BPM Label
+          textPaint.setColor(design::colors::TEXT_PRIMARY);
+          canvas->drawString(cachedBpm_.text.c_str(), bpmStartX, centerY, monoFont_, textPaint);
+          
           textPaint.setColor(design::colors::TEXT_SECONDARY);
-          canvas->drawString("BPM", bpmStartX + bpmValueWidth + spacing, centerY, labelFont, textPaint);
+          canvas->drawString("BPM", bpmStartX + cachedBpm_.xOffset, centerY, labelFont_, textPaint);
       }
-      // Calculate layout for Time Sig
-      juce::String sigStr = juce::String(timeSigNum_) + " / " + juce::String(timeSigDen_);
-      std::string sigText = sigStr.toStdString();
-      float sigValueWidth = bpmFont.measureText(sigText.c_str(), sigText.length(), SkTextEncoding::kUTF8);
-      float sigLabelWidth = labelFont.measureText("TIME", 4, SkTextEncoding::kUTF8);
-      float totalSigWidth = sigValueWidth + spacing + sigLabelWidth;
       
-      auto timeCenter = timeSigHitBounds_.getCentre();
-      float sigStartX = timeCenter.getX() - (totalSigWidth / 2.0f);
+      // Time Sig
+      {
+          auto timeCenter = timeSigHitBounds_.getCentre();
+          float sigStartX = timeCenter.getX() - (cachedTimeSig_.width / 2.0f);
+          
+          textPaint.setColor(design::colors::TEXT_PRIMARY);
+          canvas->drawString(cachedTimeSig_.text.c_str(), sigStartX, centerY, monoFont_, textPaint);
+          
+          textPaint.setColor(design::colors::TEXT_SECONDARY);
+          canvas->drawString("TIME", sigStartX + cachedTimeSig_.xOffset, centerY - 6.0f, labelFont_, textPaint);
+      }
       
-      // Draw Time Sig Value
-      textPaint.setColor(design::colors::TEXT_PRIMARY);
-      canvas->drawString(sigText.c_str(), sigStartX, centerY, bpmFont, textPaint);
-      
-      // Draw TIME Label
-      textPaint.setColor(design::colors::TEXT_SECONDARY);
-      canvas->drawString("TIME", sigStartX + sigValueWidth + spacing, centerY - 6.0f, labelFont, textPaint);
-      
-      // Interaction Hints (Hover)
+      // Interaction Hints
       if (isDraggingBpm_) {
            SkPaint hl;
            hl.setColor(SkColorSetA(design::colors::ACCENT_PRIMARY, 30));
@@ -372,80 +383,66 @@ void TransportBar::drawSkia(SkCanvas *canvas) {
       }
   }
 
-  // 3. Transport Buttons
-  // Play - Triangle
-  drawTransportButton(canvas, playButtonBounds_, icons::Play(), isPlaying_,
-                      design::colors::NEON_GREEN, playState_);
-                      
-  // Stop - PERFECT SQUARE as requested
-  drawTransportButton(canvas, stopButtonBounds_, icons::Stop(), !isPlaying_,
-                      design::colors::BLUE, stopState_);
-                      
-  // Record - Circle
-  drawTransportButton(canvas, recordButtonBounds_, icons::Record(),
-                      isRecording_ || recordState_.isHovered,
-                      design::colors::RED, recordState_);
+  // 3. Transport Buttons (Driven by Component State)
+  drawTransportButton(canvas, *rewindBtn_, icons::Rewind(), false, design::colors::TEXT_SECONDARY, rewindState_);
+  drawTransportButton(canvas, *stopBtn_, icons::Stop(), !isPlaying_, design::colors::NEON_RED, stopState_);
+  drawTransportButton(canvas, *playBtn_, icons::Play(), isPlaying_, design::colors::NEON_GREEN, playState_);
+  drawTransportButton(canvas, *recordBtn_, icons::Record(), isRecording_, design::colors::NEON_RED, recordState_);
+  drawTransportButton(canvas, *loopBtn_, icons::Loop(), isLooping_, design::colors::ORANGE, loopState_);
+  drawTransportButton(canvas, *metroBtn_, icons::Metronome(), isMetronomeOn_, design::colors::NEON_PURPLE, metroState_);
 
+  // 4. Tools
+  drawTransportButton(canvas, *settingsBtn_, icons::Settings(), false, design::colors::TEXT_SECONDARY, settingsState_);
+  drawTransportButton(canvas, *exportBtn_, icons::Download(), false, design::colors::TEXT_SECONDARY, exportState_);
 
-  // 4. Secondary Tools (Right)
-  drawTransportButton(canvas, settingsButtonBounds_, icons::Settings(), false,
-                      design::colors::TEXT_SECONDARY, settingsState_);
-  drawTransportButton(canvas, exportButtonBounds_, icons::Download(), false,
-                      design::colors::TEXT_SECONDARY, exportState_);
+  // 5. View Toggle
+  drawTransportButton(canvas, *viewToggleBtn_, icons::ViewToggle(), false, design::colors::TEXT_SECONDARY, viewToggleState_);
 
-  // 5. View Toggle (Left)
-  drawTransportButton(canvas, viewToggleButtonBounds_, icons::ViewToggle(),
-                      false, design::colors::TEXT_SECONDARY, viewToggleState_);
-
-  // 6. CPU Meter (Updated visual)
+  // 6. CPU Meter
   drawMeter(canvas, cpuMeterBounds_, cpuUsage_ / 100.0f, "CPU");
 }
 
 void TransportBar::updateCachedPaints(const SkRect &bounds) {
-  // 1. Background Paint
   bgPaint_.setAntiAlias(true);
+  bgPaint_.setStyle(SkPaint::kFill_Style);
+  // Shader creation is expensive? Only do it on resize/init.
   SkPoint pts[2] = {{0, 0}, {0, bounds.height()}};
   SkColor colors[2] = {design::withAlpha(design::colors::BG_01, 0.94f),
                        design::withAlpha(design::colors::BG_00, 0.94f)};
-  bgPaint_.setShader(SkGradientShader::MakeLinear(pts, colors, nullptr, 2,
-                                                  SkTileMode::kClamp));
-  bgPaint_.setStyle(SkPaint::kFill_Style);
+  bgPaint_.setShader(SkGradientShader::MakeLinear(pts, colors, nullptr, 2, SkTileMode::kClamp));
 
-  // 2. Border Paint
   borderPaint_.setAntiAlias(true);
   borderPaint_.setStyle(SkPaint::kStroke_Style);
   borderPaint_.setStrokeWidth(1.0f);
-  borderPaint_.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.2f)); // Themed glow
+  borderPaint_.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.2f));
 
-  // 3. Fonts
-  // Use Mono font for Tempo/BPM display to avoid jitter
-  font_ = design::getMonoFont(18.0f, design::FontWeight::Medium);
-  
-  // Use UI font for labels
-  smallFont_ = design::getSkFont(14.0f, design::FontWeight::Regular);
+  // Initialize Fonts once
+  monoFont_ = design::getMonoFont(18.0f, design::FontWeight::Medium);
+  labelFont_ = design::getSkFont(14.0f, design::FontWeight::Regular);
 }
 
-void TransportBar::drawTransportButton(SkCanvas *canvas,
-                                       const juce::Rectangle<int> &bounds,
+void TransportBar::drawTransportButton(SkCanvas *canvas, GhostButton& btn,
                                        const SkPath &iconPath, bool isActive,
                                        uint32_t color,
-                                       const InteractionState &state) {
-  SkRect rect =
-      SkRect::MakeXYWH((float)bounds.getX(), (float)bounds.getY(),
-                       (float)bounds.getWidth(), (float)bounds.getHeight());
-
-  // 1. Background / Pill (Only for Active or Hover)
-  // Logic Style: Buttons are just floating icons usually, until interacted with.
+                                       InteractionState &state) {
+  // Sync Interaction State from JUCE Component
+  bool isHovered = btn.isMouseOver();
+  bool isDown = btn.isDown();
   
+  // Update our animation state helper
+  state.isHovered = isHovered;
+  state.isPressed = isDown;
+  
+  // Get bounds from the component
+  auto b = btn.getBounds();
+  SkRect rect = SkRect::MakeXYWH(b.getX(), b.getY(), b.getWidth(), b.getHeight());
+
   if (isActive) {
-      // Active State: Subtle filled background with strong glow
       SkPaint activeBg;
       activeBg.setAntiAlias(true);
-      // Faint colored background
       activeBg.setColor(SkColorSetA(color, 40)); 
       canvas->drawRoundRect(rect, 6.0f, 6.0f, activeBg);
       
-      // Add a border for "pushed" feel?
       SkPaint border;
       border.setStyle(SkPaint::kStroke_Style);
       border.setStrokeWidth(1.0f);
@@ -453,28 +450,21 @@ void TransportBar::drawTransportButton(SkCanvas *canvas,
       canvas->drawRoundRect(rect, 6.0f, 6.0f, border);
       
   } else if (state.hoverAmount > 0.01f) {
-      // Hover State: White/Bright overlay
       SkPaint hoverBg;
       hoverBg.setAntiAlias(true);
       hoverBg.setColor(SkColorSetA(SK_ColorWHITE, (uint8_t)(20 * state.hoverAmount)));
       canvas->drawRoundRect(rect, 6.0f, 6.0f, hoverBg);
   }
   
-  // 2. Icon Rendering
   icons::IconStyle style;
-  
-  // Base Icon Properties
   style.strokeWidth = 2.0f;
-  style.filled = isActive; // Fill only when active? Or always stroke?
-  // Logic uses filled icons often. Let's stick to fill for active.
+  style.filled = isActive;
   
   if (isActive) {
-      style.color = color; // Example: Neon Green icon
+      style.color = color;
       style.glowColor = color;
-      style.glowRadius = 15.0f; // Strong glow
+      style.glowRadius = 15.0f;
   } else {
-      // Idle: White, high opacity (so it pops against dark glass)
-      // Hover: Go to full white
       float opacity = 0.7f + (0.3f * state.hoverAmount);
       style.color = design::withAlpha(SK_ColorWHITE, opacity);
       
@@ -484,7 +474,6 @@ void TransportBar::drawTransportButton(SkCanvas *canvas,
       }
   }
 
-  // Draw scaled and centered icon using helper for consistency
   float iconSize = rect.width() * 0.45f;
   icons::drawIconCentered(canvas, iconPath, rect, iconSize, style);
 }
@@ -500,8 +489,84 @@ void TransportBar::drawMeter(SkCanvas *canvas,
   zenith::design::MeterRenderer::drawHorizontalMeter(canvas, rect, value, valStr);
 }
 
+// === Caching & Setters ===
+
+void TransportBar::updateBpmCache() {
+    juce::String bpmStr = juce::String(tempo_, 1);
+    cachedBpm_.text = bpmStr.toStdString();
+    
+    float bpmValueWidth = monoFont_.measureText(cachedBpm_.text.c_str(), cachedBpm_.text.length(), SkTextEncoding::kUTF8);
+    float bpmLabelWidth = labelFont_.measureText("BPM", 3, SkTextEncoding::kUTF8);
+    float spacing = 8.0f;
+    
+    cachedBpm_.width = bpmValueWidth + spacing + bpmLabelWidth;
+    cachedBpm_.xOffset = bpmValueWidth + spacing;
+}
+
+void TransportBar::updateTimeSigCache() {
+    juce::String sigStr = juce::String(timeSigNum_) + " / " + juce::String(timeSigDen_);
+    cachedTimeSig_.text = sigStr.toStdString();
+    
+    float sigValueWidth = monoFont_.measureText(cachedTimeSig_.text.c_str(), cachedTimeSig_.text.length(), SkTextEncoding::kUTF8);
+    float sigLabelWidth = labelFont_.measureText("TIME", 4, SkTextEncoding::kUTF8);
+    float spacing = 8.0f;
+    
+    cachedTimeSig_.width = sigValueWidth + spacing + sigLabelWidth;
+    cachedTimeSig_.xOffset = sigValueWidth + spacing;
+}
+
+void TransportBar::setPlaying(bool playing) {
+    if (isPlaying_ != playing) {
+        isPlaying_ = playing;
+        repaint();
+    }
+}
+void TransportBar::setRecording(bool recording) {
+    if (isRecording_ != recording) {
+        isRecording_ = recording;
+        repaint();
+    }
+}
+void TransportBar::setLooping(bool looping) {
+    if (isLooping_ != looping) {
+        isLooping_ = looping;
+        repaint();
+    }
+}
+void TransportBar::setMetronomeEnabled(bool enabled) {
+    if (isMetronomeOn_ != enabled) {
+        isMetronomeOn_ = enabled;
+        repaint();
+    }
+}
+void TransportBar::setTempo(double bpm) {
+    if (std::abs(tempo_ - bpm) > 0.01) {
+        tempo_ = bpm;
+        updateBpmCache();
+        repaint();
+    }
+}
+void TransportBar::setCPU(float percent) {
+    cpuUsage_ = percent;
+    repaint();
+}
+void TransportBar::setPosition(double seconds) {
+    position_ = seconds;
+    repaint();
+}
+void TransportBar::setTimeSignature(int num, int den) {
+    if (timeSigNum_ != num || timeSigDen_ != den) {
+        timeSigNum_ = num;
+        timeSigDen_ = den;
+        updateTimeSigCache();
+        repaint();
+    }
+}
+
+
+// === Mouse Interaction for LCD (Custom) ===
+
 void TransportBar::mouseDown(const juce::MouseEvent &e) {
-  // 1. LCD Interaction (BPM / TimeSig)
   if (bpmHitBounds_.contains(e.getPosition())) {
       isDraggingBpm_ = true;
       dragStartValue_ = tempo_;
@@ -516,65 +581,13 @@ void TransportBar::mouseDown(const juce::MouseEvent &e) {
       dragStartPos_ = e.getPosition();
       return;
   }
-
-  bool isRightClick = e.mods.isRightButtonDown();
-  
-  // Set pressed state
-  playState_.isPressed = playButtonBounds_.contains(e.getPosition()) && !isRightClick;
-  stopState_.isPressed = stopButtonBounds_.contains(e.getPosition()) && !isRightClick;
-  recordState_.isPressed = recordButtonBounds_.contains(e.getPosition()) && !isRightClick;
-  viewToggleState_.isPressed = viewToggleButtonBounds_.contains(e.getPosition()) && !isRightClick;
-  exportState_.isPressed = exportButtonBounds_.contains(e.getPosition()) && !isRightClick;
-  settingsState_.isPressed = settingsButtonBounds_.contains(e.getPosition()) && !isRightClick;
-  
-  repaint();
-
-  if (playButtonBounds_.contains(e.getPosition())) {
-    if (isRightClick) {
-      auto menu = ContextMenuManager::createMenu();
-      menu->addItem(1, "Restart Playback", true, false, [this]() {
-          if (onStopClicked) onStopClicked();
-          if (onRewind) onRewind();
-          if (onPlayClicked) onPlayClicked();
-      });
-      menu->addItem(2, "Loop Playback", true, false, [this]() {
-          if (onLoopToggled) onLoopToggled();
-      });
-      ContextMenuManager::getInstance().showMenuAt(std::move(menu), this, e.x, e.y);
-    } 
-    // Regular click handled on mouseUp usually, but let's conform to existing pattern:
-    // Existing code triggered on mouseDown. I'll keep it but ensure pressed state is visualized.
-    else if (onPlayClicked) { onPlayClicked(); }
-    
-  } else if (stopButtonBounds_.contains(e.getPosition())) {
-    if (isRightClick) {
-      auto menu = ContextMenuManager::createMenu();
-      menu->addItem(1, "Stop & Return to 0", true, false, [this]() {
-          if (onStopClicked) onStopClicked();
-          if (onRewind) onRewind();
-      });
-      menu->addItem(2, "Clear All Solo", true, false, [this]() {
-          if (onClearAllSolos) onClearAllSolos();
-      });
-      ContextMenuManager::getInstance().showMenuAt(std::move(menu), this, e.x, e.y);
-    } else if (onStopClicked) { onStopClicked(); }
-    
-  } else if (recordButtonBounds_.contains(e.getPosition())) {
-    if (!isRightClick && onRecordClicked) { onRecordClicked(); }
-  } else if (viewToggleButtonBounds_.contains(e.getPosition()) && !isRightClick) {
-    if (onViewToggleClicked) onViewToggleClicked();
-  } else if (exportButtonBounds_.contains(e.getPosition()) && !isRightClick) {
-    if (onExportClicked) onExportClicked();
-  } else if (settingsButtonBounds_.contains(e.getPosition()) && !isRightClick) {
-    if (onSettingsClicked) onSettingsClicked();
-  }
 }
 
 void TransportBar::mouseDrag(const juce::MouseEvent &e) {
   if (isDraggingBpm_) {
-      int dy = dragStartPos_.y - e.getPosition().y; // Drag UP to increase
-      double change = dy * 0.5; // Sensitivity
-      if (e.mods.isShiftDown()) change *= 0.1; // Fine tune
+      int dy = dragStartPos_.y - e.getPosition().y;
+      double change = dy * 0.5;
+      if (e.mods.isShiftDown()) change *= 0.1;
       
       double newTempo = juce::jlimit(1.0, 2000.0, dragStartValue_ + change);
       setTempo(newTempo);
@@ -584,7 +597,7 @@ void TransportBar::mouseDrag(const juce::MouseEvent &e) {
   
   if (isDraggingTimeSig_) {
       int dy = dragStartPos_.y - e.getPosition().y;
-      int steps = dy / 15; // Requires more movement
+      int steps = dy / 15;
       int newNum = juce::jlimit(1, 64, dragStartNum_ + steps);
       
       if (newNum != timeSigNum_) {
@@ -598,14 +611,6 @@ void TransportBar::mouseDrag(const juce::MouseEvent &e) {
 void TransportBar::mouseUp(const juce::MouseEvent &e) {
   isDraggingBpm_ = false;
   isDraggingTimeSig_ = false;
-  
-  // Clear pressed states
-  playState_.isPressed = false;
-  stopState_.isPressed = false;
-  recordState_.isPressed = false;
-  viewToggleState_.isPressed = false;
-  exportState_.isPressed = false;
-  settingsState_.isPressed = false;
   repaint();
 }
 
@@ -617,7 +622,6 @@ void TransportBar::mouseDoubleClick(const juce::MouseEvent &e) {
             bpmLabel_->showEditor();
         }
     } else if (timeSigHitBounds_.contains(e.getPosition())) {
-        // Start two-step entry: numerator first
         if (timeSigNumLabel_) {
             editingTimeSigNum_ = true;
             timeSigNumLabel_->setText(juce::String(timeSigNum_), juce::dontSendNotification);
@@ -627,85 +631,36 @@ void TransportBar::mouseDoubleClick(const juce::MouseEvent &e) {
     }
 }
 
-void TransportBar::mouseEnter(const juce::MouseEvent &e) { mouseMove(e); }
-
-void TransportBar::mouseExit(const juce::MouseEvent &e) {
-  juce::ignoreUnused(e);
-  // Clear all hover states
-  bool wasHovered = playState_.isHovered || stopState_.isHovered || recordState_.isHovered ||
-                    viewToggleState_.isHovered || exportState_.isHovered || settingsState_.isHovered;
-                    
-  playState_.isHovered = false;
-  stopState_.isHovered = false;
-  recordState_.isHovered = false;
-  viewToggleState_.isHovered = false;
-  exportState_.isHovered = false;
-  settingsState_.isHovered = false;
-  
-  if (wasHovered) repaint();
-}
-
 void TransportBar::mouseMove(const juce::MouseEvent &e) {
-  auto pos = e.getPosition();
-  
-  bool anyChanged = false;
-  auto update = [&](InteractionState& state, const juce::Rectangle<int>& bounds) {
-      bool nowHovered = bounds.contains(pos);
-      if (state.isHovered != nowHovered) {
-          state.isHovered = nowHovered;
-          anyChanged = true;
-      }
-  };
-
-  update(playState_, playButtonBounds_);
-  update(stopState_, stopButtonBounds_);
-  update(recordState_, recordButtonBounds_);
-  update(viewToggleState_, viewToggleButtonBounds_);
-  update(exportState_, exportButtonBounds_);
-  update(settingsState_, settingsButtonBounds_);
-  
-  if (anyChanged) repaint();
-
-  // Trigger Global Help Callbacks
-  if (globalHelpCallback) {
-    if (playState_.isHovered) 
-        globalHelpCallback("Start Playback", "Begins audio and MIDI playback from the current position. Shortcut: Space.");
-    else if (stopState_.isHovered) 
-        globalHelpCallback("Stop Playback", "Stops all rendering and returns playhead to start. Double-click to return to 0.");
-    else if (recordState_.isHovered) 
-        globalHelpCallback("Record", "Begins recording onto armed tracks. Pro Tip: Use 'Count-in' in settings for a lead-in.");
-    else if (viewToggleState_.isHovered) 
-        globalHelpCallback("Switch View", "Toggles between linear Arranger and loop-based Session view. Shortcut: Tab.");
-    else if (exportState_.isHovered) 
-        globalHelpCallback("Export", "Mixes down your project to a high-quality audio file. Support for WAV, MP3, and FLAC.");
-    else if (settingsState_.isHovered) 
-        globalHelpCallback("Audio Settings", "Configure your sound card, buffer size, and MIDI hardware here.");
-  }
+    // LCD Hover effects handled in draw via hit test? 
+    // Or we can just repaint. Button hovers handled by GhostButtons.
 }
+void TransportBar::mouseEnter(const juce::MouseEvent &e) {}
+void TransportBar::mouseExit(const juce::MouseEvent &e) {}
 
 void TransportBar::onAnimationTick(float deltaMs) {
   SkiaComponent::updateInternalAnimations(deltaMs);
 
   float dt = deltaMs / 1000.0f;
-  // Update animations
+  
+  // Update animations driven by component state
   playState_.update(dt);
   stopState_.update(dt);
   recordState_.update(dt);
+  loopState_.update(dt);
+  rewindState_.update(dt);
+  metroState_.update(dt);
   viewToggleState_.update(dt);
   exportState_.update(dt);
   settingsState_.update(dt);
 
-  // Check if any need repainting
-  if (playState_.isAnimating() || stopState_.isAnimating() ||
-      recordState_.isAnimating() || viewToggleState_.isAnimating() ||
-      exportState_.isAnimating() || settingsState_.isAnimating()) {
-    repaint();
-  }
+  // If animating, request repaint
+  // (Optimization: Check if any actually changed)
+  repaint();
 }
 
 std::unique_ptr<juce::AccessibilityHandler>
 TransportBar::createAccessibilityHandler() {
-  // Return a group handler so it exposes children
   return std::make_unique<juce::AccessibilityHandler>(
       *this, juce::AccessibilityRole::group);
 }
@@ -715,19 +670,6 @@ TransportBar::~TransportBar() {
 }
 
 
-bool TransportBar::hitTest(int x, int y) {
-    if (playButtonBounds_.contains(x, y)) return true;
-    if (stopButtonBounds_.contains(x, y)) return true;
-    if (recordButtonBounds_.contains(x, y)) return true;
-    if (viewToggleButtonBounds_.contains(x, y)) return true;
-    if (settingsButtonBounds_.contains(x, y)) return true;
-    if (exportButtonBounds_.contains(x, y)) return true;
-    
-    // NEW: Allow interaction with LCD
-    if (lcdBounds_.contains(x, y)) return true;
-    
-    return false;
-}
 
 } // namespace zenith
 

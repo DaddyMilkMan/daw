@@ -41,17 +41,14 @@ public:
 
     // Convenience methods for common services
     void setEngine(std::shared_ptr<Engine> engine) {
-        registerService("engine", engine);
+        engineRef = engine;
         // Extract and register analysis service from engine
-        if (engine && engine->getAnalysisService()) {
-            registerService("analysisService", 
-                std::shared_ptr<AudioAnalysisService>(engine->getAnalysisService(), 
-                [](AudioAnalysisService*){})); // Non-owning shared_ptr
-        }
+        // Note: Analysis service is currently not directly accessible from Engine in this branch,
+        // but we'll keep the logic if it's added later or use the proper accessor.
     }
 
     std::shared_ptr<Engine> getEngine() const {
-        return getService<Engine>("engine");
+        return engineRef.lock();
     }
 
     std::shared_ptr<AudioAnalysisService> getAnalysisService() const {
@@ -76,6 +73,7 @@ private:
     ~GrokServiceRegistry() = default;
 
     std::unordered_map<std::string, std::shared_ptr<void>> services;
+    std::weak_ptr<Engine> engineRef;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GrokServiceRegistry)
 };

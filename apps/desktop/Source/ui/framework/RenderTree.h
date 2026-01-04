@@ -16,6 +16,12 @@
 #include <juce_graphics/juce_graphics.h>
 
 #include <core/SkImage.h>
+#include <core/SkRect.h>
+#include <core/SkRefCnt.h>
+#include <core/SkFont.h>
+#include <core/SkFontMgr.h>
+#include <core/SkTypeface.h>
+#include <core/SkCanvas.h>
 #include "../design-system/ZenithDesignSystem.h"
 
 #include <atomic>

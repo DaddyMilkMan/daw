@@ -14,11 +14,11 @@
 #pragma once
 
 #include "ZenithDesignSystem.h"
-#include <include/core/SkCanvas.h>
-#include <include/core/SkMaskFilter.h>
-#include <include/core/SkPaint.h>
-#include <include/core/SkRect.h>
-#include <include/effects/SkGradientShader.h>
+#include <core/SkCanvas.h>
+#include <core/SkMaskFilter.h>
+#include <core/SkPaint.h>
+#include <core/SkRect.h>
+#include <effects/SkGradientShader.h>
 
 namespace zenith {
 namespace design {

@@ -4,11 +4,14 @@ import os
 import signal
 import socket
 import subprocess
+import sys
 import threading
 import time
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Callable, Dict, List, Optional
+
+from backend.config import ZenithConfig
 
 # Replaced structlog with standard logging
 log = logging.getLogger("zenith.orchestrator")
@@ -216,3 +219,125 @@ def check_tcp_port(host: str, port: int, timeout: float = 1.0) -> bool:
             return True
     except (OSError, ConnectionRefusedError):
         return False
+
+
+class ServiceManager:
+    """
+    High-level service manager for Zenith DAW backend services.
+    
+    This class provides a simplified interface to manage backend services
+    including signaling server and UPnP port mapping. It wraps the ServiceSentinel
+    for process management and health monitoring.
+    
+    Thread-safe for concurrent operations through internal locking.
+    """
+    
+    def __init__(self, config: ZenithConfig):
+        """
+        Initialize the ServiceManager with the given configuration.
+        
+        Args:
+            config: ZenithConfig instance containing service configuration
+        """
+        if not isinstance(config, ZenithConfig):
+            raise TypeError(f"Expected ZenithConfig, got {type(config)}")
+            
+        self.config = config
+        self.sentinel = ServiceSentinel(check_interval=1.0)
+        self.logger = logging.getLogger("zenith.service_manager")
+        self._setup_services()
+        
+    def _setup_services(self) -> None:
+        """Configure services based on the configuration."""
+        # Setup signaling service
+        signaling_env = {
+            "ZENITH_SIGNALING_HOST": self.config.signaling_host,
+            "ZENITH_SIGNALING_PORT": str(self.config.signaling_port),
+            "ZENITH_LOG_LEVEL": self.config.log_level,
+        }
+        
+        def check_signaling_health() -> bool:
+            return check_tcp_port("127.0.0.1", self.config.signaling_port)
+        
+        self.sentinel.add_service(
+            ServiceDefinition(
+                name="signaling",
+                command=[sys.executable, "-m", "backend.signaling.signaling_server"],
+                env=signaling_env,
+                health_check=check_signaling_health,
+                cwd=os.getcwd(),
+            )
+        )
+        
+        # Setup UPnP service if enabled
+        if self.config.upnp_enabled:
+            upnp_env = {
+                "ZENITH_UPNP_PORT": str(self.config.upnp_port),
+                "ZENITH_UPNP_TIMEOUT": str(self.config.upnp_timeout),
+            }
+            
+            self.sentinel.add_service(
+                ServiceDefinition(
+                    name="upnp",
+                    command=[sys.executable, "-m", "backend.networking.port_mapper"],
+                    env=upnp_env,
+                    backoff_base_sec=60.0,
+                    backoff_max_sec=300.0,
+                    cwd=os.getcwd(),
+                )
+            )
+    
+    def start_services(self, dry_run: bool = False) -> None:
+        """
+        Start all configured services.
+        
+        Args:
+            dry_run: If True, validate configuration but don't actually start services
+            
+        Raises:
+            RuntimeError: If services fail to start
+        """
+        if dry_run:
+            self.logger.info("Dry run: would start services", 
+                    extra={"services": list(self.sentinel.services.keys())})
+            return
+            
+        try:
+            self.sentinel.start_all()
+            self.logger.info("All services started successfully")
+        except Exception as e:
+            self.logger.error("Failed to start services", extra={"error": str(e)})
+            raise RuntimeError(f"Service startup failed: {e}") from e
+    
+    def stop_services(self) -> None:
+        """Stop all running services gracefully."""
+        try:
+            self.sentinel.stop_all()
+            self.logger.info("All services stopped")
+        except Exception as e:
+            self.logger.error("Error stopping services", extra={"error": str(e)})
+            raise RuntimeError(f"Service shutdown failed: {e}") from e
+    
+    def get_status(self) -> Dict[str, dict]:
+        """
+        Get the current status of all services.
+        
+        Returns:
+            Dictionary mapping service names to their status information
+        """
+        return self.sentinel.get_status()
+    
+    def wait_forever(self) -> None:
+        """Block until interrupted, keeping services running."""
+        def handle_shutdown(signum, frame):
+            self.logger.info("Shutdown signal received", extra={"signal": signum})
+            self.stop_services()
+            sys.exit(0)
+        
+        # Set up signal handlers atomically
+        signal.signal(signal.SIGINT, handle_shutdown)
+        signal.signal(signal.SIGTERM, handle_shutdown)
+        
+        # The loop will be interrupted by a signal, and the handler will exit the process
+        while True:
+            time.sleep(1)

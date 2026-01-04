@@ -188,7 +188,13 @@ void WingmanPanel::drawSkia(SkCanvas *canvas) {
       canvas->translate(0, offsetY);
   }
 
-  canvas->saveLayerAlpha(nullptr, (uint8_t)(alpha * 255));
+  // PERFORMANCE: Only use saveLayerAlpha when actually fading.
+  // saveLayerAlpha triggers an offscreen buffer allocation which is expensive.
+  // When fully visible, skip it entirely to stay on the fast GPU path.
+  bool needsAlphaLayer = (alpha < 0.999f);
+  if (needsAlphaLayer) {
+      canvas->saveLayerAlpha(nullptr, (uint8_t)(alpha * 255));
+  }
 
   //==========================================================================
   // 1. Background - Sharp rectangle (NO rounded corners)
@@ -253,8 +259,11 @@ void WingmanPanel::drawSkia(SkCanvas *canvas) {
   //==========================================================================
   drawChildren(canvas);
 
-  canvas->restore();
-  canvas->restore();
+  // Restore in correct order
+  if (needsAlphaLayer) {
+      canvas->restore();  // Restore alpha layer
+  }
+  canvas->restore();  // Restore initial save
 }
 
 //==============================================================================

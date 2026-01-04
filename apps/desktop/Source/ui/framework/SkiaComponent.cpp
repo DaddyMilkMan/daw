@@ -9,6 +9,7 @@
 */
 
 #include "SkiaComponent.h"
+#include "../../engine/ZenithLogger.h"
 #include <core/SkBlurTypes.h> // Explicitly include
 
 #include "PlatformDisplayUtils.h"
