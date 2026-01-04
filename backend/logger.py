@@ -86,7 +86,7 @@ def configure_logging(config: ZenithConfig) -> None:
     )
 
 
-def get_logger(name: str = "zenith") -> structlog.stdlib.BoundLogger:
+def get_logger(name: str = "zenith") -> "structlog.typing.BoundLogger":
     """
     Get a configured structlog logger instance.
     
