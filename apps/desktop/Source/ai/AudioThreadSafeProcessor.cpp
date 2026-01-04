@@ -342,7 +342,7 @@ void RealTimeSuggestionEngine::addSuggestion(const Suggestion& suggestion) {
     for (auto& slot : suggestions) {
         if (!slot.isActive) {
             slot = suggestion;
-            suggestionCount.fetch_add(1, std::memory_order_relaxed);
+            suggestionCount.fetch_add(1, std::memory_order_acq_rel);
             return;
         }
     }
