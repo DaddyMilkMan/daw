@@ -21,9 +21,9 @@ The Zenith DAW codebase has been successfully configured to use **Skia exclusive
 ### 2. Code Updates
 
 **apps/desktop/Source/ui/framework/SkiaComponent.h/cpp:**
-- Added clear documentation that paint() triggers repaint requests
+- Clarified that paint() is required by JUCE but non-functional
 - Emphasized that drawSkia() is the only rendering method
-- Added detailed comments about Skia-first architecture
+- No legacy JUCE compatibility maintained
 
 **apps/desktop/Source/ui/design-system/ZenithLookAndFeel.h/cpp:**
 - Added deprecation warnings
@@ -76,7 +76,7 @@ The Zenith DAW codebase has been successfully configured to use **Skia exclusive
 ## Verification
 
 ### What Was Verified
-✅ All SkiaComponent paint() methods trigger repaint requests  
+✅ All SkiaComponent paint() methods are non-functional (required override only)
 ✅ All rendering goes through drawSkia(SkCanvas*)  
 ✅ Documentation clearly states Skia-only architecture  
 ✅ CMakeLists.txt enforces Skia requirement  
