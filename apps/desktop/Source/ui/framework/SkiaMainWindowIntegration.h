@@ -23,7 +23,6 @@
 
 namespace zenith {
 
-#ifdef ZENITH_USE_SKIA
 /**
  * @brief Reusable Skia OpenGL Renderer that manages OpenGL context and Skia
  * Surface.
@@ -139,7 +138,5 @@ private:
   sk_sp<SkSurface> softwareSurface_;
   juce::Image softwareImage_;
 };
-
-#endif // ZENITH_USE_SKIA
 
 } // namespace zenith

@@ -20,42 +20,7 @@
 #include <mutex>
 #include <algorithm>
 
-#ifdef ZENITH_USE_SKIA
 #include <core/SkRect.h>
-#else
-// Fallback when Skia is disabled
-struct SkRect {
-    float fLeft = 0, fTop = 0, fRight = 0, fBottom = 0;
-    static SkRect MakeXYWH(float x, float y, float w, float h) {
-        return {x, y, x + w, y + h};
-    }
-    static SkRect MakeWH(float w, float h) {
-        return {0, 0, w, h};
-    }
-    static SkRect MakeEmpty() { return {0, 0, 0, 0}; }
-    float width() const { return fRight - fLeft; }
-    float height() const { return fBottom - fTop; }
-    bool isEmpty() const { return fLeft >= fRight || fTop >= fBottom; }
-    bool intersects(const SkRect& other) const {
-        return fLeft < other.fRight && fRight > other.fLeft &&
-               fTop < other.fBottom && fBottom > other.fTop;
-    }
-    SkRect makeInset(float dx, float dy) const {
-        return {fLeft + dx, fTop + dy, fRight - dx, fBottom - dy};
-    }
-    SkRect makeOffset(float dx, float dy) const {
-        return {fLeft + dx, fTop + dy, fRight + dx, fBottom + dy};
-    }
-    void join(const SkRect& other) {
-        if (other.isEmpty()) return;
-        if (isEmpty()) { *this = other; return; }
-        fLeft = std::min(fLeft, other.fLeft);
-        fTop = std::min(fTop, other.fTop);
-        fRight = std::max(fRight, other.fRight);
-        fBottom = std::max(fBottom, other.fBottom);
-    }
-};
-#endif
 
 #include <juce_graphics/juce_graphics.h>
 
