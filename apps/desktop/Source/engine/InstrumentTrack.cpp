@@ -14,9 +14,9 @@ void InstrumentTrack::getNextAudioBlock(
   bufferToFill.clearActiveBufferRegion();
 
   // 2. Prepare MIDI Buffer
-  juce::MidiBuffer midiBuffer;
+  midiBuffer_.clear();
   if (incomingMidi != nullptr) {
-    midiBuffer.addEvents(*incomingMidi, 0, numSamples, 0);
+    midiBuffer_.addEvents(*incomingMidi, 0, numSamples, 0);
   }
 
   // 3. Add Clip MIDI (from MIDI clips on this instrument track)
@@ -44,7 +44,7 @@ void InstrumentTrack::getNextAudioBlock(
             
             // Process the intersecting part of the MIDI clip
             // processMidiClip takes numSamples as a constraint
-            clip->processMidiClip(midiBuffer, overlapStart, numToProcess);
+            clip->processMidiClip(midiBuffer_, overlapStart, numToProcess);
           }
         }
       }
@@ -53,7 +53,7 @@ void InstrumentTrack::getNextAudioBlock(
 
   // 4. Process through plugin chain and mixer (delegated to Processor)
   juce::AudioSourceChannelInfo blockInfo(bufferToFill.buffer, bufferToFill.startSample, numSamples);
-  processor->processBlock(blockInfo, midiBuffer, auxBuffers, sidechainBuffer);
+  processor->processBlock(blockInfo, midiBuffer_, auxBuffers, sidechainBuffer);
 
   // 5. Update Metering
   // TrackProcessor currently doesn't explicitly 'update' meters separate from processBlock, 

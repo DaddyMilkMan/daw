@@ -129,7 +129,7 @@ struct AudioRenderContext {
 class AudioRenderer {
 public:
   //==========================================================================
-  AudioRenderer() = default;
+  AudioRenderer();
   ~AudioRenderer() = default;
 
   //==========================================================================
@@ -266,6 +266,7 @@ private:
 
   // Dither
   zenith::dsp::Dither dither_;
+  juce::MidiBuffer scratchMidi_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioRenderer)
 };

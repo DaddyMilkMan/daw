@@ -36,8 +36,7 @@ void AuxBusTrack::getNextAudioBlock(
 
   // 3. Process Plugins and Mixer (delegated to Processor)
   juce::AudioSourceChannelInfo blockInfo(bufferToFill.buffer, bufferToFill.startSample, numSamples);
-  juce::MidiBuffer emptyMidi;
-  processor->processBlock(blockInfo, emptyMidi, {}, sidechainBuffer);
+  processor->processBlock(blockInfo, processor->getEmptyMidiBuffer(), {}, sidechainBuffer);
 }
 
 } // namespace zenith

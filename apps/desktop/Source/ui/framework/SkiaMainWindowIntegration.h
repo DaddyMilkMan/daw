@@ -22,6 +22,11 @@
 
 #endif
 
+#if JUCE_WINDOWS
+#include <memory>
+#include "SkiaD3D12Context.h"
+#endif
+
 namespace zenith {
 
 #ifdef ZENITH_USE_SKIA
@@ -112,13 +117,13 @@ public:
       safeHeight_.store(height);
   }
 
+
+
   JUCE_DECLARE_WEAK_REFERENCEABLE(SkiaOpenGLRenderer)
 };
 
 /**
- * @brief Base class for main window with Skia rendering
- *
- * Kept for backward compatibility and simple use cases.
+ * @brief Base class for main window with Skia rendering (OpenGL or D3D12)
  */
 class SkiaMainWindowIntegration : public juce::Component,
                                   public SkiaOpenGLRenderer {
@@ -139,6 +144,12 @@ public:
 private:
   sk_sp<SkSurface> softwareSurface_;
   juce::Image softwareImage_;
+
+#if JUCE_WINDOWS
+  // D3D12 Context
+  std::unique_ptr<SkiaD3D12Context> d3d12Context_;
+  bool useD3D12_ = true; // Default to D3D12 on Windows
+#endif
 };
 
 #endif // ZENITH_USE_SKIA

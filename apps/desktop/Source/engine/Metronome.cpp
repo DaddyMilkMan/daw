@@ -73,46 +73,26 @@ void Metronome::getNextAudioBlock(juce::AudioBuffer<float> &bufferToFill,
   float *channelData1 =
       (numChannels > 1) ? bufferToFill.getWritePointer(1) : nullptr;
 
+  // Optimization: Calculate beat info once per block if tempo is constant
+  // (Approximation: We assume tempo doesn't change drastically WITHIN a 10ms block for the metronome click)
+  double startBeat = tempoMap.samplesToBeats(currentTransportSample, sampleRate_);
+  double endBeat = tempoMap.samplesToBeats(currentTransportSample + numSamples, sampleRate_);
+  double beatsPerSample = (endBeat - startBeat) / (double)numSamples;
+
+  // Track the current beat as we iterate
+  double currentBeat = startBeat;
+
   for (int i = 0; i < numSamples; ++i) {
-    int64_t samplePos = currentTransportSample + i;
-    double currentBeat = tempoMap.samplesToBeats(samplePos, sampleRate_);
-
-    // Simple beat detection logic:
-    // We need to trigger exactly when we cross a quarter note boundary
-
-    // Because of floating point, "crossing" is better detected by observing the
-    // change in integral beat But samplesToBeats might jump. Better approach:
-    // Calculate the NEXT beat's sample position and see if it falls in this
-    // buffer? Or check simply if the integer part of beat changed.
-
-    // Let's use the 'samples to beat' approach for precision.
-    double beatInteger;
-    double beatFraction = std::modf(currentBeat, &beatInteger);
-
-    // This checks if we are *very* close to the start of a beat.
-    // A robust way used in DAWs is tracking the "last beat index" and firing if
-    // "current beat index" > "last". However, we process sample by sample here
-    // (or small blocks). Since we are iterating i, let's just check equality
-    // with a epsilon relative to sample rate? No, `samplesToBeats` is precise.
-    // The beat starts exactly when samplePos corresponds to beat X.0.
-    //
-    // We can invert it: `tempoMap.beatsToSamples(nextBeat)`.
-
-    // Optimization: Don't call `beatsToSamples` every sample.
-    // But `tempoMap.samplesToBeats` is fast (linear map lookup).
-
-    // Initialize lastBeat_ on first run or discontinuity
-    if (i == 0 && lastBeat_ < 0.0) {
-      // Look back one sample to establish state
-      lastBeat_ = tempoMap.samplesToBeats(samplePos - 1, sampleRate_);
-    }
-
-    double thisSampleBeat = currentBeat;
-
+    // Current sample index in this process block is 'i'
+    // Transport sample is currentTransportSample + i
+    
+    // Instead of: double currentBeat = tempoMap.samplesToBeats(samplePos, sampleRate_);
+    // We increment:
+    
     // Check for integer crossing
-    if (std::floor(thisSampleBeat) > std::floor(lastBeat_)) {
+    if (std::floor(currentBeat) > std::floor(lastBeat_)) {
       // Trigger!
-      int beatIndex = static_cast<int>(std::floor(thisSampleBeat));
+      int beatIndex = static_cast<int>(std::floor(currentBeat));
 
       // Get Time Signature from TempoMap properly
       int numerator = std::max(1, tempoMap.getTimeSignatureNumerator());
@@ -122,8 +102,9 @@ void Metronome::getNextAudioBlock(juce::AudioBuffer<float> &bufferToFill,
       else
         triggerClick(kLowClickFreq);
     }
-
-    lastBeat_ = thisSampleBeat;
+    
+    lastBeat_ = currentBeat;
+    currentBeat += beatsPerSample;
 
     // Synthesis
     float sampleValue = 0.0f;

@@ -412,9 +412,32 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice *device) {
   // Zero-Latency Agent: Mark this thread for RT-safety assertions
   rt::markAsAudioThread();
 
+#if JUCE_WINDOWS
+  // CRITICAL: Explicitly register with MMCSS for "Pro Audio" priority.
+  // This prevents the audio thread from getting preempted by OS background tasks.
+  DWORD taskIndex = 0;
+  HANDLE res = AvSetMmThreadCharacteristics(L"Pro Audio", &taskIndex);
+  if (res == NULL) {
+      DBG("Engine: FAILED to register audio thread with MMCSS 'Pro Audio'.");
+      // Fallback: try "Audio"
+      res = AvSetMmThreadCharacteristics(L"Audio", &taskIndex);
+      if (res == NULL) {
+          DBG("Engine: FAILED to register audio thread with MMCSS 'Audio'.");
+      } else {
+        DBG("Engine: Registered audio thread with MMCSS 'Audio'.");
+      }
+  } else {
+      DBG("Engine: Registered audio thread with MMCSS 'Pro Audio'.");
+  }
+#endif
+
   // Update settings
   currentSampleRate.store(device->getCurrentSampleRate());
   currentBufferSize.store(device->getCurrentBufferSizeSamples());
+  lastLiveMidiCallbackTimeSeconds_ =
+      juce::Time::getMillisecondCounterHiRes() * 0.001;
+  liveMidiPass1_.ensureSize(65536);
+  liveMidiPass2_.ensureSize(65536);
 
   // Reset state
   phase = 0.0;
@@ -473,6 +496,13 @@ void Engine::audioDeviceIOCallbackWithContext(
     const juce::AudioIODeviceCallbackContext &context) noexcept {
 
   juce::ignoreUnused(inputChannelData, numInputChannels, context);
+  const double sampleRate = currentSampleRate.load();
+  const double timeNowSeconds = juce::Time::getMillisecondCounterHiRes() * 0.001;
+  const double blockStartTimeSeconds = lastLiveMidiCallbackTimeSeconds_;
+  lastLiveMidiCallbackTimeSeconds_ = timeNowSeconds;
+  const int numSourceSamples =
+      juce::jmax(1, juce::roundToInt((timeNowSeconds - blockStartTimeSeconds) *
+                                    sampleRate));
 
   // Clean output buffers
   for (int i = 0; i < numOutputChannels; ++i) {
@@ -490,15 +520,12 @@ void Engine::audioDeviceIOCallbackWithContext(
   // Process Events (Updates track parameters etc.)
   processEvents();
 
-  // Midi Buffer for rendering (populated from FIFO)
-  juce::MidiBuffer midiBuffer;
-  midiFifo_.drainTo(midiBuffer, numSamples);
-
   // Master plugins for pass 1/2
   std::span<const std::shared_ptr<juce::AudioPluginInstance>> masterPlugins;
   if (masterSnapshot) masterPlugins = masterSnapshot->plugins;
 
-  if (transportController_ && transportController_->isPlaying()) {
+  const bool isPlaying = transportController_ && transportController_->isPlaying();
+  if (isPlaying) {
     juce::int64 currentPos = transportController_->getPlayheadSamples();
     juce::int64 loopEnd = transportController_->getLoopEndSamples();
     juce::int64 loopStart = transportController_->getLoopStartSamples();
@@ -514,20 +541,46 @@ void Engine::audioDeviceIOCallbackWithContext(
       samplesBeforeLoop = static_cast<int>(loopEnd - currentPos);
     }
 
+    const int samplesAfter = numSamples - samplesBeforeLoop;
+    liveMidiPass1_.clear();
+    liveMidiPass2_.clear();
+
+    midiFifo_.drain([&](const juce::MidiMessage &msg) {
+      int rawPos = juce::roundToInt((msg.getTimeStamp() - blockStartTimeSeconds) *
+                                    sampleRate);
+      rawPos = juce::jlimit(0, juce::jmax(0, numSourceSamples - 1), rawPos);
+
+      int pos = 0;
+      if (numSourceSamples > numSamples) {
+        pos = (int)((int64_t)rawPos * (int64_t)numSamples /
+                    (int64_t)numSourceSamples);
+      } else {
+        pos = rawPos + (numSamples - numSourceSamples);
+      }
+      pos = juce::jlimit(0, numSamples - 1, pos);
+
+      if (!wrapped || pos < samplesBeforeLoop) {
+        liveMidiPass1_.addEvent(msg, pos);
+      } else {
+        const int pos2 = pos - samplesBeforeLoop;
+        if (pos2 >= 0 && pos2 < samplesAfter) {
+          liveMidiPass2_.addEvent(msg, pos2);
+        }
+      }
+    });
+
     // Pass 1
     if (samplesBeforeLoop > 0) {
       // Use proxy buffer to avoid allocation
       juce::AudioBuffer<float> buffer1(outputChannelData, numOutputChannels,
                                        samplesBeforeLoop);
-      juce::MidiBuffer midi1;
-      midiFifo_.drainTo(midi1, samplesBeforeLoop);
 
       if (audioRenderer_) {
         audioRenderer_->renderAudioGraph(
             renderContext_,
             buffer1, samplesBeforeLoop, currentPos, snapshot->tracks,
             snapshot->auxBuses, routingGraph_, masterLimiter_, masterPlugins,
-            tempoMap_.get(), &midi1, inputChannelData, numInputChannels);
+            tempoMap_.get(), &liveMidiPass1_, inputChannelData, numInputChannels);
 
         // Mix Metronome (Pass 1)
         if (metronome_) {
@@ -538,7 +591,6 @@ void Engine::audioDeviceIOCallbackWithContext(
 
     // Pass 2 (Wrapped)
     if (wrapped) {
-      int samplesAfter = numSamples - samplesBeforeLoop;
       if (samplesAfter > 0) {
         // Use stack array for channel pointers to avoid heap allocation
         jassert(numOutputChannels <= 32 &&
@@ -553,14 +605,12 @@ void Engine::audioDeviceIOCallbackWithContext(
         juce::AudioBuffer<float> buffer2(offsets, safeNumChannels,
                                          samplesAfter);
 
-        juce::MidiBuffer emptyMidi; // No MIDI in wrapped part for now
-
         if (audioRenderer_) {
           audioRenderer_->renderAudioGraph(
               renderContext_,
               buffer2, samplesAfter, loopStart, snapshot->tracks,
               snapshot->auxBuses, routingGraph_, masterLimiter_, masterPlugins,
-              tempoMap_.get(), &emptyMidi, offsets,
+              tempoMap_.get(), &liveMidiPass2_, offsets,
               safeNumChannels); // Using offset inputs
 
           // Mix Metronome (Pass 2)
@@ -577,6 +627,7 @@ void Engine::audioDeviceIOCallbackWithContext(
   } else {
     // Not playing?
     // We could process reverb tails here if we wanted.
+    midiFifo_.drain([](const juce::MidiMessage &) {});
   }
 
   // Analysis / Visualizers
@@ -644,14 +695,12 @@ void Engine::applyEvent(const zenith::EngineEvent &e,
         if (plugin) {
           auto params = plugin->getParameters();
           if (e.paramIndex >= 0 && e.paramIndex < (int)params.size()) {
-             // RT-SAFE FIX: Use setValueWithoutNotification to avoid triggering plugin
-             // UI updates/notifications from audio thread. setValueNotifyingHost can
-             // cause locks, allocations, and blocking operations.
-              params[e.paramIndex]->setValueWithoutNotification(e.value);
-           }
-       }
-     }
-   } else if (e.type == zenith::EngineEvent::Type::SetTrackVolume) {
+            params[e.paramIndex]->setValue(e.value);
+          }
+        }
+      }
+    }
+  } else if (e.type == zenith::EngineEvent::Type::SetTrackVolume) {
     if (snapshot && e.trackIndex >= 0 &&
         e.trackIndex < (int)snapshot->tracks.size()) {
       if (auto *track = snapshot->tracks[e.trackIndex]) {

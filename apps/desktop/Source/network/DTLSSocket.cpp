@@ -1,9 +1,9 @@
 #include "DTLSSocket.h"
-#include <openssl/err.h>
 
 namespace zenith {
 
 #ifdef ZENITH_ENABLE_COLLAB
+#include <openssl/err.h>
 
 // Helper to load self-signed certs (for development)
 void configure_ssl_context_with_self_signed(SSL_CTX* ctx) {

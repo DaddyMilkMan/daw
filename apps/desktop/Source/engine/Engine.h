@@ -1111,6 +1111,9 @@ private:
   // MIDI input handling
   std::vector<std::unique_ptr<juce::MidiInput>> midiInputs_;
   zenith::MidiFifo midiFifo_; // Lock-free MIDI FIFO for input routing
+  juce::MidiBuffer liveMidiPass1_;
+  juce::MidiBuffer liveMidiPass2_;
+  double lastLiveMidiCallbackTimeSeconds_ = 0.0;
 
   // Lock-free Command Queue
   static constexpr int kCommandBufferSize = 1024;

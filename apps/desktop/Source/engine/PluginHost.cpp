@@ -139,37 +139,45 @@ bool PluginHost::scanFileOutProcess(const juce::File& file, juce::PluginDescript
         
         if (process.getExitCode() == 0)
         {
-            // Parse JSON output
-            // Output usually contains JSON on one line, but maybe headers.
-            // We look for the last valid JSON lines or clean output.
-            
-            output = output.trim();
-            int jsonStart = output.indexOf("{");
-            int jsonEnd = output.lastIndexOf("}");
-            
-            if (jsonStart >= 0 && jsonEnd > jsonStart)
-            {
-                juce::String jsonStr = output.substring(jsonStart, jsonEnd + 1);
-                auto json = juce::JSON::parse(jsonStr);
+            try {
+                // Parse YAML output (simple key: value format)
+                output = output.trim();
                 
-                if (!json.isVoid() && json.hasProperty("status"))
-                {
-                   juce::String status = json["status"];
-                   if (status == "success") {
-                       result.fileOrIdentifier = file.getFullPathName();
-                       result.name = json["name"];
-                       result.manufacturerName = json["manufacturer"];
-                       result.version = json["version"];
-                       result.uniqueId = json["uid"].toString().getIntValue();
-                       result.pluginFormatName = "VST3";
-                       result.lastInfoUpdateTime = juce::Time::getCurrentTime();
-                       
-                       bool isInst = json["isInstrument"];
-                       result.isInstrument = isInst;
-                       
-                       return true;
-                   }
+                // Split into lines and parse key-value pairs
+                auto lines = juce::StringArray::fromLines(output);
+                bool foundSuccess = false;
+                
+                for (const auto& line : lines) {
+                    auto trimmed = line.trim();
+                    
+                    if (trimmed.startsWith("status:")) {
+                        auto status = trimmed.fromFirstOccurrenceOf("status:", false, false).trim();
+                        if (status == "success") {
+                            foundSuccess = true;
+                        }
+                    } else if (trimmed.startsWith("name:")) {
+                        result.name = trimmed.fromFirstOccurrenceOf("name:", false, false).trim();
+                    } else if (trimmed.startsWith("manufacturer:")) {
+                        result.manufacturerName = trimmed.fromFirstOccurrenceOf("manufacturer:", false, false).trim();
+                    } else if (trimmed.startsWith("version:")) {
+                        result.version = trimmed.fromFirstOccurrenceOf("version:", false, false).trim();
+                    } else if (trimmed.startsWith("uid:")) {
+                        result.uniqueId = trimmed.fromFirstOccurrenceOf("uid:", false, false).trim().getIntValue();
+                    } else if (trimmed.startsWith("is_instrument:")) {
+                        auto isInstStr = trimmed.fromFirstOccurrenceOf("is_instrument:", false, false).trim();
+                        result.isInstrument = (isInstStr == "true");
+                    } else if (trimmed.startsWith("format:")) {
+                        result.pluginFormatName = trimmed.fromFirstOccurrenceOf("format:", false, false).trim();
+                    }
                 }
+                
+                if (foundSuccess) {
+                    result.fileOrIdentifier = file.getFullPathName();
+                    result.lastInfoUpdateTime = juce::Time::getCurrentTime();
+                    return true;
+                }
+} catch (const std::exception& e) {
+                DBG("PluginHost: Parse error: " + juce::String(e.what()));
             }
         }
         else {

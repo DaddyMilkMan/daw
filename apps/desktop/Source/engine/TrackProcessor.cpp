@@ -15,6 +15,7 @@
 namespace zenith {
 
 TrackProcessor::TrackProcessor() {
+    emptyMidi_.ensureSize(65536);
 }
 
 TrackProcessor::~TrackProcessor() {
@@ -23,6 +24,8 @@ TrackProcessor::~TrackProcessor() {
 void TrackProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
     currentSampleRate = sampleRate;
     currentBlockSize = samplesPerBlock;
+
+    emptyMidi_.ensureSize(65536);
 
     // Resize buffers
     if (pluginBuffer.getNumSamples() != samplesPerBlock ||
@@ -44,6 +47,11 @@ void TrackProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
 void TrackProcessor::releaseResources() {
     pluginChain.releaseResources();
     mixerChannel.releaseResources();
+}
+
+juce::MidiBuffer& TrackProcessor::getEmptyMidiBuffer() noexcept {
+    emptyMidi_.clear();
+    return emptyMidi_;
 }
 
 void TrackProcessor::processBlock(const juce::AudioSourceChannelInfo& bufferToFill,

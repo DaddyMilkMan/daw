@@ -80,6 +80,7 @@ SkiaRenderer::Backend SkiaRenderer::detectBestBackend() const {
 //==============================================================================
 bool SkiaRenderer::createGpuContext() {
     if (backend_ == Backend::OpenGL) {
+#if JUCE_LINUX
         // Wayland/Pop!_OS specific EGL Bootstrapping
         auto interface = GrGLMakeAssembledInterface(nullptr, [](void* ctx, const char* name) -> GrGLFuncPtr {
             return (GrGLFuncPtr)eglGetProcAddress(name);
@@ -94,6 +95,17 @@ bool SkiaRenderer::createGpuContext() {
             grContext_ = GrDirectContexts::MakeGL(interface);
             return grContext_ != nullptr;
         }
+#else
+        // Windows/Mac: Use standard native interface (WGL/CGL)
+        // managed by JUCE's OpenGLContext usually, but here we are standalone?
+        // For now, try native interface which Skia should be able to resolve 
+        // if an OpenGL context is active.
+        auto interface = GrGLMakeNativeInterface();
+        if (interface) {
+            grContext_ = GrDirectContexts::MakeGL(interface);
+            return grContext_ != nullptr;
+        }
+#endif
     }
     
     // Fallback to Software if GPU fails, or if Software requested
