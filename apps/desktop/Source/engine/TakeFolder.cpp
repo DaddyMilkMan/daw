@@ -291,26 +291,26 @@ std::unique_ptr<Clip> TakeFolder::flatten(double sampleRate, const juce::File& o
   juce::File outputFile = outputDirectory.getChildFile(name_ + "_flattened.wav")
                                          .getNonexistentSibling();
   
-  if (outputFile.exists()) outputFile.deleteFile(); // Should check above, but extra safety
-
   // 2. Setup format writer
   juce::WavAudioFormat wavFormat;
-  auto* fos = new juce::FileOutputStream(outputFile);
+  // JUCE 8 API: createWriterFor takes unique_ptr<OutputStream>& by lvalue ref 
+  // It will steal ownership internally, leaving our variable null on success
+  std::unique_ptr<juce::OutputStream> fileStream = std::make_unique<juce::FileOutputStream>(outputFile);
   
-  if (fos->failedToOpen()) {
-    delete fos;
-    DBG("TakeFolder: Failed to open output file for flattening: " + outputFile.getFullPathName());
-    return nullptr;
+  // Check if file opened successfully (cast needed to access failedToOpen)
+  if (auto* fos = dynamic_cast<juce::FileOutputStream*>(fileStream.get())) {
+    if (fos->failedToOpen()) {
+      DBG("TakeFolder: Failed to open output file for flattening: " + outputFile.getFullPathName());
+      return nullptr;
+    }
   }
-  
-  std::unique_ptr<juce::OutputStream> fileStream(fos);
 
-  // Writer takes ownership of stream
-  auto options = juce::AudioFormatWriterOptions()
-      .withSampleRate(sampleRate)
-      .withNumChannels(2)
-      .withBitsPerSample(24);
-      
+  // Writer takes ownership of stream via lvalue ref (JUCE 8 API)
+  juce::AudioFormatWriterOptions options;
+  options = options.withSampleRate(sampleRate)
+                   .withNumChannels(2)
+                   .withBitsPerSample(24);
+  
   std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(fileStream, options));
 
   if (!writer) {

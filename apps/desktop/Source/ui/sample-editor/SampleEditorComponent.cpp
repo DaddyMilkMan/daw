@@ -2153,8 +2153,13 @@ void SampleEditorComponent::saveAsNewFile(const juce::File &targetFile) {
     return;
   }
   
+  std::unique_ptr<juce::OutputStream> outStream(stream.release());
   std::unique_ptr<juce::AudioFormatWriter> writer(
-      format.createWriterFor(stream.release(), sampleRate, (int)bufferToSave->getNumChannels(), 24, {}, 0));
+      format.createWriterFor(outStream,
+        juce::AudioFormatWriterOptions()
+          .withSampleRate(sampleRate)
+          .withNumChannels((unsigned int)bufferToSave->getNumChannels())
+          .withBitsPerSample(24)));
 
   if (writer) {
     writer->writeFromAudioSampleBuffer(*bufferToSave, 0,
@@ -2185,8 +2190,13 @@ void SampleEditorComponent::exportSelection(const juce::File &targetFile) {
   juce::WavAudioFormat format;
   
   std::unique_ptr<juce::OutputStream> fileStream(new juce::FileOutputStream(targetFile));
+  std::unique_ptr<juce::OutputStream> outStream(fileStream.release());
   std::unique_ptr<juce::AudioFormatWriter> writer(
-      format.createWriterFor(fileStream.release(), sampleRate, (int)bufferToSave->getNumChannels(), 24, {}, 0));
+      format.createWriterFor(outStream,
+        juce::AudioFormatWriterOptions()
+          .withSampleRate(sampleRate)
+          .withNumChannels((unsigned int)bufferToSave->getNumChannels())
+          .withBitsPerSample(24)));
 
   if (writer) {
     writer->writeFromAudioSampleBuffer(*bufferToSave, startSample, numSamples);

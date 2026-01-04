@@ -17,6 +17,8 @@
 #include "../framework/GlassmorphicPanel.h"
 #include <juce_gui_extra/juce_gui_extra.h>
 #include <juce_audio_utils/juce_audio_utils.h>
+#include "../../engine/ZenithLogger.h"
+#include "../framework/AnimationCoordinator.h"
 
 namespace zenith {
 
@@ -280,10 +282,15 @@ GlobalSettingsPanel::GlobalSettingsPanel(juce::AudioDeviceManager& deviceManager
   addAndMakeVisible(closeBtn_.get());
   
   switchCategory(Category::General);
-  setSize(900, 600);
+  
+  // CRITICAL: Register for self-healing tick
+  zenith::animation::AnimationCoordinator::getInstance().registerListener(this, zenith::animation::Priority::Normal);
+  
+  setSize(900, 650); // Start reasonably large
 }
 
 GlobalSettingsPanel::~GlobalSettingsPanel() {
+    zenith::animation::AnimationCoordinator::getInstance().unregisterListener(this);
     deviceManager_.removeChangeListener(this);
 }
 
@@ -347,8 +354,75 @@ void GlobalSettingsPanel::drawSkia(SkCanvas* canvas) {
 }
 
 void GlobalSettingsPanel::changeListenerCallback(juce::ChangeBroadcaster*) {}
-void GlobalSettingsPanel::show() { setVisible(true); toFront(true); }
-void GlobalSettingsPanel::hide() { setVisible(false); if(onClose) onClose(); }
+void GlobalSettingsPanel::show() { 
+    setVisible(true); 
+    toFront(true);
+    
+    // Guard against immediate closing (bounce protection)
+    canCloseAfter_ = juce::Time::getMillisecondCounter() + 500;
+    
+    // Ensure we are sized/centered properly
+    int targetW = 900;
+    int targetH = 650;
+    
+    if (auto* parent = getParentComponent()) {
+        if (parent->getWidth() > 100) {
+            targetW = std::max(900, juce::roundToInt(parent->getWidth() * 0.8));
+            targetH = std::max(650, juce::roundToInt(parent->getHeight() * 0.85));
+        }
+    }
+    
+    centreWithSize(targetW, targetH);
+    
+    // Force Position Clamping (X,Y >= 0)
+    auto b = getBounds();
+    if (b.getX() < 0) b.setX(0);
+    if (b.getY() < 0) b.setY(0);
+    setBounds(b);
+}
+
+void GlobalSettingsPanel::hide() { 
+    // Bounce guard
+    if (juce::Time::getMillisecondCounter() < canCloseAfter_) {
+        return;
+    }
+    setVisible(false); 
+    if(onClose) onClose(); 
+}
 void GlobalSettingsPanel::mouseDown(const juce::MouseEvent& event) {}
+
+// SELF-HEALING LAYOUT LOGIC
+void GlobalSettingsPanel::onAnimationTick(float delta) {
+    static int tickCount = 0;
+    if (tickCount++ % 60 == 0) {
+        auto b = getBounds();
+        auto p = getParentComponent();
+        ZENITH_LOG_INFO(juce::String::formatted("[GlobalSettingsPanel] Tick Bounds: %d %d %d %d | Parent: %s | Vis: %d", 
+             b.getX(), b.getY(), b.getWidth(), b.getHeight(), 
+             p ? (juce::String(p->getWidth()) + "x" + juce::String(p->getHeight())).toRawUTF8() : "NULL",
+             isVisible() ? 1 : 0));
+    }
+    
+    // SELF HEALING
+    if (isVisible() && (getWidth() < 800 || getHeight() < 600)) {
+         ZENITH_LOG_INFO("[GlobalSettingsPanel] Self-Healing Triggered: Resizing from tiny state.");
+         
+         int w = 800; 
+         int h = 600;
+         if (auto* p = getParentComponent()) {
+             if (p->getWidth() > 100) {
+                 w = std::max(800, juce::roundToInt(p->getWidth() * 0.8));
+                 h = std::max(600, juce::roundToInt(p->getHeight() * 0.85));
+             }
+         }
+         centreWithSize(w, h);
+         
+         // Clamp Position
+         auto b = getBounds();
+         if (b.getX() < 0) b.setX(0);
+         if (b.getY() < 0) b.setY(0);
+         setBounds(b);
+    }
+}
 
 } // namespace zenith

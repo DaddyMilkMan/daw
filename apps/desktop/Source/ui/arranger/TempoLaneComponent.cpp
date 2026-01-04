@@ -44,9 +44,9 @@ void TempoLaneComponent::drawSkia(SkCanvas* canvas)
     float width = (float)bounds.getWidth();
     float height = (float)bounds.getHeight();
 
-    // Background
+    // Background - use design system BG_02 for panels
     SkPaint bgPaint;
-    bgPaint.setColor(SkColorSetRGB(40, 40, 40)); // slightly darker than marker lane
+    bgPaint.setColor(colors::BG_02);
     canvas->drawRect(SkRect::MakeWH(width, height), bgPaint);
 
     // Grid
@@ -67,9 +67,11 @@ void TempoLaneComponent::drawSkia(SkCanvas* canvas)
 
 void TempoLaneComponent::drawGrid(SkCanvas* canvas) const
 {
+    using namespace zenith::design;
+    
     float width = (float)getWidth();
     SkPaint gridPaint;
-    gridPaint.setColor(SkColorSetARGB(30, 255, 255, 255));
+    gridPaint.setColor(withAlpha(colors::TEXT_PRIMARY, opacity::BORDER_SUBTLE));
     gridPaint.setStrokeWidth(1.0f);
 
     // Draw horizontal lines for key BPMs
@@ -84,7 +86,7 @@ void TempoLaneComponent::drawGrid(SkCanvas* canvas) const
             
             // Label
             SkPaint textPaint;
-            textPaint.setColor(SkColorSetARGB(100, 255, 255, 255));
+            textPaint.setColor(colors::TEXT_TERTIARY);
             SkFont font = zenith::design::typography::getMonoFont(10.0f);
             canvas->drawString(juce::String(bpm).toStdString().c_str(), 5, y - 2, font, textPaint);
         }
@@ -93,6 +95,7 @@ void TempoLaneComponent::drawGrid(SkCanvas* canvas) const
 
 void TempoLaneComponent::drawTempoCurve(SkCanvas* canvas) const
 {
+    using namespace zenith::design;
     auto points = projectState.getTempoMap(); // Assumes sorted by time
     if (points.getNumChildren() == 0) return;
 
@@ -134,7 +137,7 @@ void TempoLaneComponent::drawTempoCurve(SkCanvas* canvas) const
     }
 
     SkPaint curvePaint;
-    curvePaint.setColor(SkColorSetRGB(100, 200, 255)); // Light blue
+    curvePaint.setColor(colors::CYAN);  // Use design system accent for tempo curve
     curvePaint.setStyle(SkPaint::kStroke_Style);
     curvePaint.setStrokeWidth(2.0f);
     curvePaint.setAntiAlias(true);
@@ -146,10 +149,14 @@ void TempoLaneComponent::drawTempoCurve(SkCanvas* canvas) const
     curvePath.lineTo(0, (float)getHeight());
     curvePath.close();
     
+    // Use stack-allocated arrays to avoid memory leak (was using new[] without delete)
+    SkPoint gradientPoints[2] = {SkPoint::Make(0, 0), SkPoint::Make(0, (float)getHeight())};
+    SkColor gradientColors[2] = {withAlpha(colors::CYAN, opacity::GLOW_SUBTLE), withAlpha(colors::CYAN, 0.04f)};
+    
     SkPaint fillPaint;
     fillPaint.setShader(SkGradientShader::MakeLinear(
-        new SkPoint[2]{SkPoint::Make(0, 0), SkPoint::Make(0, (float)getHeight())},
-        new SkColor[2]{SkColorSetARGB(50, 100, 200, 255), SkColorSetARGB(10, 100, 200, 255)},
+        gradientPoints,
+        gradientColors,
         nullptr, 2, SkTileMode::kClamp));
     fillPaint.setStyle(SkPaint::kFill_Style);
     
@@ -173,12 +180,14 @@ void TempoLaneComponent::drawTempoPoints(SkCanvas* canvas) const
 
 void TempoLaneComponent::drawTempoPoint(SkCanvas* canvas, double timeBeats, double bpm, bool selected) const
 {
+    using namespace zenith::design;
+    
     float x = beatsToX(timeBeats);
     float y = bpmToY(bpm);
     float radius = 4.0f;
 
     SkPaint pointPaint;
-    pointPaint.setColor(selected ? SK_ColorWHITE : SkColorSetRGB(100, 200, 255));
+    pointPaint.setColor(selected ? colors::TEXT_PRIMARY : colors::CYAN);
     pointPaint.setStyle(SkPaint::kFill_Style);
     pointPaint.setAntiAlias(true);
     
@@ -187,7 +196,7 @@ void TempoLaneComponent::drawTempoPoint(SkCanvas* canvas, double timeBeats, doub
     if (selected)
     {
         SkPaint ringPaint;
-        ringPaint.setColor(SK_ColorWHITE);
+        ringPaint.setColor(colors::TEXT_PRIMARY);
         ringPaint.setStyle(SkPaint::kStroke_Style);
         ringPaint.setStrokeWidth(1.0f);
         ringPaint.setAntiAlias(true);

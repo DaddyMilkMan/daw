@@ -11,6 +11,7 @@
 */
 
 #include "TransportBar.h"
+#include "../../engine/ZenithLogger.h"
 
 #include <core/SkBlurTypes.h> // Explicitly include
 #include <core/SkCanvas.h>
@@ -235,6 +236,9 @@ void TransportBar::setupButton(GhostButton& btn, const juce::String& tooltip) {
 void TransportBar::visibilityChanged() {}
 
 void TransportBar::resized() {
+  // Early return if not fully initialized (can be called during construction)
+  if (!rewindBtn_) return;
+  
   using namespace juce;
   auto area = getLocalBounds();
   

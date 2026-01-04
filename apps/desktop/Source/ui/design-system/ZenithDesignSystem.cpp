@@ -12,6 +12,13 @@
 
 #include "ZenithDesignSystem.h"
 
+// Skia Headers for Effects
+#include <include/core/SkCanvas.h>
+#include <include/core/SkPaint.h>
+#include <include/core/SkMaskFilter.h>
+#include <include/effects/SkImageFilters.h>
+#include <include/core/SkPath.h>
+
 namespace zenith::design {
 
 // ============================================================================
@@ -177,6 +184,10 @@ void ThemeManager::applyDarkTheme() {
   currentPalette_.success = 0xFF32D74B;
   currentPalette_.warning = 0xFFFFAB00;
   currentPalette_.error = 0xFFFF453A;
+
+  // Update design::colors with neon-specific variations
+  colors::CYAN_GLOW = withAlpha(currentPalette_.accentPrimary, opacity::GLOW_MEDIUM);
+  colors::MAGENTA_GLOW = withAlpha(currentPalette_.accentSecondary, opacity::GLOW_MEDIUM);
 }
 
 void ThemeManager::applyDarkerTheme() {
@@ -201,6 +212,10 @@ void ThemeManager::applyDarkerTheme() {
   currentPalette_.success = 0xFF00C853;
   currentPalette_.warning = 0xFFFF9800;
   currentPalette_.error = 0xFFFF3D00;
+
+  // Muted glows for OLED to preserve battery and reduce burn-in risk
+  colors::CYAN_GLOW = withAlpha(currentPalette_.accentPrimary, opacity::GLOW_SUBTLE);
+  colors::MAGENTA_GLOW = withAlpha(currentPalette_.accentSecondary, opacity::GLOW_SUBTLE);
 }
 
 void ThemeManager::applyLightTheme() {
@@ -297,4 +312,97 @@ void LayoutManager::loadLayout(const juce::String &name) {
 void zenith::design::ThemeManager::resetToDefault() {
   listeners_.clear();
   setActiveTheme(zenith::design::ThemePreset::Dark);
+}
+
+// ============================================================================
+// EFFECT HELPER IMPLEMENTATIONS
+// ============================================================================
+
+void zenith::design::drawGlassPanel(SkCanvas* canvas, const juce::Rectangle<float>& bounds, float cornerRad, float panelOpacity) {
+    if (!canvas) return;
+
+    SkRect rect = SkRect::MakeLTRB(bounds.getX(), bounds.getY(), bounds.getRight(), bounds.getBottom());
+    
+    // 1. REAL Backdrop Blur using saveLayer with a backdrop filter
+    if (Settings::getBlurQuality() != Settings::BlurQuality::Off) {
+        float sigma = effects::BLUR_GLASS * (static_cast<float>(Settings::getBlurQuality()) / 3.0f);
+        sk_sp<SkImageFilter> blurFilter = SkImageFilters::Blur(sigma, sigma, SkTileMode::kClamp, nullptr);
+        
+        // saveLayer with a backdrop filter blurs everything ALREADY on the canvas within these bounds
+        SkCanvas::SaveLayerRec rec(&rect, nullptr, blurFilter.get(), 0);
+        canvas->saveLayer(rec);
+        
+        // Now we are inside the layer. We just need to draw the tint.
+        SkPaint tintPaint;
+        tintPaint.setAntiAlias(true);
+        tintPaint.setColor(withAlpha(colors::BG_02, panelOpacity));
+        canvas->drawRoundRect(rect, cornerRad, cornerRad, tintPaint);
+        
+        canvas->restore();
+    } else {
+        // Fallback: Just draw the panel without blur
+        SkPaint flatPaint;
+        flatPaint.setAntiAlias(true);
+        flatPaint.setColor(withAlpha(colors::BG_02, panelOpacity));
+        canvas->drawRoundRect(rect, cornerRad, cornerRad, flatPaint);
+    }
+
+    // 2. Rim Light (Highlight top and left edges)
+    SkPaint rimPaint;
+    rimPaint.setAntiAlias(true);
+    rimPaint.setStyle(SkPaint::kStroke_Style);
+    rimPaint.setStrokeWidth(1.0f);
+    rimPaint.setColor(colors::GLASS_HIGHLIGHT);
+    canvas->drawRoundRect(rect, cornerRad, cornerRad, rimPaint);
+    
+    // 3. Subtle Shadow
+    SkPaint shadowPaint;
+    shadowPaint.setAntiAlias(true);
+    shadowPaint.setStyle(SkPaint::kStroke_Style);
+    shadowPaint.setStrokeWidth(1.0f);
+    shadowPaint.setColor(colors::GLASS_SHADOW);
+    SkRect shadowRect = rect.makeOffset(0.0f, 1.0f);
+    canvas->drawRoundRect(shadowRect, cornerRad, cornerRad, shadowPaint);
+}
+
+void zenith::design::drawGlowLine(SkCanvas* canvas, float x1, float y1, float x2, float y2, SkColor glowColor, float thickness, float radius) {
+    if (!canvas) return;
+
+    // 1. Draw the Glow (Bloom)
+    SkPaint glowPaint;
+    glowPaint.setAntiAlias(true);
+    glowPaint.setStrokeWidth(thickness + radius);
+    glowPaint.setColor(withAlpha(glowColor, opacity::GLOW_SUBTLE));
+    glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, radius * 0.5f));
+    canvas->drawLine(x1, y1, x2, y2, glowPaint);
+
+    // 2. Draw the Core Line
+    SkPaint corePaint;
+    corePaint.setAntiAlias(true);
+    corePaint.setStrokeWidth(thickness);
+    corePaint.setColor(glowColor);
+    canvas->drawLine(x1, y1, x2, y2, corePaint);
+}
+
+void zenith::design::drawGlowRect(SkCanvas* canvas, const juce::Rectangle<float>& bounds, SkColor glowColor, float cornerRad, float radius) {
+    if (!canvas) return;
+
+    SkRect rect = SkRect::MakeLTRB(bounds.getX(), bounds.getY(), bounds.getRight(), bounds.getBottom());
+
+    // 1. Draw the Glow (Bloom)
+    SkPaint glowPaint;
+    glowPaint.setAntiAlias(true);
+    glowPaint.setStyle(SkPaint::kStroke_Style);
+    glowPaint.setStrokeWidth(radius);
+    glowPaint.setColor(withAlpha(glowColor, opacity::GLOW_SUBTLE));
+    glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, radius * 0.5f));
+    canvas->drawRoundRect(rect, cornerRad, cornerRad, glowPaint);
+
+    // 2. Draw Core Rect Border
+    SkPaint corePaint;
+    corePaint.setAntiAlias(true);
+    corePaint.setStyle(SkPaint::kStroke_Style);
+    corePaint.setStrokeWidth(1.0f);
+    corePaint.setColor(glowColor);
+    canvas->drawRoundRect(rect, cornerRad, cornerRad, corePaint);
 }

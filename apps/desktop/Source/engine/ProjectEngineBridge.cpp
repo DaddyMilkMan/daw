@@ -13,11 +13,14 @@
 #include "ProjectEngineBridge.h"
 #include "ProjectState.h"
 #include "Engine.h"
+#include "EngineConstants.h"
 #include "Track.h"
 #include "TempoMap.h"
 #include "TransportController.h"
 
 namespace zenith {
+
+using namespace zenith::constants;
 
 //==============================================================================
 // Constructor / Destructor
@@ -458,7 +461,7 @@ double ProjectEngineBridge::sampleEnvelope(const juce::ValueTree& envelope, doub
 
     // Normalized position between points
     double timeDelta = nextTime - prevTime;
-    if (timeDelta <= 0.00001)
+    if (timeDelta <= kEpsilonTimeStrict)
         return nextValue; // Points are at same time or reversed
 
     double t = (timeBeats - prevTime) / timeDelta;
@@ -480,7 +483,7 @@ double ProjectEngineBridge::sampleEnvelope(const juce::ValueTree& envelope, doub
         
         if (exponent < 0.0) {
             // Negative exponent: avoid 0^neg division
-            curvedT = (t > 0.0001) ? std::pow(t, exponent) : 0.0;
+            curvedT = (t > kEpsilonTime) ? std::pow(t, exponent) : 0.0;
         } else if (exponent > 0.01) {
             curvedT = std::pow(t, exponent);
         } else {
@@ -495,7 +498,7 @@ double ProjectEngineBridge::sampleEnvelope(const juce::ValueTree& envelope, doub
         if (std::abs(exponent) > 0.01) {
             double invExp = 1.0 / exponent;
             if (invExp < 0.0)
-                curvedT = (t > 0.0001) ? std::pow(t, invExp) : 0.0;
+                curvedT = (t > kEpsilonTime) ? std::pow(t, invExp) : 0.0;
             else
                 curvedT = std::pow(t, invExp);
         } else {

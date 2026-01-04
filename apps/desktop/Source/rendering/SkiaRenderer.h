@@ -225,6 +225,20 @@ private:
   Stats stats_;
   juce::Time lastFrameTime_;
   std::vector<double> frameTimes_; ///< For averaging
+  
+  // FBO Metadata Cache (Optimizes surface recreation)
+  struct FboMetadata {
+      int fboId = -1;
+      int width = 0;
+      int height = 0;
+      int samples = 0;
+      int stencilBits = 0;
+      unsigned int format = 0; // e.g. GL_RGBA8
+      
+      bool matches(int otherFboId, int otherWidth, int otherHeight) const {
+          return fboId == otherFboId && width == otherWidth && height == otherHeight;
+      }
+  } fboCache_;
 
   // Platform-specific handles (void* to avoid platform headers)
   void *platformHandle_ = nullptr;
@@ -232,6 +246,7 @@ private:
   // Internal methods
   bool createGpuContext();
   bool createSurface(int width, int height);
+  void renderFrame(std::function<void(SkCanvas *)>& drawCallback);
   void updateStats();
   Backend detectBestBackend() const;
 

@@ -9,9 +9,12 @@
 */
 
 #include "AudioFilePool.h"
+#include "EngineConstants.h"
 #include <filesystem>
 
 namespace zenith {
+
+using namespace zenith::constants;
 
 //==============================================================================
 AudioFilePool::AudioFilePool() {
@@ -39,10 +42,9 @@ AudioFilePool::HandlePtr AudioFilePool::loadFile(const juce::File &file,
   juce::String filePath = juce::String(canonicalPath.string());
 
   // Check path length (prevent excessive paths)
-  if (filePath.length() >
-      4096) // MAX_PATH on Windows is 260, but allow longer for safety
+  if (filePath.length() > kMaxPathLength)
   {
-    errorMessage = "File path too long (max 4096 characters)";
+    errorMessage = "File path too long (max " + juce::String(kMaxPathLength) + " characters)";
     return nullptr;
   }
 

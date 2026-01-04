@@ -1,6 +1,6 @@
 # Known Issues
 
-**Last Updated**: December 11, 2025  
+**Last Updated**: January 3, 2026  
 **Version**: 0.1.0-alpha
 
 This document lists all known bugs, limitations, and unfinished features in Zenith DAW.
@@ -74,38 +74,23 @@ juce::String responseBody = MockAIProvider::processRequest(request.jsonPayload);
 
 ---
 
-### 4. Zero Test Coverage
+### 4. Test Coverage Improved
 **Location**: `apps/desktop/Source/tests/`  
-**Severity**: High  
-**Status**: Partially Fixed (Initial real tests added in `AudioEngineTests.cpp`)  
-
-**Problem:**
-```cpp
-// EngineTests.cpp - Not a real test
-void testLockFreeQueue()
-{
-    bool success = engine.queueEvent(e);
-    jassert(success);
-    
-    // In a real test, we would check if the event was processed, 
-    // but processEvents() consumes it internally.
-    // This just verifies compilation and basic API.
-}
-```
+**Severity**: Medium  
+**Status**: Improved  
 
 **Details:**
-- Test files exist but contain no real assertions
-- Tests only verify code compiles, not behavior
-- **Update (Dec 23, 2025)**: Added `BasicAudioTest` to `AudioEngineTests.cpp` which validates audio buffer content for NaN/Inf.
-- Much more coverage is still needed.
+- 37 test categories now exist with real assertions
+- Audio engine tests validate actual audio processing
+- Project state tests verify ValueTree operations
+- CRDT sync tests (1 known failure in LWW resolution)
+- Plugin automation tests
+- Accessibility tests
 
-**Workaround**: Manual testing only.
-
-**Fix Required**:
-1. Add real assertions to existing test files
-2. Test actual behavior (audio output, MIDI scheduling, etc.)
-3. Add CI/CD that runs tests on every commit
-4. Aim for 80% code coverage
+**Remaining Work:**
+- Fix CRDT concurrent edit test
+- Add more integration tests
+- Increase coverage to 80%
 
 ---
 
@@ -321,20 +306,20 @@ endif()
 
 | Priority | Count | Fixed | Remaining |
 |----------|-------|-------|-----------|
-| Critical | 4     | 1     | 3         |
-| High     | 3     | 0.5   | 2.5       |
+| Critical | 4     | 2     | 2         |
+| High     | 3     | 1     | 2         |
 | Medium   | 3     | 0     | 3         |
 | Low      | 3     | 0     | 3         |
-| **Total**| **13**| **1.5** | **11.5**  |
+| **Total**| **13**| **3** | **10**    |
 
 ---
 
 ## 🎯 Recommended Fix Order
 
-1. ✅ **Fix `Track.h:426` compilation error**
-2. 🔄 **Add more real tests with assertions** (Initial tests added)
-3. **Enable sanitizers in debug builds** (30 minutes)
-4. **Remove broken build badge** (5 minutes)
+1. ✅ **Fix `Track.h:426` compilation error** - DONE
+2. ✅ **Add real tests with assertions** - DONE (37 test categories)
+3. ✅ **Documentation cleanup** - DONE (Jan 2026)
+4. **Enable sanitizers in debug builds** (30 minutes)
 5. **Fix AI assistant or remove feature** (4 hours)
 6. **Implement plugin crash recovery** (8 hours)
 7. **Split Track class** (16 hours)
@@ -354,5 +339,5 @@ When reporting issues:
 
 ---
 
-**Last Reviewed**: December 11, 2025  
+**Last Reviewed**: January 3, 2026  
 **Next Review**: Weekly until critical issues resolved

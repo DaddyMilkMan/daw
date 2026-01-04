@@ -72,6 +72,7 @@ public:
 
   void resized() override;
   void drawSkia(SkCanvas* canvas) override;
+  void onAnimationTick(float delta) override;
   
   // Modal visibility API
   void show();

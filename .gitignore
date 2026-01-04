@@ -147,9 +147,14 @@ __pycache__/
 /linked_objects.txt
 /obj_list.txt
 /apps/desktop/Source/zenith_headers.txt
-/find_brace_level.py
 /launch.sh
 /apps/scanner/
+/old_logs/
+
+# ============================================
+# 13. Archived Documentation (historical)
+# ============================================
+/docs/archive/root-cleanup-*/
 
 # ============================================
 # 13. Text Files (except CMakeLists)

@@ -244,16 +244,16 @@ bool Track::isSendPreFader(int sendIndex) const {
   return processor->getMixerChannel().isSendPreFader(sendIndex);
 }
 
-void Track::setPluginSidechainSource(int pluginIndex, Track* sourceTrack) {
-    // BUG FIX #8: Document and mitigate dangling pointer risk
-    // WARNING: sourceTrack is a raw pointer. Caller MUST ensure the source track
-    // outlives this track's use of it. Engine should clear sidechain sources before
-    // deleting tracks. Consider using weak_ptr in future refactor.
-    //
-    // TODO: Implement track deletion listeners or weak reference pattern
-    
-    sidechainSourceTrack_.store(sourceTrack); // Simple storage
+void Track::setPluginSidechainSource(int pluginIndex, std::shared_ptr<Track> sourceTrack) {
+    {
+        const juce::SpinLock::ScopedLockType lock(sidechainLock_);
+        sidechainSourceTrack_ = sourceTrack;
+    }
+
     if (processor) {
+        // Pass weak_ptr or raw ptr? TrackProcessor is owned by Track, so raw ptr is okay-ish 
+        // if we change TrackProcessor to store weak_ptr.
+        // For now, let's update TrackProcessor to take the shared_ptr and store weak_ptr.
         processor->setSidechainSource(pluginIndex, sourceTrack);
     }
     

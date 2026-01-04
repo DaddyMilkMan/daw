@@ -69,15 +69,39 @@ void SkiaOpenGLRenderer::scheduleAttachmentCheck() {
   juce::Component* comp = targetComponent_;
   juce::OpenGLContext* ctx = &openGLContext_;
   
+  ZENITH_LOG_INFO("SkiaOpenGLRenderer::scheduleAttachmentCheck called");
+  
   juce::MessageManager::callAsync([this, comp, ctx]() {
-    if (!comp || !ctx) return;
+    if (!comp || !ctx) {
+      ZENITH_LOG_ERROR("scheduleAttachmentCheck: Component or context is null!");
+      return;
+    }
     
-    if (comp->getPeer() != nullptr && !ctx->isAttached()) {
+    // Log current state
+    bool hasPeer = comp->getPeer() != nullptr;
+    bool hasValidSize = comp->getWidth() >= 400 && comp->getHeight() >= 300;
+    bool isAttached = ctx->isAttached();
+    
+    ZENITH_LOG_INFO(juce::String::formatted(
+      "scheduleAttachmentCheck: hasPeer=%s, size=%dx%d, validSize=%s, isAttached=%s",
+      hasPeer ? "YES" : "NO",
+      comp->getWidth(), comp->getHeight(),
+      hasValidSize ? "YES" : "NO",
+      isAttached ? "YES" : "NO"
+    ));
+    
+    // CRITICAL: Only attach when component has valid dimensions (prevents tiny window)
+    if (hasPeer && hasValidSize && !isAttached) {
+      ZENITH_LOG_INFO("Conditions met - attempting to attach context");
       attachContextNow();
-    } else if (!ctx->isAttached()) {
+    } else if (!isAttached) {
+      // Reschedule - either no peer yet or dimensions too small
+      ZENITH_LOG_INFO("Conditions not met - rescheduling attachment check in 100ms");
       juce::Timer::callAfterDelay(100, [this]() {
         scheduleAttachmentCheck();
       });
+    } else {
+      ZENITH_LOG_INFO("Context already attached - no action needed");
     }
   });
 }
@@ -92,14 +116,32 @@ void SkiaOpenGLRenderer::timerCallback() {
 }
 
 void SkiaOpenGLRenderer::attachContextNow() {
-  ZENITH_LOG_INFO("SkiaOpenGLRenderer: Attaching OpenGL context to component...");
+  ZENITH_LOG_INFO("SkiaOpenGLRenderer::attachContextNow called");
+  
+  if (!targetComponent_) {
+    ZENITH_LOG_ERROR("attachContextNow: targetComponent is null!");
+    return;
+  }
+  
+  if (openGLContext_.isAttached()) {
+    ZENITH_LOG_INFO("attachContextNow: Context already attached, skipping");
+    return;
+  }
+  
+  ZENITH_LOG_INFO(juce::String::formatted(
+    "attachContextNow: Component size=%dx%d, hasPeer=%s",
+    targetComponent_->getWidth(), targetComponent_->getHeight(),
+    targetComponent_->getPeer() != nullptr ? "YES" : "NO"
+  ));
+  
   try {
+    ZENITH_LOG_INFO("Calling openGLContext_.attachTo()...");
     openGLContext_.attachTo(*targetComponent_);
-    ZENITH_LOG_INFO("SkiaOpenGLRenderer: OpenGL context attached!");
+    ZENITH_LOG_INFO("OpenGL context attached successfully!");
   } catch (const std::exception& e) {
-    ZENITH_LOG_ERROR("SkiaOpenGLRenderer: Exception during attachTo: " + std::string(e.what()));
+    ZENITH_LOG_ERROR("Exception during attachTo: " + std::string(e.what()));
   } catch (...) {
-    ZENITH_LOG_ERROR("SkiaOpenGLRenderer: Unknown exception during attachTo!");
+    ZENITH_LOG_ERROR("Unknown exception during attachTo!");
   }
 }
 
@@ -119,21 +161,50 @@ void SkiaOpenGLRenderer::triggerRepaint() {
 }
 
 void SkiaOpenGLRenderer::newOpenGLContextCreated() {
-  ZENITH_LOG_INFO("SkiaOpenGLRenderer: newOpenGLContextCreated called");
+  ZENITH_LOG_INFO("========================================");
+  ZENITH_LOG_INFO("SkiaOpenGLRenderer::newOpenGLContextCreated called");
+  ZENITH_LOG_INFO("========================================");
   
+  // Log OpenGL version
   const char* glVersion = (const char*)juce::gl::glGetString(juce::gl::GL_VERSION);
   ZENITH_LOG_INFO("OpenGL Version: " + juce::String(glVersion ? glVersion : "unknown"));
 
   try {
+    ZENITH_LOG_INFO("Creating Skia GL interface...");
     auto glInterface = PlatformWindowUtils::createNativeGLInterface(openGLContext_);
-    if (!glInterface) return;
+    if (!glInterface) {
+      ZENITH_LOG_ERROR("Failed to create GL interface!");
+      return;
+    }
+    ZENITH_LOG_INFO("GL interface created successfully");
     
+    ZENITH_LOG_INFO("Creating Skia GrDirectContext...");
     grContext_ = GrDirectContexts::MakeGL(glInterface);
-    if (!grContext_) return;
+    if (!grContext_) {
+      ZENITH_LOG_ERROR("Failed to create GrDirectContext!");
+      return;
+    }
+    ZENITH_LOG_INFO("GrDirectContext created successfully");
 
     contextInitialized_ = true;
+    ZENITH_LOG_INFO("Skia context initialized successfully");
+    
+    ZENITH_LOG_INFO("Creating Skia surface...");
     recreateSurface();
-  } catch (...) {}
+    
+    if (surface_) {
+      ZENITH_LOG_INFO("Skia surface created successfully");
+    } else {
+      ZENITH_LOG_ERROR("Failed to create Skia surface!");
+    }
+    
+  } catch (const std::exception& e) {
+    ZENITH_LOG_ERROR("Exception in newOpenGLContextCreated: " + std::string(e.what()));
+  } catch (...) {
+    ZENITH_LOG_ERROR("Unknown exception in newOpenGLContextCreated");
+  }
+  
+  ZENITH_LOG_INFO("========================================");
 }
 
 void SkiaOpenGLRenderer::renderOpenGL() {
