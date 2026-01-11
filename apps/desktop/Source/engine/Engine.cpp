@@ -489,6 +489,12 @@ void Engine::audioDeviceIOCallbackWithContext(
 
   // Process Events (Updates track parameters etc.)
   processEvents();
+  
+  // Process scheduled transport actions (sample-accurate timing)
+  if (transportController_) {
+    juce::int64 currentPos = transportController_->getPlayheadSamples();
+    transportController_->processScheduledActions(currentPos, numSamples);
+  }
 
   // Midi Buffer for rendering (populated from FIFO)
   juce::MidiBuffer midiBuffer;

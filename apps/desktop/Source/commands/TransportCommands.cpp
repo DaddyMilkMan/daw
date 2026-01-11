@@ -149,4 +149,68 @@ juce::var TransportCommands::getTempoMap(const juce::var &params) {
   return createSuccessResponse(juce::var(resultObj));
 }
 
+juce::var TransportCommands::playAt(const juce::var &params) {
+  if (!params.hasProperty("whenMs"))
+    return createErrorResponse("Missing 'whenMs' parameter");
+
+  int64_t whenMs = static_cast<int64_t>(params["whenMs"]);
+  double positionSeconds = params.hasProperty("positionSeconds") 
+    ? static_cast<double>(params["positionSeconds"]) 
+    : -1.0;
+
+  bool success = engine.getTransportController().playAt(whenMs, positionSeconds);
+  
+  if (success) {
+    auto *resultObj = new juce::DynamicObject();
+    resultObj->setProperty("scheduled", true);
+    resultObj->setProperty("whenMs", whenMs);
+    if (positionSeconds >= 0.0) {
+      resultObj->setProperty("positionSeconds", positionSeconds);
+    }
+    return createSuccessResponse(juce::var(resultObj));
+  }
+  
+  return createErrorResponse("Failed to schedule play action (queue full)");
+}
+
+juce::var TransportCommands::stopAt(const juce::var &params) {
+  if (!params.hasProperty("whenMs"))
+    return createErrorResponse("Missing 'whenMs' parameter");
+
+  int64_t whenMs = static_cast<int64_t>(params["whenMs"]);
+
+  bool success = engine.getTransportController().stopAt(whenMs);
+  
+  if (success) {
+    auto *resultObj = new juce::DynamicObject();
+    resultObj->setProperty("scheduled", true);
+    resultObj->setProperty("whenMs", whenMs);
+    return createSuccessResponse(juce::var(resultObj));
+  }
+  
+  return createErrorResponse("Failed to schedule stop action (queue full)");
+}
+
+juce::var TransportCommands::seekAt(const juce::var &params) {
+  if (!params.hasProperty("whenMs"))
+    return createErrorResponse("Missing 'whenMs' parameter");
+  if (!params.hasProperty("positionSeconds"))
+    return createErrorResponse("Missing 'positionSeconds' parameter");
+
+  int64_t whenMs = static_cast<int64_t>(params["whenMs"]);
+  double positionSeconds = static_cast<double>(params["positionSeconds"]);
+
+  bool success = engine.getTransportController().seekAt(whenMs, positionSeconds);
+  
+  if (success) {
+    auto *resultObj = new juce::DynamicObject();
+    resultObj->setProperty("scheduled", true);
+    resultObj->setProperty("whenMs", whenMs);
+    resultObj->setProperty("positionSeconds", positionSeconds);
+    return createSuccessResponse(juce::var(resultObj));
+  }
+  
+  return createErrorResponse("Failed to schedule seek action (queue full)");
+}
+
 } // namespace zenith

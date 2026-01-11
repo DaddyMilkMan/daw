@@ -883,6 +883,25 @@ public:
   void setMetronomeLevel(float level);
 
   //==========================================================================
+  // Transport Controller
+  //==========================================================================
+
+  /**
+   * @brief Get the transport controller
+   * @return Reference to the transport controller
+   * @note Thread-safe to call; TransportController methods have their own thread safety
+   */
+  TransportController& getTransportController() noexcept {
+    jassert(transportController_ != nullptr);
+    return *transportController_;
+  }
+
+  const TransportController& getTransportController() const noexcept {
+    jassert(transportController_ != nullptr);
+    return *transportController_;
+  }
+
+  //==========================================================================
   // Application Thread Pool (Background Tasks)
   //==========================================================================
 

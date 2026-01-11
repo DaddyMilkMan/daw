@@ -22,6 +22,11 @@ public:
   juce::var setTimeSignature(const juce::var &params);
   juce::var addTempoChange(const juce::var &params);
   juce::var getTempoMap(const juce::var &params);
+  
+  // Scheduled transport commands
+  juce::var playAt(const juce::var &params);
+  juce::var stopAt(const juce::var &params);
+  juce::var seekAt(const juce::var &params);
 
 private:
   Engine &engine;

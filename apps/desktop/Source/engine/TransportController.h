@@ -21,6 +21,8 @@
 #include <juce_core/juce_core.h>
 #include <atomic>
 #include <functional>
+#include <chrono>
+#include <array>
 
 #include "EngineConstants.h"
 
@@ -37,9 +39,30 @@ using TransportCallback = std::function<void()>;
 
 //==============================================================================
 /**
+    Scheduled transport action for sample-accurate timing.
+    
+    Used for network sync, MIDI clock sync, and other time-critical operations.
+*/
+struct ScheduledAction {
+    enum class Type : uint8_t {
+        None = 0,
+        Play,
+        Stop,
+        Seek
+    };
+    
+    uint32_t seq{0};              ///< Sequence number for ordering
+    Type type{Type::None};        ///< Action type
+    int64_t whenMs{0};            ///< Wall clock time (milliseconds since epoch)
+    double positionSec{0.0};      ///< Position in seconds (for Play/Seek)
+};
+
+//==============================================================================
+/**
     Transport controller for the engine.
     
-    Manages playback state, position, looping, and tempo synchronization.
+    Manages playback state, position, looping, tempo synchronization,
+    and sample-accurate scheduled actions.
 */
 class TransportController {
 public:
@@ -261,6 +284,53 @@ public:
     void setMetronomeLevel(float level) { metronomeLevel_.store(level); }
     float getMetronomeLevel() const { return metronomeLevel_.load(); }
 
+    //==========================================================================
+    // Scheduled Actions (Sample-Accurate Scheduling)
+    //==========================================================================
+
+    /**
+     * @brief Schedule playback to start at a specific wall clock time
+     * @param wallClockMsEpoch Wall clock time in milliseconds since epoch
+     * @param positionSeconds Position to start playing from (default: current position)
+     * @return true if action was enqueued, false if queue is full
+     * @note Thread-safe, can be called from any thread
+     */
+    bool playAt(int64_t wallClockMsEpoch, double positionSeconds = -1.0);
+
+    /**
+     * @brief Schedule playback to stop at a specific wall clock time
+     * @param wallClockMsEpoch Wall clock time in milliseconds since epoch
+     * @return true if action was enqueued, false if queue is full
+     * @note Thread-safe, can be called from any thread
+     */
+    bool stopAt(int64_t wallClockMsEpoch);
+
+    /**
+     * @brief Schedule seek to a specific position at a wall clock time
+     * @param wallClockMsEpoch Wall clock time in milliseconds since epoch
+     * @param positionSeconds Target position in seconds
+     * @return true if action was enqueued, false if queue is full
+     * @note Thread-safe, can be called from any thread
+     */
+    bool seekAt(int64_t wallClockMsEpoch, double positionSeconds);
+
+    /**
+     * @brief Enqueue a scheduled action
+     * @param action The action to enqueue
+     * @return true if enqueued successfully, false if queue is full
+     * @note Thread-safe, lock-free enqueue
+     */
+    bool enqueueScheduledAction(const ScheduledAction& action);
+
+    /**
+     * @brief Process scheduled actions in audio thread
+     * @param currentSample Current playhead position in samples
+     * @param bufferSize Number of samples in current buffer
+     * @note AUDIO THREAD ONLY - RT-safe, no allocations or locks
+     * @return Sample offset within buffer where action should be applied (-1 if none)
+     */
+    int processScheduledActions(juce::int64 currentSample, int bufferSize) noexcept;
+
 private:
     //==========================================================================
     // State
@@ -295,6 +365,37 @@ private:
     TransportCallback onPlay_;
     TransportCallback onStop_;
     TransportCallback onSeek_;
+
+    //==========================================================================
+    // Scheduled Actions Infrastructure
+    //==========================================================================
+    
+    // Lock-free ring buffer for scheduled actions
+    static constexpr int kScheduledActionsCapacity = 256;
+    std::array<ScheduledAction, kScheduledActionsCapacity> scheduledActions_;
+    std::atomic<uint32_t> actionQueueHead_{0};  ///< Write index (producer)
+    std::atomic<uint32_t> actionQueueTail_{0};  ///< Read index (consumer)
+    std::atomic<uint32_t> actionSeqCounter_{0}; ///< Sequence counter
+    
+    // Clock mapping for wall time to sample time conversion
+    std::atomic<int64_t> lastWallClockMs_{0};   ///< Last recorded wall clock (ms since epoch)
+    std::atomic<int64_t> lastStreamSample_{0};  ///< Corresponding stream sample position
+    std::atomic<int64_t> streamStartTimeMs_{0}; ///< Stream start time in wall clock
+    
+    /**
+     * @brief Convert epoch milliseconds to stream sample position
+     * @param epochMs Wall clock time in milliseconds since epoch
+     * @return Estimated sample position in the stream
+     * @note Uses linear interpolation with periodic mapping updates
+     */
+    juce::int64 epochMsToStreamSample(int64_t epochMs) const noexcept;
+    
+    /**
+     * @brief Update clock mapping (called periodically from audio thread)
+     * @param currentSample Current stream sample position
+     * @note AUDIO THREAD ONLY - Updates mapping to handle clock drift
+     */
+    void updateClockMapping(juce::int64 currentSample) noexcept;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TransportController)
 };
