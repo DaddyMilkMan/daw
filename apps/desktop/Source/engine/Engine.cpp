@@ -10,6 +10,7 @@
 #include "TempoMap.h"
 #include "TrackAutomationSynchronizer.h"
 #include "ZenithLogger.h"
+#include "../Settings.h"
 #include <algorithm> // For std::remove_if
 #include <array>     // For RT-safe stack allocation in audio callback
 #include <memory>    // For std::make_unique
@@ -795,6 +796,14 @@ void Engine::processAudioBlock(const float *const *inputChannelData,
 //==============================================================================
 
 // toggleMetronome, isMetronomeEnabled, setMetronomeLevel defined in EngineTransport.cpp
+
+//==============================================================================
+// Remote Control Settings
+//==============================================================================
+
+bool Engine::isRemoteControlAllowed() const {
+    return Settings::getInstance().getAllowRemoteControl();
+}
 
 //==============================================================================
 

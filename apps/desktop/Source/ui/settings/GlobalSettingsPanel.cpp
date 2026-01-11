@@ -15,6 +15,7 @@
 #include "../design-system/ZenithTheme.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../framework/GlassmorphicPanel.h"
+#include "../../Settings.h"
 #include <juce_gui_extra/juce_gui_extra.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "../../engine/ZenithLogger.h"
@@ -54,11 +55,67 @@ public: PluginSettingsPanel() {} void drawSkia(SkCanvas* c) override { /* TODO *
 class AppearanceSettingsPanel : public SettingsSubPanel {
 public: AppearanceSettingsPanel() {} void drawSkia(SkCanvas* c) override { /* TODO */ } };
 
-class CollaborationSettingsPanel : public SettingsSubPanel {
-public: CollaborationSettingsPanel() {} void drawSkia(SkCanvas* c) override { /* TODO */ } };
-
 class AdvancedSettingsPanel : public SettingsSubPanel {
 public: AdvancedSettingsPanel() {} void drawSkia(SkCanvas* c) override { /* TODO */ } };
+
+//==============================================================================
+// COLLABORATION SETTINGS PANEL
+//==============================================================================
+class CollaborationSettingsPanel : public SettingsSubPanel {
+public:
+    CollaborationSettingsPanel() {
+        remoteControlToggle = std::make_unique<ZenithToggle>("Allow remote control of playback");
+        remoteControlToggle->setToggleState(Settings::getInstance().getAllowRemoteControl());
+        remoteControlToggle->onToggle = [this](bool isOn) {
+            if (isOn) {
+                // Show confirmation dialog when enabling
+                showConfirmationDialog();
+            } else {
+                // Disable without confirmation
+                Settings::getInstance().setAllowRemoteControl(false);
+            }
+        };
+        addAndMakeVisible(remoteControlToggle.get());
+        
+        explanationLabel = std::make_unique<SkiaLabel>();
+        explanationLabel->setText("When enabled, remote agents or collaboration sessions you join may control play/stop/seek for this project. Default: disabled.");
+        explanationLabel->setColour(juce::Label::textColourId, juce::Colour(0xFFAAAAAA));
+        addAndMakeVisible(explanationLabel.get());
+    }
+    
+    void resized() override {
+        auto area = getLocalBounds().reduced(20);
+        remoteControlToggle->setBounds(area.removeFromTop(40));
+        area.removeFromTop(10); // Gap
+        explanationLabel->setBounds(area.removeFromTop(60));
+    }
+    
+    void drawSkia(SkCanvas* canvas) override {}
+    
+private:
+    void showConfirmationDialog() {
+        // Create a modal dialog
+        juce::AlertWindow::showOkCancelBox(
+            juce::MessageBoxIconType::WarningIcon,
+            "Enable Remote Control",
+            "Enabling remote control allows connected agents to control playback. Only enable for trusted sessions.\n\nDo you want to continue?",
+            "Confirm",
+            "Cancel",
+            nullptr,
+            juce::ModalCallbackFunction::create([this](int result) {
+                if (result == 1) { // OK clicked
+                    Settings::getInstance().setAllowRemoteControl(true);
+                    remoteControlToggle->setToggleState(true);
+                } else { // Cancel clicked
+                    remoteControlToggle->setToggleState(false);
+                }
+            })
+        );
+    }
+    
+    std::unique_ptr<ZenithToggle> remoteControlToggle;
+    std::unique_ptr<SkiaLabel> explanationLabel;
+};
 
 //==============================================================================
 // AUDIO SETTINGS PANEL
