@@ -381,6 +381,7 @@ private:
     std::atomic<int64_t> lastWallClockMs_{0};   ///< Last recorded wall clock (ms since epoch)
     std::atomic<int64_t> lastStreamSample_{0};  ///< Corresponding stream sample position
     std::atomic<int64_t> streamStartTimeMs_{0}; ///< Stream start time in wall clock
+    std::atomic<int> clockUpdateCounter_{0};    ///< Counter for periodic clock mapping updates
     
     /**
      * @brief Convert epoch milliseconds to stream sample position

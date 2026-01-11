@@ -93,10 +93,10 @@ bool TransportController::enqueueScheduledAction(const ScheduledAction& action) 
 int TransportController::processScheduledActions(juce::int64 currentSample, int bufferSize) noexcept {
     // Update clock mapping periodically (every ~1 second worth of samples)
     double sampleRate = sampleRate_.load(std::memory_order_relaxed);
-    static int updateCounter = 0;
-    if (++updateCounter >= static_cast<int>(sampleRate)) {
+    int updateCounter = clockUpdateCounter_.fetch_add(1, std::memory_order_relaxed);
+    if (updateCounter >= static_cast<int>(sampleRate)) {
         updateClockMapping(currentSample);
-        updateCounter = 0;
+        clockUpdateCounter_.store(0, std::memory_order_relaxed);
     }
     
     uint32_t tail = actionQueueTail_.load(std::memory_order_relaxed);
