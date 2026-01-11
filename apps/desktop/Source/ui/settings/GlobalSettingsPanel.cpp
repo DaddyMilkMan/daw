@@ -77,7 +77,7 @@ public:
         
         // Explanatory text label
         helpLabel = std::make_unique<SkiaLabel>();
-        helpLabel->setText("When enabled, remote agents or collaboration sessions you join may control play/stop/seek for this project. Default: disabled.");
+        helpLabel->setText("When enabled, remote agents or collaboration sessions may control play/stop/seek operations. Default: disabled for security.");
         addAndMakeVisible(helpLabel.get());
     }
     
