@@ -19,6 +19,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "../../engine/ZenithLogger.h"
 #include "../framework/AnimationCoordinator.h"
+#include "../../Settings.h"
 
 namespace zenith {
 
@@ -55,7 +56,78 @@ class AppearanceSettingsPanel : public SettingsSubPanel {
 public: AppearanceSettingsPanel() {} void drawSkia(SkCanvas* c) override { /* TODO */ } };
 
 class CollaborationSettingsPanel : public SettingsSubPanel {
-public: CollaborationSettingsPanel() {} void drawSkia(SkCanvas* c) override { /* TODO */ } };
+public:
+    CollaborationSettingsPanel() {
+        // Remote Control Toggle
+        remoteControlToggle = std::make_unique<ZenithToggle>("Allow Remote Control of Playback");
+        remoteControlToggle->setToggleState(Settings::getInstance().getAllowRemoteControl());
+        remoteControlToggle->onToggle = [this](bool enabled) {
+            if (enabled && !Settings::getInstance().getAllowRemoteControl()) {
+                // Show confirmation dialog when enabling for the first time
+                showConfirmationDialog();
+            } else {
+                Settings::getInstance().setAllowRemoteControl(enabled);
+            }
+        };
+        addAndMakeVisible(remoteControlToggle.get());
+        
+        // Help Text Label
+        helpLabel = std::make_unique<SkiaLabel>();
+        helpLabel->setText("When enabled, remote agents or collaboration sessions you explicitly join can control transport (play/stop/seek). This setting is required for AI-assisted workflow and remote collaboration features.");
+        addAndMakeVisible(helpLabel.get());
+    }
+    
+    void resized() override {
+        using namespace juce;
+        auto area = getLocalBounds().reduced(20);
+        
+        if (remoteControlToggle) {
+            remoteControlToggle->setBounds(area.removeFromTop(40));
+            area.removeFromTop(10); // Gap
+        }
+        
+        if (helpLabel) {
+            helpLabel->setBounds(area.removeFromTop(80));
+        }
+    }
+    
+    void drawSkia(SkCanvas* canvas) override {
+        // Background is handled by parent
+    }
+
+private:
+    std::unique_ptr<ZenithToggle> remoteControlToggle;
+    std::unique_ptr<SkiaLabel> helpLabel;
+    
+    void showConfirmationDialog() {
+        // Create a modal confirmation dialog
+        juce::AlertWindow::showOkCancelBox(
+            juce::MessageBoxIconType::WarningIcon,
+            "Enable Remote Control?",
+            "This will allow remote agents or collaboration sessions that you explicitly join to control playback (play/stop/seek).\n\n"
+            "Only enable this if:\n"
+            "• You are using AI-assisted workflow features\n"
+            "• You are collaborating with trusted partners\n"
+            "• You understand that remote participants can control transport\n\n"
+            "You can disable this at any time.",
+            "Enable",
+            "Cancel",
+            nullptr,
+            juce::ModalCallbackFunction::create([this](int result) {
+                if (result == 1) { // OK clicked
+                    Settings::getInstance().setAllowRemoteControl(true);
+                    if (remoteControlToggle) {
+                        remoteControlToggle->setToggleState(true, juce::dontSendNotification);
+                    }
+                } else { // Cancel clicked
+                    if (remoteControlToggle) {
+                        remoteControlToggle->setToggleState(false, juce::dontSendNotification);
+                    }
+                }
+            })
+        );
+    }
+};
 
 class AdvancedSettingsPanel : public SettingsSubPanel {
 public: AdvancedSettingsPanel() {} void drawSkia(SkCanvas* c) override { /* TODO */ } };
@@ -278,9 +350,16 @@ GlobalSettingsPanel::GlobalSettingsPanel(juce::AudioDeviceManager& deviceManager
   
   // Now these are complete types
   pluginPanel_ = std::make_unique<PluginSettingsPanel>(); 
+  addChildComponent(pluginPanel_.get());
+  
   appearancePanel_ = std::make_unique<AppearanceSettingsPanel>();
+  addChildComponent(appearancePanel_.get());
+  
   collabPanel_ = std::make_unique<CollaborationSettingsPanel>();
+  addChildComponent(collabPanel_.get());
+  
   advancedPanel_ = std::make_unique<AdvancedSettingsPanel>();
+  addChildComponent(advancedPanel_.get());
   
   closeBtn_ = std::make_unique<ZenithButton>();
   closeBtn_->setText("Close");
@@ -323,12 +402,20 @@ void GlobalSettingsPanel::switchCategory(Category category) {
     if(audioPanel_) audioPanel_->setVisible(false);
     if(midiPanel_) midiPanel_->setVisible(false);
     if(keyboardPanel_) keyboardPanel_->setVisible(false);
+    if(pluginPanel_) pluginPanel_->setVisible(false);
+    if(appearancePanel_) appearancePanel_->setVisible(false);
+    if(collabPanel_) collabPanel_->setVisible(false);
+    if(advancedPanel_) advancedPanel_->setVisible(false);
     
     switch(category) {
         case Category::General: generalPanel_->setVisible(true); break;
         case Category::Audio: audioPanel_->setVisible(true); break;
         case Category::MIDI: midiPanel_->setVisible(true); break;
         case Category::Keyboard: keyboardPanel_->setVisible(true); break;
+        case Category::Plugins: pluginPanel_->setVisible(true); break;
+        case Category::Appearance: appearancePanel_->setVisible(true); break;
+        case Category::Collaboration: collabPanel_->setVisible(true); break;
+        case Category::Advanced: advancedPanel_->setVisible(true); break;
         default: break;
     }
     resized();
@@ -347,6 +434,10 @@ void GlobalSettingsPanel::resized() {
     if(audioPanel_) audioPanel_->setBounds(content);
     if(midiPanel_) midiPanel_->setBounds(content);
     if(keyboardPanel_) keyboardPanel_->setBounds(content);
+    if(pluginPanel_) pluginPanel_->setBounds(content);
+    if(appearancePanel_) appearancePanel_->setBounds(content);
+    if(collabPanel_) collabPanel_->setBounds(content);
+    if(advancedPanel_) advancedPanel_->setBounds(content);
 }
 
 void GlobalSettingsPanel::drawSkia(SkCanvas* canvas) {

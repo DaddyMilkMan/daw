@@ -90,6 +90,9 @@ public:
             meterBallistics_ = (MeterBallistics)userSettings->getIntValue("meterBallistics", (int)MeterBallistics::Peak);
             meterPeakHoldSeconds_ = (float)userSettings->getDoubleValue("meterPeakHoldSeconds", 2.0);
             showVolumeInDB_ = userSettings->getBoolValue("showVolumeInDB", true);
+            
+            // Collaboration
+            allowRemoteControl_ = userSettings->getBoolValue("allowRemoteControl", false);
         }
     }
 
@@ -148,6 +151,9 @@ public:
             userSettings->setValue("meterBallistics", (int)meterBallistics_);
             userSettings->setValue("meterPeakHoldSeconds", meterPeakHoldSeconds_);
             userSettings->setValue("showVolumeInDB", showVolumeInDB_);
+            
+            // Collaboration
+            userSettings->setValue("allowRemoteControl", allowRemoteControl_);
             
             userSettings->saveIfNeeded();
         }
@@ -272,6 +278,12 @@ public:
     //==============================================================================
     // Managed by PluginHost
 
+    //==============================================================================
+    // Collaboration Settings
+    //==============================================================================
+    void setAllowRemoteControl(bool enabled) { if (allowRemoteControl_ != enabled) { allowRemoteControl_ = enabled; save(); sendChangeMessage(); } }
+    bool getAllowRemoteControl() const { return allowRemoteControl_; }
+
 private:
     Settings() = default;
     void sendChangeMessage() { juce::ChangeBroadcaster::sendChangeMessage(); }
@@ -320,6 +332,9 @@ private:
     MeterBallistics meterBallistics_ = MeterBallistics::Peak;
     float meterPeakHoldSeconds_ = 2.0f;
     bool showVolumeInDB_ = true;
+    
+    // Collaboration
+    bool allowRemoteControl_ = false;
 };
 
 } // namespace zenith

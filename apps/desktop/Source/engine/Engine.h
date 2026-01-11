@@ -883,6 +883,17 @@ public:
   void setMetronomeLevel(float level);
 
   //==========================================================================
+  // Remote Control Settings
+  //==========================================================================
+
+  /**
+   * @brief Check if remote control of playback is allowed
+   * @return true if remote control is enabled in settings
+   * @note Thread-safe; reads from Settings singleton
+   */
+  bool isRemoteControlAllowed() const;
+
+  //==========================================================================
   // Application Thread Pool (Background Tasks)
   //==========================================================================
 

@@ -93,6 +93,7 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/tests/MixerChannelBenchmark.cpp
     apps/desktop/Source/tests/TrackGroupHeaderTest.cpp
     apps/desktop/Source/tests/SIMDHelpersTest.cpp
+    apps/desktop/Source/tests/SettingsTests.cpp
 )
 
 # =============================================================================

@@ -12,6 +12,7 @@
 #include "../engine/TrackAutomationSynchronizer.h"
 #include "../engine/AudioRenderer.h"
 #include "../engine/Track.h"
+#include "../Settings.h"
 
 namespace zenith {
 
@@ -155,6 +156,14 @@ void Engine::setMetronomeLevel(float level) {
       metronome_->setLevel(level);
     }
   }
+}
+
+//==============================================================================
+// Remote Control Settings
+//==============================================================================
+
+bool Engine::isRemoteControlAllowed() const {
+  return zenith::Settings::getInstance().getAllowRemoteControl();
 }
 
 } // namespace zenith
