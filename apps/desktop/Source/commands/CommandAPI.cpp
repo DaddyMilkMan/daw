@@ -233,6 +233,17 @@ void CommandAPI::initializeCommandMap() {
   registerCommand("set_time_signature", [this](const juce::var &p) {
     return transportCommands->setTimeSignature(p);
   });
+  
+  // Scheduled transport commands
+  registerCommand("play_at", [this](const juce::var &p) {
+    return transportCommands->playAt(p);
+  });
+  registerCommand("stop_at", [this](const juce::var &p) {
+    return transportCommands->stopAt(p);
+  });
+  registerCommand("seek_at", [this](const juce::var &p) {
+    return transportCommands->seekAt(p);
+  });
 
   registerCommand("add_plugin",
                   [this](const juce::var &p) { return addPlugin(p); });
