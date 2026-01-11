@@ -744,6 +744,13 @@ public:
 
   // getInstrumentRegistry() is defined inline earlier in the file
 
+  /**
+   * @brief Check if remote control is allowed
+   * @return true if remote control of transport is allowed, false otherwise
+   * @note Thread-safe; reads from Settings singleton
+   */
+  bool isRemoteControlAllowed() const;
+
   //==========================================================================
   // AudioIODeviceCallback interface (AUDIO THREAD)
   //==========================================================================
