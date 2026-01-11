@@ -64,7 +64,7 @@ public:
         // Remote Control Toggle
         remoteControlToggle = std::make_unique<ZenithToggle>("Allow remote control of playback");
         remoteControlToggle->setToggleState(Settings::getInstance().getAllowRemoteControl());
-        remoteControlToggle->onToggleChanged = [this](bool newState) {
+        remoteControlToggle->onToggle = [this](bool newState) {
             if (newState) {
                 // Show confirmation dialog when enabling
                 showConfirmationDialog();

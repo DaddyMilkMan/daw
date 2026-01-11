@@ -9,8 +9,8 @@
  * - Engine::isRemoteControlAllowed() reflects persisted value
  */
 
-#include "Settings.h"
-#include "engine/Engine.h"
+#include "../Settings.h"
+#include "../engine/Engine.h"
 #include <juce_core/juce_core.h>
 
 namespace zenith {
