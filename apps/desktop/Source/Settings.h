@@ -281,7 +281,13 @@ public:
     //==============================================================================
     // Collaboration Settings
     //==============================================================================
-    void setAllowRemoteControl(bool enabled) { if (allowRemoteControl_ != enabled) { allowRemoteControl_ = enabled; save(); sendChangeMessage(); } }
+    void setAllowRemoteControl(bool enabled) { 
+        if (allowRemoteControl_ != enabled) { 
+            allowRemoteControl_ = enabled; 
+            save(); 
+            sendChangeMessage(); 
+        } 
+    }
     bool getAllowRemoteControl() const { return allowRemoteControl_; }
 
 private:
