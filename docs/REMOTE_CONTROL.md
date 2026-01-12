@@ -79,9 +79,10 @@ bool zenith::Engine::isRemoteControlAllowed() const;
 
 ### Thread Safety
 
-- `Settings::getAllowRemoteControl()` is thread-safe (reads from singleton)
-- `Settings::setAllowRemoteControl()` should be called from the message thread
-- `Engine::isRemoteControlAllowed()` is thread-safe
+- `Settings::getAllowRemoteControl()` is thread-safe (uses `std::atomic<bool>`)
+- `Settings::setAllowRemoteControl()` should be called from the message thread (persists to disk)
+- `Engine::isRemoteControlAllowed()` is thread-safe (reads atomic value via Settings singleton)
+- The underlying storage uses `std::atomic<bool>` to prevent data races between threads
 
 ## Use Cases
 

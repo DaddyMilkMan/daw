@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include "rendering/SkiaRenderer.h"
@@ -92,7 +93,7 @@ public:
             showVolumeInDB_ = userSettings->getBoolValue("showVolumeInDB", true);
             
             // Playback
-            allowRemoteControl_ = userSettings->getBoolValue("playback.allowRemoteControl", false);
+            allowRemoteControl_.store(userSettings->getBoolValue("playback.allowRemoteControl", false));
         }
     }
 
@@ -153,7 +154,7 @@ public:
             userSettings->setValue("showVolumeInDB", showVolumeInDB_);
             
             // Playback
-            userSettings->setValue("playback.allowRemoteControl", allowRemoteControl_);
+            userSettings->setValue("playback.allowRemoteControl", allowRemoteControl_.load());
             
             userSettings->saveIfNeeded();
         }
@@ -276,8 +277,8 @@ public:
     //==============================================================================
     // Playback Settings
     //==============================================================================
-    void setAllowRemoteControl(bool enabled) { if (allowRemoteControl_ != enabled) { allowRemoteControl_ = enabled; save(); sendChangeMessage(); } }
-    bool getAllowRemoteControl() const { return allowRemoteControl_; }
+    void setAllowRemoteControl(bool enabled) { if (allowRemoteControl_.load() != enabled) { allowRemoteControl_.store(enabled); save(); sendChangeMessage(); } }
+    bool getAllowRemoteControl() const { return allowRemoteControl_.load(); }
 
     //==============================================================================
     // Plugin Settings
@@ -334,7 +335,7 @@ private:
     bool showVolumeInDB_ = true;
     
     // Playback
-    bool allowRemoteControl_ = false;
+    std::atomic<bool> allowRemoteControl_{false};
 };
 
 } // namespace zenith
