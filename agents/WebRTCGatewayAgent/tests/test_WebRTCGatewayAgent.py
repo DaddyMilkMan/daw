@@ -7,15 +7,13 @@ Tests cover:
 - Configuration handling
 """
 
-import os
 import sys
 from pathlib import Path
 
 # Ensure agents module is importable in test environment
-root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-agents_path = os.path.join(root, 'agents')
-if agents_path not in sys.path:
-    sys.path.insert(0, agents_path)
+agents_path = Path(__file__).parents[3] / 'agents'
+if str(agents_path) not in sys.path:
+    sys.path.insert(0, str(agents_path))
 
 from WebRTCGatewayAgent.WebRTCGatewayAgent import WebRTCGatewayAgent
 
