@@ -114,7 +114,7 @@ class TriageBot:
         assignees = self._route_to_maintainer(issue, issue_type)
         
         # Generate automated response if applicable
-        response = self._generate_response(issue, issue_type, is_duplicate)
+        response = self._generate_response(issue, issue_type, is_duplicate, duplicate_of)
         
         return TriageResult(
             issue_type=issue_type,
@@ -257,12 +257,13 @@ class TriageBot:
 
     def _generate_response(self, issue: Issue, 
                           issue_type: IssueType,
-                          is_duplicate: bool) -> Optional[str]:
+                          is_duplicate: bool,
+                          duplicate_of: Optional[int] = None) -> Optional[str]:
         """Generate automated response if applicable."""
-        if is_duplicate:
-            return ("Thank you for reporting this issue. "
-                   "It appears to be a duplicate of an existing issue. "
-                   "Please check the linked issue for updates.")
+        if is_duplicate and duplicate_of:
+            return (f"Thank you for reporting this issue. "
+                   f"It appears to be a duplicate of issue #{duplicate_of}. "
+                   f"Please check that issue for updates.")
         
         if issue_type == IssueType.QUESTION:
             return ("Thank you for your question! "

@@ -271,9 +271,13 @@ class SecurityAgent:
 if __name__ == "__main__":
     agent = SecurityAgent()
     
-    # Scan source code
-    source_files = list(Path("apps/desktop/Source").rglob("*.cpp"))
-    report = agent.scan_source_code(source_files[:10])  # Sample
-    
-    print(f"Found {len(report.vulnerabilities)} vulnerabilities")
-    print(f"Critical: {report.critical_count}, High: {report.high_count}")
+    # Scan source code - check if path exists
+    source_dir = Path("apps/desktop/Source")
+    if source_dir.exists():
+        source_files = list(source_dir.rglob("*.cpp"))
+        report = agent.scan_source_code(source_files[:10])  # Sample
+        
+        print(f"Found {len(report.vulnerabilities)} vulnerabilities")
+        print(f"Critical: {report.critical_count}, High: {report.high_count}")
+    else:
+        print(f"Example source directory not found: {source_dir}")

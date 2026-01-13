@@ -153,11 +153,11 @@ class TestingAgent:
         
         # Example RT safety checks:
         unsafe_patterns = [
-            r"new\s+",  # Heap allocation
-            r"delete\s+",  # Heap deallocation
+            r"\bnew\s+",  # Heap allocation
+            r"\bdelete\s+",  # Heap deallocation
             r"std::lock_guard",  # Mutex lock
-            r"malloc\(",  # C-style allocation
-            r"std::vector::push_back",  # Potential allocation
+            r"\bmalloc\(",  # C-style allocation
+            r"\.push_back\(",  # Potential allocation (may need capacity check)
         ]
         
         # TODO: Scan audio callback code paths
