@@ -16,6 +16,10 @@ set(SOURCES
     transport_protocol.cpp
 )
 
+set(HEADERS
+    transport_protocol.h
+)
+
 # Create library
 add_library(transport_protocol_agent STATIC ${SOURCES})
 
@@ -37,8 +41,8 @@ add_executable(test_transport_protocol
     ../tests/test_transport_protocol.cpp
 )
 
-# Link test with agent library (optional for now, as test is standalone)
-# target_link_libraries(test_transport_protocol PRIVATE transport_protocol_agent)
+# Link test with agent library
+target_link_libraries(test_transport_protocol PRIVATE transport_protocol_agent)
 
 # Installation (optional)
 install(TARGETS transport_protocol_agent
