@@ -1,19 +1,8 @@
 # ScheduledTransportAgent module
 
-# Create a library for the agent
-add_library(ScheduledTransportAgent
+# Create an executable for the agent scaffold
+add_executable(ScheduledTransportAgent
     scheduled_transport.cpp
-)
-
-# Link with JUCE core components
-target_link_libraries(ScheduledTransportAgent PUBLIC
-    juce::juce_core
-    juce::juce_audio_basics
-)
-
-# Include directories
-target_include_directories(ScheduledTransportAgent PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 # C++20 standard required
@@ -25,3 +14,6 @@ if(MSVC)
 else()
     target_compile_options(ScheduledTransportAgent PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+
+# Note: This is a minimal scaffold. Future versions will be structured as a library
+# with separate executable targets for testing and demos.
