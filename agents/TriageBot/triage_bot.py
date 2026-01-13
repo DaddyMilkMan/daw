@@ -216,7 +216,7 @@ class TriageBot:
             return IssueType.ENHANCEMENT
         
         # Check for documentation
-        if "doc" in text or "readme" in text:
+        if re.search(r'\bdoc(umentation)?\b', text) or re.search(r'\breadme\b', text):
             return IssueType.DOCUMENTATION
         
         # Default to question

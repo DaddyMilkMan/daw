@@ -247,7 +247,7 @@ Test suite for {module_name}
 """
 
 import pytest
-from {module_name} import *
+# TODO: Replace with explicit imports from {module_name}
 
 
 class Test{module_name.title()}:

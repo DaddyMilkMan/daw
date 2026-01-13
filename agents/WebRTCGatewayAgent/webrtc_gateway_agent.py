@@ -10,7 +10,7 @@ low-latency audio/video collaboration in the DAW.
 import asyncio
 import logging
 from typing import Dict, List, Optional, Any
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
 
@@ -31,11 +31,7 @@ class PeerConnection:
     state: ConnectionState
     local_description: Optional[str] = None
     remote_description: Optional[str] = None
-    ice_candidates: List[str] = None
-    
-    def __post_init__(self):
-        if self.ice_candidates is None:
-            self.ice_candidates = []
+    ice_candidates: List[str] = field(default_factory=list)
 
 
 class WebRTCGatewayAgent:

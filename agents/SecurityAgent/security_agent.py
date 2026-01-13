@@ -80,7 +80,7 @@ class SecurityAgent:
         ],
         VulnerabilityType.SQL_INJECTION: [
             r'execute\s*\(\s*["\'].*\+.*["\']',
-            r'query\s*\(\s*[f"\'].*{.*}',
+            r'query\s*\(\s*[f"\'].*\{.*\}',
         ],
         VulnerabilityType.COMMAND_INJECTION: [
             r'system\s*\(\s*.*\+',
