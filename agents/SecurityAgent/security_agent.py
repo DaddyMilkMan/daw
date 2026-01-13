@@ -74,9 +74,9 @@ class SecurityAgent:
         """Load known security vulnerability patterns"""
         # TODO: Load comprehensive pattern database
         return {
-            "hardcoded_secret": re.compile(r'(password|secret|key|token)\s*=\s*["\'][^"\']+["\']', re.IGNORECASE),
+            "hardcoded_secret": re.compile(r'(password|secret|key|token)\s*=\s*["\'][^"\']{8,}["\']', re.IGNORECASE),
             "sql_injection": re.compile(r'execute\s*\(\s*["\'].*\+', re.IGNORECASE),
-            "buffer_overflow": re.compile(r'strcpy|strcat|sprintf|gets\s*\(', re.IGNORECASE),
+            "buffer_overflow": re.compile(r'\b(strcpy|strcat|sprintf|gets)\s*\(', re.IGNORECASE),
         }
 
     def scan_codebase(self, directory: Optional[str] = None) -> SecurityReport:

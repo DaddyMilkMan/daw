@@ -142,7 +142,7 @@ class TriageBot:
             scores[issue_type] = score
         
         # Return highest scoring category or default to BUG
-        if scores:
+        if scores and max(scores.values()) > 0:
             return max(scores, key=scores.get)
         return IssueType.BUG
 
