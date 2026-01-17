@@ -15,12 +15,13 @@
 
 #include "ZenithSkia.h"
 
+#include "ArrangerGridUtils.h"
+
 namespace zenith {
 
 // Forward declarations
 class ArrangerComponent;
 class ArrangerClipManager;
-class ArrangerGridUtils;
 class ProjectState;
 class Engine;
 struct ClipView;
@@ -49,6 +50,7 @@ public:
      */
     ArrangerRenderer(ArrangerComponent& owner, Engine& engine, ProjectState& projectState,
                      ArrangerClipManager& clipManager, ArrangerGridUtils& gridUtils);
+    ~ArrangerRenderer();
 
     /**
      * @brief Main Skia drawing entry point

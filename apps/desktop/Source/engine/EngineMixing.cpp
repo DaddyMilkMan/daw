@@ -313,16 +313,16 @@ void Engine::setSidechainSource(int destTrackIndex, int pluginIndex, int sourceT
         return;
     }
 
-    Track* sourceTrack = nullptr;
+    std::shared_ptr<Track> sourceTrack = nullptr;
     if (sourceTrackIndex >= 0 && sourceTrackIndex < static_cast<int>(tracks_.size())) {
         if (tracks_[sourceTrackIndex] == nullptr) {
             DBG("Engine: Source track at index " + juce::String(sourceTrackIndex) + " is null");
             return;
         }
-        sourceTrack = tracks_[sourceTrackIndex].get();
+        sourceTrack = tracks_[sourceTrackIndex];
         
         // Prevent self-sidechaining (would cause feedback)
-        if (sourceTrack == tracks_[destTrackIndex].get()) {
+        if (sourceTrack == tracks_[destTrackIndex]) {
             DBG("Engine: Cannot sidechain track to itself");
             return;
         }

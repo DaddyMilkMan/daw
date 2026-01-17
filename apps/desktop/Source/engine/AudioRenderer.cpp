@@ -134,7 +134,7 @@ void AudioRenderer::renderAudioGraph(
                                               ? incomingMidi : nullptr;
 
       const juce::AudioBuffer<float>* sidechainBuffer = nullptr;
-      if (auto* sourceTrack = track->getSidechainSource()) {
+      if (auto sourceTrack = track->getSidechainSource()) {
           // Validate sidechain source is still valid (not deleted)
           if (sourceTrack != nullptr) {
               int sourceIdx = sourceTrack->getTrackIndex();

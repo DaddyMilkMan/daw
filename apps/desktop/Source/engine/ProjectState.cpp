@@ -10,6 +10,7 @@
 #include "TrackStateManager.h"
 #include "MidiNoteStateManager.h"
 #include "IDService.h"
+#include "TempoMap.h"
 
 #include <functional>
 
@@ -881,3 +882,293 @@ juce::File ProjectState::getAssetDirectory(const juce::String &subfolder) const 
 }
 
 } // namespace zenith
+
+namespace zenith {
+
+//==============================================================================
+// Missing Implementations for Linkage (Sample-based wrappers)
+//==============================================================================
+
+juce::ValueTree ProjectState::getTempoMap() const {
+    return state.getChildWithName(ID_TEMPO_MAP);
+}
+
+double ProjectState::samplesToBeats(juce::int64 samples) const {
+    double sr = sampleRate_;
+    if (sr <= 0) sr = 44100.0;
+    double bpm = getTempo();
+    if (bpm <= 0) bpm = 120.0;
+    
+    // seconds = samples / sr
+    // beats = seconds * (bpm / 60)
+    return (samples / sr) * (bpm / 60.0);
+}
+
+juce::String ProjectState::createClip(const juce::String &trackId,
+                                      const juce::String &clipType,
+                                      juce::int64 startSamples, juce::int64 lengthSamples,
+                                      const juce::String &name,
+                                      const juce::String &actionName) {
+    double startBeats = samplesToBeats(startSamples);
+    double lengthBeats = samplesToBeats(lengthSamples);
+    
+    // Determine lane (default 0)
+    int laneIndex = 0;
+    
+    if (clipStateManager) {
+        return clipStateManager->addClip(trackId, clipType, startBeats, lengthBeats, laneIndex);
+    }
+    return {};
+}
+
+void ProjectState::deleteClip(const juce::String &trackId, const juce::String &clipId,
+                              const juce::String &actionName) {
+    if (clipStateManager) {
+        clipStateManager->removeClip(trackId, clipId, actionName);
+    }
+}
+
+void ProjectState::moveClip(const juce::String &trackId, const juce::String &clipId,
+                            juce::int64 newStartSamples,
+                            const juce::String &actionName) {
+    if (clipStateManager) {
+        double newStartBeats = samplesToBeats(newStartSamples);
+        clipStateManager->moveClip(trackId, clipId, newStartBeats, actionName);
+    }
+}
+
+std::pair<juce::String, juce::String>
+ProjectState::splitClip(const juce::String &trackId, const juce::String &clipId,
+                        juce::int64 splitSamples,
+                        const juce::String &actionName) {
+    if (clipStateManager) {
+        double splitBeats = samplesToBeats(splitSamples);
+        return clipStateManager->splitClip(trackId, clipId, splitBeats, actionName);
+    }
+    return {};
+}
+
+// Ensure addNotes is implemented if declared
+// Note: This matches the signature from the linker error
+// zenith::ProjectState::addNotes(juce::String const&, std::vector<zenith::MidiNote, std::allocator<zenith::MidiNote> > const&, juce::String const&)
+// Ensure addNotes is implemented if declared
+// Note: This matches the signature from the linker error
+// zenith::ProjectState::addNotes(juce::String const&, std::vector<zenith::MidiNote, std::allocator<zenith::MidiNote> > const&, juce::String const&)
+void ProjectState::addNotes(const juce::String &clipId, 
+                                    const std::vector<MidiNote>& notes, 
+                                    const juce::String &actionName) {
+    undoManager.beginNewTransaction(actionName);
+    
+    for (const auto& note : notes) {
+        MidiNoteSpec spec;
+        spec.startBeats = note.startBeats;
+        spec.lengthBeats = note.lengthBeats;
+        spec.pitch = note.pitch;
+        spec.velocity = note.velocity;
+        spec.probability = 1.0f; // Default
+        
+        addMidiNote(clipId, spec, actionName);
+    }
+}
+
+void ProjectState::renameTrack(const juce::String &trackId, const juce::String &newName,
+                               const juce::String &actionName) {
+  if (trackStateManager)
+    trackStateManager->setTrackName(trackId, newName, actionName);
+}
+
+void ProjectState::setTrackColor(const juce::String &trackId, const juce::Colour &color,
+                                 bool manuallySet, const juce::String &actionName) {
+  if (trackStateManager)
+    trackStateManager->setTrackColor(trackId, color, manuallySet, actionName);
+}
+
+void ProjectState::setTrackVolume(const juce::String &trackId, float volumeLinear,
+                                  const juce::String &actionName) {
+  if (trackStateManager)
+    trackStateManager->setTrackVolume(trackId, volumeLinear, actionName);
+}
+
+void ProjectState::setTrackPan(const juce::String &trackId, float pan,
+                               const juce::String &actionName) {
+  if (trackStateManager)
+    trackStateManager->setTrackPan(trackId, pan, actionName);
+}
+
+void ProjectState::setTrackMute(const juce::String &trackId, bool muted,
+                                const juce::String &actionName) {
+  if (trackStateManager)
+    trackStateManager->setTrackMute(trackId, muted, actionName);
+}
+
+void ProjectState::setTrackSolo(const juce::String &trackId, bool soloed,
+                                const juce::String &actionName) {
+  if (trackStateManager)
+    trackStateManager->setTrackSolo(trackId, soloed, actionName);
+}
+
+void ProjectState::setTrackArmed(const juce::String &trackId, bool armed,
+                                 const juce::String &actionName) {
+  if (trackStateManager)
+    trackStateManager->setTrackArmed(trackId, armed, actionName);
+}
+
+//==============================================================================
+// Marker Management
+//==============================================================================
+
+juce::ValueTree ProjectState::getMarkers() const {
+    return state.getChildWithName(ID_MARKERS);
+}
+
+juce::String ProjectState::addMarker(double beatPosition, const juce::String &name,
+                       const juce::String &color, const juce::String &actionName) {
+    juce::ValueTree markers = state.getOrCreateChildWithName(ID_MARKERS, &undoManager);
+    juce::String id = generateUniqueId("m_");
+    
+    juce::ValueTree marker(ID_MARKER);
+    marker.setProperty(PROP_ID, id, nullptr);
+    marker.setProperty(PROP_START_BEATS, beatPosition, nullptr);
+    marker.setProperty(PROP_NAME, name, nullptr);
+    marker.setProperty(PROP_COLOR, color, nullptr);
+    
+    undoManager.beginNewTransaction(actionName);
+    markers.addChild(marker, -1, &undoManager);
+    return id;
+}
+
+bool ProjectState::deleteMarker(const juce::String &markerId, const juce::String &actionName) {
+    juce::ValueTree markers = state.getChildWithName(ID_MARKERS);
+    if (!markers.isValid()) return false;
+    
+    juce::ValueTree marker = markers.getChildWithProperty(PROP_ID, markerId);
+    if (marker.isValid()) {
+        undoManager.beginNewTransaction(actionName);
+        markers.removeChild(marker, &undoManager);
+        return true;
+    }
+    return false;
+}
+
+void ProjectState::moveMarker(const juce::String &markerId, double newBeats, const juce::String &actionName) {
+    juce::ValueTree markers = state.getChildWithName(ID_MARKERS);
+    juce::ValueTree marker = markers.getChildWithProperty(PROP_ID, markerId);
+    if (marker.isValid()) {
+         undoManager.beginNewTransaction(actionName);
+         marker.setProperty(PROP_START_BEATS, newBeats, &undoManager);
+    }
+}
+
+void ProjectState::renameMarker(const juce::String &markerId, const juce::String &newName, const juce::String &actionName) {
+    juce::ValueTree markers = state.getChildWithName(ID_MARKERS);
+    juce::ValueTree marker = markers.getChildWithProperty(PROP_ID, markerId);
+    if (marker.isValid()) {
+         undoManager.beginNewTransaction(actionName);
+         marker.setProperty(PROP_NAME, newName, &undoManager);
+    }
+}
+
+//==============================================================================
+// Tempo Management
+//==============================================================================
+
+juce::String ProjectState::addTempoChange(double beatPosition, double bpm, const juce::String &actionName) {
+    juce::ValueTree tempoMap = state.getOrCreateChildWithName(ID_TEMPO_MAP, &undoManager);
+    juce::String id = generateUniqueId("t_");
+    
+    juce::ValueTree point(ID_TEMPO_POINT);
+    point.setProperty(PROP_ID, id, nullptr);
+    point.setProperty(PROP_TIME_BEATS, beatPosition, nullptr);
+    point.setProperty(PROP_BPM, bpm, nullptr);
+    
+    undoManager.beginNewTransaction(actionName);
+    tempoMap.addChild(point, -1, &undoManager);
+    return id;
+}
+
+bool ProjectState::deleteTempoChange(const juce::String &pointId, const juce::String &actionName) {
+    juce::ValueTree tempoMap = state.getChildWithName(ID_TEMPO_MAP);
+    if (!tempoMap.isValid()) return false;
+    juce::ValueTree point = tempoMap.getChildWithProperty(PROP_ID, pointId);
+    if (point.isValid()) {
+        undoManager.beginNewTransaction(actionName);
+        tempoMap.removeChild(point, &undoManager);
+        return true;
+    }
+    return false;
+}
+
+void ProjectState::moveTempoChange(const juce::String &pointId, double newBeats, double newBpm, const juce::String &actionName) {
+    juce::ValueTree tempoMap = state.getChildWithName(ID_TEMPO_MAP);
+    if (!tempoMap.isValid()) return;
+    juce::ValueTree point = tempoMap.getChildWithProperty(PROP_ID, pointId);
+    if (point.isValid()) {
+        undoManager.beginNewTransaction(actionName);
+        point.setProperty(PROP_TIME_BEATS, newBeats, &undoManager);
+        if (newBpm > 0) point.setProperty(PROP_BPM, newBpm, &undoManager);
+    }
+}
+
+//==============================================================================
+// Sections
+//==============================================================================
+
+juce::ValueTree ProjectState::getSections() const { return state.getChildWithName(ID_SECTIONS); }
+
+void ProjectState::moveSectionContent(const juce::String &sectionId, double newStartBeats, const juce::String &actionName) {
+     DBG("ProjectState::moveSectionContent not fully implemented");
+}
+
+void ProjectState::createDefaultState() {
+     state = juce::ValueTree(ID_PROJECT);
+     state.setProperty(PROP_ID, "root", nullptr);
+     state.getOrCreateChildWithName(ID_TRACKS, nullptr);
+     state.getOrCreateChildWithName(ID_MARKERS, nullptr);
+     state.getOrCreateChildWithName(ID_TEMPO_MAP, nullptr);
+     state.getOrCreateChildWithName(ID_SECTIONS, nullptr);
+     
+     // Initialize defaults
+     state.setProperty(PROP_BPM, 120.0, nullptr);
+     state.setProperty(PROP_TIME_SIG_NUM, 4, nullptr);
+     state.setProperty(PROP_TIME_SIG_DEN, 4, nullptr);
+     state.setProperty(PROP_SAMPLE_RATE, 44100.0, nullptr);
+}
+
+void ProjectState::rebuildIdCounter() {
+    // No-op or basic scan
+}
+
+juce::ValueTree ProjectState::findTrack(const juce::String &trackId) const {
+    if (trackStateManager) return trackStateManager->getTrack(trackId);
+    return {};
+}
+
+void ProjectState::setCompRegion(const juce::String &trackId, double start, double length, int takeIndex, const juce::String &actionName) {
+    // Stub
+}
+
+juce::ValueTree ProjectState::findMidiNote(const juce::String &clipId, const juce::String &noteId) const {
+    if (midiNoteStateManager) return midiNoteStateManager->findNote(clipId, noteId);
+    return {};
+}
+
+bool ProjectState::resizeClip(const juce::String &trackId, const juce::String &clipId, double lengthBeats) {
+    if (clipStateManager) return clipStateManager->resizeClip(trackId, clipId, lengthBeats);
+    return false;
+}
+
+juce::String ProjectState::addNote(const juce::String &clipId, double startBeats,
+                       double lengthBeats, int pitch, int velocity,
+                       const juce::String &actionName) {
+    MidiNoteSpec note;
+    note.startBeats = startBeats;
+    note.lengthBeats = lengthBeats;
+    note.pitch = pitch;
+    note.velocity = velocity;
+    note.probability = 1.0f;
+    
+    return addMidiNote(clipId, note, actionName);
+}
+
+} // namespace zenith
+

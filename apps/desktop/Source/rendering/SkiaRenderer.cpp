@@ -90,11 +90,6 @@ void SkiaRenderer::shutdown()
 }
 
 //==============================================================================
-<<<<<<< HEAD
-bool SkiaRenderer::createGpuContext() {
-    if (backend_ == Backend::OpenGL) {
-#if JUCE_LINUX
-        // Wayland/Pop!_OS specific EGL Bootstrapping
 // Rendering
 //==============================================================================
 
@@ -238,15 +233,8 @@ bool SkiaRenderer::createGpuContext()
     // 1. Create the native GL interface
     sk_sp<const GrGLInterface> interface;
     
-#if JUCE_LINUX
-    // Wayland/Pop!_OS specific EGL Bootstrapping
-    interface = GrGLMakeAssembledInterface(nullptr, [](void* ctx, const char* name) -> GrGLFuncPtr {
-        return (GrGLFuncPtr)eglGetProcAddress(name);
-    });
-#else
-    // Windows/Mac: Use standard native interface (WGL/CGL)
+    // Generic Linux (X11/Wayland) - Attempt Native Interface first
     interface = GrGLMakeNativeInterface();
-#endif
 
     if (!interface)
     {

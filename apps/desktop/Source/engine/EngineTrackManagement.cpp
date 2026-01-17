@@ -332,7 +332,7 @@ void Engine::removeTrack(int index) {
   for (auto& otherTrack : tracks_) {
     if (otherTrack != nullptr && otherTrack.get() != trackToRemove) {
       // Check if this track uses the removed track as sidechain source
-      if (otherTrack->getSidechainSource() == trackToRemove) {
+      if (otherTrack->getSidechainSource().get() == trackToRemove) {
         otherTrack->setPluginSidechainSource(0, nullptr); // Clear sidechain
         DBG("Engine: Cleared sidechain reference from track " + otherTrack->getName() + " to removed track " + name);
       }

@@ -33,6 +33,7 @@
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_graphics/juce_graphics.h>
 #include "MidiNote.h"
+#include "IDService.h"
 
 //==============================================================================
 //==============================================================================
@@ -638,12 +639,17 @@ private:
   juce::File projectFile;
   zenith::RoutingGraph routingGraph;
   double sampleRate_ = 44100.0;
+  
+  // Cache for fast ID lookup
+  std::unordered_map<juce::String, juce::ValueTree> trackIdMap_;
 
   std::unique_ptr<TrackStateManager> trackStateManager;
   std::unique_ptr<ClipStateManager> clipStateManager;
   std::unique_ptr<MidiNoteStateManager> midiNoteStateManager;
   std::unique_ptr<AutomationStateManager> automationStateManager;
   std::unique_ptr<ProjectFileIO> projectFileIO;
+
+  double samplesToBeats(juce::int64 samples) const;
 
   std::pair<juce::String, juce::String> splitBeatBasedClip(const juce::String &trackId, juce::ValueTree originalClip, juce::int64 splitSamples);
   std::pair<juce::String, juce::String> splitSampleBasedClip(const juce::String &trackId, juce::ValueTree originalClip, juce::int64 splitSamples);
