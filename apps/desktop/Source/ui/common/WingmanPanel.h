@@ -18,17 +18,26 @@
 
 #include "../framework/SkiaComponent.h"
 #include "../controls/ZenithButton.h"
+#include "../controls/SkiaTextInput.h"
 #include "../network/GrokDAWController.h"
 #include "../../commands/CommandAPI.h"
 #include "Engine.h"
-#include "WingmanChatBubble.h"
-#include "WingmanPillEditor.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 namespace zenith {
 
 /**
-    Wingman AI Assistant Panel - Modern Redesign
+    Chat message data for pure Skia rendering
+*/
+struct ChatMessage {
+  juce::String speaker;
+  juce::String text;
+  bool isUser = false;
+  float cachedHeight = 0.0f; // Cached bubble height for layout
+};
+
+/**
+    Wingman AI Assistant Panel - Pure Skia Rendering
 
     Premium glassmorphic chat interface for DAW AI control.
     Features:
@@ -36,6 +45,7 @@ namespace zenith {
     - Hairline 0.5px borders
     - Brain toggle for reasoning mode (pink glow)
     - Send button with blue feedback
+    - Pure Skia chat rendering with manual scroll
     - Thread-safe async Grok integration
 */
 class WingmanPanel : public SkiaComponent {
@@ -52,6 +62,7 @@ public:
   // Component overrides
   void resized() override;
   void visibilityChanged() override;
+  void mouseWheelMove(const juce::MouseEvent &e, const juce::MouseWheelDetails &wheel) override;
 
   //==========================================================================
   /**
@@ -70,16 +81,20 @@ public:
 
 private:
   //==========================================================================
-  // UI Components
+  // UI Components (Skia-rendered buttons + input field)
 
-  std::unique_ptr<WingmanPillEditor> inputField_;
-  std::unique_ptr<juce::Viewport> chatViewport_;
-  std::unique_ptr<juce::Component> chatContainer_;
-  std::vector<std::unique_ptr<WingmanChatBubble>> chatBubbles_;
-
+  std::unique_ptr<SkiaTextInput> inputField_;
   std::unique_ptr<ZenithButton> brainToggle_;  // Reasoning mode toggle
   std::unique_ptr<ZenithButton> sendButton_;   // Send message
   std::unique_ptr<ZenithButton> settingsButton_; // Settings (header)
+
+  //==========================================================================
+  // Chat Data (Pure Skia - no JUCE components)
+
+  std::vector<ChatMessage> messages_;
+  float scrollOffset_ = 0.0f;
+  float contentHeight_ = 0.0f;
+  juce::Rectangle<float> chatAreaBounds_;
 
   //==========================================================================
   // Backend
@@ -101,14 +116,22 @@ private:
   static constexpr int INPUT_ROW_HEIGHT = 56;
   static constexpr int BUTTON_SIZE = 40;
   static constexpr int PADDING = 12;
+  static constexpr float BUBBLE_MAX_WIDTH_RATIO = 0.8f;
+  static constexpr float BUBBLE_PADDING = 10.0f;
+  static constexpr float BUBBLE_RADIUS = 12.0f;
+  static constexpr float LINE_HEIGHT = 18.0f;
 
   //==========================================================================
   // Methods
 
   void sendMessage();
   void appendMessage(const juce::String &speaker, const juce::String &message);
-  void layoutChatBubbles();
+  void recalculateLayout();
   void scrollToBottom();
+  
+  void drawChatArea(SkCanvas *canvas);
+  void drawMessage(SkCanvas *canvas, const ChatMessage &msg, float y, float maxWidth);
+  float calculateMessageHeight(const ChatMessage &msg, float maxWidth);
 
   void setupBrainToggle();
   void setupSendButton();

@@ -90,6 +90,12 @@ public:
             meterBallistics_ = (MeterBallistics)userSettings->getIntValue("meterBallistics", (int)MeterBallistics::Peak);
             meterPeakHoldSeconds_ = (float)userSettings->getDoubleValue("meterPeakHoldSeconds", 2.0);
             showVolumeInDB_ = userSettings->getBoolValue("showVolumeInDB", true);
+
+            // Zenith Hub
+            customGreeting_ = userSettings->getValue("customGreeting", "");
+
+            // Features
+            stayAwakeDuringProject_ = userSettings->getBoolValue("stayAwakeDuringProject", true);
         }
     }
 
@@ -147,8 +153,15 @@ public:
             // Metering
             userSettings->setValue("meterBallistics", (int)meterBallistics_);
             userSettings->setValue("meterPeakHoldSeconds", meterPeakHoldSeconds_);
+            userSettings->setValue("meterPeakHoldSeconds", meterPeakHoldSeconds_);
             userSettings->setValue("showVolumeInDB", showVolumeInDB_);
+
+            // Zenith Hub
+            userSettings->setValue("customGreeting", customGreeting_);
             
+            // Features
+            userSettings->setValue("stayAwakeDuringProject", stayAwakeDuringProject_);
+
             userSettings->saveIfNeeded();
         }
     }
@@ -265,7 +278,20 @@ public:
     float getMeterPeakHoldSeconds() const { return meterPeakHoldSeconds_; }
 
     void setShowVolumeInDB(bool enabled) { if (showVolumeInDB_ != enabled) { showVolumeInDB_ = enabled; save(); sendChangeMessage(); } }
+
     bool getShowVolumeInDB() const { return showVolumeInDB_; }
+
+    //==============================================================================
+    // Zenith Hub Settings
+    //==============================================================================
+    void setCustomGreeting(const juce::String& greeting) { if (customGreeting_ != greeting) { customGreeting_ = greeting; save(); sendChangeMessage(); } }
+    juce::String getCustomGreeting() const { return customGreeting_; }
+
+    //==============================================================================
+    // Power Management
+    //==============================================================================
+    void setStayAwakeDuringProject(bool stayAwake) { if (stayAwakeDuringProject_ != stayAwake) { stayAwakeDuringProject_ = stayAwake; save(); sendChangeMessage(); } }
+    bool getStayAwakeDuringProject() const { return stayAwakeDuringProject_; }
 
     //==============================================================================
     // Plugin Settings
@@ -320,6 +346,12 @@ private:
     MeterBallistics meterBallistics_ = MeterBallistics::Peak;
     float meterPeakHoldSeconds_ = 2.0f;
     bool showVolumeInDB_ = true;
+
+    // Zenith Hub
+    juce::String customGreeting_;
+
+    // Features
+    bool stayAwakeDuringProject_ = true;
 };
 
 } // namespace zenith

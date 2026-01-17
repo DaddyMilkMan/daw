@@ -2,112 +2,195 @@
   ==============================================================================
 
     GlobalSettingsPanel.h
-    Created: 2025-12-30
-    Updated: 2026-01-02
+    Created: 2025-12-30 / Redesigned: 2026-01-13
     Author:  Zenith DAW
 
-    Premium Settings Modal with modular tab architecture.
+    Professional Settings Panel with:
+    - Tabbed navigation (Audio, MIDI, Recording, Editing, Display, General)
+    - Searchable settings with filtering
+    - Grouped settings with labels and descriptions
+    - Reset to defaults functionality
+    - Change indicators for modified settings
 
   ==============================================================================
 */
 
 #pragma once
 
-#include <juce_audio_devices/juce_audio_devices.h>
-#include <juce_gui_basics/juce_gui_basics.h>
 #include "../framework/SkiaComponent.h"
+#include "../controls/SkiaComboBox.h"
 #include "../controls/ZenithButton.h"
 #include "../controls/ZenithToggle.h"
-#include "../controls/ZenithSlider.h"
-#include "../controls/ZenithTextInput.h"
-#include "../controls/SkiaComboBox.h"
-#include "../controls/SkiaListBox.h"
-#include "../controls/SkiaLabel.h"
+#include "../controls/SkiaTextInput.h"
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <map>
+#include <vector>
 
 namespace zenith {
 
-// Forward declarations for Sub-Panels
-class AudioSettingsPanel;
-class MidiSettingsPanel;
-class PluginSettingsPanel;
-class KeyboardSettingsPanel;
-class AppearanceSettingsPanel;
-class GeneralSettingsPanel;
-class CollaborationSettingsPanel;
-class AdvancedSettingsPanel;
+//==============================================================================
+// SettingRow - Individual setting with label, description, and control
+//==============================================================================
+
+class SettingRow : public SkiaComponent {
+public:
+  enum class Type { Toggle, Combo, Button, Info };
+
+  SettingRow(const juce::String& id, const juce::String& label, 
+             const juce::String& description, Type type);
+
+  void resized() override;
+  void drawSkia(SkCanvas* canvas) override;
+  void mouseEnter(const juce::MouseEvent& e) override;
+  void mouseExit(const juce::MouseEvent& e) override;
+
+  // Identification
+  juce::String getId() const { return id_; }
+  
+  // Search filtering
+  bool matchesSearch(const juce::String& query) const;
+
+  // Toggle control
+  void setToggleState(bool state);
+  bool getToggleState() const;
+  std::function<void(bool)> onToggle;
+
+  // Combo control
+  void setComboItems(const juce::StringArray& items);
+  void setSelectedId(int id);
+  int getSelectedId() const;
+  juce::String getSelectedText() const;
+  std::function<void()> onComboChange;
+
+  // Button control
+  void setButtonText(const juce::String& text);
+  std::function<void()> onButtonClick;
+
+  // Info display
+  void setInfoText(const juce::String& text);
+
+  // Change indicator
+  void setChanged(bool changed) { isChanged_ = changed; markDirty(); }
+  bool isChanged() const { return isChanged_; }
+
+  // Tooltip
+  void setTooltipText(const juce::String& tip) { tooltip_ = tip; }
+  juce::String getTooltipText() const { return tooltip_; }
+
+private:
+  juce::String id_;
+  juce::String label_;
+  juce::String description_;
+  juce::String tooltip_;
+  juce::String infoText_;
+  Type type_;
+  bool isChanged_ = false;
+
+  std::unique_ptr<ZenithToggle> toggle_;
+  std::unique_ptr<SkiaComboBox> combo_;
+  std::unique_ptr<ZenithButton> button_;
+
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SettingRow)
+};
+
+//==============================================================================
+// SettingGroup - Container for related settings with header
+//==============================================================================
+
+class SettingGroup : public SkiaComponent {
+public:
+  explicit SettingGroup(const juce::String& title);
+
+  void addSetting(SettingRow* row);
+  void filterSettings(const juce::String& query);
+  bool hasVisibleSettings() const;
+  int getContentHeight() const;
+
+  void resized() override;
+  void drawSkia(SkCanvas* canvas) override;
+
+private:
+  juce::String title_;
+  std::vector<SettingRow*> rows_;
+
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SettingGroup)
+};
+
+//==============================================================================
+// GlobalSettingsPanel - Main settings dialog
+//==============================================================================
 
 class GlobalSettingsPanel : public SkiaComponent,
                             public juce::ChangeListener {
 public:
-  enum class Category {
-    General,
-    Audio,
-    MIDI,
-    Plugins,
-    Appearance,
-    Keyboard,
-    Collaboration,
-    Advanced,
-    COUNT
-  };
-
-  struct CategoryInfo {
-    const char* name;
-    const char* icon; // Placeholder for icon font char
-  };
-
-  static constexpr CategoryInfo categories_[] = {
-    {"General", "A"},
-    {"Audio", "B"},
-    {"MIDI", "C"},
-    {"Plugins", "D"},
-    {"Appearance", "E"},
-    {"Keyboard", "F"},
-    {"Collaboration", "G"},
-    {"Advanced", "H"}
-  };
-
-  GlobalSettingsPanel(juce::AudioDeviceManager& deviceManager);
+  explicit GlobalSettingsPanel(juce::AudioDeviceManager& deviceManager);
   ~GlobalSettingsPanel() override;
 
   void resized() override;
   void drawSkia(SkCanvas* canvas) override;
-  void onAnimationTick(float delta) override;
-  
-  // Modal visibility API
-  void show();
-  void hide();
-  std::function<void()> onClose;
-  
-  void mouseDown(const juce::MouseEvent& event) override;
+  void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& d) override;
 
-private:
-  void createTabButtons();
-  void switchCategory(Category category);
-  
-  // JUCE ChangeListener
+  // ChangeListener for device changes
   void changeListenerCallback(juce::ChangeBroadcaster* source) override;
 
-  juce::AudioDeviceManager& deviceManager_;
-  Category currentCategory_ = Category::General;
-  
-  // Sub-Panels
-  std::unique_ptr<GeneralSettingsPanel> generalPanel_;
-  std::unique_ptr<AudioSettingsPanel> audioPanel_;
-  std::unique_ptr<MidiSettingsPanel> midiPanel_;
-  std::unique_ptr<PluginSettingsPanel> pluginPanel_;
-  std::unique_ptr<AppearanceSettingsPanel> appearancePanel_;
-  std::unique_ptr<KeyboardSettingsPanel> keyboardPanel_;
-  std::unique_ptr<CollaborationSettingsPanel> collabPanel_;
-  std::unique_ptr<AdvancedSettingsPanel> advancedPanel_;
-  
-  // Navigation
-  std::vector<std::unique_ptr<ZenithButton>> tabButtons_;
-  std::unique_ptr<ZenithButton> closeBtn_;
+  // Keyboard handling
+  bool keyPressed(const juce::KeyPress& key) override;
 
-  // Animation state
-  bool isVisible_ = false;
-  uint32_t canCloseAfter_ = 0; // Bounce guard timestamp
+  // Close callback
+  std::function<void()> onClose;
+
+  // Tab enumeration
+  enum class Tab { Audio, MIDI, Recording, Editing, Display, General };
+
+private:
+  juce::AudioDeviceManager& deviceManager_;
+
+  // UI Components
+  std::unique_ptr<SkiaTextInput> searchField_;
+  std::unique_ptr<ZenithButton> closeBtn_;
+  std::unique_ptr<ZenithButton> resetBtn_;
+  std::unique_ptr<SkiaComponent> contentContainer_;
+  std::vector<std::unique_ptr<ZenithButton>> tabButtons_;
+
+  // Settings organization
+  std::map<Tab, std::vector<std::unique_ptr<SettingRow>>> rows_;
+  std::map<Tab, std::vector<std::unique_ptr<SettingGroup>>> groups_;
+
+  // State
+  Tab currentTab_ = Tab::Audio;
+  juce::String searchQuery_;
+  float scrollY_ = 0.0f;
+  float maxScroll_ = 0.0f;
+
+  // Setup methods
+  void createTabs();
+  void createAudioSettings();
+  void createMidiSettings();
+  void createRecordingSettings();
+  void createEditingSettings();
+  void createDisplaySettings();
+  void createGeneralSettings();
+
+  // Row creation helpers
+  SettingRow* createToggleRow(Tab tab, const juce::String& id, const juce::String& label,
+                              const juce::String& desc, const juce::String& tooltip);
+  SettingRow* createComboRow(Tab tab, const juce::String& id, const juce::String& label,
+                             const juce::String& desc, const juce::String& tooltip,
+                             const juce::StringArray& items);
+  SettingRow* createButtonRow(Tab tab, const juce::String& id, const juce::String& label,
+                              const juce::String& desc, const juce::String& tooltip,
+                              const juce::String& buttonText);
+  SettingRow* createInfoRow(Tab tab, const juce::String& id, const juce::String& label,
+                            const juce::String& desc);
+
+  // Tab management
+  void setCurrentTab(Tab tab);
+  void filterSettings(const juce::String& query);
+  void resetCurrentTabToDefaults();
+
+  // Settings sync
+  void syncWithSettings();
+  void refreshAudioDevices();
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GlobalSettingsPanel)
 };

@@ -415,6 +415,16 @@ void MixerChannel::getNextAudioBlock(
     const juce::AudioSourceChannelInfo &bufferToFill,
     const std::vector<juce::AudioBuffer<float> *> &auxBuffers) {
 
+  // Input validation
+  if (bufferToFill.buffer == nullptr || bufferToFill.numSamples <= 0) {
+    return; // Invalid buffer
+  }
+  
+  if (bufferToFill.startSample < 0 || 
+      bufferToFill.startSample + bufferToFill.numSamples > bufferToFill.buffer->getNumSamples()) {
+    return; // Invalid range
+  }
+
   if (muted.load() || silencedBySolo.load()) {
     bufferToFill.clearActiveBufferRegion();
     inputLevel.store(0.0f);

@@ -33,6 +33,15 @@ void AudioRenderer::renderAudioGraph(
     const float *const *inputChannelData,
     int numInputChannels) noexcept {
 
+  // Input validation
+  if (numSamples <= 0 || numSamples > 8192) {
+    return; // Invalid block size
+  }
+  
+  if (outputBuffer.getNumChannels() == 0 || outputBuffer.getNumSamples() < numSamples) {
+    return; // Invalid output buffer
+  }
+
   juce::ScopedNoDenormals noDenormals;
   outputBuffer.clear();
 
@@ -53,22 +62,38 @@ void AudioRenderer::renderAudioGraph(
       Track* track = rn.track;
       int trackIdx = rn.bufferIndex;
          
-      if (trackIdx < 0 || trackIdx >= (int)context.trackBuffers.size())
-        continue;
-
+      // Validate track and buffer index
+      if (track == nullptr) {
+        continue; // Skip null tracks
+      }
+      
+      if (trackIdx < 0 || trackIdx >= static_cast<int>(context.trackBuffers.size())) {
+        continue; // Invalid buffer index
+      }
+      
+      // Validate buffer is properly sized
       auto &trackBuffer = context.trackBuffers[trackIdx];
+      if (trackBuffer.getNumChannels() == 0 || trackBuffer.getNumSamples() < numSamples) {
+        continue; // Invalid buffer
+      }
+
       trackBuffer.clear();
+
+      if (track == nullptr) {
+        continue; // Skip null tracks
+      }
 
       if (track->isFrozen()) {
         auto freezeBuffer = track->getFreezeBuffer();
-        if (freezeBuffer != nullptr) {
+        if (freezeBuffer != nullptr && freezeBuffer->getNumSamples() > 0) {
           const juce::int64 readPos = playheadPosition;
           const int bufferLength = freezeBuffer->getNumSamples();
           
           if (readPos >= 0 && readPos < bufferLength) {
              const int samplesToRead = std::min(numSamples, static_cast<int>(bufferLength - readPos));
-             if (samplesToRead > 0) {
-                 for (int ch = 0; ch < std::min(trackBuffer.getNumChannels(), freezeBuffer->getNumChannels()); ++ch) {
+             if (samplesToRead > 0 && trackBuffer.getNumChannels() > 0 && freezeBuffer->getNumChannels() > 0) {
+                 const int channelsToCopy = std::min(trackBuffer.getNumChannels(), freezeBuffer->getNumChannels());
+                 for (int ch = 0; ch < channelsToCopy; ++ch) {
                      trackBuffer.copyFrom(ch, 0, *freezeBuffer, ch, (int)readPos, samplesToRead);
                  }
              }
@@ -104,15 +129,23 @@ void AudioRenderer::renderAudioGraph(
                                               ? incomingMidi : nullptr;
 
       const juce::AudioBuffer<float>* sidechainBuffer = nullptr;
-      if (auto sourceTrack = track->getSidechainSource()) {
-          int sourceIdx = sourceTrack->getTrackIndex();
-          if (sourceIdx >= 0 && sourceIdx < (int)context.trackBuffers.size()) {
-              sidechainBuffer = &context.trackBuffers[sourceIdx];
+      if (auto* sourceTrack = track->getSidechainSource()) {
+          // Validate sidechain source is still valid (not deleted)
+          if (sourceTrack != nullptr) {
+              int sourceIdx = sourceTrack->getTrackIndex();
+              if (sourceIdx >= 0 && sourceIdx < static_cast<int>(context.trackBuffers.size())) {
+                  sidechainBuffer = &context.trackBuffers[sourceIdx];
+              }
+          } else {
+              // Sidechain source was deleted, clear the reference
+              track->setPluginSidechainSource(0, nullptr);
           }
       }
 
-      track->getNextAudioBlock(trackInfo, playheadPosition, trackMidiInput,
-                                context.auxBufferPtrsVector, tempoMap, sidechainBuffer);
+      if (track != nullptr) {
+          track->getNextAudioBlock(trackInfo, playheadPosition, trackMidiInput,
+                                    context.auxBufferPtrsVector, tempoMap, sidechainBuffer);
+      }
 
       if (context.pdcDelayBuffers.size() > 0) { 
         applyPDCDelay(context, trackBuffer, trackIdx, numSamples);
@@ -127,10 +160,12 @@ void AudioRenderer::renderAudioGraph(
        AuxBus* bus = rn.auxBus;
        int busIdx = rn.bufferIndex;
 
-       if (busIdx >= 0 && busIdx < (int)context.auxBusBuffers.size()) {
+       if (bus != nullptr && busIdx >= 0 && busIdx < static_cast<int>(context.auxBusBuffers.size())) {
         auto &busBuffer = context.auxBusBuffers[busIdx];
-        juce::AudioSourceChannelInfo auxInfo(&busBuffer, 0, numSamples);
-        bus->getNextAudioBlock(auxInfo);
+        if (busBuffer.getNumChannels() > 0 && busBuffer.getNumSamples() >= numSamples) {
+            juce::AudioSourceChannelInfo auxInfo(&busBuffer, 0, numSamples);
+            bus->getNextAudioBlock(auxInfo);
+        }
 
         if (rn.hasMasterSend) {
             for (int ch = 0; ch < std::min(outputBuffer.getNumChannels(), busBuffer.getNumChannels()); ++ch) {

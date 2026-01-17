@@ -11,12 +11,17 @@
 #include "TitleBarComponent.h"
 #include "../design-system/ZenithTypography.h"
 #include "../framework/GlassmorphicPanel.h"
+#include "../../engine/ZenithLogger.h" // Added for logging
 
 namespace zenith {
 
 TitleBarComponent::TitleBarComponent() 
     : transparentBackground_(false) {
   setOpaque(false);
+  
+  // Initialize Menu Bar
+  menuBar_ = std::make_unique<ZenithMenuBar>();
+  addAndMakeVisible(menuBar_.get());
   
   // Fonts
   titleFont_ = design::getSkFont(14.0f, design::FontWeight::SemiBold);
@@ -30,7 +35,25 @@ TitleBarComponent::~TitleBarComponent() {}
 // setupButtons removed
 
 void TitleBarComponent::resized() {
-  // Window buttons layout removed
+  auto bounds = getLocalBounds();
+  int height = bounds.getHeight();
+  
+  // Window control buttons on the right - LARGER for easy clicking
+  int buttonSize = 24;
+  int buttonSpacing = 12;
+  int buttonY = (height - buttonSize) / 2;
+  int rightPadding = 16;
+  
+  closeButtonBounds_ = juce::Rectangle<int>(bounds.getWidth() - rightPadding - buttonSize, buttonY, buttonSize, buttonSize);
+  maximizeButtonBounds_ = juce::Rectangle<int>(closeButtonBounds_.getX() - buttonSpacing - buttonSize, buttonY, buttonSize, buttonSize);
+  minimizeButtonBounds_ = juce::Rectangle<int>(maximizeButtonBounds_.getX() - buttonSpacing - buttonSize, buttonY, buttonSize, buttonSize);
+  
+  // Menu bar starts from left edge (no logo), goes up to window buttons
+  int menuBarX = 16;
+  int menuBarWidth = minimizeButtonBounds_.getX() - menuBarX - 20;
+  if (menuBar_ && menuBarWidth > 100) {
+    menuBar_->setBounds(menuBarX, 0, menuBarWidth, height);
+  }
 }
 
 void TitleBarComponent::drawSkia(SkCanvas* canvas) {
@@ -38,38 +61,71 @@ void TitleBarComponent::drawSkia(SkCanvas* canvas) {
 
     SkRect bounds = SkRect::MakeWH(getWidth(), getHeight());
     
-    // Draw simple background with subtle blur feel
-    // If hub is open, we want NO background to avoid bleed.
-    // Otherwise, we want a very subtle dark glass tint.
-    if (!transparentBackground_) {
-        SkPaint bgPaint;
-        // Reduced from absolute white/gray to a very subtle dark tint (30% opacity)
-        bgPaint.setColor(SkColorSetA(colors::BG_DARK, 80)); 
-        canvas->drawRect(bounds, bgPaint);
-        
-        // Subtle 1px bottom divider
-        SkPaint divPaint;
-        divPaint.setAntiAlias(true);
-        divPaint.setColor(SkColorSetA(SK_ColorWHITE, 15));
-        canvas->drawLine(0, bounds.bottom() - 1, bounds.right(), bounds.bottom() - 1, divPaint);
+    // DEBUG LOGGING - Trace draw calls
+    static uint32_t lastLogTime = 0;
+    uint32_t now = juce::Time::getMillisecondCounter();
+    if (now - lastLogTime > 200) { // Throttle logs
+         lastLogTime = now;
+         ZENITH_LOG_INFO(juce::String::formatted("TitleBar Draw: Bounds=[%.1f %.1f %.1f %.1f], Visible=%d, MenuVisible=%d, Opacity=%.1f", 
+            bounds.fLeft, bounds.fTop, bounds.fRight, bounds.fBottom, 
+            isVisible(),
+            menuBar_ ? (int)menuBar_->isVisible() : -1,
+            getAlpha()
+         ));
     }
     
-    // Draw Title
-    if (showTitle_) {
-        juce::String title = "Zenith DAW";
-        if (auto* w = findParentComponentOfClass<juce::DocumentWindow>()) {
-            title = w->getName();
+    // Solid dark background (sharp edges, fills entire top)
+    SkPaint bgPaint;
+    bgPaint.setAntiAlias(false); // Sharp edges
+    bgPaint.setColor(SkColorSetARGB(255, 10, 10, 10)); // Force opaque near-black
+    canvas->drawRect(bounds, bgPaint);
+    
+    // Subtle 1px bottom divider with cyan tint
+    SkPaint divPaint;
+    divPaint.setAntiAlias(true);
+    divPaint.setColor(SkColorSetA(colors::CYAN, 60));
+    canvas->drawLine(0, bounds.bottom() - 1, bounds.right(), bounds.bottom() - 1, divPaint);
+    
+    // Draw Menu Bar - ALWAYS draw when TitleBar is drawn
+    if (menuBar_) {
+        canvas->save();
+        canvas->translate(static_cast<float>(menuBar_->getX()), static_cast<float>(menuBar_->getY()));
+        // NO clipping here
+        menuBar_->drawSkia(canvas);
+        canvas->restore();
+    }
+    
+    // 5. Draw Window Control Buttons (X, -, □) - Zenith Style
+    auto drawWindowButton = [&](const juce::Rectangle<int>& rect, bool isHovered, SkColor baseColor, const SkPath& icon) {
+        SkRect skRect = SkRect::MakeXYWH(rect.getX(), rect.getY(), rect.getWidth(), rect.getHeight());
+        
+        // Hover background circle
+        if (isHovered) {
+            SkPaint bgPaint;
+            bgPaint.setAntiAlias(true);
+            bgPaint.setColor(SkColorSetA(baseColor, 50));
+            canvas->drawCircle(skRect.centerX(), skRect.centerY(), skRect.width() / 2.0f + 3, bgPaint);
         }
         
-        SkString skTitle(title.toRawUTF8());
-        SkRect titleBounds;
-        titleFont_.measureText(skTitle.c_str(), skTitle.size(), SkTextEncoding::kUTF8, &titleBounds);
-        
-        canvas->drawSimpleText(skTitle.c_str(), skTitle.size(), SkTextEncoding::kUTF8, 
-                               bounds.centerX() - titleBounds.width()/2, 
-                               bounds.centerY() + titleBounds.height()/2, 
-                               titleFont_, textPaint_);
-    }
+        // Icon
+        icons::IconStyle style;
+        style.color = isHovered ? baseColor : SkColorSetA(colors::TEXT_SECONDARY, 180);
+        style.strokeWidth = icons::STROKE_LIGHT;
+        if (isHovered) {
+            style.glowColor = baseColor;
+            style.glowRadius = 8.0f;
+        }
+        icons::drawIconCentered(canvas, icon, skRect, 14.0f, style);
+    };
+    
+    // Close button (Red X)
+    drawWindowButton(closeButtonBounds_, closeHovered_, colors::RED, icons::Close());
+    
+    // Maximize button (Yellow square)
+    drawWindowButton(maximizeButtonBounds_, maximizeHovered_, colors::YELLOW, icons::Stop()); // Using Stop for square
+    
+    // Minimize button (Green dash)
+    drawWindowButton(minimizeButtonBounds_, minimizeHovered_, colors::NEON_GREEN, icons::Minus());
 }
 
 // drawWindowButton removed
@@ -96,15 +152,33 @@ void TitleBarComponent::mouseDoubleClick(const juce::MouseEvent& e) {
 // getButtonAt removed
 
 void TitleBarComponent::mouseMove(const juce::MouseEvent& e) {
-    juce::ignoreUnused(e);
+    bool prevClose = closeHovered_, prevMin = minimizeHovered_, prevMax = maximizeHovered_;
+    
+    closeHovered_ = closeButtonBounds_.contains(e.getPosition());
+    minimizeHovered_ = minimizeButtonBounds_.contains(e.getPosition());
+    maximizeHovered_ = maximizeButtonBounds_.contains(e.getPosition());
+    
+    if (closeHovered_ != prevClose || minimizeHovered_ != prevMin || maximizeHovered_ != prevMax) {
+        repaint();
+    }
 }
 
 void TitleBarComponent::mouseExit(const juce::MouseEvent& e) {
     juce::ignoreUnused(e);
+    closeHovered_ = false;
+    minimizeHovered_ = false;
+    maximizeHovered_ = false;
+    repaint();
 }
 
 void TitleBarComponent::mouseUp(const juce::MouseEvent& e) {
-   juce::ignoreUnused(e);
+    if (closeButtonBounds_.contains(e.getPosition())) {
+        if (onClose) onClose();
+    } else if (minimizeButtonBounds_.contains(e.getPosition())) {
+        if (onMinimize) onMinimize();
+    } else if (maximizeButtonBounds_.contains(e.getPosition())) {
+        if (onMaximize) onMaximize();
+    }
 }
 
 } // namespace zenith

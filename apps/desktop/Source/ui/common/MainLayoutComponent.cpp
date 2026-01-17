@@ -176,6 +176,22 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, CommandAPI &api, Projec
       ResizablePanelContainer::SplitDirection::Horizontal);
   addAndMakeVisible(panelContainer_.get());
 
+  // 2a. Wingman Panel (LEFT SIDE - Added FIRST to appear on left)
+  auto wingmanSidePanel = std::make_unique<RightSidePanel>(api, engine_, projectState_);
+  rightSidePanel_ = wingmanSidePanel.get();
+  
+  layout::PanelConfig wingmanCfg;
+  wingmanCfg.id = "left_sidebar";
+  wingmanCfg.type = "left_sidebar";
+  wingmanCfg.name = "Wingman";
+  wingmanCfg.initialSize = 320;
+  wingmanCfg.minSize = 280;
+  wingmanCfg.flex = 0;
+  wingmanCfg.isCollapsible = true;
+  wingmanCfg.isCollapsed = true; // Default to closed
+  
+  panelContainer_->addPanel(std::move(wingmanSidePanel), wingmanCfg);
+
   // 3. Create Left Container (Vertical: Browser | Info View)
   auto leftContainer = std::make_unique<ResizablePanelContainer>();
   leftContainer->setSplitDirection(ResizablePanelContainer::SplitDirection::Vertical);
@@ -210,6 +226,7 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, CommandAPI &api, Projec
   helpCfg.isCollapsible = true;
   
   leftContainer->addPanel(std::move(helpView), helpCfg);
+  ZENITH_LOG_INFO("MainLayoutComponent: help_view panel added to leftContainer");
 
   // Add Left Container to Root
   layout::PanelConfig leftCfg;
@@ -222,21 +239,30 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, CommandAPI &api, Projec
   leftCfg.isCollapsible = true;
   leftCfg.showHeader = false; // Hide header for sidebar container
 
+  ZENITH_LOG_INFO("MainLayoutComponent: Adding leftContainer to panelContainer_");
   panelContainer_->addPanel(std::move(leftContainer), leftCfg);
+  ZENITH_LOG_INFO("MainLayoutComponent: leftContainer added successfully");
 
   // 4. Create Center Container (Vertical: Views | Sample Editor)
+  ZENITH_LOG_INFO("MainLayoutComponent: Creating centerContainer");
   auto centerContainer = std::make_unique<ResizablePanelContainer>();
   centerContainer_ = centerContainer.get(); // Cache pointer
   centerContainer->setSplitDirection(
       ResizablePanelContainer::SplitDirection::Vertical);
+  ZENITH_LOG_INFO("MainLayoutComponent: centerContainer created");
 
   // 4a. Views Panel (Switcher)
+  ZENITH_LOG_INFO("MainLayoutComponent: Creating ViewSwitcher");
   auto switcher = std::make_unique<ViewSwitcher>();
   viewSwitcher_ = switcher.get();
+  ZENITH_LOG_INFO("MainLayoutComponent: ViewSwitcher created");
 
+  ZENITH_LOG_INFO("MainLayoutComponent: Creating ArrangerComponent");
   auto arranger = std::make_unique<ArrangerComponent>(engine_, projectState_);
+  ZENITH_LOG_INFO("MainLayoutComponent: ArrangerComponent created");
   arranger->onClipDoubleClicked = [this](const juce::String &trackId,
                                          const juce::String &clipId) {
+    ZENITH_LOG_INFO("MainLayoutComponent: onClipDoubleClicked callback");
     // Check clip type
     auto [track, clip] = projectState_.findClip(clipId);
     if (clip.isValid()) {
@@ -264,13 +290,18 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, CommandAPI &api, Projec
       toggleSampleEditor();
     }
   };
+  ZENITH_LOG_INFO("MainLayoutComponent: ArrangerComponent callback set");
   
   // Store raw pointer for collaboration features
   ArrangerComponent* arrangerPtr = arranger.get();
-  
+  ZENITH_LOG_INFO("MainLayoutComponent: Adding arranger to switcher");
   switcher->addView(std::move(arranger));
+  ZENITH_LOG_INFO("MainLayoutComponent: Arranger added to switcher");
+  
+  ZENITH_LOG_INFO("MainLayoutComponent: Creating SessionViewComponent");
   switcher->addView(
       std::make_unique<SessionViewComponent>(engine_, projectState_));
+  ZENITH_LOG_INFO("MainLayoutComponent: SessionViewComponent added");
 
   layout::PanelConfig viewsCfg;
   viewsCfg.id = "main_views";
@@ -280,23 +311,35 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, CommandAPI &api, Projec
   viewsCfg.minSize = 300;
   viewsCfg.showHeader = false; // Hide header for main content area
 
+  ZENITH_LOG_INFO("MainLayoutComponent: Adding switcher to centerContainer");
   centerContainer->addPanel(std::move(switcher), viewsCfg);
+  ZENITH_LOG_INFO("MainLayoutComponent: Switcher added to centerContainer");
 
   // 4b. Editors Panel (Switcher: Sample Editor | MIDI Editor)
+  ZENITH_LOG_INFO("MainLayoutComponent: Creating editorSwitcher");
   auto editorSwitcher = std::make_unique<ViewSwitcher>();
   editorSwitcher_ = editorSwitcher.get();
+  ZENITH_LOG_INFO("MainLayoutComponent: editorSwitcher created");
 
   // View 0: Sample Editor
+  ZENITH_LOG_INFO("MainLayoutComponent: Creating SampleEditorComponent");
   auto sampleEditor =
       std::make_unique<SampleEditorComponent>(engine_, projectState_);
+  ZENITH_LOG_INFO("MainLayoutComponent: SampleEditorComponent created");
   sampleEditor_ = sampleEditor.get();
+  ZENITH_LOG_INFO("MainLayoutComponent: Adding sampleEditor to editorSwitcher");
   editorSwitcher->addView(std::move(sampleEditor));
+  ZENITH_LOG_INFO("MainLayoutComponent: sampleEditor added");
 
   // View 1: MIDI Editor
+  ZENITH_LOG_INFO("MainLayoutComponent: Creating MidiEditorContainer");
   auto midiEditor =
       std::make_unique<MidiEditorContainer>(projectState_, engine_);
+  ZENITH_LOG_INFO("MainLayoutComponent: MidiEditorContainer created");
   midiEditor_ = midiEditor.get();
+  ZENITH_LOG_INFO("MainLayoutComponent: Adding midiEditor to editorSwitcher");
   editorSwitcher->addView(std::move(midiEditor));
+  ZENITH_LOG_INFO("MainLayoutComponent: midiEditor added");
 
   layout::PanelConfig editorCfg;
   editorCfg.id =
@@ -309,7 +352,9 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, CommandAPI &api, Projec
   editorCfg.isCollapsible = true;
   editorCfg.isCollapsed = true;
 
+  ZENITH_LOG_INFO("MainLayoutComponent: Adding editorSwitcher to centerContainer");
   centerContainer->addPanel(std::move(editorSwitcher), editorCfg);
+  ZENITH_LOG_INFO("MainLayoutComponent: editorSwitcher added to centerContainer");
 
   // Add Center Container
   layout::PanelConfig centerCfg;
@@ -325,26 +370,16 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, CommandAPI &api, Projec
   centerCfg.minSize = 400;
   centerCfg.showHeader = false; // Hide header for center container
 
+  ZENITH_LOG_INFO("MainLayoutComponent: Adding centerContainer to panelContainer_");
   panelContainer_->addPanel(std::move(centerContainer), centerCfg);
+  ZENITH_LOG_INFO("MainLayoutComponent: centerContainer added to panelContainer_");
 
-  // 6. Create Right Container (Vertical: RightSidePanel)
-  auto rightSidePanel = std::make_unique<RightSidePanel>(api, engine_, projectState_);
-  rightSidePanel_ = rightSidePanel.get();
-  
-  layout::PanelConfig rightCfg;
-  rightCfg.id = "right_sidebar";
-  rightCfg.type = "right_sidebar";
-  rightCfg.name = "Wingman";
-  rightCfg.initialSize = 300;
-  rightCfg.minSize = 250;
-  rightCfg.flex = 0;
-  rightCfg.isCollapsible = true;
-  rightCfg.isCollapsed = true; // Default to closed for "pop out" behavior
-  
-  panelContainer_->addPanel(std::move(rightSidePanel), rightCfg);
+  // RIGHT SIDEBAR REMOVED - Wingman is now on left side
 
   // 7. Cursor Overlay with ID-to-Rect mapping for collaboration
+  ZENITH_LOG_INFO("MainLayoutComponent: Creating RemoteCursorOverlay");
   cursorOverlay_ = std::make_unique<RemoteCursorOverlay>();
+  ZENITH_LOG_INFO("MainLayoutComponent: RemoteCursorOverlay created");
   
   // Set up the mapper to convert selection IDs to screen rectangles
   // This enables remote users' selections to be visualized
@@ -354,8 +389,10 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, CommandAPI &api, Projec
     if (!clipMgr) return {};
     return clipMgr->getClipBounds(clipId);
   });
+  ZENITH_LOG_INFO("MainLayoutComponent: RemoteCursorOverlay mapper set");
   
   addAndMakeVisible(cursorOverlay_.get());
+  ZENITH_LOG_INFO("MainLayoutComponent: Constructor complete");
 }
 
 MainLayoutComponent::~MainLayoutComponent() = default;
@@ -404,7 +441,7 @@ void MainLayoutComponent::toggleBrowser() {
 }
 
 void MainLayoutComponent::toggleWingman() {
-  if (auto *wrapper = panelContainer_->getPanel("right_sidebar")) {
+  if (auto *wrapper = panelContainer_->getPanel("left_sidebar")) {
     wrapper->toggleCollapse(true);
   }
 }

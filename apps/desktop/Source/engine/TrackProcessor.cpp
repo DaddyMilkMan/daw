@@ -51,16 +51,34 @@ void TrackProcessor::processBlock(const juce::AudioSourceChannelInfo& bufferToFi
                                   const std::vector<juce::AudioBuffer<float>*>& auxBuffers,
                                   const juce::AudioBuffer<float>* sidechain) {
     
+    // Input validation
+    if (bufferToFill.buffer == nullptr || bufferToFill.numSamples <= 0) {
+        return; // Invalid buffer
+    }
+    
+    if (bufferToFill.startSample < 0 || 
+        bufferToFill.startSample + bufferToFill.numSamples > bufferToFill.buffer->getNumSamples()) {
+        return; // Invalid range
+    }
+    
     // 1. Process Plugin Chain
     // Correctly create a local buffer wrapper by offsetting pointers to startSample
     const int numChannels = bufferToFill.buffer->getNumChannels();
+    
+    if (numChannels <= 0 || numChannels > 32) {
+        return; // Invalid channel count
+    }
     
     // Use a fixed-size array on the stack to avoid allocations
     std::array<float*, 32> pointers;
     const int safeChannels = std::min(numChannels, 32);
     
     for (int i = 0; i < safeChannels; ++i) {
-        pointers[i] = bufferToFill.buffer->getWritePointer(i, bufferToFill.startSample);
+        float* ptr = bufferToFill.buffer->getWritePointer(i, bufferToFill.startSample);
+        if (ptr == nullptr) {
+            return; // Invalid pointer
+        }
+        pointers[i] = ptr;
     }
 
     juce::AudioBuffer<float> localBuffer(pointers.data(), safeChannels, bufferToFill.numSamples);

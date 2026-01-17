@@ -10,6 +10,7 @@
 #include "ZenithHubComponent.h"
 #include "../design-system/ZenithLayout.h"
 #include "ZenithIcons.h"
+#include "../../Settings.h"
 #include "../../engine/ZenithLogger.h"
 #include "../design-system/ZenithTypography.h"
 #include <array>
@@ -74,6 +75,18 @@ ZenithHubComponent::ZenithHubComponent(
   if (auto* auth = AuthenticationService::getInstance()) {
       auth->addListener(this);
   }
+  
+  // Prioritize persistent custom greeting
+  juce::String savedGreeting = zenith::Settings::getInstance().getCustomGreeting();
+  if (savedGreeting.isNotEmpty()) {
+      greetingText_ = savedGreeting;
+  } else if (auto* auth = AuthenticationService::getInstance()) {
+      if (auth->isLoggedIn()) {
+          auto user = auth->getCurrentUser();
+          greetingText_ = "Welcome back, " + (user.displayName.isNotEmpty() ? user.displayName : user.email);
+      }
+  }
+  
   loadFromManager();
 
   templates_ = {{"Electronic", "icon_synth", colors::CYAN, {}, false},
@@ -99,19 +112,28 @@ ZenithHubComponent::ZenithHubComponent(
   subPaint_.setAntiAlias(true);
   subPaint_.setColor(withAlpha(colors::TEXT_PRIMARY, 0.6f));
 
-  // Initialize Greeting Editor as pure-Skia pill text box
-  greetingEditor_ = std::make_unique<SkiaTextEditor>("greetingEditor");
-  greetingEditor_->setPillStyle(true);
-  greetingEditor_->setPillCornerRadius(14.0f);
-  greetingEditor_->setFont(design::getSkFont(18.0f, design::FontWeight::Regular));
-  greetingEditor_->setMultiLine(false);
+  // Initialize Greeting Editor with robust SkiaTextInput
+  greetingEditor_ = std::make_unique<SkiaTextInput>();
+  greetingEditor_->setPillShape(true);
+  greetingEditor_->setFontSize(18.0f);
   greetingEditor_->setVisible(false);
   addChildComponent(greetingEditor_.get());
 
   auto safeDismiss = [this]() { hideGreetingEditor(false); };
+  
+  // FIX: Save on focus lost so clicking away commits the change
+  auto commitDismiss = [this](const auto&) { hideGreetingEditor(true); };
+
+  // SkiaTextInput passes FocusChangeType to focusLost, we adapt it
   greetingEditor_->onEscapeKey = safeDismiss;
-  greetingEditor_->onFocusLost = safeDismiss;
+  greetingEditor_->onFocusLostCallback = [this]() { hideGreetingEditor(true); };
+  
   greetingEditor_->onReturnKey = [this]() { hideGreetingEditor(true); };
+  
+  greetingEditor_->onTextChanged = [this](const juce::String& text) {
+      greetingText_ = text;
+      repaint();
+  };
 
   // FIX: Start fully visible (1.0) instead of transparent (0.0)
   // The animation from 0.0 wasn't completing before rendering, causing blank screen
@@ -146,7 +168,14 @@ void ZenithHubComponent::mouseExit(const juce::MouseEvent &e) {
 }
 
 void ZenithHubComponent::authStateChanged(bool isLoggedIn, const AuthUser& user) {
-    juce::ignoreUnused(isLoggedIn, user);
+    // Only auto-update if user hasn't set a custom greeting
+    if (zenith::Settings::getInstance().getCustomGreeting().isEmpty()) {
+        if (isLoggedIn) {
+             greetingText_ = "Welcome back, " + (user.displayName.isNotEmpty() ? user.displayName : user.email);
+        } else {
+             greetingText_ = "Welcome back, User";
+        }
+    }
     repaint();
 }
 
@@ -309,13 +338,14 @@ void ZenithHubComponent::updateLayout() {
     auto r = mainColumns[0];
     recentArea_ = SkRect::MakeXYWH(r.getX(), r.getY(), r.getWidth(), r.getHeight());
 
-    // Slice Recent Area: Header vs Grid
+    // Slice Recent Area: Header vs Grid - with left padding to match title
     float kHeaderHeight = 32.0f;
     float kHeaderGap = 16.0f;
+    float kLeftPadding = 40.0f;  // MUCH more visible padding
     
-    recentHeaderBounds_ = SkRect::MakeXYWH(recentArea_.fLeft, recentArea_.fTop, recentArea_.width(), kHeaderHeight);
-    recentGridBounds_ = SkRect::MakeXYWH(recentArea_.fLeft, recentArea_.fTop + kHeaderHeight + kHeaderGap,
-                                         recentArea_.width(),
+    recentHeaderBounds_ = SkRect::MakeXYWH(recentArea_.fLeft + kLeftPadding, recentArea_.fTop, recentArea_.width() - kLeftPadding, kHeaderHeight);
+    recentGridBounds_ = SkRect::MakeXYWH(recentArea_.fLeft + kLeftPadding, recentArea_.fTop + kHeaderHeight + kHeaderGap,
+                                         recentArea_.width() - kLeftPadding,
                                          recentArea_.height() - kHeaderHeight - kHeaderGap);
 
 
@@ -327,13 +357,10 @@ void ZenithHubComponent::updateLayout() {
             sidebarRect.getX(), sidebarRect.getY(), sidebarRect.getWidth(), sidebarRect.getHeight());
 
     // Sidebar layout: New Project Button -> Templates (Collaborations REMOVED)
-    // Responsive Button Height (roughly 10% of sidebar, clamped)
-    float btnH = std::clamp(sidebarRect.getHeight() * 0.12f, 50.0f, 80.0f);
-    
     auto sidebarRows = ZenithLayout::begin()
                            .withFloatBounds(sidebarRect)
                            .withGap(24.0f)
-                           .addFlexItem(juce::FlexItem().withHeight(btnH))    // Responsive New Project button
+                           .addFlexItem(juce::FlexItem().withHeight(60.0f))   // New Project button
                            .addFlexItem(juce::FlexItem().withFlex(1.0f))      // Templates (gets all remaining space)
                            .layout(juce::FlexBox::Direction::column);
 
@@ -393,15 +420,9 @@ void ZenithHubComponent::updateLayout() {
   if (!recentGridBounds_.isEmpty()) {
     std::lock_guard<std::mutex> lock(projectsMutex_);
     float gridW = recentGridBounds_.width();
-    float gridH = recentGridBounds_.height();
     float cardGap = 16.0f;
     float pCardW = (gridW - cardGap) / 2.0f;
-    
-    // Responsive Card Height: Try to fit 3 rows comfortably
-    // (Total Height - 2 gaps) / 3
-    float pCardH = (gridH - (cardGap * 2.0f)) / 3.0f;
-    // Clamp to reasonable limits
-    pCardH = std::clamp(pCardH, 90.0f, 130.0f);
+    float pCardH = 110.0f;
 
     for (size_t i = 0; i < recentProjects_.size(); ++i) {
       int row = (int)i / 2;
@@ -416,12 +437,8 @@ void ZenithHubComponent::updateLayout() {
 
   // Update Template Cards (Larger with icons)
   if (!templatesContentBounds_.isEmpty()) {
-    float contentH = templatesContentBounds_.height();
+    float tCardH = 80.0f;  // Slightly smaller for better fit
     float cardGap = 12.0f;
-    
-    // Try to fit 3 items
-    float tCardH = (contentH - (cardGap * 2.0f)) / 3.0f;
-    tCardH = std::clamp(tCardH, 60.0f, 90.0f);
     
     for (size_t i = 0; i < templates_.size(); ++i) {
       float tx = templatesContentBounds_.fLeft;
@@ -434,40 +451,6 @@ void ZenithHubComponent::updateLayout() {
   if (greetingEditor_ && greetingEditor_->isVisible()) {
     showGreetingEditor(); // Re-layout editor
   }
-
-  // Calculate greeting bounds HERE (not in drawSkia) so clicking works immediately
-  float greetingPadding = 40.0f;
-  float greetingHeaderX = mainCardBounds_.fLeft + greetingPadding;
-  float greetingHeaderY = mainCardBounds_.fTop + greetingPadding + 60.0f;
-  float greetingSubX = greetingHeaderX;
-  float greetingSubY = greetingHeaderY + 32;
-
-  juce::String currentGreeting = greetingText_;
-  if (auto* auth = AuthenticationService::getInstance()) {
-      if (auth->isLoggedIn()) {
-          auto user = auth->getCurrentUser();
-          currentGreeting = "Welcome back, " + (user.displayName.isNotEmpty() ? user.displayName : user.email);
-      }
-  }
-
-  SkString greetingSkStr(currentGreeting.toRawUTF8());
-  SkRect greetingMeasure;
-  subFont_.measureText(greetingSkStr.c_str(), greetingSkStr.size(), SkTextEncoding::kUTF8, &greetingMeasure);
-
-  greetingTextBounds_ = SkRect::MakeXYWH(
-      greetingSubX,
-      greetingSubY - greetingMeasure.height(),
-      greetingMeasure.width(),
-      greetingMeasure.height() + 8.0f
-  );
-
-  constexpr float kGreetingIconSize = 16.0f;
-  greetingEditIconBounds_ = SkRect::MakeXYWH(
-      greetingSubX + greetingMeasure.width() + 10,
-      greetingSubY - greetingMeasure.height() / 2 - kGreetingIconSize / 2,
-      kGreetingIconSize,
-      kGreetingIconSize
-  );
 }
 
 void ZenithHubComponent::onAnimationTick(float deltaMs) {
@@ -477,18 +460,16 @@ void ZenithHubComponent::onAnimationTick(float deltaMs) {
   
   {
       std::lock_guard<std::mutex> lock(projectsMutex_);
-      if (isProfileMenuOpen_.load()) {
-          menuSpring_.setTarget(1.0f);
-          // FASTER spring physics for snappy menu (was 0.15, 0.85)
-          menuSpring_.update(0.5f, 0.75f);
-      } else {
-          menuSpring_.setTarget(0.0f);
-          menuSpring_.update(0.6f, 0.7f);  // Snappier exit
-      }
+      // INSTANT menu state changes - no animation, no lag
+      float targetValue = isProfileMenuOpen_.load() ? 1.0f : 0.0f;
+      menuSpring_.setCurrent(targetValue);
+      menuSpring_.setTarget(targetValue);
   }
   
-  // Always repaint when tick is called - coordinator throttles to 60fps
-  repaint();
+  // Only repaint if animations are active
+  if (alpha_.isAnimating()) {
+      repaint();
+  }
 }
 
 bool ZenithHubComponent::isAnimating() const {
@@ -550,8 +531,9 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
   // Header with proper hierarchy
   textPaint_.setColor(colors::TEXT_PRIMARY);
 
-  float headerX = mainCardBounds_.fLeft + 40;
-  float headerY = mainCardBounds_.fTop + 60;
+  // Position header with balanced spacing (24px left, 80px from top)
+  float headerX = mainCardBounds_.fLeft + 24;
+  float headerY = mainCardBounds_.fTop + 80;
 
   // Use drawText helper for title as per code review
   SkRect titleBounds =
@@ -571,8 +553,12 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
   float subY = headerY + 32;
 
   // Store bounds for interaction
+  // FIX: Enforce minimum width so editor doesn't collapse if text is empty/short
+  constexpr float kMinTextWidth = 150.0f;
+  float width = std::max(bounds.width(), kMinTextWidth);
+  
   greetingTextBounds_ = SkRect::MakeXYWH(subX, subY - bounds.height(),
-                                         bounds.width(), bounds.height() + 4);
+                                         width, bounds.height() + 4);
 
   SkRect helperBounds = SkRect::MakeXYWH(subX, subY - bounds.height(),
                                          bounds.width(), bounds.height());
@@ -585,24 +571,49 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
       }
   }
   
-  drawText(canvas, currentGreeting, helperBounds, subFont_, subPaint_, false);
+  // FIX: Only draw static text and icon if NOT editing to prevent double-rendering/ghosting
+  bool isEditing = greetingEditor_ && greetingEditor_->isVisible();
 
-  // Use predefined constant instead of magic number per code review feedback
-  constexpr float kGreetingIconSize = 16.0f;
+  if (!isEditing) {
+      drawText(canvas, currentGreeting, helperBounds, subFont_, subPaint_, false);
 
-  // Calculate icon bounds
-  greetingEditIconBounds_ =
-      SkRect::MakeXYWH(subX + bounds.width() + 10, subY - 14, kGreetingIconSize,
-                       kGreetingIconSize);
+      // Use predefined constant instead of magic number per code review feedback
+      constexpr float kGreetingIconSize = 16.0f;
 
-  icons::IconStyle iconStyle;
-  iconStyle.color = isGreetingHovered_
-                        ? colors::CYAN
-                        : withAlpha(colors::TEXT_SECONDARY, 0.5f);
-  iconStyle.strokeWidth = icons::STROKE_THIN;
+      // Calculate icon bounds
+      // FIX: Better vertical alignment (center with text cap height, not bottom)
+      float textCapHeight = subFont_.getSize() * 0.7f; // Approx cap height
+      float iconY = subY - bounds.height() + (bounds.height() - textCapHeight) * 0.5f + (textCapHeight - kGreetingIconSize) * 0.5f;
 
-  icons::drawIconCentered(canvas, icons::Edit(), greetingEditIconBounds_,
-                          kGreetingIconSize, iconStyle);
+      greetingEditIconBounds_ =
+          SkRect::MakeXYWH(subX + bounds.width() + 10, iconY, kGreetingIconSize,
+                           kGreetingIconSize);
+
+      icons::IconStyle iconStyle;
+      iconStyle.color = isGreetingHovered_
+                            ? colors::CYAN
+                            : withAlpha(colors::TEXT_SECONDARY, 0.5f);
+      iconStyle.strokeWidth = icons::STROKE_THIN;
+
+      icons::drawIconCentered(canvas, icons::Edit(), greetingEditIconBounds_,
+                              kGreetingIconSize, iconStyle);
+  } else {
+      // Keep bounds updated for hit testing even if not drawing
+      // ... actually we just need them to not be empty? 
+      // ZenithHubComponent::showGreetingEditor uses greetingTextBounds_ to position the editor.
+      // But once editor is showing, we don't need to update these constantly for the Editor's initial position.
+      // However, if we resize, we might want them.
+      // But subFont_.measureText depends on the text. 
+      // Okay, let's just NOT draw. The bounds calculation above (lines 538-548) already happened.
+      
+      // Ensure icon bounds are also set so we don't breaks hit testing logic if we exit edit mode via mouse?
+      // Actually hitTest checks greetingEditIconBounds_.
+      // Let's set them anyway just in case, but usually we click AWAY to dismiss.
+      
+      // We'll just skip the draw calls.
+      // The bounds calculation for `greetingEditIconBounds_` is needed for consistent "clicking" area if we want to toggle back?
+      // No, if editor is visible, clicking it focuses it.
+  }
 
   drawRecentProjects(canvas);
   drawNewProjectButton(canvas);
@@ -610,6 +621,8 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
   drawProfileIcon(canvas);  // Draw icon on top
   drawProfileMenu(canvas);  // Draw menu on top of everything
 
+  // Important: Draw any child SkiaComponents (like the greeting editor)
+  drawChildren(canvas);
 
   canvas->restore();
 }
@@ -627,7 +640,15 @@ void ZenithHubComponent::drawBackground(SkCanvas *canvas) {
 void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
   std::lock_guard<std::mutex> lock(projectsMutex_);
   textPaint_.setColor(colors::TEXT_PRIMARY);
-  drawText(canvas, "Recent Projects", recentHeaderBounds_, headerFont_, textPaint_, true);
+  
+  // Align with "Zenith Hub" title - use exact same left position
+  float alignedLeft = mainCardBounds_.fLeft + 24.0f;  // Same as title headerX
+  
+  SkRect alignedHeaderBounds = SkRect::MakeXYWH(
+      alignedLeft, recentHeaderBounds_.fTop, 
+      recentHeaderBounds_.width(), recentHeaderBounds_.height());
+  
+  drawText(canvas, "Recent Projects", alignedHeaderBounds, headerFont_, textPaint_, true);
 
   // Empty state check
   if (recentProjects_.empty()) {
@@ -635,7 +656,7 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
     emptyStatePaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.35f));
     drawText(
         canvas, "No recent projects yet.",
-        SkRect::MakeXYWH(recentGridBounds_.fLeft, recentGridBounds_.fTop, 300, 20),
+        SkRect::MakeXYWH(alignedLeft, recentGridBounds_.fTop, 300, 20),
         bodyFont_, emptyStatePaint, false);
     return;
   }
@@ -998,9 +1019,6 @@ void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
   if (profileIconBounds_.contains(pt.fX, pt.fY)) {
     // Toggle profile menu
     isProfileMenuOpen_ = !isProfileMenuOpen_;
-    
-    // Wake coordinator for menu animation (throttled repaint)
-    zenith::animation::AnimationCoordinator::getInstance().wake();
     return;
   }
 
@@ -1036,8 +1054,11 @@ void ZenithHubComponent::showGreetingEditor() {
       (int)(greetingTextBounds_.width() + kEditorWidthPadding), kEditorHeight);
 
   greetingEditor_->setBounds(bounds);
+  greetingEditor_->setBounds(bounds);
   greetingEditor_->setVisible(true);
+  greetingEditor_->toFront(true);
   greetingEditor_->grabKeyboardFocus();
+  greetingEditor_->repaint();
 }
 
 void ZenithHubComponent::hideGreetingEditor(bool save) {
@@ -1046,6 +1067,7 @@ void ZenithHubComponent::hideGreetingEditor(bool save) {
     
   if (save) {
     greetingText_ = greetingEditor_->getText();
+    zenith::Settings::getInstance().setCustomGreeting(greetingText_);
   }
   greetingEditor_->setVisible(false);
   repaint();
@@ -1165,34 +1187,8 @@ void ZenithHubComponent::drawText(SkCanvas *canvas, const juce::String &text,
   SkString skText(text.toRawUTF8());
   SkScalar width = font.measureText(skText.c_str(), skText.size(), SkTextEncoding::kUTF8);
   
-  // Truncate if text is wider than bounds
-  if (width > bounds.width()) {
-    SkString ellipsis("...");
-    SkScalar ellipsisWidth = font.measureText(ellipsis.c_str(), ellipsis.size(), SkTextEncoding::kUTF8);
-    
-    // If even ellipsis doesn't fit, just draw nothing or ellipsis
-    if (ellipsisWidth > bounds.width()) {
-      skText = ellipsis; 
-    } else {
-      // OPTIMIZED: Use average character width to estimate truncation point
-      // This drastically reduces the number of measureText calls for long strings
-      juce::String jStr = text;
-      float avgCharWidth = width / (float)jStr.length();
-      int estimatedChars = static_cast<int>((bounds.width() - ellipsisWidth) / avgCharWidth);
-      
-      // Refine truncation (usually 0-2 iterations)
-      jStr = jStr.substring(0, std::clamp(estimatedChars, 0, jStr.length()));
-      skText = SkString(jStr.toRawUTF8());
-      width = font.measureText(skText.c_str(), skText.size(), SkTextEncoding::kUTF8);
-
-      while (jStr.length() > 0 && width + ellipsisWidth > bounds.width()) {
-        jStr = jStr.substring(0, jStr.length() - 1);
-        skText = SkString(jStr.toRawUTF8());
-        width = font.measureText(skText.c_str(), skText.size(), SkTextEncoding::kUTF8);
-      }
-      skText.append("...");
-    }
-  }
+  // Truncation removed per user request - allow text to overflow or clip naturally
+  // if (width > bounds.width()) { ... } logic deleted
 
   SkRect textBounds;
   font.measureText(skText.c_str(), skText.size(), SkTextEncoding::kUTF8,

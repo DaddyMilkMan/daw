@@ -67,12 +67,13 @@ void RightSidePanel::drawSkia(SkCanvas *canvas) {
   opts.cornerRadius = 0.0f; // Sharp rectangle for pop-out
   GlassmorphicPanel::drawWithOptions(canvas, skBounds, opts);
 
-  // Left accent border highlight (the "pop out" edge)
+  // Right accent border highlight (the "pop out" edge)
+  // FIX: Since panel is on Left, border should be on Right
   SkPaint accentPaint;
   accentPaint.setAntiAlias(true);
   accentPaint.setStrokeWidth(0.8f);
   accentPaint.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.4f));
-  canvas->drawLine(0.4f, 0.0f, 0.4f, skBounds.height(), accentPaint);
+  canvas->drawLine(skBounds.width() - 0.4f, 0.0f, skBounds.width() - 0.4f, skBounds.height(), accentPaint);
   
   // Draw children (WingmanPanel, etc.)
   drawChildren(canvas);

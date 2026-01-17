@@ -498,6 +498,16 @@ void Clip::loadState(const juce::ValueTree &state) {
 // Time-Stretching
 void Clip::processAudioClip(const juce::AudioSourceChannelInfo &bufferToFill,
                             int64_t playheadSamples) {
+  // Input validation
+  if (bufferToFill.buffer == nullptr || bufferToFill.numSamples <= 0) {
+    return; // Invalid buffer
+  }
+  
+  if (bufferToFill.startSample < 0 || 
+      bufferToFill.startSample + bufferToFill.numSamples > bufferToFill.buffer->getNumSamples()) {
+    return; // Invalid range
+  }
+  
   // [DSP Optimization] Use RT-safe handle
   // Load once to ensure consistency and avoid multiple atomic operations
   auto handlePtr =
@@ -514,7 +524,7 @@ void Clip::processAudioClip(const juce::AudioSourceChannelInfo &bufferToFill,
     sourceBuffer = &audioBuffer;
   }
 
-  if (sourceBuffer == nullptr || sourceBuffer->getNumSamples() == 0)
+  if (sourceBuffer == nullptr || sourceBuffer->getNumSamples() == 0 || sourceBuffer->getNumChannels() == 0)
     return;
 
   const double rate = playbackRate_.load();

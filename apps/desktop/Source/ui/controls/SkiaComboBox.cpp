@@ -143,9 +143,8 @@ void SkiaComboBox::setTextWhenNoChoicesAvailable(const juce::String &text) {
 }
 
 void SkiaComboBox::drawSkia(SkCanvas *canvas) {
-  // The combo box is primarily drawn by its trigger button
-  // This method can be extended for custom drawing if needed
-  juce::ignoreUnused(canvas);
+  // Draw child components (trigger button)
+  drawChildren(canvas);
 }
 
 void SkiaComboBox::resized() {

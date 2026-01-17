@@ -9,6 +9,7 @@ target_sources(ZenithDAW PRIVATE
     AIPrompts.cpp
     CollaborationManager.cpp
     MCPServer.cpp
+    UpdateService.cpp
 )
 
 # Platform-specific sources are handled via Source/platform/[os]/master

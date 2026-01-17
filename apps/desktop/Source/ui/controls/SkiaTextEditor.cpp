@@ -18,6 +18,7 @@ namespace zenith {
 
 SkiaTextEditor::SkiaTextEditor(const juce::String &componentName) {
   setName(componentName);
+  setWantsKeyboardFocus(true);
 
   // Set default appearance
   font_ = zenith::design::getSkFont(design::typography::FONT_MD,

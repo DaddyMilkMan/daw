@@ -57,6 +57,15 @@ public:
                 NewProjectCallback onNewProject);
   ~MainComponent() override;
 
+  // Menu Callbacks
+  std::function<void()> onOpenProjectRequest;
+  std::function<void()> onSaveProjectRequest;
+  std::function<void()> onSaveProjectAsRequest;
+  std::function<void()> onUndoRequest;
+  std::function<void()> onRedoRequest;
+  std::function<void()> onToggleMixerRequest;
+
+
   void paint(juce::Graphics &g) override;
   void resized() override;
   void parentHierarchyChanged() override;
@@ -159,7 +168,6 @@ private:
 
   std::unique_ptr<ProjectRecoveryModal> recoveryModal_;
   std::unique_ptr<UnsavedChangesModal> unsavedChangesModal_;
-
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };

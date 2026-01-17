@@ -13,6 +13,7 @@
 #include <algorithm> // For std::remove_if
 #include <array>     // For RT-safe stack allocation in audio callback
 #include <memory>    // For std::make_unique
+#include "../Settings.h"
 
 // C3: Include donor headers (NOT in Engine.h to avoid exposing implementation)
 #include "../ai/AIMasteringAgent.h"
@@ -41,6 +42,11 @@
 
 //==============================================================================
 namespace zenith {
+
+void Engine::updatePowerManagement() {
+  bool shouldStayAwake = projectState_ != nullptr && Settings::getInstance().getStayAwakeDuringProject();
+  powerManagement_.setSleepDisabled(shouldStayAwake);
+}
 
 Engine::Engine() {
   DBG("Engine: Constructor");
@@ -113,6 +119,9 @@ Engine::Engine() {
     // Initialize track snapshot
     updateTrackSnapshot();
 
+    // Listen for setting changes (e.g. for Stay Awake feature)
+    Settings::getInstance().addChangeListener(this);
+
     DBG("Engine: Constructor complete");
 }
 
@@ -135,6 +144,9 @@ Engine::~Engine() {
   disableMidiInput();
 
   shutdown();
+
+  // Stop listening for settings
+  Settings::getInstance().removeChangeListener(this);
 
   // Explicitly reset managers to ensure orderly shutdown
   ZENITH_LOG_INFO("Engine: Resetting modular components...");
@@ -187,6 +199,9 @@ void Engine::setProjectState(ProjectState *state) {
 
     // Sync tempo map
     syncTempoMap();
+
+    // Update power management (Stay Awake feature)
+    updatePowerManagement();
   }
 }
 
@@ -283,6 +298,9 @@ void Engine::shutdown() {
   // Close audio device
   deviceManager.closeAudioDevice();
 
+  // Release sleep inhibition
+  powerManagement_.setSleepDisabled(false);
+
   // Clear audio file pool
   if (audioFilePool_) {
     audioFilePool_->clear();
@@ -327,6 +345,8 @@ void Engine::changeListenerCallback(juce::ChangeBroadcaster* source) {
                 recalculatePDC();
             });
         }
+    } else if (source == &Settings::getInstance()) {
+        updatePowerManagement();
     }
 }
 
@@ -474,9 +494,22 @@ void Engine::audioDeviceIOCallbackWithContext(
 
   juce::ignoreUnused(inputChannelData, numInputChannels, context);
 
+  // Input validation - CRITICAL for RT safety
+  if (numSamples <= 0 || numSamples > 8192) {
+    return; // Invalid block size - would cause buffer overflows
+  }
+  
+  if (numOutputChannels <= 0 || numOutputChannels > 32) {
+    return; // Invalid channel count
+  }
+  
+  if (outputChannelData == nullptr) {
+    return; // Null output pointer
+  }
+
   // Clean output buffers
   for (int i = 0; i < numOutputChannels; ++i) {
-    if (outputChannelData[i]) {
+    if (outputChannelData[i] != nullptr) {
       juce::FloatVectorOperations::clear(outputChannelData[i], numSamples);
     }
   }
@@ -484,8 +517,16 @@ void Engine::audioDeviceIOCallbackWithContext(
   // Load snapshots for RT-safe access
   auto *snapshot = activeSnapshot_.load();
   auto *masterSnapshot = activeMasterPluginsSnapshot_.load();
-  if (!snapshot)
-    return;
+  
+  // Validate snapshot before use
+  if (!snapshot) {
+    return; // No tracks to process
+  }
+  
+  // Validate snapshot integrity
+  if (snapshot->tracks.size() > 1000) {
+    return; // Sanity check - too many tracks (likely corruption)
+  }
 
   // Process Events (Updates track parameters etc.)
   processEvents();
@@ -515,23 +556,26 @@ void Engine::audioDeviceIOCallbackWithContext(
     }
 
     // Pass 1
-    if (samplesBeforeLoop > 0) {
-      // Use proxy buffer to avoid allocation
-      juce::AudioBuffer<float> buffer1(outputChannelData, numOutputChannels,
-                                       samplesBeforeLoop);
-      juce::MidiBuffer midi1;
-      midiFifo_.drainTo(midi1, samplesBeforeLoop);
+    if (samplesBeforeLoop > 0 && samplesBeforeLoop <= numSamples) {
+      // Validate buffer bounds
+      if (numOutputChannels > 0) {
+        // Use proxy buffer to avoid allocation
+        juce::AudioBuffer<float> buffer1(outputChannelData, numOutputChannels,
+                                         samplesBeforeLoop);
+        juce::MidiBuffer midi1;
+        midiFifo_.drainTo(midi1, samplesBeforeLoop);
 
-      if (audioRenderer_) {
-        audioRenderer_->renderAudioGraph(
-            renderContext_,
-            buffer1, samplesBeforeLoop, currentPos, snapshot->tracks,
-            snapshot->auxBuses, routingGraph_, masterLimiter_, masterPlugins,
-            tempoMap_.get(), &midi1, inputChannelData, numInputChannels);
+        if (audioRenderer_ && tempoMap_ != nullptr) {
+          audioRenderer_->renderAudioGraph(
+              renderContext_,
+              buffer1, samplesBeforeLoop, currentPos, snapshot->tracks,
+              snapshot->auxBuses, routingGraph_, masterLimiter_, masterPlugins,
+              tempoMap_.get(), &midi1, inputChannelData, numInputChannels);
 
-        // Mix Metronome (Pass 1)
-        if (metronome_) {
-          metronome_->getNextAudioBlock(buffer1, currentPos, true, *tempoMap_);
+          // Mix Metronome (Pass 1)
+          if (metronome_) {
+            metronome_->getNextAudioBlock(buffer1, currentPos, true, *tempoMap_);
+          }
         }
       }
     }
@@ -539,23 +583,29 @@ void Engine::audioDeviceIOCallbackWithContext(
     // Pass 2 (Wrapped)
     if (wrapped) {
       int samplesAfter = numSamples - samplesBeforeLoop;
-      if (samplesAfter > 0) {
+      if (samplesAfter > 0 && samplesAfter <= numSamples && samplesBeforeLoop >= 0) {
         // Use stack array for channel pointers to avoid heap allocation
-        jassert(numOutputChannels <= 32 &&
-                "Audio callback has a hardcoded limit of 32 channels");
+        if (numOutputChannels > 32) {
+          // Clamp to max supported channels - log but don't crash
+          DBG("Engine: Warning - More than 32 output channels requested, clamping to 32");
+        }
         float *offsets[32]; // Max 32 channels supported
         int safeNumChannels = juce::jmin(numOutputChannels, 32);
 
-        for (int ch = 0; ch < safeNumChannels; ++ch)
-          if (outputChannelData[ch])
+        for (int ch = 0; ch < safeNumChannels; ++ch) {
+          if (outputChannelData[ch] != nullptr) {
             offsets[ch] = outputChannelData[ch] + samplesBeforeLoop;
+          } else {
+            offsets[ch] = nullptr; // Mark invalid channels
+          }
+        }
 
         juce::AudioBuffer<float> buffer2(offsets, safeNumChannels,
                                          samplesAfter);
 
         juce::MidiBuffer emptyMidi; // No MIDI in wrapped part for now
 
-        if (audioRenderer_) {
+        if (audioRenderer_ && tempoMap_ != nullptr) {
           audioRenderer_->renderAudioGraph(
               renderContext_,
               buffer2, samplesAfter, loopStart, snapshot->tracks,
@@ -569,10 +619,14 @@ void Engine::audioDeviceIOCallbackWithContext(
           }
         }
 
-        transportController_->setPlayheadSamples(loopStart + samplesAfter);
+        if (transportController_) {
+          transportController_->setPlayheadSamples(loopStart + samplesAfter);
+        }
       }
     } else {
-      transportController_->advancePlayhead(numSamples);
+      if (transportController_) {
+        transportController_->advancePlayhead(numSamples);
+      }
     }
   } else {
     // Not playing?
@@ -582,16 +636,20 @@ void Engine::audioDeviceIOCallbackWithContext(
   // Analysis / Visualizers
   // We need to push the final output to the analysis FIFO.
   // Reconstruct full buffer wrapper
-  juce::AudioBuffer<float> fullOutput(outputChannelData, numOutputChannels,
-                                      numSamples);
-  if (meteringSystem_) {
-    meteringSystem_->getAnalysisFifo().push(fullOutput, numSamples);
+  if (numOutputChannels > 0 && outputChannelData != nullptr) {
+    juce::AudioBuffer<float> fullOutput(outputChannelData, numOutputChannels,
+                                        numSamples);
+    if (meteringSystem_) {
+      meteringSystem_->getAnalysisFifo().push(fullOutput, numSamples);
+    }
   }
 
   // Audio Recording
-  if (recordingManager_ && recordingManager_->isRecording()) {
-    recordingManager_->captureAudio(inputChannelData, numInputChannels,
-                                    numSamples, snapshot->lifecycle);
+  if (recordingManager_ && recordingManager_->isRecording() && snapshot != nullptr) {
+    if (inputChannelData != nullptr && numInputChannels > 0) {
+      recordingManager_->captureAudio(inputChannelData, numInputChannels,
+                                      numSamples, snapshot->lifecycle);
+    }
   }
 }
 
@@ -747,13 +805,13 @@ void Engine::processAudioBlock(const float *const *inputChannelData,
     const double phaseIncrement =
         frequency * 2.0 * juce::MathConstants<double>::pi / safeSampleRate;
     
-    // Smooth the phase transition if sample rate changed?
-    // For a test tone, simplistic is fine.
+    // Thread-local phase accumulator for test tone (persists across calls)
+    thread_local double phase = 0.0;
     
     for (int i = 0; i < numSamples; ++i) {
       float value = static_cast<float>(std::sin(phase) * amplitude);
       for (int channel = 0; channel < numOutputChannels; ++channel) {
-        if (outputChannelData[channel]) {
+        if (outputChannelData[channel] != nullptr) {
           outputChannelData[channel][i] += value;
         }
       }

@@ -76,29 +76,45 @@ void ZenithMenuBar::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
   SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
 
-  // 1. Glassmorphic Background
-  GlassmorphicPanel::draw(canvas, skBounds, GlassmorphicPanel::Style::Elevated);
-
-  // 2. Bottom Border with Neon Glow
-  SkRect borderRect = SkRect::MakeXYWH(0, skBounds.height() - 2.0f, 
-                                        skBounds.width(), 2.0f);
-  NeonGlow::drawGlow(canvas, borderRect, design::colors::CYAN, 
-                     NeonGlow::Intensity::Subtle);
+  // 1. Solid Dark Background (Sharp edges, no rounding)
+  // FIX: Removed to prevent double-drawing/flickering. TitleBarComponent already draws the background.
+  /*
+  SkPaint bgPaint;
+  bgPaint.setAntiAlias(true);
+  bgPaint.setColor(design::colors::BG_DARK); // Solid dark background for visibility
+  canvas->drawRect(skBounds, bgPaint);
+  */
+  
+  // 2. Subtle bottom border
+  // FIX: Removed redundant border
+  /*
+  SkPaint borderPaint;
+  borderPaint.setAntiAlias(true);
+  borderPaint.setColor(SkColorSetA(design::colors::CYAN, 80));
+  canvas->drawLine(0, skBounds.height() - 1, skBounds.width(), skBounds.height() - 1, borderPaint);
+  */
 
   // 3. Draw Menu Items
   for (size_t i = 0; i < items_.size(); ++i) {
     drawMenuItem(canvas, items_[i], static_cast<int>(i) == hoveredItemIndex_);
+    
+    // Draw green update indicator next to Help (last item)
+    // FIX: Removed as per user feedback ("random green dot")
+    /*
+    if (updateAvailable_ && i == items_.size() - 1) {
+        float dotX = items_[i].bounds.getRight() + design::spacing::SM;
+        float dotY = skBounds.centerY();
+        float dotRadius = 4.0f;
+        
+        SkPaint dotPaint;
+        dotPaint.setAntiAlias(true);
+        dotPaint.setColor(design::colors::NEON_GREEN);
+        canvas->drawCircle(dotX, dotY, dotRadius, dotPaint);
+    }
+    */
   }
-
-  // 4. Draw Collab Button
-  drawCollabButton(canvas);
-
-  // 5. Subtle vertical divider before Collab button
-  float dividerX = collabButtonBounds_.getX() - design::spacing::MD;
-  SkPaint dividerPaint;
-  dividerPaint.setColor(design::colors::BORDER_SUBTLE);
-  dividerPaint.setAntiAlias(true);
-  canvas->drawLine(dividerX, 6.0f, dividerX, getHeight() - 6.0f, dividerPaint);
+  
+  // Collab button removed - cleaner interface
 }
 
 void ZenithMenuBar::drawMenuItem(SkCanvas *canvas, const MenuItem &item,
@@ -342,12 +358,18 @@ void ZenithMenuBar::showFileMenu() {
   menu.addSeparator();
   menu.addItem(7, "Quit", true, false);
 
-  auto screenBounds = items_[0].bounds.translated(getScreenX(), 
-                                                   getScreenY() + getHeight());
+  // Position dropdown directly below the menu item, no gap
+  auto itemScreenBounds = juce::Rectangle<int>(
+      getScreenX() + items_[0].bounds.getX(),
+      getScreenY() + items_[0].bounds.getBottom(),
+      items_[0].bounds.getWidth(),
+      1  // Height doesn't matter, it's just the anchor point
+  );
   menu.showMenuAsync(
       juce::PopupMenu::Options()
           .withTargetComponent(this)
-          .withTargetScreenArea(screenBounds),
+          .withMinimumWidth(150)
+          .withTargetScreenArea(itemScreenBounds),
       [this](int result) {
         switch (result) {
           case 1: if (onNewProject) onNewProject(); break;
@@ -373,12 +395,18 @@ void ZenithMenuBar::showEditMenu() {
   menu.addSeparator();
   menu.addItem(7, "Select All", true, false);
 
-  auto screenBounds = items_[1].bounds.translated(getScreenX(), 
-                                                   getScreenY() + getHeight());
+  // Position dropdown directly below the menu item, no gap
+  auto itemScreenBounds = juce::Rectangle<int>(
+      getScreenX() + items_[1].bounds.getX(),
+      getScreenY() + items_[1].bounds.getBottom(),
+      items_[1].bounds.getWidth(),
+      1
+  );
   menu.showMenuAsync(
       juce::PopupMenu::Options()
           .withTargetComponent(this)
-          .withTargetScreenArea(screenBounds),
+          .withMinimumWidth(120)
+          .withTargetScreenArea(itemScreenBounds),
       [this](int result) {
         if (result == 1 && onUndo) onUndo();
         else if (result == 2 && onRedo) onRedo();
@@ -395,12 +423,18 @@ void ZenithMenuBar::showViewMenu() {
   menu.addItem(5, "Zoom Out", true, false);
   menu.addItem(6, "Fit to Window", true, false);
 
-  auto screenBounds = items_[2].bounds.translated(getScreenX(), 
-                                                   getScreenY() + getHeight());
+  // Position dropdown directly below the menu item, no gap
+  auto itemScreenBounds = juce::Rectangle<int>(
+      getScreenX() + items_[2].bounds.getX(),
+      getScreenY() + items_[2].bounds.getBottom(),
+      items_[2].bounds.getWidth(),
+      1
+  );
   menu.showMenuAsync(
       juce::PopupMenu::Options()
           .withTargetComponent(this)
-          .withTargetScreenArea(screenBounds),
+          .withMinimumWidth(180)
+          .withTargetScreenArea(itemScreenBounds),
       [this](int result) {
         if (result == 2 && onToggleMixer) onToggleMixer();
         else if (result == 3 && onToggleBrowser) onToggleBrowser();
@@ -417,12 +451,18 @@ void ZenithMenuBar::showHelpMenu() {
   menu.addSeparator();
   menu.addItem(5, "About Zenith DAW...", true, false);
 
-  auto screenBounds = items_[3].bounds.translated(getScreenX(), 
-                                                   getScreenY() + getHeight());
+  // Position dropdown directly below the menu item, no gap
+  auto itemScreenBounds = juce::Rectangle<int>(
+      getScreenX() + items_[3].bounds.getX(),
+      getScreenY() + items_[3].bounds.getBottom(),
+      items_[3].bounds.getWidth(),
+      1
+  );
   menu.showMenuAsync(
       juce::PopupMenu::Options()
           .withTargetComponent(this)
-          .withTargetScreenArea(screenBounds));
+          .withMinimumWidth(160)
+          .withTargetScreenArea(itemScreenBounds));
 }
 
 } // namespace zenith

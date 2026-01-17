@@ -53,6 +53,7 @@
 #include "../Source/engine/RoutingGraph.h"
 #include "AudioRenderer.h"
 #include "EngineEvent.h"
+#include "../utils/PowerManagement.h"
 
 // Forward declarations
 namespace zenith {
@@ -362,6 +363,21 @@ public:
    * @brief Get maximum track latency (for PDC compensation)
    */
   int getMaxTrackLatency() const;
+
+  //==========================================================================
+  // Test Tone (for calibration)
+  //==========================================================================
+
+  /**
+   * @brief Enable/disable the test tone generator
+   * @param enabled true to enable 440Hz sine tone
+   */
+  void setEnableTestTone(bool enabled);
+
+  /**
+   * @brief Check if test tone is enabled
+   */
+  bool isTestToneEnabled() const;
 
   //==========================================================================
   // Audio Device Management
@@ -1128,6 +1144,10 @@ private:
 
   juce::WeakReference<Engine>::Master masterReference;
   friend class juce::WeakReference<Engine>;
+
+  // Power Management
+  PowerManagement powerManagement_;
+  void updatePowerManagement();
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

@@ -15,6 +15,7 @@
 
 #include "../design-system/InteractionHelper.h"
 #include "SkiaComponent.h"
+#include "../../network/UpdateService.h" // Added UpdateService
 #include <functional>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
@@ -40,132 +41,137 @@ public:
   void drawSkia(SkCanvas *canvas) override;
   void resized() override;
   
-  // Mouse interaction (Only for custom LCD dragging)
+  // Mouse interaction
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
   void mouseDrag(const juce::MouseEvent &e) override;
   void mouseDoubleClick(const juce::MouseEvent &e) override;
+  void mouseWheelMove(const juce::MouseEvent &e, const juce::MouseWheelDetails &wheel) override;
+  
   void mouseMove(const juce::MouseEvent &e) override;
   void mouseEnter(const juce::MouseEvent &e) override;
   void mouseExit(const juce::MouseEvent &e) override;
+  bool hitTest(int x, int y) override;
 
   void onAnimationTick(float deltaMs) override;
   void visibilityChanged() override;
-  std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
+
+  std::unique_ptr<juce::AccessibilityHandler>
+  createAccessibilityHandler() override;
+
+  bool isUpdateAvailable() const { return isUpdateAvailable_; }
   
   // State setters
-  void setPlaying(bool playing);
-  void setRecording(bool recording);
-  void setLooping(bool looping);
-  void setMetronomeEnabled(bool enabled);
-  void setTempo(double bpm);
-  void setCPU(float percent);
-  void setPosition(double seconds);
+  void setPlaying(bool playing) {
+    isPlaying_ = playing;
+    requestRepaint();
+  }
+  void setRecording(bool recording) {
+    isRecording_ = recording;
+    requestRepaint();
+  }
+  void setTempo(double bpm) {
+    tempo_ = bpm;
+    requestRepaint();
+  }
+  void setCPU(float percent) {
+    cpuUsage_ = percent;
+    requestRepaint();
+  }
+  void setPosition(double seconds) {
+    position_ = seconds;
+    requestRepaint();
+  }
   
   bool isPlaying() const { return isPlaying_; }
   bool isRecording() const { return isRecording_; }
-  bool isLooping() const { return isLooping_; }
 
   // New setters
-  void setTimeSignature(int num, int den);
+  void setTimeSignature(int num, int den) {
+    timeSigNum_ = num;
+    timeSigDen_ = den;
+    requestRepaint();
+  }
 
   // Callbacks
   std::function<void()> onPlayClicked;
   std::function<void()> onStopClicked;
   std::function<void()> onRecordClicked;
   std::function<void()> onLoopToggled;
-  std::function<void()> onRewindClicked;
-  std::function<void()> onMetronomeToggled;
-  
+  std::function<void()> onRewind;
   std::function<void()> onViewToggleClicked;
   std::function<void()> onSettingsClicked;
-  std::function<void()> onExportClicked;
+  std::function<void()> onUpdateAvailable;
   std::function<void()> onClearAllSolos;
+  std::function<void()> onWingmanClicked;  // AI Assistant button
 
   // Interaction Callbacks
   std::function<void(double)> onTempoChanged;
   std::function<void(int, int)> onTimeSignatureChanged;
 
 private:
-  // Internal "Ghost" Button for Accessibility & Standard Input
-  class GhostButton : public juce::Button {
-  public:
-      GhostButton(const juce::String& name) : juce::Button(name) {}
-      void paintButton(juce::Graphics&, bool, bool) override {} // Invisible
-  };
-
-  void createButtons();
-  void setupButton(GhostButton& btn, const juce::String& tooltip);
-
   bool isPlaying_ = false;
   bool isRecording_ = false;
-  bool isLooping_ = false;
-  bool isMetronomeOn_ = false;
   double tempo_ = 120.0;
   float cpuUsage_ = 0.0f;
+  float smoothedCpu_ = 0.0f; // FIX: Smoothed value for display
   double position_ = 0.0;
   int timeSigNum_ = 4;
   int timeSigDen_ = 4;
   
   // Editors
   std::unique_ptr<juce::Label> bpmLabel_;
-  std::unique_ptr<juce::Label> timeSigNumLabel_;
-  std::unique_ptr<juce::Label> timeSigDenLabel_;
-  bool editingTimeSigNum_ = false;
+  std::unique_ptr<juce::Label> timeSigLabel_;       // Legacy (unused now)
+  std::unique_ptr<juce::Label> timeSigNumLabel_;    // Numerator editor
+  std::unique_ptr<juce::Label> timeSigDenLabel_;    // Denominator editor
+  bool editingTimeSigNum_ = false;                  // Track which field is active
   
   // Interaction State
   bool isDraggingBpm_ = false;
-  bool isDraggingTimeSig_ = false;
+  bool isDraggingTimeSigNum_ = false;   // Dragging numerator
+  bool isDraggingTimeSigDen_ = false;   // Dragging denominator
   double dragStartValue_ = 0.0;
   int dragStartNum_ = 0;
   int dragStartDen_ = 0;
   juce::Point<int> dragStartPos_;
   
-  // Buttons (Accessibility + Input)
-  std::unique_ptr<GhostButton> playBtn_;
-  std::unique_ptr<GhostButton> stopBtn_;
-  std::unique_ptr<GhostButton> recordBtn_;
-  std::unique_ptr<GhostButton> loopBtn_;
-  std::unique_ptr<GhostButton> rewindBtn_;
-  std::unique_ptr<GhostButton> metroBtn_;
-  std::unique_ptr<GhostButton> viewToggleBtn_;
-  std::unique_ptr<GhostButton> settingsBtn_;
-  std::unique_ptr<GhostButton> exportBtn_;
+  // Sub-bounds for hit testing
+  juce::Rectangle<int> bpmHitBounds_;
+  juce::Rectangle<int> timeSigHitBounds_;      // Overall area
+  juce::Rectangle<int> timeSigNumBounds_;      // Numerator zone
+  juce::Rectangle<int> timeSigDenBounds_;      // Denominator zone
+  juce::Rectangle<int> timeSigTemplateBounds_; // Templates dropdown button
 
-  // Layout Bounds
+  juce::Rectangle<int> playButtonBounds_;
+  juce::Rectangle<int> stopButtonBounds_;
+  juce::Rectangle<int> recordButtonBounds_;
+  juce::Rectangle<int> viewToggleButtonBounds_;
+  juce::Rectangle<int> wingmanButtonBounds_;   // AI Assistant button
+  juce::Rectangle<int> settingsButtonBounds_;
+
+
+  // Update Service
+  std::unique_ptr<zenith::network::UpdateService> updateService_;
+  bool isUpdateAvailable_ = false;
+
+  // Dynamic layout bounds
   juce::Rectangle<int> lcdBounds_;
   juce::Rectangle<int> cpuMeterBounds_;
-  
-  // Hit zones for LCD custom interaction
-  juce::Rectangle<int> bpmHitBounds_;
-  juce::Rectangle<int> timeSigHitBounds_;
 
-  // Interaction states for Animation
+  // Interaction states
   InteractionState playState_;
   InteractionState stopState_;
   InteractionState recordState_;
-  InteractionState loopState_;
-  InteractionState rewindState_;
-  InteractionState metroState_;
   InteractionState viewToggleState_;
+  InteractionState wingmanState_;   // AI Assistant button
   InteractionState settingsState_;
-  InteractionState exportState_;
 
-  // Cached Text Layouts (Performance)
-  struct CachedText {
-      std::string text;
-      float width;
-      float xOffset;
-  };
-  CachedText cachedBpm_;
-  CachedText cachedTimeSig_;
-  void updateBpmCache();
-  void updateTimeSigCache();
 
-  void drawTransportButton(SkCanvas *canvas, GhostButton& btn,
+
+  void drawTransportButton(SkCanvas *canvas, const juce::Rectangle<int> &bounds,
                            const SkPath &iconPath, bool isActive,
-                           uint32_t color, InteractionState &state);
-                           
+                           uint32_t color, const InteractionState &state,
+                           bool isFilled = true);
   void drawMeter(SkCanvas *canvas, const juce::Rectangle<int> &bounds,
                  float value, const char *label);
 
@@ -174,11 +180,27 @@ private:
   // Cached resources for 60FPS rendering
   ::SkPaint bgPaint_;
   ::SkPaint borderPaint_;
-  ::SkFont monoFont_;
-  ::SkFont labelFont_;
+  ::SkFont font_;
+  ::SkFont smallFont_;
   ::SkRect cachedBounds_;
 
   void updateCachedPaints(const ::SkRect &bounds);
+  
+  // Force full window repaint to prevent Linux compositing artifacts
+  // Also explicitly marks sibling TitleBar as needing repaint
+  void requestRepaint() {
+      if (auto* top = getTopLevelComponent()) {
+          // Force ENTIRE window to repaint (all children)
+          top->repaint();
+          
+          // Also mark our parent as needing full repaint
+          if (auto* parent = getParentComponent()) {
+              parent->repaint();
+          }
+      } else {
+          repaint();
+      }
+  }
 };
 
 #else // ZENITH_USE_SKIA

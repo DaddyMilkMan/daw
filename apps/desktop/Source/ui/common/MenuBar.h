@@ -34,6 +34,13 @@ public:
   std::function<void()> onToggleMixer;
   std::function<void()> onToggleBrowser;
 
+  void setUpdateAvailable(bool available) { 
+    if (updateAvailable_ != available) {
+        updateAvailable_ = available; 
+        repaint(); 
+    }
+  }
+
   void paint(juce::Graphics &g) override;
   void drawSkia(SkCanvas *canvas) override;
   void resized() override;
@@ -65,6 +72,7 @@ private:
   // Cached rendering resources
   SkFont menuFont_;
   SkFont smallFont_;
+  bool updateAvailable_ = false;
   
   void showFileMenu();
   void showEditMenu();

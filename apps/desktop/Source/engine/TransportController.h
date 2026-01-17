@@ -218,7 +218,7 @@ public:
      * @brief Set tempo in BPM
      */
     void setTempo(double bpm) {
-        tempo_.store(juce::jlimit(20.0, 999.0, bpm));
+        tempo_.store(juce::jlimit(1.0, 999.0, bpm));
     }
 
     /**

@@ -24,17 +24,37 @@ namespace zenith {
 void Engine::setTrackVolume(int trackIndex, float volume) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-  if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size())) {
-    tracks_[trackIndex]->setVolume(volume);
+  if (trackIndex < 0 || trackIndex >= static_cast<int>(tracks_.size())) {
+    DBG("Engine: setTrackVolume - Invalid track index: " + juce::String(trackIndex));
+    return;
   }
+  
+  if (tracks_[trackIndex] == nullptr) {
+    DBG("Engine: setTrackVolume - Track at index " + juce::String(trackIndex) + " is null");
+    return;
+  }
+  
+  // Clamp volume to valid range
+  volume = juce::jlimit(0.0f, 1.0f, volume);
+  tracks_[trackIndex]->setVolume(volume);
 }
 
 void Engine::setTrackPan(int trackIndex, float pan) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-  if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size())) {
-    tracks_[trackIndex]->setPan(pan);
+  if (trackIndex < 0 || trackIndex >= static_cast<int>(tracks_.size())) {
+    DBG("Engine: setTrackPan - Invalid track index: " + juce::String(trackIndex));
+    return;
   }
+  
+  if (tracks_[trackIndex] == nullptr) {
+    DBG("Engine: setTrackPan - Track at index " + juce::String(trackIndex) + " is null");
+    return;
+  }
+  
+  // Clamp pan to valid range
+  pan = juce::jlimit(-1.0f, 1.0f, pan);
+  tracks_[trackIndex]->setPan(pan);
 }
 
 void Engine::setTrackInputChannel(int trackIndex, int channelIndex) {
@@ -48,18 +68,34 @@ void Engine::setTrackInputChannel(int trackIndex, int channelIndex) {
 void Engine::setTrackMute(int trackIndex, bool muted) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-  if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size())) {
-    tracks_[trackIndex]->setMuted(muted);
+  if (trackIndex < 0 || trackIndex >= static_cast<int>(tracks_.size())) {
+    DBG("Engine: setTrackMute - Invalid track index: " + juce::String(trackIndex));
+    return;
   }
+  
+  if (tracks_[trackIndex] == nullptr) {
+    DBG("Engine: setTrackMute - Track at index " + juce::String(trackIndex) + " is null");
+    return;
+  }
+  
+  tracks_[trackIndex]->setMuted(muted);
 }
 
 void Engine::setTrackSolo(int trackIndex, bool solo) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-  if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size())) {
-    tracks_[trackIndex]->setSolo(solo);
-    updateSoloState();
+  if (trackIndex < 0 || trackIndex >= static_cast<int>(tracks_.size())) {
+    DBG("Engine: setTrackSolo - Invalid track index: " + juce::String(trackIndex));
+    return;
   }
+  
+  if (tracks_[trackIndex] == nullptr) {
+    DBG("Engine: setTrackSolo - Track at index " + juce::String(trackIndex) + " is null");
+    return;
+  }
+  
+  tracks_[trackIndex]->setSolo(solo);
+  updateSoloState();
 }
 
 void Engine::setTrackArmed(int trackIndex, bool armed) {
@@ -96,17 +132,27 @@ void Engine::setTrackArmed(int trackIndex, bool armed) {
 //==============================================================================
 
 float Engine::getTrackLevel(int trackIndex) const {
-  if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size())) {
-    return tracks_[trackIndex]->getCurrentLevel();
+  if (trackIndex < 0 || trackIndex >= static_cast<int>(tracks_.size())) {
+    return 0.0f;
   }
-  return 0.0f;
+  
+  if (tracks_[trackIndex] == nullptr) {
+    return 0.0f;
+  }
+  
+  return tracks_[trackIndex]->getCurrentLevel();
 }
 
 float Engine::getTrackPeakLevel(int trackIndex) const {
-  if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size())) {
-    return tracks_[trackIndex]->getPeakLevel();
+  if (trackIndex < 0 || trackIndex >= static_cast<int>(tracks_.size())) {
+    return 0.0f;
   }
-  return 0.0f;
+  
+  if (tracks_[trackIndex] == nullptr) {
+    return 0.0f;
+  }
+  
+  return tracks_[trackIndex]->getPeakLevel();
 }
 
 float Engine::getMasterLevel() const {
@@ -261,40 +307,37 @@ void Engine::setSidechainSource(int destTrackIndex, int pluginIndex, int sourceT
         DBG("Engine: Invalid sidechain destination track index: " + juce::String(destTrackIndex));
         return;
     }
-
-    auto destTrack = tracks_[destTrackIndex];
-    juce::String destId = destTrack->getId();
-
-    // 1. Clear existing sidechain connection for this specific plugin from the graph
-    // (Note: RoutingGraph::disconnect might need to be specific if we want to support multiple sidechains per track,
-    // but for now we follow the 'isSidechain' flag)
     
-    // We get all connections to dest and remove only sidechains. 
-    // In a more complex DAW, we'd need to know specifically which source was for this plugin.
-    // For now, we assume one sidechain source per track or we clear all sidechains to this dest
-    // before re-adding.
-    auto currentConns = routingGraph_.getConnectionsTo(destId);
-    for (const auto& c : currentConns) {
-        if (c.isSidechain) {
-            routingGraph_.disconnect(c.sourceId, destId);
-        }
+    if (tracks_[destTrackIndex] == nullptr) {
+        DBG("Engine: Destination track at index " + juce::String(destTrackIndex) + " is null");
+        return;
     }
 
-    std::shared_ptr<Track> sourceTrack = nullptr;
+    Track* sourceTrack = nullptr;
     if (sourceTrackIndex >= 0 && sourceTrackIndex < static_cast<int>(tracks_.size())) {
-        sourceTrack = tracks_[sourceTrackIndex];
+        if (tracks_[sourceTrackIndex] == nullptr) {
+            DBG("Engine: Source track at index " + juce::String(sourceTrackIndex) + " is null");
+            return;
+        }
+        sourceTrack = tracks_[sourceTrackIndex].get();
         
-        // 2. Add new sidechain connection to RoutingGraph
-        // This ensures the topological sort renders source before dest
-        routingGraph_.connect(sourceTrack->getId(), destId, 1.0f, true);
-        DBG("Engine: Added sidechain routing: " + sourceTrack->getName() + " -> " + destTrack->getName());
+        // Prevent self-sidechaining (would cause feedback)
+        if (sourceTrack == tracks_[destTrackIndex].get()) {
+            DBG("Engine: Cannot sidechain track to itself");
+            return;
+        }
     } else if (sourceTrackIndex != -1) {
         DBG("Engine: Invalid sidechain source track index: " + juce::String(sourceTrackIndex));
         return;
     }
+    
+    // Validate plugin index
+    if (pluginIndex < 0) {
+        DBG("Engine: Invalid plugin index: " + juce::String(pluginIndex));
+        return;
+    }
 
-    // 3. Update the track model
-    destTrack->setPluginSidechainSource(pluginIndex, sourceTrack);
+    tracks_[destTrackIndex]->setPluginSidechainSource(pluginIndex, sourceTrack);
 }
 
 //==============================================================================

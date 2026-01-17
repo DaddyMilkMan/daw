@@ -74,6 +74,11 @@ juce::AudioPluginInstance *PluginChain::getPlugin(int index) const {
 void PluginChain::process(juce::AudioBuffer<float> &buffer,
                           juce::MidiBuffer &midi,
                           const juce::AudioBuffer<float> *sidechain) {
+  // Input validation
+  if (buffer.getNumSamples() <= 0 || buffer.getNumChannels() <= 0) {
+    return; // Invalid buffer
+  }
+  
   const PluginSnapshot *snapshot =
       activeSnapshot_.load(std::memory_order_acquire);
   if (!snapshot)
@@ -81,6 +86,10 @@ void PluginChain::process(juce::AudioBuffer<float> &buffer,
 
   const int numSamples = buffer.getNumSamples();
   const int numMainChannels = buffer.getNumChannels();
+  
+  if (numSamples <= 0 || numMainChannels <= 0) {
+    return; // Invalid dimensions
+  }
 
   // Process parameter automation
   for (const auto& binding : snapshot->bindings) {

@@ -23,8 +23,7 @@
 #include "utils/PlatformSystemUtils.h"
 #include "ui/design-system/FontManager.h"
 #include "engine/ZenithLogger.h"
-#include "engine/RealTimeGarbageCollector.h"
-#include "engine/GrokServiceRegistry.h"
+#include "Settings.h"
 
 
 //==============================================================================
@@ -55,6 +54,10 @@ public:
   void initialise(const juce::String &commandLine) override {
     // Input validation should be added here for production releases
     juce::ignoreUnused(commandLine);
+    
+    // Load settings immediately on startup
+    // FIX: This was missing, causing changes to be lost on relaunch
+    ::zenith::Settings::getInstance().load();
 
     // Log startup
     DBG("Zenith DAW starting...");
@@ -73,9 +76,7 @@ public:
     DBG("FontManager initialized.");
 
     // Create main window
-    DBG("Creating MainWindow...");
     mainWindow = std::make_unique<::zenith::MainWindow>(getApplicationName());
-    DBG("MainWindow created.");
 
     DBG("Zenith DAW initialized successfully!");
   }
@@ -86,10 +87,6 @@ public:
 
     // Close main window (releases all resources)
     mainWindow.reset();
-
-    // Cleanup singletons and registries
-    ::zenith::GrokServiceRegistry::getInstance().clear();
-    ::zenith::RealTimeGarbageCollector::deleteInstance();
 
     ZENITH_LOG_INFO("ZenithApplication::shutdown() COMPLETE");
     DBG("Zenith DAW shutdown complete.");

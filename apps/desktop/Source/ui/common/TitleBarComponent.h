@@ -15,6 +15,7 @@
 #include "../ZenithSkia.h"
 #include "../framework/GlassmorphicPanel.h"
 #include "../design-system/ZenithDesignSystem.h"
+#include "MenuBar.h"
 
 namespace zenith {
 
@@ -43,11 +44,22 @@ public:
   std::function<void()> onMinimize;
   std::function<void()> onMaximize;
 
+  ZenithMenuBar& getMenuBar() { return *menuBar_; }
+
 private:
   SkFont titleFont_;
   SkPaint textPaint_;
   
-  // Window buttons layout removed
+  std::unique_ptr<ZenithMenuBar> menuBar_;
+  SkRect logoBounds_;
+  
+  // Window control buttons (top right)
+  juce::Rectangle<int> closeButtonBounds_;
+  juce::Rectangle<int> minimizeButtonBounds_;
+  juce::Rectangle<int> maximizeButtonBounds_;
+  bool closeHovered_ = false;
+  bool minimizeHovered_ = false;
+  bool maximizeHovered_ = false;
   
   // Dragger
   juce::ComponentDragger dragger_;

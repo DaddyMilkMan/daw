@@ -913,53 +913,161 @@ inline SkPath Waveform() { return Audio(); }
 // AI ICONS
 // ============================================================================
 
-/** Brain icon for AI/Thinking - realistic but vectorized */
+/** Brain icon for AI/Thinking - professional anatomical brain with gyri */
 inline SkPath Brain() {
   SkPath path;
-  // Left hemisphere
-  path.moveTo(12.0f, 4.0f);
-  path.cubicTo(8.0f, 4.0f, 4.0f, 7.0f, 4.0f, 12.0f);
-  path.cubicTo(4.0f, 16.0f, 7.0f, 18.0f, 10.0f, 19.5f);
-  path.cubicTo(11.0f, 20.0f, 12.0f, 20.0f, 12.0f, 19.0f);
-  path.lineTo(12.0f, 4.0f);
   
-  // Right hemisphere
-  path.moveTo(12.0f, 4.0f);
-  path.cubicTo(16.0f, 4.0f, 20.0f, 7.0f, 20.0f, 12.0f);
-  path.cubicTo(20.0f, 16.0f, 17.0f, 18.0f, 14.0f, 19.5f);
-  path.cubicTo(13.0f, 20.0f, 12.0f, 20.0f, 12.0f, 19.0f);
-  path.lineTo(12.0f, 4.0f);
-
-  // Brain folds/details (left)
-  path.moveTo(7.0f, 8.0f);
-  path.cubicTo(6.0f, 10.0f, 9.0f, 11.0f, 8.0f, 13.0f);
-  path.moveTo(10.0f, 6.0f);
-  path.cubicTo(9.0f, 8.0f, 11.0f, 10.0f, 10.0f, 12.0f);
-  path.moveTo(7.0f, 15.0f);
-  path.cubicTo(8.0f, 16.0f, 10.0f, 15.0f, 11.0f, 16.5f);
-
-  // Brain folds/details (right)
-  path.moveTo(17.0f, 8.0f);
-  path.cubicTo(18.0f, 10.0f, 15.0f, 11.0f, 16.0f, 13.0f);
-  path.moveTo(14.0f, 6.0f);
-  path.cubicTo(15.0f, 8.0f, 13.0f, 10.0f, 14.0f, 12.0f);
-  path.moveTo(17.0f, 15.0f);
-  path.cubicTo(16.0f, 16.0f, 14.0f, 15.0f, 13.0f, 16.5f);
+  // Adjusted Y coordinates to prevent cutoff (shifted up by ~2px)
+  // Brain outline - rounded peanut shape
+  path.moveTo(12.0f, 1.5f); // Was 3.5f
+  // Right hemisphere outline
+  path.cubicTo(15.5f, 1.5f, 18.5f, 3.0f, 19.5f, 6.0f);
+  path.cubicTo(20.5f, 9.0f, 20.0f, 12.0f, 19.0f, 14.0f);
+  path.cubicTo(18.0f, 16.0f, 15.5f, 18.0f, 13.0f, 18.0f);
+  path.lineTo(12.0f, 18.0f);
+  
+  // Left hemisphere outline  
+  path.lineTo(11.0f, 18.0f);
+  path.cubicTo(8.5f, 18.0f, 6.0f, 16.0f, 5.0f, 14.0f);
+  path.cubicTo(4.0f, 12.0f, 3.5f, 9.0f, 4.5f, 6.0f);
+  path.cubicTo(5.5f, 3.0f, 8.5f, 1.5f, 12.0f, 1.5f);
+  path.close();
+  
+  // Central fissure
+  path.moveTo(12.0f, 2.5f);
+  path.lineTo(12.0f, 17.0f);
+  
+  // Gyri details (shifted)
+  path.moveTo(5.5f, 6.0f);
+  path.cubicTo(7.0f, 5.5f, 8.5f, 7.0f, 9.5f, 6.0f);
+  path.cubicTo(10.5f, 5.0f, 11.0f, 6.5f, 11.5f, 6.0f);
+  
+  path.moveTo(5.0f, 9.5f);
+  path.cubicTo(6.5f, 10.5f, 8.0f, 8.5f, 9.5f, 9.5f);
+  path.cubicTo(10.5f, 10.0f, 11.0f, 9.0f, 11.5f, 9.5f);
+  
+  // Brain stem
+  path.moveTo(11.0f, 18.0f);
+  path.lineTo(11.0f, 20.0f); // Fits within 24px box
+  path.moveTo(13.0f, 18.0f);
+  path.lineTo(13.0f, 20.0f);
 
   return path;
 }
 
-/** Send icon - diagonal arrow with tail */
+/** Sparkles/Stars icon for AI/Magic - replaces Brain for modern look */
+inline SkPath Sparkles() {
+  SkPath path;
+  
+  // Large star (Top Left)
+  // Center roughly at 8, 8
+  path.moveTo(8.0f, 2.0f);
+  path.cubicTo(9.0f, 5.0f, 11.0f, 7.0f, 14.0f, 8.0f);
+  path.cubicTo(11.0f, 9.0f, 9.0f, 11.0f, 8.0f, 14.0f);
+  path.cubicTo(7.0f, 11.0f, 5.0f, 9.0f, 2.0f, 8.0f);
+  path.cubicTo(5.0f, 7.0f, 7.0f, 5.0f, 8.0f, 2.0f);
+  
+  // Medium star (Bottom Right)
+  // Center at 18, 18
+  path.moveTo(18.0f, 14.0f);
+  path.cubicTo(18.5f, 16.0f, 20.0f, 17.5f, 22.0f, 18.0f);
+  path.cubicTo(20.0f, 18.5f, 18.5f, 20.0f, 18.0f, 22.0f);
+  path.cubicTo(17.5f, 20.0f, 16.0f, 18.5f, 14.0f, 18.0f);
+  path.cubicTo(16.0f, 17.5f, 17.5f, 16.0f, 18.0f, 14.0f);
+  
+  // Small star (Top Right)
+  // Center at 19, 6
+  path.moveTo(19.0f, 4.0f);
+  path.cubicTo(19.3f, 5.0f, 20.0f, 5.7f, 21.0f, 6.0f); 
+  path.cubicTo(20.0f, 6.3f, 19.3f, 7.0f, 19.0f, 8.0f);
+  path.cubicTo(18.7f, 7.0f, 18.0f, 6.3f, 17.0f, 6.0f);
+  path.cubicTo(18.0f, 5.7f, 18.7f, 5.0f, 19.0f, 4.0f);
+
+  return path;
+}
+
+/** Send icon - paper plane / arrow pointing right-up */
 inline SkPath Send() {
   SkPath path;
-  path.moveTo(2.0f, 21.0f);    // Bottom left tail
-  path.lineTo(22.0f, 2.0f);    // Top right tip
-  path.moveTo(22.0f, 2.0f);    // Arrow head start
-  path.lineTo(22.0f, 10.0f);   // Down
-  path.moveTo(22.0f, 2.0f);    // Tip again
-  path.lineTo(14.0f, 2.0f);    // Left
+  // Paper plane style send arrow
+  path.moveTo(4.0f, 12.0f);
+  path.lineTo(20.0f, 4.0f);    // Top tip
+  path.lineTo(20.0f, 20.0f);   // Bottom tip
+  path.close();
+  
+  // Inner fold line
+  path.moveTo(4.0f, 12.0f);
+  path.lineTo(20.0f, 12.0f);
+  
   return path;
 }
+
+/** SendArrow icon - simple right-pointing arrow for send button */
+inline SkPath SendArrow() {
+  SkPath path;
+  // Arrow body (left to right)
+  path.moveTo(4.0f, 12.0f);
+  path.lineTo(18.0f, 12.0f);
+  
+  // Arrow head
+  path.moveTo(14.0f, 7.0f);
+  path.lineTo(20.0f, 12.0f);
+  path.lineTo(14.0f, 17.0f);
+  
+  return path;
+}
+
+/** Partnership icon - Human hand + Digital wireframe hand clasping (Wingman button)
+ *  Lucide "handshake" icon - this version WORKED and rendered correctly
+ *  24x24 viewport
+ */
+inline SkPath Partnership() {
+  SkPath path;
+  
+  // ==========================================================================
+  // Lucide Handshake - This rendered correctly before
+  // Going back to what works
+  // ==========================================================================
+  
+  // Path 1: "m11 17 2 2a1 1 0 1 0 3-3"
+  path.moveTo(11.0f, 17.0f);
+  path.rLineTo(2.0f, 2.0f);
+  path.arcTo(1.0f, 1.0f, 0.0f, SkPath::kLarge_ArcSize, SkPathDirection::kCCW, 16.0f, 16.0f);
+  
+  // Path 2: Main handshake
+  path.moveTo(14.0f, 14.0f);
+  path.rLineTo(2.5f, 2.5f);
+  path.arcTo(1.0f, 1.0f, 0.0f, SkPath::kLarge_ArcSize, SkPathDirection::kCCW, 19.5f, 13.5f);
+  path.rLineTo(-3.88f, -3.88f);
+  path.arcTo(3.0f, 3.0f, 0.0f, SkPath::kSmall_ArcSize, SkPathDirection::kCCW, 11.38f, 9.62f);
+  path.rLineTo(-0.88f, 0.88f);
+  path.arcTo(1.0f, 1.0f, 0.0f, SkPath::kLarge_ArcSize, SkPathDirection::kCW, 7.5f, 7.5f);
+  path.rLineTo(2.81f, -2.81f);
+  path.arcTo(5.79f, 5.79f, 0.0f, SkPath::kSmall_ArcSize, SkPathDirection::kCW, 17.37f, 3.82f);
+  path.rLineTo(0.47f, 0.28f);
+  path.arcTo(2.0f, 2.0f, 0.0f, SkPath::kSmall_ArcSize, SkPathDirection::kCCW, 19.26f, 4.35f);
+  path.lineTo(21.0f, 4.0f);
+  
+  // Path 3: Right arm
+  path.moveTo(21.0f, 3.0f);
+  path.rLineTo(1.0f, 11.0f);
+  path.rLineTo(-2.0f, 0.0f);
+  
+  // Path 4: Left arm
+  path.moveTo(3.0f, 3.0f);
+  path.lineTo(2.0f, 14.0f);
+  path.rLineTo(6.5f, 6.5f);
+  path.arcTo(1.0f, 1.0f, 0.0f, SkPath::kLarge_ArcSize, SkPathDirection::kCCW, 11.5f, 17.5f);
+  
+  // Path 5: Top bar
+  path.moveTo(3.0f, 4.0f);
+  path.rLineTo(8.0f, 0.0f);
+  
+  return path;
+}
+
+// Alias for backwards compatibility
+inline SkPath Handshake() { return Partnership(); }
 
 // ============================================================================
 // DRAWING HELPERS

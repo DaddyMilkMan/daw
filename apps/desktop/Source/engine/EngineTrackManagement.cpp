@@ -313,30 +313,51 @@ void Engine::removeTrack(int index) {
 
   const juce::ScopedWriteLock lock(tracksLock_);
 
-  if (index >= 0 && index < static_cast<int>(tracks_.size())) {
-    juce::String name = tracks_[index]->getName();
-    juce::String id = tracks_[index]->getTrackId();
-
-    // Release resources
-    tracks_[index]->releaseResources();
-    
-    // Unregister listener
-    tracks_[index]->removeChangeListener(this);
-
-    // Remove from vector
-    tracks_.erase(tracks_.begin() + index);
-
-    // Remove from RoutingGraph
-    routingGraph_.removeNode(id);
-
-    DBG("Engine: Removed track '" + name + "' at index " + juce::String(index));
-
-    // Update Solo State (removed track might have been the only soloed one)
-    updateSoloState();
-
-    // Update snapshot for audio thread
-    updateTrackSnapshot();
+  if (index < 0 || index >= static_cast<int>(tracks_.size())) {
+    DBG("Engine: removeTrack - Invalid track index: " + juce::String(index));
+    return;
   }
+
+  if (tracks_[index] == nullptr) {
+    DBG("Engine: removeTrack - Track at index " + juce::String(index) + " is null");
+    return;
+  }
+
+  juce::String name = tracks_[index]->getName();
+  juce::String id = tracks_[index]->getTrackId();
+
+  // CRITICAL FIX: Clear all sidechain references to this track before deletion
+  // This prevents dangling pointers in other tracks' sidechain sources
+  Track* trackToRemove = tracks_[index].get();
+  for (auto& otherTrack : tracks_) {
+    if (otherTrack != nullptr && otherTrack.get() != trackToRemove) {
+      // Check if this track uses the removed track as sidechain source
+      if (otherTrack->getSidechainSource() == trackToRemove) {
+        otherTrack->setPluginSidechainSource(0, nullptr); // Clear sidechain
+        DBG("Engine: Cleared sidechain reference from track " + otherTrack->getName() + " to removed track " + name);
+      }
+    }
+  }
+
+  // Release resources
+  tracks_[index]->releaseResources();
+  
+  // Unregister listener
+  tracks_[index]->removeChangeListener(this);
+
+  // Remove from vector
+  tracks_.erase(tracks_.begin() + index);
+
+  // Remove from RoutingGraph
+  routingGraph_.removeNode(id);
+
+  DBG("Engine: Removed track '" + name + "' at index " + juce::String(index));
+
+  // Update Solo State (removed track might have been the only soloed one)
+  updateSoloState();
+
+  // Update snapshot for audio thread
+  updateTrackSnapshot();
 }
 
 Track* Engine::getTrackById(const juce::String& trackId) {

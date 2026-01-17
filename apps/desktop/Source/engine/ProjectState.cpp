@@ -290,7 +290,7 @@ double ProjectState::getTempo() const {
 }
 
 void ProjectState::setTempo(double tempo) {
-  tempo = juce::jlimit<double>(20.0, 999.0, tempo);
+  tempo = juce::jlimit<double>(1.0, 999.0, tempo);
   state.setProperty(PROP_TEMPO, tempo, &undoManager);
 }
 

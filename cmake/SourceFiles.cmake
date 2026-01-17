@@ -95,6 +95,7 @@ set(ZENITH_UI_COMPONENTS_SOURCES
     apps/desktop/Source/ui/controls/ZenithKnob.cpp
     apps/desktop/Source/ui/controls/ZenithToggle.cpp
     apps/desktop/Source/ui/controls/ZenithTextInput.cpp
+    apps/desktop/Source/ui/controls/SkiaTextInput.cpp
     apps/desktop/Source/ui/controls/ZenithDropdown.cpp
     apps/desktop/Source/ui/controls/ZenithModMatrix.cpp
     apps/desktop/Source/ui/controls/ZenithTooltipOverlay.cpp
@@ -260,6 +261,7 @@ set(ZENITH_AI_NETWORK_SOURCES
     apps/desktop/Source/network/OAuthRedirectServer.cpp
     apps/desktop/Source/network/MCPServer.cpp
     apps/desktop/Source/network/AudioAnalysisService.cpp
+    apps/desktop/Source/network/UpdateService.cpp
     apps/desktop/Source/utils/PlatformSystemUtils.cpp
     apps/desktop/Source/dsp/PlatformModelUtils.cpp
     apps/desktop/Source/engine/ClipTrack.cpp
@@ -276,6 +278,7 @@ set(ZENITH_UTILS_SOURCES
     apps/desktop/Source/engine/PropertyExchangeManager.cpp
     apps/desktop/Source/engine/Midi2DiscoveryService.cpp
     apps/desktop/Source/engine/AudioAsMidiBridge.cpp
+    apps/desktop/Source/utils/PowerManagement.cpp
     apps/desktop/Source/commands/CommandAPI.cpp
     apps/desktop/Source/commands/TrackCommands.cpp
     apps/desktop/Source/commands/TransportCommands.cpp
@@ -310,6 +313,7 @@ if(UNIX AND NOT APPLE)
     list(APPEND ZENITH_ALL_SOURCES
         apps/desktop/Source/platform/linux/engine/PlatformAudioUtils_Linux.cpp
         apps/desktop/Source/platform/linux/window/PlatformWindowUtils_Linux.cpp
+        apps/desktop/Source/platform/linux/system/PowerManagement_Linux.cpp
     )
 endif()
 
