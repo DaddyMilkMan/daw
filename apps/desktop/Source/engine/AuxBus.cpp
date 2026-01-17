@@ -9,6 +9,7 @@ AuxBus::~AuxBus() { pluginChain.clearPlugins(); }
 void AuxBus::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
   currentSampleRate_ = sampleRate;
   currentBlockSize_ = samplesPerBlockExpected;
+  emptyMidi_.ensureSize(65536);
 
   // Prepare input buffer (stereo)
   inputBuffer_.setSize(2, samplesPerBlockExpected, false, true, true);
@@ -36,8 +37,8 @@ void AuxBus::getNextAudioBlock(
   bufferToFill.clearActiveBufferRegion();
 
   // Process through plugin chain (effect processors)
-  juce::MidiBuffer emptyMidi; // Aux buses don't process MIDI
-  pluginChain.process(inputBuffer_, emptyMidi);
+  emptyMidi_.clear();
+  pluginChain.process(inputBuffer_, emptyMidi_);
 
   // Process through mixer channel (volume, pan, metering, etc.)
   juce::AudioSourceChannelInfo mixerInfo(&inputBuffer_, 0,

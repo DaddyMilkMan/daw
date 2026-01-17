@@ -36,6 +36,8 @@ public:
     void prepareToPlay(double sampleRate, int samplesPerBlock);
     void releaseResources();
 
+    juce::MidiBuffer& getEmptyMidiBuffer() noexcept;
+
     /**
      * @brief Process audio block. Replaces Track::getNextAudioBlock logic.
      */
@@ -75,6 +77,7 @@ private:
     // Buffers
     juce::AudioBuffer<float> pluginBuffer;
     juce::AudioBuffer<float> sidechainBuffer;
+    juce::MidiBuffer emptyMidi_;
     
     double currentSampleRate = 48000.0;
     int currentBlockSize = 512;

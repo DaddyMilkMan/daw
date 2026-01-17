@@ -88,6 +88,7 @@ private:
 
   // Plugin chain (effect processors)
   PluginChain pluginChain;
+  juce::MidiBuffer emptyMidi_;
   // pluginLock_ is handled inside PluginChain
 
   // Processing state

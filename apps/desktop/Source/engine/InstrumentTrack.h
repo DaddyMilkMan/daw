@@ -21,6 +21,7 @@ public:
 
   void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override {
     ClipTrack::prepareToPlay(samplesPerBlockExpected, sampleRate);
+    midiBuffer_.ensureSize(65536);
     if (instrument != nullptr && instrument->getAudioProcessor() != nullptr) {
       instrument->getAudioProcessor()->prepareToPlay(sampleRate,
                                                      samplesPerBlockExpected);
@@ -58,6 +59,7 @@ public:
 
 private:
   std::unique_ptr<Instrument> instrument;
+  juce::MidiBuffer midiBuffer_;
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(InstrumentTrack)
 };
 

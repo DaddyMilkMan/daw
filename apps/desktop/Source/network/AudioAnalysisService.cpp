@@ -98,15 +98,15 @@ juce::String AudioAnalysisResults::toSummary() const
 // AudioAnalysisService Implementation
 //==============================================================================
 
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <fcntl.h>
-#include <poll.h>
+// #include <unistd.h>  <-- Removed POSIX headers
+// #include <sys/types.h>
+// #include <sys/wait.h>
+// #include <fcntl.h>
+// #include <poll.h>
 
 //==============================================================================
 /**
-    A persistent worker process for audio analysis using native pipes
+    A persistent worker process for audio analysis using juce::ChildProcess
 */
 class AnalysisWorker : private juce::Thread
 {
@@ -137,7 +137,7 @@ public:
         workSignal.signal();
     }
     
-    bool isAlive() const { return childPid > 0 && kill(childPid, 0) == 0; }
+    bool isAlive() const { return process.isRunning(); }
     
     void stop()
     {
@@ -147,23 +147,16 @@ public:
         if (isAlive())
         {
             // Send quit command to python
-            writeToStdin("quit\n");
+            process.start("echo quit");
             
-            // Wait a bit
-            int status;
-            for (int i = 0; i < 20 && isAlive(); ++i)
+            // Wait a bit for graceful exit
+            if (!process.waitForProcessToFinish(2000))
             {
-                waitpid(childPid, &status, WNOHANG);
-                juce::Thread::sleep(50);
+                process.kill();
             }
-            
-            if (isAlive())
-                kill(childPid, SIGKILL);
         }
         
         stopThread(2000);
-        closePipes();
-        childPid = -1;
     }
 
 private:
@@ -189,7 +182,7 @@ private:
                 {
                     // Send path to Python
                     juce::String path = targetFile.getFullPathName() + "\n";
-                    if (writeToStdin(path.toRawUTF8()))
+                    if (process.start("echo " + path))
                     {
                         // Read response
                         juce::String response = readResponse();
@@ -201,7 +194,7 @@ private:
                     }
                     else
                     {
-                        notifyError("Failed to write to worker stdin");
+                        notifyError("Failed to write to worker process");
                     }
                 }
                 else
@@ -216,71 +209,35 @@ private:
     
     bool startProcess()
     {
-        closePipes();
+        juce::StringArray args;
+        args.add("python3"); // Try python3 first
+        args.add(scriptFile.getFullPathName());
         
-        int pipeIn[2];  // Parent writes, Child reads (child's stdin)
-        int pipeOut[2]; // Parent reads, Child writes (child's stdout)
-        
-        if (pipe(pipeIn) != 0 || pipe(pipeOut) != 0)
-            return false;
-            
-        childPid = fork();
-        
-        if (childPid == 0) // Child
+        if (process.start(args))
         {
-            dup2(pipeIn[0], STDIN_FILENO);
-            dup2(pipeOut[1], STDOUT_FILENO);
-            
-            close(pipeIn[0]); close(pipeIn[1]);
-            close(pipeOut[0]); close(pipeOut[1]);
-            
-            const char* cmd = "python3";
-            const char* script = scriptFile.getFullPathName().toRawUTF8();
-            char* args[] = { (char*)cmd, (char*)script, nullptr };
-            
-            execvp(cmd, args);
-            
-            // Fallback to "python"
-            char* argsFallback[] = { (char*)"python", (char*)script, nullptr };
-            execvp("python", argsFallback);
-            
-            _exit(1);
+             return waitForReady();
         }
-        else if (childPid > 0) // Parent
+        
+        // Fallback to "python"
+        args.set(0, "python");
+        if (process.start(args))
         {
-            close(pipeIn[0]);
-            close(pipeOut[1]);
-            
-            stdinFd = pipeIn[1];
-            stdoutFd = pipeOut[0];
-            
-            // Set non-blocking for stdout
-            fcntl(stdoutFd, F_SETFL, fcntl(stdoutFd, F_GETFL) | O_NONBLOCK);
-            
-            // Read "ready" message
-            juce::String readyMsg = readResponse();
-            if (readyMsg.isEmpty()) return false;
-            
-            auto json = juce::JSON::parse(readyMsg);
-            return json["status"].toString() == "ready";
+             return waitForReady();
         }
         
         return false;
     }
     
-    void closePipes()
+    bool waitForReady()
     {
-        if (stdinFd >= 0) { close(stdinFd); stdinFd = -1; }
-        if (stdoutFd >= 0) { close(stdoutFd); stdoutFd = -1; }
+        // Read "ready" message
+        juce::String readyMsg = readResponse();
+        if (readyMsg.isEmpty()) return false;
+        
+        auto json = juce::JSON::parse(readyMsg);
+        return json["status"].toString() == "ready";
     }
-    
-    bool writeToStdin(const char* data)
-    {
-        if (stdinFd < 0) return false;
-        size_t len = strlen(data);
-        return write(stdinFd, data, len) == (ssize_t)len;
-    }
-    
+
     juce::String readResponse()
     {
         juce::MemoryBlock buffer;
@@ -288,24 +245,22 @@ private:
         
         auto startTime = juce::Time::getMillisecondCounter();
         
+        // Read until newline or timeout
         while (!threadShouldExit())
         {
-            struct pollfd pfd;
-            pfd.fd = stdoutFd;
-            pfd.events = POLLIN;
+            int numRead = process.readProcessOutput(&c, 1);
             
-            if (poll(&pfd, 1, 100) > 0)
+            if (numRead > 0)
             {
-                ssize_t n = read(stdoutFd, &c, 1);
-                if (n > 0)
-                {
-                    if (c == '\n') break;
-                    buffer.append(&c, 1);
-                }
-                else if (n == 0) // EOF
-                {
-                    break;
-                }
+                if (c == '\n') break;
+                buffer.append(&c, 1);
+            }
+            else
+            {
+                // Small sleep to avoid spinning if no data yet
+                juce::Thread::sleep(10);
+                
+                if (!process.isRunning()) return {};
             }
             
             if (juce::Time::getMillisecondCounter() - startTime > 10000) // 10s timeout
@@ -358,16 +313,14 @@ private:
 
     juce::File scriptFile;
     juce::File targetFile;
+    juce::ChildProcess process;
+    
     std::atomic<bool> busy { false };
     std::atomic<bool> shouldExit { false };
     juce::WaitableEvent workSignal;
     
     std::function<void(AudioAnalysisResults)> completeCallback;
     std::function<void(juce::String)> errorCallback;
-
-    int stdinFd = -1;
-    int stdoutFd = -1;
-    pid_t childPid = -1;
     
 public:
     std::function<void(const juce::var&, AudioAnalysisResults&)> parserFunc;

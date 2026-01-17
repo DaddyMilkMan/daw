@@ -189,6 +189,17 @@ public:
   ~ProjectState();
 
   //==========================================================================
+  // ID Service Access
+  //==========================================================================
+  
+  /**
+   * @brief Get the ID service for generating unique IDs
+   * @return Reference to ID service
+   */
+  IDService& getIDService() { return idService_; }
+  const IDService& getIDService() const { return idService_; }
+
+  //==========================================================================
   // Project Management
   //==========================================================================
 
@@ -579,7 +590,6 @@ public:
 
   juce::ValueTree &getState() { return state; }
   const juce::ValueTree &getState() const { return state; }
-  juce::File getAssetDirectory(const juce::String& name);
 
   //==========================================================================
   // Routing Graph
@@ -601,7 +611,9 @@ private:
   //==========================================================================
 
   void createDefaultState();
-  juce::String generateUniqueId(const juce::String &prefix);
+  juce::String generateUniqueId(const juce::String &prefix) {
+    return idService_.generateId(prefix);
+  }
   juce::ValueTree findTrackInternal(const juce::String &trackId) const;
   juce::ValueTree findNote(const juce::String &trackId,
                            const juce::String &clipId,
@@ -617,10 +629,11 @@ private:
   // Member Variables
   //==========================================================================
 
+  // ID generation service (thread-safe)
+  IDService idService_;
+  
   // juce::ValueTree state; // Moved to public as per Step 1
   // juce::UndoManager undoManager; // Moved to public as per Step 1
-  std::atomic<int> idCounter{0};
-  mutable std::unordered_map<juce::String, juce::ValueTree> trackIdMap_;
   std::atomic<bool> isDirty{false};
   juce::File projectFile;
   zenith::RoutingGraph routingGraph;

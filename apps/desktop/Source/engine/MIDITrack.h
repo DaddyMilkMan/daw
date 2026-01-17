@@ -19,6 +19,7 @@ public:
       const juce::AudioBuffer<float> *sidechainBuffer = nullptr) override;
 
 private:
+  juce::MidiBuffer midiBuffer_;
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MIDITrack)
 };
 

@@ -38,8 +38,10 @@ SkiaOpenGLRenderer::SkiaOpenGLRenderer(juce::Component *componentToAttach)
       ZENITH_LOG_INFO("SkiaOpenGLRenderer: Setting renderer...");
       openGLContext_.setRenderer(this);
       openGLContext_.setOpenGLVersionRequired(juce::OpenGLContext::openGL3_2);
-      // Following JUCE OpenGLAppComponent pattern: continuous repainting
-      openGLContext_.setContinuousRepainting(true);
+      
+      // CRITICAL: Disable continuous repainting to save battery/CPU.
+      // We rely on triggerRepaint() to update the UI when needed.
+      openGLContext_.setContinuousRepainting(false);
       
       // Check if component already has a peer (rare but possible)
       if (targetComponent_->isShowing() && targetComponent_->getPeer() != nullptr) {
@@ -56,9 +58,8 @@ SkiaOpenGLRenderer::SkiaOpenGLRenderer(juce::Component *componentToAttach)
       ZENITH_LOG_ERROR(
           std::string("SkiaOpenGLRenderer: Exception in constructor: ") +
           e.what());
-    } catch (...) {
-      ZENITH_LOG_ERROR("SkiaOpenGLRenderer: Unknown exception in constructor");
-    }
+    } 
+    // Removed catch(...) to allow critical failures to surface
   } else {
     ZENITH_LOG_WARNING(
         "SkiaOpenGLRenderer: WARNING - targetComponent is null!");
@@ -83,24 +84,13 @@ void SkiaOpenGLRenderer::scheduleAttachmentCheck() {
       return;
     }
     
-    // Log current state
-    bool hasPeer = comp->getPeer() != nullptr;
-    bool hasValidSize = comp->getWidth() >= 400 && comp->getHeight() >= 300;
-    bool isAttached = ctx->isAttached();
+    // Debug logging reduced to avoid spam
+    // std::cerr << "[ASYNC] Checking peer..." << std::endl;
     
-    ZENITH_LOG_INFO(juce::String::formatted(
-      "scheduleAttachmentCheck: hasPeer=%s, size=%dx%d, validSize=%s, isAttached=%s",
-      hasPeer ? "YES" : "NO",
-      comp->getWidth(), comp->getHeight(),
-      hasValidSize ? "YES" : "NO",
-      isAttached ? "YES" : "NO"
-    ));
-    
-    // CRITICAL: Only attach when component has valid dimensions (prevents tiny window)
-    if (hasPeer && hasValidSize && !isAttached) {
-      ZENITH_LOG_INFO("Conditions met - attempting to attach context");
+    if (comp->getPeer() != nullptr && !ctx->isAttached()) {
+      ZENITH_LOG_INFO("SkiaOpenGLRenderer: Async check found peer, attaching context...");
       attachContextNow();
-    } else if (!isAttached) {
+    } else if (!ctx->isAttached()) {
       // Reschedule - either no peer yet or dimensions too small
       ZENITH_LOG_INFO("Conditions not met - rescheduling attachment check in 100ms");
       juce::Timer::callAfterDelay(100, [this]() {
@@ -113,12 +103,7 @@ void SkiaOpenGLRenderer::scheduleAttachmentCheck() {
 }
 
 void SkiaOpenGLRenderer::timerCallback() {
-  if (targetComponent_ && targetComponent_->getPeer() != nullptr && !openGLContext_.isAttached()) {
-    attachContextNow();
-    stopTimer();
-  } else if (openGLContext_.isAttached()) {
-    stopTimer();
-  }
+    // Zombie callback removed
 }
 
 void SkiaOpenGLRenderer::attachContextNow() {
@@ -145,10 +130,9 @@ void SkiaOpenGLRenderer::attachContextNow() {
     openGLContext_.attachTo(*targetComponent_);
     ZENITH_LOG_INFO("OpenGL context attached successfully!");
   } catch (const std::exception& e) {
-    ZENITH_LOG_ERROR("Exception during attachTo: " + std::string(e.what()));
-  } catch (...) {
-    ZENITH_LOG_ERROR("Unknown exception during attachTo!");
+    ZENITH_LOG_ERROR("SkiaOpenGLRenderer: Exception during attachTo: " + std::string(e.what()));
   }
+  // Removed catch(...) as unexpected exceptions should crash/dump
 }
 
 
@@ -197,17 +181,11 @@ void SkiaOpenGLRenderer::newOpenGLContextCreated() {
     
     ZENITH_LOG_INFO("Creating Skia surface...");
     recreateSurface();
-    
-    if (surface_) {
-      ZENITH_LOG_INFO("Skia surface created successfully");
-    } else {
-      ZENITH_LOG_ERROR("Failed to create Skia surface!");
-    }
-    
-  } catch (const std::exception& e) {
-    ZENITH_LOG_ERROR("Exception in newOpenGLContextCreated: " + std::string(e.what()));
-  } catch (...) {
-    ZENITH_LOG_ERROR("Unknown exception in newOpenGLContextCreated");
+  } catch (const std::exception &e) {
+    ZENITH_LOG_ERROR(
+        std::string(
+            "SkiaOpenGLRenderer: Exception in newOpenGLContextCreated: ") +
+        e.what());
   }
   
   ZENITH_LOG_INFO("========================================");
@@ -313,22 +291,63 @@ void SkiaOpenGLRenderer::recreateSurfaceWithSize(int width, int height) {
 SkiaMainWindowIntegration::SkiaMainWindowIntegration()
     : SkiaOpenGLRenderer(this) {
   setOpaque(true);
+
+#if JUCE_WINDOWS
+  d3d12Context_ = std::make_unique<SkiaD3D12Context>();
+#endif
 }
 
-SkiaMainWindowIntegration::~SkiaMainWindowIntegration() {}
+SkiaMainWindowIntegration::~SkiaMainWindowIntegration() {
+#if JUCE_WINDOWS
+  d3d12Context_.reset();
+#endif
+}
 
 void SkiaMainWindowIntegration::paint(juce::Graphics &g) {
-  // If OpenGL is attached, it handles rendering
-  if (openGLContext_.isAttached()) return;
+#if JUCE_WINDOWS
+  // 1. Try D3D12 Path
+  if (useD3D12_ && d3d12Context_) {
+      if (!d3d12Context_->isInitialized()) {
+          // Lazy init
+          void* hwnd = getPeer() ? getPeer()->getNativeHandle() : nullptr;
+          if (hwnd && getWidth() > 0 && getHeight() > 0) {
+              if (d3d12Context_->initialize(hwnd, getWidth(), getHeight())) {
+                  ZENITH_LOG_INFO("D3D12 Initialized!");
+              } else {
+                  ZENITH_LOG_ERROR("D3D12 Init Failed - Unknown error");
+                  useD3D12_ = false; // Fallback
+              }
+          }
+      }
 
-  // Software fallback rendering
+      if (d3d12Context_->isInitialized()) {
+          SkCanvas* canvas = d3d12Context_->beginFrame();
+          if (canvas) {
+              canvas->clear(SkColorSetARGB(255, 20, 20, 25));
+              drawSkiaContent(canvas);
+              d3d12Context_->endFrame();
+              return; // Done
+          }
+      }
+  }
+#endif
+
+  // 2. Try OpenGL Path
+  if (openGLContext_.isAttached()) {
+    return;
+  }
+
+  // 3. Fallback to Software Raster
+  static int frameCount = 0;
+  frameCount++;
+  
   auto bounds = getLocalBounds();
   if (bounds.isEmpty()) return;
 
   const int width = bounds.getWidth();
   const int height = bounds.getHeight();
 
-  // Create/Recreate Raster Surface
+  // Create/Recreate Raster Surface if needed
   if (!softwareSurface_ || softwareSurface_->width() != width || softwareSurface_->height() != height) {
       SkImageInfo info = SkImageInfo::MakeN32Premul(width, height);
       softwareSurface_ = SkSurfaces::Raster(info);
@@ -340,10 +359,12 @@ void SkiaMainWindowIntegration::paint(juce::Graphics &g) {
       return;
   }
 
+  // Draw Content
   SkCanvas* canvas = softwareSurface_->getCanvas();
   canvas->clear(SkColorSetARGB(255, 20, 20, 25)); 
   drawSkiaContent(canvas);
 
+  // Blit to JUCE Graphics
   SkPixmap pixmap;
   if (softwareSurface_->peekPixels(&pixmap)) {
       juce::Image::BitmapData bd(softwareImage_, juce::Image::BitmapData::writeOnly);
@@ -357,17 +378,52 @@ void SkiaMainWindowIntegration::paint(juce::Graphics &g) {
 void SkiaMainWindowIntegration::resized() {
   auto bounds = getLocalBounds();
   updateDimensions(bounds.getWidth(), bounds.getHeight());
+
+#if JUCE_WINDOWS
+  if (useD3D12_ && d3d12Context_ && d3d12Context_->isInitialized()) {
+      d3d12Context_->resize(bounds.getWidth(), bounds.getHeight());
+  }
+#endif
 }
 
 void SkiaMainWindowIntegration::parentHierarchyChanged() {
-  if (isShowing() && getPeer() != nullptr && !openGLContext_.isAttached()) {
-    scheduleAttachmentCheck();
+  juce::String msg = "SkiaMainWindowIntegration: parentHierarchyChanged called, peer=";
+  msg += (getPeer() != nullptr ? "valid" : "null");
+  msg += ", attached=";
+  msg += (openGLContext_.isAttached() ? "yes" : "no");
+  ZENITH_LOG_INFO(msg);
+
+  if (isShowing() && getPeer() != nullptr) {
+#if JUCE_WINDOWS
+      // If we are using D3D12, we trigger a repaint and let paint() handle init
+      if (useD3D12_) {
+          repaint();
+          return;
+      }
+#endif
+      if (!openGLContext_.isAttached()) {
+          scheduleAttachmentCheck();
+      }
   }
 }
 
 void SkiaMainWindowIntegration::visibilityChanged() {
-  if (isShowing() && getPeer() != nullptr && !openGLContext_.isAttached()) {
-    scheduleAttachmentCheck();
+  juce::String msg = "SkiaMainWindowIntegration: visibilityChanged called, visible=";
+  msg += (isVisible() ? "yes" : "no");
+  msg += ", peer=";
+  msg += (getPeer() != nullptr ? "valid" : "null");
+  ZENITH_LOG_INFO(msg);
+
+  if (isShowing() && getPeer() != nullptr) {
+#if JUCE_WINDOWS
+      if (useD3D12_) {
+          repaint();
+          return;
+      }
+#endif
+      if (!openGLContext_.isAttached()) {
+          scheduleAttachmentCheck();
+      }
   }
 }
 

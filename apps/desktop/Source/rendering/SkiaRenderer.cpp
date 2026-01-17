@@ -90,6 +90,11 @@ void SkiaRenderer::shutdown()
 }
 
 //==============================================================================
+<<<<<<< HEAD
+bool SkiaRenderer::createGpuContext() {
+    if (backend_ == Backend::OpenGL) {
+#if JUCE_LINUX
+        // Wayland/Pop!_OS specific EGL Bootstrapping
 // Rendering
 //==============================================================================
 
@@ -231,8 +236,18 @@ bool SkiaRenderer::createGpuContext()
 {
 #ifdef ZENITH_USE_SKIA
     // 1. Create the native GL interface
-    // Skia needs to abstract over the specific GL driver (Mesa, Nvidia, etc.)
-    auto interface = GrGLMakeNativeInterface();
+    sk_sp<const GrGLInterface> interface;
+    
+#if JUCE_LINUX
+    // Wayland/Pop!_OS specific EGL Bootstrapping
+    interface = GrGLMakeAssembledInterface(nullptr, [](void* ctx, const char* name) -> GrGLFuncPtr {
+        return (GrGLFuncPtr)eglGetProcAddress(name);
+    });
+#else
+    // Windows/Mac: Use standard native interface (WGL/CGL)
+    interface = GrGLMakeNativeInterface();
+#endif
+
     if (!interface)
     {
         juce::Logger::writeToLog("SkiaRenderer: Failed to create native GL interface. Check GPU drivers.");

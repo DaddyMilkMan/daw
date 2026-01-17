@@ -30,7 +30,7 @@
 #include <vector>
 
 using namespace zenith;
-namespace juce = ::juce;  // FIX: Ensure juce resolves to global ::juce, not zenith::juce
+// namespace juce = ::juce;  // FIX: Ensure juce resolves to global ::juce, not zenith::juce
 
 // Magic numbers moved to constants/theme
 static constexpr float NOTE_CORNER_RADIUS = design::dimensions::RADIUS_SM; // 8px for modern look

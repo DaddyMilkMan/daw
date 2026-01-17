@@ -87,7 +87,7 @@ void PluginAutomationBinding::applyAutomation(int numSamples) {
 
     // Apply to plugin parameter
     // Using setValueNotifyingHost ensures plugin UI updates
-    params[parameterIndex_]->setValueNotifyingHost(smoothedVal);
+    params[parameterIndex_]->setValue(smoothedVal);
 
     // Check if we've reached target
     if (!smoothedValue_.isSmoothing()) {

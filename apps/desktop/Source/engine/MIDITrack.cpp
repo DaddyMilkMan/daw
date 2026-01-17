@@ -7,6 +7,7 @@ MIDITrack::MIDITrack(const juce::String &name) : ClipTrack(name, Type::MIDI) {}
 
 void MIDITrack::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
   ClipTrack::prepareToPlay(samplesPerBlockExpected, sampleRate);
+  midiBuffer_.ensureSize(65536);
 }
 
 void MIDITrack::getNextAudioBlock(
@@ -21,9 +22,9 @@ void MIDITrack::getNextAudioBlock(
   bufferToFill.clearActiveBufferRegion();
 
   // 2. Prepare MIDI Buffer (Using JUCE 8 UMP compatible buffer)
-  juce::MidiBuffer midiBuffer;
+  midiBuffer_.clear();
   if (incomingMidi != nullptr) {
-    midiBuffer.addEvents(*incomingMidi, 0, numSamples, 0);
+    midiBuffer_.addEvents(*incomingMidi, 0, numSamples, 0);
   }
 
   // 3. Add Clip MIDI with High-Res Support
@@ -32,7 +33,7 @@ void MIDITrack::getNextAudioBlock(
     for (auto *clip : snapshot->clips) {
       if (clip->getType() == Clip::Type::MIDI) {
         clip->setTransportPosition(playheadSamples);
-        clip->getMidiEvents(midiBuffer, numSamples);
+        clip->getMidiEvents(midiBuffer_, numSamples);
       }
     }
   }
@@ -43,7 +44,7 @@ void MIDITrack::getNextAudioBlock(
 
   // 4. Process through plugin chain and mixer (delegated to Processor)
   juce::AudioSourceChannelInfo blockInfo(bufferToFill.buffer, bufferToFill.startSample, numSamples);
-  processor->processBlock(blockInfo, midiBuffer, auxBuffers, sidechainBuffer);
+  processor->processBlock(blockInfo, midiBuffer_, auxBuffers, sidechainBuffer);
 }
 
 } // namespace zenith

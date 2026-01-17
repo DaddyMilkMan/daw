@@ -21,6 +21,11 @@
 namespace zenith {
 
 //==============================================================================
+AudioRenderer::AudioRenderer() {
+  scratchMidi_.ensureSize(65536);
+}
+
+//==============================================================================
 void AudioRenderer::renderAudioGraph(
     AudioRenderContext& context,
     juce::AudioBuffer<float> &outputBuffer, int numSamples,
@@ -100,9 +105,9 @@ void AudioRenderer::renderAudioGraph(
           }
 
           if (auto* processor = track->getProcessor()) {
-              juce::MidiBuffer dummyMidi;
+              scratchMidi_.clear();
               juce::AudioSourceChannelInfo trackInfo(&trackBuffer, 0, numSamples);
-              processor->processBlock(trackInfo, dummyMidi, context.auxBufferPtrsVector, nullptr);
+              processor->processBlock(trackInfo, scratchMidi_, context.auxBufferPtrsVector, nullptr);
           }
 
           if (rn.hasMasterSend) {
@@ -283,11 +288,11 @@ void AudioRenderer::processMasterPlugins(
     return;
   }
 
-  juce::MidiBuffer midi;
+  scratchMidi_.clear();
 
   for (auto &plugin : plugins) {
     if (plugin != nullptr && !plugin->isSuspended()) {
-      plugin->processBlock(buffer, midi);
+      plugin->processBlock(buffer, scratchMidi_);
     }
   }
 }
