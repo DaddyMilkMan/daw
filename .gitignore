@@ -165,3 +165,4 @@ __pycache__/
 !README.txt
 !LICENSE.txt
 !docs/**/*.txt
+.venv/
