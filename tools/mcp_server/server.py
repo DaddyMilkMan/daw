@@ -205,11 +205,14 @@ def run_server(host='127.0.0.1', port=8008, certfile=None, keyfile=None):
     certfile = certfile or os.environ.get('MCP_SERVER_CERT')
     keyfile = keyfile or os.environ.get('MCP_SERVER_KEY')
     if certfile:
-        import ssl as _ssl
-        context = _ssl.SSLContext(_ssl.PROTOCOL_TLS_SERVER)
-        context.load_cert_chain(certfile, keyfile)
-        server.socket = context.wrap_socket(server.socket, server_side=True)
-        print('MCP server: TLS enabled')
+        try:
+            import ssl as _ssl
+            context = _ssl.SSLContext(_ssl.PROTOCOL_TLS_SERVER)
+            context.load_cert_chain(certfile, keyfile)
+            server.socket = context.wrap_socket(server.socket, server_side=True)
+            print('MCP server: TLS enabled')
+        except Exception as e:
+            print('Warning: TLS initialization failed in run_server:', e)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
