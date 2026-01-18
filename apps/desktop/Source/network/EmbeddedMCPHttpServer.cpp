@@ -57,10 +57,45 @@ void EmbeddedMCPHttpServer::runServer(int port, const juce::String &host, const 
     const char* certEnv = std::getenv("MCP_HTTP_CERT");
     const char* keyEnv = std::getenv("MCP_HTTP_KEY");
     bool useTls = false;
+    void* wrapperHandle = nullptr;
     if (certEnv && keyEnv) {
-        // Note: JUCE's StreamingSocket doesn't support TLS directly; this is a placeholder that attempts to load a platform TLS wrapper if available.
-        ZENITH_LOG_INFO("[MCP HTTP] TLS certificate and key provided; embedded TLS will be enabled if platform supports it.");
-        useTls = true;
+        // Attempt to use the optional cpp-httplib wrapper if it was compiled in.
+        ZENITH_LOG_INFO("[MCP HTTP] TLS certificate and key provided; attempting to enable embedded TLS via httplib wrapper.");
+        // The C API functions are weakly referenced at runtime; try to dlopen the current binary and resolve the symbols.
+        typedef void* (*create_fn_t)(void*, const char*, int, const char*, const char*, const char*);
+        typedef bool (*start_fn_t)(void*);
+        typedef void (*stop_fn_t)(void*);
+        typedef void (*destroy_fn_t)(void*);
+
+        void* handle = nullptr;
+        // Try resolving from current process
+        handle = dlopen(nullptr, RTLD_NOW | RTLD_GLOBAL);
+        if (handle) {
+            create_fn_t create_fn = (create_fn_t)dlsym(handle, "zenith_network_create_http_wrapper");
+            start_fn_t start_fn = (start_fn_t)dlsym(handle, "zenith_network_start_http_wrapper");
+            stop_fn_t stop_fn = (stop_fn_t)dlsym(handle, "zenith_network_stop_http_wrapper");
+            destroy_fn_t destroy_fn = (destroy_fn_t)dlsym(handle, "zenith_network_destroy_http_wrapper");
+            if (create_fn && start_fn && stop_fn && destroy_fn) {
+                std::string hostStr = host.toStdString();
+                std::string certStr = certEnv ? std::string(certEnv) : std::string();
+                std::string keyStr = keyEnv ? std::string(keyEnv) : std::string();
+                std::string tokenStr = token.toStdString();
+                wrapperHandle = create_fn(reinterpret_cast<void*>(&engine_), hostStr.c_str(), port, certStr.c_str(), keyStr.c_str(), tokenStr.c_str());
+                if (wrapperHandle) {
+                    if (start_fn(wrapperHandle)) {
+                        ZENITH_LOG_INFO("[MCP HTTP] Started TLS-enabled httplib wrapper on " + juce::String(host) + ":" + juce::String(port));
+                        useTls = true;
+                    } else {
+                        ZENITH_LOG_WARN("[MCP HTTP] httplib wrapper failed to start");
+                        destroy_fn(wrapperHandle);
+                        wrapperHandle = nullptr;
+                    }
+                }
+            } else {
+                ZENITH_LOG_INFO("[MCP HTTP] httplib wrapper symbols not available in binary");
+            }
+            dlclose(handle);
+        }
     }
 
     while (!shouldStop_.load()) {
@@ -221,6 +256,22 @@ void EmbeddedMCPHttpServer::runServer(int port, const juce::String &host, const 
     }
 
     try { serverSocket_->close(); } catch (...) {}
+
+    // If we started an httplib wrapper, ensure it's stopped/destroyed
+    if (wrapperHandle) {
+        void* h = dlopen(nullptr, RTLD_NOW | RTLD_GLOBAL);
+        if (h) {
+            typedef void (*stop_fn_t)(void*);
+            typedef void (*destroy_fn_t)(void*);
+            stop_fn_t stop_fn = (stop_fn_t)dlsym(h, "zenith_network_stop_http_wrapper");
+            destroy_fn_t destroy_fn = (destroy_fn_t)dlsym(h, "zenith_network_destroy_http_wrapper");
+            if (stop_fn) stop_fn(wrapperHandle);
+            if (destroy_fn) destroy_fn(wrapperHandle);
+            dlclose(h);
+        }
+        wrapperHandle = nullptr;
+    }
+
     running_.store(false);
     ZENITH_LOG_INFO("[MCP HTTP] Embedded HTTP API stopped");
 }
