@@ -10,7 +10,7 @@
 #include "engine/RecentProjectManager.h"
 #include "engine/ZenithLogger.h"
 #include "network/MCPServer.h"
-// TEMPORARILY DISABLED: #include "network/EmbeddedMCPHttpServer.h"
+#include "network/EmbeddedMCPHttpServer.h"
 #include "ui/framework/GlassmorphicPanel.h"
 #include "utils/PlatformSystemUtils.h"
 #include "commands/CommandAPI.h"
@@ -277,8 +277,8 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
           int port = atoi(mcp_port_env);
           (void)tryStartPort(port);
       } else {
-          // auto-select from 8090..8100
-          for (int p = 8090; p <= 8100; ++p) {
+          // auto-select from 49152..49162 (ephemeral/dynamic range)
+          for (int p = 49152; p <= 49162; ++p) {
               if (tryStartPort(p)) break;
           }
       }
