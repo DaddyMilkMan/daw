@@ -78,7 +78,7 @@ AGENTS = {
     'svg_viewer': {
         'name': 'SVG/UI Asset Viewer',
         'description': 'Renders and inspects SVG/Skia assets. Returns raw SVG or simple preview.',
-        'handler': lambda action, params: _render_svg_preview(params.get('svg', '')) if action in ('render', 'status') else _make_handler('SVG Viewer')(action, params)
+        'handler': lambda action, params: _render_svg_preview(params.get('svg', '')) if action in ('render', 'preview', 'status') else _make_handler('SVG Viewer')(action, params)
     },
     'ui_inspector': {
         'name': 'UI Inspector',
