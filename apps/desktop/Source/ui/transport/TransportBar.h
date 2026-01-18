@@ -76,7 +76,12 @@ public:
   }
   void setCPU(float percent) {
     cpuUsage_ = juce::jlimit(0.0f, 100.0f, percent);
-    requestRepaint();
+    // Repaint only the CPU meter area when possible to reduce flicker and improve performance
+    if (cpuMeterBounds_.getWidth() > 0 && cpuMeterBounds_.getHeight() > 0) {
+        repaint(cpuMeterBounds_.getX(), cpuMeterBounds_.getY(), cpuMeterBounds_.getWidth(), cpuMeterBounds_.getHeight());
+    } else {
+        requestRepaint();
+    }
   }
   void setPosition(double seconds) {
     position_ = seconds;
