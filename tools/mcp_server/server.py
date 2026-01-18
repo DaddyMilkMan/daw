@@ -18,8 +18,13 @@ import os
 
 # Try to import local agents implementation (tests add this directory to sys.path)
 try:
+    # Make sure local tools/mcp_server is on sys.path so relative imports work when running from repo root
+    here = os.path.dirname(__file__)
+    if here not in sys.path:
+        sys.path.insert(0, here)
     from agents import AGENTS, invoke_agent
-except Exception:
+except Exception as e:
+    print('Warning: could not import agents module:', e)
     AGENTS = {}
     def invoke_agent(name, action, params):
         return {'error': 'agents module not available'}
