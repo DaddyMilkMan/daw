@@ -79,4 +79,41 @@ private:
 } // namespace network
 } // namespace zenith
 
+
+// Expose a small C API so EmbeddedMCPHttpServer can optionally create and control the wrapper
+extern "C" {
+    void* zenith_network_create_http_wrapper(void* enginePtr, const char* host, int port, const char* cert, const char* key, const char* token) {
+        if (!enginePtr) return nullptr;
+        try {
+            Engine* e = reinterpret_cast<Engine*>(enginePtr);
+            auto* w = new zenith::network::HTTPLibServerWrapper(*e, std::string(host ? host : "127.0.0.1"), port,
+                                                                  std::string(cert ? cert : ""), std::string(key ? key : ""), std::string(token ? token : ""));
+            return reinterpret_cast<void*>(w);
+        } catch (...) {
+            return nullptr;
+        }
+    }
+
+    bool zenith_network_start_http_wrapper(void* wrapper) {
+        if (!wrapper) return false;
+        try {
+            auto* w = reinterpret_cast<zenith::network::HTTPLibServerWrapper*>(wrapper);
+            return w->start();
+        } catch (...) { return false; }
+    }
+
+    void zenith_network_stop_http_wrapper(void* wrapper) {
+        if (!wrapper) return;
+        try {
+            auto* w = reinterpret_cast<zenith::network::HTTPLibServerWrapper*>(wrapper);
+            w->stop();
+        } catch (...) {}
+    }
+
+    void zenith_network_destroy_http_wrapper(void* wrapper) {
+        if (!wrapper) return;
+        try { delete reinterpret_cast<zenith::network::HTTPLibServerWrapper*>(wrapper); } catch (...) {}
+    }
+}
+
 #endif // ENABLE_CPP_HTTP_LIB
