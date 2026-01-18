@@ -132,7 +132,10 @@ def _svg_viewer_handler(action: str, params: Dict[str, Any]):
     if action in ('rasterize', 'raster'):
         if not svg:
             return {'error': 'no_svg_provided'}
+        try:
         return _rasterize_svg_to_png(svg)
+    except Exception as e:
+        return {'error': 'rasterize_failed', 'detail': str(e)}
     return _make_handler('SVG Viewer')(action, params)
 
 
@@ -140,7 +143,10 @@ def _visual_diff_handler(action: str, params: Dict[str, Any]):
     if action == 'diff':
         return _visual_diff(params.get('before', ''), params.get('after', ''))
     if action == 'pixel_diff':
-        return _pixel_diff_svgs(params.get('before', ''), params.get('after', ''))
+        try:
+            return _pixel_diff_svgs(params.get('before', ''), params.get('after', ''))
+        except Exception as e:
+            return {'error': 'pixel_diff_failed', 'detail': str(e)}
     return _make_handler('Visual Diff')(action, params)
 
 
