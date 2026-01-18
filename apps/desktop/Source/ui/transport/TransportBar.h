@@ -76,14 +76,8 @@ public:
   }
   void setCPU(float percent) {
     cpuUsage_ = juce::jlimit(0.0f, 100.0f, percent);
-    // Repaint only the CPU meter area to avoid full-window repaints
-    if (cpuMeterBounds_.getWidth() > 0 && cpuMeterBounds_.getHeight() > 0) {
-        repaint(cpuMeterBounds_.getX(), cpuMeterBounds_.getY(),
-                cpuMeterBounds_.getWidth(), cpuMeterBounds_.getHeight());
-    } else {
-        repaint();
-    }
-}
+    requestRepaint();
+  }
   void setPosition(double seconds) {
     position_ = seconds;
     requestRepaint();
@@ -204,10 +198,6 @@ private:
         repaint();
     }
 }
-      } else {
-          repaint();
-      }
-  }
 };
 
 #else // ZENITH_USE_SKIA

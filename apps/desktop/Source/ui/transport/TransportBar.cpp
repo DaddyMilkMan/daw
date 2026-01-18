@@ -13,7 +13,7 @@
 #include "TransportBar.h"
 
 #ifndef NDEBUG
-#define TB_DEBUG(x) TB_DEBUG(x)
+#define TB_DEBUG(x) DBG(x)
 #else
 #define TB_DEBUG(x) ((void)0)
 #endif
