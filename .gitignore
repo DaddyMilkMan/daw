@@ -117,6 +117,18 @@ __pycache__/
 *.pyd
 .Python
 
+# Local Python venv for tools/mcp_server
+/tools/mcp_server/venv/
+
+# MCP runtime snapshot and generated assets
+/tools/mcp_server/engine_snapshot.json
+# Allow configuring engine snapshot path via environment, ignore user overrides
+/.mcp_engine_snapshot_override
+
+/tools/mcp_server/*.png
+/tools/mcp_server/*.wav
+/tools/mcp_server/*.log
+
 # ============================================
 # 10. Script and Patch Files
 # ============================================
