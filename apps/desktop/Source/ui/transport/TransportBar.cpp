@@ -517,7 +517,7 @@ void TransportBar::drawSkia(SkCanvas *canvas) {
                       false, design::colors::TEXT_SECONDARY, viewToggleState_);
 
   // 6. CPU Meter (Updated visual - use smoothed value)
-  drawMeter(canvas, cpuMeterBounds_, smoothedCpu_ / 100.0f, "CPU");
+  drawMeter(canvas, cpuMeterBounds_, juce::jlimit(0.0f, 1.0f, smoothedCpu_ / 100.0f), "CPU");
 }
 
 void TransportBar::updateCachedPaints(const SkRect &bounds) {
