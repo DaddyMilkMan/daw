@@ -19,6 +19,11 @@
 #include <random>
 #include <algorithm>
 
+// Fix for Linux build
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 namespace zenith {
 
 using namespace design;
@@ -58,9 +63,9 @@ static const std::map<juce::String, SkPath (*)()> kGenreIconMap = {
     {"metal", &icons::Waveform}};
 
 static const std::map<juce::String, SkPath (*)()> kTemplateIconMap = {
-    {"icon_synth", &icons::Synth},
-    {"icon_note", &icons::MusicNote},
-    {"icon_mic", &icons::Microphone}};
+    {"icon_synth", &icons::ElectronicTemplate},
+    {"icon_note", &icons::OrchestralTemplate},
+    {"icon_mic", &icons::RecordingTemplate}};
 
 ZenithHubComponent::ZenithHubComponent(
     RecentProjectManager &recentProjectManager,
@@ -112,10 +117,10 @@ ZenithHubComponent::ZenithHubComponent(
   subPaint_.setAntiAlias(true);
   subPaint_.setColor(withAlpha(colors::TEXT_PRIMARY, 0.6f));
 
-  // Initialize Greeting Editor with robust SkiaTextInput
-  greetingEditor_ = std::make_unique<SkiaTextInput>();
-  greetingEditor_->setPillShape(true);
-  greetingEditor_->setFontSize(18.0f);
+  // Initialize Greeting Editor with robust SkiaTextEditor
+  greetingEditor_ = std::make_unique<SkiaTextEditor>();
+  greetingEditor_->setPillStyle(true);
+  greetingEditor_->setFont(design::getSkFont(18.0f));
   greetingEditor_->setVisible(false);
   addChildComponent(greetingEditor_.get());
 
@@ -124,14 +129,13 @@ ZenithHubComponent::ZenithHubComponent(
   // FIX: Save on focus lost so clicking away commits the change
   auto commitDismiss = [this](const auto&) { hideGreetingEditor(true); };
 
-  // SkiaTextInput passes FocusChangeType to focusLost, we adapt it
   greetingEditor_->onEscapeKey = safeDismiss;
-  greetingEditor_->onFocusLostCallback = [this]() { hideGreetingEditor(true); };
+  greetingEditor_->onFocusLost = [this]() { hideGreetingEditor(true); };
   
   greetingEditor_->onReturnKey = [this]() { hideGreetingEditor(true); };
   
-  greetingEditor_->onTextChanged = [this](const juce::String& text) {
-      greetingText_ = text;
+  greetingEditor_->onTextChange = [this]() {
+      greetingText_ = greetingEditor_->getText();
       repaint();
   };
 
@@ -976,8 +980,8 @@ void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
               if (auth) {
                   auth->loginWithWeb([](bool success, juce::String error) {
                       if (!success && error.isNotEmpty()) {
-                          juce::NativeMessageBox::showMessageBoxAsync(
-                              juce::MessageBoxIconType::WarningIcon,
+                          SkiaAlertWindow::showMessageBoxAsync(
+                              SkiaAlertWindow::IconType::WarningIcon,
                               "Login Failed",
                               "Could not sign in: " + error
                           );
@@ -991,8 +995,8 @@ void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
               if (auth) {
                   auth->signupWithWeb([](bool success, juce::String error) {
                       if (!success && error.isNotEmpty()) {
-                          juce::NativeMessageBox::showMessageBoxAsync(
-                              juce::MessageBoxIconType::WarningIcon,
+                          SkiaAlertWindow::showMessageBoxAsync(
+                              SkiaAlertWindow::IconType::WarningIcon,
                               "Signup Failed",
                               "Could not create account: " + error
                           );

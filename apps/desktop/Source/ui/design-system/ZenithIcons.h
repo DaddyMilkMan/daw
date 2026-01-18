@@ -774,6 +774,123 @@ inline SkPath EyeOff() {
 // HUB ICONS
 // ============================================================================
 
+/**
+ * ElectronicTemplate - Synthesizer with keyboard and sound waves
+ * Represents electronic music production, synth-heavy templates
+ */
+inline SkPath ElectronicTemplate() {
+  SkPath path;
+  
+  // Synth body (rounded rectangle with keyboard)
+  SkRect body = SkRect::MakeLTRB(4.0f, 6.0f, 20.0f, 14.0f);
+  SkRRect bodyRect = SkRRect::MakeRectXY(body, 3.0f, 3.0f);
+  path.addRRect(bodyRect);
+  
+  // White keys (4 rows x 7 columns)
+  float keyW = 1.8f;
+  float keyH = 1.5f;
+  float gapX = 0.4f;
+  float gapY = 0.3f;
+  float startY = 10.0f;
+  
+  for (int row = 0; row < 4; ++row) {
+    for (int col = 0; col < 7; ++col) {
+      float kx = 5.5f + (col * (keyW + gapX));
+      float ky = startY + (row * (keyH + gapY));
+      SkRect key = SkRect::MakeLTRB(kx, ky, kx + keyW, ky + keyH);
+      path.addRect(key);
+    }
+  }
+  
+  // Sound waves (3 stylized curves)
+  SkPath wave1;
+  wave1.moveTo(6.0f, 3.0f);
+  wave1.cubicTo(7.0f, 1.0f, 9.0f, 1.5f, 11.0f, 2.5f);
+  path.addPath(wave1);
+  
+  SkPath wave2;
+  wave2.moveTo(8.0f, 4.5f);
+  wave2.cubicTo(9.0f, 3.0f, 11.0f, 4.0f, 13.0f, 4.5f);
+  path.addPath(wave2);
+  
+  SkPath wave3;
+  wave3.moveTo(10.0f, 5.5f);
+  wave3.cubicTo(11.0f, 5.0f, 13.0f, 5.2f, 14.5f, 5.5f);
+  path.addPath(wave3);
+  
+  return path;
+}
+
+/**
+ * OrchestralTemplate - Conductor's baton with music notes
+ * Represents orchestral, cinematic, classical music templates
+ */
+inline SkPath OrchestralTemplate() {
+  SkPath path;
+  
+  // Baton stick (angled)
+  path.moveTo(10.5f, 19.0f);
+  path.lineTo(13.5f, 4.0f);
+  
+  // Baton head (circle)
+  SkRect head = SkRect::MakeLTRB(12.0f, 3.0f, 16.0f, 5.0f);
+  path.addOval(head);
+  
+  // First music note (eighth note - left)
+  path.moveTo(5.0f, 9.0f);
+  path.addCircle(5.0f, 8.5f, 2.0f);
+  path.moveTo(7.0f, 8.0f);
+  path.lineTo(9.5f, 8.0f);
+  path.lineTo(9.5f, 12.0f);
+  path.lineTo(7.0f, 12.0f);
+  path.lineTo(7.0f, 9.0f);
+  
+  // Second music note (quarter note - right)
+  path.moveTo(17.5f, 10.0f);
+  path.addCircle(17.5f, 9.5f, 2.0f);
+  path.moveTo(19.5f, 9.5f);
+  path.lineTo(20.0f, 9.5f);
+  path.lineTo(20.0f, 14.0f);
+  path.lineTo(19.5f, 14.0f);
+  path.lineTo(19.5f, 10.5f);
+  
+  return path;
+}
+
+/**
+ * RecordingTemplate - Microphone with recording indicator
+ * Represents vocal recording, podcast, acoustic templates
+ */
+inline SkPath RecordingTemplate() {
+  SkPath path;
+  
+  // Microphone body (capsule shape)
+  SkRect body = SkRect::MakeLTRB(6.0f, 5.0f, 18.0f, 14.0f);
+  SkRRect micRect = SkRRect::MakeRectXY(body, 4.0f, 4.0f);
+  path.addRRect(micRect);
+  
+  // Microphone grille (horizontal lines)
+  float grilleY = 9.5f;
+  float grilleW = 10.0f;
+  float grilleX = 7.0f;
+  
+  for (int i = 0; i < 5; ++i) {
+    float lineX = grilleX + (i * 2.2f);
+    path.moveTo(lineX, grilleY - 2.2f);
+    path.lineTo(lineX, grilleY + 2.2f);
+  }
+  
+  // Recording indicator (red circle with pulsing dot)
+  SkRect indicator = SkRect::MakeLTRB(16.5f, 5.5f, 20.5f, 9.5f);
+  path.addOval(indicator);
+  
+  // Recording dot (white)
+  SkRect dot = SkRect::MakeLTRB(17.8f, 6.8f, 19.2f, 8.2f);
+  path.addOval(dot);
+  
+  return path;
+}
+
 /** Project - Folder with a project indicator */
 inline SkPath Project() {
   SkPath path;
@@ -892,17 +1009,11 @@ inline SkPath Info() {
 /** Users - Two people silhouettes */
 inline SkPath Users() {
   SkPath path;
-  // Front person - head
-  path.addCircle(10.0f, 8.0f, 3.0f);
-  // Front person - body
-  path.moveTo(4.0f, 20.0f);
-  path.cubicTo(4.0f, 15.0f, 7.0f, 13.0f, 10.0f, 13.0f);
-  path.cubicTo(13.0f, 13.0f, 16.0f, 15.0f, 16.0f, 20.0f);
-  // Back person - head (offset right)
-  path.addCircle(16.0f, 7.0f, 2.5f);
-  // Back person - body (partial, behind first)
-  path.moveTo(19.0f, 18.0f);
-  path.cubicTo(19.0f, 14.0f, 17.0f, 12.0f, 15.0f, 11.5f);
+  // Two people silhouettes (simplified)
+  path.addCircle(8.0f, 8.0f, 3.0f);
+  path.addCircle(16.0f, 8.0f, 3.0f);
+  path.addArc(SkRect::MakeLTRB(4.0f, 12.0f, 12.0f, 20.0f), 180.0f, 180.0f);
+  path.addArc(SkRect::MakeLTRB(12.0f, 12.0f, 20.0f, 20.0f), 180.0f, 180.0f);
   return path;
 }
 
@@ -1185,6 +1296,10 @@ inline void drawIconButton(SkCanvas *canvas, const SkPath &icon,
 
   drawIconCentered(canvas, icon, bounds, iconSize, style);
 }
+
+// Aliases for Wingman (commented to fix redefinition)
+// inline SkPath History() { return Undo(); }
+// inline SkPath Lightbulb() { return Brain(); }
 
 } // namespace icons
 } // namespace zenith
