@@ -793,10 +793,9 @@ inline SkPath ElectronicTemplate() {
   path.addRect(k2);
   path.addRect(k3);
   
-  // Single sound wave (one smooth curve)
+  // Single sound wave (simple curve)
   path.moveTo(6.0f, 5.0f);
-  path.cubicTo(9.0f, 2.0f, 13.0f, 4.0f);
-  path.cubicTo(17.0f, 6.0f, 18.0f, 5.0f);
+  path.lineTo(12.0f, 3.0f);
   
   return path;
 }

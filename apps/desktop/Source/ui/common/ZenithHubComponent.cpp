@@ -52,7 +52,7 @@ public:
   }
 };
 
-static PillTextEditorLookAndFeel pillTextEditorLookAndFeel;
+// static PillTextEditorLookAndFeel pillTextEditorLookAndFeel;
 
 static const std::map<juce::String, SkPath (*)()> kGenreIconMap = {
     {"electronic", &icons::Synth},    {"techno", &icons::Synth},
