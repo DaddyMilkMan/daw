@@ -1,0 +1,6266 @@
+[
+  {
+    "issue_number": 0,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:macos"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 1,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 2,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:midi"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 3,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 4,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 5,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 6,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 7,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:build",
+      "component:ui",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 8,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 9,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 10,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 11,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 12,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 13,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui",
+      "platform:macos"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 14,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 15,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 16,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 17,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 18,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "platform:linux"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 19,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 20,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 21,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 22,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 23,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 24,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 25,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 26,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 27,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 28,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 29,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 30,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 31,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 32,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 33,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 34,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "platform:linux"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 35,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:build",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 36,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 37,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 38,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "platform:macos"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 39,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 40,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 41,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:midi"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 42,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 43,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 44,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 45,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:macos"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 46,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 47,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 48,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 49,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 50,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:build",
+      "platform:macos"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 51,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 52,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 53,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 54,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 55,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 56,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 57,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 58,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:midi",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 59,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "platform:macos"
+    ],
+    "assignees": [
+      "platform_expert"
+    ]
+  },
+  {
+    "issue_number": 60,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 61,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "component:collaboration",
+      "platform:windows"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 62,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 63,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:audio"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 64,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 65,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui",
+      "platform:windows"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 66,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 67,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 68,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 69,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 70,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 71,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 72,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 73,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 74,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:collaboration",
+      "component:ui",
+      "platform:macos"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 75,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 76,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 77,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 78,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "component:build",
+      "platform:linux"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 79,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:midi",
+      "platform:linux"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 80,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "platform:macos"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 81,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:midi"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 82,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 83,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 84,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "platform:linux"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 85,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "platform:windows"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 86,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 87,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:midi",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 88,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 89,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "platform:windows"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 90,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 91,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:midi",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 92,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 93,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 94,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 95,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 96,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "platform:macos"
+    ],
+    "assignees": [
+      "platform_expert"
+    ]
+  },
+  {
+    "issue_number": 97,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build"
+    ],
+    "assignees": [
+      "platform_expert"
+    ]
+  },
+  {
+    "issue_number": 98,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 99,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "platform:windows"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 100,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 101,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 102,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 103,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 104,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 105,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:plugin"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 106,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "component:ui",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 107,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui",
+      "platform:windows"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 108,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "platform:macos"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 109,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "platform:linux"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 110,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:ui",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 111,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 112,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 113,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:audio"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 114,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 115,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 116,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "platform:linux"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 117,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 118,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 119,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:ui",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 120,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 121,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "platform:windows"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 122,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:macos"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 123,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 124,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 125,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:collaboration",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 126,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:plugin",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 127,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 128,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "platform:windows"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 129,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:build",
+      "component:ui",
+      "platform:macos"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 130,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 131,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 132,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 133,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:collaboration",
+      "component:ui",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 134,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 135,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "component:ui",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 136,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:midi"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 137,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 138,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 139,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 140,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 141,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 142,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 143,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "platform:windows"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 144,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 145,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 146,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 147,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 148,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 149,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 150,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 151,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:build",
+      "component:ui",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 152,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 153,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 154,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 155,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "platform:windows"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 156,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 157,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 158,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "component:build",
+      "platform:windows"
+    ],
+    "assignees": [
+      "platform_expert"
+    ]
+  },
+  {
+    "issue_number": 159,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 160,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 161,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 162,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 163,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 164,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "platform:windows"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 165,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 166,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 167,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 168,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:midi"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 169,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 170,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 171,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 172,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 173,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:midi",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 174,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 175,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 176,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:plugin"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 177,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:macos"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 178,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:audio",
+      "platform:windows"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 179,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 180,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 181,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 182,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 183,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 184,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 185,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 186,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 187,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 188,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 189,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "platform:macos"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 190,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 191,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:linux"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 192,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 193,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 194,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "component:ui",
+      "platform:macos"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 195,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 196,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 197,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 198,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build"
+    ],
+    "assignees": [
+      "platform_expert"
+    ]
+  },
+  {
+    "issue_number": 199,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "platform:windows"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 200,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 201,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 202,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 203,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 204,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 205,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "platform:macos"
+    ],
+    "assignees": [
+      "platform_expert"
+    ]
+  },
+  {
+    "issue_number": 206,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 207,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 208,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 209,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 210,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 211,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "platform:linux"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 212,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 213,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 214,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 215,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 216,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 217,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 218,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "platform:macos"
+    ],
+    "assignees": [
+      "platform_expert"
+    ]
+  },
+  {
+    "issue_number": 219,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 220,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "platform:linux"
+    ],
+    "assignees": [
+      "platform_expert"
+    ]
+  },
+  {
+    "issue_number": 221,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 222,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 223,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 224,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:ui",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 225,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 226,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 227,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 228,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 229,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 230,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "platform:windows"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 231,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "component:build",
+      "component:ui",
+      "platform:linux"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 232,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:midi",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 233,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 234,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:collaboration",
+      "platform:macos"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 235,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "platform:linux"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 236,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 237,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 238,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:plugin",
+      "component:ui",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 239,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 240,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 241,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 242,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 243,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 244,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 245,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "platform:linux"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 246,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 247,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 248,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 249,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 250,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 251,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build"
+    ],
+    "assignees": [
+      "platform_expert"
+    ]
+  },
+  {
+    "issue_number": 252,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 253,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:audio"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 254,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 255,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:midi",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 256,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 257,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:plugin"
+    ],
+    "assignees": [
+      "platform_expert"
+    ]
+  },
+  {
+    "issue_number": 258,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:macos"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 259,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 260,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 261,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "platform:windows"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 262,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 263,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 264,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 265,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 266,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 267,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 268,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 269,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "platform:windows"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 270,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 271,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 272,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 273,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "platform:macos"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 274,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 275,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 276,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 277,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 278,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 279,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 280,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 281,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 282,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 283,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 284,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "platform:linux"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 285,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "platform:macos"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 286,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 287,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 288,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 289,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 290,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 291,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 292,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "component:midi",
+      "platform:windows"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 293,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 294,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 295,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 296,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 297,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 298,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 299,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 300,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 301,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 302,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 303,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 304,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 305,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 306,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 307,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 308,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:collaboration",
+      "platform:macos"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 309,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 310,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 311,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 312,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 313,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 314,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 315,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:collaboration",
+      "platform:linux"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 316,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 317,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 318,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 319,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 320,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 321,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 322,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:build",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 323,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 324,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 325,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:collaboration",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 326,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 327,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:midi"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 328,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 329,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 330,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "component:ui",
+      "platform:windows"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 331,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 332,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 333,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "platform:linux"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 334,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:midi",
+      "platform:linux"
+    ],
+    "assignees": [
+      "platform_expert"
+    ]
+  },
+  {
+    "issue_number": 335,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui",
+      "platform:macos"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 336,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 337,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 338,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "component:ui",
+      "platform:linux"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 339,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:midi",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 340,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 341,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 342,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 343,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 344,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 345,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:collaboration",
+      "component:ui"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 346,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 347,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "platform:linux"
+    ],
+    "assignees": [
+      "platform_expert"
+    ]
+  },
+  {
+    "issue_number": 348,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "platform:macos"
+    ],
+    "assignees": [
+      "platform_expert"
+    ]
+  },
+  {
+    "issue_number": 349,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 350,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:midi",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 351,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 352,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 353,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 354,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 355,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 356,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 357,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 358,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 359,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 360,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 361,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 362,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:macos"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 363,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 364,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 365,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:audio",
+      "platform:linux"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 366,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 367,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 368,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 369,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "platform:windows"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 370,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 371,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 372,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 373,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build"
+    ],
+    "assignees": [
+      "platform_expert"
+    ]
+  },
+  {
+    "issue_number": 374,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 375,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 376,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build"
+    ],
+    "assignees": [
+      "platform_expert"
+    ]
+  },
+  {
+    "issue_number": 377,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 378,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 379,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "platform:windows"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 380,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 381,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 382,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 383,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 384,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:macos"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 385,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "platform:macos"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 386,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 387,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 388,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 389,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 390,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:midi",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 391,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "platform:windows"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 392,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:audio",
+      "component:plugin"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 393,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui",
+      "platform:macos"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 394,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 395,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 396,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "platform:linux"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 397,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 398,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 399,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:audio",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 400,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 401,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 402,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 403,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 404,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui",
+      "platform:macos"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 405,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:midi"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 406,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 407,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 408,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 409,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 410,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build"
+    ],
+    "assignees": [
+      "platform_expert"
+    ]
+  },
+  {
+    "issue_number": 411,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 412,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 413,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 414,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 415,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 416,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 417,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:plugin",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 418,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:build"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 419,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 420,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 421,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 422,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 423,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 424,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "platform:windows"
+    ],
+    "assignees": [
+      "platform_expert"
+    ]
+  },
+  {
+    "issue_number": 425,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 426,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 427,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 428,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 429,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 430,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 431,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "platform:windows"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 432,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 433,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 434,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 435,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 436,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 437,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 438,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 439,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 440,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:midi"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 441,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "platform:windows"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 442,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 443,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:collaboration",
+      "component:ui"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 444,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "platform:windows"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 445,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 446,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 447,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 448,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 449,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 450,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 451,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 452,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 453,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 454,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui",
+      "platform:macos"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 455,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:ui"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 456,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:midi",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 457,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 458,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 459,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 460,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 461,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 462,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 463,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 464,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 465,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 466,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "component:build",
+      "component:ui",
+      "platform:macos"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 467,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 468,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:build",
+      "component:midi",
+      "platform:macos"
+    ],
+    "assignees": [
+      "platform_expert"
+    ]
+  },
+  {
+    "issue_number": 469,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 470,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:windows"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 471,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "component:ui"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 472,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "component:plugin"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 473,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 474,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 475,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui",
+      "platform:macos"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 476,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:linux"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 477,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 478,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 479,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 480,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 481,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 482,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 483,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 484,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:linux"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 485,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 486,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "platform:linux"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 487,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai"
+    ],
+    "assignees": [
+      "ai_expert"
+    ]
+  },
+  {
+    "issue_number": 488,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ai",
+      "component:build",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 489,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 490,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 491,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 492,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui",
+      "platform:macos"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 493,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:ui"
+    ],
+    "assignees": [
+      "ui_expert"
+    ]
+  },
+  {
+    "issue_number": 494,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration",
+      "platform:macos"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 495,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:collaboration"
+    ],
+    "assignees": [
+      "network_expert"
+    ]
+  },
+  {
+    "issue_number": 496,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:audio",
+      "component:build",
+      "platform:macos"
+    ],
+    "assignees": [
+      "audio_expert"
+    ]
+  },
+  {
+    "issue_number": 497,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 498,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug",
+      "component:plugin",
+      "platform:windows"
+    ],
+    "assignees": []
+  },
+  {
+    "issue_number": 499,
+    "type": "bug",
+    "priority": "P0",
+    "labels": [
+      "P0",
+      "bug"
+    ],
+    "assignees": []
+  }
+]
