@@ -57,6 +57,36 @@ constexpr int kMaxPluginNameLength = 12;
 } // namespace
 
 //==============================================================================
+// Accessibility Handler
+//==============================================================================
+
+class MixerChannelAccessibilityHandler : public juce::AccessibilityHandler {
+public:
+  MixerChannelAccessibilityHandler(MixerChannelComponent &component)
+      : AccessibilityHandler(component, juce::AccessibilityRole::group),
+        owner(component) {
+    addAction(juce::AccessibilityActionType::focus,
+              [this]() { owner.grabKeyboardFocus(); });
+  }
+
+  juce::String getTitle() const override {
+    if (auto *track = owner.getTrack())
+      return track->getName();
+    return "Unassigned Channel";
+  }
+
+  juce::String getDescription() const override {
+    if (owner.getTrack())
+      return "Mixer Channel Strip. Use Left/Right to navigate, M to mute, S to "
+             "solo.";
+    return "";
+  }
+
+private:
+  MixerChannelComponent &owner;
+};
+
+//==============================================================================
 // MixerChannelComponent Implementation
 //==============================================================================
 
@@ -1017,24 +1047,9 @@ bool MixerChannelComponent::keyPressed(const juce::KeyPress& key, juce::Componen
   return false;
 }
 
-std::unique_ptr<juce::AccessibilityHandler> MixerChannelComponent::createAccessibilityHandler() {
-  auto handler = std::make_unique<juce::AccessibilityHandler>(
-    *this,
-    juce::AccessibilityRole::group,
-    juce::AccessibilityActions()
-      .addAction(juce::AccessibilityActionType::focus, [this]() { grabKeyboardFocus(); })
-  );
-  
-  if (track_) {
-    // TODO: JUCE AccessibilityHandler doesn't have setTitle/setDescription
-    // These need to be set through proper accessibility configuration
-    // handler->setTitle(track_->getName());
-    // handler->setDescription("Mixer Channel Strip. Use Left/Right to navigate, M to mute, S to solo.");
-  } else {
-    // handler->setTitle("Unassigned Channel");
-  }
-  
-  return handler;
+std::unique_ptr<juce::AccessibilityHandler>
+MixerChannelComponent::createAccessibilityHandler() {
+  return std::make_unique<MixerChannelAccessibilityHandler>(*this);
 }
 
 void MixerChannelComponent::SendIndicator::drawSkia(SkCanvas *canvas) {
