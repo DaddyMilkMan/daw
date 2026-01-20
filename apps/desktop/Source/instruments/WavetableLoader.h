@@ -112,6 +112,12 @@ private:
       Used for single-cycle waveforms that aren't exactly 2048 samples.
   */
   std::vector<float> resampleToFrameSize(const float *data, int numSamples);
+
+  /**
+      Resample audio data to match wavetable frame size.
+      Writes directly to output buffer to avoid allocation.
+  */
+  void resampleToFrameSize(const float *data, float *dst, int numSamples);
 };
 
 } // namespace zenith

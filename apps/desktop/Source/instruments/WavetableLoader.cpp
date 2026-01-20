@@ -150,14 +150,7 @@ WavetableLoadResult WavetableLoader::loadWtFile(const juce::File &file) {
       wavetable->setFrameData(i, frameBuffer.data());
     } else {
       // Resample to WAVETABLE_FRAME_SIZE
-      for (int j = 0; j < WAVETABLE_FRAME_SIZE; ++j) {
-        float srcPos = static_cast<float>(j) / WAVETABLE_FRAME_SIZE * frameSize;
-        int idx0 = static_cast<int>(srcPos) % frameSize;
-        int idx1 = (idx0 + 1) % frameSize;
-        float frac = srcPos - std::floor(srcPos);
-        resampledBuffer[j] =
-            frameBuffer[idx0] * (1.0f - frac) + frameBuffer[idx1] * frac;
-      }
+      resampleToFrameSize(frameBuffer.data(), resampledBuffer.data(), frameSize);
       wavetable->setFrameData(i, resampledBuffer.data());
     }
   }
@@ -186,15 +179,7 @@ WavetableLoadResult WavetableLoader::loadFromBuffer(const float *data,
     std::vector<float> resampledBuffer(WAVETABLE_FRAME_SIZE);
     for (int i = 0; i < numFrames; ++i) {
       const float *frameData = data + (i * samplesPerFrame);
-      for (int j = 0; j < WAVETABLE_FRAME_SIZE; ++j) {
-        float srcPos =
-            static_cast<float>(j) / WAVETABLE_FRAME_SIZE * samplesPerFrame;
-        int idx0 = static_cast<int>(srcPos) % samplesPerFrame;
-        int idx1 = (idx0 + 1) % samplesPerFrame;
-        float frac = srcPos - std::floor(srcPos);
-        resampledBuffer[j] =
-            frameData[idx0] * (1.0f - frac) + frameData[idx1] * frac;
-      }
+      resampleToFrameSize(frameData, resampledBuffer.data(), samplesPerFrame);
       wavetable->setFrameData(i, resampledBuffer.data());
     }
   }
@@ -373,16 +358,19 @@ void WavetableLoader::setContentDirectory(const juce::File &path) {
 std::vector<float> WavetableLoader::resampleToFrameSize(const float *data,
                                                         int numSamples) {
   std::vector<float> result(WAVETABLE_FRAME_SIZE);
+  resampleToFrameSize(data, result.data(), numSamples);
+  return result;
+}
 
+void WavetableLoader::resampleToFrameSize(const float *data, float *dst,
+                                          int numSamples) {
   for (int i = 0; i < WAVETABLE_FRAME_SIZE; ++i) {
     float srcPos = static_cast<float>(i) / WAVETABLE_FRAME_SIZE * numSamples;
     int idx0 = static_cast<int>(srcPos) % numSamples;
     int idx1 = (idx0 + 1) % numSamples;
     float frac = srcPos - std::floor(srcPos);
-    result[i] = data[idx0] * (1.0f - frac) + data[idx1] * frac;
+    dst[i] = data[idx0] * (1.0f - frac) + data[idx1] * frac;
   }
-
-  return result;
 }
 
 } // namespace zenith
