@@ -178,6 +178,7 @@ void CollaborationManager::run() {
     int senderPort;
     int bytes = p2pSocket.read(decryptedBuffer, sizeof(decryptedBuffer), senderIP, senderPort);
     if (bytes > 0) {
+        // Update timestamp on any packet (KeepAlive or Data) to maintain connection
         lastPeerResponseTime = juce::Time::currentTimeMillis();
         handleIncomingPacket(decryptedBuffer, bytes, senderIP, senderPort);
     }
