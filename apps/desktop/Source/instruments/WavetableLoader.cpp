@@ -12,6 +12,7 @@
 
 #include "WavetableLoader.h"
 #include <cmath>
+#include <vector>
 
 namespace zenith {
 
@@ -192,72 +193,107 @@ WavetableLoader::generateBasicWavetable(int type, int numFrames) {
   auto wavetable = std::make_unique<Wavetable>(numFrames);
   std::vector<float> frame(WAVETABLE_FRAME_SIZE);
 
+  // Hoist PWM vectors to avoid re-allocation in loop
+  std::vector<float> pwmX, pwmY;
+
   for (int f = 0; f < numFrames; ++f) {
     float morphAmount =
         (numFrames > 1) ? static_cast<float>(f) / (numFrames - 1) : 0.0f;
+
+    // Precompute coefficients for PWM to hoist math out of the sample loop
+    if (type == 4) {
+      int maxHarmonic = 32;
+      if (pwmX.size() != static_cast<size_t>(maxHarmonic + 1)) {
+        pwmX.resize(static_cast<size_t>(maxHarmonic + 1));
+        pwmY.resize(static_cast<size_t>(maxHarmonic + 1));
+      }
+      float pw = 0.1f + morphAmount * 0.8f;
+
+      for (int h = 1; h <= maxHarmonic; ++h) {
+        float b = h * pw * juce::MathConstants<float>::pi;
+        float term = 2.0f / (h * juce::MathConstants<float>::pi) * std::sin(b);
+        pwmX[static_cast<size_t>(h)] = term * std::cos(b);
+        pwmY[static_cast<size_t>(h)] = term * std::sin(b);
+      }
+    }
 
     for (int i = 0; i < WAVETABLE_FRAME_SIZE; ++i) {
       float phase = static_cast<float>(i) / WAVETABLE_FRAME_SIZE;
       float sample = 0.0f;
 
-      switch (type) {
-      case 0: // Sine
+      // Common recurrence setup for additive types
+      if (type >= 1 && type <= 4) {
+        float angle = phase * juce::MathConstants<float>::twoPi;
+        float s1 = std::sin(angle);
+        float c1 = std::cos(angle);
+        float currentSin = s1;
+        float currentCos = c1;
+
+        if (type == 1) { // Saw
+          int maxHarmonic = 64;
+          sample += currentSin;
+          for (int h = 2; h <= maxHarmonic; ++h) {
+            float nextSin = currentSin * c1 + currentCos * s1;
+            float nextCos = currentCos * c1 - currentSin * s1;
+            currentSin = nextSin;
+            currentCos = nextCos;
+            sample += currentSin / static_cast<float>(h);
+          }
+          sample *= 0.5f;
+        } else if (type == 2) { // Square
+          int maxHarmonic = 32;
+          sample += currentSin;
+
+          // Step 2 recurrence
+          float angle2 = 2.0f * angle;
+          float s2 = std::sin(angle2);
+          float c2 = std::cos(angle2);
+
+          for (int h = 3; h <= maxHarmonic; h += 2) {
+            float nextSin = currentSin * c2 + currentCos * s2;
+            float nextCos = currentCos * c2 - currentSin * s2;
+            currentSin = nextSin;
+            currentCos = nextCos;
+            sample += currentSin / static_cast<float>(h);
+          }
+          sample *= 0.6f;
+        } else if (type == 3) { // Triangle
+          int maxHarmonic = 32;
+          sample += currentSin;
+          int sign = -1;
+
+          // Step 2 recurrence
+          float angle2 = 2.0f * angle;
+          float s2 = std::sin(angle2);
+          float c2 = std::cos(angle2);
+
+          for (int h = 3; h <= maxHarmonic; h += 2) {
+            float nextSin = currentSin * c2 + currentCos * s2;
+            float nextCos = currentCos * c2 - currentSin * s2;
+            currentSin = nextSin;
+            currentCos = nextCos;
+            sample += sign * currentSin / static_cast<float>(h * h);
+            sign = -sign;
+          }
+          sample *= 0.8f;
+        } else if (type == 4) { // PWM
+          int maxHarmonic = 32;
+          // h=1
+          sample += pwmX[1] * currentCos + pwmY[1] * currentSin;
+
+          for (int h = 2; h <= maxHarmonic; ++h) {
+            float nextSin = currentSin * c1 + currentCos * s1;
+            float nextCos = currentCos * c1 - currentSin * s1;
+            currentSin = nextSin;
+            currentCos = nextCos;
+            sample += pwmX[static_cast<size_t>(h)] * currentCos +
+                      pwmY[static_cast<size_t>(h)] * currentSin;
+          }
+          sample *= 0.6f;
+        }
+      } else if (type == 0) { // Sine
         sample = std::sin(phase * juce::MathConstants<float>::twoPi);
-        break;
-
-      case 1: // Saw (additive, band-limited-ish)
-      {
-        int maxHarmonic = 64;
-        for (int h = 1; h <= maxHarmonic; ++h) {
-          sample += std::sin(h * phase * juce::MathConstants<float>::twoPi) / h;
-        }
-        sample *= 0.5f;
-        break;
-      }
-
-      case 2: // Square (odd harmonics only)
-      {
-        int maxHarmonic = 32;
-        for (int h = 1; h <= maxHarmonic; h += 2) {
-          sample += std::sin(h * phase * juce::MathConstants<float>::twoPi) / h;
-        }
-        sample *= 0.6f;
-        break;
-      }
-
-      case 3: // Triangle
-      {
-        int maxHarmonic = 32;
-        int sign = 1;
-        for (int h = 1; h <= maxHarmonic; h += 2) {
-          sample += sign *
-                    std::sin(h * phase * juce::MathConstants<float>::twoPi) /
-                    (h * h);
-          sign = -sign;
-        }
-        sample *= 0.8f;
-        break;
-      }
-
-      case 4: // PWM (morph controls pulse width) - Band-limited
-      {
-        float pw = 0.1f + morphAmount * 0.8f; // 10% to 90%
-        // Additive synthesis for band-limited PWM
-        int maxHarmonic = 32;
-        for (int h = 1; h <= maxHarmonic; ++h) {
-          float harmPhase = h * phase * juce::MathConstants<float>::twoPi;
-          // Fourier series for pulse wave with variable width
-          float coeff = 2.0f / (h * juce::MathConstants<float>::pi);
-          sample +=
-              coeff * std::sin(h * pw * juce::MathConstants<float>::pi) *
-              std::cos(harmPhase - h * pw * juce::MathConstants<float>::pi);
-        }
-        sample *= 0.6f;
-        break;
-      }
-
-      case 5: // Formant morph (basic vowel-ish)
-      {
+      } else if (type == 5) { // Formant morph (basic vowel-ish)
         // Mix of harmonics emphasizing different formants
         float f1 = 3.0f + morphAmount * 5.0f;  // Formant 1: 3-8
         float f2 = 8.0f + morphAmount * 12.0f; // Formant 2: 8-20
@@ -267,10 +303,7 @@ WavetableLoader::generateBasicWavetable(int type, int numFrames) {
         sample +=
             0.3f * std::sin(f2 * phase * juce::MathConstants<float>::twoPi);
         sample *= 0.5f;
-        break;
-      }
-
-      default:
+      } else {
         sample = std::sin(phase * juce::MathConstants<float>::twoPi);
       }
 
