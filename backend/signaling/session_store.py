@@ -1,6 +1,7 @@
 import random
 import threading
 import time
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Dict, Optional, Tuple
 
@@ -18,7 +19,7 @@ class SessionStore:
 
     def __init__(self, ttl: int = 300) -> None:
         self._ttl = ttl
-        self._sessions: Dict[str, SessionEntry] = {}
+        self._sessions: OrderedDict[str, SessionEntry] = OrderedDict()
         self._lock = threading.RLock()
 
     def create_session(self) -> str:
@@ -34,6 +35,7 @@ class SessionStore:
                 return False
             session.host = addr
             session.timestamp = time.time()
+            self._sessions.move_to_end(code)
             return True
 
     def get_host(self, code: str) -> Optional[Address]:
@@ -42,6 +44,7 @@ class SessionStore:
             if session is None:
                 return None
             session.timestamp = time.time()
+            self._sessions.move_to_end(code)
             return session.host
 
     def has_code(self, code: str) -> bool:
@@ -51,10 +54,16 @@ class SessionStore:
     def cleanup(self) -> int:
         with self._lock:
             now = time.time()
-            expired = [k for k, v in self._sessions.items() if now - v.timestamp > self._ttl]
-            for code in expired:
-                self._sessions.pop(code, None)
-            return len(expired)
+            expired_count = 0
+            while self._sessions:
+                code = next(iter(self._sessions))
+                session = self._sessions[code]
+                if now - session.timestamp > self._ttl:
+                    self._sessions.popitem(last=False)
+                    expired_count += 1
+                else:
+                    break
+            return expired_count
 
     def _generate_code(self) -> str:
         while True:

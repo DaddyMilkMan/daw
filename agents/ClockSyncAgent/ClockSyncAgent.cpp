@@ -91,8 +91,8 @@ ClockSyncAgent::SyncStatus ClockSyncAgent::getSyncStatus() const {
   auto drift = driftCompensation_.load(std::memory_order_acquire);
   status.driftPPM = (drift - 1.0) * 1.0e6;
   
-  // TODO: Calculate actual network latency
-  status.latencyMs = 0.0;
+  // Calculate actual network latency
+  status.latencyMs = latencyMs_.load(std::memory_order_acquire);
   
   return status;
 }
@@ -105,6 +105,33 @@ void ClockSyncAgent::resynchronize() {
 
 void ClockSyncAgent::setDriftCompensationEnabled(bool enabled) {
   driftCompensationEnabled_.store(enabled, std::memory_order_release);
+}
+
+void ClockSyncAgent::updateNetworkMetrics(Timestamp t1, Timestamp t2, Timestamp t3, Timestamp t4) {
+  // Calculate Round-Trip Time (RTT) and Clock Offset using NTP algorithm
+  // RTT = (T4 - T1) - (T3 - T2)
+  // Offset = ((T2 - T1) + (T3 - T4)) / 2
+
+  auto t1_n = t1.count();
+  auto t2_n = t2.count();
+  auto t3_n = t3.count();
+  auto t4_n = t4.count();
+
+  int64_t rttNs = (t4_n - t1_n) - (t3_n - t2_n);
+  // Clamp negative RTT (should not happen with monotonic clocks but possible with system adjustments)
+  if (rttNs < 0) rttNs = 0;
+
+  int64_t offsetNs = ((t2_n - t1_n) + (t3_n - t4_n)) / 2;
+
+  // Update atomic state
+  clockOffsetNs_.store(offsetNs, std::memory_order_release);
+
+  // Store one-way latency in milliseconds (RTT / 2)
+  double latencyMs = static_cast<double>(rttNs) / 2.0 / 1.0e6;
+  latencyMs_.store(latencyMs, std::memory_order_release);
+
+  // If we have valid metrics, we are synchronized
+  synchronized_.store(true, std::memory_order_release);
 }
 
 } // namespace agents

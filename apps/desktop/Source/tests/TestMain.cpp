@@ -24,7 +24,19 @@ extern "C" int main(int argc, char *argv[]) {
   zenith::SkiaAlertWindow::setTestMode(true);
 
   juce::UnitTestRunner runner;
-  
+  juce::String categoryFilter;
+  juce::File jsonOutputFile;
+
+  // Parse arguments
+  for (int i = 1; i < argc; ++i) {
+      juce::String arg(argv[i]);
+      if (arg.startsWith("--gtest_output=json:")) {
+          jsonOutputFile = juce::File::getCurrentWorkingDirectory().getChildFile(arg.substring(20));
+      } else if (!arg.startsWith("-")) {
+          categoryFilter = arg;
+      }
+  }
+
   // List all available tests first
   std::cout << "Available Unit Tests:" << std::endl;
   auto& allTests = juce::UnitTest::getAllTests();
@@ -33,12 +45,74 @@ extern "C" int main(int argc, char *argv[]) {
   }
   std::cout << "-----------------------------------" << std::endl;
 
-  if (argc > 1) {
-      juce::String filter (argv[1]);
-      std::cout << "Running tests in category: " << filter << std::endl;
-      runner.runTestsInCategory(filter);
+  if (categoryFilter.isNotEmpty()) {
+      std::cout << "Running tests in category: " << categoryFilter << std::endl;
+      runner.runTestsInCategory(categoryFilter);
   } else {
       runner.runAllTests();
+  }
+
+  // Generate JSON Report if requested
+  if (jsonOutputFile != juce::File()) {
+      juce::var root;
+      juce::var testsuites; // Array of suites
+
+      // Group results by category (treating category as testsuite)
+      std::map<juce::String, juce::Array<const juce::UnitTestRunner::TestResult*>> suites;
+      for (int i = 0; i < runner.getNumResults(); ++i) {
+          const auto* result = runner.getResult(i);
+          suites[result->unitTestName].add(result); // Usually category is not in result, check documentation.
+          // Actually runner.getResult(i) returns TestResult.
+          // TestResult has: unitTestName, subcategoryName, passes, failures, messages.
+          // We'll treat unitTestName as the suite.
+      }
+
+      for (int i = 0; i < runner.getNumResults(); ++i) {
+          const auto* result = runner.getResult(i);
+          
+          juce::var suiteObj(new juce::DynamicObject());
+          suiteObj.setProperty("name", result->unitTestName);
+          suiteObj.setProperty("tests", 1);
+          suiteObj.setProperty("failures", result->failures);
+          suiteObj.setProperty("errors", 0);
+          suiteObj.setProperty("time", "0"); // Time not tracked per test in standard runner easily without custom printer
+
+          juce::var testcases;
+          
+          juce::var testcase(new juce::DynamicObject());
+          testcase.setProperty("classname", result->unitTestName);
+          testcase.setProperty("name", result->subcategoryName.isNotEmpty() ? result->subcategoryName : "Main");
+          testcase.setProperty("time", "0");
+
+          if (result->failures > 0) {
+              juce::var failures;
+              for (const auto& msg : result->messages) {
+                  // Heuristic: messages usually contain failure info
+                  juce::var failure(new juce::DynamicObject());
+                  failure.setProperty("message", msg);
+                  failures.append(failure);
+              }
+              testcase.setProperty("failures", failures);
+          }
+
+          testcases.append(testcase);
+          suiteObj.setProperty("testsuite", testcases); // Agent expects "testsuite" array inside
+          
+          testsuites.append(suiteObj);
+      }
+
+      // Root object structure: { "testsuites": [ ... ] }
+      // But Agent expects GTest JSON format:
+      // { "testsuites": [ { "name": "...", "testsuite": [ ... ] } ] }
+      // Actually GTest format is slightly different but Agent parses:
+      // data.get("testsuites", []) -> suite -> suite.get("testsuite", [])
+      
+      juce::DynamicObject* rootObj = new juce::DynamicObject();
+      rootObj->setProperty("testsuites", testsuites);
+      
+      juce::String jsonString = juce::JSON::toString(juce::var(rootObj));
+      jsonOutputFile.replaceWithText(jsonString);
+      std::cout << "Wrote JSON report to: " << jsonOutputFile.getFullPathName() << std::endl;
   }
 
   // C5: Flush garbage collector to avoid false positive leaks from deferred deletion

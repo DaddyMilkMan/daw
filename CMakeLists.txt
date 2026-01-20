@@ -98,6 +98,7 @@ set(ZENITH_TEST_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/MixerChannelBenchmark.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/TrackGroupHeaderTest.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/SIMDHelpersTest.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/WavetableLoaderBenchmark.cpp"
 )
 
 # =============================================================================
@@ -472,6 +473,41 @@ if(BUILD_TESTS)
     )
 
     target_compile_features(MetricsChartTests PRIVATE cxx_std_20)
+
+    # =========================================================================
+    # WavetableBenchmark - Performance benchmark for WavetableLoader
+    # =========================================================================
+    juce_add_console_app(WavetableBenchmark
+        PRODUCT_NAME "WavetableBenchmark"
+    )
+
+    juce_generate_juce_header(WavetableBenchmark)
+
+    target_sources(WavetableBenchmark PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/WavetableLoaderBenchmark.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/instruments/WavetableLoader.cpp"
+    )
+
+    target_include_directories(WavetableBenchmark PRIVATE
+        ${CMAKE_BINARY_DIR}/WavetableBenchmark_artefacts/JuceLibraryCode
+        ${CMAKE_BINARY_DIR}/JuceLibraryCode
+    )
+
+    target_link_libraries(WavetableBenchmark PRIVATE
+        zenith_juce_includes
+        juce::juce_core
+        juce::juce_audio_formats
+        juce::juce_audio_basics
+    )
+
+    target_compile_definitions(WavetableBenchmark PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        WAVETABLE_BENCHMARK_STANDALONE=1
+    )
+
+    target_compile_features(WavetableBenchmark PRIVATE cxx_std_20)
+
 endif()
 
 # =============================================================================
