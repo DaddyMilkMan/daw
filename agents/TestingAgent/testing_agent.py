@@ -105,13 +105,83 @@ class TestingAgent:
         Returns:
             List of discovered test names
         """
-        # TODO: Scan for test files matching pattern
-        # TODO: Parse test case declarations
-        # TODO: Filter by test type
-        
         tests = []
-        print(f"Discovering tests with pattern: {pattern}")
+        print(f"Discovering tests in {self.project_root} with pattern: {pattern}")
+
+        # Regex for JUCE: juce::UnitTest("Name", "Category")
+        regex_juce = re.compile(r'(?:juce::)?UnitTest\s*\(\s*"([^"]+)"(?:,\s*"([^"]+)")?\s*\)')
+        # Regex for Catch2: TEST_CASE("Name", "Tags")
+        regex_catch2 = re.compile(r'TEST_CASE\s*\(\s*"([^"]+)"(?:,\s*"([^"]+)")?\s*\)')
+
+        for path in self.project_root.rglob(pattern):
+            if not path.is_file():
+                continue
+
+            # Filter for C++ source files
+            if path.suffix not in ['.cpp', '.mm', '.h', '.hpp']:
+                continue
+
+            try:
+                content = path.read_text(encoding='utf-8', errors='ignore')
+
+                # Check JUCE tests
+                for match in regex_juce.finditer(content):
+                    name = match.group(1)
+                    category = match.group(2)
+
+                    if self._matches_test_type(name, category, None, path.name, test_type):
+                        tests.append(name)
+
+                # Check Catch2 tests
+                for match in regex_catch2.finditer(content):
+                    name = match.group(1)
+                    tags = match.group(2)
+
+                    if self._matches_test_type(name, None, tags, path.name, test_type):
+                        tests.append(name)
+
+            except Exception as e:
+                print(f"Error reading {path}: {e}")
+
         return tests
+
+    def _matches_test_type(self, name: str, category: Optional[str],
+                          tags: Optional[str], filename: str,
+                          test_type: Optional[TestType]) -> bool:
+        """
+        Check if a test matches the requested TestType.
+        """
+        if test_type is None:
+            return True
+
+        # Combine all info into a search string
+        search_text = f"{name} {category or ''} {tags or ''} {filename}".lower()
+
+        if test_type == TestType.PERFORMANCE:
+            return any(x in search_text for x in ["stress", "performance", "benchmark"])
+
+        if test_type == TestType.INTEGRATION:
+            return "integration" in search_text
+
+        if test_type == TestType.SYSTEM:
+            return "system" in search_text
+
+        if test_type == TestType.RT_SAFETY:
+            return any(x in search_text for x in ["thread", "safety", "concurrency", "lock-free", "real-time"])
+
+        if test_type == TestType.AUDIO_QUALITY:
+            return any(x in search_text for x in ["quality", "thd", "snr"])
+
+        if test_type == TestType.FUZZ:
+            return "fuzz" in search_text
+
+        if test_type == TestType.UNIT:
+            # Exclude tests that are clearly other high-level types
+            if any(x in search_text for x in ["stress", "performance", "benchmark", "integration", "system", "fuzz"]):
+                return False
+            return True
+
+        return False
 
     def run_unit_tests(self, test_filter: Optional[str] = None) -> List[TestCase]:
         """
