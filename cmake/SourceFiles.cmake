@@ -200,6 +200,7 @@ set(ZENITH_INSTRUMENTS_SOURCES
     apps/desktop/Source/instruments/InstrumentRegistry.cpp
     apps/desktop/Source/instruments/RegisterBuiltInInstruments.cpp
     apps/desktop/Source/instruments/PresetGenerator.cpp
+    apps/desktop/Source/instruments/WavetableLoader.cpp
     apps/desktop/Source/instruments/ZenithOscillator.cpp
     apps/desktop/Source/instruments/ZenithFilter.cpp
     apps/desktop/Source/instruments/ZenithEffects.cpp
