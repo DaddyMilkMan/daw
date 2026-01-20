@@ -11,6 +11,10 @@ from enum import Enum
 from pathlib import Path
 import subprocess
 import re
+import shutil
+import xml.etree.ElementTree as ET
+import tempfile
+import os
 
 
 class TestType(Enum):
@@ -235,23 +239,71 @@ class TestingAgent:
         self.coverage = coverage
         return coverage
 
-    def check_memory_leaks(self, test_binary: Path) -> bool:
+    def check_memory_leaks(self, test_binary: Path) -> Optional[bool]:
         """
-        Check for memory leaks using valgrind or similar.
+        Check for memory leaks using valgrind.
         
         Args:
             test_binary: Path to test executable
             
         Returns:
-            True if no leaks detected
+            True if no leaks detected, False if leaks found, None if valgrind missing
         """
+        if not shutil.which("valgrind"):
+            print("Valgrind not found. Skipping memory leak check.")
+            return None
+
         print(f"Checking memory leaks in {test_binary}...")
         
-        # TODO: Run with valgrind --leak-check=full
-        # TODO: Parse valgrind output
-        # TODO: Report leaks
-        
-        return True
+        with tempfile.NamedTemporaryFile(suffix=".xml", delete=False) as temp_xml:
+            xml_path = temp_xml.name
+
+        try:
+            cmd = [
+                "valgrind",
+                "--tool=memcheck",
+                "--leak-check=full",
+                "--show-leak-kinds=definite,indirect",
+                "--track-origins=yes",
+                "--xml=yes",
+                f"--xml-file={xml_path}",
+                "--error-exitcode=1",
+                str(test_binary.resolve())
+            ]
+
+            # Run valgrind
+            subprocess.run(
+                cmd,
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+
+            # Parse XML
+            try:
+                tree = ET.parse(xml_path)
+                root = tree.getroot()
+
+                leaks_found = False
+                for error in root.findall("error"):
+                    kind = error.find("kind")
+                    if kind is not None and kind.text in ["Leak_DefinitelyLost", "Leak_IndirectlyLost"]:
+                        leaks_found = True
+                        xwhat = error.find("xwhat")
+                        if xwhat is not None:
+                            text = xwhat.find("text")
+                            if text is not None:
+                                print(f"Leak detected: {text.text}")
+
+                return not leaks_found
+
+            except ET.ParseError:
+                print("Failed to parse valgrind XML output.")
+                return False
+
+        finally:
+            if os.path.exists(xml_path):
+                os.remove(xml_path)
 
     def generate_report(self, output_file: Path) -> None:
         """
