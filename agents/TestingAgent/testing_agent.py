@@ -14,6 +14,7 @@ import re
 import shutil
 import xml.etree.ElementTree as ET
 import tempfile
+import json
 import os
 
 
@@ -117,6 +118,39 @@ class TestingAgent:
         print(f"Discovering tests with pattern: {pattern}")
         return tests
 
+    def _find_test_binary(self, binary_name: str) -> Optional[Path]:
+        """
+        Find test binary in build directories.
+
+        Args:
+            binary_name: Name of the binary to find
+
+        Returns:
+            Path to binary if found, else None
+        """
+        search_paths = [
+            self.project_root / "build",
+            self.project_root / "out",
+            self.project_root / "bin"
+        ]
+
+        # extensions to check (empty for linux/mac, .exe for windows)
+        extensions = ["", ".exe"]
+
+        for base_path in search_paths:
+            if not base_path.exists():
+                continue
+
+            for root, _, files in os.walk(base_path):
+                for file in files:
+                    for ext in extensions:
+                        if file == binary_name + ext:
+                            path = Path(root) / file
+                            # check if executable
+                            if os.access(path, os.X_OK):
+                                return path
+        return None
+
     def run_unit_tests(self, test_filter: Optional[str] = None) -> List[TestCase]:
         """
         Execute unit tests.
@@ -129,12 +163,65 @@ class TestingAgent:
         """
         print("Running unit tests...")
         
-        # TODO: Execute test binary (e.g., ZenithDAWTests)
-        # TODO: Parse test output (Google Test, Catch2, etc.)
-        # TODO: Collect results
+        binary_name = "ZenithDAWTests"
+        binary_path = self._find_test_binary(binary_name)
+
+        if not binary_path:
+            print(f"Error: Test binary '{binary_name}' not found. Please build the project.")
+            return []
+
+        json_output = Path("test_results.json")
+        cmd = [str(binary_path), f"--gtest_output=json:{json_output}"]
         
+        if test_filter:
+            cmd.append(f"--gtest_filter={test_filter}")
+
         results = []
-        return results
+        try:
+            # Run tests
+            # check=False because tests might fail (return non-zero), which is valid
+            subprocess.run(cmd, check=False, capture_output=True, text=True)
+
+            if not json_output.exists():
+                print("Error: Test output file not generated.")
+                return []
+
+            with open(json_output, 'r') as f:
+                data = json.load(f)
+
+            testsuites = data.get("testsuites", [])
+            for suite in testsuites:
+                for test in suite.get("testsuite", []):
+                    name = f"{test.get('classname')}.{test.get('name')}"
+                    # time is in seconds (string)
+                    duration = float(test.get("time", "0").replace('s','')) * 1000.0 # ms
+
+                    failures = test.get("failures", [])
+                    status = TestStatus.PASSED
+                    error_msg = None
+
+                    if failures:
+                        status = TestStatus.FAILED
+                        failure = failures[0]
+                        error_msg = failure.get("failure")
+
+                    results.append(TestCase(
+                        name=name,
+                        test_type=TestType.UNIT,
+                        status=status,
+                        duration_ms=duration,
+                        error_message=error_msg
+                    ))
+
+            self.test_results.extend(results)
+            return results
+
+        except Exception as e:
+            print(f"Error executing tests: {e}")
+            return []
+        finally:
+            if json_output.exists():
+                json_output.unlink()
 
     def validate_rt_safety(self, source_files: Optional[List[Path]] = None) -> List[TestCase]:
         """
