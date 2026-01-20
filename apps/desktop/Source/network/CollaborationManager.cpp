@@ -171,12 +171,14 @@ void CollaborationManager::run() {
 
   char decryptedBuffer[2048];
   juce::int64 lastKeepAlive = 0;
+  juce::int64 lastPeerResponseTime = juce::Time::currentTimeMillis();
 
   while (!threadShouldExit()) {
     juce::String senderIP;
     int senderPort;
     int bytes = p2pSocket.read(decryptedBuffer, sizeof(decryptedBuffer), senderIP, senderPort);
     if (bytes > 0) {
+        lastPeerResponseTime = juce::Time::currentTimeMillis();
         handleIncomingPacket(decryptedBuffer, bytes, senderIP, senderPort);
     }
 
@@ -188,7 +190,12 @@ void CollaborationManager::run() {
       lastKeepAlive = now;
     }
     
-    // TODO: Peer timeout logic
+    // Peer timeout logic
+    if (now - lastPeerResponseTime > PEER_TIMEOUT_MS) {
+        juce::MessageManager::callAsync([this]() { reportError("Connection timed out - peer unresponsive."); });
+        break;
+    }
+
     wait(10);
   }
 }
