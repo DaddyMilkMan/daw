@@ -3,15 +3,33 @@
  */
 
 #include <iostream>
+#include <thread>
+#include <chrono>
 #include <cassert>
 #include "../ClockSyncAgent.h"
 
 int main() {
-    std::cout << "Starting ClockSyncAgent Latency Test..." << std::endl;
-    
+    std::cout << "Starting ClockSyncAgent Test..." << std::endl;
+
     zenith::agents::ClockSyncAgent agent;
-    
-    // 1. Test Latency Calculation
+
+    // ==========================================
+    // 1. Test Initial State (LocalClock)
+    // ==========================================
+    auto status = agent.getSyncStatus();
+    if (status.currentSource != zenith::agents::ClockSyncAgent::TimeSource::LocalClock) {
+        std::cerr << "FAIL: Initial source should be LocalClock" << std::endl;
+        return 1;
+    }
+    if (!status.synchronized) {
+        std::cerr << "FAIL: LocalClock should be synchronized initially" << std::endl;
+        return 1;
+    }
+    std::cout << "LocalClock: OK" << std::endl;
+
+    // ==========================================
+    // 2. Test Latency Calculation (from PR #452)
+    // ==========================================
     // NTP Scenario:
     // T1: Client Sent Request (100)
     // T2: Server Received (110)
@@ -31,11 +49,9 @@ int main() {
     
     agent.updateNetworkMetrics(t1, t2, t3, t4);
     
-    auto status = agent.getSyncStatus();
+    status = agent.getSyncStatus();
     
-    // RTT = 30ms -> Latency = 15ms
     double expectedLatency = 15.0;
-    // Offset = -5ms = -5,000,000ns
     int64_t expectedOffset = -5000000;
 
     std::cout << "Calculated Latency: " << status.latencyMs << " ms" << std::endl;
@@ -50,7 +66,46 @@ int main() {
          std::cerr << "FAIL: Offset calculation incorrect. Expected " << expectedOffset << ", got " << status.offsetNanoseconds << std::endl;
          return 1;
     }
+    std::cout << "Latency Calculation: OK" << std::endl;
 
-    std::cout << "ClockSyncAgent Latency Test - PASS" << std::endl;
+    // ==========================================
+    // 3. Test NTP Source Switching
+    // ==========================================
+    std::cout << "Switching to NTP..." << std::endl;
+    agent.setTimeSource(zenith::agents::ClockSyncAgent::TimeSource::NetworkNTP);
+
+    status = agent.getSyncStatus();
+    if (status.currentSource != zenith::agents::ClockSyncAgent::TimeSource::NetworkNTP) {
+        std::cerr << "FAIL: Source should be NetworkNTP" << std::endl;
+        return 1;
+    }
+    // Note: Synchronization might take time, so we don't expect it to be true immediately.
+    // But it should be false initially.
+    if (status.synchronized) {
+        std::cout << "WARNING: NTP reports synchronized immediately (unexpected but possible if mocked)" << std::endl;
+    } else {
+        std::cout << "NTP initialized (not yet synced): OK" << std::endl;
+    }
+
+    // ==========================================
+    // 4. Test PTP Source Switching
+    // ==========================================
+    std::cout << "Switching to PTP..." << std::endl;
+    agent.setTimeSource(zenith::agents::ClockSyncAgent::TimeSource::NetworkPTP);
+
+    status = agent.getSyncStatus();
+    if (status.currentSource != zenith::agents::ClockSyncAgent::TimeSource::NetworkPTP) {
+        std::cerr << "FAIL: Source should be NetworkPTP" << std::endl;
+        return 1;
+    }
+    std::cout << "PTP initialized: OK" << std::endl;
+
+    // ==========================================
+    // Cleanup
+    // ==========================================
+    std::cout << "Testing cleanup..." << std::endl;
+    // Agent goes out of scope here.
+
+    std::cout << "ClockSyncAgent Test - PASS" << std::endl;
     return 0;
 }

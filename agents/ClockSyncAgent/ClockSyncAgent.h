@@ -8,6 +8,7 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
+#include "protocols/SyncProtocol.h"
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -87,7 +88,8 @@ private:
   std::atomic<bool> driftCompensationEnabled_{true};
   std::atomic<double> latencyMs_{0.0};
   
-  // TODO: Add PTP/NTP client
+  std::unique_ptr<protocols::SyncProtocol> syncProtocol_;
+
   // TODO: Add MIDI clock parser
   // TODO: Add drift detector with filtering
   

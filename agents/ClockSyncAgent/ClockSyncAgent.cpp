@@ -6,6 +6,8 @@
 */
 
 #include "ClockSyncAgent.h"
+#include "protocols/NTPProtocol.h"
+#include "protocols/PTPProtocol.h"
 
 namespace zenith {
 namespace agents {
@@ -69,10 +71,28 @@ int64_t ClockSyncAgent::timestampToSamples(
 void ClockSyncAgent::setTimeSource(TimeSource source) {
   currentSource_.store(source, std::memory_order_release);
   
-  // TODO: Initialize appropriate sync protocol
-  // TODO: Start synchronization process
+  if (syncProtocol_) {
+    syncProtocol_->stop();
+    syncProtocol_.reset();
+  }
+
+  if (source == TimeSource::NetworkNTP) {
+    syncProtocol_ = std::make_unique<protocols::NTPProtocol>();
+  } else if (source == TimeSource::NetworkPTP) {
+    syncProtocol_ = std::make_unique<protocols::PTPProtocol>();
+  }
   
-  if (source == TimeSource::LocalClock) {
+  if (syncProtocol_) {
+    syncProtocol_->onOffsetChanged = [this](int64_t offset) {
+      clockOffsetNs_.store(offset, std::memory_order_release);
+    };
+    syncProtocol_->onSyncStateChanged = [this](bool sync) {
+      synchronized_.store(sync, std::memory_order_release);
+    };
+
+    syncProtocol_->start();
+    synchronized_.store(false, std::memory_order_release);
+  } else if (source == TimeSource::LocalClock) {
     synchronized_.store(true, std::memory_order_release);
     clockOffsetNs_.store(0, std::memory_order_release);
     driftCompensation_.store(1.0, std::memory_order_release);
