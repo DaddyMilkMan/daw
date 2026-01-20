@@ -75,6 +75,9 @@ public:
   /// Enable/disable automatic drift compensation
   void setDriftCompensationEnabled(bool enabled);
 
+  /// Update network synchronization metrics from protocol timestamps (t1=request sent, t2=request received, t3=response sent, t4=response received)
+  void updateNetworkMetrics(Timestamp t1, Timestamp t2, Timestamp t3, Timestamp t4);
+
 private:
   //==============================================================================
   std::atomic<TimeSource> currentSource_{TimeSource::LocalClock};
@@ -82,6 +85,7 @@ private:
   std::atomic<int64_t> clockOffsetNs_{0};
   std::atomic<double> driftCompensation_{1.0};
   std::atomic<bool> driftCompensationEnabled_{true};
+  std::atomic<double> latencyMs_{0.0};
   
   // TODO: Add PTP/NTP client
   // TODO: Add MIDI clock parser
