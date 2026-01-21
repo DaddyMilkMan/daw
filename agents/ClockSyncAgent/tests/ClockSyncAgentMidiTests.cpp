@@ -63,10 +63,10 @@ private:
     // Send Start
     agent->processMidiMessage(createStartMsg());
 
-    // Send some clocks
+    // Send some clocks at proper 120 BPM timing (~20.8ms per tick)
     for (int i = 0; i < 24; ++i) {
       agent->processMidiMessage(createClockMsg());
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      std::this_thread::sleep_for(std::chrono::milliseconds(21)); // Proper timing for 120 BPM
     }
 
     // Stop
@@ -105,9 +105,9 @@ private:
     // After 100 ticks, we should be synchronized
     expect(status.synchronized, "Should be synchronized after warmup");
 
-    // Offset should be reasonable
+    // Offset should be reasonable (using JUCE's string formatting)
     int64_t absOffset = std::abs(status.offsetNanoseconds);
-    expect(absOffset < 50000000, "Offset should be < 50ms (Actual: " + juce::String(absOffset) + ")");
+    expectLessThan(absOffset, (int64_t)50000000, "Offset should be < 50ms");
   }
 
   void testTempoJumpReset() {
