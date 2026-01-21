@@ -96,10 +96,19 @@ public:
 
 private:
   //==============================================================================
+  struct RawMetricEvent {
+    const char* name; // CONTRACT: Must be a static string literal
+    double value;
+    MetricType type;
+    int64_t timestamp;
+  };
+
   std::atomic<bool> enabled_{true};
   std::atomic<uint64_t> metricsCollected_{0};
   
-  // TODO: Add lock-free ring buffer for RT metrics
+  juce::AbstractFifo fifo_{4096};
+  std::vector<RawMetricEvent> eventBuffer_;
+
   // TODO: Add metrics exporter (Prometheus, OpenTelemetry)
   // TODO: Add trace context propagation
   // TODO: Add log aggregation

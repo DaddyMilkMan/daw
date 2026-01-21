@@ -11,7 +11,7 @@ namespace zenith {
 namespace agents {
 
 //==============================================================================
-ObservabilityAgent::ObservabilityAgent() {
+ObservabilityAgent::ObservabilityAgent() : eventBuffer_(4096) {
   // Initialize metrics collection system
 }
 
@@ -27,10 +27,20 @@ void ObservabilityAgent::recordCounter(const char* name, double value) noexcept 
     return;
   }
   
-  // TODO: Write to lock-free ring buffer
-  // TODO: Avoid string allocations
+  int start1, size1, start2, size2;
+  fifo_.prepareToWrite(1, start1, size1, start2, size2);
   
-  metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  if (size1 > 0) {
+    eventBuffer_[start1] = {name, value, MetricType::Counter,
+                            (int64_t)std::chrono::steady_clock::now().time_since_epoch().count()};
+    fifo_.finishedWrite(1);
+    metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  } else if (size2 > 0) {
+    eventBuffer_[start2] = {name, value, MetricType::Counter,
+                            (int64_t)std::chrono::steady_clock::now().time_since_epoch().count()};
+    fifo_.finishedWrite(1);
+    metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  }
 }
 
 void ObservabilityAgent::recordGauge(const char* name, double value) noexcept {
@@ -38,9 +48,20 @@ void ObservabilityAgent::recordGauge(const char* name, double value) noexcept {
     return;
   }
   
-  // TODO: Write to lock-free ring buffer
+  int start1, size1, start2, size2;
+  fifo_.prepareToWrite(1, start1, size1, start2, size2);
   
-  metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  if (size1 > 0) {
+    eventBuffer_[start1] = {name, value, MetricType::Gauge,
+                            (int64_t)std::chrono::steady_clock::now().time_since_epoch().count()};
+    fifo_.finishedWrite(1);
+    metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  } else if (size2 > 0) {
+    eventBuffer_[start2] = {name, value, MetricType::Gauge,
+                            (int64_t)std::chrono::steady_clock::now().time_since_epoch().count()};
+    fifo_.finishedWrite(1);
+    metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  }
 }
 
 uint64_t ObservabilityAgent::startTimer() noexcept {
@@ -56,12 +77,22 @@ void ObservabilityAgent::endTimer(const char* name, uint64_t startTime) noexcept
   
   auto now = std::chrono::steady_clock::now();
   auto endTime = static_cast<uint64_t>(now.time_since_epoch().count());
-  auto duration = endTime - startTime;
+  double duration = static_cast<double>(endTime - startTime);
   
-  // TODO: Record timer metric with duration
-  // TODO: Write to lock-free ring buffer
+  int start1, size1, start2, size2;
+  fifo_.prepareToWrite(1, start1, size1, start2, size2);
   
-  metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  if (size1 > 0) {
+    eventBuffer_[start1] = {name, duration, MetricType::Timer,
+                            (int64_t)endTime};
+    fifo_.finishedWrite(1);
+    metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  } else if (size2 > 0) {
+    eventBuffer_[start2] = {name, duration, MetricType::Timer,
+                            (int64_t)endTime};
+    fifo_.finishedWrite(1);
+    metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  }
 }
 
 //==============================================================================
@@ -99,15 +130,41 @@ void ObservabilityAgent::setExportInterval(std::chrono::milliseconds interval) {
 std::vector<ObservabilityAgent::Metric> ObservabilityAgent::getMetrics() {
   std::vector<Metric> metrics;
   
-  // TODO: Read from lock-free ring buffer
-  // TODO: Aggregate metrics by name
-  // TODO: Apply time-based windowing
+  int start1, size1, start2, size2;
+  int numReady = fifo_.getNumReady();
+
+  if (numReady == 0)
+    return metrics;
+
+  fifo_.prepareToRead(numReady, start1, size1, start2, size2);
+
+  auto processEvents = [&](int start, int size) {
+    for (int i = 0; i < size; ++i) {
+      const auto& raw = eventBuffer_[start + i];
+      Metric m;
+      m.name = raw.name;
+      m.type = raw.type;
+      m.value = raw.value;
+      // Convert int64_t count back to steady_clock::time_point
+      // Note: This assumes steady_clock epoch hasn't changed or isn't relevant for display logic
+      // But for Metric struct we need time_point.
+      using Duration = std::chrono::steady_clock::duration;
+      m.timestamp = std::chrono::steady_clock::time_point(Duration(raw.timestamp));
+      metrics.push_back(m);
+    }
+  };
+
+  if (size1 > 0) processEvents(start1, size1);
+  if (size2 > 0) processEvents(start2, size2);
+
+  fifo_.finishedRead(size1 + size2);
   
   return metrics;
 }
 
 void ObservabilityAgent::clearMetrics() {
-  // TODO: Clear lock-free ring buffer
+  // Clear lock-free ring buffer
+  fifo_.reset();
   metricsCollected_.store(0, std::memory_order_release);
 }
 
