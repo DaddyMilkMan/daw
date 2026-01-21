@@ -32,6 +32,7 @@
 #include "../design-system/ZenithTypography.h"
 #include "PluginBrowser.h"
 #include <JuceHeader.h>
+#include <cmath> // For std::log10, std::abs
 
 #include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
@@ -127,8 +128,28 @@ public:
     if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
       auto *track = comp->getTrack();
       if (track) {
-        // Provide essential state information
-        desc << ". Volume fader, pan control, and transport buttons available";
+        // Provide essential state information that changes
+        // Volume level in dB
+        float volume = track->getVolume();
+        float volumeDB = 20.0f * std::log10(volume + 0.0001f); // Avoid log(0)
+        desc << juce::String::formatted(". Volume: %.1f dB", volumeDB);
+        
+        // Pan position
+        float pan = track->getPan();
+        if (std::abs(pan) < 0.01f) {
+          desc << ", Pan: Center";
+        } else if (pan > 0) {
+          desc << juce::String::formatted(", Pan: %.0f%% Right", pan * 100.0f);
+        } else {
+          desc << juce::String::formatted(", Pan: %.0f%% Left", -pan * 100.0f);
+        }
+        
+        // Mute/Solo/Arm status
+        if (track->isMuted()) desc << ", Muted";
+        if (track->isSolo()) desc << ", Soloed";
+        if (track->isArmed()) desc << ", Record Armed";
+        
+        // Usage hint
         desc << ". Press Tab to navigate controls";
         desc << ", M to toggle mute, S to toggle solo, R to toggle record arm";
       }
@@ -176,8 +197,10 @@ MixerChannelComponent::MixerChannelComponent(Track *track, ProjectState& state, 
   track_->addChangeListener(this);
   zenith::design::ThemeManager::getInstance().addChangeListener(this);
   
-  // Accessibility: Allow focus
+  // Accessibility: Set up as focus container so screen readers can navigate to child controls
+  // The channel strip itself can receive focus, but we want Tab to navigate to child controls
   setWantsKeyboardFocus(true);
+  setFocusContainerType(juce::Component::FocusContainerType::keyboardFocusContainer);
 
   // Initialize UI from track
   updateFromTrack();
@@ -187,6 +210,7 @@ MixerChannelComponent::MixerChannelComponent(Track *track, ProjectState& state, 
   nameLabel_.setJustificationType(juce::Justification::centred);
   nameLabel_.setFont(isMaster_ ? ZenithTypography::getHeaderFont().withHeight(16.0f) : ZenithTypography::getHeaderFont().withHeight(14.0f));
   nameLabel_.setEditable(true, true, false);
+  nameLabel_.setWantsKeyboardFocus(true); // Make label focusable for editing
   nameLabel_.onTextChange = [this]() {
     if (track_) {
       track_->setName(nameLabel_.getText());
@@ -199,12 +223,16 @@ MixerChannelComponent::MixerChannelComponent(Track *track, ProjectState& state, 
   // ZenithSlider uses setRange instead of setStyle/setDisplayRange
   faderSlider_.setRange(0.0f, 1.0f, 1.0f);
   faderSlider_.setValue(track_->getVolume());
+  faderSlider_.setLabel("Volume");
+  faderSlider_.setTooltip("Volume fader. Use Up/Down arrow keys to adjust.");
   faderSlider_.onValueChange = [this](float value) { juce::ignoreUnused(value); onFaderChanged(); };
   addAndMakeVisible(faderSlider_);
 
   // GPU-accelerated pan knob with spring physics
   panKnob_.setRange(-1.0f, 1.0f, 0.0f);
   panKnob_.setValue(track_->getPan());
+  panKnob_.setLabel("Pan");
+  panKnob_.setTooltip("Pan control. Use Left/Right arrow keys to adjust.");
   panKnob_.onValueChange = [this]() { onPanChanged(); };
   addAndMakeVisible(panKnob_);
 
@@ -214,6 +242,7 @@ MixerChannelComponent::MixerChannelComponent(Track *track, ProjectState& state, 
   muteButton_.setToggleable(true);
   muteButton_.setToggleState(track_->isMuted());
   muteButton_.setStyle(SkiaButton::Style::Secondary);
+  muteButton_.setTooltip("Mute. Press M or Space to toggle.");
   muteButton_.onClick = [this]() { onMuteClicked(); };
   addAndMakeVisible(muteButton_);
 
@@ -223,6 +252,7 @@ MixerChannelComponent::MixerChannelComponent(Track *track, ProjectState& state, 
   soloButton_.setToggleable(true);
   soloButton_.setToggleState(track_->isSolo());
   soloButton_.setStyle(SkiaButton::Style::Secondary);
+  soloButton_.setTooltip("Solo. Press S or Space to toggle.");
   soloButton_.onClick = [this]() { onSoloClicked(); };
   addAndMakeVisible(soloButton_);
 
@@ -232,6 +262,7 @@ MixerChannelComponent::MixerChannelComponent(Track *track, ProjectState& state, 
   armButton_.setToggleable(true);
   armButton_.setToggleState(track_->isArmed());
   armButton_.setStyle(SkiaButton::Style::Danger);
+  armButton_.setTooltip("Record Arm. Press R or Space to toggle.");
   armButton_.onClick = [this]() { onArmClicked(); };
   addAndMakeVisible(armButton_);
 
