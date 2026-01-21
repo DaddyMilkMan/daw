@@ -28,23 +28,99 @@ std::vector<TransportProtocolAgent::DeviceInfo>
 TransportProtocolAgent::enumerateDevices() {
   std::vector<DeviceInfo> devices;
   
-  // TODO: Enumerate all available audio device types
-  // TODO: Query device capabilities
-  // TODO: Filter by platform-specific APIs
-  
   auto* currentDevice = deviceManager_->getCurrentAudioDevice();
-  if (currentDevice != nullptr) {
-    DeviceInfo info;
-    info.name = currentDevice->getName();
-    info.id = currentDevice->getName(); // Simplified
-    info.numInputChannels = currentDevice->getActiveInputChannels().countNumberOfSetBits();
-    info.numOutputChannels = currentDevice->getActiveOutputChannels().countNumberOfSetBits();
-    info.supportedSampleRates = currentDevice->getAvailableSampleRates();
-    info.supportedBufferSizes = currentDevice->getAvailableBufferSizes();
-    info.isDefault = true;
-    info.apiType = currentDevice->getTypeName();
-    
-    devices.push_back(info);
+  const juce::String currentDeviceName = currentDevice ? currentDevice->getName() : "";
+  const juce::String currentDeviceType = currentDevice ? currentDevice->getTypeName() : "";
+
+  const auto& deviceTypes = deviceManager_->getAvailableDeviceTypes();
+
+  for (auto* type : deviceTypes)
+  {
+      type->scanForDevices();
+      juce::String typeName = type->getTypeName();
+
+      if (typeName == "ASIO")
+      {
+          juce::StringArray devNames = type->getDeviceNames();
+          for (const auto& name : devNames)
+          {
+              DeviceInfo info;
+              info.name = name;
+              info.id = name;
+              info.apiType = typeName;
+
+              if (currentDevice != nullptr && currentDeviceName == name && currentDeviceType == typeName)
+              {
+                  info.numInputChannels = currentDevice->getActiveInputChannels().countNumberOfSetBits();
+                  info.numOutputChannels = currentDevice->getActiveOutputChannels().countNumberOfSetBits();
+                  info.supportedSampleRates = currentDevice->getAvailableSampleRates();
+                  info.supportedBufferSizes = currentDevice->getAvailableBufferSizes();
+                  info.isDefault = true;
+              }
+              else
+              {
+                  // Shallow info for ASIO - assume availability
+                  info.numInputChannels = 2;
+                  info.numOutputChannels = 2;
+                  info.isDefault = false;
+              }
+              devices.push_back(info);
+          }
+      }
+      else
+      {
+          juce::StringArray inputNames = type->getDeviceNames(true);
+          juce::StringArray outputNames = type->getDeviceNames(false);
+          int defaultInputIndex = type->getDefaultDeviceIndex(true);
+          int defaultOutputIndex = type->getDefaultDeviceIndex(false);
+
+          // Inputs
+          for (int i = 0; i < inputNames.size(); ++i)
+          {
+              DeviceInfo info;
+              info.name = inputNames[i];
+              info.id = inputNames[i];
+              info.apiType = typeName;
+
+              info.numInputChannels = 2; // Placeholder indicating input capability
+              info.numOutputChannels = 0;
+
+              info.isDefault = (i == defaultInputIndex);
+
+              if (currentDevice != nullptr && currentDeviceName == info.name && currentDeviceType == typeName)
+              {
+                   // If this specific device is active, update with real info
+                   info.numInputChannels = currentDevice->getActiveInputChannels().countNumberOfSetBits();
+                   info.supportedSampleRates = currentDevice->getAvailableSampleRates();
+                   info.supportedBufferSizes = currentDevice->getAvailableBufferSizes();
+              }
+
+              devices.push_back(info);
+          }
+
+          // Outputs
+          for (int i = 0; i < outputNames.size(); ++i)
+          {
+              DeviceInfo info;
+              info.name = outputNames[i];
+              info.id = outputNames[i];
+              info.apiType = typeName;
+
+              info.numInputChannels = 0;
+              info.numOutputChannels = 2; // Placeholder indicating output capability
+
+              info.isDefault = (i == defaultOutputIndex);
+
+              if (currentDevice != nullptr && currentDeviceName == info.name && currentDeviceType == typeName)
+              {
+                   info.numOutputChannels = currentDevice->getActiveOutputChannels().countNumberOfSetBits();
+                   info.supportedSampleRates = currentDevice->getAvailableSampleRates();
+                   info.supportedBufferSizes = currentDevice->getAvailableBufferSizes();
+              }
+
+              devices.push_back(info);
+          }
+      }
   }
   
   return devices;

@@ -548,6 +548,45 @@ if(BUILD_TESTS)
 
     target_compile_features(ClockSyncAgentTests PRIVATE cxx_std_20)
 
+    # =========================================================================
+    # TransportProtocolAgentTests - Lightweight test for TransportProtocolAgent
+    # =========================================================================
+    add_executable(TransportProtocolAgentTests)
+
+    target_sources(TransportProtocolAgentTests PRIVATE
+        "agents/TransportProtocolAgent/tests/RunTests.cpp"
+        "agents/TransportProtocolAgent/tests/TransportProtocolAgentTest.cpp"
+        "agents/TransportProtocolAgent/TransportProtocolAgent.cpp"
+    )
+
+    target_include_directories(TransportProtocolAgentTests PRIVATE
+        ${CMAKE_BINARY_DIR}/TransportProtocolAgentTests_artefacts/JuceLibraryCode
+        ${CMAKE_BINARY_DIR}/JuceLibraryCode
+        "agents/TransportProtocolAgent"
+    )
+
+    target_link_libraries(TransportProtocolAgentTests PRIVATE
+        juce::juce_core
+        juce::juce_audio_devices
+        juce::juce_audio_basics
+    )
+
+    target_compile_definitions(TransportProtocolAgentTests PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+        JUCE_STANDALONE_APPLICATION=1
+        JUCE_ALSA=1
+    )
+
+    if (UNIX AND NOT APPLE)
+        target_link_libraries(TransportProtocolAgentTests PRIVATE pthread dl)
+        find_package(ALSA REQUIRED)
+        target_link_libraries(TransportProtocolAgentTests PRIVATE ${ALSA_LIBRARIES})
+    endif()
+
+    target_compile_features(TransportProtocolAgentTests PRIVATE cxx_std_20)
+
 endif()
 
 # =============================================================================
