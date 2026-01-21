@@ -12,6 +12,7 @@
 #include <chrono>
 #include <string>
 #include <vector>
+#include <array>
 
 namespace zenith {
 namespace agents {
@@ -21,7 +22,7 @@ namespace agents {
     ObservabilityAgent provides lock-free metrics collection and monitoring
     for real-time audio systems without impacting RT thread performance.
 */
-class ObservabilityAgent {
+class ObservabilityAgent : public juce::Thread {
 public:
   //==============================================================================
   using Timestamp = std::chrono::steady_clock::time_point;
@@ -51,7 +52,7 @@ public:
 
   //==============================================================================
   ObservabilityAgent();
-  ~ObservabilityAgent();
+  ~ObservabilityAgent() override;
 
   //==============================================================================
   // Metrics Collection (RT-safe)
@@ -71,7 +72,10 @@ public:
   //==============================================================================
   // Logging (async, non-RT)
   
-  /// Log message at specified level
+  /// Log message at specified level (RT-safe)
+  void log(LogLevel level, const char* message) noexcept;
+
+  /// Log message at specified level (Helper)
   void log(LogLevel level, const juce::String& message);
   
   /// Log structured data
@@ -96,9 +100,21 @@ public:
 
 private:
   //==============================================================================
+  void run() override;
+
+  struct LogEntry {
+      LogLevel level;
+      uint64_t timestamp;
+      char message[512];
+  };
+
   std::atomic<bool> enabled_{true};
   std::atomic<uint64_t> metricsCollected_{0};
   
+  static constexpr int kLogQueueSize = 1024;
+  juce::AbstractFifo logFifo_{kLogQueueSize};
+  std::vector<LogEntry> logBuffer_;
+
   // TODO: Add lock-free ring buffer for RT metrics
   // TODO: Add metrics exporter (Prometheus, OpenTelemetry)
   // TODO: Add trace context propagation
