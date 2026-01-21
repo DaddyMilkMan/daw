@@ -25,7 +25,7 @@ jobs:
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        # No external dependencies needed for current stub implementation
+        # Current implementation has no external Python dependencies
 
     - name: Install build dependencies (for test discovery)
       run: |
@@ -55,7 +55,6 @@ jobs:
 
     - name: Run Testing Agent
       run: |
-        cd /home/runner/work/daw/daw
         python agents/TestingAgent/testing_agent.py
       continue-on-error: true
 
