@@ -99,7 +99,18 @@ private:
   std::atomic<bool> enabled_{true};
   std::atomic<uint64_t> metricsCollected_{0};
   
-  // TODO: Add lock-free ring buffer for RT metrics
+  // RT-safe Ring Buffer
+  struct RawMetricEvent {
+    const char* name; // CONTRACT: Must be a static string literal
+    double value;
+    MetricType type;
+    int64_t timestamp;
+  };
+
+  static constexpr int bufferSize = 4096;
+  juce::AbstractFifo fifo_{bufferSize};
+  std::vector<RawMetricEvent> eventBuffer_;
+
   // TODO: Add metrics exporter (Prometheus, OpenTelemetry)
   // TODO: Add trace context propagation
   // TODO: Add log aggregation
