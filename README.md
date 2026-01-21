@@ -6,7 +6,7 @@ A professional Digital Audio Workstation built with C++20 and JUCE, featuring AI
 
 **Version:** 0.1.0-alpha  
 **Platform:** Linux, macOS, Windows  
-**Build:** [![Tests](https://github.com/zenith-daw/zenith/actions/workflows/test.yml/badge.svg)](https://github.com/zenith-daw/zenith/actions/workflows/test.yml)
+**Build:** [![Tests](https://github.com/zenith-daw/zenith/actions/workflows/test.yml/badge.svg)](https://github.com/zenith-daw/zenith/actions/workflows/test.yml) [![Security](https://github.com/zenith-daw/zenith/actions/workflows/security-agent.yml/badge.svg)](https://github.com/zenith-daw/zenith/actions/workflows/security-agent.yml)
 
 ### What Works
 - Audio engine with real-time playback and recording
@@ -83,6 +83,7 @@ cmake --build build -j$(nproc)
 - [Build Instructions](docs/BUILD.md)
 - [Developer Guide](docs/DEVELOPER.md)
 - [Known Issues](docs/KNOWN_ISSUES.md)
+- [Security Policy](SECURITY.md)
 
 ## Testing
 
