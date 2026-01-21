@@ -289,6 +289,7 @@ set(ZENITH_UTILS_SOURCES
     apps/desktop/Source/browser/BrowserPreviewEngine.cpp
     apps/desktop/Source/browser/BrowserScanner.cpp
     apps/desktop/Source/ui/common/PluginEditorWindow.cpp
+    agents/ObservabilityAgent/ObservabilityAgent.cpp
 )
 
 # Combine all sources

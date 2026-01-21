@@ -12,6 +12,7 @@
 #include <chrono>
 #include <string>
 #include <vector>
+#include <array>
 
 namespace zenith {
 namespace agents {
@@ -21,7 +22,7 @@ namespace agents {
     ObservabilityAgent provides lock-free metrics collection and monitoring
     for real-time audio systems without impacting RT thread performance.
 */
-class ObservabilityAgent {
+class ObservabilityAgent : public juce::Thread {
 public:
   //==============================================================================
   using Timestamp = std::chrono::steady_clock::time_point;
@@ -51,7 +52,7 @@ public:
 
   //==============================================================================
   ObservabilityAgent();
-  ~ObservabilityAgent();
+  ~ObservabilityAgent() override;
 
   //==============================================================================
   // Metrics Collection (RT-safe)
@@ -78,6 +79,9 @@ public:
   void logStructured(LogLevel level, 
                      const juce::String& message,
                      const juce::var& data);
+
+  /// Low-level logging (RT-safe)
+  void log(const char* rawMessage) noexcept;
   
   //==============================================================================
   // Configuration
@@ -94,15 +98,23 @@ public:
   /// Clear collected metrics
   void clearMetrics();
 
+  //==============================================================================
+  // Threading
+  void run() override;
+
 private:
+  void flushToSink();
+
   //==============================================================================
   std::atomic<bool> enabled_{true};
   std::atomic<uint64_t> metricsCollected_{0};
   
-  // TODO: Add lock-free ring buffer for RT metrics
-  // TODO: Add metrics exporter (Prometheus, OpenTelemetry)
-  // TODO: Add trace context propagation
-  // TODO: Add log aggregation
+  // Lock-free ring buffer
+  static constexpr int MessageSize = 512;
+  static constexpr int BufferItems = 1024;
+
+  juce::AbstractFifo fifo_{BufferItems};
+  std::vector<std::array<char, MessageSize>> buffer_;
   
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ObservabilityAgent)
 };
