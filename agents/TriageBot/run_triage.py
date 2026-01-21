@@ -74,8 +74,9 @@ class GitHubAPIClient:
                 return json.loads(response.read().decode('utf-8'))
         except HTTPError as e:
             error_body = e.read().decode('utf-8')
+            # Sanitize error output - don't print full response body which may contain sensitive info
             print(f"GitHub API error: {e.code} {e.reason}")
-            print(f"Response: {error_body}")
+            print(f"URL: {url}")
             raise
     
     def add_labels(self, issue_number: int, labels: List[str]) -> Dict[str, Any]:
@@ -207,9 +208,17 @@ def parse_event_data(event_path: str) -> Dict[str, Any]:
         
     Returns:
         Event data
+        
+    Raises:
+        ValueError: If the event file is malformed or cannot be read
     """
-    with open(event_path, 'r') as f:
-        return json.load(f)
+    try:
+        with open(event_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (IOError, OSError) as e:
+        raise ValueError(f"Failed to read event file: {e}") from e
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Failed to parse event JSON: {e}") from e
 
 
 def extract_issue_from_event(event_data: Dict[str, Any]) -> Optional[Issue]:
@@ -306,8 +315,11 @@ def main() -> int:
     
     # Parse repository owner and name
     try:
-        repo_owner, repo_name = repository.split("/")
-    except ValueError:
+        parts = repository.split("/")
+        if len(parts) != 2:
+            raise ValueError(f"Expected format 'owner/repo', got: {repository}")
+        repo_owner, repo_name = parts
+    except (ValueError, AttributeError) as e:
         print(f"Error: Invalid GITHUB_REPOSITORY format: {repository}")
         return 1
     
@@ -354,7 +366,7 @@ def main() -> int:
     
     # Apply labels
     try:
-        labels_to_add = list(result.suggested_labels - issue.labels)
+        labels_to_add = [label for label in result.suggested_labels if label not in issue.labels]
         if labels_to_add:
             print(f"Adding labels: {labels_to_add}")
             client.add_labels(issue.number, labels_to_add)
