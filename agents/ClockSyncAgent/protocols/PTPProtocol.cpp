@@ -86,8 +86,8 @@ void PTPProtocol::run() {
         return;
     }
 
-    eventSocket_.joinMulticastGroup(PTP_MULTICAST_IP);
-    generalSocket_.joinMulticastGroup(PTP_MULTICAST_IP);
+    eventSocket_.joinMulticast(PTP_MULTICAST_IP);
+    generalSocket_.joinMulticast(PTP_MULTICAST_IP);
 
     std::vector<uint8_t> buffer(1024);
 

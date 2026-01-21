@@ -8,10 +8,12 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
+#include <juce_audio_basics/juce_audio_basics.h>
 #include "protocols/SyncProtocol.h"
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <array>
 
 namespace zenith {
 namespace agents {
@@ -79,8 +81,16 @@ public:
   /// Update network synchronization metrics from protocol timestamps (t1=request sent, t2=request received, t3=response sent, t4=response received)
   void updateNetworkMetrics(Timestamp t1, Timestamp t2, Timestamp t3, Timestamp t4);
 
+  //==============================================================================
+  // MIDI Synchronization (RT-safe)
+
+  /// Process incoming MIDI message for clock synchronization
+  void processMidiMessage(const juce::MidiMessage& message);
+
 private:
   //==============================================================================
+  void updateMidiRegression();
+
   std::atomic<TimeSource> currentSource_{TimeSource::LocalClock};
   std::atomic<bool> synchronized_{false};
   std::atomic<int64_t> clockOffsetNs_{0};
@@ -90,8 +100,18 @@ private:
   
   std::unique_ptr<protocols::SyncProtocol> syncProtocol_;
 
-  // TODO: Add MIDI clock parser
-  // TODO: Add drift detector with filtering
+  // MIDI Clock State
+  struct TickPoint {
+    int64_t tick;
+    int64_t timeNs;
+  };
+
+  static constexpr size_t kMidiHistorySize = 48;
+  std::array<TickPoint, kMidiHistorySize> historyBuffer_;
+  size_t historyIdx_ = 0;
+  size_t historyCount_ = 0;
+  int64_t midiTickCounter_ = 0;
+  std::atomic<bool> isMidiRunning_{false}; // Atomic for thread safety if accessed from UI
   
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClockSyncAgent)
 };
