@@ -12,9 +12,15 @@
 #include <chrono>
 #include <string>
 #include <vector>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <memory>
 
 namespace zenith {
 namespace agents {
+
+class PrometheusExporter;
 
 //==============================================================================
 /**
@@ -88,6 +94,9 @@ public:
   /// Set metrics export interval
   void setExportInterval(std::chrono::milliseconds interval);
   
+  /// Set the destination file for metrics export
+  void setMetricsFile(const juce::File& file);
+
   /// Get collected metrics (non-RT)
   std::vector<Metric> getMetrics();
   
@@ -96,11 +105,22 @@ public:
 
 private:
   //==============================================================================
+  void exportLoop();
+  void stopExportThread();
+
   std::atomic<bool> enabled_{true};
   std::atomic<uint64_t> metricsCollected_{0};
   
+  std::unique_ptr<PrometheusExporter> exporter_;
+  juce::File metricsFile_;
+
+  std::thread exportThread_;
+  std::atomic<bool> shouldExitExportThread_{false};
+  std::mutex exportMutex_;
+  std::condition_variable exportCv_;
+  std::chrono::milliseconds exportInterval_{0};
+
   // TODO: Add lock-free ring buffer for RT metrics
-  // TODO: Add metrics exporter (Prometheus, OpenTelemetry)
   // TODO: Add trace context propagation
   // TODO: Add log aggregation
   
