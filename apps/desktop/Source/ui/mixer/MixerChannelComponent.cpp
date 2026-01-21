@@ -55,6 +55,10 @@ constexpr int kTopHeightMaster = 40;
 constexpr int kTopHeightNormal = 34;
 constexpr int kSpectrumHeight = 50;
 constexpr int kMaxPluginNameLength = 12;
+
+// Accessibility constants
+constexpr float kVolumeLogProtection = 0.0001f; // Prevents log(0) in dB calculation
+constexpr float kPanCenterTolerance = 0.01f;    // Pan values within this are considered "center"
 } // namespace
 
 //==============================================================================
@@ -85,13 +89,19 @@ public:
                                         })
                               .addAction(juce::AccessibilityActionType::showMenu,
                                         [comp = juce::Component::SafePointer<MixerChannelComponent>(&component)]() {
-                                          if (comp != nullptr)
-                                            comp->mouseDown(juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),
-                                                                            juce::Point<float>(), juce::ModifierKeys::rightButtonModifier,
-                                                                            1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-                                                                            comp.getComponent(), comp.getComponent(),
-                                                                            juce::Time::getCurrentTime(), juce::Point<float>(),
-                                                                            juce::Time::getCurrentTime(), 1, false));
+                                          if (comp != nullptr) {
+                                            // Show context menu at component center
+                                            auto bounds = comp->getLocalBounds();
+                                            comp->mouseDown(juce::MouseEvent(
+                                                juce::Desktop::getInstance().getMainMouseSource(),
+                                                comp->getLocalBounds().getCentre().toFloat(),
+                                                juce::ModifierKeys::rightButtonModifier,
+                                                1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+                                                comp.getComponent(), comp.getComponent(),
+                                                juce::Time::getCurrentTime(), 
+                                                comp->getLocalBounds().getCentre().toFloat(),
+                                                juce::Time::getCurrentTime(), 1, false));
+                                          }
                                         })),
         owner(component) {}
 
@@ -131,12 +141,12 @@ public:
         // Provide essential state information that changes
         // Volume level in dB
         float volume = track->getVolume();
-        float volumeDB = 20.0f * std::log10(volume + 0.0001f); // Avoid log(0)
+        float volumeDB = 20.0f * std::log10(volume + kVolumeLogProtection);
         desc << juce::String::formatted(". Volume: %.1f dB", volumeDB);
         
         // Pan position
         float pan = track->getPan();
-        if (std::abs(pan) < 0.01f) {
+        if (std::abs(pan) < kPanCenterTolerance) {
           desc << ", Pan: Center";
         } else if (pan > 0) {
           desc << juce::String::formatted(", Pan: %.0f%% Right", pan * 100.0f);
