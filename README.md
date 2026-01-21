@@ -92,6 +92,34 @@ cmake --build build --target ZenithDAWTests
 ./build/ZenithDAWTests_artefacts/Release/ZenithDAWTests
 ```
 
+### Automated Testing with Testing Agent
+
+The repository includes an automated **Testing Agent** that runs on every push and pull request via GitHub Actions. This agent provides comprehensive test orchestration and validation:
+
+**Current Capabilities:**
+- **Test Discovery**: Automatically discovers C++ unit tests (JUCE and Catch2 frameworks)
+- **Test Execution**: Runs all discovered tests and reports results
+- **CI Integration**: Seamlessly integrates with GitHub Actions workflow
+
+**Planned Features** (stub implementations, expandable in future PRs):
+- **RT-Safety Analysis**: Static analysis to detect illegal allocations, locks, or blocking calls in real-time audio threads
+- **Code Coverage**: Generate and report line/branch coverage metrics
+- **TODO Scanning**: Surface TODO comments in critical code paths for developer triage
+- **Memory Leak Detection**: Valgrind integration for leak checking
+- **Audio Quality Metrics**: THD, SNR, and frequency response validation
+
+**Running Locally:**
+```bash
+python agents/TestingAgent/testing_agent.py
+```
+
+**CI Workflow:**
+The Testing Agent runs automatically via `.github/workflows/agent-testing.yml` on:
+- Pushes to `main`, `develop`, and `copilot/**` branches
+- Pull requests targeting `main` or `develop`
+
+See [`agents/TestingAgent/README.md`](agents/TestingAgent/README.md) for implementation details and expansion roadmap.
+
 ## License
 
 See [LICENSE](LICENSE) for details.
