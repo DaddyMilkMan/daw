@@ -102,6 +102,7 @@ set(ZENITH_TEST_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/SIMDHelpersTest.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/WavetableLoaderBenchmark.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/AudioBufferConverterTest.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/ObservabilityAgentTest.cpp"
 )
 
 # =============================================================================
@@ -547,6 +548,37 @@ if(BUILD_TESTS)
     endif()
 
     target_compile_features(ClockSyncAgentTests PRIVATE cxx_std_20)
+
+    # =========================================================================
+    # ObservabilityTest - Lightweight test for ObservabilityAgent
+    # =========================================================================
+    add_executable(ObservabilityTest
+        apps/desktop/Source/tests/ObservabilityTestMain.cpp
+        apps/desktop/Source/tests/ObservabilityAgentTest.cpp
+        agents/ObservabilityAgent/ObservabilityAgent.cpp
+    )
+
+    target_include_directories(ObservabilityTest PRIVATE
+        ${CMAKE_BINARY_DIR}/JuceLibraryCode
+        "agents/ObservabilityAgent"
+    )
+
+    target_link_libraries(ObservabilityTest PRIVATE
+        juce::juce_core
+    )
+
+    target_compile_definitions(ObservabilityTest PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+        JUCE_STANDALONE_APPLICATION=1
+    )
+
+    if (UNIX AND NOT APPLE)
+        target_link_libraries(ObservabilityTest PRIVATE pthread dl)
+    endif()
+
+    target_compile_features(ObservabilityTest PRIVATE cxx_std_20)
 
 endif()
 

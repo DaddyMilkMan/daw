@@ -291,8 +291,14 @@ set(ZENITH_UTILS_SOURCES
     apps/desktop/Source/ui/common/PluginEditorWindow.cpp
 )
 
+# Agents sources
+set(ZENITH_AGENTS_SOURCES
+    agents/ObservabilityAgent/ObservabilityAgent.cpp
+)
+
 # Combine all sources
 set(ZENITH_ALL_SOURCES
+    ${ZENITH_AGENTS_SOURCES}
     ${ZENITH_APP_SOURCES}
     ${ZENITH_ENGINE_SOURCES}
     ${ZENITH_LEGACY_SOURCES}

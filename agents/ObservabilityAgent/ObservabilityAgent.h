@@ -53,6 +53,14 @@ public:
   ObservabilityAgent();
   ~ObservabilityAgent();
 
+  struct MetricEvent
+  {
+      enum class Type { Counter, Gauge, TimerEnd } type;
+      const char* name;
+      double value;
+      int64_t timestamp;
+  };
+
   //==============================================================================
   // Metrics Collection (RT-safe)
   
@@ -99,7 +107,9 @@ private:
   std::atomic<bool> enabled_{true};
   std::atomic<uint64_t> metricsCollected_{0};
   
-  // TODO: Add lock-free ring buffer for RT metrics
+  juce::AbstractFifo fifo_{ 4096 };
+  std::vector<MetricEvent> eventBuffer_;
+
   // TODO: Add metrics exporter (Prometheus, OpenTelemetry)
   // TODO: Add trace context propagation
   // TODO: Add log aggregation
