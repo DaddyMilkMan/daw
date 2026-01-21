@@ -11,7 +11,7 @@ namespace zenith {
 namespace agents {
 
 //==============================================================================
-ObservabilityAgent::ObservabilityAgent() {
+ObservabilityAgent::ObservabilityAgent() : ringBufferData_(4096) {
   // Initialize metrics collection system
 }
 
@@ -27,8 +27,15 @@ void ObservabilityAgent::recordCounter(const char* name, double value) noexcept 
     return;
   }
   
-  // TODO: Write to lock-free ring buffer
-  // TODO: Avoid string allocations
+  int start1, size1, start2, size2;
+  ringBufferFifo_.prepareToWrite(1, start1, size1, start2, size2);
+
+  if (size1 > 0) {
+      ringBufferData_[start1].type = MetricEvent::Type::Counter;
+      ringBufferData_[start1].name = name;
+      ringBufferData_[start1].value = value;
+      ringBufferFifo_.finishedWrite(1);
+  }
   
   metricsCollected_.fetch_add(1, std::memory_order_relaxed);
 }
@@ -38,15 +45,23 @@ void ObservabilityAgent::recordGauge(const char* name, double value) noexcept {
     return;
   }
   
-  // TODO: Write to lock-free ring buffer
+  int start1, size1, start2, size2;
+  ringBufferFifo_.prepareToWrite(1, start1, size1, start2, size2);
+
+  if (size1 > 0) {
+      ringBufferData_[start1].type = MetricEvent::Type::Gauge;
+      ringBufferData_[start1].name = name;
+      ringBufferData_[start1].value = value;
+      ringBufferFifo_.finishedWrite(1);
+  }
   
   metricsCollected_.fetch_add(1, std::memory_order_relaxed);
 }
 
 uint64_t ObservabilityAgent::startTimer() noexcept {
-  // Return high-resolution timestamp
+  // Return high-resolution timestamp (nanoseconds)
   auto now = std::chrono::steady_clock::now();
-  return static_cast<uint64_t>(now.time_since_epoch().count());
+  return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count());
 }
 
 void ObservabilityAgent::endTimer(const char* name, uint64_t startTime) noexcept {
@@ -55,11 +70,20 @@ void ObservabilityAgent::endTimer(const char* name, uint64_t startTime) noexcept
   }
   
   auto now = std::chrono::steady_clock::now();
-  auto endTime = static_cast<uint64_t>(now.time_since_epoch().count());
-  auto duration = endTime - startTime;
+  auto endTime = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count());
   
-  // TODO: Record timer metric with duration
-  // TODO: Write to lock-free ring buffer
+  // Calculate duration in seconds
+  double duration = (double)(endTime - startTime) * 1e-9;
+
+  int start1, size1, start2, size2;
+  ringBufferFifo_.prepareToWrite(1, start1, size1, start2, size2);
+
+  if (size1 > 0) {
+      ringBufferData_[start1].type = MetricEvent::Type::Timer;
+      ringBufferData_[start1].name = name;
+      ringBufferData_[start1].value = duration;
+      ringBufferFifo_.finishedWrite(1);
+  }
   
   metricsCollected_.fetch_add(1, std::memory_order_relaxed);
 }
@@ -99,15 +123,49 @@ void ObservabilityAgent::setExportInterval(std::chrono::milliseconds interval) {
 std::vector<ObservabilityAgent::Metric> ObservabilityAgent::getMetrics() {
   std::vector<Metric> metrics;
   
-  // TODO: Read from lock-free ring buffer
-  // TODO: Aggregate metrics by name
-  // TODO: Apply time-based windowing
+  int numReady = ringBufferFifo_.getNumReady();
+  if (numReady == 0)
+      return metrics;
+
+  int start1, size1, start2, size2;
+  ringBufferFifo_.prepareToRead(numReady, start1, size1, start2, size2);
+
+  metrics.reserve(size1 + size2);
+
+  auto processEvent = [&](int index) {
+      const auto& event = ringBufferData_[index];
+      Metric m;
+      m.name = event.name; // Assumes name is static char*
+      m.value = event.value;
+      m.timestamp = std::chrono::steady_clock::now(); // Capture read time as approximation
+
+      switch (event.type) {
+          case MetricEvent::Type::Counter: m.type = MetricType::Counter; break;
+          case MetricEvent::Type::Gauge:   m.type = MetricType::Gauge; break;
+          case MetricEvent::Type::Timer:   m.type = MetricType::Timer; break;
+      }
+      metrics.push_back(m);
+  };
+
+  for (int i = 0; i < size1; ++i)
+      processEvent(start1 + i);
+
+  for (int i = 0; i < size2; ++i)
+      processEvent(start2 + i);
+
+  ringBufferFifo_.finishedRead(size1 + size2);
   
   return metrics;
 }
 
 void ObservabilityAgent::clearMetrics() {
-  // TODO: Clear lock-free ring buffer
+  // Drain the FIFO
+  int numReady = ringBufferFifo_.getNumReady();
+  if (numReady > 0) {
+      int s1, z1, s2, z2;
+      ringBufferFifo_.prepareToRead(numReady, s1, z1, s2, z2);
+      ringBufferFifo_.finishedRead(z1 + z2);
+  }
   metricsCollected_.store(0, std::memory_order_release);
 }
 
