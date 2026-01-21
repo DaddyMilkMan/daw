@@ -52,11 +52,13 @@ endif()
 # DEPENDENCIES
 # =============================================================================
 
+# Disable JUCEAIDE and tools to avoid build issues
+set(JUCE_DISABLE_JUCEAIDE ON CACHE BOOL "Disable JUCEAIDE build tool" FORCE)
+set(JUCE_BUILD_HELPER_TOOLS OFF CACHE BOOL "Disable JUCE helper tools" FORCE)
+set(JUCE_BUILD_EXTRAS OFF CACHE BOOL "Disable JUCE extras" FORCE)
+
 # Centralized dependency management (JUCE, ONNX, OpenSSL, etc.)
 include(cmake/Dependencies.cmake)
-
-# Disable JUCEAIDE to avoid build issues
-set(JUCE_DISABLE_JUCEAIDE ON CACHE BOOL "Disable JUCEAIDE build tool" FORCE)
 
 # Disable yaml-cpp to avoid CMake version conflicts
 set(YAML_CPP_BUILD OFF CACHE BOOL "Disable yaml-cpp build" FORCE)
@@ -508,6 +510,43 @@ if(BUILD_TESTS)
     )
 
     target_compile_features(WavetableBenchmark PRIVATE cxx_std_20)
+
+    # =========================================================================
+    # ClockSyncAgentTests - Lightweight test for ClockSyncAgent
+    # =========================================================================
+    add_executable(ClockSyncAgentTests)
+
+    target_sources(ClockSyncAgentTests PRIVATE
+        "agents/ClockSyncAgent/tests/RunTests.cpp"
+        "agents/ClockSyncAgent/tests/ClockSyncAgentMidiTests.cpp"
+        "agents/ClockSyncAgent/ClockSyncAgent.cpp"
+        "agents/ClockSyncAgent/protocols/NTPProtocol.cpp"
+        "agents/ClockSyncAgent/protocols/PTPProtocol.cpp"
+    )
+
+    target_include_directories(ClockSyncAgentTests PRIVATE
+        ${CMAKE_BINARY_DIR}/ClockSyncAgentTests_artefacts/JuceLibraryCode
+        ${CMAKE_BINARY_DIR}/JuceLibraryCode
+        "agents/ClockSyncAgent"
+    )
+
+    target_link_libraries(ClockSyncAgentTests PRIVATE
+        juce::juce_core
+        juce::juce_audio_basics
+    )
+
+    target_compile_definitions(ClockSyncAgentTests PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+        JUCE_STANDALONE_APPLICATION=1
+    )
+
+    if (UNIX AND NOT APPLE)
+        target_link_libraries(ClockSyncAgentTests PRIVATE pthread dl)
+    endif()
+
+    target_compile_features(ClockSyncAgentTests PRIVATE cxx_std_20)
 
 endif()
 
