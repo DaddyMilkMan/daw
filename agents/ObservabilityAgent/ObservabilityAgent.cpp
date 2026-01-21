@@ -17,6 +17,8 @@ ObservabilityAgent::ObservabilityAgent() {
 
 ObservabilityAgent::~ObservabilityAgent() {
   // Flush any pending metrics
+  stopTimer();
+  exportMetrics();
 }
 
 //==============================================================================
@@ -92,8 +94,31 @@ void ObservabilityAgent::setEnabled(bool enabled) {
 }
 
 void ObservabilityAgent::setExportInterval(std::chrono::milliseconds interval) {
-  // TODO: Configure periodic metrics export
-  // TODO: Start/restart export timer
+  if (interval.count() > 0) {
+    juce::Timer::startTimer(static_cast<int>(interval.count()));
+  } else {
+    stopTimer();
+  }
+}
+
+void ObservabilityAgent::exportMetrics() {
+  if (!enabled_.load(std::memory_order_acquire)) {
+    return;
+  }
+
+  // TODO: Drain lock-free ring buffer
+  // TODO: Send to configured exporters
+
+  // For now, track export count for verification
+  exportCount_.fetch_add(1, std::memory_order_relaxed);
+}
+
+uint64_t ObservabilityAgent::getExportCount() const {
+  return exportCount_.load(std::memory_order_relaxed);
+}
+
+void ObservabilityAgent::timerCallback() {
+  exportMetrics();
 }
 
 std::vector<ObservabilityAgent::Metric> ObservabilityAgent::getMetrics() {
