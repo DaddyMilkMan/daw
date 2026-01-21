@@ -90,6 +90,11 @@ public:
 private:
   //==============================================================================
   void updateMidiRegression(int64_t currentTickCounter);
+  
+  // Helper for circular buffer index calculation
+  inline size_t getPreviousBufferIndex(size_t currentIdx, size_t offset = 1) const noexcept {
+    return (currentIdx + kMidiHistorySize - offset) % kMidiHistorySize;
+  }
 
   std::atomic<TimeSource> currentSource_{TimeSource::LocalClock};
   std::atomic<bool> synchronized_{false};

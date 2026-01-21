@@ -185,8 +185,8 @@ void ClockSyncAgent::processMidiMessage(const juce::MidiMessage& message) {
     // Check for tempo jumps / discontinuity if we have enough history
     if (currentHistoryCount > 10) {
       // Predict expected arrival using last 2 points (crude linear extrapolation for jump detection)
-      size_t lastIdx = (currentHistoryIdx + kMidiHistorySize - 1) % kMidiHistorySize;
-      size_t prevIdx = (lastIdx + kMidiHistorySize - 1) % kMidiHistorySize;
+      size_t lastIdx = getPreviousBufferIndex(currentHistoryIdx, 1);
+      size_t prevIdx = getPreviousBufferIndex(currentHistoryIdx, 2);
 
       int64_t lastTime = historyBuffer_[lastIdx].timeNs;
       int64_t prevTime = historyBuffer_[prevIdx].timeNs;
@@ -272,7 +272,7 @@ void ClockSyncAgent::updateMidiRegression(int64_t currentTickCounter) {
   // To avoid floating point precision issues with large tick/time values,
   // normalize X (tick) relative to the oldest point in the circular buffer.
   size_t currentHistoryIdx = historyIdx_.load(std::memory_order_acquire);
-  size_t startIdx = (currentHistoryIdx + kMidiHistorySize - currentHistoryCount) % kMidiHistorySize;
+  size_t startIdx = getPreviousBufferIndex(currentHistoryIdx, currentHistoryCount);
   int64_t baseTick = historyBuffer_[startIdx].tick;
 
   // Accumulate regression sums
@@ -307,7 +307,7 @@ void ClockSyncAgent::updateMidiRegression(int64_t currentTickCounter) {
   //
   // This ensures getCurrentTime() returns a smoothed MIDI timeline value.
   
-  size_t lastIdx = (currentHistoryIdx + kMidiHistorySize - 1) % kMidiHistorySize;
+  size_t lastIdx = getPreviousBufferIndex(currentHistoryIdx, 1);
   int64_t actualNowNs = historyBuffer_[lastIdx].timeNs;
   int64_t offset = static_cast<int64_t>(predictedNowNs) - actualNowNs;
 
