@@ -202,8 +202,8 @@ WavetableLoader::generateBasicWavetable(int type, int numFrames) {
   // Pre-allocate PWM coefficient vectors ONCE to avoid per-frame allocation
   std::vector<float> pwmX, pwmY;
   if (type == 4) { // PWM
-    pwmX.resize(static_cast<size_t>(kPWMMaxHarmonics + 1));
-    pwmY.resize(static_cast<size_t>(kPWMMaxHarmonics + 1));
+    pwmX.resize(kPWMMaxHarmonics + 1);
+    pwmY.resize(kPWMMaxHarmonics + 1);
   }
 
   for (int f = 0; f < numFrames; ++f) {
@@ -220,8 +220,8 @@ WavetableLoader::generateBasicWavetable(int type, int numFrames) {
       for (int h = 1; h <= kPWMMaxHarmonics; ++h) {
         float b = h * pw * juce::MathConstants<float>::pi;
         float term = 2.0f / (h * juce::MathConstants<float>::pi) * std::sin(b);
-        pwmX[static_cast<size_t>(h)] = term * std::cos(b);
-        pwmY[static_cast<size_t>(h)] = term * std::sin(b);
+        pwmX[h] = term * std::cos(b);
+        pwmY[h] = term * std::sin(b);
       }
     }
 
@@ -297,8 +297,7 @@ WavetableLoader::generateBasicWavetable(int type, int numFrames) {
             float nextCos = currentCos * c1 - currentSin * s1;
             currentSin = nextSin;
             currentCos = nextCos;
-            sample += pwmX[static_cast<size_t>(h)] * currentCos +
-                      pwmY[static_cast<size_t>(h)] * currentSin;
+            sample += pwmX[h] * currentCos + pwmY[h] * currentSin;
           }
           sample *= 0.6f;
         }
