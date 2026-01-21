@@ -16,7 +16,21 @@ import xml.etree.ElementTree as ET
 import tempfile
 import json
 import os
-import json
+import sys
+
+# Add current directory to path to allow importing local modules when running as script
+current_dir = Path(__file__).parent
+if str(current_dir) not in sys.path:
+    sys.path.append(str(current_dir))
+
+try:
+    from rt_analyzer import RTSafetyAnalyzer
+except ImportError:
+    try:
+        from .rt_analyzer import RTSafetyAnalyzer
+    except ImportError:
+        print("Warning: Could not import RTSafetyAnalyzer")
+        RTSafetyAnalyzer = None
 
 
 class TestType(Enum):
@@ -306,25 +320,63 @@ class TestingAgent:
         """
         print("Validating real-time thread safety...")
         
-        # TODO: Static analysis for RT-unsafe operations
-        # TODO: Check for allocations, locks, blocking calls
-        # TODO: Verify noexcept specifications
-        # TODO: Validate lock-free data structures
-        
+        if RTSafetyAnalyzer is None:
+            print("Error: RTSafetyAnalyzer not available.")
+            return []
+
+        analyzer = RTSafetyAnalyzer()
         results = []
         
-        # Example RT safety checks:
-        unsafe_patterns = [
-            r"\bnew\s+",  # Heap allocation
-            r"\bdelete\s+",  # Heap deallocation
-            r"std::lock_guard",  # Mutex lock
-            r"\bmalloc\(",  # C-style allocation
-            r"\.push_back\(",  # Potential allocation (may need capacity check)
-        ]
+        files_to_scan = source_files if source_files else []
+
+        if not files_to_scan:
+            # Discover C++ files if none provided
+            # Scan .cpp and .h files
+            for ext in ['*.cpp', '*.h', '*.hpp', '*.mm']:
+                files_to_scan.extend(self.project_root.rglob(ext))
+
+        # Group violations by file
+        violations_by_file: Dict[str, List] = {}
         
-        # TODO: Scan audio callback code paths
-        # TODO: Report violations
+        print(f"Scanning {len(files_to_scan)} files for RT safety violations...")
         
+        for file_path in files_to_scan:
+            if not file_path.is_file():
+                continue
+
+            file_violations = analyzer.analyze_file(file_path)
+            if file_violations:
+                violations_by_file[str(file_path)] = file_violations
+
+        # Create TestCases from findings
+        if not violations_by_file:
+            # Maybe create one passing test case to show it ran?
+            results.append(TestCase(
+                name="RT Safety Scan",
+                test_type=TestType.RT_SAFETY,
+                status=TestStatus.PASSED,
+                duration_ms=0,
+                error_message=None
+            ))
+        else:
+            for file_path, violations in violations_by_file.items():
+                # Build error message
+                error_lines = [f"Found {len(violations)} RT safety violations in {file_path} (Surface-Level Scan):"]
+                for v in violations:
+                    error_lines.append(f"  Line {v.line_number} ({v.function}): {v.violation_type}")
+                    error_lines.append(f"    Code: {v.context}")
+
+                full_error = "\n".join(error_lines)
+
+                results.append(TestCase(
+                    name=f"RT Safety: {Path(file_path).name}",
+                    test_type=TestType.RT_SAFETY,
+                    status=TestStatus.FAILED,
+                    duration_ms=0,
+                    error_message=full_error
+                ))
+
+        self.test_results.extend(results)
         return results
 
     def test_audio_quality(self, audio_processor: Callable,
