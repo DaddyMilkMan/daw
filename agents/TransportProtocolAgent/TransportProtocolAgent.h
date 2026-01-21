@@ -101,5 +101,62 @@ private:
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TransportProtocolAgent)
 };
 
+//==============================================================================
+/**
+    Audio format bit depth enumeration.
+*/
+enum class BitDepth {
+  Int16,
+  Int24,
+  Int32,
+  Float32
+};
+
+//==============================================================================
+/**
+    Utility for converting between interleaved audio data and planar JUCE AudioBuffers.
+    Wraps juce::AudioDataConverters for optimized performance.
+*/
+struct AudioBufferConverter {
+  /**
+      De-interleaves raw audio data from a device into a JUCE AudioBuffer.
+      @param sourceData        Pointer to the raw interleaved data (e.g., from the driver)
+      @param destBuffer        The planar buffer to fill
+      @param numSamples        Number of samples to process per channel
+      @param numChannels       Number of channels in the source/dest
+      @param sourceFormat      Enum for Int16, Int24, Int32, or Float32
+  */
+  static void convertToPlanarFloat(const void* sourceData,
+                                   juce::AudioBuffer<float>& destBuffer,
+                                   int numSamples,
+                                   int numChannels,
+                                   BitDepth sourceFormat);
+
+  /**
+      Interleaves a JUCE AudioBuffer into raw memory for output.
+      @param sourceBuffer      The planar source buffer
+      @param destData          Pointer to the raw interleaved destination memory
+      @param numSamples        Number of samples to process per channel
+      @param numChannels       Number of channels in the source/dest
+      @param destFormat        Enum for Int16, Int24, Int32, or Float32
+  */
+  static void convertFromPlanarFloat(const juce::AudioBuffer<float>& sourceBuffer,
+                                     void* destData,
+                                     int numSamples,
+                                     int numChannels,
+                                     BitDepth destFormat);
+
+  // Helper to get bytes per sample for allocation
+  static int getBytesPerSample(BitDepth depth) {
+      switch (depth) {
+          case BitDepth::Int16: return 2;
+          case BitDepth::Int24: return 3;
+          case BitDepth::Int32: return 4;
+          case BitDepth::Float32: return 4;
+          default: return 0;
+      }
+  }
+};
+
 } // namespace agents
 } // namespace zenith
