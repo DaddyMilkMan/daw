@@ -8,111 +8,63 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
-#include <atomic>
-#include <chrono>
-#include <string>
 #include <vector>
+#include <string>
+#include <map>
+#include <chrono>
 
 namespace zenith {
 namespace agents {
 
-//==============================================================================
-/**
-    ObservabilityAgent provides lock-free metrics collection and monitoring
-    for real-time audio systems without impacting RT thread performance.
-*/
 class ObservabilityAgent {
 public:
-  //==============================================================================
-  using Timestamp = std::chrono::steady_clock::time_point;
-  
-  enum class MetricType {
-    Counter,
-    Gauge,
-    Histogram,
-    Timer
-  };
-  
-  enum class LogLevel {
-    Debug,
-    Info,
-    Warning,
-    Error,
-    Critical
-  };
-  
   struct Metric {
     std::string name;
-    MetricType type;
     double value;
-    Timestamp timestamp;
-    std::vector<std::pair<std::string, std::string>> labels;
+    std::map<std::string, std::string> labels;
+    enum class Type { Counter, Gauge, Timer } type;
   };
 
-  //==============================================================================
   ObservabilityAgent();
   ~ObservabilityAgent();
 
-  //==============================================================================
-  // Metrics Collection (RT-safe)
-  
-  /// Record counter increment (RT-safe, lock-free)
-  void recordCounter(const char* name, double value = 1.0) noexcept;
-  
-  /// Record gauge value (RT-safe, lock-free)
-  void recordGauge(const char* name, double value) noexcept;
-  
-  /// Start timing measurement (RT-safe)
-  uint64_t startTimer() noexcept;
-  
-  /// End timing measurement and record (RT-safe)
-  void endTimer(const char* name, uint64_t startTime) noexcept;
-  
-  //==============================================================================
-  // Logging (async, non-RT)
-  
-  /// Log message at specified level
-  void log(LogLevel level, const juce::String& message);
-  
-  /// Log structured data
-  void logStructured(LogLevel level, 
-                     const juce::String& message,
-                     const juce::var& data);
-  
-  //==============================================================================
-  // Configuration
-  
-  /// Enable/disable metrics collection
-  void setEnabled(bool enabled);
-  
-  /// Set metrics export interval
-  void setExportInterval(std::chrono::milliseconds interval);
-  
-  /// Get collected metrics (non-RT)
+  // RT-Safe: name must be a static string literal
+  void recordCounter(const char* name, int increment = 1);
+  void recordGauge(const char* name, double value);
+  void startTimer(const char* name);
+  void endTimer(const char* name);
+
+  // Non-RT: Reads from ring buffer and returns full metrics
   std::vector<Metric> getMetrics();
   
-  /// Clear collected metrics
+  // Configuration
+  void setEnabled(bool enabled);
+  void setExportInterval(std::chrono::milliseconds interval);
   void clearMetrics();
 
+  // Logging (async, non-RT)
+  enum class LogLevel { Debug, Info, Warning, Error, Critical };
+  void log(LogLevel level, const juce::String& message);
+  void logStructured(LogLevel level, const juce::String& message, const juce::var& data);
+
 private:
-  //==============================================================================
   struct RawMetricEvent {
-    const char* name; // CONTRACT: Must be a static string literal
+    enum class Type { Counter, Gauge, Timer } type;
+    const char* name; // CONTRACT: Must be static
     double value;
-    MetricType type;
     int64_t timestamp;
   };
 
-  std::atomic<bool> enabled_{true};
-  std::atomic<uint64_t> metricsCollected_{0};
-  
-  juce::AbstractFifo fifo_{4096};
+  // Lock-free Queue
+  juce::AbstractFifo fifo_{ 4096 };
   std::vector<RawMetricEvent> eventBuffer_;
 
-  // TODO: Add metrics exporter (Prometheus, OpenTelemetry)
-  // TODO: Add trace context propagation
-  // TODO: Add log aggregation
-  
+  // Helper to push to FIFO
+  void pushToFifo(RawMetricEvent::Type type, const char* name, double value);
+
+  std::atomic<bool> enabled_{true};
+  std::atomic<int> metricsCollected_{ 0 };
+
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ObservabilityAgent)
 };
 

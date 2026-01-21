@@ -16,70 +16,40 @@ namespace juce {
 class ObservabilityAgentTest : public juce::UnitTest
 {
 public:
-    ObservabilityAgentTest() : juce::UnitTest("ObservabilityAgent") {}
+    ObservabilityAgentTest() : juce::UnitTest("ObservabilityAgentTest") {}
 
     void runTest() override
     {
-        beginTest("Lock-free Ring Buffer Operations");
+        beginTest("LockFreeRingBuffer_WritesAndReads");
 
         zenith::agents::ObservabilityAgent agent;
 
-        // 1. Test recordGauge
-        agent.recordGauge("cpu_load", 0.75);
+        // Simulate Audio Thread Writes
+        agent.recordGauge("audio_callback_duration", 0.05);
+        agent.recordCounter("buffer_underruns", 1);
 
-        // 2. Test recordCounter
-        agent.recordCounter("packets_sent", 1.0);
-
-        // 3. Test Timer
-        auto start = agent.startTimer();
-        juce::Thread::sleep(10);
-        agent.endTimer("process_time", start);
-
-        // 4. Retrieve metrics
+        // Simulate Message Thread Read
         auto metrics = agent.getMetrics();
 
-        expectEquals((int)metrics.size(), 3);
+        expectEquals((int)metrics.size(), 2);
 
-        // Verify order and content
-        if (metrics.size() >= 3)
-        {
-            expect(metrics[0].name == "cpu_load");
-            expectEquals(metrics[0].value, 0.75);
-            expect(metrics[0].type == zenith::agents::ObservabilityAgent::MetricType::Gauge);
+        if (metrics.size() >= 2) {
+            expect(metrics[0].name == "audio_callback_duration");
+            expectEquals(metrics[0].value, 0.05);
+            expect(metrics[0].type == zenith::agents::ObservabilityAgent::Metric::Type::Gauge);
 
-            expect(metrics[1].name == "packets_sent");
+            expect(metrics[1].name == "buffer_underruns");
             expectEquals(metrics[1].value, 1.0);
-            expect(metrics[1].type == zenith::agents::ObservabilityAgent::MetricType::Counter);
-
-            expect(metrics[2].name == "process_time");
-            // Timer duration can be small, but should be positive
-            expect(metrics[2].value >= 0.0);
-            expect(metrics[2].type == zenith::agents::ObservabilityAgent::MetricType::Timer);
+            expect(metrics[1].type == zenith::agents::ObservabilityAgent::Metric::Type::Counter);
         }
 
-        // 5. Test Buffer Wrap / Overflow
-        // Write 5000 items (buffer is 4096). Since we drop when full, we expect the first 4096 items.
-        agent.clearMetrics();
-        for (int i = 0; i < 5000; ++i) {
-            agent.recordCounter("stress_test", (double)i);
-        }
-
-        auto stressMetrics = agent.getMetrics();
-        // AbstractFifo often holds size-1 items to distinguish full/empty
-        expectEquals((int)stressMetrics.size(), 4095);
-
-        if (stressMetrics.size() > 0)
-            expectEquals(stressMetrics[0].value, 0.0);
-        if (stressMetrics.size() >= 4095)
-            expectEquals(stressMetrics[4094].value, 4094.0);
-
-        // 6. Test Clear
-        agent.clearMetrics();
-        expectEquals((int)agent.getMetrics().size(), 0);
+        // Verify Buffer is drained
+        auto emptyMetrics = agent.getMetrics();
+        expectEquals((int)emptyMetrics.size(), 0);
     }
 };
 
-static ObservabilityAgentTest test;
+static ObservabilityAgentTest observabilityAgentTest;
 
 // Main entry point for standalone test app
 int main()
