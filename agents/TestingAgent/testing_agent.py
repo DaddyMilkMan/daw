@@ -5,7 +5,7 @@ This module provides test orchestration, execution, coverage analysis,
 and specialized testing for real-time audio systems.
 """
 
-from typing import Dict, List, Optional, Set, Callable
+from typing import Dict, List, Optional, Set, Callable, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -16,7 +16,6 @@ import xml.etree.ElementTree as ET
 import tempfile
 import json
 import os
-import json
 
 
 class TestType(Enum):
@@ -87,6 +86,24 @@ class TestingAgent:
     Orchestrates various types of tests, collects results,
     generates coverage reports, and validates audio quality.
     """
+
+    # Unsafe operation patterns (Regex)
+    UNSAFE_PATTERNS = {
+        "Allocation": re.compile(r"\b(new|delete|malloc|calloc|realloc|free|strdup)\b"),
+        "Smart Pointer": re.compile(r"\bstd::(make_unique|make_shared)\b"),
+        "Container Mutation": re.compile(r"\.(push_back|emplace_back|resize|reserve|insert)\s*\("),
+        "String Usage": re.compile(r"\b(std::string|juce::String)\b"),
+        "Lock": re.compile(r"\bstd::(mutex|lock_guard|unique_lock|condition_variable)\b|\bjuce::(CriticalSection|ScopedLock)\b"),
+        "I/O": re.compile(r"\b(std::cout|std::cerr|printf|fprintf|std::fstream)\b|\bjuce::(Logger|File)\b|\bDBG\b"),
+        "Flow Control": re.compile(r"\b(throw|try|catch|dynamic_cast)\b"),
+        "Waiting": re.compile(r"\b(sleep|std::this_thread::sleep_for)\b")
+    }
+
+    # Suppressions
+    SUPPRESSION_PATTERNS = [
+        "// NOLINT",
+        "// RT-SAFE-IGNORE"
+    ]
 
     def __init__(self, project_root: Optional[Path] = None):
         """
@@ -294,6 +311,150 @@ class TestingAgent:
             if json_output.exists():
                 json_output.unlink()
 
+    def _mask_comments_and_strings(self, source: str, preserve_rt_safe: bool = False) -> str:
+        """
+        Mask comments and string literals with spaces to prevent false positives and
+        allow robust parsing, while preserving line breaks and optionally RT-SAFE markers.
+        """
+        out = list(source)
+        i = 0
+        n = len(source)
+
+        while i < n:
+            # Strings
+            if source[i] in ('"', "'"):
+                quote = source[i]
+                # We do not mask the quote character itself to preserve some structure if needed,
+                # but content inside is masked.
+                i += 1
+                while i < n:
+                    if source[i] == '\\':
+                        # Handle escape sequence
+                        if source[i] != '\n': out[i] = ' '
+                        i += 1
+                        if i < n:
+                            if source[i] != '\n': out[i] = ' '
+                            i += 1
+                        continue
+
+                    if source[i] == quote:
+                        i += 1
+                        break
+
+                    if source[i] != '\n':
+                        out[i] = ' '
+                    i += 1
+                continue
+
+            # Line comments
+            if source[i:i+2] == '//':
+                if preserve_rt_safe and source.startswith('// RT-SAFE', i):
+                    # Keep // RT-SAFE
+                    i += 10
+                    continue
+
+                out[i] = ' '
+                out[i+1] = ' '
+                i += 2
+                while i < n and source[i] != '\n':
+                    out[i] = ' '
+                    i += 1
+                continue
+
+            # Block comments
+            if source[i:i+2] == '/*':
+                out[i] = ' '
+                out[i+1] = ' '
+                i += 2
+                while i < n:
+                    if source[i:i+2] == '*/':
+                        out[i] = ' '
+                        out[i+1] = ' '
+                        i += 2
+                        break
+                    if source[i] != '\n':
+                        out[i] = ' '
+                    i += 1
+                continue
+
+            i += 1
+
+        return "".join(out)
+
+    def _extract_rt_function_bodies(self, source: str) -> List[Tuple[str, str, int]]:
+        """
+        Extract bodies of functions that must be RT-safe.
+        Returns list of (function_name, body_text, start_line_number).
+        """
+        extracted = []
+
+        # Create a masked version of source where comments (except RT-SAFE) and strings are spaces.
+        # This ensures we don't find triggers or braces inside comments/strings.
+        masked_source = self._mask_comments_and_strings(source, preserve_rt_safe=True)
+
+        triggers = ["processBlock", "getNextAudioBlock", "// RT-SAFE"]
+
+        i = 0
+        n = len(masked_source)
+
+        while i < n:
+            found_trigger = None
+            found_idx = -1
+
+            # Find the next trigger in MASKED source
+            next_idx = n
+            for trigger in triggers:
+                idx = masked_source.find(trigger, i)
+                if idx != -1 and idx < next_idx:
+                    next_idx = idx
+                    found_trigger = trigger
+
+            if found_trigger is None:
+                break
+
+            i = next_idx
+
+            # Move past trigger
+            i += len(found_trigger)
+
+            # Find opening brace in MASKED source
+            brace_idx = -1
+            curr = i
+            while curr < n:
+                if masked_source[curr] == '{':
+                    brace_idx = curr
+                    break
+                curr += 1
+
+            if brace_idx != -1:
+                # Extract body by counting braces in MASKED source
+                balance = 1
+                curr = brace_idx + 1
+                while curr < n and balance > 0:
+                    if masked_source[curr] == '{':
+                        balance += 1
+                    elif masked_source[curr] == '}':
+                        balance -= 1
+                    curr += 1
+
+                if balance == 0:
+                    # Extract body from ORIGINAL source using indices
+                    body = source[brace_idx:curr]
+                    # Calculate line number
+                    start_line = source.count('\n', 0, brace_idx) + 1
+                    extracted.append((found_trigger, body, start_line))
+
+                    # Continue search from after the function
+                    i = curr
+                else:
+                    # Unbalanced or EOF
+                    i = brace_idx + 1
+            else:
+                # No brace found
+                i += 1
+
+        return extracted
+
     def validate_rt_safety(self, source_files: Optional[List[Path]] = None) -> List[TestCase]:
         """
         Validate real-time thread safety constraints.
@@ -306,25 +467,68 @@ class TestingAgent:
         """
         print("Validating real-time thread safety...")
         
-        # TODO: Static analysis for RT-unsafe operations
-        # TODO: Check for allocations, locks, blocking calls
-        # TODO: Verify noexcept specifications
-        # TODO: Validate lock-free data structures
-        
         results = []
         
-        # Example RT safety checks:
-        unsafe_patterns = [
-            r"\bnew\s+",  # Heap allocation
-            r"\bdelete\s+",  # Heap deallocation
-            r"std::lock_guard",  # Mutex lock
-            r"\bmalloc\(",  # C-style allocation
-            r"\.push_back\(",  # Potential allocation (may need capacity check)
-        ]
-        
-        # TODO: Scan audio callback code paths
-        # TODO: Report violations
-        
+        if source_files is None:
+            # Default to scanning common source directories
+            source_files = []
+            for ext in ['*.cpp', '*.h', '*.hpp']:
+                source_files.extend(list(self.project_root.rglob(ext)))
+
+        for file_path in source_files:
+            # Skip build artifacts, tests (unless testing safety of tests?), and external deps
+            if any(part in str(file_path).split(os.sep) for part in ['build', 'out', 'external', 'JuceLibraryCode']):
+                continue
+
+            try:
+                content = file_path.read_text(encoding='utf-8', errors='ignore')
+
+                # Extract function bodies
+                functions = self._extract_rt_function_bodies(content)
+
+                for func_name, body, start_line in functions:
+                    # 1. Mask the body for checking violations (do NOT preserve RT-SAFE here)
+                    masked_body = self._mask_comments_and_strings(body, preserve_rt_safe=False)
+
+                    # 2. Split both original and masked into lines
+                    body_lines = body.splitlines()
+                    masked_lines = masked_body.splitlines()
+
+                    # They should match in length if mask preserves newlines
+                    length = min(len(body_lines), len(masked_lines))
+                    if len(body_lines) != len(masked_lines):
+                        print(f"Warning: Line count mismatch in {file_path.name}::{func_name}")
+
+                    for i in range(length):
+                        line = body_lines[i]
+                        masked_line = masked_lines[i]
+                        current_line_num = start_line + i
+
+                        # Check original line for suppressions
+                        if any(s in line for s in self.SUPPRESSION_PATTERNS):
+                            continue
+
+                        # Check masked line for violations
+                        for violation_type, pattern in self.UNSAFE_PATTERNS.items():
+                            if pattern.search(masked_line):
+                                error_msg = f"RT-Safety Violation: {violation_type} detected in {func_name} at line {current_line_num}"
+
+                                results.append(TestCase(
+                                    name=f"{file_path.name}::{func_name}::L{current_line_num}",
+                                    test_type=TestType.RT_SAFETY,
+                                    status=TestStatus.FAILED,
+                                    error_message=error_msg
+                                ))
+
+            except Exception as e:
+                print(f"Error processing {file_path}: {e}")
+
+        if not results:
+            print("No RT-safety violations found.")
+        else:
+            print(f"Found {len(results)} RT-safety violations.")
+
+        self.test_results.extend(results)
         return results
 
     def test_audio_quality(self, audio_processor: Callable,
