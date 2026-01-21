@@ -179,21 +179,26 @@ std::vector<ActiveNote> activeNotes;
 
 ## 🟡 Medium Priority Issues
 
-### 8. Memory Leaks Likely
-**Location**: Multiple files  
-**Severity**: Medium  
-**Status**: Not Confirmed  
+### 8. Memory Leaks - FIXED (2026-01-21)
+**Location**: RealTimeGarbageCollector.cpp, cmake/CompilerFlags.cmake  
+**Severity**: High (was causing 301+ leaked objects in tests)  
+**Status**: ✅ RESOLVED  
 
-**Problem:**
-- Sanitizers disabled by default in CMakeLists.txt
-- No regular leak detection during development
-- Complex pointer management (unique_ptr, shared_ptr, raw pointers mixed)
+**Problem (Found):**
+- RealTimeGarbageCollector::ensureClean() had critical bug: cleared pending deleters without executing them
+- Caused 301 AudioPluginInstance, 602 OwnedArray, and 1 PluginAutomationBinding leaks in tests
+- Sanitizers were disabled by default, preventing early detection
 
-**Fix Required**:
-1. Enable sanitizers: `cmake -DENABLE_SANITIZERS=ON`
-2. Run leak detection tools regularly
-3. Add RAII wrappers for all resources
-4. Document ownership patterns
+**Fix Applied (2026-01-21)**:
+1. ✅ Fixed RealTimeGarbageCollector::ensureClean() to properly execute all pending deleters
+2. ✅ Enabled LeakSanitizer by default in Debug builds (cmake/CompilerFlags.cmake)
+3. ✅ Added lsan.supp suppression file for known ONNX Runtime false positives
+4. ✅ Configured CMakeLists.txt to use suppression file
+
+**Verification**:
+- Run tests with: `LSAN_OPTIONS=suppressions=lsan.supp ./ZenithDAWTests`
+- Should now report zero memory leaks from application code
+- ONNX Runtime allocations suppressed (known library behavior)
 
 ---
 

@@ -379,6 +379,14 @@ if(BUILD_TESTS)
 
     target_compile_features(ZenithDAWTests PRIVATE cxx_std_20)
 
+    # Configure LeakSanitizer suppression file
+    if(ENABLE_SANITIZERS AND NOT MSVC)
+        set_target_properties(ZenithDAWTests PROPERTIES
+            ENVIRONMENT "LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/lsan.supp"
+        )
+        message(STATUS "LeakSanitizer suppressions configured for ZenithDAWTests")
+    endif()
+
     if(ZENITH_ENABLE_SKIA)
         # Re-use SKIA_ROOT/SKIA_INCLUDE_DIR detected by SkiaManualIntegration.cmake
         target_include_directories(ZenithDAWTests PRIVATE ${SKIA_ROOT}/include ${SKIA_INCLUDE_DIR})
