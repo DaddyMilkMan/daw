@@ -92,6 +92,22 @@ cmake --build build --target ZenithDAWTests
 ./build/ZenithDAWTests_artefacts/Release/ZenithDAWTests
 ```
 
+## Automation
+
+### TriageBot
+
+This repository uses an automated triage system for issues and pull requests. When you open an issue or PR, TriageBot will:
+
+- **Automatically classify** your submission (bug, enhancement, question, etc.)
+- **Assign priority** based on severity (P0-P3)
+- **Add relevant labels** for components, platforms, and categories
+- **Detect duplicates** to help avoid redundant issues
+- **Leave helpful comments** with classification details
+
+This helps maintainers respond faster and ensures issues are properly categorized. The bot's classification is not final - maintainers may adjust labels as needed.
+
+For more details, see [agents/TriageBot/README.md](agents/TriageBot/README.md).
+
 ## License
 
 See [LICENSE](LICENSE) for details.
