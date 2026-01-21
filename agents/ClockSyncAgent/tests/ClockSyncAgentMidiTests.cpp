@@ -105,9 +105,9 @@ private:
     // After 100 ticks, we should be synchronized
     expect(status.synchronized, "Should be synchronized after warmup");
 
-    // Offset should be reasonable (using JUCE's string formatting)
+    // Offset should be reasonable
     int64_t absOffset = std::abs(status.offsetNanoseconds);
-    expectLessThan(absOffset, (int64_t)50000000, "Offset should be < 50ms");
+    expect(absOffset < 50000000, "Offset should be < 50ms (Actual: " + juce::String(absOffset) + " ns)");
   }
 
   void testTempoJumpReset() {

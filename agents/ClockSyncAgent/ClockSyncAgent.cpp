@@ -215,8 +215,12 @@ void ClockSyncAgent::processMidiMessage(const juce::MidiMessage& message) {
       historyCount_.store(currentHistoryCount + 1, std::memory_order_release);
     }
 
-    midiTickCounter_.store(currentTickCounter + 1, std::memory_order_release);
-    updateMidiRegression();
+    // Increment and store the new tick counter
+    int64_t newTickCounter = currentTickCounter + 1;
+    midiTickCounter_.store(newTickCounter, std::memory_order_release);
+    
+    // Pass the new tick counter to regression for consistent calculation
+    updateMidiRegression(newTickCounter);
   }
   // Start (0xFA)
   else if (status == 0xFA) {
@@ -247,7 +251,7 @@ void ClockSyncAgent::processMidiMessage(const juce::MidiMessage& message) {
   }
 }
 
-void ClockSyncAgent::updateMidiRegression() {
+void ClockSyncAgent::updateMidiRegression(int64_t currentTickCounter) {
   // Load history state atomically for thread-safe reading
   size_t currentHistoryCount = historyCount_.load(std::memory_order_acquire);
   
@@ -290,8 +294,8 @@ void ClockSyncAgent::updateMidiRegression() {
   double c_rel = (sumY - m * sumX) / n; // Intercept relative to baseTick
 
   // Calculate predicted MIDI time for the most recent tick
-  // Note: midiTickCounter was incremented after adding the point, so latest tick is (counter - 1)
-  int64_t latestTick = midiTickCounter_.load(std::memory_order_acquire) - 1;
+  // Use the tick counter passed as parameter for consistency (it was incremented after adding the point)
+  int64_t latestTick = currentTickCounter - 1;
   double predictedNowNs = m * (latestTick - baseTick) + c_rel;
 
   // Calculate clock offset for synchronization

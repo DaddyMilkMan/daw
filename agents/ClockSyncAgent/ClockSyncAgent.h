@@ -89,7 +89,7 @@ public:
 
 private:
   //==============================================================================
-  void updateMidiRegression();
+  void updateMidiRegression(int64_t currentTickCounter);
 
   std::atomic<TimeSource> currentSource_{TimeSource::LocalClock};
   std::atomic<bool> synchronized_{false};
