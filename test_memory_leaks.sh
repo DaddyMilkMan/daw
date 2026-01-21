@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Test script for verifying memory leak fixes in Zenith DAW
 # Run this script after building the project in Debug mode with sanitizers enabled
 

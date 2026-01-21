@@ -27,9 +27,12 @@ if(ENABLE_SANITIZERS)
         add_compile_options(/fsanitize=address)
         message(STATUS "Sanitizers enabled: Address")
     else()
+        # Define sanitizer flags for reuse
+        set(SANITIZER_FLAGS -fsanitize=address -fsanitize=leak -fsanitize=undefined)
+        
         # Enable AddressSanitizer, LeakSanitizer (implicit with ASan), and UBSan
-        add_compile_options(-fsanitize=address -fsanitize=leak -fsanitize=undefined)
-        add_link_options(-fsanitize=address -fsanitize=leak -fsanitize=undefined)
+        add_compile_options(${SANITIZER_FLAGS})
+        add_link_options(${SANITIZER_FLAGS})
         
         # Improved error reporting
         add_compile_options(-fno-omit-frame-pointer -g)
