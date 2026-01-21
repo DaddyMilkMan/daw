@@ -73,10 +73,20 @@ public:
                  int samplesPerFrame = WAVETABLE_FRAME_SIZE);
 
   /**
-      Generate a basic wavetable from waveform type.
-      @param type Waveform type (sine, saw, square, etc.)
-      @param numFrames Number of frames (1 for static, >1 for morphing)
-      @return Wavetable with procedural waveforms
+      Generate a basic wavetable from waveform type using additive synthesis.
+      
+      Uses trigonometric recurrence relations to optimize harmonic generation:
+      - Saw: 64 harmonics with step-1 recurrence (sin((n+1)θ) = sin(nθ)cos(θ) + cos(nθ)sin(θ))
+      - Square/Triangle: 32 odd harmonics with step-2 recurrence (θ' = 2θ)
+      - PWM: 32 harmonics with precomputed phase-shifted coefficients
+      
+      @param type Waveform type (0=Sine, 1=Saw, 2=Square, 3=Triangle, 4=PWM, 5=Formant)
+      @param numFrames Number of frames (1 for static, >1 for morphing wavetables)
+      @return Wavetable with procedurally generated waveforms
+      
+      @note Maximum numerical error: <2e-6 compared to direct std::sin
+      @warning Not real-time safe (allocates memory for frame buffers)
+      @warning Thread-safe (no shared state), but not suitable for audio thread
   */
   std::unique_ptr<Wavetable> generateBasicWavetable(int type,
                                                     int numFrames = 1);
