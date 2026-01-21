@@ -48,6 +48,12 @@ struct WavetableLoadResult {
     - WAV (mono, 32-bit float or 16-bit): Split into frames of 2048 samples
     - WT (Serum format): Header + raw frame data
     - Single-cycle WAV: Resampled to 2048 samples
+
+    Thread Safety:
+    - generateBasicWavetable() is SAFE from any thread (pure function, allocates locally)
+    - All file I/O methods (loadFromFile, loadWavFile, loadWtFile) are MESSAGE THREAD ONLY
+    - setContentDirectory() and getBundledWavetableNames() are MESSAGE THREAD ONLY
+    - WARNING: generateBasicWavetable() is NOT real-time safe (allocates memory)
 */
 class WavetableLoader {
 public:
