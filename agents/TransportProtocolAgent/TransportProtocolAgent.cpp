@@ -118,5 +118,94 @@ int TransportProtocolAgent::getOutputLatencySamples() const {
   return device ? device->getOutputLatencyInSamples() : 0;
 }
 
+//==============================================================================
+// AudioBufferConverter Implementation
+
+void AudioBufferConverter::convertToPlanarFloat(const void* sourceData,
+                                                juce::AudioBuffer<float>& destBuffer,
+                                                int numSamples,
+                                                int numChannels,
+                                                BitDepth sourceFormat)
+{
+    // Resize buffer if needed (though usually caller handles this)
+    destBuffer.setSize(numChannels, numSamples, false, false, true);
+
+    const int bytesPerSample = getBytesPerSample(sourceFormat);
+    const int strideBytes = bytesPerSample * numChannels;
+    const char* rawSrc = static_cast<const char*>(sourceData);
+
+    for (int ch = 0; ch < numChannels; ++ch)
+    {
+        float* destChannel = destBuffer.getWritePointer(ch);
+        const void* channelSrc = rawSrc + (ch * bytesPerSample);
+
+        switch (sourceFormat)
+        {
+            case BitDepth::Int16:
+                // srcBytesPerSample arg handles the stride for us
+                juce::AudioDataConverters::convertInt16LEToFloat(
+                    channelSrc, destChannel, numSamples, strideBytes);
+                break;
+
+            case BitDepth::Int24:
+                juce::AudioDataConverters::convertInt24LEToFloat(
+                    channelSrc, destChannel, numSamples, strideBytes);
+                break;
+
+            case BitDepth::Int32:
+                juce::AudioDataConverters::convertInt32LEToFloat(
+                    channelSrc, destChannel, numSamples, strideBytes);
+                break;
+
+            case BitDepth::Float32:
+                juce::AudioDataConverters::convertFloat32LEToFloat(
+                    channelSrc, destChannel, numSamples, strideBytes);
+                break;
+        }
+    }
+}
+
+void AudioBufferConverter::convertFromPlanarFloat(const juce::AudioBuffer<float>& sourceBuffer,
+                                                  void* destData,
+                                                  int numSamples,
+                                                  int numChannels,
+                                                  BitDepth destFormat)
+{
+    const int bytesPerSample = getBytesPerSample(destFormat);
+    const int strideBytes = bytesPerSample * numChannels;
+    char* rawDest = static_cast<char*>(destData);
+
+    for (int ch = 0; ch < numChannels; ++ch)
+    {
+        if (ch >= sourceBuffer.getNumChannels()) break;
+
+        const float* srcChannel = sourceBuffer.getReadPointer(ch);
+        void* channelDest = rawDest + (ch * bytesPerSample);
+
+        switch (destFormat)
+        {
+            case BitDepth::Int16:
+                juce::AudioDataConverters::convertFloatToInt16LE(
+                    srcChannel, channelDest, numSamples, strideBytes);
+                break;
+
+            case BitDepth::Int24:
+                juce::AudioDataConverters::convertFloatToInt24LE(
+                    srcChannel, channelDest, numSamples, strideBytes);
+                break;
+
+            case BitDepth::Int32:
+                juce::AudioDataConverters::convertFloatToInt32LE(
+                    srcChannel, channelDest, numSamples, strideBytes);
+                break;
+
+            case BitDepth::Float32:
+                juce::AudioDataConverters::convertFloatToFloat32LE(
+                    srcChannel, channelDest, numSamples, strideBytes);
+                break;
+        }
+    }
+}
+
 } // namespace agents
 } // namespace zenith
