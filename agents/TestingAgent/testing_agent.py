@@ -16,7 +16,6 @@ import xml.etree.ElementTree as ET
 import tempfile
 import json
 import os
-import json
 
 
 class TestType(Enum):
@@ -294,37 +293,236 @@ class TestingAgent:
             if json_output.exists():
                 json_output.unlink()
 
+    def _strip_comments_and_strings(self, text: str) -> str:
+        """
+        Remove C++ comments and string literals to prevent false positives.
+        Replaces them with spaces/newlines to maintain character positions relative to lines roughly.
+        """
+        # Pattern to match strings (including escaped quotes), block comments, and line comments
+        # " (:? \\. | [^"\\] )* " matches "..." with escaped chars
+        # /\* [\s\S]*? \*/ matches /* ... */
+        # // .* matches // ...
+        pattern = r'("(:?\\.|[^"\\])*"|/\*[\s\S]*?\*/|//.*)'
+
+        def replacer(match):
+            s = match.group(0)
+            if s.startswith('/'):
+                # It's a comment
+                # Keep newlines if any, replace rest with space
+                return " " * (len(s) - s.count('\n')) + "\n" * s.count("\n")
+            else:
+                # It's a string literal, replace with empty string literal
+                return '""'
+
+        return re.sub(pattern, replacer, text)
+
+    def _extract_rt_function_bodies(self, text: str) -> List[Dict]:
+        """
+        Parse C++ content to find bodies of RT-critical functions.
+        Targets: processBlock, getNextAudioBlock, and functions annotated with // RT-SAFE
+        """
+        results = []
+
+        # 1. Standard RT functions (processBlock, getNextAudioBlock)
+        # Matches: (optional ret type) (optional Class::)Name (args) (modifiers) {
+        # Using [^{]* for modifiers to handle const, noexcept, override, final, etc.
+        start_pattern = re.compile(
+            r'(?P<ret>[\w:<>\*&]+\s+)?(?:[\w:<>\*&]+::)?(?P<name>processBlock|getNextAudioBlock)\s*\((?P<args>[^)]*)\)\s*(?P<modifiers>[^{};]*)\{'
+        )
+
+        # Helper to extract body block
+        def extract_body(start_idx):
+            brace_count = 1
+            idx = start_idx + 1
+            length = len(text)
+            while idx < length and brace_count > 0:
+                if text[idx] == '{':
+                    brace_count += 1
+                elif text[idx] == '}':
+                    brace_count -= 1
+                idx += 1
+            return text[start_idx:idx]
+
+        for match in start_pattern.finditer(text):
+            # Verify the match ended at '{'
+            start_brace_idx = match.end() - 1
+
+            body = extract_body(start_brace_idx)
+
+            modifiers = match.group('modifiers')
+            is_noexcept = 'noexcept' in modifiers
+
+            results.append({
+                'name': match.group('name'),
+                'body': body,
+                'noexcept': is_noexcept,
+                'start_idx': match.start()
+            })
+
+        # 2. Annotated functions // RT-SAFE
+        annot_iter = re.finditer(r'//\s*RT-SAFE', text)
+        for match in annot_iter:
+            search_start = match.end()
+            window = text[search_start:search_start+500]
+
+            # Generic function definition regex
+            # Exclude control keywords to avoid matching loops/ifs as functions
+            func_pattern = re.compile(
+                r'(?:[\w:<>\*&]+\s+)(?:[\w:<>\*&]+::)?(?P<name>(?!if\b|for\b|while\b|switch\b|catch\b|return\b|auto\b)\w+)\s*\((?P<args>[^)]*)\)\s*(?P<modifiers>[^{};]*)\{'
+            )
+
+            func_match = func_pattern.search(window)
+            if func_match:
+                name = func_match.group('name')
+
+                # Deduplicate: if we already found this function (e.g. processBlock tagged with RT-SAFE)
+                current_func_start = search_start + func_match.start()
+                if any(r['name'] == name and abs(r['start_idx'] - current_func_start) < 200 for r in results):
+                    continue
+
+                abs_start_brace = search_start + func_match.end() - 1
+                body = extract_body(abs_start_brace)
+
+                modifiers = func_match.group('modifiers')
+                is_noexcept = 'noexcept' in modifiers
+
+                results.append({
+                    'name': name,
+                    'body': body,
+                    'noexcept': is_noexcept,
+                    'start_idx': current_func_start
+                })
+
+        return results
+
     def validate_rt_safety(self, source_files: Optional[List[Path]] = None) -> List[TestCase]:
         """
         Validate real-time thread safety constraints.
         
         Args:
-            source_files: Specific files to validate
+            source_files: Specific files to validate. If None, scans project.
             
         Returns:
             List of validation results
         """
         print("Validating real-time thread safety...")
         
-        # TODO: Static analysis for RT-unsafe operations
-        # TODO: Check for allocations, locks, blocking calls
-        # TODO: Verify noexcept specifications
-        # TODO: Validate lock-free data structures
-        
+        if source_files is None:
+            source_files = []
+            # Scan common source directories
+            dirs_to_scan = [
+                self.project_root / "Source",
+                self.project_root / "apps",
+                self.project_root / "agents",
+                self.project_root / "modules"
+            ]
+
+            for d in dirs_to_scan:
+                if d.exists():
+                    for ext in ['*.cpp', '*.h', '*.hpp', '*.mm']:
+                        source_files.extend(list(d.rglob(ext)))
+
         results = []
         
-        # Example RT safety checks:
-        unsafe_patterns = [
-            r"\bnew\s+",  # Heap allocation
-            r"\bdelete\s+",  # Heap deallocation
-            r"std::lock_guard",  # Mutex lock
-            r"\bmalloc\(",  # C-style allocation
-            r"\.push_back\(",  # Potential allocation (may need capacity check)
+        # Forbidden patterns with descriptions
+        forbidden_ops = [
+            (r'\bnew\b', "Heap allocation (new)"),
+            (r'\bdelete\b', "Heap deallocation (delete)"),
+            (r'\bmalloc\s*\(', "C-style allocation (malloc)"),
+            (r'\bfree\s*\(', "C-style deallocation (free)"),
+            (r'\bcalloc\s*\(', "C-style allocation (calloc)"),
+            (r'\brealloc\s*\(', "C-style allocation (realloc)"),
+
+            # Vector / Container allocations
+            (r'\.push_back\s*\(', "Vector push_back (potential allocation)"),
+            (r'\.resize\s*\(', "Vector resize (allocation)"),
+            (r'\.reserve\s*\(', "Vector reserve (allocation)"),
+
+            # Locking
+            (r'\bstd::mutex\b', "std::mutex usage"),
+            (r'\bstd::lock_guard\b', "std::lock_guard usage"),
+            (r'\bstd::unique_lock\b', "std::unique_lock usage"),
+            (r'\bjuce::CriticalSection\b', "juce::CriticalSection usage"),
+            (r'\bjuce::ScopedLock\b', "juce::ScopedLock usage"),
+
+            # Syscalls / Logging
+            (r'\bstd::cout\b', "Console output (std::cout)"),
+            (r'\bprintf\s*\(', "Console output (printf)"),
+            (r'\bjuce::Logger\b', "Logging (juce::Logger)"),
+            (r'\bDBG\s*\(', "Debug logging (DBG)"),
+            (r'\bjassert\s*\(', "Assertion (jassert)"),
+
+            # Smart pointers creation/reset
+            (r'\bstd::make_shared\b', "Shared pointer creation"),
+            (r'\bstd::make_unique\b', "Unique pointer creation"),
+            (r'\.reset\s*\(', "Smart pointer reset"),
+
+            # Async
+            (r'\bstd::async\b', "std::async usage"),
+            (r'\bstd::future\b', "std::future usage"),
+            (r'\bstd::promise\b', "std::promise usage"),
+
+            # RTTI/Exceptions
+            (r'\bdynamic_cast\b', "dynamic_cast usage (RTTI)"),
+            (r'\bthrow\b', "Exception throwing"),
+            (r'\bcatch\b', "Exception catching"),
         ]
-        
-        # TODO: Scan audio callback code paths
-        # TODO: Report violations
-        
+
+        for file_path in source_files:
+            try:
+                try:
+                    content = file_path.read_text(encoding='utf-8', errors='ignore')
+                except Exception:
+                    continue
+
+                # Extract functions
+                functions = self._extract_rt_function_bodies(content)
+
+                for func in functions:
+                    test_name = f"{file_path.name}::{func['name']}"
+
+                    # 1. Check noexcept
+                    if not func['noexcept']:
+                        results.append(TestCase(
+                            name=f"{test_name} [noexcept]",
+                            test_type=TestType.RT_SAFETY,
+                            status=TestStatus.FAILED,
+                            error_message=f"Function {func['name']} in {file_path.name} is missing 'noexcept' specifier."
+                        ))
+
+                    # 2. Check forbidden ops in stripped body
+                    clean_body = self._strip_comments_and_strings(func['body'])
+
+                    found_errors = []
+                    for pattern, desc in forbidden_ops:
+                        if re.search(pattern, clean_body):
+                            found_errors.append(desc)
+
+                    # Additional checks
+                    if re.search(r'\bstd::shared_ptr\b', clean_body):
+                         found_errors.append("std::shared_ptr usage")
+                    if re.search(r'\bstd::function\b', clean_body):
+                         found_errors.append("std::function usage")
+
+                    if found_errors:
+                        results.append(TestCase(
+                            name=f"{test_name} [rt-violations]",
+                            test_type=TestType.RT_SAFETY,
+                            status=TestStatus.FAILED,
+                            error_message=f"Real-time safety violations: {', '.join(found_errors)}"
+                        ))
+                    elif func['noexcept']:
+                        # Only report pass if noexcept AND no violations
+                        results.append(TestCase(
+                            name=test_name,
+                            test_type=TestType.RT_SAFETY,
+                            status=TestStatus.PASSED
+                        ))
+
+            except Exception as e:
+                print(f"Error validating {file_path}: {e}")
+
+        self.test_results.extend(results)
         return results
 
     def test_audio_quality(self, audio_processor: Callable,
