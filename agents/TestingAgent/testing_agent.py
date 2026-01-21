@@ -5,7 +5,7 @@ This module provides test orchestration, execution, coverage analysis,
 and specialized testing for real-time audio systems.
 """
 
-from typing import Dict, List, Optional, Set, Callable
+from typing import Dict, List, Optional, Set, Callable, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -80,6 +80,219 @@ class AudioQualityMetrics:
     no_clicks_pops: bool = False
 
 
+class RTSafetyValidator:
+    """Static analysis validator for Real-Time safety constraints."""
+
+    def __init__(self):
+        # Forbidden operations in RT context
+        self.forbidden_patterns = [
+            (re.compile(r"\b(new|delete|malloc|free)\b"), "Memory allocation/deallocation"),
+            (re.compile(r"\.push_back\s*\("), "std::vector::push_back (potential reallocation)"),
+            (re.compile(r"\bstd::string\b"), "std::string usage (allocation)"),
+            (re.compile(r"\bstd::(mutex|lock_guard|unique_lock)\b"), "Blocking synchronization (mutex/lock)"),
+            (re.compile(r"\bjuce::CriticalSection\b"), "Blocking synchronization (CriticalSection)"),
+            (re.compile(r"\b(std::cout|printf|sleep|usleep|sleep_for)\b"), "Blocking I/O or sleep"),
+            (re.compile(r"\b(throw|try|catch)\b"), "Exception handling"),
+            (re.compile(r"\bdynamic_cast\b"), "Runtime Type Information (dynamic_cast)")
+        ]
+
+        # Regex to match function headers
+        self.func_regex = re.compile(
+            r'\b(void|int|float|double|auto)\s+(?:\w+::)?(processBlock|getNextAudioBlock)\s*\('
+        )
+        # Regex to match RT-SAFE annotation
+        # Ensure it doesn't match RT-SAFE-IGNORE by using negative lookahead for dash/word chars
+        self.annotation_regex = re.compile(r'//\s*RT-SAFE(?![-\w])')
+        self.next_func_regex = re.compile(r'\b(void|int|float|double|auto)\s+(?:\w+::)?(\w+)\s*\(')
+
+    def strip_comments_and_strings(self, code: str) -> str:
+        """
+        Replace comments and string literals with whitespace, preserving line count and character indices.
+        """
+        result = []
+        i = 0
+        n = len(code)
+
+        while i < n:
+            # Check for string literals first
+            if code[i] == '"':
+                result.append(' ') # Replace opening quote
+                i += 1
+                while i < n:
+                    if code[i] == '\\':
+                        result.append(' ')
+                        i += 1
+                        if i < n:
+                            result.append(' ')
+                            i += 1
+                    elif code[i] == '"':
+                        result.append(' ') # Replace closing quote
+                        i += 1
+                        break
+                    else:
+                        if code[i] == '\n': result.append('\n')
+                        else: result.append(' ')
+                        i += 1
+            elif code[i] == "'":
+                result.append(' ')
+                i += 1
+                while i < n:
+                    if code[i] == '\\':
+                        result.append(' ')
+                        i += 1
+                        if i < n:
+                            result.append(' ')
+                            i += 1
+                    elif code[i] == "'":
+                        result.append(' ')
+                        i += 1
+                        break
+                    else:
+                        if code[i] == '\n': result.append('\n')
+                        else: result.append(' ')
+                        i += 1
+            # Check for line comments
+            elif code[i:i+2] == '//':
+                result.append(' ')
+                result.append(' ')
+                i += 2
+                while i < n and code[i] != '\n':
+                    result.append(' ')
+                    i += 1
+            # Check for block comments
+            elif code[i:i+2] == '/*':
+                result.append(' ')
+                result.append(' ')
+                i += 2
+                while i < n:
+                    if code[i:i+2] == '*/':
+                        result.append(' ')
+                        result.append(' ')
+                        i += 2
+                        break
+                    if code[i] == '\n': result.append('\n')
+                    else: result.append(' ')
+                    i += 1
+            else:
+                result.append(code[i])
+                i += 1
+
+        return "".join(result)
+
+    def extract_functions(self, code: str) -> List[Tuple[str, int, List[str], List[str]]]:
+        """
+        Extract target function bodies.
+        Returns list of (function_name, start_line, original_lines, clean_lines).
+        """
+        clean_code = self.strip_comments_and_strings(code)
+        lines = code.splitlines()
+        clean_lines = clean_code.splitlines()
+        functions = []
+        seen = set() # (name, start_line)
+
+        # Find explicitly named functions
+        # Search in clean_code to avoid matching commented-out functions
+        for match in self.func_regex.finditer(clean_code):
+            func_name = match.group(2)
+            start_index = match.end()
+            body_info = self._extract_body(clean_code, start_index, lines, clean_lines)
+            if body_info:
+                key = (func_name, body_info[0])
+                if key not in seen:
+                    functions.append((func_name, *body_info))
+                    seen.add(key)
+
+        # Find annotated functions
+        # Search in original code for comments (annotations)
+        for match in self.annotation_regex.finditer(code):
+            # Start searching for function definition after the annotation
+            search_start = match.end()
+            # Search in clean_code to avoid matching commented-out functions
+            func_match = self.next_func_regex.search(clean_code, search_start)
+            if func_match:
+                # Check intervening text in clean_code (should be empty/whitespace)
+                # clean_code already has comments stripped
+                segment_clean = clean_code[search_start:func_match.start()]
+
+                if not segment_clean.strip():
+                    func_name = func_match.group(2)
+                    start_index = func_match.end()
+                    body_info = self._extract_body(clean_code, start_index, lines, clean_lines)
+                    if body_info:
+                        key = (func_name, body_info[0])
+                        if key not in seen:
+                            functions.append((func_name, *body_info))
+                            seen.add(key)
+
+        return functions
+
+    def _extract_body(self, clean_code: str, start_index: int,
+                     lines: List[str], clean_lines: List[str]) -> Optional[Tuple[int, List[str], List[str]]]:
+        """Helper to extract body using brace counting on clean code."""
+        # Find opening brace
+        open_brace = clean_code.find('{', start_index)
+        if open_brace == -1:
+            return None
+
+        balance = 1
+        i = open_brace + 1
+        n = len(clean_code)
+
+        while i < n and balance > 0:
+            char = clean_code[i]
+            if char == '{':
+                balance += 1
+            elif char == '}':
+                balance -= 1
+            i += 1
+
+        if balance == 0:
+            # Determine line numbers
+            # Count newlines up to open_brace
+            start_line_idx = clean_code[:open_brace].count('\n')
+            end_line_idx = clean_code[:i].count('\n')
+
+            # Extract lines (inclusive of start/end braces)
+            # Adjust indices to be safe
+            return (
+                start_line_idx + 1,
+                lines[start_line_idx : end_line_idx + 1],
+                clean_lines[start_line_idx : end_line_idx + 1]
+            )
+        return None
+
+    def validate(self, file_path: Path) -> List[TestCase]:
+        """Run validation on a single file."""
+        results = []
+        try:
+            code = file_path.read_text(encoding='utf-8', errors='ignore')
+        except Exception as e:
+            print(f"Error reading {file_path}: {e}")
+            return []
+
+        functions = self.extract_functions(code)
+
+        for func_name, start_line, original_lines, clean_lines in functions:
+            for i, (orig_line, clean_line) in enumerate(zip(original_lines, clean_lines)):
+                current_line_num = start_line + i
+
+                # Check suppression
+                if "// NOLINT" in orig_line or "// RT-SAFE-IGNORE" in orig_line:
+                    continue
+
+                for pattern, failure_msg in self.forbidden_patterns:
+                    if pattern.search(clean_line):
+                        results.append(TestCase(
+                            name=f"{file_path.name}::{func_name}::Line{current_line_num}",
+                            test_type=TestType.RT_SAFETY,
+                            status=TestStatus.FAILED,
+                            duration_ms=0,
+                            error_message=f"{failure_msg} detected: '{orig_line.strip()}'"
+                        ))
+
+        return results
+
+
 class TestingAgent:
     """
     Testing Agent for comprehensive automated testing and validation.
@@ -98,6 +311,7 @@ class TestingAgent:
         self.project_root = project_root or Path.cwd()
         self.test_results: List[TestCase] = []
         self.coverage: Optional[CoverageReport] = None
+        self.rt_validator = RTSafetyValidator()
 
     def discover_tests(self, test_type: Optional[TestType] = None,
                       pattern: str = "*Test*") -> List[str]:
@@ -306,25 +520,34 @@ class TestingAgent:
         """
         print("Validating real-time thread safety...")
         
-        # TODO: Static analysis for RT-unsafe operations
-        # TODO: Check for allocations, locks, blocking calls
-        # TODO: Verify noexcept specifications
-        # TODO: Validate lock-free data structures
-        
         results = []
         
-        # Example RT safety checks:
-        unsafe_patterns = [
-            r"\bnew\s+",  # Heap allocation
-            r"\bdelete\s+",  # Heap deallocation
-            r"std::lock_guard",  # Mutex lock
-            r"\bmalloc\(",  # C-style allocation
-            r"\.push_back\(",  # Potential allocation (may need capacity check)
-        ]
+        # If source files not provided, scan all C++ files
+        if not source_files:
+            source_files = []
+            extensions = ['.cpp', '.h', '.hpp', '.mm']
+            for path in self.project_root.rglob("*"):
+                if path.is_file() and path.suffix in extensions:
+                    # Skip build/external directories to avoid noise
+                    if "build" in path.parts or "external" in path.parts or "JuceLibraryCode" in path.parts:
+                        continue
+                    source_files.append(path)
+
+        print(f"Scanning {len(source_files)} files for RT safety...")
         
-        # TODO: Scan audio callback code paths
-        # TODO: Report violations
+        for file_path in source_files:
+            file_results = self.rt_validator.validate(file_path)
+            results.extend(file_results)
+
+        self.test_results.extend(results)
         
+        # Summarize findings
+        failure_count = sum(1 for r in results if r.status == TestStatus.FAILED)
+        if failure_count > 0:
+            print(f"Found {failure_count} RT safety violations.")
+        else:
+            print("No RT safety violations found.")
+
         return results
 
     def test_audio_quality(self, audio_processor: Callable,
