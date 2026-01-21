@@ -63,10 +63,10 @@ private:
     // Send Start
     agent->processMidiMessage(createStartMsg());
 
-    // Send some clocks
+    // Send some clocks at proper 120 BPM timing (~20.8ms per tick)
     for (int i = 0; i < 24; ++i) {
       agent->processMidiMessage(createClockMsg());
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      std::this_thread::sleep_for(std::chrono::milliseconds(21)); // Proper timing for 120 BPM
     }
 
     // Stop
@@ -107,7 +107,7 @@ private:
 
     // Offset should be reasonable
     int64_t absOffset = std::abs(status.offsetNanoseconds);
-    expect(absOffset < 50000000, "Offset should be < 50ms (Actual: " + juce::String(absOffset) + ")");
+    expect(absOffset < 50000000, "Offset should be < 50ms (Actual: " + juce::String(absOffset) + " ns)");
   }
 
   void testTempoJumpReset() {

@@ -97,6 +97,15 @@ void ClockSyncAgent::setTimeSource(TimeSource source) {
     synchronized_.store(true, std::memory_order_release);
     clockOffsetNs_.store(0, std::memory_order_release);
     driftCompensation_.store(1.0, std::memory_order_release);
+  } else if (source == TimeSource::MIDIClock) {
+    // MIDI Clock: Reset synchronization state
+    synchronized_.store(false, std::memory_order_release);
+    clockOffsetNs_.store(0, std::memory_order_release);
+    driftCompensation_.store(1.0, std::memory_order_release);
+    midiTickCounter_.store(0, std::memory_order_release);
+    historyCount_.store(0, std::memory_order_release);
+    historyIdx_.store(0, std::memory_order_release);
+    isMidiRunning_.store(false, std::memory_order_release);
   } else {
     synchronized_.store(false, std::memory_order_release);
   }
@@ -169,16 +178,15 @@ void ClockSyncAgent::processMidiMessage(const juce::MidiMessage& message) {
     auto now = HighResClock::now();
     auto nowNs = std::chrono::duration_cast<Timestamp>(now.time_since_epoch()).count();
 
+    // Load current history state atomically
+    size_t currentHistoryCount = historyCount_.load(std::memory_order_acquire);
+    size_t currentHistoryIdx = historyIdx_.load(std::memory_order_acquire);
+    
     // Check for tempo jumps / discontinuity if we have enough history
-    if (historyCount_ > 10) {
+    if (currentHistoryCount > 10) {
       // Predict expected arrival using last 2 points (crude linear extrapolation for jump detection)
-      // Note: A full regression prediction would be better but this is cheaper for a quick check.
-      // We'll use the regression values if available, but for now let's just use the last interval.
-
-      // Accessing historyBuffer safely - since this is the only writer thread for historyBuffer_,
-      // we can read it.
-      size_t lastIdx = (historyIdx_ == 0) ? (kMidiHistorySize - 1) : (historyIdx_ - 1);
-      size_t prevIdx = (lastIdx == 0) ? (kMidiHistorySize - 1) : (lastIdx - 1);
+      size_t lastIdx = getPreviousBufferIndex(currentHistoryIdx, 1);
+      size_t prevIdx = getPreviousBufferIndex(currentHistoryIdx, 2);
 
       int64_t lastTime = historyBuffer_[lastIdx].timeNs;
       int64_t prevTime = historyBuffer_[prevIdx].timeNs;
@@ -187,31 +195,39 @@ void ClockSyncAgent::processMidiMessage(const juce::MidiMessage& message) {
       int64_t expectedNs = lastTime + interval;
       int64_t errorNs = std::abs(nowNs - expectedNs);
 
-      // Threshold: 20ms (approx 1 beat at 3000 BPM, or huge jitter)
-      // At 120 BPM, 1 tick = ~20.8ms. So 20ms error is basically missing a tick or double speed.
-      if (errorNs > 20000000) {
-        historyCount_ = 0; // Reset history
-        // Don't reset midiTickCounter_ here as we might just be catching up,
-        // unless it's a huge jump which the regression will handle by resetting slope.
+      // Use named constant for threshold
+      if (errorNs > kTempoJumpThresholdNs) {
+        historyCount_.store(0, std::memory_order_release); // Reset history
       }
     }
 
-    // Update History
-    historyBuffer_[historyIdx_] = { midiTickCounter_, nowNs };
-    historyIdx_ = (historyIdx_ + 1) % kMidiHistorySize;
-    if (historyCount_ < kMidiHistorySize) {
-      historyCount_++;
+    // Update History - load current tick counter atomically
+    int64_t currentTickCounter = midiTickCounter_.load(std::memory_order_acquire);
+    
+    // Write to history buffer (this is safe because only MIDI thread writes)
+    historyBuffer_[currentHistoryIdx] = { currentTickCounter, nowNs };
+    
+    // Update index and count atomically for UI thread readers
+    size_t nextIdx = (currentHistoryIdx + 1) % kMidiHistorySize;
+    historyIdx_.store(nextIdx, std::memory_order_release);
+    
+    if (currentHistoryCount < kMidiHistorySize) {
+      historyCount_.store(currentHistoryCount + 1, std::memory_order_release);
     }
 
-    midiTickCounter_++;
-    updateMidiRegression();
+    // Increment and store the new tick counter
+    int64_t newTickCounter = currentTickCounter + 1;
+    midiTickCounter_.store(newTickCounter, std::memory_order_release);
+    
+    // Pass the new tick counter to regression for consistent calculation
+    updateMidiRegression(newTickCounter);
   }
   // Start (0xFA)
   else if (status == 0xFA) {
     isMidiRunning_.store(true, std::memory_order_release);
-    midiTickCounter_ = 0;
-    historyCount_ = 0;
-    historyIdx_ = 0;
+    midiTickCounter_.store(0, std::memory_order_release);
+    historyCount_.store(0, std::memory_order_release);
+    historyIdx_.store(0, std::memory_order_release);
   }
   // Continue (0xFB)
   else if (status == 0xFB) {
@@ -229,30 +245,38 @@ void ClockSyncAgent::processMidiMessage(const juce::MidiMessage& message) {
     int songPositionBeats = (positionMsb << 7) | positionLsb;
 
     // SPP is in 16th notes (6 clocks per 16th note)
-    midiTickCounter_ = songPositionBeats * 6;
-    historyCount_ = 0; // Reset regression history as we jumped time
-    historyIdx_ = 0;
+    midiTickCounter_.store(songPositionBeats * 6, std::memory_order_release);
+    historyCount_.store(0, std::memory_order_release); // Reset regression history as we jumped time
+    historyIdx_.store(0, std::memory_order_release);
   }
 }
 
-void ClockSyncAgent::updateMidiRegression() {
-  if (historyCount_ < 2) return;
+void ClockSyncAgent::updateMidiRegression(int64_t currentTickCounter) {
+  // Load history state atomically for thread-safe reading
+  size_t currentHistoryCount = historyCount_.load(std::memory_order_acquire);
+  
+  if (currentHistoryCount < 2) return;
 
   // Linear Regression: Time = m * Tick + c
-  // We want to find m (ns per tick) and c (offset at tick 0)
+  // Goal: Find m (nanoseconds per tick) and c (time offset at tick 0)
+  // This smooths out MIDI transmission jitter by fitting a line through recent tick timestamps.
+  //
+  // Memory Ordering Note:
+  // - historyCount_/historyIdx_ are atomic and loaded with acquire semantics
+  // - historyBuffer_ is only written by MIDI thread, so reads are safe from same thread
+  // - clockOffsetNs_/driftCompensation_ are stored with release semantics for cross-thread visibility
 
   double sumX = 0.0, sumY = 0.0, sumXY = 0.0, sumX2 = 0.0;
-  int64_t n = static_cast<int64_t>(historyCount_);
+  int64_t n = static_cast<int64_t>(currentHistoryCount);
 
-  // To avoid floating point issues with large Tick/Time values,
-  // we normalize X relative to the oldest point in the buffer.
-  // We still use absolute Y (Time) but calculating slope is safer with relative X.
-
-  // Find the start index in the circular buffer
-  size_t startIdx = (historyIdx_ + kMidiHistorySize - historyCount_) % kMidiHistorySize;
+  // To avoid floating point precision issues with large tick/time values,
+  // normalize X (tick) relative to the oldest point in the circular buffer.
+  size_t currentHistoryIdx = historyIdx_.load(std::memory_order_acquire);
+  size_t startIdx = getPreviousBufferIndex(currentHistoryIdx, currentHistoryCount);
   int64_t baseTick = historyBuffer_[startIdx].tick;
 
-  for (size_t i = 0; i < historyCount_; ++i) {
+  // Accumulate regression sums
+  for (size_t i = 0; i < currentHistoryCount; ++i) {
     size_t idx = (startIdx + i) % kMidiHistorySize;
     double x = static_cast<double>(historyBuffer_[idx].tick - baseTick);
     double y = static_cast<double>(historyBuffer_[idx].timeNs);
@@ -263,93 +287,38 @@ void ClockSyncAgent::updateMidiRegression() {
     sumX2 += x * x;
   }
 
+  // Calculate slope (m) and intercept (c) using least squares formula
+  // m = (n*ΣXY - ΣX*ΣY) / (n*ΣX² - (ΣX)²)
+  // c = (ΣY - m*ΣX) / n
   double m = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
   double c_rel = (sumY - m * sumX) / n; // Intercept relative to baseTick
 
-  // "c" in absolute terms (though we don't strictly need it if we calculate offset directly)
-  // double c_abs = c_rel - m * baseTick;
-
-  // Calculate current predicted MIDI time for the latest tick
-  // Latest tick is (midiTickCounter_ - 1) because we incremented it after adding the point
-  int64_t latestTick = midiTickCounter_ - 1;
+  // Calculate predicted MIDI time for the most recent tick
+  // Use the tick counter passed as parameter for consistency (it was incremented after adding the point)
+  int64_t latestTick = currentTickCounter - 1;
   double predictedNowNs = m * (latestTick - baseTick) + c_rel;
 
-  // Update Atomics
-
-  // 1. Drift Compensation
-  // Nominal tick at 120 BPM is ~20.8ms (20833333ns).
-  // This is purely informational for the UI unless we want to normalize time.
-  // However, ClockSyncAgent uses driftCompensation_ to scale the LOCAL clock.
-  // If we want getCurrentTime() to return MIDI time, we have two options:
-  // A. Warping: drift = 1.0. Offset = MIDI_Time - Local_Time.
-  // B. Scaling: drift = MIDI_Rate / Local_Rate.
-
-  // The architecture seems to support "drift" as a multiplier on local monotonic time.
-  // If local clock is perfect, m should be exactly the expected tick duration.
-  // But MIDI tempo varies. "Drift" usually implies error relative to a fixed standard (like 48kHz).
-  // Here, MIDI *defines* the time.
-
-  // Strategy:
-  // We want getCurrentTime() == predictedNowNs (at this moment).
-  // getCurrentTime() = (LocalNow + Offset) * Drift
-  // Let's simplify: Set Drift = 1.0 (unless we are compensating for sample rate mismatch)
-  // and put all correction into Offset.
-  // Offset = PredictedMidiTime - LocalNow
-
-  // Wait, if we leave Drift=1.0, getCurrentTime will advance at LocalClock speed.
-  // If MIDI is 140 BPM, it advances faster. We need Drift to match the tempo IF
-  // getCurrentTime is supposed to return "Song Time" (musical time).
-  // BUT: getCurrentTime() returns nanoseconds. Nanoseconds are absolute.
-  // If MIDI clock runs fast (e.g. sender's crystal is +1%), then "1 second of MIDI time"
-  // takes 0.99 seconds of wall clock.
-  // So yes, we should probably just sync the "phase" (Offset) and let the "drift"
-  // be the ratio between MIDI rate and Local rate?
-  // Actually, usually Sync means aligning the timelines.
-  // If TimeSource::MIDIClock is selected, getCurrentTime() returns the time on the MIDI master's clock.
-  // If the MIDI master is perfect, m should be stable.
-
-  // For now, let's stick to the Plan:
-  // Formula: T_MIDI = m * currentTick + c
-  // Offset = T_MIDI - T_Local
-  // If we update Offset continuously, we effectively lock phase.
-
-  // Get the actual local time of the last point
-  size_t lastIdx = (historyIdx_ == 0) ? (kMidiHistorySize - 1) : (historyIdx_ - 1);
+  // Calculate clock offset for synchronization
+  // The offset represents how much to adjust local time to match MIDI time.
+  // Formula: Offset = PredictedMidiTime - ActualLocalTime
+  //
+  // When getCurrentTime() applies this offset:
+  // SyncedTime = LocalTime + Offset = LocalTime + (MidiTime - LocalTime) = MidiTime
+  //
+  // This ensures getCurrentTime() returns a smoothed MIDI timeline value.
+  
+  size_t lastIdx = getPreviousBufferIndex(currentHistoryIdx, 1);
   int64_t actualNowNs = historyBuffer_[lastIdx].timeNs;
-
   int64_t offset = static_cast<int64_t>(predictedNowNs) - actualNowNs;
 
-  // Store results
-  // We add 'offset' to the CURRENT offset? No, ClockSyncAgent::getCurrentTime adds clockOffsetNs_ to LocalTime.
-  // So clockOffsetNs_ should be (TargetTime - LocalTime).
-  // TargetTime here is predictedNowNs. LocalTime is actualNowNs.
-  // So clockOffsetNs_ = predictedNowNs - actualNowNs.
+  // Update atomic state with release semantics for visibility to other threads
+  // (e.g., audio thread calling getCurrentTime() or UI thread calling getSyncStatus())
+  clockOffsetNs_.store(offset, std::memory_order_release);
 
-  // Wait, predictedNowNs is the "smoothed" time for the current tick.
-  // actualNowNs is the "raw" local timestamp of the current tick.
-  // So offset is the error of the current tick vs the regression line.
-  // This is NOT the offset between Local Clock 0 and MIDI Clock 0.
-  // It is the "phase correction" to put the current local time onto the regression line.
-
-  // Actually, there's a misunderstanding of what `getCurrentTime()` should return.
-  // If it returns a monotonic timestamp that is "synced", it usually means:
-  // MasterTime = SlaveTime + Offset.
-  // Here, MIDI is Master.
-  // We received a tick at 'actualNowNs' (Slave Time).
-  // What is the Master Time?
-  // MIDI Clock doesn't send absolute timestamps. It sends Ticks.
-  // We have to DECIDE what "Time" it is.
-  // Usually, we pick a reference (e.g. First Tick = Time 0, or Time = System Time at First Tick).
-  // If we want `getCurrentTime` to return something close to `HighResClock::now()` but smoothed to MIDI,
-  // then we are doing exactly that.
-
-  clockOffsetNs_.store(static_cast<int64_t>(offset), std::memory_order_release);
-
-  // Update drift for stats (optional, or used for interpolation if we were doing that)
-  // For now, keep drift at 1.0 or calculate it if needed.
-  // The plan said: driftCompensation_ = nominalTickDurationNs_ / m;
-  // But we don't have a fixed nominalTickDurationNs_ (tempo changes).
-  // So let's leave drift at 1.0 unless we want to detect sample rate drift.
+  // Drift compensation is kept at 1.0 for MIDI Clock
+  // Unlike network protocols (PTP/NTP) which measure crystal drift, MIDI Clock
+  // defines the tempo, so there's no "drift" to compensate. The offset alone
+  // synchronizes us to the MIDI master's timeline.
   driftCompensation_.store(1.0, std::memory_order_release);
 
   synchronized_.store(true, std::memory_order_release);

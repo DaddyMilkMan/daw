@@ -89,7 +89,12 @@ public:
 
 private:
   //==============================================================================
-  void updateMidiRegression();
+  void updateMidiRegression(int64_t currentTickCounter);
+  
+  // Helper for circular buffer index calculation
+  inline size_t getPreviousBufferIndex(size_t currentIdx, size_t offset = 1) const noexcept {
+    return (currentIdx + kMidiHistorySize - offset) % kMidiHistorySize;
+  }
 
   std::atomic<TimeSource> currentSource_{TimeSource::LocalClock};
   std::atomic<bool> synchronized_{false};
@@ -107,10 +112,12 @@ private:
   };
 
   static constexpr size_t kMidiHistorySize = 48;
+  static constexpr int64_t kTempoJumpThresholdNs = 20'000'000; // 20ms: Max jitter before resetting history
+  
   std::array<TickPoint, kMidiHistorySize> historyBuffer_;
-  size_t historyIdx_ = 0;
-  size_t historyCount_ = 0;
-  int64_t midiTickCounter_ = 0;
+  std::atomic<size_t> historyIdx_{0};      // Atomic: written by MIDI thread, may be read by UI
+  std::atomic<size_t> historyCount_{0};    // Atomic: written by MIDI thread, may be read by UI
+  std::atomic<int64_t> midiTickCounter_{0}; // Atomic: written by MIDI thread, may be read by UI
   std::atomic<bool> isMidiRunning_{false}; // Atomic for thread safety if accessed from UI
   
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClockSyncAgent)
