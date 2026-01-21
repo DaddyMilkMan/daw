@@ -77,6 +77,74 @@ class TriageBot:
         self.maintainers = self._load_maintainer_expertise()
         self.known_issues: List[Issue] = []
 
+        # Compile regex patterns
+        self._compile_patterns()
+
+    def _compile_patterns(self):
+        """Pre-compile regex patterns for performance."""
+        # Issue Type Patterns
+        issue_type_keywords = {
+            "BUG": ["crash", "segfault", "error", "broken", "fails"],
+            "SECURITY": ["security", "vulnerability", "cve"],
+            "PERFORMANCE": ["slow", "performance", "lag", "latency"],
+            "FEATURE_REQUEST": ["feature request", "would be nice", "add support"],
+            "QUESTION": ["how to", "how do i", "question", "help"],
+            "DOCUMENTATION": ["documentation", "docs", "readme"]
+        }
+        self.issue_type_regex = self._build_compiled_regex(issue_type_keywords)
+
+        # Priority Patterns
+        priority_keywords = {
+            "CRITICAL": ["crash", "data loss", "security", "vulnerability", "cannot use"],
+            "HIGH": ["broken", "not working", "unusable", "blocking"]
+        }
+        self.priority_regex = self._build_compiled_regex(priority_keywords)
+
+        # Component Labels Patterns
+        component_keywords = {
+            "audio": ["audio", "sound", "playback", "recording"],
+            "midi": ["midi", "controller", "notes"],
+            "ui": ["ui", "interface", "rendering", "display"],
+            "plugin": ["plugin", "vst", "effect", "instrument"],
+            "ai": ["ai", "grok", "assistant"],
+            "collaboration": ["collaboration", "network", "webrtc"],
+            "build": ["build", "compile", "cmake"],
+        }
+        self.component_regex = self._build_compiled_regex(component_keywords)
+
+        # Platform Patterns
+        platform_keywords = {
+            "linux": ["linux"],
+            "macos": ["macos"],
+            "windows": ["windows"]
+        }
+        self.platform_regex = self._build_compiled_regex(platform_keywords)
+
+        # Maintainer Patterns
+        self.maintainer_regex = self._build_compiled_regex(self.maintainers)
+
+    def _build_compiled_regex(self, keyword_dict: Dict[str, List[str]]) -> re.Pattern:
+        """
+        Build a single compiled regex from a dictionary of keywords.
+        Uses named groups and word boundaries.
+        """
+        patterns = []
+        for key, keywords in keyword_dict.items():
+            # Validate key is a valid regex group name
+            if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', key):
+                raise ValueError(f"Invalid group name '{key}'. Regex group names must be alphanumeric.")
+
+            # Escape keywords to handle special characters safely
+            escaped_keywords = [re.escape(k) for k in keywords]
+            # Join keywords with OR
+            pattern_group = "|".join(escaped_keywords)
+            # Create named group with word boundaries
+            # \b(?:...) \b ensures whole word matching
+            patterns.append(f"(?P<{key}>\\b(?:{pattern_group})\\b)")
+
+        full_pattern = "|".join(patterns)
+        return re.compile(full_pattern, re.IGNORECASE)
+
     def _load_maintainer_expertise(self) -> Dict[str, List[str]]:
         """Load maintainer expertise areas."""
         # TODO: Load from CODEOWNERS or configuration
@@ -128,41 +196,41 @@ class TriageBot:
 
     def _classify_issue_type(self, issue: Issue) -> IssueType:
         """Classify issue type from title and body."""
-        text = (issue.title + " " + issue.body).lower()
+        text = issue.title + " " + issue.body
+
+        matches = {m.lastgroup for m in self.issue_type_regex.finditer(text)}
         
-        # Pattern matching for common keywords
-        if any(word in text for word in ["crash", "segfault", "error", "broken", "fails"]):
+        # Check in priority order
+        if "BUG" in matches:
             return IssueType.BUG
         
-        if any(word in text for word in ["security", "vulnerability", "cve"]):
+        if "SECURITY" in matches:
             return IssueType.SECURITY
         
-        if any(word in text for word in ["slow", "performance", "lag", "latency"]):
+        if "PERFORMANCE" in matches:
             return IssueType.PERFORMANCE
-        
-        if any(word in text for word in ["feature request", "would be nice", "add support"]):
+
+        if "FEATURE_REQUEST" in matches:
             return IssueType.FEATURE_REQUEST
-        
-        if any(word in text for word in ["how to", "how do i", "question", "help"]):
+
+        if "QUESTION" in matches:
             return IssueType.QUESTION
-        
-        if any(word in text for word in ["documentation", "docs", "readme"]):
+
+        if "DOCUMENTATION" in matches:
             return IssueType.DOCUMENTATION
         
         return IssueType.ENHANCEMENT
 
     def _determine_priority(self, issue: Issue, issue_type: IssueType) -> Priority:
         """Determine issue priority."""
-        text = (issue.title + " " + issue.body).lower()
+        text = issue.title + " " + issue.body
         
-        # Critical keywords
-        critical_keywords = ["crash", "data loss", "security", "vulnerability", "cannot use"]
-        if any(keyword in text for keyword in critical_keywords):
+        matches = {m.lastgroup for m in self.priority_regex.finditer(text)}
+        
+        if "CRITICAL" in matches:
             return Priority.CRITICAL
-        
-        # High priority keywords
-        high_keywords = ["broken", "not working", "unusable", "blocking"]
-        if any(keyword in text for keyword in high_keywords):
+
+        if "HIGH" in matches:
             return Priority.HIGH
         
         # Security issues are always at least high priority
@@ -189,26 +257,16 @@ class TriageBot:
         labels.add(priority.value)
         
         # Add component labels based on content
-        text = (issue.title + " " + issue.body).lower()
+        text = issue.title + " " + issue.body
         
-        component_keywords = {
-            "audio": ["audio", "sound", "playback", "recording"],
-            "midi": ["midi", "controller", "notes"],
-            "ui": ["ui", "interface", "rendering", "display"],
-            "plugin": ["plugin", "vst", "effect", "instrument"],
-            "ai": ["ai", "grok", "assistant"],
-            "collaboration": ["collaboration", "network", "webrtc"],
-            "build": ["build", "compile", "cmake"],
-        }
-        
-        for component, keywords in component_keywords.items():
-            if any(keyword in text for keyword in keywords):
-                labels.add(f"component:{component}")
+        component_matches = {m.lastgroup for m in self.component_regex.finditer(text)}
+        for component in component_matches:
+            labels.add(f"component:{component}")
         
         # Add platform labels
-        for platform in ["linux", "macos", "windows"]:
-            if platform in text:
-                labels.add(f"platform:{platform}")
+        platform_matches = {m.lastgroup for m in self.platform_regex.finditer(text)}
+        for platform in platform_matches:
+            labels.add(f"platform:{platform}")
         
         return labels
 
@@ -245,15 +303,11 @@ class TriageBot:
     def _route_to_maintainer(self, issue: Issue, 
                             issue_type: IssueType) -> List[str]:
         """Route issue to appropriate maintainer."""
-        text = (issue.title + " " + issue.body).lower()
+        text = issue.title + " " + issue.body
         
-        # Find maintainer with matching expertise
-        for maintainer, expertise in self.maintainers.items():
-            if any(area in text for area in expertise):
-                return [maintainer]
-        
-        # Default to no assignment (will be manually triaged)
-        return []
+        # Find all maintainers with matching expertise
+        matches = {m.lastgroup for m in self.maintainer_regex.finditer(text)}
+        return list(matches)
 
     def _generate_response(self, issue: Issue, 
                           issue_type: IssueType,
