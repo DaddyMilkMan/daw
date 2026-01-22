@@ -6,7 +6,7 @@ A professional Digital Audio Workstation built with C++20 and JUCE, featuring AI
 
 **Version:** 0.1.0-alpha  
 **Platform:** Linux, macOS, Windows  
-**Build:** [![Tests](https://github.com/zenith-daw/zenith/actions/workflows/test.yml/badge.svg)](https://github.com/zenith-daw/zenith/actions/workflows/test.yml) [![Fuzzing](https://github.com/micahcooley/daw/actions/workflows/fuzzing-agent.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/fuzzing-agent.yml) [![Testing Agent](https://github.com/micahcooley/daw/actions/workflows/agent-testing.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/agent-testing.yml) [![Security Scan](https://github.com/micahcooley/daw/actions/workflows/security-agent.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/security-agent.yml) [![Linting](https://github.com/micahcooley/daw/actions/workflows/linting-agent.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/linting-agent.yml)
+**Build:** [![Tests](https://github.com/zenith-daw/zenith/actions/workflows/test.yml/badge.svg)](https://github.com/zenith-daw/zenith/actions/workflows/test.yml) [![Fuzzing](https://github.com/micahcooley/daw/actions/workflows/fuzzing-agent.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/fuzzing-agent.yml) [![Testing Agent](https://github.com/micahcooley/daw/actions/workflows/agent-testing.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/agent-testing.yml) [![Security Scan](https://github.com/micahcooley/daw/actions/workflows/security-agent.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/security-agent.yml) [![Linting](https://github.com/micahcooley/daw/actions/workflows/linting-agent.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/linting-agent.yml) [![Triage](https://github.com/micahcooley/daw/actions/workflows/triage-bot.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/triage-bot.yml)
 
 ### What Works
 - Audio engine with real-time playback and recording
@@ -30,11 +30,7 @@ A professional Digital Audio Workstation built with C++20 and JUCE, featuring AI
 **Linux (Ubuntu/Debian):**
 ```bash
 sudo apt update
-sudo apt install build-essential cmake ninja-build \
-    libasound2-dev libjack-jackd2-dev libcurl4-openssl-dev \
-    libfreetype6-dev libx11-dev libxinerama-dev libxext-dev \
-    libxrandr-dev libxcursor-dev libwebkit2gtk-4.0-dev \
-    libglu1-mesa-dev mesa-common-dev
+sudo apt install build-essential cmake ninja-build     libasound2-dev libjack-jackd2-dev libcurl4-openssl-dev     libfreetype6-dev libx11-dev libxinerama-dev libxext-dev     libxrandr-dev libxcursor-dev libwebkit2gtk-4.0-dev     libglu1-mesa-dev mesa-common-dev
 ```
 
 **macOS:**
@@ -162,6 +158,22 @@ The Linting Agent performs automated code quality checks on every push and pull 
 - Extensible for additional linters (clang-tidy, pylint, etc.)
 
 See [`agents/LintingAgent/README.md`](agents/LintingAgent/README.md) for details.
+
+## Automation
+
+### TriageBot
+
+This repository uses an automated triage system for issues and pull requests. When you open an issue or PR, TriageBot will:
+
+- **Automatically classify** your submission (bug, enhancement, question, etc.)
+- **Assign priority** based on severity (P0-P3)
+- **Add relevant labels** for components, platforms, and categories
+- **Detect duplicates** to help avoid redundant issues
+- **Leave helpful comments** with classification details
+
+This helps maintainers respond faster and ensures issues are properly categorized. The bot's classification is not final - maintainers may adjust labels as needed.
+
+For more details, see [agents/TriageBot/README.md](agents/TriageBot/README.md).
 
 ## Backend Coordinator Agents
 
