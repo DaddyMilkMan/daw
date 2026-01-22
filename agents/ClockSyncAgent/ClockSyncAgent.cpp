@@ -128,9 +128,28 @@ ClockSyncAgent::SyncStatus ClockSyncAgent::getSyncStatus() const {
 }
 
 void ClockSyncAgent::resynchronize() {
-  // TODO: Force synchronization update based on current source
-  // TODO: Measure clock offset
-  // TODO: Update drift compensation
+  auto source = currentSource_.load(std::memory_order_acquire);
+
+  if (source == TimeSource::LocalClock) {
+    clockOffsetNs_.store(0, std::memory_order_release);
+    driftCompensation_.store(1.0, std::memory_order_release);
+    synchronized_.store(true, std::memory_order_release);
+  }
+  else if (source == TimeSource::MIDIClock) {
+    // Reset regression history to force fresh calculation on next ticks
+    synchronized_.store(false, std::memory_order_release);
+    clockOffsetNs_.store(0, std::memory_order_release);
+    driftCompensation_.store(1.0, std::memory_order_release);
+
+    // Clear history but preserve tick counter and running state
+    historyCount_.store(0, std::memory_order_release);
+    historyIdx_.store(0, std::memory_order_release);
+  }
+  else if (source == TimeSource::NetworkNTP || source == TimeSource::NetworkPTP) {
+    if (syncProtocol_) {
+      syncProtocol_->forceSync();
+    }
+  }
 }
 
 void ClockSyncAgent::setDriftCompensationEnabled(bool enabled) {
