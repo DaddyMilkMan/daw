@@ -109,11 +109,7 @@ set(ZENITH_TEST_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/SIMDHelpersTest.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/WavetableLoaderBenchmark.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/AudioBufferConverterTest.cpp"
-<<<<<<< HEAD
-    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/TransportProtocolAgentTest.cpp"
-=======
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/ObservabilityAgentTest.cpp"
->>>>>>> origin/master
 )
 
 # =============================================================================
@@ -567,30 +563,6 @@ if(BUILD_TESTS)
     target_compile_features(ClockSyncAgentTests PRIVATE cxx_std_20)
 
     # =========================================================================
-<<<<<<< HEAD
-    # ObservabilityAgentTests - Lightweight test for ObservabilityAgent
-    # =========================================================================
-    add_executable(ObservabilityAgentTests)
-
-    target_sources(ObservabilityAgentTests PRIVATE
-        "agents/ObservabilityAgent/tests/RunTests.cpp"
-        "agents/ObservabilityAgent/tests/ObservabilityAgentTest.cpp"
-        "agents/ObservabilityAgent/ObservabilityAgent.cpp"
-    )
-
-    target_include_directories(ObservabilityAgentTests PRIVATE
-        ${CMAKE_BINARY_DIR}/ObservabilityAgentTests_artefacts/JuceLibraryCode
-        ${CMAKE_BINARY_DIR}/JuceLibraryCode
-        "agents/ObservabilityAgent"
-    )
-
-    target_link_libraries(ObservabilityAgentTests PRIVATE
-        juce::juce_core
-        juce::juce_events
-    )
-
-    target_compile_definitions(ObservabilityAgentTests PRIVATE
-=======
     # TransportProtocolAgentTests - Tests for TransportProtocolAgent
     # =========================================================================
     add_executable(TransportProtocolAgentTests)
@@ -613,7 +585,6 @@ if(BUILD_TESTS)
     )
 
     target_compile_definitions(TransportProtocolAgentTests PRIVATE
->>>>>>> origin/master
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
         JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
@@ -621,12 +592,6 @@ if(BUILD_TESTS)
     )
 
     if (UNIX AND NOT APPLE)
-<<<<<<< HEAD
-        target_link_libraries(ObservabilityAgentTests PRIVATE pthread dl)
-    endif()
-
-    target_compile_features(ObservabilityAgentTests PRIVATE cxx_std_20)
-=======
         target_link_libraries(TransportProtocolAgentTests PRIVATE pthread dl)
     endif()
 
@@ -641,6 +606,7 @@ if(BUILD_TESTS)
         "agents/ObservabilityAgent/tests/RunTests.cpp"
         "agents/ObservabilityAgent/tests/ObservabilityAgentTest.cpp"
         "agents/ObservabilityAgent/ObservabilityAgent.cpp"
+        "agents/ObservabilityAgent/PrometheusExporter.cpp"
     )
 
     target_include_directories(ObservabilityTest PRIVATE
@@ -652,6 +618,7 @@ if(BUILD_TESTS)
     target_link_libraries(ObservabilityTest PRIVATE
         juce::juce_core
         juce::juce_audio_basics
+        juce::juce_events
     )
 
     target_compile_definitions(ObservabilityTest PRIVATE
@@ -666,7 +633,6 @@ if(BUILD_TESTS)
     endif()
 
     target_compile_features(ObservabilityTest PRIVATE cxx_std_20)
->>>>>>> origin/master
 
 endif()
 

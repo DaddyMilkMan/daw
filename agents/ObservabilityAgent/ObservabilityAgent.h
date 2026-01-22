@@ -13,10 +13,16 @@
 #include <chrono>
 #include <string>
 #include <vector>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <memory>
 #include <array>
 
 namespace zenith {
 namespace agents {
+
+class PrometheusExporter;
 
 //==============================================================================
 /**
@@ -93,6 +99,9 @@ public:
   /// Set metrics export interval
   void setExportInterval(std::chrono::milliseconds interval);
   
+  /// Set the destination file for metrics export
+  void setMetricsFile(const juce::File& file);
+
   /// Get collected metrics (non-RT)
   std::vector<Metric> getMetrics();
   
@@ -109,6 +118,8 @@ private:
   //==============================================================================
   void run() override;
   void timerCallback() override;
+  void exportLoop();
+  void stopExportThread();
 
   struct LogEntry {
       LogLevel level;
@@ -127,6 +138,15 @@ private:
   std::atomic<uint64_t> metricsCollected_{0};
   std::atomic<uint64_t> exportCount_{0};
   
+  std::unique_ptr<PrometheusExporter> exporter_;
+  juce::File metricsFile_;
+
+  std::thread exportThread_;
+  std::atomic<bool> shouldExitExportThread_{false};
+  std::mutex exportMutex_;
+  std::condition_variable exportCv_;
+  std::chrono::milliseconds exportInterval_{0};
+
   // Async Log Queue
   static constexpr int kLogQueueSize = 1024;
   juce::AbstractFifo logFifo_{kLogQueueSize};
