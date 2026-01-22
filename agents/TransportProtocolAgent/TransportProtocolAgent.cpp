@@ -17,6 +17,10 @@ TransportProtocolAgent::TransportProtocolAgent()
   deviceManager_->initialiseWithDefaultDevices(2, 2);
 }
 
+TransportProtocolAgent::TransportProtocolAgent(std::unique_ptr<juce::AudioDeviceManager> manager)
+  : deviceManager_(std::move(manager)) {
+}
+
 TransportProtocolAgent::~TransportProtocolAgent() {
   closeDevice();
 }
@@ -93,45 +97,74 @@ TransportProtocolAgent::enumerateDevices() {
 
 TransportProtocolAgent::DeviceInfo TransportProtocolAgent::getDefaultInputDevice() {
   DeviceInfo info;
+  info.name = "None";
+  info.id = "";
+  info.isDefault = false;
 
   if (deviceManager_ == nullptr)
-    return info;
+      return info;
 
-  for (auto* type : deviceManager_->getAvailableDeviceTypes()) {
-    if (type == nullptr)
-      continue;
+  // Define priority order based on platform
+  juce::StringArray searchOrder;
 
-    type->scanForDevices();
+  // Check currently active type first
+  juce::String activeType = deviceManager_->getCurrentAudioDeviceType();
+  if (activeType.isNotEmpty())
+      searchOrder.add(activeType);
 
-    // Check for default input device (true = input)
-    int defaultIndex = type->getDefaultDeviceIndex(true);
+#if JUCE_WINDOWS
+  searchOrder.add("ASIO");
+  searchOrder.add("Windows Audio");
+  searchOrder.add("DirectSound");
+#elif JUCE_LINUX
+  searchOrder.add("JACK");
+  searchOrder.add("ALSA");
+#elif JUCE_MAC
+  searchOrder.add("CoreAudio");
+#endif
 
-    if (defaultIndex >= 0) {
-      auto deviceNames = type->getDeviceNames();
-
-      if (defaultIndex < deviceNames.size()) {
-        info.name = deviceNames[defaultIndex];
-        info.id = deviceNames[defaultIndex];
-        info.apiType = type->getTypeName();
-        info.isDefault = true;
-
-        // If the default device is the currently open device, we can fill in more details
-        auto* currentDevice = deviceManager_->getCurrentAudioDevice();
-        if (currentDevice != nullptr && currentDevice->getName() == info.name &&
-            currentDevice->getTypeName() == info.apiType) {
-          info.numInputChannels = currentDevice->getActiveInputChannels().countNumberOfSetBits();
-          info.numOutputChannels = currentDevice->getActiveOutputChannels().countNumberOfSetBits();
-          info.supportedSampleRates = currentDevice->getAvailableSampleRates();
-          info.supportedBufferSizes = currentDevice->getAvailableBufferSizes();
-        }
-
-        return info;
-      }
-    }
+  // Remove duplicates (keep first occurrence - effectively active type stays first)
+  for (int i = searchOrder.size() - 1; i > 0; --i)
+  {
+      if (searchOrder.indexOf(searchOrder[i]) < i)
+          searchOrder.remove(i);
   }
 
-  // Fallback
-  info.name = "Default Input";
+  const auto& availableTypes = deviceManager_->getAvailableDeviceTypes();
+
+  for (const auto& typeName : searchOrder)
+  {
+      for (auto* type : availableTypes)
+      {
+          if (type != nullptr && type->getTypeName() == typeName)
+          {
+              type->scanForDevices();
+              juce::StringArray deviceNames = type->getDeviceNames(true); // true for input
+              int defaultIndex = type->getDefaultDeviceIndex(true);
+
+              if (defaultIndex >= 0 && defaultIndex < deviceNames.size())
+              {
+                  info.name = deviceNames[defaultIndex];
+                  info.id = info.name; // In JUCE, name is typically used as ID
+                  info.apiType = typeName;
+                  info.isDefault = true;
+                  
+                  // Enrich with details if it matches current device (Best effort)
+                  auto* currentDevice = deviceManager_->getCurrentAudioDevice();
+                  if (currentDevice != nullptr && currentDevice->getName() == info.name &&
+                      currentDevice->getTypeName() == info.apiType) {
+                    info.numInputChannels = currentDevice->getActiveInputChannels().countNumberOfSetBits();
+                    info.numOutputChannels = currentDevice->getActiveOutputChannels().countNumberOfSetBits();
+                    info.supportedSampleRates = currentDevice->getAvailableSampleRates();
+                    info.supportedBufferSizes = currentDevice->getAvailableBufferSizes();
+                  }
+                  
+                  return info;
+              }
+          }
+      }
+  }
+
   return info;
 }
 

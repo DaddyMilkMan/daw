@@ -14,6 +14,11 @@ include(cmake/BuildOptimizations.cmake OPTIONAL)
 
 cmake_minimum_required(VERSION 3.25)
 
+# Disable JUCE tools early to prevent build issues
+set(JUCE_DISABLE_JUCEAIDE ON CACHE BOOL "Disable JUCEAIDE build tool" FORCE)
+set(JUCE_BUILD_HELPER_TOOLS OFF CACHE BOOL "Disable JUCE helper tools" FORCE)
+set(JUCE_BUILD_EXTRAS OFF CACHE BOOL "Disable JUCE extras" FORCE)
+
 project(ZenithDAW
     VERSION 0.1.0
     DESCRIPTION "Zenith DAW - Professional Digital Audio Workstation"
@@ -26,6 +31,8 @@ include(cmake/PlatformDetection.cmake OPTIONAL)
 # =============================================================================
 # BUILD CONFIGURATION
 # =============================================================================
+
+option(ZENITH_BUILD_APP "Build the main application" ON)
 
 # Default to Release build for Skia compatibility
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -108,6 +115,8 @@ set(ZENITH_TEST_SOURCES
 # =============================================================================
 # TARGET DEFINITION
 # =============================================================================
+
+if(ZENITH_BUILD_APP)
 
 # Create main executable
 juce_add_gui_app(ZenithDAW
@@ -346,12 +355,15 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/cmake/PrecompiledHeaders.cma
     include(apps/desktop/cmake/PrecompiledHeaders.cmake)
 endif()
 
+endif()
+
 # =============================================================================
 # OPTIONAL TESTS
 # =============================================================================
 
 option(BUILD_TESTS "Build unit tests" ON)
 if(BUILD_TESTS)
+    if(ZENITH_BUILD_APP)
     juce_add_console_app(ZenithDAWTests
         PRODUCT_NAME "ZenithDAWTests"
     )
@@ -359,7 +371,7 @@ if(BUILD_TESTS)
     juce_generate_juce_header(ZenithDAWTests)
 
     set(ZENITH_TEST_APP_SOURCES ${ZENITH_ALL_SOURCES})
-    list(FILTER ZENITH_TEST_APP_SOURCES EXCLUDE REGEX "Main\\.cpp$")
+    list(FILTER ZENITH_TEST_APP_SOURCES EXCLUDE REGEX "Main\.cpp$")
     target_sources(ZenithDAWTests PRIVATE ${ZENITH_TEST_SOURCES} ${ZENITH_TEST_APP_SOURCES})
 
     # Use centralized interface libraries (same as ZenithDAW)
@@ -511,6 +523,7 @@ if(BUILD_TESTS)
     )
 
     target_compile_features(WavetableBenchmark PRIVATE cxx_std_20)
+    endif()
 
     # =========================================================================
     # ClockSyncAgentTests - Lightweight test for ClockSyncAgent
@@ -548,6 +561,41 @@ if(BUILD_TESTS)
     endif()
 
     target_compile_features(ClockSyncAgentTests PRIVATE cxx_std_20)
+
+    # =========================================================================
+    # TransportProtocolAgentTests - Tests for TransportProtocolAgent
+    # =========================================================================
+    add_executable(TransportProtocolAgentTests)
+
+    target_sources(TransportProtocolAgentTests PRIVATE
+        "agents/TransportProtocolAgent/tests/TransportProtocolAgentTests.cpp"
+        "agents/TransportProtocolAgent/TransportProtocolAgent.cpp"
+    )
+
+    target_include_directories(TransportProtocolAgentTests PRIVATE
+        ${CMAKE_BINARY_DIR}/TransportProtocolAgentTests_artefacts/JuceLibraryCode
+        ${CMAKE_BINARY_DIR}/JuceLibraryCode
+        "agents/TransportProtocolAgent"
+    )
+
+    target_link_libraries(TransportProtocolAgentTests PRIVATE
+        juce::juce_core
+        juce::juce_audio_devices
+        juce::juce_events
+    )
+
+    target_compile_definitions(TransportProtocolAgentTests PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+        JUCE_STANDALONE_APPLICATION=1
+    )
+
+    if (UNIX AND NOT APPLE)
+        target_link_libraries(TransportProtocolAgentTests PRIVATE pthread dl)
+    endif()
+
+    target_compile_features(TransportProtocolAgentTests PRIVATE cxx_std_20)
 
     # =========================================================================
     # ObservabilityTest - Lightweight test for ObservabilityAgent
@@ -589,6 +637,8 @@ endif()
 # =============================================================================
 # INSTALLATION
 # =============================================================================
+
+if(ZENITH_BUILD_APP)
 
 install(TARGETS ZenithDAW
     BUNDLE DESTINATION .
@@ -648,6 +698,8 @@ if(ZENITH_ENABLE_COLLAB)
     endif()
 else()
     message(STATUS "Collaboration features disabled by user.")
+endif()
+
 endif()
 
 # =============================================================================
