@@ -85,8 +85,8 @@ class TestAppState:
         state2 = AppState(config=config2, manager=manager2)
         
         # Verify they are independent
-        assert state1.config != state2.config
-        assert state1.manager != state2.manager
+        assert state1.config is not state2.config
+        assert state1.manager is not state2.manager
 
 
 class TestMainCallback:
@@ -474,6 +474,7 @@ class TestServiceManager:
     def test_service_manager_start_services_dry_run(self, mock_sentinel_cls, mock_config):
         """Test ServiceManager dry run doesn't start services."""
         mock_sentinel = Mock()
+        mock_sentinel.services = {}
         mock_sentinel_cls.return_value = mock_sentinel
         
         manager = ServiceManager(mock_config)
