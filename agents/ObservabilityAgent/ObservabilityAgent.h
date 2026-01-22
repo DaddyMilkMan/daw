@@ -108,18 +108,32 @@ private:
       char message[512];
   };
 
+  struct RawMetricEvent {
+    MetricType type;
+    const char* name; // Points to static literal
+    double value;
+    uint64_t timestamp;
+  };
+
   std::atomic<bool> enabled_{true};
   std::atomic<uint64_t> metricsCollected_{0};
   
+  // Async Log Queue
   static constexpr int kLogQueueSize = 1024;
   juce::AbstractFifo logFifo_{kLogQueueSize};
   std::vector<LogEntry> logBuffer_;
 
-  // TODO: Add lock-free ring buffer for RT metrics
+  // Lock-free ring buffer for RT metrics
+  static constexpr int kRingBufferSize = 4096;
+  juce::AbstractFifo ringBufferFifo_{kRingBufferSize};
+  std::vector<RawMetricEvent> ringBufferData_;
+
   // TODO: Add metrics exporter (Prometheus, OpenTelemetry)
   // TODO: Add trace context propagation
   // TODO: Add log aggregation
   
+  friend class ObservabilityAgentTest; // Allow tests to access ring buffer
+
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ObservabilityAgent)
 };
 

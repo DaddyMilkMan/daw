@@ -26,9 +26,12 @@ RealtimeAudioEngineAgent::~RealtimeAudioEngineAgent() {
 void RealtimeAudioEngineAgent::processBlock(juce::AudioBuffer<float>& buffer,
                                             juce::MidiBuffer& midi) noexcept {
   // RT-safe processing - no allocations, no locks
-  // TODO: Implement lock-free command processing
+  
+  // 1. Process pending commands from UI/Management threads
+  processCommands();
+  
   // TODO: Process plugin chain
-  // TODO: Update metrics atomically
+  // TODO: Update metrics atomically (partially done below)
   
   const auto numSamples = buffer.getNumSamples();
   metrics_.samplesProcessed.fetch_add(numSamples, std::memory_order_relaxed);
@@ -44,9 +47,46 @@ void RealtimeAudioEngineAgent::initialize(double sampleRate, int bufferSize) {
   sampleRate_.store(sampleRate, std::memory_order_release);
   bufferSize_.store(bufferSize, std::memory_order_release);
   
-  // TODO: Initialize lock-free structures
+  // Reset Fifo
+  commandFifo_.reset();
+  
   // TODO: Prepare plugin chain
   // TODO: Setup routing graph
+}
+
+//==============================================================================
+bool RealtimeAudioEngineAgent::queueCommand(const EngineEvent& command) {
+    int start1, size1, start2, size2;
+    commandFifo_.prepareToWrite(1, start1, size1, start2, size2);
+
+    if (size1 > 0) {
+        commandBuffer_[start1] = command;
+        commandFifo_.finishedWrite(1);
+        return true;
+    }
+    
+    // Buffer full
+    return false;
+}
+
+void RealtimeAudioEngineAgent::processCommands() noexcept {
+    int start1, size1, start2, size2;
+    commandFifo_.prepareToRead(commandFifo_.getNumReady(), start1, size1, start2, size2);
+
+    if (size1 > 0) {
+        for (int i = 0; i < size1; ++i) {
+            // const auto& event = commandBuffer_[start1 + i];
+            // TODO: Apply event to internal state (graph, plugins, etc.)
+        }
+    }
+    if (size2 > 0) {
+        for (int i = 0; i < size2; ++i) {
+            // const auto& event = commandBuffer_[start2 + i];
+            // TODO: Apply event to internal state
+        }
+    }
+
+    commandFifo_.finishedRead(size1 + size2);
 }
 
 void RealtimeAudioEngineAgent::start() {

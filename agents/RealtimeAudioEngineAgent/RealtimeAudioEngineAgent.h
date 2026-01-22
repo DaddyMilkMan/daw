@@ -11,6 +11,9 @@
 #include <juce_core/juce_core.h>
 #include <atomic>
 #include <memory>
+#include <vector>
+
+#include "../../apps/desktop/Source/engine/EngineEvent.h"
 
 namespace zenith {
 namespace agents {
@@ -49,6 +52,17 @@ public:
   
   /// Check if engine is currently processing
   bool isRunning() const noexcept;
+
+  //==============================================================================
+  // Command Queue (Lock-Free)
+
+  /**
+   * @brief Queue a command for the audio thread
+   * @param command The event to process
+   * @return true if queued successfully, false if full
+   * @note Safe to call from UI/Message thread
+   */
+  bool queueCommand(const EngineEvent& command);
   
   //==============================================================================
   // Metrics (RT-safe read)
@@ -64,6 +78,12 @@ public:
 
 private:
   //==============================================================================
+  // Internal Helpers (RT-safe)
+
+  /// Process pending commands from the queue
+  void processCommands() noexcept;
+
+  //==============================================================================
   // Member variables
   std::atomic<bool> isRunning_{false};
   std::atomic<double> sampleRate_{44100.0};
@@ -71,7 +91,11 @@ private:
   
   Metrics metrics_;
   
-  // TODO: Add lock-free command queue
+  // Lock-free Command Queue
+  static constexpr int kCommandBufferSize = 1024;
+  juce::AbstractFifo commandFifo_{kCommandBufferSize};
+  std::vector<EngineEvent> commandBuffer_{kCommandBufferSize};
+  
   // TODO: Add plugin chain management
   // TODO: Add routing graph
   

@@ -15,6 +15,7 @@ namespace agents {
 ObservabilityAgent::ObservabilityAgent() : juce::Thread("ObservabilityAgent") {
   // Initialize metrics collection system
   logBuffer_.resize(kLogQueueSize);
+  ringBufferData_.resize(kRingBufferSize);
   startThread();
 }
 
@@ -31,10 +32,18 @@ void ObservabilityAgent::recordCounter(const char* name, double value) noexcept 
     return;
   }
   
-  // TODO: Write to lock-free ring buffer
-  // TODO: Avoid string allocations
+  auto s1 = 0, s2 = 0, num1 = 0, num2 = 0;
+  ringBufferFifo_.prepareToWrite(1, s1, num1, s2, num2);
   
-  metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  if (num1 > 0) {
+    auto& event = ringBufferData_[s1];
+    event.type = MetricType::Counter;
+    event.name = name;
+    event.value = value;
+    event.timestamp = startTimer(); // Reuse for current timestamp
+    ringBufferFifo_.finishedWrite(1);
+    metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  }
 }
 
 void ObservabilityAgent::recordGauge(const char* name, double value) noexcept {
@@ -42,9 +51,18 @@ void ObservabilityAgent::recordGauge(const char* name, double value) noexcept {
     return;
   }
   
-  // TODO: Write to lock-free ring buffer
+  auto s1 = 0, s2 = 0, num1 = 0, num2 = 0;
+  ringBufferFifo_.prepareToWrite(1, s1, num1, s2, num2);
   
-  metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  if (num1 > 0) {
+    auto& event = ringBufferData_[s1];
+    event.type = MetricType::Gauge;
+    event.name = name;
+    event.value = value;
+    event.timestamp = startTimer(); // Reuse for current timestamp
+    ringBufferFifo_.finishedWrite(1);
+    metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  }
 }
 
 uint64_t ObservabilityAgent::startTimer() noexcept {
@@ -62,10 +80,18 @@ void ObservabilityAgent::endTimer(const char* name, uint64_t startTime) noexcept
   auto endTime = static_cast<uint64_t>(now.time_since_epoch().count());
   auto duration = endTime - startTime;
   
-  // TODO: Record timer metric with duration
-  // TODO: Write to lock-free ring buffer
+  auto s1 = 0, s2 = 0, num1 = 0, num2 = 0;
+  ringBufferFifo_.prepareToWrite(1, s1, num1, s2, num2);
   
-  metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  if (num1 > 0) {
+    auto& event = ringBufferData_[s1];
+    event.type = MetricType::Timer;
+    event.name = name;
+    event.value = static_cast<double>(duration);
+    event.timestamp = endTime;
+    ringBufferFifo_.finishedWrite(1);
+    metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  }
 }
 
 //==============================================================================
@@ -140,9 +166,11 @@ void ObservabilityAgent::run() {
     if (size1 + size2 > 0) {
       auto process = [this](int index) {
         const auto& entry = logBuffer_[static_cast<size_t>(index)];
-        DBG("[" << static_cast<int>(entry.level) << "] "
-            << entry.timestamp << ": "
-            << entry.message);
+        // Simple console output for now
+        // In production this would write to a file or aggregation service
+        // DBG("[" << static_cast<int>(entry.level) << "] "
+        //     << entry.timestamp << ": "
+        //     << entry.message);
       };
 
       for (int i = 0; i < size1; ++i) process(start1 + i);

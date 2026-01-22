@@ -550,25 +550,28 @@ if(BUILD_TESTS)
     target_compile_features(ClockSyncAgentTests PRIVATE cxx_std_20)
 
     # =========================================================================
-    # ObservabilityAgentTests - Lightweight test for ObservabilityAgent
+    # ObservabilityTest - Lightweight test for ObservabilityAgent
     # =========================================================================
-    add_executable(ObservabilityAgentTests
-        "apps/desktop/Source/tests/ObservabilityAgentTestMain.cpp"
-        "apps/desktop/Source/tests/ObservabilityAgentTest.cpp"
+    add_executable(ObservabilityTest)
+
+    target_sources(ObservabilityTest PRIVATE
+        "agents/ObservabilityAgent/tests/RunTests.cpp"
+        "agents/ObservabilityAgent/tests/ObservabilityAgentTest.cpp"
         "agents/ObservabilityAgent/ObservabilityAgent.cpp"
     )
 
-    target_include_directories(ObservabilityAgentTests PRIVATE
+    target_include_directories(ObservabilityTest PRIVATE
+        ${CMAKE_BINARY_DIR}/ObservabilityTest_artefacts/JuceLibraryCode
         ${CMAKE_BINARY_DIR}/JuceLibraryCode
         "agents/ObservabilityAgent"
-        "apps/desktop/Source"
     )
 
-    target_link_libraries(ObservabilityAgentTests PRIVATE
+    target_link_libraries(ObservabilityTest PRIVATE
         juce::juce_core
+        juce::juce_audio_basics
     )
 
-    target_compile_definitions(ObservabilityAgentTests PRIVATE
+    target_compile_definitions(ObservabilityTest PRIVATE
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
         JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
@@ -576,10 +579,10 @@ if(BUILD_TESTS)
     )
 
     if (UNIX AND NOT APPLE)
-        target_link_libraries(ObservabilityAgentTests PRIVATE pthread dl)
+        target_link_libraries(ObservabilityTest PRIVATE pthread dl)
     endif()
 
-    target_compile_features(ObservabilityAgentTests PRIVATE cxx_std_20)
+    target_compile_features(ObservabilityTest PRIVATE cxx_std_20)
 
 endif()
 
@@ -600,7 +603,7 @@ install(TARGETS ZenithDAW
 add_custom_command(TARGET ZenithDAW POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/apps/desktop/Resources/fonts
-    $<TARGET_FILE_DIR:ZenithDAW>/Resources/fonts
+    "$<TARGET_FILE_DIR:ZenithDAW>/Resources/fonts"
     COMMENT "Copying Fonts to Output Directory"
 )
 

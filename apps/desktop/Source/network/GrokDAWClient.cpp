@@ -50,11 +50,13 @@ public:
     {
         auto request = new juce::DynamicObject();
         
-        // Model selection
-        request->setProperty("model", "grok-beta");
-        
-        // Reasoning mode control
-        request->setProperty("reasoning", mode == GrokMode::Thinking);
+        // Model selection based on mode:
+        // - Fast: grok-4.1-fast (non-reasoning, low latency) - DEFAULT
+        // - Thinking: grok-4.1-fast-reasoning (fast with reasoning/thinking)
+        const char* modelId = (mode == GrokMode::Thinking) 
+            ? "grok-4.1-fast-reasoning" 
+            : "grok-4.1-fast";
+        request->setProperty("model", modelId);
         
         // Temperature settings
         const float TEMP_THINKING = 0.3f; // Lower temperature for precise reasoning
@@ -245,11 +247,13 @@ bool GrokDAWClient::setAPIKey(const juce::String& apiKey)
 {
     if (apiKey.isNotEmpty())
     {
+        // Store in secure storage for persistence
+        SecureKeyStore::storeKey(SecureKeyStore::GrokAPIKey, apiKey);
         pImpl->apiKey = apiKey;
         return true;
     }
     
-    // 1. Try environment variables
+    // 1. Try environment variables (secure - not in repo)
     juce::String envKey = juce::SystemStats::getEnvironmentVariable("GROK_API_KEY", "");
     if (envKey.isEmpty())
         envKey = juce::SystemStats::getEnvironmentVariable("XAI_API_KEY", "");
@@ -260,7 +264,7 @@ bool GrokDAWClient::setAPIKey(const juce::String& apiKey)
         return true;
     }
 
-    // 2. Try to retrieve from secure storage
+    // 2. Try to retrieve from secure storage (OS keychain/credential manager)
     juce::String storedKey;
     if (SecureKeyStore::retrieveKey(SecureKeyStore::GrokAPIKey, storedKey))
     {
@@ -268,6 +272,8 @@ bool GrokDAWClient::setAPIKey(const juce::String& apiKey)
         return true;
     }
     
+    // No API key found - user needs to configure via Settings or environment
+    DBG("Grok API key not configured. Set GROK_API_KEY environment variable or configure in Settings.");
     return false;
 }
 
