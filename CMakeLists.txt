@@ -102,6 +102,7 @@ set(ZENITH_TEST_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/SIMDHelpersTest.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/WavetableLoaderBenchmark.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/AudioBufferConverterTest.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/ObservabilityAgentTest.cpp"
 )
 
 # =============================================================================
@@ -602,7 +603,7 @@ install(TARGETS ZenithDAW
 add_custom_command(TARGET ZenithDAW POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/apps/desktop/Resources/fonts
-    $<TARGET_FILE_DIR:ZenithDAW>/Resources/fonts
+    "$<TARGET_FILE_DIR:ZenithDAW>/Resources/fonts"
     COMMENT "Copying Fonts to Output Directory"
 )
 
