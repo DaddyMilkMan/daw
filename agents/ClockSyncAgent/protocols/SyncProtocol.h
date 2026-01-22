@@ -37,6 +37,9 @@ public:
     /** Returns the current estimated drift ratio (1.0 = no drift). */
     virtual double getDrift() const = 0;
 
+    /** Forces an immediate synchronization update. */
+    virtual void forceSync() = 0;
+
     // Callbacks for updates
     std::function<void(int64_t)> onOffsetChanged;
     std::function<void(bool)> onSyncStateChanged;

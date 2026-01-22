@@ -27,11 +27,13 @@
 #include "TitleBarComponent.h"
 #include <memory>
 #include "../dialogs/ExportDialog.h"
-#include "../settings/GlobalSettingsPanel.h"
+#include "../settings/ModernSettingsPanel.h"
 #include "../dialogs/ProjectRecoveryModal.h"
 #include "../dialogs/UnsavedChangesModal.h"
 
 namespace zenith {
+
+// TEMPORARILY DISABLED: namespace network { class EmbeddedMCPHttpServer; }
 
 class ProjectRecoveryModal;
 class MainLayoutComponent;
@@ -116,7 +118,8 @@ private:
   std::unique_ptr<MainLayoutComponent> mainLayout;
   
   std::unique_ptr<ExportDialog> exportDialog;
-  std::unique_ptr<GlobalSettingsPanel> settingsPanel;
+  std::unique_ptr<ModernSettingsPanel> settingsPanel;
+  // TEMPORARILY DISABLED: std::unique_ptr<network::EmbeddedMCPHttpServer> mcpHttpServer;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
