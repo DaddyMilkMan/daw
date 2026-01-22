@@ -548,6 +548,41 @@ if(BUILD_TESTS)
 
     target_compile_features(ClockSyncAgentTests PRIVATE cxx_std_20)
 
+    # =========================================================================
+    # ObservabilityTest - Lightweight test for ObservabilityAgent
+    # =========================================================================
+    add_executable(ObservabilityTest)
+
+    target_sources(ObservabilityTest PRIVATE
+        "agents/ObservabilityAgent/tests/RunTests.cpp"
+        "agents/ObservabilityAgent/tests/ObservabilityAgentTest.cpp"
+        "agents/ObservabilityAgent/ObservabilityAgent.cpp"
+    )
+
+    target_include_directories(ObservabilityTest PRIVATE
+        ${CMAKE_BINARY_DIR}/ObservabilityTest_artefacts/JuceLibraryCode
+        ${CMAKE_BINARY_DIR}/JuceLibraryCode
+        "agents/ObservabilityAgent"
+    )
+
+    target_link_libraries(ObservabilityTest PRIVATE
+        juce::juce_core
+        juce::juce_audio_basics
+    )
+
+    target_compile_definitions(ObservabilityTest PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+        JUCE_STANDALONE_APPLICATION=1
+    )
+
+    if (UNIX AND NOT APPLE)
+        target_link_libraries(ObservabilityTest PRIVATE pthread dl)
+    endif()
+
+    target_compile_features(ObservabilityTest PRIVATE cxx_std_20)
+
 endif()
 
 # =============================================================================
