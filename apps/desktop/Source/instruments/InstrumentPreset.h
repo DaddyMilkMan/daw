@@ -66,10 +66,15 @@ struct ZenithInstrumentPreset {
    */
   ZenithInstrumentPreset(const std::string &name_,
                          const std::string &instrumentId_,
-                         const std::string &author_ = "Factory")
+                         const std::string &author_ = "Factory",
+                         const std::string &id_ = "")
       : name(name_), instrumentId(instrumentId_), author(author_) {
-    // Generate unique ID from name and timestamp
-    id = generateId(name_);
+    if (id_.empty()) {
+      // Generate unique ID from name and timestamp
+      id = generateId(name_);
+    } else {
+      id = id_;
+    }
   }
 
   /**
@@ -168,16 +173,15 @@ struct ZenithInstrumentPreset {
    * @brief Load from ValueTree
    */
   static ZenithInstrumentPreset fromValueTree(const juce::ValueTree &tree) {
-    ZenithInstrumentPreset preset;
+    std::string id = tree.getProperty("id", "").toString().toStdString();
+    std::string name = tree.getProperty("name", "Untitled").toString().toStdString();
+    std::string instrumentId = tree.getProperty("instrumentId", "").toString().toStdString();
+    std::string author = tree.getProperty("author", "Unknown").toString().toStdString();
+
+    ZenithInstrumentPreset preset(name, instrumentId, author, id);
 
     // Basic info
-    preset.id = tree.getProperty("id", "").toString().toStdString();
-    preset.name = tree.getProperty("name", "Untitled").toString().toStdString();
-    preset.instrumentId =
-        tree.getProperty("instrumentId", "").toString().toStdString();
     preset.category = tree.getProperty("category", "").toString().toStdString();
-    preset.author =
-        tree.getProperty("author", "Unknown").toString().toStdString();
     preset.description =
         tree.getProperty("description", "").toString().toStdString();
     // New taxonomy fields
@@ -306,22 +310,22 @@ struct ZenithInstrumentPreset {
    * @brief Load from JSON object
    */
   static ZenithInstrumentPreset fromJson(const juce::var &json) {
-    ZenithInstrumentPreset preset;
-
     if (!json.isObject())
-      return preset;
+      return ZenithInstrumentPreset();
 
     auto obj = json.getDynamicObject();
     if (!obj)
-      return preset;
+      return ZenithInstrumentPreset();
+
+    std::string id = obj->getProperty("id").toString().toStdString();
+    std::string name = obj->getProperty("name").toString().toStdString();
+    std::string instrumentId = obj->getProperty("instrumentId").toString().toStdString();
+    std::string author = obj->getProperty("author").toString().toStdString();
+
+    ZenithInstrumentPreset preset(name, instrumentId, author, id);
 
     // Basic info
-    preset.id = obj->getProperty("id").toString().toStdString();
-    preset.name = obj->getProperty("name").toString().toStdString();
-    preset.instrumentId =
-        obj->getProperty("instrumentId").toString().toStdString();
     preset.category = obj->getProperty("category").toString().toStdString();
-    preset.author = obj->getProperty("author").toString().toStdString();
     preset.description =
         obj->getProperty("description").toString().toStdString();
     preset.version = obj->getProperty("version").toString().toStdString();
