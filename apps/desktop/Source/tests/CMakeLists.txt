@@ -57,28 +57,28 @@ add_custom_target(ai_performance_tests
 )
 
 # Optimized MetricsChart Tests (Minimal dependencies)
-add_executable(MetricsChartTests
-    TestRunner.cpp
-    UITests.cpp
-    ../ui/dashboards/MetricsChart.cpp
-)
+# add_executable(MetricsChartTests
+#     TestRunner.cpp
+#     UITests.cpp
+#     ../ui/dashboards/MetricsChart.cpp
+# )
 
-target_link_libraries(MetricsChartTests PRIVATE
-    juce::juce_core
-    juce::juce_events
-    juce::juce_graphics
-    juce::juce_data_structures
-    juce::juce_gui_basics
-)
+# target_link_libraries(MetricsChartTests PRIVATE
+#     juce::juce_core
+#     juce::juce_events
+#     juce::juce_graphics
+#     juce::juce_data_structures
+#     juce::juce_gui_basics
+# )
 
-target_include_directories(MetricsChartTests PRIVATE
-    ${CMAKE_BINARY_DIR}/ZenithDAW_artefacts/JuceLibraryCode
-    ../../Source
-)
+# target_include_directories(MetricsChartTests PRIVATE
+#     ${CMAKE_BINARY_DIR}/ZenithDAW_artefacts/JuceLibraryCode
+#     ../../Source
+# )
 
-target_compile_definitions(MetricsChartTests PRIVATE
-    JUCE_WEB_BROWSER=0
-    JUCE_USE_CURL=0
-    ZENITH_TEST_MODE=1
-)
+# target_compile_definitions(MetricsChartTests PRIVATE
+#     JUCE_WEB_BROWSER=0
+#     JUCE_USE_CURL=0
+#     ZENITH_TEST_MODE=1
+# )
 

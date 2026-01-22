@@ -11,7 +11,9 @@ namespace zenith {
 namespace agents {
 
 //==============================================================================
-ObservabilityAgent::ObservabilityAgent() {
+ObservabilityAgent::ObservabilityAgent()
+  : ringBuffer_(4096) // Initialize MPSC ring buffer with 4096 slots
+{
   // Initialize metrics collection system
 }
 
@@ -27,10 +29,13 @@ void ObservabilityAgent::recordCounter(const char* name, double value) noexcept 
     return;
   }
   
-  // TODO: Write to lock-free ring buffer
-  // TODO: Avoid string allocations
-  
-  metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  // Use high-resolution clock for timestamp
+  auto now = std::chrono::steady_clock::now();
+  int64_t timestamp = static_cast<int64_t>(now.time_since_epoch().count());
+
+  if (ringBuffer_.write(MetricType::Counter, name, value, timestamp)) {
+    metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  }
 }
 
 void ObservabilityAgent::recordGauge(const char* name, double value) noexcept {
@@ -38,9 +43,12 @@ void ObservabilityAgent::recordGauge(const char* name, double value) noexcept {
     return;
   }
   
-  // TODO: Write to lock-free ring buffer
-  
-  metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  auto now = std::chrono::steady_clock::now();
+  int64_t timestamp = static_cast<int64_t>(now.time_since_epoch().count());
+
+  if (ringBuffer_.write(MetricType::Gauge, name, value, timestamp)) {
+    metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  }
 }
 
 uint64_t ObservabilityAgent::startTimer() noexcept {
@@ -58,10 +66,10 @@ void ObservabilityAgent::endTimer(const char* name, uint64_t startTime) noexcept
   auto endTime = static_cast<uint64_t>(now.time_since_epoch().count());
   auto duration = endTime - startTime;
   
-  // TODO: Record timer metric with duration
-  // TODO: Write to lock-free ring buffer
-  
-  metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  // We record the duration as the value for the timer metric
+  if (ringBuffer_.write(MetricType::Timer, name, static_cast<double>(duration), static_cast<int64_t>(endTime))) {
+    metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  }
 }
 
 //==============================================================================
@@ -98,16 +106,34 @@ void ObservabilityAgent::setExportInterval(std::chrono::milliseconds interval) {
 
 std::vector<ObservabilityAgent::Metric> ObservabilityAgent::getMetrics() {
   std::vector<Metric> metrics;
+  RingBufferEvent event;
   
-  // TODO: Read from lock-free ring buffer
-  // TODO: Aggregate metrics by name
-  // TODO: Apply time-based windowing
+  // Drain the ring buffer
+  while (ringBuffer_.read(event)) {
+    Metric metric;
+    // name is a const char* pointer (static lifetime per contract)
+    if (event.name) {
+      metric.name = std::string(event.name);
+    }
+    metric.type = event.type;
+    metric.value = event.value;
+
+    // Reconstruct timestamp from int64_t ticks
+    auto duration = std::chrono::steady_clock::duration(event.timestamp);
+    metric.timestamp = std::chrono::steady_clock::time_point(duration);
+
+    metrics.push_back(std::move(metric));
+  }
   
   return metrics;
 }
 
 void ObservabilityAgent::clearMetrics() {
-  // TODO: Clear lock-free ring buffer
+  // Drain and discard
+  RingBufferEvent event;
+  while (ringBuffer_.read(event)) {
+    // Discard
+  }
   metricsCollected_.store(0, std::memory_order_release);
 }
 
