@@ -78,6 +78,14 @@ struct ZenithInstrumentPreset {
   }
 
   /**
+   * @brief Create preset with existing ID (Optimized)
+   */
+  ZenithInstrumentPreset(const std::string &id_, const std::string &name_,
+                         const std::string &instrumentId_,
+                         const std::string &author_ = "Factory")
+      : id(id_), name(name_), instrumentId(instrumentId_), author(author_) {}
+
+  /**
    * @brief Set parameter value
    */
   void setParameter(const std::string &paramId, float value) {
@@ -174,13 +182,15 @@ struct ZenithInstrumentPreset {
    */
   static ZenithInstrumentPreset fromValueTree(const juce::ValueTree &tree) {
     std::string id = tree.getProperty("id", "").toString().toStdString();
-    std::string name = tree.getProperty("name", "Untitled").toString().toStdString();
-    std::string instrumentId = tree.getProperty("instrumentId", "").toString().toStdString();
-    std::string author = tree.getProperty("author", "Unknown").toString().toStdString();
+    std::string name =
+        tree.getProperty("name", "Untitled").toString().toStdString();
+    std::string instrumentId =
+        tree.getProperty("instrumentId", "").toString().toStdString();
+    std::string author =
+        tree.getProperty("author", "Unknown").toString().toStdString();
 
-    ZenithInstrumentPreset preset(name, instrumentId, author, id);
+    ZenithInstrumentPreset preset(id, name, instrumentId, author);
 
-    // Basic info
     preset.category = tree.getProperty("category", "").toString().toStdString();
     preset.description =
         tree.getProperty("description", "").toString().toStdString();
@@ -317,14 +327,15 @@ struct ZenithInstrumentPreset {
     if (!obj)
       return ZenithInstrumentPreset();
 
+    // Basic info
     std::string id = obj->getProperty("id").toString().toStdString();
     std::string name = obj->getProperty("name").toString().toStdString();
-    std::string instrumentId = obj->getProperty("instrumentId").toString().toStdString();
+    std::string instrumentId =
+        obj->getProperty("instrumentId").toString().toStdString();
     std::string author = obj->getProperty("author").toString().toStdString();
 
-    ZenithInstrumentPreset preset(name, instrumentId, author, id);
+    ZenithInstrumentPreset preset(id, name, instrumentId, author);
 
-    // Basic info
     preset.category = obj->getProperty("category").toString().toStdString();
     preset.description =
         obj->getProperty("description").toString().toStdString();
