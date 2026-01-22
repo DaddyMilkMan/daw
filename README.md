@@ -6,7 +6,7 @@ A professional Digital Audio Workstation built with C++20 and JUCE, featuring AI
 
 **Version:** 0.1.0-alpha  
 **Platform:** Linux, macOS, Windows  
-**Build:** [![Tests](https://github.com/zenith-daw/zenith/actions/workflows/test.yml/badge.svg)](https://github.com/zenith-daw/zenith/actions/workflows/test.yml) [![Fuzzing](https://github.com/micahcooley/daw/actions/workflows/fuzzing-agent.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/fuzzing-agent.yml) [![Testing Agent](https://github.com/micahcooley/daw/actions/workflows/agent-testing.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/agent-testing.yml) [![Security Scan](https://github.com/micahcooley/daw/actions/workflows/security-agent.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/security-agent.yml)
+**Build:** [![Tests](https://github.com/zenith-daw/zenith/actions/workflows/test.yml/badge.svg)](https://github.com/zenith-daw/zenith/actions/workflows/test.yml) [![Fuzzing](https://github.com/micahcooley/daw/actions/workflows/fuzzing-agent.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/fuzzing-agent.yml) [![Testing Agent](https://github.com/micahcooley/daw/actions/workflows/agent-testing.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/agent-testing.yml) [![Security Scan](https://github.com/micahcooley/daw/actions/workflows/security-agent.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/security-agent.yml) [![Linting](https://github.com/micahcooley/daw/actions/workflows/linting-agent.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/linting-agent.yml)
 
 ### What Works
 - Audio engine with real-time playback and recording
@@ -152,6 +152,16 @@ python security_agent.py --scan-type full
 ```
 
 See [`agents/SecurityAgent/README.md`](agents/SecurityAgent/README.md) for details.
+
+### Code Quality & Linting
+
+The Linting Agent performs automated code quality checks on every push and pull request:
+- Naming convention enforcement (C++ and Python)
+- Style rule validation (trailing whitespace, comment spacing)
+- Detection of commented-out code, magic numbers, and TODOs
+- Extensible for additional linters (clang-tidy, pylint, etc.)
+
+See [`agents/LintingAgent/README.md`](agents/LintingAgent/README.md) for details.
 
 ## Backend Coordinator Agents
 
