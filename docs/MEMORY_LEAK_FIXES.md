@@ -210,13 +210,13 @@ The deferred deletion pattern uses type erasure:
 template <typename T>
 void deferDelete(std::shared_ptr<T> object) {
     deferDelete([object]() mutable { 
-        // Object destroyed when lambda destructor runs
+        // Object destroyed when lambda is invoked
         (void)object; 
     });
 }
 ```
 
-The `std::shared_ptr<T>` is captured by value in the lambda. When the lambda destructor runs, it decrements the shared_ptr reference count. If this was the last reference, the object is deleted.
+The `std::shared_ptr<T>` is captured by value in the lambda. When the TrashItem destructor invokes the lambda (via `deleter()`), the lambda executes and returns, causing the captured shared_ptr to go out of scope. This decrements the shared_ptr reference count. If this was the last reference, the object is deleted.
 
 ### Why 1-Second Safety Window?
 

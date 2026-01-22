@@ -157,7 +157,7 @@ This ensures no use-after-free in RT threads.
 ```cpp
 deferDelete([snapshot]() { (void)snapshot; });
 ```
-The lambda captures `shared_ptr` by value. When the lambda destructor runs, it decrements the reference count. This was the mechanism that was broken.
+The lambda captures `shared_ptr` by value. When the TrashItem destructor invokes the lambda via `deleter()`, the lambda executes and the captured shared_ptr goes out of scope, decrementing its reference count. When the count reaches zero, the object is deleted.
 
 ## Status
 ✅ **COMPLETE** - All fixes implemented and documented.
