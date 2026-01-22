@@ -76,8 +76,8 @@ void HelpViewPanel::drawSkia(SkCanvas* canvas) {
         // For simplicity, we just flow it.
         juce::String testLine = currentLine.isEmpty() ? word : currentLine + " " + word;
         
-        // Measure text safely
-        float width = descFont.measureText(testLine.toRawUTF8(), testLine.length(), SkTextEncoding::kUTF8);
+        // Measure text safely - use getNumBytesAsUTF8() not length() for UTF-8 encoding
+        float width = descFont.measureText(testLine.toRawUTF8(), testLine.getNumBytesAsUTF8(), SkTextEncoding::kUTF8);
         
         if (width > maxWidth) {
             if (currentLine.isNotEmpty()) {

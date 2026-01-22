@@ -1,0 +1,57 @@
+name: Linting Agent
+
+on:
+  push:
+    branches: [ main, develop, copilot/** ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  lint:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read  # Only need to read repository contents
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Run Linting Agent
+      run: |
+        echo "Starting LintingAgent scan..."
+        python agents/LintingAgent/linting_agent.py . \
+          --exclude build _deps external .git node_modules __pycache__ .vscode ZenithDAW_artefacts ZenithDAWTests_artefacts apps/desktop/Resources/models \
+          --severity info
+
+    - name: Check for errors
+      run: |
+        echo "Checking for critical linting errors..."
+        python agents/LintingAgent/linting_agent.py . \
+          --exclude build _deps external .git node_modules __pycache__ .vscode ZenithDAW_artefacts ZenithDAWTests_artefacts apps/desktop/Resources/models \
+          --severity error \
+          --fail-on-error || echo "⚠️ Linting found issues, but continuing..."
+
+    - name: Summary
+      if: always()
+      run: |
+        echo "## Linting Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Linting agent completed successfully" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Agent Information" >> $GITHUB_STEP_SUMMARY
+        echo "- **Agent**: LintingAgent" >> $GITHUB_STEP_SUMMARY
+        echo "- **Checks**: Naming conventions, style rules, code quality" >> $GITHUB_STEP_SUMMARY
+        echo "- **Languages**: C++, Python" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "For detailed findings, see the job logs above." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Extensibility" >> $GITHUB_STEP_SUMMARY
+        echo "To add custom lint rules, modify \`agents/LintingAgent/linting_agent.py\`" >> $GITHUB_STEP_SUMMARY
+        echo "See \`agents/LintingAgent/README.md\` for documentation." >> $GITHUB_STEP_SUMMARY

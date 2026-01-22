@@ -68,9 +68,8 @@ Headers in `apps/desktop/include` mirror this structure:
 - MIDI routing and processing
 - Runs on audio thread (lock-free where possible)
 
-### 3. **UI Components** (Presentation Layer)
-- **Skia-based**: Modern, GPU-accelerated rendering
-- **JUCE fallback**: For compatibility
+### 3. UI Components (Presentation Layer)
+- **Skia**: Exclusive rendering engine (GPU-accelerated)
 - **Theme System**: `ZenithTheme` for consistent styling
 - **Responsive**: Adapts to window resizing
 
@@ -202,7 +201,7 @@ InstrumentRegistry
 - **Platform**: x64
 - **Build Types**: Debug, Release
 - **Options**:
-  - `ZENITH_USE_SKIA=ON/OFF` - Enable Skia rendering
+  - `ZENITH_USE_SKIA=ON` - Enable Skia rendering (Required)
   - `CMAKE_PREFIX_PATH` - vcpkg path for dependencies
 
 ### Dependencies (via vcpkg)
@@ -222,7 +221,6 @@ InstrumentRegistry
 
 ### UI Rendering
 - **Skia**: GPU-accelerated (Metal on macOS, Direct3D 12 on Windows, Vulkan on Linux), 60 FPS target
-- **JUCE Fallback**: Software rendering (OpenGL legacy support available)
 - **Dirty Regions**: Only repaint changed areas
 
 ### Memory Usage
@@ -242,7 +240,7 @@ InstrumentRegistry
 
 ### Adding a New UI Component
 1. Create in `Source/ui/` or `Source/ui/skia/`
-2. Inherit from `SkiaComponent` (Skia) or `juce::Component` (fallback)
+2. Inherit from `SkiaComponent`
 3. Use `ZenithTheme` for styling
 4. Add to parent layout in `MainLayoutComponent`
 
