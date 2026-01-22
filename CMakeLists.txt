@@ -110,6 +110,7 @@ set(ZENITH_TEST_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/WavetableLoaderBenchmark.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/AudioBufferConverterTest.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/ObservabilityAgentTest.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/SampleGeneratorBenchmark.cpp"
 )
 
 # =============================================================================
@@ -604,7 +605,7 @@ if(BUILD_TESTS)
 
     target_sources(ObservabilityTest PRIVATE
         "agents/ObservabilityAgent/tests/RunTests.cpp"
-        "agents/ObservabilityAgent/tests/ObservabilityAgentTests.cpp"
+        "agents/ObservabilityAgent/tests/ObservabilityAgentTest.cpp"
         "agents/ObservabilityAgent/ObservabilityAgent.cpp"
         "agents/ObservabilityAgent/PrometheusExporter.cpp"
     )
@@ -633,6 +634,40 @@ if(BUILD_TESTS)
     endif()
 
     target_compile_features(ObservabilityTest PRIVATE cxx_std_20)
+
+    # =========================================================================
+    # SampleGeneratorBenchmark - Performance benchmark for SampleGenerator
+    # =========================================================================
+    add_executable(SampleGeneratorBenchmarkApp
+        "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/SampleGeneratorBenchmark.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/utils/SampleGenerator.cpp"
+    )
+
+    target_include_directories(SampleGeneratorBenchmarkApp PRIVATE
+        ${CMAKE_BINARY_DIR}/JuceLibraryCode
+    )
+
+    target_link_libraries(SampleGeneratorBenchmarkApp PRIVATE
+        zenith_core_includes
+        zenith_juce_includes
+        juce::juce_core
+        juce::juce_audio_formats
+        juce::juce_audio_basics
+    )
+
+    target_compile_definitions(SampleGeneratorBenchmarkApp PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        SAMPLE_GENERATOR_BENCHMARK_STANDALONE=1
+        JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+        JUCE_STANDALONE_APPLICATION=1
+    )
+
+    target_compile_features(SampleGeneratorBenchmarkApp PRIVATE cxx_std_20)
+
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(SampleGeneratorBenchmarkApp PRIVATE pthread dl)
+    endif()
 
 endif()
 
