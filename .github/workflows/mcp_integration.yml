@@ -1,0 +1,31 @@
+name: MCP Integration Tests
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'tools/mcp_server/**'
+      - 'apps/desktop/Source/network/**'
+
+jobs:
+  mcp-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+      - name: Start Python MCP server
+        run: |
+          python3 tools/mcp_server/server.py &
+          sleep 1
+      - name: Run AI agent client discovery
+        run: |
+          python3 -c "import sys; sys.path.insert(0,'tools/mcp_server'); from ai_agent_client import discover_all; print(discover_all())"
+      - name: Run tools unit tests
+        run: python3 -m unittest discover -s tools/mcp_server/tests -v

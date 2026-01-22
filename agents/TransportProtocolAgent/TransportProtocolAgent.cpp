@@ -32,23 +32,64 @@ std::vector<TransportProtocolAgent::DeviceInfo>
 TransportProtocolAgent::enumerateDevices() {
   std::vector<DeviceInfo> devices;
   
-  // TODO: Enumerate all available audio device types
-  // TODO: Query device capabilities
-  // TODO: Filter by platform-specific APIs
-  
   auto* currentDevice = deviceManager_->getCurrentAudioDevice();
-  if (currentDevice != nullptr) {
-    DeviceInfo info;
-    info.name = currentDevice->getName();
-    info.id = currentDevice->getName(); // Simplified
-    info.numInputChannels = currentDevice->getActiveInputChannels().countNumberOfSetBits();
-    info.numOutputChannels = currentDevice->getActiveOutputChannels().countNumberOfSetBits();
-    info.supportedSampleRates = currentDevice->getAvailableSampleRates();
-    info.supportedBufferSizes = currentDevice->getAvailableBufferSizes();
-    info.isDefault = true;
-    info.apiType = currentDevice->getTypeName();
+
+  // Iterate through all available device types (ASIO, WASAPI, ALSA, etc.)
+  for (auto* type : deviceManager_->getAvailableDeviceTypes()) {
+    type->scanForDevices();
+
+    juce::StringArray inputNames = type->getDeviceNames(true);
+    juce::StringArray outputNames = type->getDeviceNames(false);
+
+    // Identify defaults by name
+    juce::String defaultInputName;
+    int defInIdx = type->getDefaultDeviceIndex(true);
+    if (defInIdx >= 0 && defInIdx < inputNames.size())
+      defaultInputName = inputNames[defInIdx];
+
+    juce::String defaultOutputName;
+    int defOutIdx = type->getDefaultDeviceIndex(false);
+    if (defOutIdx >= 0 && defOutIdx < outputNames.size())
+      defaultOutputName = outputNames[defOutIdx];
+
+    // Merge unique device names from inputs and outputs
+    juce::StringArray allNames;
+    allNames.addArray(inputNames);
     
-    devices.push_back(info);
+    for (const auto& outName : outputNames) {
+      if (!allNames.contains(outName)) {
+        allNames.add(outName);
+      }
+    }
+
+    for (const auto& name : allNames) {
+      DeviceInfo info;
+      info.name = name;
+      info.id = name; // Using name as ID is standard for simple device types
+      info.apiType = type->getTypeName();
+
+      // Mark as default if it matches either default input or output
+      info.isDefault = (name == defaultInputName || name == defaultOutputName);
+
+      // Check if this is the currently active device
+      bool isActive = (currentDevice != nullptr &&
+                       currentDevice->getName() == name &&
+                       currentDevice->getTypeName() == info.apiType);
+
+      if (isActive) {
+        // For active device: Query full capabilities
+        info.numInputChannels = currentDevice->getActiveInputChannels().countNumberOfSetBits();
+        info.numOutputChannels = currentDevice->getActiveOutputChannels().countNumberOfSetBits();
+        info.supportedSampleRates = currentDevice->getAvailableSampleRates();
+        info.supportedBufferSizes = currentDevice->getAvailableBufferSizes();
+      } else {
+        // For inactive devices: Return empty/zero to avoid opening the device (performance)
+        info.numInputChannels = 0;
+        info.numOutputChannels = 0;
+      }
+
+      devices.push_back(info);
+    }
   }
   
   return devices;
@@ -59,6 +100,9 @@ TransportProtocolAgent::DeviceInfo TransportProtocolAgent::getDefaultInputDevice
   info.name = "None";
   info.id = "";
   info.isDefault = false;
+
+  if (deviceManager_ == nullptr)
+      return info;
 
   // Define priority order based on platform
   juce::StringArray searchOrder;
@@ -104,6 +148,17 @@ TransportProtocolAgent::DeviceInfo TransportProtocolAgent::getDefaultInputDevice
                   info.id = info.name; // In JUCE, name is typically used as ID
                   info.apiType = typeName;
                   info.isDefault = true;
+                  
+                  // Enrich with details if it matches current device (Best effort)
+                  auto* currentDevice = deviceManager_->getCurrentAudioDevice();
+                  if (currentDevice != nullptr && currentDevice->getName() == info.name &&
+                      currentDevice->getTypeName() == info.apiType) {
+                    info.numInputChannels = currentDevice->getActiveInputChannels().countNumberOfSetBits();
+                    info.numOutputChannels = currentDevice->getActiveOutputChannels().countNumberOfSetBits();
+                    info.supportedSampleRates = currentDevice->getAvailableSampleRates();
+                    info.supportedBufferSizes = currentDevice->getAvailableBufferSizes();
+                  }
+                  
                   return info;
               }
           }
