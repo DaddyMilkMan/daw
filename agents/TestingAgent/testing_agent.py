@@ -86,6 +86,71 @@ class AudioQualityMetrics:
     no_clicks_pops: bool = False
 
 
+class GcovParser:
+    """Parses gcov output files for coverage analysis."""
+
+    def parse_file(self, content: str) -> dict:
+        """
+        Parse .gcov file content.
+
+        Returns:
+            Dictionary with coverage stats:
+            {
+                'lines_total': int,
+                'lines_covered': int,
+                'branches_total': int,
+                'branches_covered': int,
+                'file_coverage': float  # line coverage percentage
+            }
+        """
+        lines_total = 0
+        lines_covered = 0
+        branches_total = 0
+        branches_covered = 0
+
+        # Regex for line coverage: "   10:   42:code" or "#####:   42:code"
+        # Group 1 is execution count ("#####" or number), Group 2 is line number
+        # Note: headers start with "-:", which this regex won't match (good)
+        line_regex = re.compile(r"^\s*([0-9]+|#####):\s*[0-9]+:")
+
+        # Regex for branch coverage: "branch  0 taken 1" or "branch  0 taken 50%"
+        branch_regex = re.compile(r"^branch\s+\d+\s+taken\s+(\d+|[0-9.]+%)(?:$|\s|\()")
+
+        lines = content.splitlines()
+        for line in lines:
+            # Check for line execution
+            match = line_regex.match(line)
+            if match:
+                exec_count_str = match.group(1)
+                lines_total += 1
+                if exec_count_str != "#####":
+                    lines_covered += 1
+                continue
+
+            # Check for branch execution
+            match = branch_regex.match(line)
+            if match:
+                taken = match.group(1)
+                branches_total += 1
+
+                if '%' in taken:
+                    # Percentage case
+                    if float(taken.strip('%')) > 0:
+                        branches_covered += 1
+                else:
+                    # Count case
+                    if int(taken) > 0:
+                        branches_covered += 1
+
+        return {
+            'lines_total': lines_total,
+            'lines_covered': lines_covered,
+            'branches_total': branches_total,
+            'branches_covered': branches_covered,
+            'file_coverage': (lines_covered / lines_total * 100.0) if lines_total > 0 else 0.0
+        }
+
+
 class TestingAgent:
     """
     Testing Agent for comprehensive automated testing and validation.
@@ -671,14 +736,127 @@ class TestingAgent:
         """
         print("Generating coverage report...")
         
-        # TODO: Run tests with coverage instrumentation
-        # TODO: Collect coverage data (gcov, llvm-cov)
-        # TODO: Parse coverage output
-        # TODO: Generate HTML report
+        build_path = build_dir or self.project_root / "build"
+        if not build_path.exists():
+            print(f"Build directory {build_path} does not exist.")
+            return CoverageReport()
+
+        # 1. Find .gcno files
+        gcno_files = list(build_path.rglob("*.gcno"))
+        if not gcno_files:
+            print("Error: Coverage artifacts (.gcno) not found.")
+            print("Please rebuild with -DZENITH_ENABLE_COVERAGE=ON.")
+            return CoverageReport()
+
+        # 2. Check for .gcda files
+        gcda_files = list(build_path.rglob("*.gcda"))
+        if not gcda_files:
+            print("Warning: No execution data (.gcda) found.")
+            print("Did you run the tests yet?")
+            return CoverageReport()
+
+        parser = GcovParser()
+        total_lines = 0
+        covered_lines = 0
+        total_branches = 0
+        covered_branches = 0
+
+        file_stats = []
+
+        print(f"Processing {len(gcno_files)} coverage files...")
+
+        # 3. Run gcov and parse
+        for gcno in gcno_files:
+            try:
+                # We cd to the directory of the gcno file to minimize path issues
+                # and ensure .gcov files are created there
+                cwd = gcno.parent
+                cmd = ["gcov", "-b", "-c", gcno.name]
+
+                # Run gcov
+                result = subprocess.run(
+                    cmd,
+                    cwd=str(cwd),
+                    capture_output=True,
+                    text=True,
+                    check=False
+                )
+
+                if result.returncode != 0:
+                    # Only print error if verbose or critical
+                    continue
+
+                # Parse output to find generated .gcov files
+                # Output format: "Creating 'test.cpp.gcov'"
+                generated_files = []
+                for line in result.stdout.splitlines():
+                    if "Creating '" in line:
+                        # Extract filename from "Creating 'filename'"
+                        fname = line.split("'")[1]
+                        generated_files.append(cwd / fname)
+
+                # Read and parse .gcov files
+                for gcov_file in generated_files:
+                    if not gcov_file.exists():
+                        continue
+
+                    content = gcov_file.read_text(encoding='utf-8', errors='ignore')
+                    stats = parser.parse_file(content)
+
+                    file_name = gcov_file.name.replace('.gcov', '')
+
+                    # Accumulate totals
+                    total_lines += stats['lines_total']
+                    covered_lines += stats['lines_covered']
+                    total_branches += stats['branches_total']
+                    covered_branches += stats['branches_covered']
+
+                    file_stats.append({
+                        'file': file_name,
+                        'coverage_percent': stats['file_coverage'],
+                        'lines_total': stats['lines_total'],
+                        'lines_covered': stats['lines_covered'],
+                        'branches_total': stats['branches_total'],
+                        'branches_covered': stats['branches_covered']
+                    })
+
+                    # Cleanup
+                    gcov_file.unlink()
+
+            except Exception as e:
+                print(f"Error processing {gcno}: {e}")
+
+        # 4. Generate JSON report
+        report_data = {
+            "summary": {
+                "lines_total": total_lines,
+                "lines_covered": covered_lines,
+                "lines_percent": (covered_lines / total_lines * 100.0) if total_lines > 0 else 0.0,
+                "branches_total": total_branches,
+                "branches_covered": covered_branches,
+                "branches_percent": (covered_branches / total_branches * 100.0) if total_branches > 0 else 0.0
+            },
+            "hotspots": sorted(file_stats, key=lambda x: x['coverage_percent'])[:5],
+            "files": file_stats
+        }
+
+        json_path = build_path / "coverage_report.json"
+        try:
+            with open(json_path, 'w') as f:
+                json.dump(report_data, f, indent=2)
+            print(f"Coverage report saved to {json_path}")
+        except Exception as e:
+            print(f"Failed to save coverage report: {e}")
         
-        coverage = CoverageReport()
-        self.coverage = coverage
-        return coverage
+        self.coverage = CoverageReport(
+            lines_total=total_lines,
+            lines_covered=covered_lines,
+            branches_total=total_branches,
+            branches_covered=covered_branches,
+            functions_total=0,
+            functions_covered=0
+        )
+        return self.coverage
 
     def check_memory_leaks(self, test_binary: Path) -> Optional[bool]:
         """
