@@ -6,7 +6,7 @@ A professional Digital Audio Workstation built with C++20 and JUCE, featuring AI
 
 **Version:** 0.1.0-alpha  
 **Platform:** Linux, macOS, Windows  
-**Build:** [![Tests](https://github.com/zenith-daw/zenith/actions/workflows/test.yml/badge.svg)](https://github.com/zenith-daw/zenith/actions/workflows/test.yml) [![Fuzzing](https://github.com/micahcooley/daw/actions/workflows/fuzzing-agent.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/fuzzing-agent.yml) [![Testing Agent](https://github.com/micahcooley/daw/actions/workflows/agent-testing.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/agent-testing.yml)
+**Build:** [![Tests](https://github.com/zenith-daw/zenith/actions/workflows/test.yml/badge.svg)](https://github.com/zenith-daw/zenith/actions/workflows/test.yml) [![Fuzzing](https://github.com/micahcooley/daw/actions/workflows/fuzzing-agent.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/fuzzing-agent.yml) [![Testing Agent](https://github.com/micahcooley/daw/actions/workflows/agent-testing.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/agent-testing.yml) [![Security Scan](https://github.com/micahcooley/daw/actions/workflows/security-agent.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/security-agent.yml)
 
 ### What Works
 - Audio engine with real-time playback and recording
@@ -136,6 +136,22 @@ Options:
 - `--target {dsp,midi,plugin,file,all}`: Specific target to fuzz (default: all)
 
 See [`agents/FuzzingAgent/README.md`](agents/FuzzingAgent/README.md) for more details.
+
+### Automated Security Scanning
+
+The SecurityAgent performs automated vulnerability scanning on every push and pull request. It checks for:
+- Secret/Credential leaks (API keys, tokens)
+- Insecure dependencies (Python/C++)
+- Suspicious file permissions
+- Binary analysis (stub)
+
+To run locally:
+```bash
+cd agents/SecurityAgent
+python security_agent.py --scan-type full
+```
+
+See [`agents/SecurityAgent/README.md`](agents/SecurityAgent/README.md) for details.
 
 ## Backend Coordinator Agents
 
