@@ -12,24 +12,33 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(ENABLE_IPO "Enable Interprocedural Optimization (LTO)" OFF)
 option(ENABLE_SPECTRE "Enable Spectre Mitigations (MSVC)" OFF)
 
-# Debug-only options (disabled for Release/Skia compatibility)
+# Sanitizer options - Default ON for Debug builds to catch memory leaks
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" OFF)
+    option(ENABLE_SANITIZERS "Enable Address, Leak and UB Sanitizers" ON)
     option(ENABLE_HARDENING "Enable Security Hardening Flags" OFF)
 else()
     option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" OFF)
     option(ENABLE_HARDENING "Enable Security Hardening Flags" OFF)
 endif()
 
-# Sanitizer configuration (Release builds only)
-if(ENABLE_SANITIZERS AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+# Sanitizer configuration
+if(ENABLE_SANITIZERS)
     if(MSVC)
         add_compile_options(/fsanitize=address)
+        message(STATUS "Sanitizers enabled: Address")
     else()
-        add_compile_options(-fsanitize=address -fsanitize=undefined)
-        add_link_options(-fsanitize=address -fsanitize=undefined)
+        # Define sanitizer flags for reuse
+        set(SANITIZER_FLAGS -fsanitize=address -fsanitize=leak -fsanitize=undefined)
+        
+        # Enable AddressSanitizer, LeakSanitizer (implicit with ASan), and UBSan
+        add_compile_options(${SANITIZER_FLAGS})
+        add_link_options(${SANITIZER_FLAGS})
+        
+        # Improved error reporting
+        add_compile_options(-fno-omit-frame-pointer -g)
+        
+        message(STATUS "Sanitizers enabled: Address, Leak, UndefinedBehavior")
     endif()
-    message(STATUS "Sanitizers enabled for Release build")
 endif()
 
 # =============================================================================

@@ -72,13 +72,29 @@ void RealTimeGarbageCollector::deferDelete(std::function<void()> deleter) {
 void RealTimeGarbageCollector::ensureClean() {
   stopTimer();
   
-  // Process remaining items in FIFO
+  // 1. Flush all items from FIFO into pendingDestruction_
   int start1, size1, start2, size2;
-  fifo_.prepareToRead(fifo_.getNumReady(), start1, size1, start2, size2);
-  fifo_.finishedRead(size1 + size2);
+  int numReady = fifo_.getNumReady();
   
-  trashBuffer_.clear();
+  if (numReady > 0) {
+    fifo_.prepareToRead(numReady, start1, size1, start2, size2);
+    
+    // Move items from trashBuffer_ to pendingDestruction_
+    for (int i = 0; i < size1; ++i)
+      pendingDestruction_.push_back(std::move(trashBuffer_[start1 + i]));
+      
+    for (int i = 0; i < size2; ++i)
+      pendingDestruction_.push_back(std::move(trashBuffer_[start2 + i]));
+      
+    fifo_.finishedRead(size1 + size2);
+  }
+  
+  // 2. Execute all deleters by clearing pendingDestruction_
+  // The TrashItem destructors will run, executing the deleter functions
   pendingDestruction_.clear();
+  
+  // 3. Clear trash buffer (should already be moved from)
+  trashBuffer_.clear();
 }
 
 void RealTimeGarbageCollector::timerCallback() {

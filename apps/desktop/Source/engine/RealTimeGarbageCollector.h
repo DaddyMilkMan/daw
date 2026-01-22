@@ -97,6 +97,37 @@ private:
   struct TrashItem {
     std::function<void()> deleter;
     uint32_t insertionTimeMs;
+    
+    // Destructor explicitly invokes the deleter
+    ~TrashItem() {
+      if (deleter) {
+        deleter();
+      }
+    }
+    
+    // Move constructor/assignment to properly transfer ownership
+    TrashItem() = default;
+    TrashItem(TrashItem&& other) noexcept 
+      : deleter(std::move(other.deleter)), 
+        insertionTimeMs(other.insertionTimeMs) {
+      other.deleter = nullptr; // Prevent double-deletion
+    }
+    TrashItem& operator=(TrashItem&& other) noexcept {
+      if (this != &other) {
+        // Invoke old deleter if present before replacing
+        if (deleter) {
+          deleter();
+        }
+        deleter = std::move(other.deleter);
+        insertionTimeMs = other.insertionTimeMs;
+        other.deleter = nullptr; // Prevent double-deletion
+      }
+      return *this;
+    }
+    
+    // Delete copy constructor/assignment
+    TrashItem(const TrashItem&) = delete;
+    TrashItem& operator=(const TrashItem&) = delete;
   };
 
   // Queue of items to delete

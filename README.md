@@ -82,6 +82,8 @@ cmake --build build -j$(nproc)
 
 ## Testing
 
+### Run Tests
+
 ```bash
 cmake -S . -B build -DBUILD_TESTS=ON
 cmake --build build --target ZenithDAWTests
@@ -158,6 +160,26 @@ The Linting Agent performs automated code quality checks on every push and pull 
 - Extensible for additional linters (clang-tidy, pylint, etc.)
 
 See [`agents/LintingAgent/README.md`](agents/LintingAgent/README.md) for details.
+
+### Memory Leak Detection
+
+Debug builds automatically enable AddressSanitizer and LeakSanitizer to catch memory issues:
+
+```bash
+# Build in Debug mode (sanitizers enabled by default)
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON
+cmake --build build
+
+# Run tests with leak detection
+cd build
+LSAN_OPTIONS=suppressions=../lsan.supp ./ZenithDAWTests
+
+# Or use the validation script
+cd ..
+./test_memory_leaks.sh
+```
+
+For details on recent memory leak fixes, see [docs/MEMORY_LEAK_FIXES.md](docs/MEMORY_LEAK_FIXES.md).
 
 ## Automation
 
