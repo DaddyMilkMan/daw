@@ -23,6 +23,7 @@ public:
     testTransportLogic();
     testJitterRejection();
     testTempoJumpReset();
+    testResynchronize();
   }
 
   void shutdown() override {
@@ -135,6 +136,26 @@ private:
 
     auto statusAfter = agent->getSyncStatus();
     expect(statusAfter.synchronized, "Should be synced after recovery");
+  }
+
+  void testResynchronize() {
+    beginTest("Resynchronize");
+    setup();
+
+    // Stabilize
+    for (int i = 0; i < 20; ++i) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(20));
+      agent->processMidiMessage(createClockMsg());
+    }
+
+    expect(agent->getSyncStatus().synchronized, "Should be synced");
+
+    // Call resynchronize
+    agent->resynchronize();
+
+    auto status = agent->getSyncStatus();
+    expect(!status.synchronized, "Should be unsynchronized after resync");
+    expect(status.offsetNanoseconds == 0, "Offset should be reset");
   }
 };
 

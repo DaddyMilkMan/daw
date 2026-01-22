@@ -84,7 +84,7 @@ class TriageBot:
         """Pre-compile regex patterns for performance."""
         # Issue Type Patterns
         issue_type_keywords = {
-            "BUG": ["crash", "segfault", "error", "broken", "fails"],
+            "BUG": ["crash", "crashes", "crashed", "crashing", "segfault", "error", "broken", "fails", "failed", "failure"],
             "SECURITY": ["security", "vulnerability", "cve"],
             "PERFORMANCE": ["slow", "performance", "lag", "latency"],
             "FEATURE_REQUEST": ["feature request", "would be nice", "add support"],
@@ -95,7 +95,7 @@ class TriageBot:
 
         # Priority Patterns
         priority_keywords = {
-            "CRITICAL": ["crash", "data loss", "security", "vulnerability", "cannot use"],
+            "CRITICAL": ["crash", "crashes", "crashed", "crashing", "segfault", "data loss", "security", "vulnerability", "cannot use"],
             "HIGH": ["broken", "not working", "unusable", "blocking"]
         }
         self.priority_regex = self._build_compiled_regex(priority_keywords)
