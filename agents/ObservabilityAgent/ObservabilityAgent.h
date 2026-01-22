@@ -8,21 +8,28 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
+#include <juce_events/juce_events.h>
 #include <atomic>
 #include <chrono>
 #include <string>
 #include <vector>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <memory>
 #include <array>
 
 namespace zenith {
 namespace agents {
+
+class PrometheusExporter;
 
 //==============================================================================
 /**
     ObservabilityAgent provides lock-free metrics collection and monitoring
     for real-time audio systems without impacting RT thread performance.
 */
-class ObservabilityAgent : public juce::Thread {
+class ObservabilityAgent : public juce::Thread, private juce::Timer {
 public:
   //==============================================================================
   using Timestamp = std::chrono::steady_clock::time_point;
@@ -72,7 +79,10 @@ public:
   //==============================================================================
   // Logging (async, non-RT)
   
-  /// Log message at specified level
+  /// Log message at specified level (RT-safe)
+  void log(LogLevel level, const char* message) noexcept;
+
+  /// Log message at specified level (Helper)
   void log(LogLevel level, const juce::String& message);
   
   /// Log structured data
@@ -92,30 +102,70 @@ public:
   /// Set metrics export interval
   void setExportInterval(std::chrono::milliseconds interval);
   
+  /// Set the destination file for metrics export
+  void setMetricsFile(const juce::File& file);
+
   /// Get collected metrics (non-RT)
   std::vector<Metric> getMetrics();
   
   /// Clear collected metrics
   void clearMetrics();
 
-  //==============================================================================
-  // Threading
-  void run() override;
+  /// Export accumulated metrics (called by timer or manually)
+  void exportMetrics();
+
+  /// Get number of export cycles completed (for testing)
+  uint64_t getExportCount() const;
 
 private:
-  void flushToSink();
-
   //==============================================================================
+  void run() override;
+  void timerCallback() override;
+  void exportLoop();
+  void stopExportThread();
+
+  struct LogEntry {
+      LogLevel level;
+      uint64_t timestamp;
+      char message[512];
+  };
+
+  struct RawMetricEvent {
+    MetricType type;
+    const char* name; // Points to static literal
+    double value;
+    uint64_t timestamp;
+  };
+
   std::atomic<bool> enabled_{true};
   std::atomic<uint64_t> metricsCollected_{0};
+  std::atomic<uint64_t> exportCount_{0};
   
-  // Lock-free ring buffer
-  static constexpr int MessageSize = 512;
-  static constexpr int BufferItems = 1024;
+  std::unique_ptr<PrometheusExporter> exporter_;
+  juce::File metricsFile_;
 
-  juce::AbstractFifo fifo_{BufferItems};
-  std::vector<std::array<char, MessageSize>> buffer_;
+  std::thread exportThread_;
+  std::atomic<bool> shouldExitExportThread_{false};
+  std::mutex exportMutex_;
+  std::condition_variable exportCv_;
+  std::chrono::milliseconds exportInterval_{0};
+
+  // Async Log Queue
+  static constexpr int kLogQueueSize = 1024;
+  juce::AbstractFifo logFifo_{kLogQueueSize};
+  std::vector<LogEntry> logBuffer_;
+
+  // Lock-free ring buffer for RT metrics
+  static constexpr int kRingBufferSize = 4096;
+  juce::AbstractFifo ringBufferFifo_{kRingBufferSize};
+  std::vector<RawMetricEvent> ringBufferData_;
+
+  // TODO: Add metrics exporter (Prometheus, OpenTelemetry)
+  // TODO: Add trace context propagation
+  // TODO: Add log aggregation
   
+  friend class ObservabilityAgentTest; // Allow tests to access ring buffer
+
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ObservabilityAgent)
 };
 

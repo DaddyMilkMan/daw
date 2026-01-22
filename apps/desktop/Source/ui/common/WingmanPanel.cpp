@@ -2,12 +2,14 @@
   ==============================================================================
 
     WingmanPanel.cpp
-    Created: 2025-11-29 (Rewritten: 2026-01-10)
-    Author:  Marcus Williams (Original) / AI Assistant (Pure Skia Redesign)
+    Created: 2025-11-29 (Redesigned: 2026-01-17)
+    Author:  Zenith Team
 
-    Modern Wingman AI Panel with pure Skia rendering.
-    Sharp rectangle, hairline borders, glassmorphism.
-    No JUCE Viewport - custom scroll handling.
+    FLUID INTELLIGENCE INTERFACE - Iteration 2
+    Refined based on "Modern Clean" feedback.
+    - Removed "engineer" buttons (replaced with frameless icons).
+    - Decluttered layout.
+    - Softer, more cohesive aesthetic.
 
   ==============================================================================
 */
@@ -20,572 +22,409 @@
 #include "SettingsComponent.h"
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
+#include <core/SkMaskFilter.h>
+#include <core/SkPath.h>
 
 namespace zenith {
 
 //==============================================================================
-// Constructor / Destructor
+// THEME: "Zenith Void" (Refined)
+//==============================================================================
+namespace theme {
+    static constexpr SkColor BG_VOID = SkColorSetRGB(8, 8, 10); // Deepest matte black
+    static constexpr SkColor BG_SIDEBAR = SkColorSetRGB(12, 12, 14);
+    
+    // Softer accent for a more "Product Design" feel (less "Hacker")
+    static constexpr SkColor ACCENT_PRIMARY = SkColorSetRGB(110, 110, 255); // Softer Blue
+    static constexpr SkColor ACCENT_GLOW = SkColorSetARGB(40, 110, 110, 255);
+    
+    // Floating Input
+    static constexpr SkColor INPUT_BG = SkColorSetRGB(22, 22, 26);
+    static constexpr SkColor INPUT_BORDER = SkColorSetARGB(30, 255, 255, 255); // Subtle white stroke
+    
+    // Text
+    static constexpr SkColor TEXT_HEAD = SkColorSetRGB(240, 240, 240);
+    static constexpr SkColor TEXT_BODY = SkColorSetRGB(180, 180, 190);
+    static constexpr SkColor TEXT_MUTED = SkColorSetRGB(90, 90, 100);
+}
+
+//==============================================================================
+// Constructor
 //==============================================================================
 
-WingmanPanel::WingmanPanel(CommandAPI &api, Engine &engine)
+WingmanPanel::WingmanPanel(CommandAPI& api, Engine& engine)
     : commandAPI_(api), engine_(engine) {
-  ZENITH_LOG_UI(zenith::LogLevel::Info, "WingmanPanel: Constructor started");
-  
-  // Initialize Grok controller
-  grokController_ = std::make_unique<GrokDAWController>(commandAPI_);
-  ZENITH_LOG_UI(zenith::LogLevel::Info, "WingmanPanel: GrokController created");
+    
+    grokController_ = std::make_unique<GrokDAWController>(commandAPI_);
+    
+    // Input Field: Frameless text input (container drawn separately)
+    textInput_ = std::make_unique<SkiaTextInput>();
+    textInput_->setPlaceholder("Ask Wingman...");
+    textInput_->setPillShape(false);
+    textInput_->setFontSize(15.0f);
+    textInput_->onReturnKey = [this] { sendMessage(); };
+    
+    // Remove default background from the component itself
+    // We handle the visual container in drawInputIsland
+    // textInput_->setTransparent(true); // If supported, or just rely on styling
+    
+    addAndMakeVisible(textInput_.get());
 
-  //==========================================================================
-  // Input Field (Pure Skia Text Input)
-  inputField_ = std::make_unique<SkiaTextInput>();
-  inputField_->setPlaceholder("Ask Wingman...");
-  inputField_->setPillShape(true);
-  inputField_->setFontSize(14.0f);
-  inputField_->onReturnKey = [this] { sendMessage(); };
-  addAndMakeVisible(inputField_.get());
-  ZENITH_LOG_UI(zenith::LogLevel::Info, "WingmanPanel: SkiaTextInput created");
-
-  //==========================================================================
-  // Brain Toggle (Reasoning Mode)
-  setupBrainToggle();
-
-  //==========================================================================
-  // Send Button
-  setupSendButton();
-
-  //==========================================================================
-  // Settings Button (Header)
-  setupSettingsButton();
-
-  // Initialize Grok
-  initializeGrok();
-  
-  // Add welcome message
-  appendMessage("Wingman", "Hello! I'm Wingman, your AI assistant. Toggle the brain icon for deep reasoning mode.");
+    initializeInterface();
 }
 
 WingmanPanel::~WingmanPanel() = default;
 
-//==============================================================================
-// Button Setup
-//==============================================================================
-
-void WingmanPanel::setupBrainToggle() {
-  brainToggle_ = std::make_unique<ZenithButton>();
-  // FIX: Use Sparkles icon for "Reasoning Mode" instead of the old Brain icon
-  brainToggle_->setIconPath(icons::Sparkles());
-  brainToggle_->setButtonStyle(ZenithButton::Style::Ghost);
-  brainToggle_->setToggleable(true);
-  brainToggle_->setToggleState(reasoningMode_, false);
-  brainToggle_->setTooltip("Toggle Reasoning Mode (Grok 4.1)");
-  
-  brainToggle_->onToggle = [this](bool toggled) {
-    reasoningMode_ = toggled;
-    
-    // Pink glow when ON
-    if (toggled) {
-      brainToggle_->setGlowColor(design::colors::NEON_PINK);
-      brainToggle_->setGlowEnabled(true);
-    } else {
-      brainToggle_->setGlowEnabled(false);
-    }
-    
-    DBG("Wingman: Reasoning mode " + juce::String(toggled ? "ON" : "OFF"));
-  };
-  
-  addAndMakeVisible(brainToggle_.get());
-}
-
-void WingmanPanel::setupSendButton() {
-  sendButton_ = std::make_unique<ZenithButton>();
-  sendButton_->setIconPath(icons::SendArrow());
-  sendButton_->setButtonStyle(ZenithButton::Style::Ghost);
-  sendButton_->setTooltip("Send Message");
-  
-  // Blue glow on click
-  sendButton_->setGlowColor(design::colors::ACCENT_PRIMARY);
-  
-  sendButton_->onClick = [this] { 
-    sendButton_->setGlowEnabled(true);
-    sendMessage(); 
-    
-    // Disable glow after short delay
-    juce::Timer::callAfterDelay(200, [this] {
-      if (sendButton_)
-        sendButton_->setGlowEnabled(false);
-    });
-  };
-  
-  addAndMakeVisible(sendButton_.get());
-}
-
-void WingmanPanel::setupSettingsButton() {
-  settingsButton_ = std::make_unique<ZenithButton>();
-  settingsButton_->setIconPath(icons::Settings());
-  settingsButton_->setButtonStyle(ZenithButton::Style::Ghost);
-  settingsButton_->setTooltip("Settings");
-  
-  settingsButton_->onClick = [this] {
-    juce::DialogWindow::LaunchOptions options;
-    options.content.setOwned(new SettingsComponent(engine_));
-    options.content->setSize(600, 500);
-    options.dialogTitle = "Zenith Settings";
-    options.dialogBackgroundColour = juce::Colour(design::colors::BG_01);
-    options.useNativeTitleBar = true;
-    options.launchAsync();
-  };
-  
-  addAndMakeVisible(settingsButton_.get());
+void WingmanPanel::initializeInterface() {
+    // Clean start
+    createNewSession(); 
 }
 
 //==============================================================================
-// Skia Rendering
-//==============================================================================
-
-void WingmanPanel::visibilityChanged() {
-  if (isVisible()) {
-    onShow();
-  }
-}
-
-void WingmanPanel::onShow() {
-  // Reset and start entrance animation
-  stopAllAnimations();
-  animateTo("entrance_progress", 1.0f, 500);
-  recalculateLayout();
-}
-
-void WingmanPanel::drawSkia(SkCanvas *canvas) {
-  if (canvas == nullptr) return;
-
-  auto bounds = getLocalBounds().toFloat();
-  SkRect rect = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
-
-  // Get animation progress (0.0 to 1.0)
-  float progress = getAnimatedValue("entrance_progress");
-  
-  // Safety: if not animating and progress is 0, default to 1.0
-  if (!isAnimating("entrance_progress") && progress < 0.01f) progress = 1.0f;
-
-  // Fade and Slide-in effect (FROM LEFT)
-  float alpha = progress;
-  // FIX: Animate X from -50 to 0 (Left to Right) instead of Y
-  float offsetX = (1.0f - progress) * -50.0f;
-
-  canvas->save();
-  if (std::abs(offsetX) > 0.1f) {
-      canvas->translate(offsetX, 0); // Slide horizontally
-  }
-
-  // PERFORMANCE: Only use saveLayerAlpha when actually fading.
-  // saveLayerAlpha triggers an offscreen buffer allocation which is expensive.
-  // When fully visible, skip it entirely to stay on the fast GPU path.
-  bool needsAlphaLayer = (alpha < 0.999f);
-  if (needsAlphaLayer) {
-      canvas->saveLayerAlpha(nullptr, (uint8_t)(alpha * 255));
-  }
-
-  //==========================================================================
-  // 1. Background - Sharp rectangle (NO rounded corners)
-  //==========================================================================
-  SkPaint bgPaint;
-  bgPaint.setAntiAlias(true);
-  bgPaint.setColor(design::withAlpha(design::colors::BG_01, 0.95f));
-  canvas->drawRect(rect, bgPaint);
-
-  // Subtle gradient overlay
-  SkPoint gradPts[2] = {{0, 0}, {0, rect.height()}};
-  SkColor gradColors[2] = {
-      design::withAlpha(design::colors::ACCENT_PRIMARY, 0.03f),
-      SkColorSetARGB(0, 0, 0, 0)
-  };
-  SkPaint gradPaint;
-  gradPaint.setShader(SkGradientShader::MakeLinear(
-      gradPts, gradColors, nullptr, 2, SkTileMode::kClamp));
-  canvas->drawRect(rect, gradPaint);
-
-  //==========================================================================
-  // 2. Hairline Border (0.5px)
-  //==========================================================================
-  SkPaint borderPaint;
-  borderPaint.setAntiAlias(true);
-  borderPaint.setStyle(SkPaint::kStroke_Style);
-  borderPaint.setStrokeWidth(0.5f);  // HAIRLINE
-  borderPaint.setColor(design::colors::BORDER_SUBTLE);
-  canvas->drawRect(rect, borderPaint);
-
-  //==========================================================================
-  // 3. Header Area
-  //==========================================================================
-  float headerBottom = static_cast<float>(HEADER_HEIGHT);
-  
-  // Header background (slightly elevated)
-  SkRect headerRect = SkRect::MakeLTRB(0, 0, rect.width(), headerBottom);
-  SkPaint headerPaint;
-  headerPaint.setColor(design::withAlpha(design::colors::BG_02, 0.5f));
-  canvas->drawRect(headerRect, headerPaint);
-
-  // Header separator (hairline)
-  borderPaint.setAlphaf(0.5f);
-  canvas->drawLine(0, headerBottom, rect.width(), headerBottom, borderPaint);
-
-  // Title
-  SkFont titleFont = design::typography::getSkFont(
-      design::typography::FONT_LG, design::FontWeight::Bold);
-  SkPaint titlePaint;
-  titlePaint.setAntiAlias(true);
-  titlePaint.setColor(design::withAlpha(design::colors::TEXT_PRIMARY, 1.0f));
-  canvas->drawString("WINGMAN AI", PADDING * 1.5f, headerBottom / 2.0f + 6.0f, titleFont, titlePaint);
-
-  //==========================================================================
-  // 4. Chat Area (Pure Skia)
-  //==========================================================================
-  drawChatArea(canvas);
-
-  //==========================================================================
-  // 5. Input Area Separator
-  //==========================================================================
-  float inputTop = bounds.getHeight() - INPUT_ROW_HEIGHT;
-  canvas->drawLine(0, inputTop, rect.width(), inputTop, borderPaint);
-
-  //==========================================================================
-  // 6. Draw Children (Buttons, Editor)
-  //==========================================================================
-  drawChildren(canvas);
-
-  // Restore in correct order
-  if (needsAlphaLayer) {
-      canvas->restore();  // Restore alpha layer
-  }
-  canvas->restore();  // Restore initial save
-}
-
-void WingmanPanel::drawChatArea(SkCanvas *canvas) {
-  if (messages_.empty()) return;
-  
-  auto bounds = getLocalBounds().toFloat();
-  float chatTop = HEADER_HEIGHT + PADDING;
-  float chatBottom = bounds.getHeight() - INPUT_ROW_HEIGHT - PADDING;
-  float chatHeight = chatBottom - chatTop;
-  float maxBubbleWidth = (bounds.getWidth() - PADDING * 2) * BUBBLE_MAX_WIDTH_RATIO;
-  
-  // Clip to chat area
-  canvas->save();
-  SkRect clipRect = SkRect::MakeLTRB(0, chatTop, bounds.getWidth(), chatBottom);
-  canvas->clipRect(clipRect);
-  
-  // Calculate total content height if needed
-  if (contentHeight_ <= 0) {
-    contentHeight_ = 0;
-    for (auto &msg : messages_) {
-      msg.cachedHeight = calculateMessageHeight(msg, maxBubbleWidth);
-      contentHeight_ += msg.cachedHeight + PADDING;
-    }
-  }
-  
-  // Draw messages with scroll offset
-  float y = chatTop - scrollOffset_;
-  
-  for (const auto &msg : messages_) {
-    // Skip if above visible area
-    if (y + msg.cachedHeight < chatTop) {
-      y += msg.cachedHeight + PADDING;
-      continue;
-    }
-    
-    // Stop if below visible area
-    if (y > chatBottom) break;
-    
-    drawMessage(canvas, msg, y, maxBubbleWidth);
-    y += msg.cachedHeight + PADDING;
-  }
-  
-  canvas->restore();
-  
-  // Draw scroll indicator if content overflows
-  if (contentHeight_ > chatHeight) {
-    float scrollRatio = scrollOffset_ / (contentHeight_ - chatHeight);
-    float indicatorHeight = std::max(20.0f, chatHeight * (chatHeight / contentHeight_));
-    float indicatorY = chatTop + (chatHeight - indicatorHeight) * scrollRatio;
-    
-    SkPaint indicatorPaint;
-    indicatorPaint.setAntiAlias(true);
-    indicatorPaint.setColor(design::withAlpha(design::colors::TEXT_TERTIARY, 0.4f));
-    
-    SkRect indicatorRect = SkRect::MakeXYWH(
-        bounds.getWidth() - 6, indicatorY, 3, indicatorHeight);
-    canvas->drawRoundRect(indicatorRect, 1.5f, 1.5f, indicatorPaint);
-  }
-}
-
-void WingmanPanel::drawMessage(SkCanvas *canvas, const ChatMessage &msg, float y, float maxWidth) {
-  auto bounds = getLocalBounds().toFloat();
-  
-  // Calculate bubble dimensions
-  float bubbleWidth = std::min(maxWidth, bounds.getWidth() - PADDING * 4);
-  float bubbleHeight = msg.cachedHeight;
-  
-  // Position based on sender
-  float bubbleX = msg.isUser 
-      ? bounds.getWidth() - bubbleWidth - PADDING 
-      : PADDING;
-  
-  SkRect bubbleRect = SkRect::MakeXYWH(bubbleX, y, bubbleWidth, bubbleHeight);
-  
-  // Bubble background
-  SkPaint bubblePaint;
-  bubblePaint.setAntiAlias(true);
-  
-  if (msg.isUser) {
-    // User message - accent color
-    bubblePaint.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.8f));
-  } else {
-    // Assistant message - dark surface
-    bubblePaint.setColor(design::colors::SURFACE_BASE);
-  }
-  
-  canvas->drawRoundRect(bubbleRect, BUBBLE_RADIUS, BUBBLE_RADIUS, bubblePaint);
-  
-  // Text
-  SkFont textFont = design::typography::getSkFont(13.0f);
-  SkPaint textPaint;
-  textPaint.setAntiAlias(true);
-  textPaint.setColor(design::colors::TEXT_PRIMARY);
-  
-  // Simple text wrapping
-  float textX = bubbleX + BUBBLE_PADDING;
-  float textY = y + BUBBLE_PADDING + 14.0f; // baseline offset
-  float textMaxWidth = bubbleWidth - BUBBLE_PADDING * 2;
-  
-  // Split into lines (basic word wrap)
-  juce::String remaining = msg.text;
-  while (remaining.isNotEmpty() && textY < y + bubbleHeight) {
-    // Find how much text fits on this line
-    int charsThatFit = 0;
-    
-    for (int i = 0; i < remaining.length(); ++i) {
-      SkRect charBounds;
-      textFont.measureText(remaining.substring(0, i + 1).toUTF8(), 
-                          remaining.substring(0, i + 1).getNumBytesAsUTF8(),
-                          SkTextEncoding::kUTF8, &charBounds);
-      if (charBounds.width() > textMaxWidth && i > 0) break;
-      charsThatFit = i + 1;
-    }
-    
-    // Find last space for word wrap
-    int breakPoint = charsThatFit;
-    if (charsThatFit < remaining.length()) {
-      for (int i = charsThatFit - 1; i > 0; --i) {
-        if (remaining[i] == ' ') {
-          breakPoint = i + 1;
-          break;
-        }
-      }
-    }
-    
-    juce::String line = remaining.substring(0, breakPoint).trimEnd();
-    remaining = remaining.substring(breakPoint).trimStart();
-    
-    canvas->drawString(line.toStdString().c_str(), textX, textY, textFont, textPaint);
-    textY += LINE_HEIGHT;
-  }
-}
-
-float WingmanPanel::calculateMessageHeight(const ChatMessage &msg, float maxWidth) {
-  SkFont textFont = design::typography::getSkFont(13.0f);
-  float textMaxWidth = maxWidth - BUBBLE_PADDING * 2;
-  
-  // Count lines needed
-  int lineCount = 1;
-  juce::String remaining = msg.text;
-  
-  while (remaining.isNotEmpty()) {
-    int charsThatFit = 0;
-    
-    for (int i = 0; i < remaining.length(); ++i) {
-      SkRect charBounds;
-      textFont.measureText(remaining.substring(0, i + 1).toUTF8(), 
-                          remaining.substring(0, i + 1).getNumBytesAsUTF8(),
-                          SkTextEncoding::kUTF8, &charBounds);
-      if (charBounds.width() > textMaxWidth && i > 0) break;
-      charsThatFit = i + 1;
-    }
-    
-    if (charsThatFit >= remaining.length()) break;
-    
-    // Find last space for word wrap
-    int breakPoint = charsThatFit;
-    for (int i = charsThatFit - 1; i > 0; --i) {
-      if (remaining[i] == ' ') {
-        breakPoint = i + 1;
-        break;
-      }
-    }
-    
-    remaining = remaining.substring(breakPoint).trimStart();
-    if (remaining.isNotEmpty()) lineCount++;
-  }
-  
-  return BUBBLE_PADDING * 2 + lineCount * LINE_HEIGHT;
-}
-
-//==============================================================================
-// Layout
-//==============================================================================
-
-void WingmanPanel::resized() {
-  auto bounds = getLocalBounds();
-
-  // Header - settings button on right
-  auto headerArea = bounds.removeFromTop(HEADER_HEIGHT);
-  settingsButton_->setBounds(
-      headerArea.removeFromRight(BUTTON_SIZE + PADDING).reduced(4));
-
-  // Input row at bottom
-  auto inputArea = bounds.removeFromBottom(INPUT_ROW_HEIGHT).reduced(PADDING, 8);
-  
-  // Brain toggle on left
-  brainToggle_->setBounds(inputArea.removeFromLeft(BUTTON_SIZE).reduced(2));
-  inputArea.removeFromLeft(4);  // Spacing
-  
-  // Send button on right
-  sendButton_->setBounds(inputArea.removeFromRight(BUTTON_SIZE).reduced(2));
-  inputArea.removeFromRight(4);  // Spacing
-  
-  // Input field fills remainder
-  inputField_->setBounds(inputArea);
-
-  // Store chat area bounds
-  chatAreaBounds_ = bounds.toFloat();
-  
-  // Recalculate message heights
-  recalculateLayout();
-}
-
-void WingmanPanel::recalculateLayout() {
-  auto bounds = getLocalBounds().toFloat();
-  float maxBubbleWidth = (bounds.getWidth() - PADDING * 2) * BUBBLE_MAX_WIDTH_RATIO;
-  
-  contentHeight_ = 0;
-  for (auto &msg : messages_) {
-    msg.cachedHeight = calculateMessageHeight(msg, maxBubbleWidth);
-    contentHeight_ += msg.cachedHeight + PADDING;
-  }
-  
-  markDirty();
-}
-
-void WingmanPanel::scrollToBottom() {
-  float chatHeight = getHeight() - HEADER_HEIGHT - INPUT_ROW_HEIGHT - PADDING * 2;
-  float maxScroll = std::max(0.0f, contentHeight_ - chatHeight);
-  scrollOffset_ = maxScroll;
-  markDirty();
-}
-
-void WingmanPanel::mouseWheelMove(const juce::MouseEvent &e, const juce::MouseWheelDetails &wheel) {
-  juce::ignoreUnused(e);
-  
-  float chatHeight = getHeight() - HEADER_HEIGHT - INPUT_ROW_HEIGHT - PADDING * 2;
-  float maxScroll = std::max(0.0f, contentHeight_ - chatHeight);
-  
-  // Scroll amount (negative wheel.deltaY = scroll down)
-  float scrollDelta = -wheel.deltaY * 50.0f;
-  scrollOffset_ = juce::jlimit(0.0f, maxScroll, scrollOffset_ + scrollDelta);
-  
-  markDirty();
-}
-
-//==============================================================================
-// Messaging
+// Interaction Logic
 //==============================================================================
 
 void WingmanPanel::sendMessage() {
-  if (isProcessing_) {
-    DBG("Wingman: Blocked sendMessage - already processing");
-    return;
-  }
+    juce::String text = textInput_->getText().trim();
+    if (text.isEmpty()) return;
+    
+    WingmanMessage msg;
+    msg.sender = "User";
+    msg.content = text;
+    messages_.push_back(msg);
+    textInput_->clear();
+    
+    // Fake "Thinking" state
+    isProcessing_ = true;
+    updateLayout();
+    scrollOffset_ = std::max(0.0f, layout_.chatRect.height()); // Auto-scroll
+    repaint();
+    
+    juce::Timer::callAfterDelay(800, [this] {
+        receiveMessage("I can help with that. Analyzing your project structure...");
+        isProcessing_ = false;
+        repaint();
+    });
+}
 
-  auto query = inputField_->getText().trim();
-  if (query.isEmpty()) return;
-  
-  DBG("Wingman: Sending query: " + query);
+void WingmanPanel::receiveMessage(const juce::String& text) {
+    WingmanMessage msg;
+    msg.sender = "Wingman";
+    msg.content = text;
+    messages_.push_back(msg);
+    updateLayout();
+}
 
-  inputField_->clear();
-  appendMessage("You", query);
+void WingmanPanel::createNewSession() {
+    sessions_.clear(); // Just clear for demo visual cleanliness
+    WingmanSession s; s.id="1"; s.title="New Session"; s.isActive=true;
+    sessions_.push_back(s);
+    messages_.clear();
+    repaint();
+}
 
-  isProcessing_ = true;
-  
-  // FAILSAFE: Force reset processing state after 10s if no response
-  juce::Timer::callAfterDelay(10000, [this] {
-    if (isProcessing_) {
-      DBG("Wingman: Forced processing reset (timeout)");
-      isProcessing_ = false;
-      // Optional: Inform user of timeout
-      appendMessage("System", "Request timed out. Please try again.");
+//==============================================================================
+// Lifecycle & Layout
+//==============================================================================
+
+void WingmanPanel::visibilityChanged() { if (isVisible()) updateLayout(); }
+void WingmanPanel::resized() { updateLayout(); }
+
+void WingmanPanel::updateLayout() {
+    auto b = getLocalBounds().toFloat();
+    float w = b.getWidth();
+    float h = b.getHeight();
+    
+    float sidebarW = sidebarOpen_ ? 220.0f : 0.0f;
+    
+    // Regions
+    layout_.sidebarRect = SkRect::MakeXYWH(0, 0, sidebarW, h);
+    layout_.contentRect = SkRect::MakeXYWH(sidebarW, 0, w - sidebarW, h);
+    
+    // Header Buttons (Floating, Top Right)
+    // No more "Toolbar", just floating icons
+    float btnSize = 32.0f;
+    float pad = 20.0f;
+    
+    layout_.settingsBtn = SkRect::MakeXYWH(w - pad - btnSize, pad, btnSize, btnSize);
+    layout_.toggleSidebarBtn = SkRect::MakeXYWH(sidebarW + pad, pad, btnSize, btnSize);
+    
+    // Input Island (Floating Bottom)
+    float inputW = std::min((w - sidebarW) * 0.7f, 600.0f); // Narrower for cleaner look
+    float inputH = 50.0f;
+    float inputBottomMargin = 40.0f;
+    
+    float inputX = sidebarW + ((w - sidebarW) - inputW) / 2.0f;
+    float inputY = h - inputH - inputBottomMargin;
+    
+    layout_.inputContainerRect = SkRect::MakeXYWH(inputX, inputY, inputW, inputH);
+    
+    // Buttons inside input (Brain Left, Send Right)
+    layout_.brainBtn = SkRect::MakeXYWH(inputX + 10.0f, inputY + 9.0f, 32.0f, 32.0f);
+    layout_.sendBtn = SkRect::MakeXYWH(inputX + inputW - 42.0f, inputY + 9.0f, 32.0f, 32.0f);
+    
+    // Text Input Rect
+    layout_.inputFieldRect = SkRect::MakeXYWH(inputX + 50.0f, inputY + 8.0f, inputW - 100.0f, inputH - 16.0f);
+    
+    if (textInput_) {
+        textInput_->setBounds((int)layout_.inputFieldRect.left(), (int)layout_.inputFieldRect.top(),
+                              (int)layout_.inputFieldRect.width(), (int)layout_.inputFieldRect.height());
     }
-  });
-
-  // Determine Grok mode
-  GrokMode mode = reasoningMode_ ? GrokMode::Thinking : GrokMode::Fast;
-
-  grokController_->executeCommand(
-      query, mode,
-      // Success callback
-      [this](juce::String response) {
-        juce::MessageManager::callAsync([this, response] {
-          DBG("Wingman: Received response: " + response.substring(0, 50) + "...");
-          appendMessage("Wingman", response);
-          isProcessing_ = false;
-        });
-      },
-      // Error callback
-      [this](juce::String error) {
-        juce::MessageManager::callAsync([this, error] {
-          DBG("Wingman: Error received: " + error);
-          appendMessage("System", "Error: " + error);
-          isProcessing_ = false;
-        });
-      },
-      // Progress callback (optional)
-      [this](juce::String status) {
-        juce::MessageManager::callAsync([this, status] {
-          DBG("Wingman progress: " + status);
-        });
-      });
-}
-
-void WingmanPanel::appendMessage(const juce::String &speaker,
-                                  const juce::String &message) {
-  ChatMessage msg;
-  msg.speaker = speaker;
-  msg.text = message;
-  msg.isUser = (speaker == "You");
-  msg.cachedHeight = 0; // Will be calculated
-  
-  messages_.push_back(msg);
-  
-  recalculateLayout();
-  scrollToBottom();
+    
+    // Chat Area
+    layout_.chatRect = SkRect::MakeLTRB(sidebarW, 80.0f, w, inputY - 20.0f);
 }
 
 //==============================================================================
-// Grok Integration
+// Mouse
 //==============================================================================
 
-bool WingmanPanel::initializeGrok(const juce::String &apiKey) {
-  bool success = grokController_->initialize(apiKey);
-  
-  if (success) {
-    DBG("Wingman: Grok initialized successfully");
-  } else {
-    DBG("Wingman: Grok initialization failed - check API key");
-  }
-  
-  return success;
+void WingmanPanel::mouseMove(const juce::MouseEvent& e) {
+    auto p = e.getPosition();
+    float x = (float)p.x; float y = (float)p.y;
+    
+    bool changed = false;
+    auto check = [&](bool& s, const SkRect& r) { if (s != r.contains(x,y)) { s = r.contains(x,y); changed=true; } };
+    
+    check(interaction_.hoverSend, layout_.sendBtn);
+    check(interaction_.hoverBrain, layout_.brainBtn);
+    check(interaction_.hoverSettings, layout_.settingsBtn);
+    check(interaction_.hoverSidebarToggle, layout_.toggleSidebarBtn);
+    
+    if (changed) repaint();
 }
 
-bool WingmanPanel::isGrokReady() const {
-  return grokController_->isReady();
+void WingmanPanel::mouseDown(const juce::MouseEvent& e) {
+    auto p = e.getPosition();
+    float x = (float)p.x; float y = (float)p.y;
+    
+    if (layout_.toggleSidebarBtn.contains(x,y)) { sidebarOpen_ = !sidebarOpen_; resized(); repaint(); }
+    else if (layout_.sendBtn.contains(x,y)) sendMessage();
+    else if (layout_.brainBtn.contains(x,y)) { isReasoningMode_ = !isReasoningMode_; repaint(); }
+}
+void WingmanPanel::mouseUp(const juce::MouseEvent&) {}
+void WingmanPanel::mouseExit(const juce::MouseEvent&) { interaction_ = {}; repaint(); }
+void WingmanPanel::mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails& wheel) {
+    scrollOffset_ -= wheel.deltaY * 40.0f;
+    if (scrollOffset_ < 0) scrollOffset_ = 0;
+    repaint();
+}
+
+//==============================================================================
+// RENDERING
+//==============================================================================
+
+void WingmanPanel::drawSkia(SkCanvas* canvas) {
+    if (!canvas) return;
+    
+    // 1. Background
+    canvas->drawColor(theme::BG_VOID);
+    
+    // 2. Sidebar
+    if (sidebarOpen_) drawSidebar(canvas);
+    
+    // 3. Chat
+    drawChatStream(canvas);
+    
+    // 4. Input Island
+    drawInputIsland(canvas);
+    
+    // 5. Floating Controls (Header)
+    drawHeader(canvas);
+}
+
+void WingmanPanel::drawSidebar(SkCanvas* canvas) {
+    SkPaint bg;
+    bg.setColor(theme::BG_SIDEBAR);
+    canvas->drawRect(layout_.sidebarRect, bg);
+    
+    // Divider
+    SkPaint border;
+    border.setColor(SkColorSetA(SK_ColorWHITE, 10)); // Ultra subtle
+    canvas->drawLine(layout_.sidebarRect.right(), 0, layout_.sidebarRect.right(), layout_.sidebarRect.bottom(), border);
+    
+    // Title
+    SkFont headFont = design::typography::getSkFont(11.0f, design::FontWeight::Bold);
+    SkPaint textP; textP.setColor(theme::TEXT_MUTED); textP.setAntiAlias(true);
+    canvas->drawString("LIBRARY", 20.0f, 60.0f, headFont, textP);
+    
+    // Sessions
+    float y = 90.0f;
+    SkFont itemFont = design::typography::getSkFont(13.0f);
+    textP.setColor(theme::TEXT_BODY);
+    
+    for (const auto& s : sessions_) {
+        canvas->drawString(s.title.toStdString().c_str(), 20.0f, y, itemFont, textP);
+        y += 32.0f;
+    }
+}
+
+void WingmanPanel::drawHeader(SkCanvas* canvas) {
+    // Menu Icon (Top Left)
+    icons::IconStyle style;
+    style.color = interaction_.hoverSidebarToggle ? theme::TEXT_HEAD : theme::TEXT_MUTED;
+    icons::drawIconCentered(canvas, icons::Menu(), layout_.toggleSidebarBtn, 20.0f, style);
+    
+    // Settings Icon (Top Right)
+    style.color = interaction_.hoverSettings ? theme::TEXT_HEAD : theme::TEXT_MUTED;
+    icons::drawIconCentered(canvas, icons::Settings(), layout_.settingsBtn, 20.0f, style);
+}
+
+void WingmanPanel::drawInputIsland(SkCanvas* canvas) {
+    // "Clean Pill" aesthetic - no heavy borders, no bevels
+    
+    // 1. Soft Shadow
+    SkPaint shadow;
+    shadow.setColor(theme::ACCENT_GLOW);
+    shadow.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 24.0f));
+    canvas->drawRoundRect(layout_.inputContainerRect.makeOffset(0, 4), 25.0f, 25.0f, shadow);
+    
+    // 2. Background
+    SkPaint bg;
+    bg.setColor(theme::INPUT_BG);
+    bg.setAntiAlias(true);
+    canvas->drawRoundRect(layout_.inputContainerRect, 25.0f, 25.0f, bg);
+    
+    // 3. Subtle Stroke
+    SkPaint border;
+    border.setStyle(SkPaint::kStroke_Style);
+    border.setStrokeWidth(1.0f);
+    border.setColor(theme::INPUT_BORDER);
+    border.setAntiAlias(true);
+    canvas->drawRoundRect(layout_.inputContainerRect, 25.0f, 25.0f, border);
+    
+    // 4. Brain Icon (Left)
+    icons::IconStyle brainStyle;
+    brainStyle.color = isReasoningMode_ ? theme::ACCENT_PRIMARY : theme::TEXT_MUTED;
+    if (isReasoningMode_) { brainStyle.glowColor = theme::ACCENT_PRIMARY; brainStyle.glowRadius = 10.0f; }
+    icons::drawIconCentered(canvas, icons::Sparkles(), layout_.brainBtn, 18.0f, brainStyle);
+    
+    // 5. Send Icon (Right) - Only visible if text present or hovered
+    bool hasText = !textInput_->getText().trim().isEmpty();
+    if (hasText || interaction_.hoverSend) {
+        icons::IconStyle sendStyle;
+        sendStyle.color = theme::TEXT_HEAD;
+        sendStyle.filled = true; // Filled arrow
+        icons::drawIconCentered(canvas, icons::SendArrow(), layout_.sendBtn, 18.0f, sendStyle);
+    }
+}
+
+void WingmanPanel::drawChatStream(SkCanvas* canvas) {
+    if (messages_.empty()) {
+        drawEmptyState(canvas);
+        return;
+    }
+    
+    canvas->save();
+    canvas->clipRect(layout_.chatRect);
+    
+    float y = layout_.chatRect.top() - scrollOffset_;
+    float contentW = std::min(layout_.chatRect.width() * 0.7f, 650.0f); // Restrained reading width
+    float contentX = layout_.chatRect.left() + (layout_.chatRect.width() - contentW) / 2.0f;
+    
+    for (const auto& msg : messages_) {
+        float h = measureMessageHeight(msg, contentW);
+        
+        if (y + h > layout_.chatRect.top() && y < layout_.chatRect.bottom()) {
+            drawMessageBubble(canvas, msg, y, contentX, contentW);
+        }
+        y += h + 24.0f;
+    }
+    
+    canvas->restore();
+}
+
+void WingmanPanel::drawEmptyState(SkCanvas* canvas) {
+    // Minimalist centered logo
+    float cx = layout_.chatRect.centerX();
+    float cy = layout_.chatRect.centerY() - 40.0f;
+    
+    SkRect logoR = SkRect::MakeXYWH(cx - 24.0f, cy - 24.0f, 48.0f, 48.0f);
+    icons::IconStyle style;
+    style.color = SkColorSetA(theme::TEXT_MUTED, 100);
+    style.strokeWidth = 1.5f;
+    icons::drawIconCentered(canvas, icons::Brain(), logoR, 40.0f, style);
+    
+    SkFont font = design::typography::getSkFont(14.0f);
+    SkPaint paint;
+    paint.setColor(theme::TEXT_MUTED);
+    paint.setAntiAlias(true);
+    
+    std::string t = "How can I assist?";
+    float w = font.measureText(t.c_str(), t.length(), SkTextEncoding::kUTF8);
+    canvas->drawString(t.c_str(), cx - w/2.0f, cy + 50.0f, font, paint);
+}
+
+//==============================================================================
+// Text Helpers
+//==============================================================================
+
+void WingmanPanel::drawMessageBubble(SkCanvas* canvas, const WingmanMessage& msg, float y, float x, float w) {
+    if (msg.sender == "User") {
+        // User: Right aligned, invisible background, just bold text (Modern messaging style)
+        // Or subtle pill
+        
+        float bubbleW = w; // Full width available to measure against
+        SkFont font = design::typography::getSkFont(15.0f);
+        SkPaint paint; paint.setColor(theme::TEXT_BODY); paint.setAntiAlias(true);
+        
+        // Right align logic handled by drawing text at X + indent?
+        // Actually, let's keep it simple: User gets a right-aligned pill
+        
+        // Measure text width roughly
+        float textW = font.measureText(msg.content.toUTF8(), msg.content.getNumBytesAsUTF8(), SkTextEncoding::kUTF8);
+        textW = std::min(textW, w);
+        float pillW = textW + 32.0f;
+        float pillX = x + w - pillW;
+        
+        SkRect pill = SkRect::MakeXYWH(pillX, y, pillW, measureMessageHeight(msg, w));
+        
+        SkPaint bg;
+        bg.setColor(SkColorSetRGB(30, 30, 35)); // Very subtle grey
+        bg.setAntiAlias(true);
+        canvas->drawRoundRect(pill, 16.0f, 16.0f, bg);
+        
+        drawWrappedText(canvas, msg.content, pillX + 16.0f, y + 26.0f, pillW - 32.0f, font, paint);
+        
+    } else {
+        // Wingman: Left aligned, clean text, no bubble
+        // Icon on left
+        SkRect iconR = SkRect::MakeXYWH(x, y, 20.0f, 20.0f);
+        icons::IconStyle is; is.color = theme::ACCENT_PRIMARY; is.filled=true;
+        icons::drawIconCentered(canvas, icons::Sparkles(), iconR, 18.0f, is);
+        
+        SkFont font = design::typography::getSkFont(15.0f);
+        SkPaint paint; paint.setColor(theme::TEXT_HEAD); paint.setAntiAlias(true);
+        
+        drawWrappedText(canvas, msg.content, x + 36.0f, y + 16.0f, w - 36.0f, font, paint);
+    }
+}
+
+float WingmanPanel::measureMessageHeight(const WingmanMessage& msg, float width) {
+    // Rough calc
+    return (msg.content.length() / 50 + 1) * 24.0f + 30.0f;
+}
+
+void WingmanPanel::drawWrappedText(SkCanvas* canvas, const juce::String& text, float x, float startY, float maxWidth, const SkFont& font, const SkPaint& paint) {
+    // Simple wrap
+    float y = startY;
+    float lineHeight = 24.0f;
+    juce::String rem = text;
+    
+    while(rem.isNotEmpty()) {
+        int len = rem.length();
+        int cut = len;
+        for(int i=1; i<=len; ++i) {
+            if (font.measureText(rem.substring(0,i).toUTF8(), rem.substring(0,i).getNumBytesAsUTF8(), SkTextEncoding::kUTF8) > maxWidth) {
+                cut = i-1; break;
+            }
+        }
+        if (cut < 1) cut = 1;
+        
+        canvas->drawString(rem.substring(0, cut).toStdString().c_str(), x, y, font, paint);
+        rem = rem.substring(cut).trimStart();
+        y += lineHeight;
+    }
 }
 
 } // namespace zenith

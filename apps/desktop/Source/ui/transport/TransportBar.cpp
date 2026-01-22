@@ -12,6 +12,13 @@
 
 #include "TransportBar.h"
 
+#ifndef NDEBUG
+#define TB_DEBUG(x) DBG(x)
+#else
+#define TB_DEBUG(x) ((void)0)
+#endif
+
+
 #include <core/SkBlurTypes.h> // Explicitly include
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
@@ -297,14 +304,17 @@ void TransportBar::resized() {
 
   // 3. Right Section: Tools (Pushed further out)
   auto rightSection = area.removeFromRight(300).reduced(16, 8);
+  int barCenterY = getHeight() / 2; // Use full height for proper centering
   
-  // Settings
+  // Settings (rightmost)
   settingsButtonBounds_ = rightSection.removeFromRight(32).withSizeKeepingCentre(32, 32);
-  rightSection.removeFromRight(20);
+  rightSection.removeFromRight(16); // Spacing
   
-  // CPU Meter
-  cpuMeterBounds_ = rightSection.withHeight(12).withY(area.getCentreY() - 6);
-  rightSection.removeFromRight(80); // Width of CPU meter
+  // CPU Meter - Fixed width, properly centered vertically
+  const int cpuMeterWidth = 140;
+  const int cpuMeterHeight = 16;
+  auto cpuArea = rightSection.removeFromRight(cpuMeterWidth);
+  cpuMeterBounds_ = cpuArea.withSizeKeepingCentre(cpuMeterWidth, cpuMeterHeight);
 
   // 4. Left Section: View Toggles + Wingman AI
   auto leftSection = area.removeFromLeft(200).reduced(16, 8);
@@ -507,7 +517,7 @@ void TransportBar::drawSkia(SkCanvas *canvas) {
                       false, design::colors::TEXT_SECONDARY, viewToggleState_);
 
   // 6. CPU Meter (Updated visual - use smoothed value)
-  drawMeter(canvas, cpuMeterBounds_, smoothedCpu_ / 100.0f, "CPU");
+  drawMeter(canvas, cpuMeterBounds_, juce::jlimit(0.0f, 1.0f, smoothedCpu_ / 100.0f), "CPU");
 }
 
 void TransportBar::updateCachedPaints(const SkRect &bounds) {
@@ -627,23 +637,23 @@ void TransportBar::mouseDown(const juce::MouseEvent &e) {
   auto pos = e.getPosition();
   
   // DEBUG: Print hit zone info
-  DBG("=== TransportBar::mouseDown ===");
-  DBG("  Click pos: " << pos.x << ", " << pos.y);
-  DBG("  bpmHitBounds_: " << bpmHitBounds_.toString());
-  DBG("  timeSigHitBounds_: " << timeSigHitBounds_.toString());
-  DBG("  timeSigNumBounds_: " << timeSigNumBounds_.toString());
-  DBG("  timeSigDenBounds_: " << timeSigDenBounds_.toString());
-  DBG("  timeSigTemplateBounds_: " << timeSigTemplateBounds_.toString());
-  DBG("  lcdBounds_: " << lcdBounds_.toString());
-  DBG("  Contains checks:");
-  DBG("    bpmHitBounds_.contains: " << (bpmHitBounds_.contains(pos) ? "YES" : "no"));
-  DBG("    timeSigTemplateBounds_.contains: " << (timeSigTemplateBounds_.contains(pos) ? "YES" : "no"));
-  DBG("    timeSigDenBounds_.contains: " << (timeSigDenBounds_.contains(pos) ? "YES" : "no"));
-  DBG("    timeSigNumBounds_.contains: " << (timeSigNumBounds_.contains(pos) ? "YES" : "no"));
+  TB_DEBUG("=== TransportBar::mouseDown ===");
+  TB_DEBUG("  Click pos: " << pos.x << ", " << pos.y);
+  TB_DEBUG("  bpmHitBounds_: " << bpmHitBounds_.toString());
+  TB_DEBUG("  timeSigHitBounds_: " << timeSigHitBounds_.toString());
+  TB_DEBUG("  timeSigNumBounds_: " << timeSigNumBounds_.toString());
+  TB_DEBUG("  timeSigDenBounds_: " << timeSigDenBounds_.toString());
+  TB_DEBUG("  timeSigTemplateBounds_: " << timeSigTemplateBounds_.toString());
+  TB_DEBUG("  lcdBounds_: " << lcdBounds_.toString());
+  TB_DEBUG("  Contains checks:");
+  TB_DEBUG("    bpmHitBounds_.contains: " << (bpmHitBounds_.contains(pos) ? "YES" : "no"));
+  TB_DEBUG("    timeSigTemplateBounds_.contains: " << (timeSigTemplateBounds_.contains(pos) ? "YES" : "no"));
+  TB_DEBUG("    timeSigDenBounds_.contains: " << (timeSigDenBounds_.contains(pos) ? "YES" : "no"));
+  TB_DEBUG("    timeSigNumBounds_.contains: " << (timeSigNumBounds_.contains(pos) ? "YES" : "no"));
   
   // 1. LCD Interaction (BPM / TimeSig)
   if (bpmHitBounds_.contains(pos)) {
-      DBG("  -> BPM drag started");
+      TB_DEBUG("  -> BPM drag started");
       isDraggingBpm_ = true;
       dragStartValue_ = tempo_;
       dragStartPos_ = pos;
@@ -656,7 +666,7 @@ void TransportBar::mouseDown(const juce::MouseEvent &e) {
   // Templates dropdown arrow - show popup menu  
   // Templates dropdown arrow - show popup menu  
   if (timeSigTemplateBounds_.contains(e.getPosition())) {
-      DBG("TransportBar: Dropdown clicked");
+      TB_DEBUG("TransportBar: Dropdown clicked");
       juce::PopupMenu menu;
       
       // Use standard JUCE PopupMenu::Item syntax
@@ -706,7 +716,7 @@ void TransportBar::mouseDown(const juce::MouseEvent &e) {
   
   // Denominator drag zone
   if (timeSigDenBounds_.contains(pos)) {
-      DBG("  -> Denominator drag started");
+      TB_DEBUG("  -> Denominator drag started");
       isDraggingTimeSigDen_ = true;
       isDraggingTimeSigNum_ = false;
       dragStartDen_ = timeSigDen_;
@@ -716,7 +726,7 @@ void TransportBar::mouseDown(const juce::MouseEvent &e) {
   
   // Numerator drag zone
   if (timeSigNumBounds_.contains(pos)) {
-      DBG("  -> Numerator drag started");
+      TB_DEBUG("  -> Numerator drag started");
       isDraggingTimeSigNum_ = true;
       isDraggingTimeSigDen_ = false;
       dragStartNum_ = timeSigNum_;
@@ -724,7 +734,7 @@ void TransportBar::mouseDown(const juce::MouseEvent &e) {
       return;
   }
   
-  DBG("  -> No time sig zone hit, checking transport buttons...");
+  TB_DEBUG("  -> No time sig zone hit, checking transport buttons...");
 
   bool isRightClick = e.mods.isRightButtonDown();
   

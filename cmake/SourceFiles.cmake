@@ -237,6 +237,7 @@ set(ZENITH_DSP_SOURCES
 
 # AI and Network sources
 set(ZENITH_AI_NETWORK_SOURCES
+    agents/ObservabilityAgent/ObservabilityAgent.cpp
     apps/desktop/Source/ai/AIEventBus.cpp
     apps/desktop/Source/ai/AIStatusManager.cpp
     apps/desktop/Source/ai/AudioFitnessEvaluator.cpp
@@ -292,6 +293,11 @@ set(ZENITH_UTILS_SOURCES
     agents/ObservabilityAgent/ObservabilityAgent.cpp
 )
 
+# Agents sources
+set(ZENITH_AGENTS_SOURCES
+    agents/TransportProtocolAgent/TransportProtocolAgent.cpp
+)
+
 # Combine all sources
 set(ZENITH_ALL_SOURCES
     ${ZENITH_APP_SOURCES}
@@ -308,6 +314,7 @@ set(ZENITH_ALL_SOURCES
     ${ZENITH_DSP_SOURCES}
     ${ZENITH_AI_NETWORK_SOURCES}
     ${ZENITH_UTILS_SOURCES}
+    ${ZENITH_AGENTS_SOURCES}
 )
 
 # Platform-specific sources

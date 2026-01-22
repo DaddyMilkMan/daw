@@ -119,55 +119,18 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, CommandAPI &api, Projec
 
   layoutMgr.registerPanelType(
       "main_views", "Main View", [this]() -> std::unique_ptr<juce::Component> {
-        auto switcher = std::make_unique<ViewSwitcher>();
-        // Add Arranger
-        auto arranger =
-            std::make_unique<ArrangerComponent>(engine_, projectState_);
-        arranger->onClipDoubleClicked = [this](const juce::String &trackId,
-                                               const juce::String &clipId) {
-          // Check clip type
-          auto [track, clip] = projectState_.findClip(clipId);
-          if (clip.isValid()) {
-            bool isMidi = clip.getProperty("type").toString() == "midi";
-
-            if (isMidi) {
-              // Switch to MIDI Editor
-              if (editorSwitcher_)
-                editorSwitcher_->setActiveView(1);
-              if (midiEditor_) {
-                MidiClipContext ctx;
-                ctx.clipId = clipId;
-                ctx.trackId = trackId;
-                ctx.clipName = clip.getProperty("name");
-                ctx.clipStartBeats = clip.getProperty("start");
-                ctx.clipLengthBeats = clip.getProperty("length");
-                midiEditor_->setClipContext(ctx);
-              }
-            } else {
-              // Switch to Audio Editor
-              if (editorSwitcher_)
-                editorSwitcher_->setActiveView(0);
-              if (sampleEditor_) {
-                sampleEditor_->setClipToEdit(trackId, clipId);
-              }
-            }
-
-            // Ensure bottom panel is visible
-            toggleSampleEditor(); // Renamed conceptually to toggleEditor, but
-                                  // keeping method name for now
-          }
-        };
-        switcher->addView(std::move(arranger));
-        // Add Session
-        switcher->addView(
-            std::make_unique<SessionViewComponent>(engine_, projectState_));
-        return std::unique_ptr<juce::Component>(switcher.release());
+        // NUKED - Return empty component since no views exist
+        auto empty = std::make_unique<juce::Component>();
+        empty->setName("NukedMainViews");
+        return empty;
       });
 
   layoutMgr.registerPanelType("sample_editor", "Sample Editor",
                               [this]() -> std::unique_ptr<juce::Component> {
-                                return std::make_unique<SampleEditorComponent>(
-                                    engine_, projectState_);
+                                // NUKED - Return empty component since no sample editor exists
+                                auto empty = std::make_unique<juce::Component>();
+                                empty->setName("NukedSampleEditor");
+                                return empty;
                               });
 
   // 2. Create Root Container (Horizontal: Browser | Center)
@@ -192,207 +155,45 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, CommandAPI &api, Projec
   
   panelContainer_->addPanel(std::move(wingmanSidePanel), wingmanCfg);
 
-  // 3. Create Left Container (Vertical: Browser | Info View)
-  auto leftContainer = std::make_unique<ResizablePanelContainer>();
-  leftContainer->setSplitDirection(ResizablePanelContainer::SplitDirection::Vertical);
+  // 3. (Browser & Info View Removed)
+  // The user requested to remove the "clutter" (Browser + Info View)
+  // and only keep Wingman togglable.
+  // Previous code for Left Container (Browser | Info View) has been removed.
 
-  // 3a. Browser
-  auto browser = std::make_unique<BrowserPanel>(*browserModel_);
-  browser->onItemDoubleClicked = [this](std::shared_ptr<BrowserItem> item) {
-    if (item && !item->isDirectory) {
-      DBG("MainLayout: Browser item activated: " + item->name);
+  // 4. NUKED - All center content removed (Arranger, Session, Editors)
+  // Create a completely transparent center area below the transport bar
+  ZENITH_LOG_INFO("MainLayoutComponent: Creating transparent center area");
+  
+  class TransparentComponent : public juce::Component {
+  public:
+    TransparentComponent() { 
+      setOpaque(false); 
+      setInterceptsMouseClicks(false, false);
+    }
+    void paint(juce::Graphics& g) override {
+      // Paint nothing - completely transparent
     }
   };
-
-  layout::PanelConfig browserCfg;
-  browserCfg.id = "browser";
-  browserCfg.type = "browser"; 
-  browserCfg.name = "Browser";
-  browserCfg.flex = 1.0f;
-  browserCfg.minSize = 200;
   
-  leftContainer->addPanel(std::move(browser), browserCfg);
-
-  // 3b. Info View
-  auto helpView = std::make_unique<HelpViewPanel>();
+  auto transparentCenter = std::make_unique<TransparentComponent>();
+  transparentCenter->setName("TransparentCenter");
   
-  layout::PanelConfig helpCfg;
-  helpCfg.id = "help_view";
-  helpCfg.type = "help_view";
-  helpCfg.name = "Info View";
-  helpCfg.flex = 0.0f; 
-  helpCfg.initialSize = 150.0f;
-  helpCfg.minSize = 100.0f;
-  helpCfg.isCollapsible = true;
-  
-  leftContainer->addPanel(std::move(helpView), helpCfg);
-  ZENITH_LOG_INFO("MainLayoutComponent: help_view panel added to leftContainer");
-
-  // Add Left Container to Root
-  layout::PanelConfig leftCfg;
-  leftCfg.id = "left_container";
-  leftCfg.type = "container";
-  leftCfg.name = "Sidebar";
-  leftCfg.initialSize = 300;
-  leftCfg.minSize = 200;
-  leftCfg.flex = 0; 
-  leftCfg.isCollapsible = true;
-  leftCfg.showHeader = false; // Hide header for sidebar container
-
-  ZENITH_LOG_INFO("MainLayoutComponent: Adding leftContainer to panelContainer_");
-  panelContainer_->addPanel(std::move(leftContainer), leftCfg);
-  ZENITH_LOG_INFO("MainLayoutComponent: leftContainer added successfully");
-
-  // 4. Create Center Container (Vertical: Views | Sample Editor)
-  ZENITH_LOG_INFO("MainLayoutComponent: Creating centerContainer");
-  auto centerContainer = std::make_unique<ResizablePanelContainer>();
-  centerContainer_ = centerContainer.get(); // Cache pointer
-  centerContainer->setSplitDirection(
-      ResizablePanelContainer::SplitDirection::Vertical);
-  ZENITH_LOG_INFO("MainLayoutComponent: centerContainer created");
-
-  // 4a. Views Panel (Switcher)
-  ZENITH_LOG_INFO("MainLayoutComponent: Creating ViewSwitcher");
-  auto switcher = std::make_unique<ViewSwitcher>();
-  viewSwitcher_ = switcher.get();
-  ZENITH_LOG_INFO("MainLayoutComponent: ViewSwitcher created");
-
-  ZENITH_LOG_INFO("MainLayoutComponent: Creating ArrangerComponent");
-  auto arranger = std::make_unique<ArrangerComponent>(engine_, projectState_);
-  ZENITH_LOG_INFO("MainLayoutComponent: ArrangerComponent created");
-  arranger->onClipDoubleClicked = [this](const juce::String &trackId,
-                                         const juce::String &clipId) {
-    ZENITH_LOG_INFO("MainLayoutComponent: onClipDoubleClicked callback");
-    // Check clip type
-    auto [track, clip] = projectState_.findClip(clipId);
-    if (clip.isValid()) {
-      bool isMidi = clip.getProperty("type").toString() == "midi";
-
-      if (isMidi) {
-        if (editorSwitcher_)
-          editorSwitcher_->setActiveView(1);
-        if (midiEditor_) {
-          MidiClipContext ctx;
-          ctx.clipId = clipId;
-          ctx.trackId = trackId;
-          ctx.clipName = clip.getProperty("name");
-          ctx.clipStartBeats = clip.getProperty("start");
-          ctx.clipLengthBeats = clip.getProperty("length");
-          midiEditor_->setClipContext(ctx);
-        }
-      } else {
-        if (editorSwitcher_)
-          editorSwitcher_->setActiveView(0);
-        if (sampleEditor_) {
-          sampleEditor_->setClipToEdit(trackId, clipId);
-        }
-      }
-      toggleSampleEditor();
-    }
-  };
-  ZENITH_LOG_INFO("MainLayoutComponent: ArrangerComponent callback set");
-  
-  // Store raw pointer for collaboration features
-  ArrangerComponent* arrangerPtr = arranger.get();
-  ZENITH_LOG_INFO("MainLayoutComponent: Adding arranger to switcher");
-  switcher->addView(std::move(arranger));
-  ZENITH_LOG_INFO("MainLayoutComponent: Arranger added to switcher");
-  
-  ZENITH_LOG_INFO("MainLayoutComponent: Creating SessionViewComponent");
-  switcher->addView(
-      std::make_unique<SessionViewComponent>(engine_, projectState_));
-  ZENITH_LOG_INFO("MainLayoutComponent: SessionViewComponent added");
-
-  layout::PanelConfig viewsCfg;
-  viewsCfg.id = "main_views";
-  viewsCfg.type = "main_views"; // Important
-  viewsCfg.name = "Main View";
-  viewsCfg.flex = 1.0f;
-  viewsCfg.minSize = 300;
-  viewsCfg.showHeader = false; // Hide header for main content area
-
-  ZENITH_LOG_INFO("MainLayoutComponent: Adding switcher to centerContainer");
-  centerContainer->addPanel(std::move(switcher), viewsCfg);
-  ZENITH_LOG_INFO("MainLayoutComponent: Switcher added to centerContainer");
-
-  // 4b. Editors Panel (Switcher: Sample Editor | MIDI Editor)
-  ZENITH_LOG_INFO("MainLayoutComponent: Creating editorSwitcher");
-  auto editorSwitcher = std::make_unique<ViewSwitcher>();
-  editorSwitcher_ = editorSwitcher.get();
-  ZENITH_LOG_INFO("MainLayoutComponent: editorSwitcher created");
-
-  // View 0: Sample Editor
-  ZENITH_LOG_INFO("MainLayoutComponent: Creating SampleEditorComponent");
-  auto sampleEditor =
-      std::make_unique<SampleEditorComponent>(engine_, projectState_);
-  ZENITH_LOG_INFO("MainLayoutComponent: SampleEditorComponent created");
-  sampleEditor_ = sampleEditor.get();
-  ZENITH_LOG_INFO("MainLayoutComponent: Adding sampleEditor to editorSwitcher");
-  editorSwitcher->addView(std::move(sampleEditor));
-  ZENITH_LOG_INFO("MainLayoutComponent: sampleEditor added");
-
-  // View 1: MIDI Editor
-  ZENITH_LOG_INFO("MainLayoutComponent: Creating MidiEditorContainer");
-  auto midiEditor =
-      std::make_unique<MidiEditorContainer>(projectState_, engine_);
-  ZENITH_LOG_INFO("MainLayoutComponent: MidiEditorContainer created");
-  midiEditor_ = midiEditor.get();
-  ZENITH_LOG_INFO("MainLayoutComponent: Adding midiEditor to editorSwitcher");
-  editorSwitcher->addView(std::move(midiEditor));
-  ZENITH_LOG_INFO("MainLayoutComponent: midiEditor added");
-
-  layout::PanelConfig editorCfg;
-  editorCfg.id =
-      "sample_editor"; // Keep ID for layout persistence compatibility
-  editorCfg.type = "sample_editor";
-  editorCfg.name = "Editor";
-  editorCfg.initialSize = 300;
-  editorCfg.minSize = 150;
-  editorCfg.flex = 0; // Fixed height
-  editorCfg.isCollapsible = true;
-  editorCfg.isCollapsed = true;
-
-  ZENITH_LOG_INFO("MainLayoutComponent: Adding editorSwitcher to centerContainer");
-  centerContainer->addPanel(std::move(editorSwitcher), editorCfg);
-  ZENITH_LOG_INFO("MainLayoutComponent: editorSwitcher added to centerContainer");
-
-  // Add Center Container
   layout::PanelConfig centerCfg;
   centerCfg.id = "center_container";
-  centerCfg.type =
-      "container"; // We don't have a factory for this generic container,
-                   // but ResizablePanelContainer handles recursion?
-                   // Actually, LayoutManager doesn't handle nested containers
-                   // automatically yet. We'll need to improve LayoutManager for
-                   // nested containers later.
+  centerCfg.type = "empty";
   centerCfg.name = "Center";
   centerCfg.flex = 1.0f;
-  centerCfg.minSize = 400;
-  centerCfg.showHeader = false; // Hide header for center container
+  centerCfg.minSize = 200;
+  centerCfg.showHeader = false;
 
-  ZENITH_LOG_INFO("MainLayoutComponent: Adding centerContainer to panelContainer_");
-  panelContainer_->addPanel(std::move(centerContainer), centerCfg);
-  ZENITH_LOG_INFO("MainLayoutComponent: centerContainer added to panelContainer_");
+  ZENITH_LOG_INFO("MainLayoutComponent: Adding transparent center to panelContainer_");
+  panelContainer_->addPanel(std::move(transparentCenter), centerCfg);
+  ZENITH_LOG_INFO("MainLayoutComponent: Transparent center added to panelContainer_");
 
   // RIGHT SIDEBAR REMOVED - Wingman is now on left side
 
-  // 7. Cursor Overlay with ID-to-Rect mapping for collaboration
-  ZENITH_LOG_INFO("MainLayoutComponent: Creating RemoteCursorOverlay");
-  cursorOverlay_ = std::make_unique<RemoteCursorOverlay>();
-  ZENITH_LOG_INFO("MainLayoutComponent: RemoteCursorOverlay created");
-  
-  // Set up the mapper to convert selection IDs to screen rectangles
-  // This enables remote users' selections to be visualized
-  cursorOverlay_->setIdToRectMapper([arrangerPtr](const juce::String& clipId) -> juce::Rectangle<float> {
-    if (!arrangerPtr) return {};
-    auto* clipMgr = arrangerPtr->getClipManager();
-    if (!clipMgr) return {};
-    return clipMgr->getClipBounds(clipId);
-  });
-  ZENITH_LOG_INFO("MainLayoutComponent: RemoteCursorOverlay mapper set");
-  
-  addAndMakeVisible(cursorOverlay_.get());
-  ZENITH_LOG_INFO("MainLayoutComponent: Constructor complete");
+  // 7. NUKED - Cursor Overlay removed since no arranger exists
+  ZENITH_LOG_INFO("MainLayoutComponent: Constructor complete - UI nuked below transport bar");
 }
 
 MainLayoutComponent::~MainLayoutComponent() = default;
@@ -401,19 +202,14 @@ void MainLayoutComponent::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
   SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
   
-  GlassmorphicPanel::fillBackground(canvas, skBounds);
+  // NUKED - Don't draw background, keep it transparent
+  // GlassmorphicPanel::fillBackground(canvas, skBounds);
 
   if (panelContainer_) {
     panelContainer_->drawSkia(canvas);
   }
 
-  // Draw Remote Cursors on top of everything
-  if (cursorOverlay_ && cursorOverlay_->isVisible()) {
-    canvas->save();
-    canvas->translate((float)cursorOverlay_->getX(), (float)cursorOverlay_->getY());
-    cursorOverlay_->drawSkia(canvas);
-    canvas->restore();
-  }
+  // NUKED - No cursor overlay since no arranger exists
 }
 
 void MainLayoutComponent::resized() {
@@ -421,17 +217,11 @@ void MainLayoutComponent::resized() {
   if (panelContainer_) {
     panelContainer_->setBounds(bounds);
   }
-  if (cursorOverlay_) {
-    cursorOverlay_->setBounds(bounds);
-    cursorOverlay_->toFront(false);
-  }
+  // NUKED - No cursor overlay to resize
 }
 
 void MainLayoutComponent::toggleView() {
-  if (viewSwitcher_) {
-    int current = viewSwitcher_->getActiveViewIndex();
-    viewSwitcher_->setActiveView(current == 0 ? 1 : 0);
-  }
+  // NUKED - No view switcher exists
 }
 
 void MainLayoutComponent::toggleBrowser() {
@@ -447,16 +237,11 @@ void MainLayoutComponent::toggleWingman() {
 }
 
 void MainLayoutComponent::toggleSampleEditor() {
-  if (centerContainer_) {
-    if (auto *wrapper = centerContainer_->getPanel("sample_editor")) {
-      wrapper->toggleCollapse(true);
-    }
-  }
+  // NUKED - No sample editor exists
 }
 
 bool MainLayoutComponent::isSessionView() const {
-  if (viewSwitcher_)
-    return viewSwitcher_->getActiveViewIndex() == 1;
+  // NUKED - Always return false since no views exist
   return false;
 }
 
@@ -468,29 +253,22 @@ bool MainLayoutComponent::isBrowserVisible() const {
 }
 
 bool MainLayoutComponent::isSampleEditorVisible() const {
-  if (centerContainer_) {
-    if (auto *wrapper = centerContainer_->getPanel("sample_editor")) {
-      return !wrapper->isCollapsed();
-    }
-  }
+  // NUKED - Always return false since no sample editor exists
   return false;
 }
 
 SampleEditorComponent *MainLayoutComponent::getSampleEditor() {
-  return sampleEditor_;
+  // NUKED - Return nullptr since no sample editor exists
+  return nullptr;
 }
 
 MidiEditorContainer *MainLayoutComponent::getMidiEditor() {
-  return midiEditor_;
+  // NUKED - Return nullptr since no MIDI editor exists
+  return nullptr;
 }
 
 bool MainLayoutComponent::isMidiEditorVisible() const {
-  if (centerContainer_) {
-    if (auto *wrapper = centerContainer_->getPanel("sample_editor")) {
-      return !wrapper->isCollapsed() && editorSwitcher_ &&
-             editorSwitcher_->getActiveViewIndex() == 1;
-    }
-  }
+  // NUKED - Always return false since no MIDI editor exists
   return false;
 }
 

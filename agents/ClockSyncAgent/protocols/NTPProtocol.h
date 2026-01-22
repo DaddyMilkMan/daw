@@ -31,6 +31,7 @@ public:
     int64_t getOffset() const override;
     bool isSynchronized() const override;
     double getDrift() const override;
+    void forceSync() override;
 
     /** Sets the NTP server address (default: pool.ntp.org). */
     void setServerAddress(const juce::String& address);
