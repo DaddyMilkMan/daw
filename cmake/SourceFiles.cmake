@@ -292,6 +292,11 @@ set(ZENITH_UTILS_SOURCES
     apps/desktop/Source/ui/common/PluginEditorWindow.cpp
 )
 
+# Agents sources
+set(ZENITH_AGENTS_SOURCES
+    agents/TransportProtocolAgent/TransportProtocolAgent.cpp
+)
+
 # Combine all sources
 set(ZENITH_ALL_SOURCES
     ${ZENITH_APP_SOURCES}
@@ -308,6 +313,7 @@ set(ZENITH_ALL_SOURCES
     ${ZENITH_DSP_SOURCES}
     ${ZENITH_AI_NETWORK_SOURCES}
     ${ZENITH_UTILS_SOURCES}
+    ${ZENITH_AGENTS_SOURCES}
 )
 
 # Platform-specific sources

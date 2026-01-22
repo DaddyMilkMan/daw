@@ -34,6 +34,7 @@ target_include_directories(zenith_core_includes INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/effects
     ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/plugins
     ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/mcp
+    ${CMAKE_CURRENT_SOURCE_DIR}/agents/TransportProtocolAgent
 )
 
 # -----------------------------------------------------------------------------

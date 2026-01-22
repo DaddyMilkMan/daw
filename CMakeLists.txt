@@ -109,7 +109,11 @@ set(ZENITH_TEST_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/SIMDHelpersTest.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/WavetableLoaderBenchmark.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/AudioBufferConverterTest.cpp"
+<<<<<<< HEAD
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/TransportProtocolAgentTest.cpp"
+=======
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/ObservabilityAgentTest.cpp"
+>>>>>>> origin/master
 )
 
 # =============================================================================
