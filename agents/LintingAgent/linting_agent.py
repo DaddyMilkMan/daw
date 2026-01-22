@@ -207,7 +207,12 @@ class LintingAgent:
                     for match in magic_matches:
                         # Additional filtering: skip if part of a version string or date
                         context = line[max(0, match.start()-5):match.end()+5]
-                        if not any(char in context for char in ['.', '/', '-']) or ' ' in match.group():
+                        # Skip if looks like part of a version (has dots around it) or contains spaces
+                        is_version_or_date = any(char in context for char in ['.', '/', '-'])
+                        has_spaces = ' ' in match.group()
+                        
+                        # Only report if it's not a version/date and doesn't have spaces
+                        if not is_version_or_date and not has_spaces:
                             findings.append(LintFinding(
                                 category=LintCategory.MAGIC_NUMBER,
                                 severity=LintSeverity.WARNING,
