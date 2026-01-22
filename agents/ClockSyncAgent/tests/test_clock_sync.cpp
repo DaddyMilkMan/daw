@@ -101,6 +101,84 @@ int main() {
     std::cout << "PTP initialized: OK" << std::endl;
 
     // ==========================================
+    // 5. Test Resynchronize (LocalClock)
+    // ==========================================
+    std::cout << "Testing Resynchronize (LocalClock)..." << std::endl;
+    agent.setTimeSource(zenith::agents::ClockSyncAgent::TimeSource::LocalClock);
+
+    // Artificially inject an offset
+    agent.updateNetworkMetrics(
+        std::chrono::nanoseconds(100),
+        std::chrono::nanoseconds(110),
+        std::chrono::nanoseconds(120),
+        std::chrono::nanoseconds(130)
+    );
+    // Offset should be non-zero
+    status = agent.getSyncStatus();
+    if (status.offsetNanoseconds == 0) {
+        std::cerr << "FAIL: Failed to inject artificial offset for testing" << std::endl;
+        return 1;
+    }
+
+    agent.resynchronize();
+    status = agent.getSyncStatus();
+
+    if (status.offsetNanoseconds != 0) {
+        std::cerr << "FAIL: Resynchronize (LocalClock) did not reset offset" << std::endl;
+        return 1;
+    }
+    if (!status.synchronized) {
+        std::cerr << "FAIL: Resynchronize (LocalClock) should set synchronized to true" << std::endl;
+        return 1;
+    }
+    std::cout << "Resynchronize (LocalClock): OK" << std::endl;
+
+    // ==========================================
+    // 6. Test Resynchronize (MIDIClock)
+    // ==========================================
+    std::cout << "Testing Resynchronize (MIDIClock)..." << std::endl;
+    agent.setTimeSource(zenith::agents::ClockSyncAgent::TimeSource::MIDIClock);
+
+    // Simulate synchronized state (manually, as we can't easily pump MIDI here without complexity)
+    // But resynchronize should force synchronized to false.
+    // Note: setTimeSource(MIDI) already sets sync=false, but let's assume it was true.
+    // Since we can't easily force sync=true without private access or pumping messages,
+    // we verify that resynchronize ensures sync=false and offset=0.
+
+    agent.resynchronize();
+    status = agent.getSyncStatus();
+
+    if (status.synchronized) {
+        std::cerr << "FAIL: Resynchronize (MIDIClock) should set synchronized to false" << std::endl;
+        return 1;
+    }
+    if (status.offsetNanoseconds != 0) {
+        std::cerr << "FAIL: Resynchronize (MIDIClock) should reset offset" << std::endl;
+        return 1;
+    }
+    std::cout << "Resynchronize (MIDIClock): OK" << std::endl;
+
+    // ==========================================
+    // 7. Test Resynchronize (Network Protocols)
+    // ==========================================
+    std::cout << "Testing Resynchronize (NTP)..." << std::endl;
+    agent.setTimeSource(zenith::agents::ClockSyncAgent::TimeSource::NetworkNTP);
+    agent.resynchronize(); // Should not crash
+    std::cout << "Resynchronize (NTP): OK" << std::endl;
+
+    std::cout << "Testing Resynchronize (PTP)..." << std::endl;
+    agent.setTimeSource(zenith::agents::ClockSyncAgent::TimeSource::NetworkPTP);
+    agent.resynchronize(); // Should not crash
+
+    // For PTP, we know it resets sync state.
+    status = agent.getSyncStatus();
+    if (status.synchronized) {
+        std::cerr << "FAIL: Resynchronize (PTP) should set synchronized to false" << std::endl;
+        return 1;
+    }
+    std::cout << "Resynchronize (PTP): OK" << std::endl;
+
+    // ==========================================
     // Cleanup
     // ==========================================
     std::cout << "Testing cleanup..." << std::endl;

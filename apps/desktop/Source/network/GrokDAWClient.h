@@ -23,11 +23,14 @@ namespace zenith {
 //==============================================================================
 /**
     Grok operating mode
+    
+    - Fast: grok-4.1-fast (low latency, non-reasoning) - DEFAULT
+    - Thinking: grok-4.1-fast-reasoning (fast with reasoning/thinking)
 */
 enum class GrokMode
 {
-    Fast,      // grok-beta with reasoning disabled (low latency)
-    Thinking   // grok-beta with reasoning enabled (deep analysis)
+    Fast,      // grok-4.1-fast (low latency, non-reasoning) - DEFAULT
+    Thinking   // grok-4.1-fast-reasoning (fast with reasoning)
 };
 
 //==============================================================================

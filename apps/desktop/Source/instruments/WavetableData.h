@@ -29,6 +29,8 @@ namespace zenith {
 /** Standard wavetable size (Serum uses 2048) */
 constexpr int WAVETABLE_FRAME_SIZE = 2048;
 
+constexpr int WAVETABLE_FRAME_MASK = WAVETABLE_FRAME_SIZE - 1;
+
 /** Maximum frames per wavetable (Serum uses 256) */
 constexpr int MAX_WAVETABLE_FRAMES = 256;
 
@@ -78,8 +80,8 @@ public:
 
     // Convert to index
     float indexFloat = phase * WAVETABLE_FRAME_SIZE;
-    int index0 = static_cast<int>(indexFloat) % WAVETABLE_FRAME_SIZE;
-    int index1 = (index0 + 1) % WAVETABLE_FRAME_SIZE;
+    int index0 = static_cast<int>(indexFloat) & WAVETABLE_FRAME_MASK;
+    int index1 = (index0 + 1) & WAVETABLE_FRAME_MASK;
     float frac = indexFloat - std::floor(indexFloat);
 
     // Linear interpolation

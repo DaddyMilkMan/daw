@@ -10,11 +10,12 @@
 #include "engine/RecentProjectManager.h"
 #include "engine/ZenithLogger.h"
 #include "network/MCPServer.h"
+#include "network/EmbeddedMCPHttpServer.h"
 #include "ui/framework/GlassmorphicPanel.h"
 #include "utils/PlatformSystemUtils.h"
 #include "commands/CommandAPI.h"
 #include "ui/dialogs/ExportDialog.h"
-#include "ui/settings/GlobalSettingsPanel.h"
+#include "ui/settings/ModernSettingsPanel.h"
 #include "ui/dialogs/ProjectRecoveryModal.h"
 #include "ui/dialogs/UnsavedChangesModal.h"
 
@@ -172,11 +173,18 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   ZENITH_LOG_INFO("MainComponent: ExportDialog added as child");
 
   // Create Settings Panel
-  ZENITH_LOG_INFO("MainComponent: Creating GlobalSettingsPanel");
-  settingsPanel = std::make_unique<GlobalSettingsPanel>(engine.getDeviceManager());
-  ZENITH_LOG_INFO("MainComponent: GlobalSettingsPanel created");
-  addChildComponent(settingsPanel.get());
-  ZENITH_LOG_INFO("MainComponent: GlobalSettingsPanel added as child");
+  ZENITH_LOG_INFO("MainComponent: Creating ModernSettingsPanel");
+  settingsPanel = std::make_unique<ModernSettingsPanel>();
+  ZENITH_LOG_INFO("MainComponent: ModernSettingsPanel created");
+  addChildComponent(settingsPanel.get()); // Keep as child component since it's a modal
+  ZENITH_LOG_INFO("MainComponent: ModernSettingsPanel added as child");
+  
+  // Set up settings panel close callback
+  settingsPanel->onCloseRequested = [this] {
+      if (settingsPanel) {
+          settingsPanel->setVisible(false);
+      }
+  };
 
   transportBar->onViewToggleClicked = [this] {
       if (mainLayout) mainLayout->toggleView();
@@ -185,11 +193,30 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
       if (mainLayout) mainLayout->toggleWingman();
   };
   transportBar->onSettingsClicked = [this] {
-
+      DBG("Settings button clicked!");
+      
       if (settingsPanel) {
-          settingsPanel->setVisible(true);
-          settingsPanel->toFront(true);
-          resized(); // Ensure centered
+          bool isCurrentlyVisible = settingsPanel->isVisible();
+          DBG("Settings panel current visibility: " + juce::String(isCurrentlyVisible));
+          
+          if (isCurrentlyVisible) {
+              // Panel is visible, hide it
+              settingsPanel->setVisible(false);
+              DBG("Settings panel hidden");
+          } else {
+              // Panel is hidden, show it
+              settingsPanel->setVisible(true);
+              settingsPanel->toFront(true);
+              settingsPanel->repaint(); // Force repaint
+              resized(); // Ensure centered
+              repaint(); // Repaint main component
+              DBG("Settings panel shown");
+          }
+          
+          DBG("Settings panel final visibility: " + juce::String(settingsPanel->isVisible()));
+          DBG("Settings panel bounds: " + settingsPanel->getBounds().toString());
+      } else {
+          DBG("Settings panel is null!");
       }
   };
   
@@ -212,10 +239,58 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   // Start timer for animations/updates
   animationTimer_ = std::make_unique<AnimationTimer>(*this);
   // DISABLED FOR DEBUG: if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) animationTimer_->startTimerHz(60);
+  
+  // Optional embedded MCP HTTP server (start if MCP_HTTP_PORT env var set or auto-bind to available port 8090-8100)
+  {
+      const char* mcp_port_env = std::getenv("MCP_HTTP_PORT");
+      const char* token_env = std::getenv("MCP_HTTP_TOKEN");
+      if (!token_env) token_env = std::getenv("MCP_SERVER_TOKEN");
+      juce::String token = token_env ? juce::String(token_env) : juce::String();
+
+      auto tryStartPort = [&](int port)->bool {
+          try {
+              mcpHttpServer = std::make_unique<zenith::network::EmbeddedMCPHttpServer>(engine);
+              if (!mcpHttpServer->start(port, "127.0.0.1", token)) {
+                  mcpHttpServer.reset();
+                  return false;
+              }
+              // Wait briefly for server to bind
+              int waited = 0;
+              while (waited < 500 && !mcpHttpServer->isRunning()) {
+                  juce::Thread::sleep(50);
+                  waited += 50;
+              }
+              if (mcpHttpServer->isRunning()) {
+                  ZENITH_LOG_INFO("[MCP HTTP] Started embedded HTTP API on port " + juce::String(port));
+                  return true;
+              }
+              mcpHttpServer->stop();
+              mcpHttpServer.reset();
+          } catch (...) {
+              ZENITH_LOG_WARNING("[MCP HTTP] Exception creating EmbeddedMCPHttpServer");
+              mcpHttpServer.reset();
+          }
+          return false;
+      };
+
+      if (mcp_port_env != nullptr) {
+          int port = atoi(mcp_port_env);
+          (void)tryStartPort(port);
+      } else {
+          // auto-select from 49152..49162 (ephemeral/dynamic range)
+          for (int p = 49152; p <= 49162; ++p) {
+              if (tryStartPort(p)) break;
+          }
+      }
+  }
 }
 
 MainComponent::~MainComponent() {
   animationTimer_->stopTimer();
+  if (mcpHttpServer) {
+      mcpHttpServer->stop();
+      mcpHttpServer.reset();
+  }
 }
 
 bool MainComponent::keyPressed(const juce::KeyPress &key, Component *originatingComponent) {
@@ -340,6 +415,7 @@ void MainComponent::drawSkiaContent(SkCanvas *canvas) {
   }
   
   if (settingsPanel && settingsPanel->isVisible()) {
+      DBG("Drawing settings panel at: " + settingsPanel->getBounds().toString());
       canvas->save();
       canvas->translate(settingsPanel->getX(), settingsPanel->getY());
       settingsPanel->drawSkia(canvas);
@@ -348,12 +424,7 @@ void MainComponent::drawSkiaContent(SkCanvas *canvas) {
 }
 
 void MainComponent::mouseDown(const juce::MouseEvent &e) {
-  if (e.mods.isPopupMenu()) {
-    juce::PopupMenu m;
-    m.addItem("Show Debug Logs", [] { DBG("Debug logs requested"); });
-    m.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(nullptr),
-                    nullptr);
-  }
+  juce::ignoreUnused(e);
 }
 
 void MainComponent::mouseDrag(const juce::MouseEvent &e) {

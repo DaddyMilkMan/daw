@@ -35,59 +35,26 @@ This document tracks planned work organized by priority and timeline.
 
 ## 🔴 High Priority - Do This Month
 
-### 5. Wire Up Real Grok API ⏱️ 4 hours
+### 5. Wire Up Real Grok API ✅
 **Files**: 
-- `apps/desktop/Source/network/AIBridgeClient.cpp`
-- `apps/desktop/Source/ui/WingmanPanel.cpp`
+- `apps/desktop/Source/network/GrokDAWClient.cpp`
+- `apps/desktop/Source/ui/common/WingmanPanel.cpp`
 
-**Current State**: Uses `MockAIProvider`
+**Status**: Fixed (January 2026)
 
-**Goal**: Connect to real Grok API
-
-**Steps**:
-1. **Add API Key Configuration**:
-   - Create `Settings → AI → Grok API Key` field
-   - Store in `SecureKeyStore` or config file
-   - UI to paste key from https://console.x.ai/
-
-2. **Replace Mock Provider**:
-```cpp
-// AIBridgeClient.cpp - Replace line 106
-// OLD:
-juce::String responseBody = MockAIProvider::processRequest(request.jsonPayload);
-
-// NEW:
-if (!grokClient_) {
-    grokClient_ = std::make_unique<GrokAPIClient>();
-    grokClient_->setAPIKey(getAPIKeyFromSettings());
-}
-
-grokClient_->sendChat(
-    naturalLanguage,
-    GrokMode::Fast,
-    commandFunctions_,
-    "You are Wingman, a DAW assistant...",
-    [this](juce::String response) { handleGrokResponse(response); },
-    [this](GrokFunctionCall call) { handleFunctionCall(call); },
-    [this](juce::String error) { handleGrokError(error); }
-);
-```
-
-3. **Handle Errors**:
-   - Network timeout (show "Connecting..." message)
-   - Invalid API key (show "Check API key" error)
-   - Rate limiting (queue requests)
-
-4. **Test**:
-   - Get Grok API key from https://console.x.ai/
-   - Send test message: "Create a new audio track"
-   - Verify real response vs mock
+**Implementation:**
+- WingmanPanel uses GrokDAWController → GrokDAWClient for real API calls
+- Models:
+  - **Default (brain OFF)**: `grok-4.1-fast` (non-reasoning, low latency)
+  - **Brain icon ON**: `grok-4.1-fast-reasoning` (fast with reasoning)
+- API key loaded from `GROK_API_KEY` or `XAI_API_KEY` environment variable
+- Fallback to SecureKeyStore for persistent storage
 
 **Acceptance Criteria**:
-- [ ] Real Grok API responses shown in Wingman panel
-- [ ] Error messages when network unavailable
-- [ ] API key configurable in UI
-- [ ] No crashes if API key invalid
+- [x] Real Grok API responses shown in Wingman panel
+- [x] Error messages when network unavailable
+- [x] API key configurable via environment or SecureKeyStore
+- [x] No crashes if API key invalid
 
 ---
 

@@ -177,10 +177,16 @@ class ServiceSentinel:
     def _monitor_loop(self) -> None:
         """Main supervision loop."""
         while not self._stop_event.is_set():
+            services_to_check = []
+
+            # 1. Snapshot & Process Maintenance (Locked)
             with self._lock:
                 now = time.time()
-                for name, svc in self.services.items():
-                    rt = self.state[name]
+                # Create a list copy to iterate safely
+                for name, svc in list(self.services.items()):
+                    rt = self.state.get(name)
+                    if not rt:
+                        continue
 
                     # 1. Check running processes
                     if rt.state == ServiceState.RUNNING:
@@ -192,21 +198,36 @@ class ServiceSentinel:
                                 rt.process = None
                                 self._schedule_backoff(name)
                             else:
-                                # Health Check
+                                # Candidate for health check - capture callable
                                 if svc.health_check:
-                                    try:
-                                        is_healthy = svc.health_check()
-                                        if is_healthy != rt.last_health_status:
-                                            log.info(f"Health status changed for {name}: {is_healthy}")
-                                        rt.last_health_status = is_healthy
-                                    except Exception:
-                                        rt.last_health_status = False
+                                    services_to_check.append((name, svc.health_check))
 
                     # 2. Check backoff restarts
                     elif rt.state == ServiceState.BACKOFF:
                         if now >= rt.next_restart_time:
                             log.info(f"Backoff expired, restarting {name}")
                             self._spawn_service(name)
+
+            # 2. Perform Checks (Unlocked)
+            # This prevents holding the lock during slow network calls
+            health_updates = {}
+            for name, check_func in services_to_check:
+                try:
+                    is_healthy = check_func()
+                    health_updates[name] = is_healthy
+                except Exception:
+                    health_updates[name] = False
+
+            # 3. Update State (Locked)
+            if health_updates:
+                with self._lock:
+                    for name, is_healthy in health_updates.items():
+                        rt = self.state.get(name)
+                        # Re-verify state: service must still be RUNNING to accept update
+                        if rt and rt.state == ServiceState.RUNNING:
+                            if is_healthy != rt.last_health_status:
+                                log.info(f"Health status changed for {name}: {is_healthy}")
+                            rt.last_health_status = is_healthy
 
             time.sleep(self.check_interval)
 
