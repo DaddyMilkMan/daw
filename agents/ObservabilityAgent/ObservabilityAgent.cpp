@@ -8,6 +8,7 @@
 #include "ObservabilityAgent.h"
 #include "PrometheusExporter.h"
 #include <cstring>
+#include <cstdio>
 
 namespace zenith {
 namespace agents {
@@ -131,6 +132,11 @@ void ObservabilityAgent::log(LogLevel level, const char* message) noexcept {
 
 void ObservabilityAgent::log(LogLevel level, const juce::String& message) {
   log(level, message.toRawUTF8());
+}
+
+void ObservabilityAgent::log(const char* rawMessage) noexcept {
+    // Treat raw log as Info level
+    log(LogLevel::Info, rawMessage);
 }
 
 void ObservabilityAgent::logStructured(LogLevel level,

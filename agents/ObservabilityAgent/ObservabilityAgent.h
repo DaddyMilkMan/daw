@@ -89,6 +89,9 @@ public:
   void logStructured(LogLevel level, 
                      const juce::String& message,
                      const juce::var& data);
+
+  /// Low-level logging (RT-safe)
+  void log(const char* rawMessage) noexcept;
   
   //==============================================================================
   // Configuration
