@@ -33,6 +33,7 @@ public:
     int64_t getOffset() const override;
     bool isSynchronized() const override;
     double getDrift() const override;
+    void forceSync() override;
 
 private:
     void run() override;

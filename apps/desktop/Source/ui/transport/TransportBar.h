@@ -75,8 +75,13 @@ public:
     requestRepaint();
   }
   void setCPU(float percent) {
-    cpuUsage_ = percent;
-    requestRepaint();
+    cpuUsage_ = juce::jlimit(0.0f, 100.0f, percent);
+    // Repaint only the CPU meter area when possible to reduce flicker and improve performance
+    if (cpuMeterBounds_.getWidth() > 0 && cpuMeterBounds_.getHeight() > 0) {
+        repaint(cpuMeterBounds_.getX(), cpuMeterBounds_.getY(), cpuMeterBounds_.getWidth(), cpuMeterBounds_.getHeight());
+    } else {
+        requestRepaint();
+    }
   }
   void setPosition(double seconds) {
     position_ = seconds;
@@ -189,18 +194,15 @@ private:
   // Force full window repaint to prevent Linux compositing artifacts
   // Also explicitly marks sibling TitleBar as needing repaint
   void requestRepaint() {
-      if (auto* top = getTopLevelComponent()) {
-          // Force ENTIRE window to repaint (all children)
-          top->repaint();
-          
-          // Also mark our parent as needing full repaint
-          if (auto* parent = getParentComponent()) {
-              parent->repaint();
-          }
-      } else {
-          repaint();
-      }
-  }
+    // If we have a valid CPU meter bounds, repaint that sub-rect only (fast path)
+    if (cpuMeterBounds_.getWidth() > 0 && cpuMeterBounds_.getHeight() > 0) {
+        repaint(cpuMeterBounds_.getX(), cpuMeterBounds_.getY(),
+                cpuMeterBounds_.getWidth(), cpuMeterBounds_.getHeight());
+    } else {
+        // Fallback to repainting only this component
+        repaint();
+    }
+}
 };
 
 #else // ZENITH_USE_SKIA

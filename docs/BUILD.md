@@ -48,7 +48,7 @@ cmake --build build -j$(nproc)
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `ZENITH_ENABLE_SKIA` | ON | Enable Skia GPU rendering |
+| `ZENITH_ENABLE_SKIA` | ON | Enable Skia GPU rendering (Required) |
 | `ENABLE_ONNX` | ON | Enable ONNX Runtime for AI features |
 | `ZENITH_ENABLE_COLLAB` | OFF | Enable collaboration features |
 | `BUILD_TESTS` | OFF | Build test executables |
