@@ -16,7 +16,7 @@ import xml.etree.ElementTree as ET
 import tempfile
 import json
 import os
-import json
+import numpy as np
 
 
 class TestType(Enum):
@@ -343,8 +343,43 @@ class TestingAgent:
         
         test_signals = test_signals or ["sine_1khz", "impulse", "white_noise"]
         
-        # TODO: Generate test signals
-        # TODO: Process through audio pipeline
+        sample_rate = 44100
+        duration_sec = 1.0
+        num_samples = int(sample_rate * duration_sec)
+
+        for signal_type in test_signals:
+            input_signal = np.zeros(num_samples, dtype=np.float32)
+
+            if signal_type == "sine_1khz":
+                t = np.linspace(0, duration_sec, num_samples, endpoint=False)
+                # 1kHz sine wave
+                input_signal = np.sin(2 * np.pi * 1000 * t).astype(np.float32)
+            elif signal_type == "impulse":
+                input_signal[0] = 1.0
+            elif signal_type == "white_noise":
+                input_signal = np.random.uniform(-1.0, 1.0, num_samples).astype(np.float32)
+            else:
+                print(f"Warning: Unknown signal type '{signal_type}'")
+                continue
+
+            # Process through audio pipeline
+            try:
+                output_signal = audio_processor(input_signal)
+
+                # Basic validation
+                if output_signal is None:
+                    print(f"Error: Processor returned None for {signal_type}")
+                    continue
+
+                if output_signal.shape != input_signal.shape:
+                    print(f"Warning: Output shape {output_signal.shape} differs from input {input_signal.shape} for {signal_type}")
+
+                if np.all(output_signal == 0):
+                    print(f"Warning: Output is all zeros for {signal_type}")
+
+            except Exception as e:
+                print(f"Error processing {signal_type}: {e}")
+
         # TODO: Measure THD, SNR, frequency response
         # TODO: Detect clicks, pops, DC offset
         # TODO: Verify phase coherence
