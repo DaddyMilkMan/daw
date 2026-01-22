@@ -80,10 +80,10 @@ class SecurityAgent:
         """Initialize security scanning patterns."""
         # TODO: Load comprehensive vulnerability patterns
         self.blocked_patterns = [
-            re.compile(r"strcpy\s*\("),  # Unsafe string copy
-            re.compile(r"sprintf\s*\("),  # Unsafe string formatting
-            re.compile(r"gets\s*\("),  # Unsafe input reading
-            re.compile(r"system\s*\("),  # Command injection risk
+            re.compile(r"\bstrcpy\s*\("),  # Unsafe string copy
+            re.compile(r"\bsprintf\s*\("),  # Unsafe string formatting
+            re.compile(r"\bgets\s*\("),  # Unsafe input reading (not method names)
+            re.compile(r"\bsystem\s*\("),  # Command injection risk
         ]
 
     def scan_source_code(self, source_files: List[Path]) -> SecurityReport:
@@ -267,17 +267,97 @@ class SecurityAgent:
         return vulnerabilities
 
 
-# Example usage
-if __name__ == "__main__":
-    agent = SecurityAgent()
-    
-    # Scan source code - check if path exists
-    source_dir = Path("apps/desktop/Source")
-    if source_dir.exists():
-        source_files = list(source_dir.rglob("*.cpp"))
-        report = agent.scan_source_code(source_files[:10])  # Sample
+def print_report(report: SecurityReport, output_format: str = "standard") -> None:
+    """Print security report in specified format."""
+    if output_format == "ci":
+        # GitHub Actions friendly output
+        print("\n" + "="*60)
+        print("🔒 SECURITY SCAN RESULTS")
+        print("="*60)
+        print(f"Files scanned: {report.scanned_files}")
+        print(f"Vulnerabilities found: {len(report.vulnerabilities)}")
+        print(f"  - Critical: {report.critical_count}")
+        print(f"  - High: {report.high_count}")
+        print("="*60)
         
-        print(f"Found {len(report.vulnerabilities)} vulnerabilities")
-        print(f"Critical: {report.critical_count}, High: {report.high_count}")
+        if report.vulnerabilities:
+            print("\n📋 DETAILED FINDINGS:\n")
+            for vuln in report.vulnerabilities:
+                severity_emoji = {
+                    Severity.CRITICAL: "🚨",
+                    Severity.HIGH: "⚠️",
+                    Severity.MEDIUM: "⚡",
+                    Severity.LOW: "ℹ️",
+                    Severity.INFO: "💡"
+                }
+                print(f"{severity_emoji.get(vuln.severity, '•')} [{vuln.severity.value.upper()}] {vuln.description}")
+                if vuln.file_path:
+                    print(f"   File: {vuln.file_path}:{vuln.line_number or 0}")
+                if vuln.recommendation:
+                    print(f"   Recommendation: {vuln.recommendation}")
+                if vuln.cwe_id:
+                    print(f"   CWE: {vuln.cwe_id}")
+                print()
+        else:
+            print("\n✅ No vulnerabilities detected!\n")
     else:
-        print(f"Example source directory not found: {source_dir}")
+        # Standard output
+        print(f"Scanned {report.scanned_files} files")
+        print(f"Found {len(report.vulnerabilities)} vulnerabilities")
+        for vuln in report.vulnerabilities:
+            print(f"  {vuln.severity.value}: {vuln.description} at {vuln.file_path}:{vuln.line_number}")
+
+
+# CLI usage
+if __name__ == "__main__":
+    import argparse
+    import sys
+    import time
+    
+    parser = argparse.ArgumentParser(description="Security Agent - Vulnerability Scanner")
+    parser.add_argument("--scan-dir", default=".", help="Directory to scan")
+    parser.add_argument("--output", choices=["standard", "ci"], default="standard", 
+                       help="Output format (standard or ci)")
+    parser.add_argument("--extensions", nargs="+", 
+                       default=[".cpp", ".h", ".hpp", ".cc", ".c", ".py", ".js", ".ts"],
+                       help="File extensions to scan")
+    parser.add_argument("--max-files", type=int, default=None, 
+                       help="Maximum number of files to scan (for testing)")
+    
+    args = parser.parse_args()
+    
+    agent = SecurityAgent()
+    scan_dir = Path(args.scan_dir)
+    
+    if not scan_dir.exists():
+        print(f"Error: Directory not found: {scan_dir}")
+        sys.exit(1)
+    
+    # Collect source files
+    source_files = []
+    for ext in args.extensions:
+        source_files.extend(scan_dir.rglob(f"*{ext}"))
+    
+    # Filter out generated/external files
+    filtered_files = [
+        f for f in source_files 
+        if not any(part in f.parts for part in 
+                  ["build", "external", "_deps", "node_modules", ".git", "venv"])
+    ]
+    
+    if args.max_files:
+        filtered_files = filtered_files[:args.max_files]
+    
+    # Perform scan
+    start_time = time.time()
+    report = agent.scan_source_code(filtered_files)
+    report.scan_duration_seconds = time.time() - start_time
+    
+    # Print results
+    print_report(report, args.output)
+    
+    # Exit with error code if critical or high vulnerabilities found
+    if report.critical_count > 0 or report.high_count > 0:
+        sys.exit(1)
+    else:
+        sys.exit(0)

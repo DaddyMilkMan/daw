@@ -1,0 +1,66 @@
+name: Documentation Agent
+
+on:
+  push:
+    branches: [ main, develop, claude/** ]
+    paths:
+      - 'docs/**'
+      - 'agents/**'
+      - 'README.md'
+      - 'CONTRIBUTING.md'
+      - '.github/workflows/documentation-agent.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'docs/**'
+      - 'agents/**'
+      - 'README.md'
+      - 'CONTRIBUTING.md'
+      - '.github/workflows/documentation-agent.yml'
+
+jobs:
+  validate-documentation:
+    name: Validate Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Run Documentation Agent
+      run: |
+        python agents/DocumentationAgent/documentation_agent.py \
+          --project-root . \
+          --output-json documentation_report.json \
+          --max-age-days 180
+
+    - name: Upload documentation report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: documentation-report
+        path: documentation_report.json
+
+    - name: Check for critical issues
+      if: always()
+      run: |
+        if [ -f documentation_report.json ]; then
+          CRITICAL=$(grep -o '"critical_issues": [0-9]*' documentation_report.json | grep -o '[0-9]*')
+          HIGH=$(grep -o '"high_issues": [0-9]*' documentation_report.json | grep -o '[0-9]*')
+          
+          echo "Critical issues: $CRITICAL"
+          echo "High severity issues: $HIGH"
+          
+          if [ "$CRITICAL" -gt 0 ]; then
+            echo "::warning::Found $CRITICAL critical documentation issues"
+          fi
+          
+          if [ "$HIGH" -gt 0 ]; then
+            echo "::warning::Found $HIGH high severity documentation issues"
+          fi
+        fi
