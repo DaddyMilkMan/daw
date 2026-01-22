@@ -9,8 +9,16 @@ target_sources(ZenithDAW PRIVATE
     AIPrompts.cpp
     CollaborationManager.cpp
     MCPServer.cpp
+    EmbeddedMCPHttpServer.cpp
+    EmbeddedMCPHttpServer_httplib.cpp
     UpdateService.cpp
 )
+
+# Enable optional cpp-httplib server when available
+if (TARGET httplib::httplib)
+    target_compile_definitions(ZenithDAW PRIVATE ENABLE_CPP_HTTP_LIB)
+    target_link_libraries(ZenithDAW PRIVATE httplib::httplib OpenSSL::SSL OpenSSL::Crypto)
+endif()
 
 # Platform-specific sources are handled via Source/platform/[os]/master
 

@@ -644,6 +644,10 @@ AboutTab::AboutTab() {}
 
 void AboutTab::resized() {}
 
+#ifndef PROJECT_VERSION
+#define PROJECT_VERSION "0.1.0"
+#endif
+
 void AboutTab::drawSkia(SkCanvas* canvas) {
     SkPaint textPaint;
     textPaint.setColor(SK_ColorWHITE);
@@ -662,7 +666,7 @@ void AboutTab::drawSkia(SkCanvas* canvas) {
     canvas->drawString("Zenith DAW", 20, 50, headerFont, textPaint);
     
     textPaint.setColor(design::unified::accent_primary());
-    canvas->drawString("Version 1.0.0-alpha", 20, 80, versionFont, textPaint);
+    canvas->drawString((std::string("Version ") + std::string(PROJECT_VERSION)).c_str(), 20, 80, versionFont, textPaint);
     
     textPaint.setColor(design::unified::text_secondary());
     canvas->drawString("A professional digital audio workstation", 20, 110, labelFont, textPaint);

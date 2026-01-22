@@ -54,15 +54,11 @@ private:
   std::unique_ptr<BrowserModel> browserModel_;
   std::unique_ptr<ResizablePanelContainer> panelContainer_;
 
+  // NUKED - All center content components removed
   // Raw pointers to managed components (owned by containers)
-  ResizablePanelContainer *centerContainer_ = nullptr;
-  ViewSwitcher *viewSwitcher_ = nullptr;
-  ViewSwitcher *editorSwitcher_ = nullptr;
-  SampleEditorComponent *sampleEditor_ = nullptr;
-  MidiEditorContainer *midiEditor_ = nullptr;
   RightSidePanel *rightSidePanel_ = nullptr;
 
-  std::unique_ptr<RemoteCursorOverlay> cursorOverlay_;
+  // NUKED - RemoteCursorOverlay removed since no arranger exists
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainLayoutComponent)
 };

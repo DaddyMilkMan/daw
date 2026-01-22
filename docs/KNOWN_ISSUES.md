@@ -17,29 +17,21 @@ This document lists all known bugs, limitations, and unfinished features in Zeni
 ---
 
 ### 2. AI Assistant Uses Mock Responses
-**Location**: `apps/desktop/Source/network/AIBridgeClient.cpp:106`  
+**Location**: `apps/desktop/Source/network/GrokDAWClient.cpp`  
 **Severity**: High  
-**Status**: Not Fixed  
+**Status**: ✅ Fixed (January 2026)  
 
-**Problem:**
-```cpp
-// Line 106 - Not using real Grok API
-juce::String responseBody = MockAIProvider::processRequest(request.jsonPayload);
-```
+**Solution:**
+- WingmanPanel now uses real Grok API via GrokDAWController → GrokDAWClient
+- Models used:
+  - **Default**: `grok-4.1-fast` (non-reasoning, low latency)
+  - **Brain icon ON**: `grok-4.1-fast-reasoning` (fast with reasoning/thinking)
+- API key loaded from environment variable `GROK_API_KEY` or `XAI_API_KEY`
+- Fallback to SecureKeyStore for persistent storage
 
-**Details:**
-- `GrokAPIClient` class exists and is implemented
-- `AIBridgeClient` is wired to use `MockAIProvider` instead
-- All AI responses are simulated/canned
-- Users think they're getting real AI assistance but they're not
-
-**Workaround**: None. Feature is non-functional.
-
-**Fix Required**: 
-1. Replace `MockAIProvider::processRequest()` with `GrokAPIClient::sendChat()`
-2. Add API key configuration UI
-3. Handle network errors gracefully
-4. Update README to reflect actual AI capabilities
+**Setup:**
+1. Set environment variable: `export GROK_API_KEY=xai-your-key-here`
+2. Or configure via Settings UI in the app
 
 ---
 
@@ -306,11 +298,11 @@ endif()
 
 | Priority | Count | Fixed | Remaining |
 |----------|-------|-------|-----------|
-| Critical | 4     | 2     | 2         |
-| High     | 3     | 1     | 2         |
+| Critical | 4     | 3     | 1         |
+| High     | 3     | 2     | 1         |
 | Medium   | 3     | 0     | 3         |
 | Low      | 3     | 0     | 3         |
-| **Total**| **13**| **3** | **10**    |
+| **Total**| **13**| **5** | **8**     |
 
 ---
 
@@ -319,8 +311,8 @@ endif()
 1. ✅ **Fix `Track.h:426` compilation error** - DONE
 2. ✅ **Add real tests with assertions** - DONE (37 test categories)
 3. ✅ **Documentation cleanup** - DONE (Jan 2026)
-4. **Enable sanitizers in debug builds** (30 minutes)
-5. **Fix AI assistant or remove feature** (4 hours)
+4. ✅ **Fix AI assistant** - DONE (Jan 2026) - Now uses real grok-4.1-fast API
+5. **Enable sanitizers in debug builds** (30 minutes)
 6. **Implement plugin crash recovery** (8 hours)
 7. **Split Track class** (16 hours)
 8. **Add offline export** (24 hours)

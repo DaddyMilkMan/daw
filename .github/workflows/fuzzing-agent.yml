@@ -1,0 +1,77 @@
+name: FuzzingAgent - DSP/Input Robustness
+
+on:
+  push:
+    branches: [ main, develop, claude/** ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      iterations:
+        description: 'Number of fuzz iterations per target'
+        required: false
+        default: '100'
+      seed:
+        description: 'Random seed for reproducibility'
+        required: false
+        default: ''
+
+jobs:
+  fuzz-testing:
+    name: Fuzz Testing
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Display Python version
+      run: python --version
+
+    - name: Run FuzzingAgent
+      id: fuzzing
+      run: |
+        cd agents/FuzzingAgent
+        
+        # Determine iterations (use workflow input if provided, otherwise default)
+        ITERATIONS="${{ github.event.inputs.iterations }}"
+        if [ -z "$ITERATIONS" ]; then
+          ITERATIONS=100
+        fi
+        
+        # Determine seed (use workflow input if provided)
+        SEED="${{ github.event.inputs.seed }}"
+        SEED_FLAG=""
+        if [ -n "$SEED" ]; then
+          SEED_FLAG="--seed $SEED"
+        fi
+        
+        echo "Running fuzzing with $ITERATIONS iterations per target"
+        python fuzzing_agent.py --iterations "$ITERATIONS" $SEED_FLAG
+      continue-on-error: true
+
+    - name: Check fuzzing results
+      run: |
+        if [ ${{ steps.fuzzing.outcome }} == 'success' ]; then
+          echo "✅ Fuzzing passed - no crashes detected"
+          exit 0
+        else
+          echo "❌ Fuzzing failed - crashes detected"
+          echo "Review the logs above for details"
+          exit 1
+        fi
+
+    - name: Upload fuzzing results
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: fuzzing-results
+        path: |
+          agents/FuzzingAgent/*.log
+          agents/FuzzingAgent/crash_*
+        if-no-files-found: ignore
