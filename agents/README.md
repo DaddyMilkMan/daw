@@ -22,11 +22,12 @@ These agents handle build automation, testing, collaboration, and non-real-time 
 7. **CIandBenchmarkAgent** - Automated build validation, testing, and performance benchmarking
 8. **TestingAgent** - Comprehensive test orchestration including RT safety validation
 9. **TriageBot** - Automated GitHub issue/PR triage and management
+10. **LintingAgent** - Code style, naming conventions, and quality checks (Python implementation)
 
 ### Mixed Language Agents
 These agents bridge C++ and Python for security and cross-language integration.
 
-10. **SecurityAgent** - Security scanning and input validation (Python implementation + C++ bridge)
+11. **SecurityAgent** - Security scanning and input validation (Python implementation + C++ bridge)
 
 ## Directory Structure
 

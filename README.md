@@ -92,6 +92,19 @@ cmake --build build --target ZenithDAWTests
 ./build/ZenithDAWTests_artefacts/Release/ZenithDAWTests
 ```
 
+## CI/CD Workflows
+
+The project uses GitHub Actions for continuous integration and code quality checks:
+
+- **Tests** (`.github/workflows/test.yml`) - Runs unit tests on Linux, macOS, and Windows
+- **Linting Agent** (`.github/workflows/linting-agent.yml`) - Performs code quality checks:
+  - Naming convention enforcement (C++ and Python)
+  - Style rule validation (trailing whitespace, comment spacing)
+  - Detection of commented-out code, magic numbers, and TODOs
+  - Extensible for additional linters (clang-tidy, pylint, etc.)
+
+See [`agents/LintingAgent/README.md`](agents/LintingAgent/README.md) for details on linting rules and extensibility.
+
 ## License
 
 See [LICENSE](LICENSE) for details.
