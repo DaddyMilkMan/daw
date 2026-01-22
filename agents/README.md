@@ -23,11 +23,12 @@ These agents handle build automation, testing, collaboration, and non-real-time 
 8. **TestingAgent** - Comprehensive test orchestration including RT safety validation
 9. **TriageBot** - Automated GitHub issue/PR triage and management
 10. **DocumentationAgent** - Automated documentation validation and monitoring (deployed via CI)
+11. **FuzzingAgent** - Robustness testing through fuzz testing of DSP, MIDI, plugins, and file parsing
 
 ### Mixed Language Agents
 These agents bridge C++ and Python for security and cross-language integration.
 
-11. **SecurityAgent** - Security scanning and input validation (Python implementation + C++ bridge)
+12. **SecurityAgent** - Security scanning and input validation (Python implementation + C++ bridge)
 
 ## Directory Structure
 

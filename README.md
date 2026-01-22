@@ -6,7 +6,7 @@ A professional Digital Audio Workstation built with C++20 and JUCE, featuring AI
 
 **Version:** 0.1.0-alpha  
 **Platform:** Linux, macOS, Windows  
-**Build:** [![Tests](https://github.com/zenith-daw/zenith/actions/workflows/test.yml/badge.svg)](https://github.com/zenith-daw/zenith/actions/workflows/test.yml)
+**Build:** [![Tests](https://github.com/zenith-daw/zenith/actions/workflows/test.yml/badge.svg)](https://github.com/zenith-daw/zenith/actions/workflows/test.yml) [![Fuzzing](https://github.com/micahcooley/daw/actions/workflows/fuzzing-agent.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/fuzzing-agent.yml) [![Testing Agent](https://github.com/micahcooley/daw/actions/workflows/agent-testing.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/agent-testing.yml) [![Security Scan](https://github.com/micahcooley/daw/actions/workflows/security-agent.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/security-agent.yml)
 
 ### What Works
 - Audio engine with real-time playback and recording
@@ -91,6 +91,71 @@ cmake -S . -B build -DBUILD_TESTS=ON
 cmake --build build --target ZenithDAWTests
 ./build/ZenithDAWTests_artefacts/Release/ZenithDAWTests
 ```
+
+### Automated Testing with Testing Agent
+
+The repository includes an automated **Testing Agent** that runs on every push and pull request via GitHub Actions. This agent provides comprehensive test orchestration and validation:
+
+**Current Capabilities:**
+- **Test Discovery**: Automatically discovers C++ unit tests (JUCE and Catch2 frameworks)
+- **Test Execution**: Runs all discovered tests and reports results
+- **CI Integration**: Seamlessly integrates with GitHub Actions workflow
+
+**Planned Features** (stub implementations, expandable in future PRs):
+- **RT-Safety Analysis**: Static analysis to detect illegal allocations, locks, or blocking calls in real-time audio threads
+- **Code Coverage**: Generate and report line/branch coverage metrics
+- **TODO Scanning**: Surface TODO comments in critical code paths for developer triage
+- **Memory Leak Detection**: Valgrind integration for leak checking
+- **Audio Quality Metrics**: THD, SNR, and frequency response validation
+
+**Running Locally:**
+```bash
+python agents/TestingAgent/testing_agent.py
+```
+
+**CI Workflow:**
+The Testing Agent runs automatically via `.github/workflows/agent-testing.yml` on:
+- Pushes to `main`, `develop`, and `copilot/**` branches
+- Pull requests targeting `main` or `develop`
+
+See [`agents/TestingAgent/README.md`](agents/TestingAgent/README.md) for implementation details and expansion roadmap.
+
+### Fuzz Testing
+
+The FuzzingAgent provides automated robustness testing for DSP code, MIDI parsing, plugin loading, and file format parsing. It runs automatically on every push and pull request via GitHub Actions.
+
+To run locally:
+```bash
+cd agents/FuzzingAgent
+python fuzzing_agent.py --iterations 100
+```
+
+Options:
+- `--iterations N`: Number of fuzz iterations per target (default: 100)
+- `--seed N`: Random seed for reproducibility
+- `--target {dsp,midi,plugin,file,all}`: Specific target to fuzz (default: all)
+
+See [`agents/FuzzingAgent/README.md`](agents/FuzzingAgent/README.md) for more details.
+
+### Automated Security Scanning
+
+The SecurityAgent performs automated vulnerability scanning on every push and pull request. It checks for:
+- Secret/Credential leaks (API keys, tokens)
+- Insecure dependencies (Python/C++)
+- Suspicious file permissions
+- Binary analysis (stub)
+
+To run locally:
+```bash
+cd agents/SecurityAgent
+python security_agent.py --scan-type full
+```
+
+See [`agents/SecurityAgent/README.md`](agents/SecurityAgent/README.md) for details.
+
+## Backend Coordinator Agents
+
+The `agents/` directory contains coordinator agents for build automation, testing, security, and real-time audio management. See [`agents/README.md`](agents/README.md) for details on all available agents.
 
 ## License
 
