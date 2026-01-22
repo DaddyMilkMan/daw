@@ -17,6 +17,10 @@ TransportProtocolAgent::TransportProtocolAgent()
   deviceManager_->initialiseWithDefaultDevices(2, 2);
 }
 
+TransportProtocolAgent::TransportProtocolAgent(std::unique_ptr<juce::AudioDeviceManager> manager)
+  : deviceManager_(std::move(manager)) {
+}
+
 TransportProtocolAgent::~TransportProtocolAgent() {
   closeDevice();
 }
@@ -51,9 +55,61 @@ TransportProtocolAgent::enumerateDevices() {
 }
 
 TransportProtocolAgent::DeviceInfo TransportProtocolAgent::getDefaultInputDevice() {
-  // TODO: Get platform default input device
   DeviceInfo info;
-  info.name = "Default Input";
+  info.name = "None";
+  info.id = "";
+  info.isDefault = false;
+
+  // Define priority order based on platform
+  juce::StringArray searchOrder;
+
+  // Check currently active type first
+  juce::String activeType = deviceManager_->getCurrentAudioDeviceType();
+  if (activeType.isNotEmpty())
+      searchOrder.add(activeType);
+
+#if JUCE_WINDOWS
+  searchOrder.add("ASIO");
+  searchOrder.add("Windows Audio");
+  searchOrder.add("DirectSound");
+#elif JUCE_LINUX
+  searchOrder.add("JACK");
+  searchOrder.add("ALSA");
+#elif JUCE_MAC
+  searchOrder.add("CoreAudio");
+#endif
+
+  // Remove duplicates (keep first occurrence - effectively active type stays first)
+  for (int i = searchOrder.size() - 1; i > 0; --i)
+  {
+      if (searchOrder.indexOf(searchOrder[i]) < i)
+          searchOrder.remove(i);
+  }
+
+  const auto& availableTypes = deviceManager_->getAvailableDeviceTypes();
+
+  for (const auto& typeName : searchOrder)
+  {
+      for (auto* type : availableTypes)
+      {
+          if (type != nullptr && type->getTypeName() == typeName)
+          {
+              type->scanForDevices();
+              juce::StringArray deviceNames = type->getDeviceNames(true); // true for input
+              int defaultIndex = type->getDefaultDeviceIndex(true);
+
+              if (defaultIndex >= 0 && defaultIndex < deviceNames.size())
+              {
+                  info.name = deviceNames[defaultIndex];
+                  info.id = info.name; // In JUCE, name is typically used as ID
+                  info.apiType = typeName;
+                  info.isDefault = true;
+                  return info;
+              }
+          }
+      }
+  }
+
   return info;
 }
 
