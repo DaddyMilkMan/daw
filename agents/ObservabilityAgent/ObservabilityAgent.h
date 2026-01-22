@@ -8,6 +8,7 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
+#include <juce_events/juce_events.h>
 #include <atomic>
 #include <chrono>
 #include <string>
@@ -22,7 +23,7 @@ namespace agents {
     ObservabilityAgent provides lock-free metrics collection and monitoring
     for real-time audio systems without impacting RT thread performance.
 */
-class ObservabilityAgent : public juce::Thread {
+class ObservabilityAgent : public juce::Thread, private juce::Timer {
 public:
   //==============================================================================
   using Timestamp = std::chrono::steady_clock::time_point;
@@ -98,9 +99,16 @@ public:
   /// Clear collected metrics
   void clearMetrics();
 
+  /// Export accumulated metrics (called by timer or manually)
+  void exportMetrics();
+
+  /// Get number of export cycles completed (for testing)
+  uint64_t getExportCount() const;
+
 private:
   //==============================================================================
   void run() override;
+  void timerCallback() override;
 
   struct LogEntry {
       LogLevel level;
@@ -117,6 +125,7 @@ private:
 
   std::atomic<bool> enabled_{true};
   std::atomic<uint64_t> metricsCollected_{0};
+  std::atomic<uint64_t> exportCount_{0};
   
   // Async Log Queue
   static constexpr int kLogQueueSize = 1024;
