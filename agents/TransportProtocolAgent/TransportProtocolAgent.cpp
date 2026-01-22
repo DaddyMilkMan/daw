@@ -92,8 +92,45 @@ TransportProtocolAgent::enumerateDevices() {
 }
 
 TransportProtocolAgent::DeviceInfo TransportProtocolAgent::getDefaultInputDevice() {
-  // TODO: Get platform default input device
   DeviceInfo info;
+
+  if (deviceManager_ == nullptr)
+    return info;
+
+  for (auto* type : deviceManager_->getAvailableDeviceTypes()) {
+    if (type == nullptr)
+      continue;
+
+    type->scanForDevices();
+
+    // Check for default input device (true = input)
+    int defaultIndex = type->getDefaultDeviceIndex(true);
+
+    if (defaultIndex >= 0) {
+      auto deviceNames = type->getDeviceNames();
+
+      if (defaultIndex < deviceNames.size()) {
+        info.name = deviceNames[defaultIndex];
+        info.id = deviceNames[defaultIndex];
+        info.apiType = type->getTypeName();
+        info.isDefault = true;
+
+        // If the default device is the currently open device, we can fill in more details
+        auto* currentDevice = deviceManager_->getCurrentAudioDevice();
+        if (currentDevice != nullptr && currentDevice->getName() == info.name &&
+            currentDevice->getTypeName() == info.apiType) {
+          info.numInputChannels = currentDevice->getActiveInputChannels().countNumberOfSetBits();
+          info.numOutputChannels = currentDevice->getActiveOutputChannels().countNumberOfSetBits();
+          info.supportedSampleRates = currentDevice->getAvailableSampleRates();
+          info.supportedBufferSizes = currentDevice->getAvailableBufferSizes();
+        }
+
+        return info;
+      }
+    }
+  }
+
+  // Fallback
   info.name = "Default Input";
   return info;
 }
