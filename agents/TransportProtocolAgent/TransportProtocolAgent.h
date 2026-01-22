@@ -43,6 +43,7 @@ public:
 
   //==============================================================================
   TransportProtocolAgent();
+  explicit TransportProtocolAgent(std::unique_ptr<juce::AudioDeviceManager> manager);
   ~TransportProtocolAgent();
 
   //==============================================================================

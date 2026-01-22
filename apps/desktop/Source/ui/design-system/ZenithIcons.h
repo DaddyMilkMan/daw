@@ -771,8 +771,77 @@ inline SkPath EyeOff() {
 }
 
 // ============================================================================
-// HUB ICONS
+// TEMPLATE ICONS (Clean, Crisp, A+ Quality)
 // ============================================================================
+
+/**
+ * ElectronicTemplate - Simple synth with 3 visible keys + sound wave
+ * Represents electronic music production, synth-heavy templates
+ */
+inline SkPath ElectronicTemplate() {
+  SkPath path;
+  
+  // Simple synth body (single rectangle)
+  SkRect body = SkRect::MakeLTRB(6.0f, 7.0f, 18.0f, 16.0f);
+  path.addRect(body);
+  
+  // 3 visible keys (simplified, not full keyboard)
+  SkRect k1 = SkRect::MakeLTRB(8.0f, 16.0f, 10.0f, 17.0f);
+  SkRect k2 = SkRect::MakeLTRB(11.0f, 16.0f, 13.0f, 17.0f);
+  SkRect k3 = SkRect::MakeLTRB(14.0f, 16.0f, 16.0f, 17.0f);
+  path.addRect(k1);
+  path.addRect(k2);
+  path.addRect(k3);
+  
+  // Single sound wave (simple curve)
+  path.moveTo(6.0f, 5.0f);
+  path.lineTo(12.0f, 3.0f);
+  
+  return path;
+}
+
+/**
+ * OrchestralTemplate - Baton + 1 simple music note
+ * Represents orchestral, cinematic, classical music templates
+ */
+inline SkPath OrchestralTemplate() {
+  SkPath path;
+  
+  // Baton stick (angled line)
+  path.moveTo(11.0f, 18.0f);
+  path.lineTo(13.0f, 6.0f);
+  
+  // Baton head (small circle at top)
+  path.addOval(SkRect::MakeLTRB(12.5f, 4.0f, 15.5f, 7.0f));
+  
+  // Single music note (simple eighth note)
+  path.moveTo(6.0f, 14.0f);
+  path.addCircle(6.0f, 13.0f, 2.0f);
+  path.moveTo(8.0f, 13.0f);
+  path.lineTo(10.0f, 13.0f);
+  path.lineTo(10.0f, 9.0f);
+  path.lineTo(8.0f, 9.0f);
+  
+  return path;
+}
+
+/**
+ * RecordingTemplate - Simple mic with recording dot
+ * Represents vocal recording, podcast, acoustic templates
+ */
+inline SkPath RecordingTemplate() {
+  SkPath path;
+  
+  // Simple mic body (rounded rect)
+  SkRect body = SkRect::MakeLTRB(7.0f, 8.0f, 17.0f, 15.0f);
+  SkRRect bodyRect = SkRRect::MakeRectXY(body, 3.0f, 3.0f);
+  path.addRRect(bodyRect);
+  
+  // Recording dot (small circle in corner)
+  path.addOval(SkRect::MakeLTRB(14.5f, 10.5f, 17.5f, 13.5f));
+  
+  return path;
+}
 
 /** Project - Folder with a project indicator */
 inline SkPath Project() {
@@ -892,17 +961,11 @@ inline SkPath Info() {
 /** Users - Two people silhouettes */
 inline SkPath Users() {
   SkPath path;
-  // Front person - head
-  path.addCircle(10.0f, 8.0f, 3.0f);
-  // Front person - body
-  path.moveTo(4.0f, 20.0f);
-  path.cubicTo(4.0f, 15.0f, 7.0f, 13.0f, 10.0f, 13.0f);
-  path.cubicTo(13.0f, 13.0f, 16.0f, 15.0f, 16.0f, 20.0f);
-  // Back person - head (offset right)
-  path.addCircle(16.0f, 7.0f, 2.5f);
-  // Back person - body (partial, behind first)
-  path.moveTo(19.0f, 18.0f);
-  path.cubicTo(19.0f, 14.0f, 17.0f, 12.0f, 15.0f, 11.5f);
+  // Two people silhouettes (simplified)
+  path.addCircle(8.0f, 8.0f, 3.0f);
+  path.addCircle(16.0f, 8.0f, 3.0f);
+  path.addArc(SkRect::MakeLTRB(4.0f, 12.0f, 12.0f, 20.0f), 180.0f, 180.0f);
+  path.addArc(SkRect::MakeLTRB(12.0f, 12.0f, 20.0f, 20.0f), 180.0f, 180.0f);
   return path;
 }
 
@@ -1185,6 +1248,10 @@ inline void drawIconButton(SkCanvas *canvas, const SkPath &icon,
 
   drawIconCentered(canvas, icon, bounds, iconSize, style);
 }
+
+// Aliases for Wingman (commented to fix redefinition)
+// inline SkPath History() { return Undo(); }
+// inline SkPath Lightbulb() { return Brain(); }
 
 } // namespace icons
 } // namespace zenith

@@ -17,6 +17,10 @@ TransportProtocolAgent::TransportProtocolAgent()
   deviceManager_->initialiseWithDefaultDevices(2, 2);
 }
 
+TransportProtocolAgent::TransportProtocolAgent(std::unique_ptr<juce::AudioDeviceManager> manager)
+  : deviceManager_(std::move(manager)) {
+}
+
 TransportProtocolAgent::~TransportProtocolAgent() {
   closeDevice();
 }
@@ -28,32 +32,183 @@ std::vector<TransportProtocolAgent::DeviceInfo>
 TransportProtocolAgent::enumerateDevices() {
   std::vector<DeviceInfo> devices;
   
-  // TODO: Enumerate all available audio device types
-  // TODO: Query device capabilities
-  // TODO: Filter by platform-specific APIs
-  
-  auto* currentDevice = deviceManager_->getCurrentAudioDevice();
-  if (currentDevice != nullptr) {
-    DeviceInfo info;
-    info.name = currentDevice->getName();
-    info.id = currentDevice->getName(); // Simplified
-    info.numInputChannels = currentDevice->getActiveInputChannels().countNumberOfSetBits();
-    info.numOutputChannels = currentDevice->getActiveOutputChannels().countNumberOfSetBits();
-    info.supportedSampleRates = currentDevice->getAvailableSampleRates();
-    info.supportedBufferSizes = currentDevice->getAvailableBufferSizes();
-    info.isDefault = true;
-    info.apiType = currentDevice->getTypeName();
+<<<<<<< HEAD
+  for (auto* type : deviceManager_->getAvailableDeviceTypes())
+  {
+    type->scanForDevices();
+
+    auto inputNames = type->getDeviceNames(true);
+    auto outputNames = type->getDeviceNames(false);
     
-    devices.push_back(info);
+    // Combine lists to find unique devices
+    juce::StringArray allNames;
+    allNames.addArray(inputNames);
+    for (const auto& name : outputNames)
+    {
+      if (!allNames.contains(name))
+        allNames.add(name);
+    }
+
+    for (const auto& name : allNames)
+    {
+      DeviceInfo info;
+      info.name = name;
+      info.id = name;
+      info.apiType = type->getTypeName();
+
+      bool hasInput = inputNames.contains(name);
+      bool hasOutput = outputNames.contains(name);
+
+      // Estimate channels (exact count requires opening the device)
+      info.numInputChannels = hasInput ? 2 : 0;
+      info.numOutputChannels = hasOutput ? 2 : 0;
+
+      // Populate more details if this matches the currently open device
+      auto* currentDevice = deviceManager_->getCurrentAudioDevice();
+      if (currentDevice != nullptr &&
+          currentDevice->getName() == name &&
+          currentDevice->getTypeName() == type->getTypeName())
+      {
+        info.supportedSampleRates = currentDevice->getAvailableSampleRates();
+        info.supportedBufferSizes = currentDevice->getAvailableBufferSizes();
+        info.numInputChannels = currentDevice->getActiveInputChannels().countNumberOfSetBits();
+        info.numOutputChannels = currentDevice->getActiveOutputChannels().countNumberOfSetBits();
+        info.isDefault = true;
+=======
+  auto* currentDevice = deviceManager_->getCurrentAudioDevice();
+
+  // Iterate through all available device types (ASIO, WASAPI, ALSA, etc.)
+  for (auto* type : deviceManager_->getAvailableDeviceTypes()) {
+    type->scanForDevices();
+
+    juce::StringArray inputNames = type->getDeviceNames(true);
+    juce::StringArray outputNames = type->getDeviceNames(false);
+
+    // Identify defaults by name
+    juce::String defaultInputName;
+    int defInIdx = type->getDefaultDeviceIndex(true);
+    if (defInIdx >= 0 && defInIdx < inputNames.size())
+      defaultInputName = inputNames[defInIdx];
+
+    juce::String defaultOutputName;
+    int defOutIdx = type->getDefaultDeviceIndex(false);
+    if (defOutIdx >= 0 && defOutIdx < outputNames.size())
+      defaultOutputName = outputNames[defOutIdx];
+
+    // Merge unique device names from inputs and outputs
+    juce::StringArray allNames;
+    allNames.addArray(inputNames);
+    
+    for (const auto& outName : outputNames) {
+      if (!allNames.contains(outName)) {
+        allNames.add(outName);
+      }
+    }
+
+    for (const auto& name : allNames) {
+      DeviceInfo info;
+      info.name = name;
+      info.id = name; // Using name as ID is standard for simple device types
+      info.apiType = type->getTypeName();
+
+      // Mark as default if it matches either default input or output
+      info.isDefault = (name == defaultInputName || name == defaultOutputName);
+
+      // Check if this is the currently active device
+      bool isActive = (currentDevice != nullptr &&
+                       currentDevice->getName() == name &&
+                       currentDevice->getTypeName() == info.apiType);
+
+      if (isActive) {
+        // For active device: Query full capabilities
+        info.numInputChannels = currentDevice->getActiveInputChannels().countNumberOfSetBits();
+        info.numOutputChannels = currentDevice->getActiveOutputChannels().countNumberOfSetBits();
+        info.supportedSampleRates = currentDevice->getAvailableSampleRates();
+        info.supportedBufferSizes = currentDevice->getAvailableBufferSizes();
+      } else {
+        // For inactive devices: Return empty/zero to avoid opening the device (performance)
+        info.numInputChannels = 0;
+        info.numOutputChannels = 0;
+>>>>>>> origin/master
+      }
+
+      devices.push_back(info);
+    }
   }
   
   return devices;
 }
 
 TransportProtocolAgent::DeviceInfo TransportProtocolAgent::getDefaultInputDevice() {
-  // TODO: Get platform default input device
   DeviceInfo info;
-  info.name = "Default Input";
+  info.name = "None";
+  info.id = "";
+  info.isDefault = false;
+
+  if (deviceManager_ == nullptr)
+      return info;
+
+  // Define priority order based on platform
+  juce::StringArray searchOrder;
+
+  // Check currently active type first
+  juce::String activeType = deviceManager_->getCurrentAudioDeviceType();
+  if (activeType.isNotEmpty())
+      searchOrder.add(activeType);
+
+#if JUCE_WINDOWS
+  searchOrder.add("ASIO");
+  searchOrder.add("Windows Audio");
+  searchOrder.add("DirectSound");
+#elif JUCE_LINUX
+  searchOrder.add("JACK");
+  searchOrder.add("ALSA");
+#elif JUCE_MAC
+  searchOrder.add("CoreAudio");
+#endif
+
+  // Remove duplicates (keep first occurrence - effectively active type stays first)
+  for (int i = searchOrder.size() - 1; i > 0; --i)
+  {
+      if (searchOrder.indexOf(searchOrder[i]) < i)
+          searchOrder.remove(i);
+  }
+
+  const auto& availableTypes = deviceManager_->getAvailableDeviceTypes();
+
+  for (const auto& typeName : searchOrder)
+  {
+      for (auto* type : availableTypes)
+      {
+          if (type != nullptr && type->getTypeName() == typeName)
+          {
+              type->scanForDevices();
+              juce::StringArray deviceNames = type->getDeviceNames(true); // true for input
+              int defaultIndex = type->getDefaultDeviceIndex(true);
+
+              if (defaultIndex >= 0 && defaultIndex < deviceNames.size())
+              {
+                  info.name = deviceNames[defaultIndex];
+                  info.id = info.name; // In JUCE, name is typically used as ID
+                  info.apiType = typeName;
+                  info.isDefault = true;
+                  
+                  // Enrich with details if it matches current device (Best effort)
+                  auto* currentDevice = deviceManager_->getCurrentAudioDevice();
+                  if (currentDevice != nullptr && currentDevice->getName() == info.name &&
+                      currentDevice->getTypeName() == info.apiType) {
+                    info.numInputChannels = currentDevice->getActiveInputChannels().countNumberOfSetBits();
+                    info.numOutputChannels = currentDevice->getActiveOutputChannels().countNumberOfSetBits();
+                    info.supportedSampleRates = currentDevice->getAvailableSampleRates();
+                    info.supportedBufferSizes = currentDevice->getAvailableBufferSizes();
+                  }
+                  
+                  return info;
+              }
+          }
+      }
+  }
+
   return info;
 }
 
@@ -72,12 +227,47 @@ bool TransportProtocolAgent::openDevice(const juce::String& deviceId,
                                         int bufferSize) {
   jassert(sampleRate > 0.0 && bufferSize > 0);
   
-  // TODO: Open specific device by ID
-  // TODO: Apply sample rate and buffer size
-  // TODO: Handle device open errors
+  for (auto* type : deviceManager_->getAvailableDeviceTypes())
+  {
+    type->scanForDevices();
+
+    auto inputNames = type->getDeviceNames(true);
+    auto outputNames = type->getDeviceNames(false);
+
+    bool hasInput = inputNames.contains(deviceId);
+    bool hasOutput = outputNames.contains(deviceId);
+
+    if (hasInput || hasOutput)
+    {
+      // Switch to the correct backend type
+      deviceManager_->setCurrentAudioDeviceType(type->getTypeName(), true);
+
+      // Configure the device
+      juce::AudioDeviceManager::AudioDeviceSetup setup;
+      deviceManager_->getAudioDeviceSetup(setup);
+
+      setup.inputDeviceName = hasInput ? deviceId : juce::String();
+      setup.outputDeviceName = hasOutput ? deviceId : juce::String();
+      setup.sampleRate = sampleRate;
+      setup.bufferSize = bufferSize;
+      setup.useDefaultInputChannels = hasInput;
+      setup.useDefaultOutputChannels = hasOutput;
+
+      juce::String error = deviceManager_->setAudioDeviceSetup(setup, true);
+
+      if (error.isNotEmpty())
+      {
+        currentState_ = DeviceState::Error;
+        return false;
+      }
+
+      currentState_ = DeviceState::Active;
+      return true;
+    }
+  }
   
-  currentState_ = DeviceState::Active;
-  return true;
+  // Device not found
+  return false;
 }
 
 void TransportProtocolAgent::closeDevice() {

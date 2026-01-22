@@ -89,6 +89,7 @@ private:
 #define ZENITH_LOG_INFO(msg)     ::zenith::ZenithLogger::getInstance().info(msg)
 #define ZENITH_LOG_WARNING(msg)  ::zenith::ZenithLogger::getInstance().warning(msg)
 #define ZENITH_LOG_ERROR(msg)    ::zenith::ZenithLogger::getInstance().error(msg)
+#define ZENITH_LOG_WARN(msg)     ZENITH_LOG_WARNING(msg)
 #define ZENITH_LOG_CRITICAL(msg) ::zenith::ZenithLogger::getInstance().critical(msg)
 
 #define ZENITH_LOG_UI(level, msg)         ::zenith::ZenithLogger::getInstance().log(level, msg, "UI")
