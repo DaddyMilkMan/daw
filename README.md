@@ -92,6 +92,27 @@ cmake --build build --target ZenithDAWTests
 ./build/ZenithDAWTests_artefacts/Release/ZenithDAWTests
 ```
 
+### Fuzz Testing
+
+The FuzzingAgent provides automated robustness testing for DSP code, MIDI parsing, plugin loading, and file format parsing. It runs automatically on every push and pull request via GitHub Actions.
+
+To run locally:
+```bash
+cd agents/FuzzingAgent
+python fuzzing_agent.py --iterations 100
+```
+
+Options:
+- `--iterations N`: Number of fuzz iterations per target (default: 100)
+- `--seed N`: Random seed for reproducibility
+- `--target {dsp,midi,plugin,file,all}`: Specific target to fuzz (default: all)
+
+See [`agents/FuzzingAgent/README.md`](agents/FuzzingAgent/README.md) for more details.
+
+## Backend Coordinator Agents
+
+The `agents/` directory contains coordinator agents for build automation, testing, security, and real-time audio management. See [`agents/README.md`](agents/README.md) for details on all available agents.
+
 ## License
 
 See [LICENSE](LICENSE) for details.
