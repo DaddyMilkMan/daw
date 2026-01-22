@@ -5,7 +5,7 @@ This module provides automated checks for documentation presence, freshness,
 and synchronization with the codebase.
 """
 
-from typing import Dict, List, Optional, Set, Tuple
+from typing import List, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -89,21 +89,19 @@ class DocumentationAgent:
         "docs/tech-briefs/",
     ]
     
-    # File patterns that suggest documentation needs
-    CODE_PATTERNS = {
-        ".cpp": r"class\s+(\w+)",
-        ".h": r"class\s+(\w+)",
-        ".py": r"class\s+(\w+)",
-    }
+    # Minimum number of tech briefs expected
+    MIN_TECH_BRIEFS = 3
 
-    def __init__(self, project_root: Optional[Path] = None):
+    def __init__(self, project_root: Optional[Path] = None, max_age_days: int = 180):
         """
         Initialize Documentation Agent.
         
         Args:
             project_root: Root directory of the project
+            max_age_days: Maximum age in days before flagging as outdated
         """
         self.project_root = project_root or Path.cwd()
+        self.max_age_days = max_age_days
         self.report = DocReport()
         self.report.scan_timestamp = datetime.now().isoformat()
 
@@ -161,7 +159,7 @@ class DocumentationAgent:
         tech_brief_files = list(tech_briefs_dir.glob("*.md"))
         self.report.checked_files += len(tech_brief_files)
         
-        if len(tech_brief_files) < 3:
+        if len(tech_brief_files) < self.MIN_TECH_BRIEFS:
             self.report.issues.append(DocIssue(
                 severity=Severity.LOW,
                 status=DocStatus.NEEDS_UPDATE,
@@ -170,16 +168,15 @@ class DocumentationAgent:
                 recommendation="Add architecture decision records for major technical choices"
             ))
 
-    def check_doc_freshness(self, max_age_days: int = 180) -> None:
+    def check_doc_freshness(self) -> None:
         """
         Check if documentation files have been updated recently.
         
-        Args:
-            max_age_days: Maximum age in days before flagging as potentially outdated
+        Uses the max_age_days configured during initialization.
         """
-        print(f"Checking documentation freshness (max age: {max_age_days} days)...")
+        print(f"Checking documentation freshness (max age: {self.max_age_days} days)...")
         
-        cutoff_date = datetime.now() - timedelta(days=max_age_days)
+        cutoff_date = datetime.now() - timedelta(days=self.max_age_days)
         
         for doc_path in self.REQUIRED_DOCS:
             full_path = self.project_root / doc_path
@@ -245,8 +242,8 @@ class DocumentationAgent:
                 # Look for class declarations
                 classes = re.findall(r'class\s+(\w+)', content)
                 
-                # Check for Doxygen-style comments
-                has_docs = bool(re.search(r'/\*\*|\///', content))
+                # Check for Doxygen-style comments (/** */ or ///)
+                has_docs = bool(re.search(r'/\*\*|///', content))
                 
                 if classes and not has_docs:
                     self.report.issues.append(DocIssue(
@@ -367,7 +364,7 @@ def main():
     
     args = parser.parse_args()
     
-    agent = DocumentationAgent(project_root=args.project_root)
+    agent = DocumentationAgent(project_root=args.project_root, max_age_days=args.max_age_days)
     report = agent.run_all_checks()
     agent.print_report()
     

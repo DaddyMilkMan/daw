@@ -50,17 +50,17 @@ jobs:
       if: always()
       run: |
         if [ -f documentation_report.json ]; then
-          CRITICAL_COUNT=$(python -c "import json; print(json.load(open('documentation_report.json'))['critical_issues'])")
-          HIGH_COUNT=$(python -c "import json; print(json.load(open('documentation_report.json'))['high_issues'])")
+          CRITICAL=$(grep -o '"critical_issues": [0-9]*' documentation_report.json | grep -o '[0-9]*')
+          HIGH=$(grep -o '"high_issues": [0-9]*' documentation_report.json | grep -o '[0-9]*')
           
-          echo "Critical issues: $CRITICAL_COUNT"
-          echo "High severity issues: $HIGH_COUNT"
+          echo "Critical issues: $CRITICAL"
+          echo "High severity issues: $HIGH"
           
-          if [ "$CRITICAL_COUNT" -gt 0 ]; then
-            echo "::warning::Found $CRITICAL_COUNT critical documentation issues"
+          if [ "$CRITICAL" -gt 0 ]; then
+            echo "::warning::Found $CRITICAL critical documentation issues"
           fi
           
-          if [ "$HIGH_COUNT" -gt 0 ]; then
-            echo "::warning::Found $HIGH_COUNT high severity documentation issues"
+          if [ "$HIGH" -gt 0 ]; then
+            echo "::warning::Found $HIGH high severity documentation issues"
           fi
         fi
