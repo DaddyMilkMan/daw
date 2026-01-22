@@ -78,6 +78,17 @@ double PTPProtocol::getDrift() const {
     return 1.0;
 }
 
+void PTPProtocol::forceSync() {
+    synchronized_.store(false, std::memory_order_release);
+
+    {
+        std::lock_guard<std::mutex> lock(stateMutex_);
+        syncState_.waitingForFollowUp = false;
+    }
+
+    if (onSyncStateChanged) onSyncStateChanged(false);
+}
+
 void PTPProtocol::run() {
     // Bind sockets and join multicast group
     if (!eventSocket_.bindToPort(PTP_EVENT_PORT) ||
