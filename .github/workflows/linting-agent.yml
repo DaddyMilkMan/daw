@@ -11,6 +11,8 @@ jobs:
   lint:
     name: Code Quality Checks
     runs-on: ubuntu-latest
+    permissions:
+      contents: read  # Only need to read repository contents
 
     steps:
     - name: Checkout code
