@@ -261,12 +261,22 @@ SkFont FontManager::getFont(FontFamily family, FontWeight weight,
     }
   }
 
+  // CRITICAL: If still no typeface, use system default to prevent crashes
+  // SkFont with null typeface can cause SIGSEGV in FreeType when measuring text
+  if (!typeface && fontMgr_) {
+    // Try to get a system font as fallback
+    typeface = fontMgr_->matchFamilyStyle("sans-serif", SkFontStyle::Normal());
+    if (!typeface) {
+      typeface = fontMgr_->matchFamilyStyle(nullptr, SkFontStyle::Normal());
+    }
+  }
+
   SkFont font;
 
   if (typeface) {
     font.setTypeface(typeface);
   }
-  // If no typeface available, SkFont uses default (system font fallback)
+  // Note: If typeface is still null, SkFont will use its internal default
 
   font.setSize(size);
   configureFont(font);

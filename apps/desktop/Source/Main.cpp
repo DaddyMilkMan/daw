@@ -68,7 +68,8 @@ public:
     ::zenith::PlatformSystemUtils::logSystemInfo();
 
     // Ensure content validity (Generate missing samples if needed)
-    ::zenith::SampleGenerator::generateMissingSamples();
+    // Run asynchronously to unblock startup
+    ::zenith::SampleGenerator::generateMissingSamples(&threadPool);
 
     // Pre-initialize FontManager to avoid hangs when UI is created
     DBG("Initializing FontManager...");
@@ -84,6 +85,9 @@ public:
   void shutdown() override {
     ZENITH_LOG_INFO("ZenithApplication::shutdown() STARTED");
     DBG("Zenith DAW shutting down...");
+
+    // Stop background tasks
+    threadPool.removeAllJobs(true, 4000);
 
     // Close main window (releases all resources)
     mainWindow.reset();
@@ -118,6 +122,7 @@ public:
 private:
   //==========================================================================
   std::unique_ptr<::zenith::MainWindow> mainWindow;
+  juce::ThreadPool threadPool;
 };
 
 //==============================================================================

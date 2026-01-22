@@ -70,6 +70,10 @@ double NTPProtocol::getDrift() const {
     return drift_.load(std::memory_order_acquire);
 }
 
+void NTPProtocol::forceSync() {
+    notify();
+}
+
 void NTPProtocol::setServerAddress(const juce::String& address) {
     serverAddress_ = address;
 }

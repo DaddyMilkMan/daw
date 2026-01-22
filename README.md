@@ -6,7 +6,7 @@ A professional Digital Audio Workstation built with C++20 and JUCE, featuring AI
 
 **Version:** 0.1.0-alpha  
 **Platform:** Linux, macOS, Windows  
-**Build:** [![Tests](https://github.com/zenith-daw/zenith/actions/workflows/test.yml/badge.svg)](https://github.com/zenith-daw/zenith/actions/workflows/test.yml)
+**Build:** [![Tests](https://github.com/zenith-daw/zenith/actions/workflows/test.yml/badge.svg)](https://github.com/zenith-daw/zenith/actions/workflows/test.yml) [![Fuzzing](https://github.com/micahcooley/daw/actions/workflows/fuzzing-agent.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/fuzzing-agent.yml) [![Testing Agent](https://github.com/micahcooley/daw/actions/workflows/agent-testing.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/agent-testing.yml) [![Security Scan](https://github.com/micahcooley/daw/actions/workflows/security-agent.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/security-agent.yml) [![Linting](https://github.com/micahcooley/daw/actions/workflows/linting-agent.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/linting-agent.yml) [![Triage](https://github.com/micahcooley/daw/actions/workflows/triage-bot.yml/badge.svg)](https://github.com/micahcooley/daw/actions/workflows/triage-bot.yml)
 
 ### What Works
 - Audio engine with real-time playback and recording
@@ -30,11 +30,7 @@ A professional Digital Audio Workstation built with C++20 and JUCE, featuring AI
 **Linux (Ubuntu/Debian):**
 ```bash
 sudo apt update
-sudo apt install build-essential cmake ninja-build \
-    libasound2-dev libjack-jackd2-dev libcurl4-openssl-dev \
-    libfreetype6-dev libx11-dev libxinerama-dev libxext-dev \
-    libxrandr-dev libxcursor-dev libwebkit2gtk-4.0-dev \
-    libglu1-mesa-dev mesa-common-dev
+sudo apt install build-essential cmake ninja-build     libasound2-dev libjack-jackd2-dev libcurl4-openssl-dev     libfreetype6-dev libx11-dev libxinerama-dev libxext-dev     libxrandr-dev libxcursor-dev libwebkit2gtk-4.0-dev     libglu1-mesa-dev mesa-common-dev
 ```
 
 **macOS:**
@@ -94,6 +90,77 @@ cmake --build build --target ZenithDAWTests
 ./build/ZenithDAWTests_artefacts/Release/ZenithDAWTests
 ```
 
+### Automated Testing with Testing Agent
+
+The repository includes an automated **Testing Agent** that runs on every push and pull request via GitHub Actions. This agent provides comprehensive test orchestration and validation:
+
+**Current Capabilities:**
+- **Test Discovery**: Automatically discovers C++ unit tests (JUCE and Catch2 frameworks)
+- **Test Execution**: Runs all discovered tests and reports results
+- **CI Integration**: Seamlessly integrates with GitHub Actions workflow
+
+**Planned Features** (stub implementations, expandable in future PRs):
+- **RT-Safety Analysis**: Static analysis to detect illegal allocations, locks, or blocking calls in real-time audio threads
+- **Code Coverage**: Generate and report line/branch coverage metrics
+- **TODO Scanning**: Surface TODO comments in critical code paths for developer triage
+- **Memory Leak Detection**: Valgrind integration for leak checking
+- **Audio Quality Metrics**: THD, SNR, and frequency response validation
+
+**Running Locally:**
+```bash
+python agents/TestingAgent/testing_agent.py
+```
+
+**CI Workflow:**
+The Testing Agent runs automatically via `.github/workflows/agent-testing.yml` on:
+- Pushes to `main`, `develop`, and `copilot/**` branches
+- Pull requests targeting `main` or `develop`
+
+See [`agents/TestingAgent/README.md`](agents/TestingAgent/README.md) for implementation details and expansion roadmap.
+
+### Fuzz Testing
+
+The FuzzingAgent provides automated robustness testing for DSP code, MIDI parsing, plugin loading, and file format parsing. It runs automatically on every push and pull request via GitHub Actions.
+
+To run locally:
+```bash
+cd agents/FuzzingAgent
+python fuzzing_agent.py --iterations 100
+```
+
+Options:
+- `--iterations N`: Number of fuzz iterations per target (default: 100)
+- `--seed N`: Random seed for reproducibility
+- `--target {dsp,midi,plugin,file,all}`: Specific target to fuzz (default: all)
+
+See [`agents/FuzzingAgent/README.md`](agents/FuzzingAgent/README.md) for more details.
+
+### Automated Security Scanning
+
+The SecurityAgent performs automated vulnerability scanning on every push and pull request. It checks for:
+- Secret/Credential leaks (API keys, tokens)
+- Insecure dependencies (Python/C++)
+- Suspicious file permissions
+- Binary analysis (stub)
+
+To run locally:
+```bash
+cd agents/SecurityAgent
+python security_agent.py --scan-type full
+```
+
+See [`agents/SecurityAgent/README.md`](agents/SecurityAgent/README.md) for details.
+
+### Code Quality & Linting
+
+The Linting Agent performs automated code quality checks on every push and pull request:
+- Naming convention enforcement (C++ and Python)
+- Style rule validation (trailing whitespace, comment spacing)
+- Detection of commented-out code, magic numbers, and TODOs
+- Extensible for additional linters (clang-tidy, pylint, etc.)
+
+See [`agents/LintingAgent/README.md`](agents/LintingAgent/README.md) for details.
+
 ### Memory Leak Detection
 
 Debug builds automatically enable AddressSanitizer and LeakSanitizer to catch memory issues:
@@ -113,6 +180,26 @@ cd ..
 ```
 
 For details on recent memory leak fixes, see [docs/MEMORY_LEAK_FIXES.md](docs/MEMORY_LEAK_FIXES.md).
+
+## Automation
+
+### TriageBot
+
+This repository uses an automated triage system for issues and pull requests. When you open an issue or PR, TriageBot will:
+
+- **Automatically classify** your submission (bug, enhancement, question, etc.)
+- **Assign priority** based on severity (P0-P3)
+- **Add relevant labels** for components, platforms, and categories
+- **Detect duplicates** to help avoid redundant issues
+- **Leave helpful comments** with classification details
+
+This helps maintainers respond faster and ensures issues are properly categorized. The bot's classification is not final - maintainers may adjust labels as needed.
+
+For more details, see [agents/TriageBot/README.md](agents/TriageBot/README.md).
+
+## Backend Coordinator Agents
+
+The `agents/` directory contains coordinator agents for build automation, testing, security, and real-time audio management. See [`agents/README.md`](agents/README.md) for details on all available agents.
 
 ## License
 
