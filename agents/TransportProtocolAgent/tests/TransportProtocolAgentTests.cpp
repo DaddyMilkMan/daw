@@ -29,6 +29,12 @@ public:
     juce::BigInteger getActiveInputChannels() const override { return {}; }
     int getOutputLatencyInSamples() override { return 0; }
     int getInputLatencyInSamples() override { return 0; }
+
+    juce::StringArray getOutputChannelNames() override { return {"Out1", "Out2"}; }
+    juce::StringArray getInputChannelNames() override { return {"In1", "In2"}; }
+    juce::Array<double> getAvailableSampleRates() override { return {44100.0, 48000.0}; }
+    juce::Array<int> getAvailableBufferSizes() override { return {128, 256, 512}; }
+    int getDefaultBufferSize() override { return 256; }
 };
 
 // Mock AudioIODeviceType
@@ -64,6 +70,8 @@ public:
     // Test helpers
     void setInputDevices(const juce::StringArray& names) { inputDevices = names; }
     void setDefaultInputIndex(int index) { defaultInputIndex = index; }
+    void setOutputDevices(const juce::StringArray& names) { outputDevices = names; }
+    void setDefaultOutputIndex(int index) { defaultOutputIndex = index; }
 
 private:
     juce::StringArray inputDevices;
@@ -144,6 +152,53 @@ public:
 
             expectEquals(info.name, juce::String("HighDev"));
             expectEquals(info.apiType, highPriority);
+        }
+
+        beginTest("Default Output Device - Active Type Priority");
+        {
+            auto manager = std::make_unique<juce::AudioDeviceManager>();
+
+            auto mockType = std::make_unique<MockAudioIODeviceType>("MockActiveType");
+            mockType->setOutputDevices({"MockOut1", "MockOut2"});
+            mockType->setDefaultOutputIndex(1); // "MockOut2"
+
+            manager->addAudioDeviceType(std::move(mockType));
+            manager->setCurrentAudioDeviceType("MockActiveType", true);
+
+            zenith::agents::TransportProtocolAgent agent(std::move(manager));
+            auto info = agent.getDefaultOutputDevice();
+
+            expectEquals(info.name, juce::String("MockOut2"));
+            expectEquals(info.apiType, juce::String("MockActiveType"));
+            expect(info.isDefault);
+        }
+
+        beginTest("Enumerate Devices - Active Only Details");
+        {
+            auto manager = std::make_unique<juce::AudioDeviceManager>();
+            auto mockType = std::make_unique<MockAudioIODeviceType>("MockType");
+            mockType->setInputDevices({"In1"});
+            mockType->setOutputDevices({"Out1"});
+
+            manager->addAudioDeviceType(std::move(mockType));
+            // Ensure no device is open/active by default or at least check inactive behavior
+            // By default AudioDeviceManager might try to open something if we don't stop it.
+            // But we didn't call initialiseWithDefaultDevices, so it should be clean.
+
+            zenith::agents::TransportProtocolAgent agent(std::move(manager));
+            auto devices = agent.enumerateDevices();
+
+            bool foundIn = false;
+            for (const auto& dev : devices) {
+                if (dev.name == "In1") {
+                    foundIn = true;
+                    // Should be 0 because it's not active
+                    expectEquals(dev.numInputChannels, 0);
+                    expectEquals(dev.supportedSampleRates.size(), 0);
+                    expect(dev.apiType == "MockType");
+                }
+            }
+            expect(foundIn);
         }
     }
 };
