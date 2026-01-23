@@ -32,49 +32,6 @@ std::vector<TransportProtocolAgent::DeviceInfo>
 TransportProtocolAgent::enumerateDevices() {
   std::vector<DeviceInfo> devices;
   
-<<<<<<< HEAD
-  for (auto* type : deviceManager_->getAvailableDeviceTypes())
-  {
-    type->scanForDevices();
-
-    auto inputNames = type->getDeviceNames(true);
-    auto outputNames = type->getDeviceNames(false);
-    
-    // Combine lists to find unique devices
-    juce::StringArray allNames;
-    allNames.addArray(inputNames);
-    for (const auto& name : outputNames)
-    {
-      if (!allNames.contains(name))
-        allNames.add(name);
-    }
-
-    for (const auto& name : allNames)
-    {
-      DeviceInfo info;
-      info.name = name;
-      info.id = name;
-      info.apiType = type->getTypeName();
-
-      bool hasInput = inputNames.contains(name);
-      bool hasOutput = outputNames.contains(name);
-
-      // Estimate channels (exact count requires opening the device)
-      info.numInputChannels = hasInput ? 2 : 0;
-      info.numOutputChannels = hasOutput ? 2 : 0;
-
-      // Populate more details if this matches the currently open device
-      auto* currentDevice = deviceManager_->getCurrentAudioDevice();
-      if (currentDevice != nullptr &&
-          currentDevice->getName() == name &&
-          currentDevice->getTypeName() == type->getTypeName())
-      {
-        info.supportedSampleRates = currentDevice->getAvailableSampleRates();
-        info.supportedBufferSizes = currentDevice->getAvailableBufferSizes();
-        info.numInputChannels = currentDevice->getActiveInputChannels().countNumberOfSetBits();
-        info.numOutputChannels = currentDevice->getActiveOutputChannels().countNumberOfSetBits();
-        info.isDefault = true;
-=======
   auto* currentDevice = deviceManager_->getCurrentAudioDevice();
 
   // Iterate through all available device types (ASIO, WASAPI, ALSA, etc.)
@@ -129,7 +86,6 @@ TransportProtocolAgent::enumerateDevices() {
         // For inactive devices: Return empty/zero to avoid opening the device (performance)
         info.numInputChannels = 0;
         info.numOutputChannels = 0;
->>>>>>> origin/master
       }
 
       devices.push_back(info);

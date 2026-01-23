@@ -13,7 +13,12 @@ class MockAudioIODevice : public juce::AudioIODevice
 {
 public:
     MockAudioIODevice(const juce::String& name, const juce::String& typeName)
-        : AudioIODevice(name, typeName) {}
+        : AudioIODevice(name, typeName)
+    {
+        // Default to stereo for testing
+        inputChannels.setRange(0, 2, true);
+        outputChannels.setRange(0, 2, true);
+    }
 
     juce::String open(const juce::BigInteger&, const juce::BigInteger&, double, int) override { return {}; }
     void close() override {}
@@ -25,10 +30,22 @@ public:
     int getCurrentBufferSizeSamples() override { return 256; }
     double getCurrentSampleRate() override { return 44100.0; }
     int getCurrentBitDepth() override { return 16; }
-    juce::BigInteger getActiveOutputChannels() const override { return {}; }
-    juce::BigInteger getActiveInputChannels() const override { return {}; }
+
+    juce::BigInteger getActiveOutputChannels() const override { return outputChannels; }
+    juce::BigInteger getActiveInputChannels() const override { return inputChannels; }
     int getOutputLatencyInSamples() override { return 0; }
     int getInputLatencyInSamples() override { return 0; }
+
+    // Missing overrides to make class concrete
+    juce::StringArray getOutputChannelNames() override { return {"Out 1", "Out 2"}; }
+    juce::StringArray getInputChannelNames() override { return {"In 1", "In 2"}; }
+    juce::Array<double> getAvailableSampleRates() override { return {44100.0, 48000.0}; }
+    juce::Array<int> getAvailableBufferSizes() override { return {128, 256, 512}; }
+    int getDefaultBufferSize() override { return 256; }
+
+    // Test helpers
+    juce::BigInteger inputChannels;
+    juce::BigInteger outputChannels;
 };
 
 // Mock AudioIODeviceType
@@ -63,6 +80,7 @@ public:
 
     // Test helpers
     void setInputDevices(const juce::StringArray& names) { inputDevices = names; }
+    void setOutputDevices(const juce::StringArray& names) { outputDevices = names; }
     void setDefaultInputIndex(int index) { defaultInputIndex = index; }
 
 private:
@@ -144,6 +162,57 @@ public:
 
             expectEquals(info.name, juce::String("HighDev"));
             expectEquals(info.apiType, highPriority);
+        }
+
+        beginTest("Device Enumeration - Active Only Details");
+        {
+            auto manager = std::make_unique<juce::AudioDeviceManager>();
+
+            auto mockType = std::make_unique<MockAudioIODeviceType>("MockType");
+            mockType->setInputDevices({"ActiveDev", "InactiveDev"});
+            mockType->setOutputDevices({"ActiveDev", "InactiveDev"});
+
+            manager->addAudioDeviceType(std::move(mockType));
+
+            zenith::agents::TransportProtocolAgent agent(std::move(manager));
+
+            // Open "ActiveDev" to make it active
+            bool opened = agent.openDevice("ActiveDev", 44100.0, 256);
+            expect(opened, "Failed to open device");
+
+            // Scan devices
+            auto devices = agent.enumerateDevices();
+
+            // Should find 2 entries (each entry merges input/output name)
+            // Note: Since we have "ActiveDev" and "InactiveDev" in both input and output lists,
+            // and names match, we expect 2 devices.
+            expectEquals(static_cast<int>(devices.size()), 2);
+
+            bool foundActive = false;
+            bool foundInactive = false;
+
+            for (const auto& d : devices)
+            {
+                if (d.name == "ActiveDev")
+                {
+                    foundActive = true;
+                    // Active device should have details populated
+                    expect(d.numInputChannels > 0, "Active device should have input channels detected");
+                    expect(d.numOutputChannels > 0, "Active device should have output channels detected");
+                    expect(d.supportedSampleRates.size() > 0, "Active device should have sample rates");
+                }
+                else if (d.name == "InactiveDev")
+                {
+                    foundInactive = true;
+                    // Inactive device should NOT have details populated (to save performance)
+                    expectEquals(d.numInputChannels, 0);
+                    expectEquals(d.numOutputChannels, 0);
+                    expectEquals(d.supportedSampleRates.size(), 0);
+                }
+            }
+
+            expect(foundActive, "ActiveDev not found");
+            expect(foundInactive, "InactiveDev not found");
         }
     }
 };
