@@ -66,15 +66,10 @@ struct ZenithInstrumentPreset {
    */
   ZenithInstrumentPreset(const std::string &name_,
                          const std::string &instrumentId_,
-                         const std::string &author_ = "Factory",
-                         const std::string &id_ = "")
+                         const std::string &author_ = "Factory")
       : name(name_), instrumentId(instrumentId_), author(author_) {
-    if (id_.empty()) {
-      // Generate unique ID from name and timestamp
-      id = generateId(name_);
-    } else {
-      id = id_;
-    }
+    // Generate unique ID from name and timestamp
+    id = generateId(name_);
   }
 
   /**
@@ -82,7 +77,7 @@ struct ZenithInstrumentPreset {
    */
   ZenithInstrumentPreset(const std::string &id_, const std::string &name_,
                          const std::string &instrumentId_,
-                         const std::string &author_ = "Factory")
+                         const std::string &author_)
       : id(id_), name(name_), instrumentId(instrumentId_), author(author_) {}
 
   /**
