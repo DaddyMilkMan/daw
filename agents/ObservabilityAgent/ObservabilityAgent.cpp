@@ -183,15 +183,53 @@ void ObservabilityAgent::setMetricsFile(const juce::File& file) {
     metricsFile_ = file;
 }
 
+void ObservabilityAgent::processEvents() {
+    int start1, size1, start2, size2;
+    ringBufferFifo_.prepareToRead(kRingBufferSize, start1, size1, start2, size2);
+
+    if (size1 + size2 > 0) {
+        auto process = [this](int index) {
+            const auto& event = ringBufferData_[index];
+            switch (event.type) {
+                case MetricType::Counter:
+                    metricState_[event.name] += event.value;
+                    break;
+                case MetricType::Gauge:
+                    metricState_[event.name] = event.value;
+                    break;
+                case MetricType::Timer:
+                    // Prometheus Summary/Histogram pattern: _count and _sum
+                    metricState_[std::string(event.name) + "_count"] += 1.0;
+                    metricState_[std::string(event.name) + "_sum"] += event.value;
+                    break;
+                default:
+                    break;
+            }
+        };
+
+        for (int i = 0; i < size1; ++i) process(start1 + i);
+        for (int i = 0; i < size2; ++i) process(start2 + i);
+
+        ringBufferFifo_.finishedRead(size1 + size2);
+    }
+}
+
 void ObservabilityAgent::exportMetrics() {
   if (!enabled_.load(std::memory_order_acquire)) {
     return;
   }
 
-  // TODO: Drain lock-free ring buffer
-  // TODO: Send to configured exporters
+  auto metrics = getMetrics(); // Drains buffer and gets aggregated state
 
-  // For now, track export count for verification
+  if (exporter_) {
+      juce::File dest;
+      {
+          std::lock_guard<std::mutex> lock(exportMutex_);
+          dest = metricsFile_;
+      }
+      exporter_->exportMetrics(metrics, dest);
+  }
+
   exportCount_.fetch_add(1, std::memory_order_relaxed);
 }
 
@@ -204,27 +242,46 @@ void ObservabilityAgent::timerCallback() {
 }
 
 std::vector<ObservabilityAgent::Metric> ObservabilityAgent::getMetrics() {
+  processEvents();
+
   std::vector<Metric> metrics;
+  metrics.reserve(metricState_.size() + 1);
   
-  // Create a sample metric from the internal counter for testing/demonstration
-  // until the ring buffer is implemented.
-  Metric m;
-  m.name = "zenith_metrics_collected_total";
-  m.type = MetricType::Counter;
-  m.value = static_cast<double>(metricsCollected_.load(std::memory_order_relaxed));
-  m.timestamp = std::chrono::steady_clock::now();
+  // Internal diagnostic metric
+  {
+      Metric m;
+      m.name = "zenith_metrics_collected_total";
+      m.type = MetricType::Counter;
+      m.value = static_cast<double>(metricsCollected_.load(std::memory_order_relaxed));
+      m.timestamp = std::chrono::steady_clock::now();
+      metrics.push_back(m);
+  }
 
-  metrics.push_back(m);
+  auto now = std::chrono::steady_clock::now();
+  for (const auto& pair : metricState_) {
+      Metric m;
+      m.name = pair.first;
+      m.value = pair.second;
+      m.timestamp = now;
 
-  // TODO: Read from lock-free ring buffer
-  // TODO: Aggregate metrics by name
-  // TODO: Apply time-based windowing
+      // Infer type for export metadata
+      // Ideally we would store the type, but for this MVP we infer counters.
+      if (juce::String(pair.first).endsWith("_count") ||
+          juce::String(pair.first).endsWith("_sum") ||
+          juce::String(pair.first).endsWith("_total")) {
+          m.type = MetricType::Counter;
+      } else {
+          m.type = MetricType::Gauge;
+      }
+
+      metrics.push_back(m);
+  }
   
   return metrics;
 }
 
 void ObservabilityAgent::clearMetrics() {
-  // TODO: Clear lock-free ring buffer
+  metricState_.clear();
   metricsCollected_.store(0, std::memory_order_release);
 }
 
@@ -260,15 +317,7 @@ void ObservabilityAgent::exportLoop() {
 
         // Export metrics
         if (enabled_.load(std::memory_order_acquire)) {
-            auto metrics = getMetrics();
-            juce::File dest;
-            {
-                std::lock_guard<std::mutex> lock(exportMutex_);
-                dest = metricsFile_;
-            }
-            if (exporter_) {
-                exporter_->exportMetrics(metrics, dest);
-            }
+            exportMetrics();
         }
     }
 }

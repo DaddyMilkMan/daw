@@ -10,8 +10,8 @@
 #include <iostream>
 
 namespace juce {
-    extern const char* const juce_compilationDate = __DATE__;
-    extern const char* const juce_compilationTime = __TIME__;
+    extern const char* juce_compilationDate = __DATE__;
+    extern const char* juce_compilationTime = __TIME__;
 }
 
 int main(int argc, char* argv[]) {

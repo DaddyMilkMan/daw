@@ -18,10 +18,62 @@ public:
 
   void runTest() override {
     testMetricsCollection();
+    testAggregation();
     testPeriodicExport();
   }
 
 private:
+  void testAggregation() {
+    beginTest("Metric Aggregation");
+
+    ObservabilityAgent agent;
+    agent.setEnabled(true);
+
+    // 1. Counters
+    agent.recordCounter("request_count", 1.0);
+    agent.recordCounter("request_count", 2.0);
+
+    // 2. Gauges
+    agent.recordGauge("memory_usage", 100.0);
+    agent.recordGauge("memory_usage", 200.0); // Should overwrite
+
+    // 3. Timers
+    uint64_t start = agent.startTimer();
+    // We expect 2 timer events
+    agent.endTimer("process_time", start);
+    agent.endTimer("process_time", start);
+
+    // Trigger processing (drains buffer)
+    auto metrics = agent.getMetrics();
+
+    // Verify
+    bool foundCounter = false;
+    bool foundGauge = false;
+    bool foundTimerCount = false;
+    bool foundTimerSum = false;
+
+    for (const auto& m : metrics) {
+        if (m.name == "request_count") {
+            expectEquals(m.value, 3.0, "Counter aggregation failed");
+            foundCounter = true;
+        } else if (m.name == "memory_usage") {
+            expectEquals(m.value, 200.0, "Gauge aggregation failed");
+            foundGauge = true;
+        } else if (m.name == "process_time_count") {
+            expectEquals(m.value, 2.0, "Timer count aggregation failed");
+            foundTimerCount = true;
+        } else if (m.name == "process_time_sum") {
+            expect(m.value >= 0.0, "Timer sum invalid");
+            foundTimerSum = true;
+        }
+    }
+
+    expect(foundCounter, "Counter metric missing");
+    expect(foundGauge, "Gauge metric missing");
+    expect(foundTimerCount, "Timer count metric missing");
+    expect(foundTimerSum, "Timer sum metric missing");
+  }
+
   void testMetricsCollection() {
     beginTest("Lock-free Ring Buffer Writes");
 
