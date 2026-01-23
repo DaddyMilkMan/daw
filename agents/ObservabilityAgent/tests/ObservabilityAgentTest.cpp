@@ -18,10 +18,68 @@ public:
 
   void runTest() override {
     testMetricsCollection();
+    testAggregation();
     testPeriodicExport();
   }
 
 private:
+  void testAggregation() {
+    beginTest("Metrics Aggregation");
+
+    ObservabilityAgent agent;
+    agent.setEnabled(true);
+
+    // Record some metrics
+    agent.recordCounter("requests_total", 1.0);
+    agent.recordCounter("requests_total", 1.0);
+    agent.recordGauge("memory_usage", 1024.0);
+    agent.recordGauge("memory_usage", 2048.0); // Should overwrite
+
+    // Record Timer
+    uint64_t start = agent.startTimer();
+    // Emulate duration
+    juce::Thread::sleep(1);
+    agent.endTimer("processing_time", start);
+
+    // Another timer
+    start = agent.startTimer();
+    juce::Thread::sleep(1);
+    agent.endTimer("processing_time", start);
+
+    // Now get metrics
+    auto metrics = agent.getMetrics();
+
+    // Verify
+    bool foundRequests = false;
+    bool foundMemory = false;
+    bool foundTimerSum = false;
+    bool foundTimerCount = false;
+
+    for (const auto& m : metrics) {
+      if (m.name == "requests_total") {
+        foundRequests = true;
+        expectEquals(m.value, 2.0, "Counter should sum to 2.0");
+        expect(m.type == ObservabilityAgent::MetricType::Counter);
+      } else if (m.name == "memory_usage") {
+        foundMemory = true;
+        expectEquals(m.value, 2048.0, "Gauge should be 2048.0");
+        expect(m.type == ObservabilityAgent::MetricType::Gauge);
+      } else if (m.name == "processing_time_sum") {
+        foundTimerSum = true;
+        expectGreaterThan(m.value, 0.0, "Timer sum should be positive");
+      } else if (m.name == "processing_time_count") {
+        foundTimerCount = true;
+        expectEquals(m.value, 2.0, "Timer count should be 2");
+        expect(m.type == ObservabilityAgent::MetricType::Counter);
+      }
+    }
+
+    expect(foundRequests, "requests_total metric found");
+    expect(foundMemory, "memory_usage metric found");
+    expect(foundTimerSum, "processing_time_sum metric found");
+    expect(foundTimerCount, "processing_time_count metric found");
+  }
+
   void testMetricsCollection() {
     beginTest("Lock-free Ring Buffer Writes");
 

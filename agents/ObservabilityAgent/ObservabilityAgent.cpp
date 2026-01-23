@@ -207,7 +207,6 @@ std::vector<ObservabilityAgent::Metric> ObservabilityAgent::getMetrics() {
   std::vector<Metric> metrics;
   
   // Create a sample metric from the internal counter for testing/demonstration
-  // until the ring buffer is implemented.
   Metric m;
   m.name = "zenith_metrics_collected_total";
   m.type = MetricType::Counter;
@@ -216,15 +215,89 @@ std::vector<ObservabilityAgent::Metric> ObservabilityAgent::getMetrics() {
 
   metrics.push_back(m);
 
-  // TODO: Read from lock-free ring buffer
-  // TODO: Aggregate metrics by name
-  // TODO: Apply time-based windowing
+  // Lock for aggregation
+  std::lock_guard<std::mutex> lock(metricsMutex_);
+
+  // Drain ring buffer
+  int start1, size1, start2, size2;
+  // Try to read everything available
+  ringBufferFifo_.prepareToRead(kRingBufferSize, start1, size1, start2, size2);
+
+  if (size1 + size2 > 0) {
+    auto processEvent = [this](int index) {
+      const auto& event = ringBufferData_[static_cast<size_t>(index)];
+      std::string name = event.name;
+      auto eventTime = Timestamp(std::chrono::steady_clock::duration(event.timestamp));
+
+      if (event.type == MetricType::Timer) {
+        // Handle Timer: Split into _sum and _count
+        std::string sumName = name + "_sum";
+        std::string countName = name + "_count";
+
+        // Update Sum
+        auto& sumMetric = aggregatedMetrics_[sumName];
+        if (sumMetric.name.empty()) {
+          sumMetric.name = sumName;
+          sumMetric.type = MetricType::Timer;
+          sumMetric.value = 0.0;
+        }
+        sumMetric.value += event.value;
+        sumMetric.timestamp = eventTime;
+
+        // Update Count
+        auto& countMetric = aggregatedMetrics_[countName];
+        if (countMetric.name.empty()) {
+          countMetric.name = countName;
+          countMetric.type = MetricType::Counter;
+          countMetric.value = 0.0;
+        }
+        countMetric.value += 1.0;
+        countMetric.timestamp = eventTime;
+
+      } else {
+        // Handle Counter and Gauge
+        auto& metric = aggregatedMetrics_[name];
+        if (metric.name.empty()) {
+          metric.name = name;
+          metric.type = event.type;
+          metric.value = 0.0;
+        }
+
+        metric.type = event.type;
+        metric.timestamp = eventTime;
+
+        if (event.type == MetricType::Counter) {
+          metric.value += event.value;
+        } else { // Gauge
+          metric.value = event.value;
+        }
+      }
+    };
+
+    for (int i = 0; i < size1; ++i) processEvent(start1 + i);
+    for (int i = 0; i < size2; ++i) processEvent(start2 + i);
+
+    ringBufferFifo_.finishedRead(size1 + size2);
+  }
+
+  // Convert map to vector
+  for (const auto& pair : aggregatedMetrics_) {
+    metrics.push_back(pair.second);
+  }
   
   return metrics;
 }
 
 void ObservabilityAgent::clearMetrics() {
-  // TODO: Clear lock-free ring buffer
+  // Clear ring buffer by reading everything
+  int s1, n1, s2, n2;
+  ringBufferFifo_.prepareToRead(kRingBufferSize, s1, n1, s2, n2);
+  ringBufferFifo_.finishedRead(n1 + n2);
+
+  // Clear aggregated metrics
+  std::lock_guard<std::mutex> lock(metricsMutex_);
+  aggregatedMetrics_.clear();
+
   metricsCollected_.store(0, std::memory_order_release);
 }
 

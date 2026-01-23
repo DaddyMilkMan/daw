@@ -13,6 +13,7 @@
 #include <chrono>
 #include <string>
 #include <vector>
+#include <map>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -159,6 +160,10 @@ private:
   static constexpr int kRingBufferSize = 4096;
   juce::AbstractFifo ringBufferFifo_{kRingBufferSize};
   std::vector<RawMetricEvent> ringBufferData_;
+
+  // Aggregated metrics state
+  std::map<std::string, Metric> aggregatedMetrics_;
+  std::mutex metricsMutex_;
 
   // TODO: Add metrics exporter (Prometheus, OpenTelemetry)
   // TODO: Add trace context propagation
