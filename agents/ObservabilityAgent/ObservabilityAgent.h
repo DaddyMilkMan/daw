@@ -15,6 +15,7 @@
 #include <vector>
 #include <thread>
 #include <mutex>
+#include <map>
 #include <condition_variable>
 #include <memory>
 #include <array>
@@ -29,7 +30,7 @@ class PrometheusExporter;
     ObservabilityAgent provides lock-free metrics collection and monitoring
     for real-time audio systems without impacting RT thread performance.
 */
-class ObservabilityAgent : public juce::Thread, private juce::Timer {
+class ObservabilityAgent : public juce::Thread {
 public:
   //==============================================================================
   using Timestamp = std::chrono::steady_clock::time_point;
@@ -120,7 +121,6 @@ public:
 private:
   //==============================================================================
   void run() override;
-  void timerCallback() override;
   void exportLoop();
   void stopExportThread();
 
@@ -159,6 +159,11 @@ private:
   static constexpr int kRingBufferSize = 4096;
   juce::AbstractFifo ringBufferFifo_{kRingBufferSize};
   std::vector<RawMetricEvent> ringBufferData_;
+  juce::SpinLock writerLock_;
+
+  // Aggregated state
+  std::mutex stateMutex_;
+  std::map<std::string, Metric> aggregatedMetrics_;
 
   // TODO: Add metrics exporter (Prometheus, OpenTelemetry)
   // TODO: Add trace context propagation
