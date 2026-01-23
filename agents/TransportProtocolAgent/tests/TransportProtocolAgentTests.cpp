@@ -25,10 +25,18 @@ public:
     int getCurrentBufferSizeSamples() override { return 256; }
     double getCurrentSampleRate() override { return 44100.0; }
     int getCurrentBitDepth() override { return 16; }
-    juce::BigInteger getActiveOutputChannels() const override { return {}; }
+    juce::BigInteger getActiveOutputChannels() const override {
+        juce::BigInteger bi; bi.setBit(0); bi.setBit(1); return bi;
+    }
     juce::BigInteger getActiveInputChannels() const override { return {}; }
     int getOutputLatencyInSamples() override { return 0; }
     int getInputLatencyInSamples() override { return 0; }
+    int getDefaultBufferSize() override { return 256; }
+
+    juce::Array<double> getAvailableSampleRates() override { return { 44100.0, 48000.0 }; }
+    juce::Array<int> getAvailableBufferSizes() override { return { 128, 256, 512 }; }
+    juce::StringArray getOutputChannelNames() override { return { "Out 1", "Out 2" }; }
+    juce::StringArray getInputChannelNames() override { return {}; }
 };
 
 // Mock AudioIODeviceType
@@ -58,12 +66,17 @@ public:
     juce::AudioIODevice* createDevice(const juce::String& outputDeviceName,
                                       const juce::String& inputDeviceName) override
     {
-        return new MockAudioIODevice(inputDeviceName.isNotEmpty() ? inputDeviceName : outputDeviceName, getTypeName());
+        // Return a mock device with the requested name.
+        // For simplicity in tests, we assume success.
+        juce::String name = inputDeviceName.isNotEmpty() ? inputDeviceName : outputDeviceName;
+        return new MockAudioIODevice(name, getTypeName());
     }
 
     // Test helpers
     void setInputDevices(const juce::StringArray& names) { inputDevices = names; }
+    void setOutputDevices(const juce::StringArray& names) { outputDevices = names; }
     void setDefaultInputIndex(int index) { defaultInputIndex = index; }
+    void setDefaultOutputIndex(int index) { defaultOutputIndex = index; }
 
 private:
     juce::StringArray inputDevices;
@@ -144,6 +157,77 @@ public:
 
             expectEquals(info.name, juce::String("HighDev"));
             expectEquals(info.apiType, highPriority);
+        }
+
+        beginTest("Enumerate Devices - Sanity and Mock Validation");
+        {
+            auto manager = std::make_unique<juce::AudioDeviceManager>();
+            auto mockType = std::make_unique<MockAudioIODeviceType>("MockType");
+
+            mockType->setInputDevices({"Input1", "ComboDevice"});
+            mockType->setOutputDevices({"Output1", "ComboDevice"});
+            mockType->setDefaultInputIndex(1); // ComboDevice
+            mockType->setDefaultOutputIndex(0); // Output1
+
+            manager->addAudioDeviceType(std::move(mockType));
+
+            // Set ComboDevice as active
+            juce::AudioDeviceManager::AudioDeviceSetup setup;
+            setup.inputDeviceName = "ComboDevice";
+            setup.outputDeviceName = "ComboDevice";
+            // In a real scenario we'd need to setSampleRate etc, but with mocks it might be enough to just set current type
+            manager->setCurrentAudioDeviceType("MockType", true);
+
+            // Manually open the device on the manager so it becomes 'current'
+            // The mock createDevice will return a MockAudioIODevice
+            manager->setAudioDeviceSetup(setup, true);
+
+            zenith::agents::TransportProtocolAgent agent(std::move(manager));
+            auto devices = agent.enumerateDevices();
+
+            expect(devices.size() == 3); // Input1, Output1, ComboDevice
+
+            bool foundCombo = false;
+            bool foundInput1 = false;
+            bool foundOutput1 = false;
+
+            for (const auto& d : devices)
+            {
+                if (d.name == "ComboDevice")
+                {
+                    foundCombo = true;
+                    expect(d.isDefault); // Default input
+                    expectEquals(d.apiType, juce::String("MockType"));
+
+                    // Since it's active, we expect capabilities to be populated
+                    expect(d.supportedSampleRates.contains(44100.0));
+                    expect(d.supportedBufferSizes.contains(256));
+                    expectEquals(d.numOutputChannels, 2); // Mock returns 2 active outputs
+                }
+                else if (d.name == "Input1")
+                {
+                    foundInput1 = true;
+                    expect(!d.isDefault);
+                    expectEquals(d.apiType, juce::String("MockType"));
+                    // Inactive, so estimation
+                    expectEquals(d.numInputChannels, 2);
+                    expectEquals(d.numOutputChannels, 0);
+                    expect(d.supportedSampleRates.isEmpty());
+                }
+                else if (d.name == "Output1")
+                {
+                    foundOutput1 = true;
+                    expect(d.isDefault); // Default output
+                    expectEquals(d.apiType, juce::String("MockType"));
+                    // Inactive
+                    expectEquals(d.numInputChannels, 0);
+                    expectEquals(d.numOutputChannels, 2);
+                }
+            }
+
+            expect(foundCombo);
+            expect(foundInput1);
+            expect(foundOutput1);
         }
     }
 };
