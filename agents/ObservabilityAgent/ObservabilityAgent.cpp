@@ -168,10 +168,10 @@ void ObservabilityAgent::setExportInterval(std::chrono::milliseconds interval) {
     lock.unlock(); // Unlock before stopping to avoid deadlock
     stopExportThread();
   } else {
-      lock.unlock();
-      // Wake up thread to pick up new interval if already running
-      // Notify after unlocking for better performance (avoids immediate re-block)
-      exportCv_.notify_all();
+    lock.unlock();
+    // Wake up thread to pick up new interval if already running
+    // Notify after unlocking for better performance (avoids immediate re-block)
+    exportCv_.notify_all();
   }
 }
 
@@ -253,7 +253,15 @@ void ObservabilityAgent::exportLoop() {
             std::unique_lock<std::mutex> lock(exportMutex_);
             interval = exportInterval_;
             
-            if (interval.count() <= 0) break;
+            // If interval is 0 or negative, skip export but stay in loop
+            // Thread will exit via shouldExitExportThread_ flag
+            if (interval.count() <= 0) {
+                // Wait indefinitely for signal (interval change or exit)
+                exportCv_.wait(lock, [this] {
+                    return shouldExitExportThread_.load(std::memory_order_acquire);
+                });
+                continue;
+            }
             
             // Wait for the interval or until signaled to exit
             // We check shouldExitExportThread_ in the predicate for responsiveness
