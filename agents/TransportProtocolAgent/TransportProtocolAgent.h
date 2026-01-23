@@ -94,6 +94,8 @@ private:
   //==============================================================================
   std::unique_ptr<juce::AudioDeviceManager> deviceManager_;
   DeviceState currentState_{DeviceState::Disconnected};
+
+  juce::StringArray getPlatformSearchOrder() const;
   
   // TODO: Add platform-specific backend implementations
   // TODO: Add device hot-plug detection
