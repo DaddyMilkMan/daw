@@ -19,9 +19,47 @@ public:
   void runTest() override {
     testMetricsCollection();
     testPeriodicExport();
+    testLogging();
   }
 
 private:
+  void testLogging() {
+    beginTest("Logging to File");
+
+    ObservabilityAgent agent;
+
+    // Create a temporary file
+    auto logFile = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                   .getChildFile("test_log.txt");
+
+    if (logFile.exists()) {
+      logFile.deleteFile();
+    }
+
+    agent.setLogFile(logFile);
+
+    const char* msg = "Test log message";
+    agent.log(ObservabilityAgent::LogLevel::Info, msg);
+
+    // Allow time for the logging thread to process
+    // The loop waits 100ms, so give it enough time
+    juce::Thread::sleep(250);
+
+    // Stop thread to ensure flush
+    agent.stopThread(1000);
+
+    expect(logFile.existsAsFile(), "Log file should exist");
+
+    if (logFile.existsAsFile()) {
+      juce::String content = logFile.loadFileAsString();
+      expect(content.contains(msg), "Log file should contain message");
+      expect(content.contains("[INFO]"), "Log file should contain level");
+      expect(content.contains("[0x"), "Log file should contain thread ID in hex");
+    }
+
+    logFile.deleteFile();
+  }
+
   void testMetricsCollection() {
     beginTest("Lock-free Ring Buffer Writes");
 

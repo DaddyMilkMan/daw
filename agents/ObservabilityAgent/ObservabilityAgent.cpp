@@ -9,6 +9,9 @@
 #include "PrometheusExporter.h"
 #include <cstring>
 #include <cstdio>
+#include <sstream>
+#include <iomanip>
+#include <ctime>
 
 namespace zenith {
 namespace agents {
@@ -32,7 +35,6 @@ ObservabilityAgent::~ObservabilityAgent() {
   stopThread(1000);
   stopExportThread();
   // Flush any pending metrics
-  stopTimer();
   exportMetrics();
 }
 
@@ -121,6 +123,7 @@ void ObservabilityAgent::log(LogLevel level, const char* message) noexcept {
     auto& entry = logBuffer_[static_cast<size_t>(start1)];
     entry.level = level;
     entry.timestamp = startTimer();
+    entry.threadId = reinterpret_cast<uint64_t>(juce::Thread::getCurrentThreadId());
 
     // RT-safe string copy
     std::strncpy(entry.message, message, sizeof(entry.message) - 1);
@@ -169,13 +172,6 @@ void ObservabilityAgent::setExportInterval(std::chrono::milliseconds interval) {
       // Wake up thread to pick up new interval if already running
       exportCv_.notify_all();
   }
-  
-  // Keep timer for compatibility if needed, or remove if thread supersedes
-  if (interval.count() > 0) {
-    juce::Timer::startTimer(static_cast<int>(interval.count()));
-  } else {
-    stopTimer();
-  }
 }
 
 void ObservabilityAgent::setMetricsFile(const juce::File& file) {
@@ -183,24 +179,34 @@ void ObservabilityAgent::setMetricsFile(const juce::File& file) {
     metricsFile_ = file;
 }
 
+void ObservabilityAgent::setLogFile(const juce::File& file) {
+    std::lock_guard<std::mutex> lock(exportMutex_);
+    logStream_ = file.createOutputStream();
+}
+
 void ObservabilityAgent::exportMetrics() {
   if (!enabled_.load(std::memory_order_acquire)) {
     return;
   }
 
-  // TODO: Drain lock-free ring buffer
-  // TODO: Send to configured exporters
+  // TODO: Drain lock-free ring buffer (ringBufferFifo_) and update local counters
 
-  // For now, track export count for verification
+  auto metrics = getMetrics();
+  juce::File dest;
+  {
+      std::lock_guard<std::mutex> lock(exportMutex_);
+      dest = metricsFile_;
+  }
+  if (exporter_) {
+      exporter_->exportMetrics(metrics, dest);
+  }
+
+  // Track export count for verification
   exportCount_.fetch_add(1, std::memory_order_relaxed);
 }
 
 uint64_t ObservabilityAgent::getExportCount() const {
   return exportCount_.load(std::memory_order_relaxed);
-}
-
-void ObservabilityAgent::timerCallback() {
-  exportMetrics();
 }
 
 std::vector<ObservabilityAgent::Metric> ObservabilityAgent::getMetrics() {
@@ -259,37 +265,63 @@ void ObservabilityAgent::exportLoop() {
         }
 
         // Export metrics
-        if (enabled_.load(std::memory_order_acquire)) {
-            auto metrics = getMetrics();
-            juce::File dest;
-            {
-                std::lock_guard<std::mutex> lock(exportMutex_);
-                dest = metricsFile_;
-            }
-            if (exporter_) {
-                exporter_->exportMetrics(metrics, dest);
-            }
-        }
+        exportMetrics();
+    }
+}
+
+static const char* logLevelToString(ObservabilityAgent::LogLevel level) {
+    switch (level) {
+        case ObservabilityAgent::LogLevel::Debug: return "DEBUG";
+        case ObservabilityAgent::LogLevel::Info: return "INFO";
+        case ObservabilityAgent::LogLevel::Warning: return "WARN";
+        case ObservabilityAgent::LogLevel::Error: return "ERROR";
+        case ObservabilityAgent::LogLevel::Critical: return "CRITICAL";
+        default: return "UNKNOWN";
     }
 }
 
 void ObservabilityAgent::run() {
+  // Capture clock offset once at startup
+  auto steadyBase = std::chrono::steady_clock::now();
+  auto systemBase = std::chrono::system_clock::now();
+
   while (!threadShouldExit()) {
     int start1, size1, start2, size2;
     logFifo_.prepareToRead(kLogQueueSize, start1, size1, start2, size2);
 
     if (size1 + size2 > 0) {
-      auto process = [this](int index) {
+      std::lock_guard<std::mutex> lock(exportMutex_);
+
+      auto process = [&](int index) {
         const auto& entry = logBuffer_[static_cast<size_t>(index)];
-        // Simple console output for now
-        // In production this would write to a file or aggregation service
-        // DBG("[" << static_cast<int>(entry.level) << "] "
-        //     << entry.timestamp << ": "
-        //     << entry.message);
+
+        // Convert steady timestamp to system wall time
+        auto entrySteady = std::chrono::steady_clock::time_point(std::chrono::steady_clock::duration(entry.timestamp));
+        auto diff = entrySteady - steadyBase;
+        auto entrySystem = systemBase + std::chrono::duration_cast<std::chrono::system_clock::duration>(diff);
+
+        auto msSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(entrySystem.time_since_epoch()).count();
+        juce::Time t(msSinceEpoch);
+
+        std::stringstream ss;
+        ss << "[" << t.formatted("%Y-%m-%d %H:%M:%S").toStdString()
+           << "." << std::setfill('0') << std::setw(3) << (msSinceEpoch % 1000) << "] "
+           << "[" << logLevelToString(entry.level) << "] "
+           << "[0x" << std::hex << entry.threadId << "] "
+           << entry.message << "\n";
+
+        auto line = ss.str();
+        if (logStream_) {
+             logStream_->write(line.c_str(), line.length());
+        }
       };
 
       for (int i = 0; i < size1; ++i) process(start1 + i);
       for (int i = 0; i < size2; ++i) process(start2 + i);
+
+      if (logStream_) {
+          logStream_->flush();
+      }
 
       logFifo_.finishedRead(size1 + size2);
     }
