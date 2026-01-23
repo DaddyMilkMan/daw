@@ -74,13 +74,14 @@ struct ZenithInstrumentPreset {
 
   /**
    * @brief Create preset with existing ID (Optimized)
-   * @note The id_ parameter must not be empty. Use the 3-parameter constructor
-   *       to generate an ID automatically.
+   * @note The id_ parameter must not be empty. Use the name/instrumentId/author
+   *       constructor to generate an ID automatically.
    */
   ZenithInstrumentPreset(const std::string &id_, const std::string &name_,
                          const std::string &instrumentId_,
                          const std::string &author_) noexcept
       : id(id_), name(name_), instrumentId(instrumentId_), author(author_) {
+    // Assert in debug builds, but this is also checked at deserialization time
     jassert(!id_.empty() && "Preset ID must not be empty");
   }
 
