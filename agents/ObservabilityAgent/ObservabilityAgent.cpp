@@ -32,7 +32,6 @@ ObservabilityAgent::~ObservabilityAgent() {
   stopThread(1000);
   stopExportThread();
   // Flush any pending metrics
-  stopTimer();
   exportMetrics();
 }
 
@@ -169,13 +168,6 @@ void ObservabilityAgent::setExportInterval(std::chrono::milliseconds interval) {
       // Wake up thread to pick up new interval if already running
       exportCv_.notify_all();
   }
-  
-  // Keep timer for compatibility if needed, or remove if thread supersedes
-  if (interval.count() > 0) {
-    juce::Timer::startTimer(static_cast<int>(interval.count()));
-  } else {
-    stopTimer();
-  }
 }
 
 void ObservabilityAgent::setMetricsFile(const juce::File& file) {
@@ -188,8 +180,16 @@ void ObservabilityAgent::exportMetrics() {
     return;
   }
 
-  // TODO: Drain lock-free ring buffer
-  // TODO: Send to configured exporters
+  auto metrics = getMetrics();
+  juce::File dest;
+  {
+      std::lock_guard<std::mutex> lock(exportMutex_);
+      dest = metricsFile_;
+  }
+
+  if (exporter_) {
+      exporter_->exportMetrics(metrics, dest);
+  }
 
   // For now, track export count for verification
   exportCount_.fetch_add(1, std::memory_order_relaxed);
@@ -197,10 +197,6 @@ void ObservabilityAgent::exportMetrics() {
 
 uint64_t ObservabilityAgent::getExportCount() const {
   return exportCount_.load(std::memory_order_relaxed);
-}
-
-void ObservabilityAgent::timerCallback() {
-  exportMetrics();
 }
 
 std::vector<ObservabilityAgent::Metric> ObservabilityAgent::getMetrics() {
@@ -259,17 +255,7 @@ void ObservabilityAgent::exportLoop() {
         }
 
         // Export metrics
-        if (enabled_.load(std::memory_order_acquire)) {
-            auto metrics = getMetrics();
-            juce::File dest;
-            {
-                std::lock_guard<std::mutex> lock(exportMutex_);
-                dest = metricsFile_;
-            }
-            if (exporter_) {
-                exporter_->exportMetrics(metrics, dest);
-            }
-        }
+        exportMetrics();
     }
 }
 
