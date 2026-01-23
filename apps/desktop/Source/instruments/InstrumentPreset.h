@@ -42,10 +42,10 @@ struct ZenithInstrumentPreset {
   std::string instrumentId; ///< Target instrument (e.g., "zenith_poly_synth")
 
   // New taxonomy fields
-  std::string soundType;            /// < Sound type (e.g., "Bass", "Pad")
-  std::vector<std::string> engines; /// < Engine tags (e.g., "VA", "FM")
+  std::string soundType;            ///< Sound type (e.g., "Bass", "Pad")
+  std::vector<std::string> engines; ///< Engine tags (e.g., "VA", "FM")
   std::vector<std::string>
-      characters; /// < Character tags (e.g., "Bright", "Warm")
+      characters; ///< Character tags (e.g., "Bright", "Warm")
 
   // Metadata
   std::string category;    ///< Category (e.g., "Bass", "Lead", "Pad", "808")
