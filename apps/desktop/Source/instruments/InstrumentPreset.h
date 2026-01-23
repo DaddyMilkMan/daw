@@ -184,7 +184,9 @@ struct ZenithInstrumentPreset {
     std::string author =
         tree.getProperty("author", "Unknown").toString().toStdString();
 
-    ZenithInstrumentPreset preset(id, name, instrumentId, author);
+    ZenithInstrumentPreset preset =
+        id.empty() ? ZenithInstrumentPreset(name, instrumentId, author)
+                   : ZenithInstrumentPreset(id, name, instrumentId, author);
 
     preset.category = tree.getProperty("category", "").toString().toStdString();
     preset.description =
@@ -329,7 +331,9 @@ struct ZenithInstrumentPreset {
         obj->getProperty("instrumentId").toString().toStdString();
     std::string author = obj->getProperty("author").toString().toStdString();
 
-    ZenithInstrumentPreset preset(id, name, instrumentId, author);
+    ZenithInstrumentPreset preset =
+        id.empty() ? ZenithInstrumentPreset(name, instrumentId, author)
+                   : ZenithInstrumentPreset(id, name, instrumentId, author);
 
     preset.category = obj->getProperty("category").toString().toStdString();
     preset.description =
