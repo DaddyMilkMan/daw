@@ -62,28 +62,29 @@ struct ZenithInstrumentPreset {
   ZenithInstrumentPreset() = default;
 
   /**
-   * @brief Create preset with basic info
+   * @brief Create preset with basic info (Generates ID)
    */
   ZenithInstrumentPreset(const std::string &name_,
                          const std::string &instrumentId_,
-                         const std::string &author_ = "Factory",
-                         const std::string &id_ = "")
+                         const std::string &author_ = "Factory")
       : name(name_), instrumentId(instrumentId_), author(author_) {
-    if (id_.empty()) {
-      // Generate unique ID from name and timestamp
-      id = generateId(name_);
-    } else {
-      id = id_;
-    }
+    id = generateId(name_);
   }
 
   /**
    * @brief Create preset with existing ID (Optimized)
    */
-  ZenithInstrumentPreset(const std::string &id_, const std::string &name_,
+  ZenithInstrumentPreset(const std::string &name_,
                          const std::string &instrumentId_,
-                         const std::string &author_ = "Factory")
-      : id(id_), name(name_), instrumentId(instrumentId_), author(author_) {}
+                         const std::string &author_,
+                         const std::string &id_)
+      : name(name_), instrumentId(instrumentId_), author(author_) {
+    if (id_.empty()) {
+      id = generateId(name_);
+    } else {
+      id = id_;
+    }
+  }
 
   /**
    * @brief Set parameter value
@@ -189,7 +190,8 @@ struct ZenithInstrumentPreset {
     std::string author =
         tree.getProperty("author", "Unknown").toString().toStdString();
 
-    ZenithInstrumentPreset preset(id, name, instrumentId, author);
+    // Use optimized constructor
+    ZenithInstrumentPreset preset(name, instrumentId, author, id);
 
     preset.category = tree.getProperty("category", "").toString().toStdString();
     preset.description =
@@ -334,7 +336,8 @@ struct ZenithInstrumentPreset {
         obj->getProperty("instrumentId").toString().toStdString();
     std::string author = obj->getProperty("author").toString().toStdString();
 
-    ZenithInstrumentPreset preset(id, name, instrumentId, author);
+    // Use optimized constructor
+    ZenithInstrumentPreset preset(name, instrumentId, author, id);
 
     preset.category = obj->getProperty("category").toString().toStdString();
     preset.description =
