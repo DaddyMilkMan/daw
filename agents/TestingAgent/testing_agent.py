@@ -23,6 +23,11 @@ try:
     NUMPY_AVAILABLE = True
 except ImportError:
     NUMPY_AVAILABLE = False
+    # Create mock for type hinting
+    class MockNumpy:
+        ndarray = list
+        float32 = float
+    np = MockNumpy()
 
 
 class TestType(Enum):
@@ -163,7 +168,7 @@ class TestingAgent:
     UNSAFE_PATTERNS = {
         "Allocation": re.compile(r"\b(new|delete|malloc|calloc|realloc|free|strdup)\b"),
         "Smart Pointer": re.compile(r"\bstd::(make_unique|make_shared)\b"),
-        "Container Mutation": re.compile(r"\.(push_back|emplace_back|resize|reserve|insert)\s*\("),
+        "Container Mutation": re.compile(r"\.(push_back|emplace_back|resize|reserve|insert|clear|erase|pop_back|pop_front|assign)\s*\("),
         "String Usage": re.compile(r"\b(std::string|juce::String)\b"),
         "Lock": re.compile(r"\bstd::(mutex|lock_guard|unique_lock|condition_variable)\b|\bjuce::(CriticalSection|ScopedLock)\b"),
         "I/O": re.compile(r"\b(std::cout|std::cerr|printf|fprintf|std::fstream)\b|\bjuce::(Logger|File)\b|\bDBG\b"),
@@ -961,7 +966,7 @@ class TestingAgent:
                 for line in result.stdout.splitlines():
                     if "Creating '" in line:
                         # Extract filename from "Creating 'filename'"
-                        fname = line.split("'"[1]
+                        fname = line.split("'")[1]
                         generated_files.append(cwd / fname)
 
                 # Read and parse .gcov files
