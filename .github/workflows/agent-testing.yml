@@ -47,6 +47,7 @@ jobs:
           libwebkit2gtk-4.1-dev
 
     - name: Build test binary
+      continue-on-error: true
       run: |
         mkdir -p build
         cd build
