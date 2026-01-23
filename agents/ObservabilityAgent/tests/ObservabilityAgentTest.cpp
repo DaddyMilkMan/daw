@@ -19,6 +19,7 @@ public:
   void runTest() override {
     testMetricsCollection();
     testPeriodicExport();
+    testLogging();
   }
 
 private:
@@ -93,18 +94,8 @@ private:
     // Set interval to 50ms
     agent.setExportInterval(std::chrono::milliseconds(50));
 
-    // Wait for at least one export (allow 150ms to be safe)
-    // We must pump the message loop to allow the Timer to fire
-
-    // Ensure message manager is initialized
-    if (auto* mm = juce::MessageManager::getInstance()) {
-        juce::Timer::callAfterDelay(150, [mm] { mm->stopDispatchLoop(); });
-        mm->runDispatchLoop();
-    } else {
-        // Fallback if no message manager (shouldn't happen with correct runner)
-        // But for Timer to work, MessageManager MUST be present.
-        expect(false, "MessageManager not initialized, Timer cannot run");
-    }
+    // Wait for at least one export (allow 200ms to be safe)
+    juce::Thread::sleep(200);
 
     // Check that exports happened
     expect(agent.getExportCount() > 0, "Metrics should have been exported at least once");
@@ -113,13 +104,38 @@ private:
     agent.setExportInterval(std::chrono::milliseconds(0));
     uint64_t countAfterStop = agent.getExportCount();
 
-    // Wait again
-    if (auto* mm = juce::MessageManager::getInstance()) {
-        juce::Timer::callAfterDelay(150, [mm] { mm->stopDispatchLoop(); });
-        mm->runDispatchLoop();
-    }
+    // Wait again to ensure no more exports happen
+    juce::Thread::sleep(100);
 
     expectEquals(agent.getExportCount(), countAfterStop, "Metrics should not be exported after stopping");
+  }
+
+  void testLogging() {
+    beginTest("Logging to File");
+
+    ObservabilityAgent agent;
+    juce::File tempFile = juce::File::getSpecialLocation(juce::File::tempDirectory)
+        .getChildFile("zenith_test_log.txt");
+
+    if (tempFile.exists()) tempFile.deleteFile();
+
+    agent.setLogFile(tempFile);
+
+    const char* msg = "Test log message";
+    agent.log(ObservabilityAgent::LogLevel::Info, msg);
+
+    // Give time for the thread to process the log
+    juce::Thread::sleep(150);
+
+    expect(tempFile.existsAsFile(), "Log file should exist");
+
+    // Read content
+    juce::String content = tempFile.loadFileAsString();
+    expect(content.contains(msg), "Log file should contain message");
+    expect(content.contains("INFO"), "Log file should contain level");
+
+    // Clean up
+    tempFile.deleteFile();
   }
 };
 
