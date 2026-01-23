@@ -4,44 +4,7 @@
 #include <vector>
 #include <algorithm>
 
-// Mocking the behavior of the original class
-class BaselinePreset {
-public:
-    std::string id;
-    std::string name;
-    std::string instrumentId;
-    std::string author;
-
-    BaselinePreset(const std::string &name_,
-                   const std::string &instrumentId_,
-                   const std::string &author_ = "Factory")
-        : name(name_), instrumentId(instrumentId_), author(author_) {
-        id = generateId(name_);
-    }
-
-private:
-    static std::string generateId(const std::string &name) {
-        // Simulate string processing
-        std::string sanitized = name;
-        std::transform(sanitized.begin(), sanitized.end(), sanitized.begin(),
-                       [](unsigned char c){ return std::tolower(c); });
-        std::replace(sanitized.begin(), sanitized.end(), ' ', '_');
-
-        // Remove non-alphanumeric (simplified retainCharacters)
-        sanitized.erase(std::remove_if(sanitized.begin(), sanitized.end(),
-            [](char c) { return !std::isalnum(c) && c != '_'; }),
-            sanitized.end());
-
-        // Simulate syscall
-        auto now = std::chrono::system_clock::now();
-        auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
-            now.time_since_epoch()).count();
-
-        return sanitized + "_" + std::to_string(timestamp);
-    }
-};
-
-// Mocking the optimized behavior
+// Mocking the optimized behavior with Static Factory Methods
 class OptimizedPreset {
 public:
     std::string id;
@@ -49,21 +12,34 @@ public:
     std::string instrumentId;
     std::string author;
 
-    OptimizedPreset(const std::string &name_,
-                    const std::string &instrumentId_,
-                    const std::string &author_ = "Factory",
-                    const std::string &id_ = "")
-        : name(name_), instrumentId(instrumentId_), author(author_) {
-        if (!id_.empty()) {
-            id = id_;
-        } else {
-            id = generateId(name_);
-        }
+    OptimizedPreset() = default;
+
+    static OptimizedPreset createNew(const std::string &name,
+                                     const std::string &instrumentId,
+                                     const std::string &author = "Factory") {
+        OptimizedPreset preset;
+        preset.name = name;
+        preset.instrumentId = instrumentId;
+        preset.author = author;
+        preset.id = generateId(name);
+        return preset;
+    }
+
+    static OptimizedPreset loadExisting(const std::string &id,
+                                        const std::string &name,
+                                        const std::string &instrumentId,
+                                        const std::string &author = "Factory") {
+        OptimizedPreset preset;
+        preset.id = id;
+        preset.name = name;
+        preset.instrumentId = instrumentId;
+        preset.author = author;
+        return preset;
     }
 
 private:
     static std::string generateId(const std::string &name) {
-        // Same logic as above
+        // Simulate string processing
         std::string sanitized = name;
         std::transform(sanitized.begin(), sanitized.end(), sanitized.begin(),
                        [](unsigned char c){ return std::tolower(c); });
@@ -90,37 +66,33 @@ int main() {
 
     std::cout << "Running benchmark with " << iterations << " iterations..." << std::endl;
 
-    // Benchmark Baseline (Pattern A: Create then Overwrite)
+    // Benchmark Loading via loadExisting
     auto start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < iterations; ++i) {
-        BaselinePreset preset(testName, testInstId, testAuthor);
-        // Simulate overwriting the ID (e.g., loading from JSON)
-        preset.id = existingId;
+        auto preset = OptimizedPreset::loadExisting(existingId, testName, testInstId, testAuthor);
 
         // Prevent optimization
         if (preset.id.empty()) std::cout << "error";
     }
     auto end = std::chrono::high_resolution_clock::now();
-    auto baselineDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
-    std::cout << "Baseline (Create + Overwrite): " << baselineDuration << " us" << std::endl;
+    std::cout << "Load Existing (Static Factory): " << duration << " us" << std::endl;
 
-    // Benchmark Optimized (Constructor Injection)
+    // Benchmark Creation via createNew
     start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < iterations; ++i) {
-        OptimizedPreset preset(testName, testInstId, testAuthor, existingId);
+        auto preset = OptimizedPreset::createNew(testName, testInstId, testAuthor);
 
         // Prevent optimization
         if (preset.id.empty()) std::cout << "error";
     }
     end = std::chrono::high_resolution_clock::now();
-    auto optimizedDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+    auto createDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
-    std::cout << "Optimized (Constructor Injection): " << optimizedDuration << " us" << std::endl;
+    std::cout << "Create New (Static Factory): " << createDuration << " us" << std::endl;
 
-    double improvement = (double)(baselineDuration - optimizedDuration) / baselineDuration * 100.0;
-    std::cout << "Improvement: " << improvement << "%" << std::endl;
-    std::cout << "Speedup: " << (double)baselineDuration / optimizedDuration << "x" << std::endl;
+    std::cout << "Performance Ratio (Create / Load): " << (double)createDuration / duration << "x" << std::endl;
 
     return 0;
 }
