@@ -29,7 +29,7 @@ class PrometheusExporter;
     ObservabilityAgent provides lock-free metrics collection and monitoring
     for real-time audio systems without impacting RT thread performance.
 */
-class ObservabilityAgent : public juce::Thread, private juce::Timer {
+class ObservabilityAgent : public juce::Thread {
 public:
   //==============================================================================
   using Timestamp = std::chrono::steady_clock::time_point;
@@ -120,7 +120,6 @@ public:
 private:
   //==============================================================================
   void run() override;
-  void timerCallback() override;
   void exportLoop();
   void stopExportThread();
 

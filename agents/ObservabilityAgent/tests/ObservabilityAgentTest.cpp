@@ -94,30 +94,19 @@ private:
     agent.setExportInterval(std::chrono::milliseconds(50));
 
     // Wait for at least one export (allow 150ms to be safe)
-    // We must pump the message loop to allow the Timer to fire
-
-    // Ensure message manager is initialized
-    if (auto* mm = juce::MessageManager::getInstance()) {
-        juce::Timer::callAfterDelay(150, [mm] { mm->stopDispatchLoop(); });
-        mm->runDispatchLoop();
-    } else {
-        // Fallback if no message manager (shouldn't happen with correct runner)
-        // But for Timer to work, MessageManager MUST be present.
-        expect(false, "MessageManager not initialized, Timer cannot run");
-    }
+    // Using std::thread, so we just sleep
+    std::this_thread::sleep_for(std::chrono::milliseconds(150));
 
     // Check that exports happened
     expect(agent.getExportCount() > 0, "Metrics should have been exported at least once");
 
-    // Stop export
+    // Stop export (blocks until thread stops)
     agent.setExportInterval(std::chrono::milliseconds(0));
+
     uint64_t countAfterStop = agent.getExportCount();
 
-    // Wait again
-    if (auto* mm = juce::MessageManager::getInstance()) {
-        juce::Timer::callAfterDelay(150, [mm] { mm->stopDispatchLoop(); });
-        mm->runDispatchLoop();
-    }
+    // Wait again to ensure no more exports occur
+    std::this_thread::sleep_for(std::chrono::milliseconds(150));
 
     expectEquals(agent.getExportCount(), countAfterStop, "Metrics should not be exported after stopping");
   }
