@@ -1,7 +1,7 @@
 import random
 import threading
 import time
-from collections import OrderedDict
+from collections import OrderedDict, deque
 from dataclasses import dataclass, field
 from typing import Dict, Optional, Tuple
 
@@ -21,6 +21,12 @@ class SessionStore:
         self._ttl = ttl
         self._sessions: OrderedDict[str, SessionEntry] = OrderedDict()
         self._lock = threading.RLock()
+
+        # Pre-allocate and shuffle all possible 4-digit codes (1000-9999)
+        # O(N) initialization
+        all_codes = [str(i) for i in range(1000, 10000)]
+        random.shuffle(all_codes)
+        self._available_codes = deque(all_codes)
 
     def create_session(self) -> str:
         with self._lock:
@@ -60,16 +66,16 @@ class SessionStore:
                 session = self._sessions[code]
                 if now - session.timestamp > self._ttl:
                     self._sessions.popitem(last=False)
+                    self._available_codes.append(code) # Recycle the code
                     expired_count += 1
                 else:
                     break
             return expired_count
 
     def _generate_code(self) -> str:
-        while True:
-            candidate = str(random.randint(1000, 9999))
-            if candidate not in self._sessions:
-                return candidate
+        if not self._available_codes:
+            raise RuntimeError("Session store full")
+        return self._available_codes.pop()
 
 
 __all__ = ["SessionStore"]
