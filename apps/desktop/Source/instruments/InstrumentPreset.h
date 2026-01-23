@@ -62,29 +62,40 @@ struct ZenithInstrumentPreset {
   ZenithInstrumentPreset() = default;
 
   /**
-   * @brief Create preset with basic info
+   * @brief Create a new preset (Generates a unique ID)
    */
-  ZenithInstrumentPreset(const std::string &name_,
-                         const std::string &instrumentId_,
-                         const std::string &author_ = "Factory",
-                         const std::string &id_ = "")
-      : name(name_), instrumentId(instrumentId_), author(author_) {
-    if (id_.empty()) {
-      // Generate unique ID from name and timestamp
-      id = generateId(name_);
-    } else {
-      id = id_;
-    }
+  static ZenithInstrumentPreset createNew(const std::string &name,
+                                          const std::string &instrumentId,
+                                          const std::string &author = "Factory") {
+    return ZenithInstrumentPreset(name, instrumentId, author);
   }
 
   /**
-   * @brief Create preset with existing ID (Optimized)
+   * @brief Load an existing preset (Uses provided ID)
    */
+  static ZenithInstrumentPreset loadExisting(const std::string &id,
+                                             const std::string &name,
+                                             const std::string &instrumentId,
+                                             const std::string &author = "Factory") {
+    return ZenithInstrumentPreset(id, name, instrumentId, author);
+  }
+
+private:
+  // Internal constructor for creation (generates ID)
+  ZenithInstrumentPreset(const std::string &name_,
+                         const std::string &instrumentId_,
+                         const std::string &author_)
+      : name(name_), instrumentId(instrumentId_), author(author_) {
+    id = generateId(name_);
+  }
+
+  // Internal constructor for loading (uses existing ID)
   ZenithInstrumentPreset(const std::string &id_, const std::string &name_,
                          const std::string &instrumentId_,
-                         const std::string &author_ = "Factory")
+                         const std::string &author_)
       : id(id_), name(name_), instrumentId(instrumentId_), author(author_) {}
 
+public:
   /**
    * @brief Set parameter value
    */
@@ -189,7 +200,8 @@ struct ZenithInstrumentPreset {
     std::string author =
         tree.getProperty("author", "Unknown").toString().toStdString();
 
-    ZenithInstrumentPreset preset(id, name, instrumentId, author);
+    ZenithInstrumentPreset preset =
+        ZenithInstrumentPreset::loadExisting(id, name, instrumentId, author);
 
     preset.category = tree.getProperty("category", "").toString().toStdString();
     preset.description =
@@ -334,7 +346,8 @@ struct ZenithInstrumentPreset {
         obj->getProperty("instrumentId").toString().toStdString();
     std::string author = obj->getProperty("author").toString().toStdString();
 
-    ZenithInstrumentPreset preset(id, name, instrumentId, author);
+    ZenithInstrumentPreset preset =
+        ZenithInstrumentPreset::loadExisting(id, name, instrumentId, author);
 
     preset.category = obj->getProperty("category").toString().toStdString();
     preset.description =
