@@ -10,6 +10,7 @@ from typing import Dict, List, Optional, Set, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
+import os
 import re
 import sys
 
@@ -343,12 +344,12 @@ class LintingAgent:
         cpp_files = []
         python_files = []
         
-        for root, dirs, files in self.project_root.walk():
+        for root, dirs, files in os.walk(self.project_root):
             # Remove excluded directories from traversal
             dirs[:] = [d for d in dirs if d not in exclude_dirs]
             
             for file in files:
-                file_path = root / file
+                file_path = Path(root) / file
                 if file.endswith(('.cpp', '.h', '.hpp', '.cc', '.cxx')):
                     cpp_files.append(file_path)
                 elif file.endswith('.py'):
