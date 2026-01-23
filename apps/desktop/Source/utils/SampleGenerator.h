@@ -15,10 +15,6 @@ public:
    * @param onComplete Optional callback when generation finishes.
    */
   static void generateMissingSamples(juce::ThreadPool* threadPool = nullptr, std::function<void()> onComplete = nullptr);
-
-private:
-  static void createWavFile(const juce::File &file, float freq,
-                            float durationSecs, juce::Random& random, bool isNoise = false);
 };
 
 } // namespace zenith
