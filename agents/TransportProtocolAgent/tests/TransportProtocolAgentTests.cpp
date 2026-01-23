@@ -29,6 +29,12 @@ public:
     juce::BigInteger getActiveInputChannels() const override { return {}; }
     int getOutputLatencyInSamples() override { return 0; }
     int getInputLatencyInSamples() override { return 0; }
+
+    juce::StringArray getOutputChannelNames() override { return {}; }
+    juce::StringArray getInputChannelNames() override { return {}; }
+    juce::Array<double> getAvailableSampleRates() override { return { 44100.0 }; }
+    juce::Array<int> getAvailableBufferSizes() override { return { 256 }; }
+    int getDefaultBufferSize() override { return 256; }
 };
 
 // Mock AudioIODeviceType
@@ -64,6 +70,8 @@ public:
     // Test helpers
     void setInputDevices(const juce::StringArray& names) { inputDevices = names; }
     void setDefaultInputIndex(int index) { defaultInputIndex = index; }
+    void setOutputDevices(const juce::StringArray& names) { outputDevices = names; }
+    void setDefaultOutputIndex(int index) { defaultOutputIndex = index; }
 
 private:
     juce::StringArray inputDevices;
@@ -144,6 +152,47 @@ public:
 
             expectEquals(info.name, juce::String("HighDev"));
             expectEquals(info.apiType, highPriority);
+        }
+
+        beginTest("Default Output Device - Platform Priority");
+        {
+            auto manager = std::make_unique<juce::AudioDeviceManager>();
+
+            // Determine what strings are used on this platform
+            juce::String highPriority;
+            juce::String lowPriority;
+
+            #if JUCE_LINUX
+            highPriority = "JACK";
+            lowPriority = "ALSA";
+            #elif JUCE_WINDOWS
+            highPriority = "ASIO";
+            lowPriority = "DirectSound";
+            #elif JUCE_MAC
+            highPriority = "CoreAudio";
+            lowPriority = "MockLow";
+            #else
+            highPriority = "MockHigh";
+            lowPriority = "MockLow";
+            #endif
+
+            auto mockHigh = std::make_unique<MockAudioIODeviceType>(highPriority);
+            mockHigh->setOutputDevices({"HighOutDev"});
+            mockHigh->setDefaultOutputIndex(0);
+
+            auto mockLow = std::make_unique<MockAudioIODeviceType>(lowPriority);
+            mockLow->setOutputDevices({"LowOutDev"});
+            mockLow->setDefaultOutputIndex(0);
+
+            manager->addAudioDeviceType(std::move(mockLow)); // Add low first
+            manager->addAudioDeviceType(std::move(mockHigh));
+
+            zenith::agents::TransportProtocolAgent agent(std::move(manager));
+            auto info = agent.getDefaultOutputDevice();
+
+            expectEquals(info.name, juce::String("HighOutDev"));
+            expectEquals(info.apiType, highPriority);
+            expect(info.isDefault);
         }
     }
 };
