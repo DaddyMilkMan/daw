@@ -165,7 +165,10 @@ void SampleGenerator::createWavFile(const juce::File &file, float freq,
         writer.reset(); // Flush writer
 
         // Atomic move
-        tempFile.moveFileTo(file);
+        if (!tempFile.moveFileTo(file)) {
+            DBG("SampleGenerator: Failed to rename temp file: " << tempFile.getFullPathName());
+            tempFile.deleteFile();
+        }
     } else {
         tempFile.deleteFile();
     }

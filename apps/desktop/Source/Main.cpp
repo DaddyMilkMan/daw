@@ -69,7 +69,13 @@ public:
 
     // Ensure content validity (Generate missing samples if needed)
     // Run asynchronously to unblock startup
-    ::zenith::SampleGenerator::generateMissingSamples(&threadPool);
+    ::zenith::SampleGenerator::generateMissingSamples(&threadPool, []() {
+      // Callback runs on background thread
+      juce::MessageManager::callAsync([]() {
+        DBG("Sample generation background task finished.");
+        // Future: trigger sample reload or notification here
+      });
+    });
 
     // Pre-initialize FontManager to avoid hangs when UI is created
     DBG("Initializing FontManager...");
