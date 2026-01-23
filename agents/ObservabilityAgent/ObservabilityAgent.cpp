@@ -216,10 +216,11 @@ void ObservabilityAgent::processEvents() {
         std::string countSuffix = "_count";
         std::string sumSuffix = "_sum";
         
+        // Lock once for the entire batch to improve performance
+        std::lock_guard<std::mutex> lock(metricStateMutex_);
+        
         auto process = [this, &countSuffix, &sumSuffix](int index) {
             const auto& event = ringBufferData_[index];
-            
-            std::lock_guard<std::mutex> lock(metricStateMutex_);
             
             switch (event.type) {
                 case MetricType::Counter:
