@@ -251,10 +251,14 @@ void ObservabilityAgent::exportLoop() {
             
             if (interval.count() <= 0) break;
             
-            // Wait for the interval or until signaled to exit
+            // Wait for the interval or until signaled to exit or interval changes
             exportCv_.wait_for(lock, interval, [this] { 
-                return shouldExitExportThread_.load(std::memory_order_acquire); 
+                return shouldExitExportThread_.load(std::memory_order_acquire) || 
+                       exportInterval_.count() <= 0; 
             });
+            
+            // Re-check interval after wait
+            if (exportInterval_.count() <= 0) break;
         }
 
         if (shouldExitExportThread_.load(std::memory_order_acquire)) break;
