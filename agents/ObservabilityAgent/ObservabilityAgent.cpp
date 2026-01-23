@@ -255,17 +255,17 @@ void ObservabilityAgent::exportLoop() {
             
             // Wait for the interval or until signaled to exit or interval changes
             // Note: exportInterval_ is safe to read in predicate since we hold the lock
-            auto wakeReason = exportCv_.wait_for(lock, interval, [this] { 
+            bool predicateTrue = exportCv_.wait_for(lock, interval, [this] { 
                 return shouldExitExportThread_.load(std::memory_order_acquire) || 
                        exportInterval_.count() <= 0; 
             });
             
-            // If woken up early, check why
-            if (!wakeReason) {
+            // If predicate is false (timeout), it's time to export
+            // If predicate is true (woken by notification), loop will handle the exit condition
+            if (!predicateTrue) {
                 // Timeout - time to export
                 shouldExport = true;
             }
-            // If woken by notification, the while loop will handle the exit condition
         }
 
         if (shouldExitExportThread_.load(std::memory_order_acquire)) break;
