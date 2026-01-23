@@ -5,7 +5,7 @@ This module provides test orchestration, execution, coverage analysis,
 and specialized testing for real-time audio systems.
 """
 
-from typing import Dict, List, Optional, Set, Callable, Tuple
+from typing import Dict, List, Optional, Set, Callable, Tuple, Any
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -23,7 +23,6 @@ try:
     NUMPY_AVAILABLE = True
 except ImportError:
     NUMPY_AVAILABLE = False
-    from typing import Any
     class MockNumpy:
         ndarray = Any
         def __getattr__(self, _): return None
