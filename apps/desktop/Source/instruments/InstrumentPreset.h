@@ -332,10 +332,10 @@ struct ZenithInstrumentPreset {
 
     ZenithInstrumentPreset preset(name, instrumentId, author, id);
 
-    preset.category = obj->getProperty("category").toString().toStdString();
+    preset.category = obj->getProperty("category", "").toString().toStdString();
     preset.description =
-        obj->getProperty("description").toString().toStdString();
-    preset.version = obj->getProperty("version").toString().toStdString();
+        obj->getProperty("description", "").toString().toStdString();
+    preset.version = obj->getProperty("version", "").toString().toStdString();
 
     // Tags array
     if (obj->hasProperty("tags")) {
