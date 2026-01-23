@@ -78,14 +78,6 @@ struct ZenithInstrumentPreset {
   }
 
   /**
-   * @brief Create preset with existing ID (Optimized)
-   */
-  ZenithInstrumentPreset(const std::string &id_, const std::string &name_,
-                         const std::string &instrumentId_,
-                         const std::string &author_ = "Factory")
-      : id(id_), name(name_), instrumentId(instrumentId_), author(author_) {}
-
-  /**
    * @brief Set parameter value
    */
   void setParameter(const std::string &paramId, float value) {
@@ -189,7 +181,7 @@ struct ZenithInstrumentPreset {
     std::string author =
         tree.getProperty("author", "Unknown").toString().toStdString();
 
-    ZenithInstrumentPreset preset(id, name, instrumentId, author);
+    ZenithInstrumentPreset preset(name, instrumentId, author, id);
 
     preset.category = tree.getProperty("category", "").toString().toStdString();
     preset.description =
@@ -334,7 +326,7 @@ struct ZenithInstrumentPreset {
         obj->getProperty("instrumentId").toString().toStdString();
     std::string author = obj->getProperty("author").toString().toStdString();
 
-    ZenithInstrumentPreset preset(id, name, instrumentId, author);
+    ZenithInstrumentPreset preset(name, instrumentId, author, id);
 
     preset.category = obj->getProperty("category").toString().toStdString();
     preset.description =
