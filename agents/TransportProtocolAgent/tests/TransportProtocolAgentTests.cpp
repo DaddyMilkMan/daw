@@ -99,7 +99,6 @@ public:
             // We need to set this as active.
             // AudioDeviceManager::setAudioDeviceSetup uses a type name.
             // But to use it, the type must be added first.
-            MockAudioIODeviceType* rawMock = mockType.get();
             manager->addAudioDeviceType(std::move(mockType));
 
             // Force manager to use this type
@@ -162,7 +161,6 @@ public:
             mockType->setOutputDevices({"MockOut1", "MockOut2"});
             mockType->setDefaultOutputIndex(1); // "MockOut2"
 
-            MockAudioIODeviceType* rawMock = mockType.get();
             manager->addAudioDeviceType(std::move(mockType));
             manager->setCurrentAudioDeviceType("MockActiveType", true);
 

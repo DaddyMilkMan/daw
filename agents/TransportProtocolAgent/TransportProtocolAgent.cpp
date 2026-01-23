@@ -44,12 +44,12 @@ TransportProtocolAgent::enumerateDevices() {
     // Identify defaults by name
     juce::String defaultInputName;
     int defInIdx = type->getDefaultDeviceIndex(true);
-    if (defInIdx >= 0 && defInIdx < inputNames.size())
+    if (defInIdx >= 0 && defInIdx < static_cast<int>(inputNames.size()))
       defaultInputName = inputNames[defInIdx];
 
     juce::String defaultOutputName;
     int defOutIdx = type->getDefaultDeviceIndex(false);
-    if (defOutIdx >= 0 && defOutIdx < outputNames.size())
+    if (defOutIdx >= 0 && defOutIdx < static_cast<int>(outputNames.size()))
       defaultOutputName = outputNames[defOutIdx];
 
     // Merge unique device names from inputs and outputs
@@ -117,7 +117,7 @@ juce::StringArray TransportProtocolAgent::getPlatformSearchOrder() const {
   searchOrder.add("CoreAudio");
 #endif
 
-  // Remove duplicates (keep first occurrence - effectively active type stays first)
+  // Remove duplicates while preserving order (active type stays first)
   for (int i = searchOrder.size() - 1; i > 0; --i)
   {
       if (searchOrder.indexOf(searchOrder[i]) < i)
@@ -148,7 +148,7 @@ TransportProtocolAgent::DeviceInfo TransportProtocolAgent::getDefaultInputDevice
               juce::StringArray deviceNames = type->getDeviceNames(true); // true for input
               int defaultIndex = type->getDefaultDeviceIndex(true);
 
-              if (defaultIndex >= 0 && defaultIndex < deviceNames.size())
+              if (defaultIndex >= 0 && defaultIndex < static_cast<int>(deviceNames.size()))
               {
                   info.name = deviceNames[defaultIndex];
                   info.id = info.name; // In JUCE, name is typically used as ID
@@ -196,7 +196,7 @@ TransportProtocolAgent::DeviceInfo TransportProtocolAgent::getDefaultOutputDevic
               juce::StringArray deviceNames = type->getDeviceNames(false); // false for output
               int defaultIndex = type->getDefaultDeviceIndex(false);
 
-              if (defaultIndex >= 0 && defaultIndex < deviceNames.size())
+              if (defaultIndex >= 0 && defaultIndex < static_cast<int>(deviceNames.size()))
               {
                   info.name = deviceNames[defaultIndex];
                   info.id = info.name; // In JUCE, name is typically used as ID

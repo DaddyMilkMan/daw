@@ -50,12 +50,15 @@ public:
   // Device Enumeration
   
   /// Scan for available audio devices
+  /// @note NOT real-time safe. Do not call from audio thread.
   std::vector<DeviceInfo> enumerateDevices();
   
   /// Get default input device
+  /// @note NOT real-time safe. Do not call from audio thread.
   DeviceInfo getDefaultInputDevice();
   
   /// Get default output device
+  /// @note NOT real-time safe. Do not call from audio thread.
   DeviceInfo getDefaultOutputDevice();
   
   //==============================================================================
