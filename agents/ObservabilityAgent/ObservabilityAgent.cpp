@@ -29,9 +29,11 @@ ObservabilityAgent::ObservabilityAgent() : juce::Thread("ObservabilityAgent") {
 }
 
 ObservabilityAgent::~ObservabilityAgent() {
-  stopThread(1000);
+  // Stop export thread first (it may be waiting to acquire exportMutex_)
   stopExportThread();
-  // Flush any pending metrics
+  // Then stop the juce::Thread for log processing
+  stopThread(1000);
+  // Flush any pending metrics (safe now that threads are stopped)
   exportMetrics();
 }
 
@@ -159,14 +161,17 @@ void ObservabilityAgent::setExportInterval(std::chrono::milliseconds interval) {
   exportInterval_ = interval;
 
   if (interval.count() > 0 && !exportThread_.joinable()) {
-    shouldExitExportThread_ = false;
+    shouldExitExportThread_.store(false, std::memory_order_release);
+    lock.unlock();
     exportThread_ = std::thread(&ObservabilityAgent::exportLoop, this);
   } else if (interval.count() <= 0 && exportThread_.joinable()) {
-    lock.unlock(); // Unlock before join to avoid deadlock
+    lock.unlock(); // Unlock before stopping to avoid deadlock
     stopExportThread();
   } else {
-      // Wake up thread to pick up new interval if already running
-      exportCv_.notify_all();
+    lock.unlock();
+    // Wake up thread to pick up new interval if already running
+    // Notify after unlocking for better performance (avoids immediate re-block)
+    exportCv_.notify_all();
   }
 }
 
@@ -227,9 +232,10 @@ void ObservabilityAgent::clearMetrics() {
 }
 
 void ObservabilityAgent::stopExportThread() {
+    shouldExitExportThread_.store(true, std::memory_order_release);
+    
     {
         std::lock_guard<std::mutex> lock(exportMutex_);
-        shouldExitExportThread_ = true;
         exportCv_.notify_all();
     }
 
@@ -239,25 +245,45 @@ void ObservabilityAgent::stopExportThread() {
 }
 
 void ObservabilityAgent::exportLoop() {
-    while (!shouldExitExportThread_) {
+    while (!shouldExitExportThread_.load(std::memory_order_acquire)) {
         std::chrono::milliseconds interval;
+        bool shouldExport = false;
+        
         {
             std::unique_lock<std::mutex> lock(exportMutex_);
             interval = exportInterval_;
+            
+            // If interval is 0 or negative, skip export but stay in loop
+            // Thread will exit via shouldExitExportThread_ flag
+            if (interval.count() <= 0) {
+                // Wait indefinitely for signal (interval change or exit)
+                exportCv_.wait(lock, [this] {
+                    return shouldExitExportThread_.load(std::memory_order_acquire);
+                });
+                continue;
+            }
+            
+            // Wait for the interval or until signaled to exit
+            // We check shouldExitExportThread_ in the predicate for responsiveness
+            // Note: We don't check exportInterval_ in the predicate to avoid races
+            // with setExportInterval(). Instead, we wake on any notification and
+            // re-check the interval at the start of the next loop iteration.
+            // wait_for returns false on timeout, true if predicate becomes true before timeout
+            bool predicateTrue = exportCv_.wait_for(lock, interval, [this] { 
+                return shouldExitExportThread_.load(std::memory_order_acquire); 
+            });
+            
+            // On timeout (predicate false), it's time to export
+            // On predicate true (woken by notification), loop will re-check conditions
+            if (!predicateTrue) {
+                shouldExport = true;
+            }
         }
 
-        if (interval.count() <= 0) break;
-
-        // Sleep for the interval
-        {
-            std::unique_lock<std::mutex> lock(exportMutex_);
-            exportCv_.wait_for(lock, interval, [this] { return shouldExitExportThread_.load(); });
-
-            if (shouldExitExportThread_) break;
+        // Export metrics if it's time (outside the lock to avoid blocking)
+        if (shouldExport) {
+            exportMetrics();
         }
-
-        // Export metrics
-        exportMetrics();
     }
 }
 
