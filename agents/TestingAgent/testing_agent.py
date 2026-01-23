@@ -23,6 +23,10 @@ try:
     NUMPY_AVAILABLE = True
 except ImportError:
     NUMPY_AVAILABLE = False
+    # Mock numpy for type hints if not installed
+    class MockNumpy:
+        class ndarray: pass
+    np = MockNumpy()
 
 
 class TestType(Enum):
@@ -165,10 +169,11 @@ class TestingAgent:
         "Smart Pointer": re.compile(r"\bstd::(make_unique|make_shared)\b"),
         "Container Mutation": re.compile(r"\.(push_back|emplace_back|resize|reserve|insert)\s*\("),
         "String Usage": re.compile(r"\b(std::string|juce::String)\b"),
-        "Lock": re.compile(r"\bstd::(mutex|lock_guard|unique_lock|condition_variable)\b|\bjuce::(CriticalSection|ScopedLock)\b"),
+        "Lock": re.compile(r"\bstd::(mutex|lock_guard|unique_lock|condition_variable)\b|\bjuce::(CriticalSection|ScopedLock|MessageManagerLock)\b"),
         "I/O": re.compile(r"\b(std::cout|std::cerr|printf|fprintf|std::fstream)\b|\bjuce::(Logger|File)\b|\bDBG\b"),
         "Flow Control": re.compile(r"\b(throw|try|catch|dynamic_cast)\b"),
-        "Waiting": re.compile(r"\b(sleep|std::this_thread::sleep_for)\b")
+        "Waiting": re.compile(r"\b(sleep|std::this_thread::sleep_for)\b"),
+        "Threading": re.compile(r"\b(std::thread|std::jthread|std::async|std::future|std::promise|juce::Thread::launch)\b")
     }
 
     # Suppressions
@@ -961,7 +966,7 @@ class TestingAgent:
                 for line in result.stdout.splitlines():
                     if "Creating '" in line:
                         # Extract filename from "Creating 'filename'"
-                        fname = line.split("'"[1]
+                        fname = line.split("'")[1]
                         generated_files.append(cwd / fname)
 
                 # Read and parse .gcov files
@@ -1132,16 +1137,33 @@ class TestingAgent:
 
 # Example usage
 if __name__ == "__main__":
-    agent = TestingAgent() 
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser(description="ZenithDAW Testing Agent")
+    parser.add_argument("--scan-rt-safety", action="store_true", help="Scan for Real-Time safety violations")
+    parser.add_argument("--run-tests", action="store_true", help="Run unit tests")
+    parser.add_argument("--coverage", action="store_true", help="Generate coverage report")
+    parser.add_argument("--all", action="store_true", help="Run all checks")
     
-    # Discover and run tests
-    tests = agent.discover_tests()
-    unit_results = agent.run_unit_tests()
+    args = parser.parse_args()
+
+    # Default to all if no args provided
+    if not any(vars(args).values()):
+        args.all = True
+
+    agent = TestingAgent()
     
-    # Validate real-time safety
-    rt_results = agent.validate_rt_safety()
+    if args.run_tests or args.all:
+        tests = agent.discover_tests()
+        unit_results = agent.run_unit_tests()
     
-    # Generate coverage
-    coverage = agent.generate_coverage_report()
+    if args.scan_rt_safety or args.all:
+        rt_results = agent.validate_rt_safety()
+        for r in rt_results:
+            if r.status == TestStatus.FAILED:
+                print(f"[FAIL] {r.name}: {r.error_message}")
     
-    print(f"Coverage: {coverage.line_coverage_percent:.1f}%")
+    if args.coverage or args.all:
+        coverage = agent.generate_coverage_report()
+        print(f"Coverage: {coverage.line_coverage_percent:.1f}%")
