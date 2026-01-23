@@ -6,13 +6,13 @@ enforcing naming conventions, detecting style violations, finding
 commented-out code, magic numbers, TODOs, and other code quality issues.
 """
 
-from typing import Dict, List, Optional, Set, Tuple
-from dataclasses import dataclass, field
-from enum import Enum
-from pathlib import Path
 import os
 import re
 import sys
+from dataclasses import dataclass, field
+from enum import Enum
+from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple
 
 
 class LintSeverity(Enum):
