@@ -23,6 +23,13 @@ try:
     NUMPY_AVAILABLE = True
 except ImportError:
     NUMPY_AVAILABLE = False
+    # Mock numpy for type hints if not available
+    class MockNumpy:
+        class ndarray:
+            pass
+        def __getattr__(self, _):
+            return None
+    np = MockNumpy()
 
 
 class TestType(Enum):
@@ -904,6 +911,11 @@ class TestingAgent:
             Coverage statistics
         """
         print("Generating coverage report...")
+
+        # Check if gcov is installed
+        if not shutil.which("gcov"):
+            print("Error: gcov tool not found. Please install gcov.")
+            return CoverageReport()
         
         build_path = build_dir or self.project_root / "build"
         if not build_path.exists():
@@ -961,8 +973,10 @@ class TestingAgent:
                 for line in result.stdout.splitlines():
                     if "Creating '" in line:
                         # Extract filename from "Creating 'filename'"
-                        fname = line.split("'"[1]
-                        generated_files.append(cwd / fname)
+                        parts = line.split("'")
+                        if len(parts) > 1:
+                            fname = parts[1]
+                            generated_files.append(cwd / fname)
 
                 # Read and parse .gcov files
                 for gcov_file in generated_files:
