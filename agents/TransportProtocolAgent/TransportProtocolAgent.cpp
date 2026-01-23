@@ -32,49 +32,6 @@ std::vector<TransportProtocolAgent::DeviceInfo>
 TransportProtocolAgent::enumerateDevices() {
   std::vector<DeviceInfo> devices;
   
-<<<<<<< HEAD
-  for (auto* type : deviceManager_->getAvailableDeviceTypes())
-  {
-    type->scanForDevices();
-
-    auto inputNames = type->getDeviceNames(true);
-    auto outputNames = type->getDeviceNames(false);
-    
-    // Combine lists to find unique devices
-    juce::StringArray allNames;
-    allNames.addArray(inputNames);
-    for (const auto& name : outputNames)
-    {
-      if (!allNames.contains(name))
-        allNames.add(name);
-    }
-
-    for (const auto& name : allNames)
-    {
-      DeviceInfo info;
-      info.name = name;
-      info.id = name;
-      info.apiType = type->getTypeName();
-
-      bool hasInput = inputNames.contains(name);
-      bool hasOutput = outputNames.contains(name);
-
-      // Estimate channels (exact count requires opening the device)
-      info.numInputChannels = hasInput ? 2 : 0;
-      info.numOutputChannels = hasOutput ? 2 : 0;
-
-      // Populate more details if this matches the currently open device
-      auto* currentDevice = deviceManager_->getCurrentAudioDevice();
-      if (currentDevice != nullptr &&
-          currentDevice->getName() == name &&
-          currentDevice->getTypeName() == type->getTypeName())
-      {
-        info.supportedSampleRates = currentDevice->getAvailableSampleRates();
-        info.supportedBufferSizes = currentDevice->getAvailableBufferSizes();
-        info.numInputChannels = currentDevice->getActiveInputChannels().countNumberOfSetBits();
-        info.numOutputChannels = currentDevice->getActiveOutputChannels().countNumberOfSetBits();
-        info.isDefault = true;
-=======
   auto* currentDevice = deviceManager_->getCurrentAudioDevice();
 
   // Iterate through all available device types (ASIO, WASAPI, ALSA, etc.)
@@ -129,7 +86,6 @@ TransportProtocolAgent::enumerateDevices() {
         // For inactive devices: Return empty/zero to avoid opening the device (performance)
         info.numInputChannels = 0;
         info.numOutputChannels = 0;
->>>>>>> origin/master
       }
 
       devices.push_back(info);
@@ -213,9 +169,75 @@ TransportProtocolAgent::DeviceInfo TransportProtocolAgent::getDefaultInputDevice
 }
 
 TransportProtocolAgent::DeviceInfo TransportProtocolAgent::getDefaultOutputDevice() {
-  // TODO: Get platform default output device
   DeviceInfo info;
-  info.name = "Default Output";
+  info.name = "None";
+  info.id = "";
+  info.isDefault = false;
+
+  if (deviceManager_ == nullptr)
+      return info;
+
+  // Define priority order based on platform
+  juce::StringArray searchOrder;
+
+  // Check currently active type first
+  juce::String activeType = deviceManager_->getCurrentAudioDeviceType();
+  if (activeType.isNotEmpty())
+      searchOrder.add(activeType);
+
+#if JUCE_WINDOWS
+  searchOrder.add("ASIO");
+  searchOrder.add("Windows Audio");
+  searchOrder.add("DirectSound");
+#elif JUCE_LINUX
+  searchOrder.add("JACK");
+  searchOrder.add("ALSA");
+#elif JUCE_MAC
+  searchOrder.add("CoreAudio");
+#endif
+
+  // Remove duplicates (keep first occurrence - effectively active type stays first)
+  for (int i = searchOrder.size() - 1; i > 0; --i)
+  {
+      if (searchOrder.indexOf(searchOrder[i]) < i)
+          searchOrder.remove(i);
+  }
+
+  const auto& availableTypes = deviceManager_->getAvailableDeviceTypes();
+
+  for (const auto& typeName : searchOrder)
+  {
+      for (auto* type : availableTypes)
+      {
+          if (type != nullptr && type->getTypeName() == typeName)
+          {
+              type->scanForDevices();
+              juce::StringArray deviceNames = type->getDeviceNames(false); // false for output
+              int defaultIndex = type->getDefaultDeviceIndex(false);
+
+              if (defaultIndex >= 0 && defaultIndex < deviceNames.size())
+              {
+                  info.name = deviceNames[defaultIndex];
+                  info.id = info.name;
+                  info.apiType = typeName;
+                  info.isDefault = true;
+
+                  // Enrich with details if it matches current device
+                  auto* currentDevice = deviceManager_->getCurrentAudioDevice();
+                  if (currentDevice != nullptr && currentDevice->getName() == info.name &&
+                      currentDevice->getTypeName() == info.apiType) {
+                    info.numInputChannels = currentDevice->getActiveInputChannels().countNumberOfSetBits();
+                    info.numOutputChannels = currentDevice->getActiveOutputChannels().countNumberOfSetBits();
+                    info.supportedSampleRates = currentDevice->getAvailableSampleRates();
+                    info.supportedBufferSizes = currentDevice->getAvailableBufferSizes();
+                  }
+
+                  return info;
+              }
+          }
+      }
+  }
+
   return info;
 }
 

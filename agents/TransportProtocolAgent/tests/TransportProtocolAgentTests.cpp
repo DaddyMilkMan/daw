@@ -25,10 +25,28 @@ public:
     int getCurrentBufferSizeSamples() override { return 256; }
     double getCurrentSampleRate() override { return 44100.0; }
     int getCurrentBitDepth() override { return 16; }
-    juce::BigInteger getActiveOutputChannels() const override { return {}; }
-    juce::BigInteger getActiveInputChannels() const override { return {}; }
     int getOutputLatencyInSamples() override { return 0; }
     int getInputLatencyInSamples() override { return 0; }
+
+    // Capabilities
+    juce::Array<double> getAvailableSampleRates() override { return { 44100.0, 48000.0 }; }
+    juce::Array<int> getAvailableBufferSizes() override { return { 128, 256, 512 }; }
+
+    juce::BigInteger getActiveInputChannels() const override { return inputChannels; }
+    juce::BigInteger getActiveOutputChannels() const override { return outputChannels; }
+
+    // Missing pure virtuals needed for instantiation
+    juce::StringArray getOutputChannelNames() override { return {"Out L", "Out R"}; }
+    juce::StringArray getInputChannelNames() override { return {"In L", "In R"}; }
+    int getDefaultBufferSize() override { return 256; }
+
+    // Test helpers
+    void setInputChannels(int num) { inputChannels.setRange(0, num, true); }
+    void setOutputChannels(int num) { outputChannels.setRange(0, num, true); }
+
+private:
+    juce::BigInteger inputChannels;
+    juce::BigInteger outputChannels;
 };
 
 // Mock AudioIODeviceType
@@ -58,7 +76,10 @@ public:
     juce::AudioIODevice* createDevice(const juce::String& outputDeviceName,
                                       const juce::String& inputDeviceName) override
     {
-        return new MockAudioIODevice(inputDeviceName.isNotEmpty() ? inputDeviceName : outputDeviceName, getTypeName());
+        auto* dev = new MockAudioIODevice(inputDeviceName.isNotEmpty() ? inputDeviceName : outputDeviceName, getTypeName());
+        dev->setInputChannels(2);
+        dev->setOutputChannels(2);
+        return dev;
     }
 
     // Test helpers
@@ -88,13 +109,7 @@ public:
             mockType->setInputDevices({"MockInput1", "MockInput2"});
             mockType->setDefaultInputIndex(1); // "MockInput2"
 
-            // We need to set this as active.
-            // AudioDeviceManager::setAudioDeviceSetup uses a type name.
-            // But to use it, the type must be added first.
-            MockAudioIODeviceType* rawMock = mockType.get();
             manager->addAudioDeviceType(std::move(mockType));
-
-            // Force manager to use this type
             manager->setCurrentAudioDeviceType("MockActiveType", true);
 
             zenith::agents::TransportProtocolAgent agent(std::move(manager));
@@ -107,25 +122,14 @@ public:
 
         beginTest("Default Input Device - Platform Priority");
         {
-            // Test that high priority type is chosen over low priority
             auto manager = std::make_unique<juce::AudioDeviceManager>();
 
-            // Determine what strings are used on this platform
-            juce::String highPriority;
-            juce::String lowPriority;
-
+            juce::String highPriority = "ASIO";
+            juce::String lowPriority = "DirectSound";
             #if JUCE_LINUX
-            highPriority = "JACK";
-            lowPriority = "ALSA";
-            #elif JUCE_WINDOWS
-            highPriority = "ASIO";
-            lowPriority = "DirectSound";
+            highPriority = "JACK"; lowPriority = "ALSA";
             #elif JUCE_MAC
-            highPriority = "CoreAudio";
-            lowPriority = "MockLow";
-            #else
-            highPriority = "MockHigh";
-            lowPriority = "MockLow";
+            highPriority = "CoreAudio"; lowPriority = "MockLow";
             #endif
 
             auto mockHigh = std::make_unique<MockAudioIODeviceType>(highPriority);
@@ -136,7 +140,7 @@ public:
             mockLow->setInputDevices({"LowDev"});
             mockLow->setDefaultInputIndex(0);
 
-            manager->addAudioDeviceType(std::move(mockLow)); // Add low first
+            manager->addAudioDeviceType(std::move(mockLow));
             manager->addAudioDeviceType(std::move(mockHigh));
 
             zenith::agents::TransportProtocolAgent agent(std::move(manager));
@@ -145,12 +149,53 @@ public:
             expectEquals(info.name, juce::String("HighDev"));
             expectEquals(info.apiType, highPriority);
         }
+
+        beginTest("Enumerate Devices - Active Only Detail");
+        {
+            auto manager = std::make_unique<juce::AudioDeviceManager>();
+
+            auto mockType = std::make_unique<MockAudioIODeviceType>("MockType");
+            mockType->setInputDevices({"Input1", "Input2"});
+            mockType->setDefaultInputIndex(0); // "Input1"
+
+            manager->addAudioDeviceType(std::move(mockType));
+            manager->setCurrentAudioDeviceType("MockType", true);
+
+            zenith::agents::TransportProtocolAgent agent(std::move(manager));
+            auto devices = agent.enumerateDevices();
+
+            expectEquals(devices.size(), (size_t)2);
+
+            bool foundActive = false;
+            bool foundInactive = false;
+
+            for (const auto& dev : devices)
+            {
+                if (dev.name == "Input1")
+                {
+                    foundActive = true;
+                    expectEquals(dev.numInputChannels, 2);
+                    expect(dev.supportedSampleRates.size() > 0);
+                    expect(dev.supportedBufferSizes.size() > 0);
+                }
+                else if (dev.name == "Input2")
+                {
+                    foundInactive = true;
+                    expectEquals(dev.numInputChannels, 0);
+                    expectEquals(dev.numOutputChannels, 0);
+                    expect(dev.supportedSampleRates.isEmpty());
+                    expect(dev.supportedBufferSizes.isEmpty());
+                }
+            }
+
+            expect(foundActive);
+            expect(foundInactive);
+        }
     }
 };
 
 static TransportProtocolAgentTests transportProtocolAgentTests;
 
-// Main entry point for the test app
 int main(int argc, char* argv[]) {
   juce::UnitTestRunner runner;
   runner.runAllTests();
