@@ -30,6 +30,9 @@ TransportProtocolAgent::~TransportProtocolAgent() {
 
 std::vector<TransportProtocolAgent::DeviceInfo> 
 TransportProtocolAgent::enumerateDevices() {
+  // Device enumeration must be called from the message thread
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  
   std::vector<DeviceInfo> devices;
   
   auto* currentDevice = deviceManager_->getCurrentAudioDevice();
@@ -96,6 +99,9 @@ TransportProtocolAgent::enumerateDevices() {
 }
 
 TransportProtocolAgent::DeviceInfo TransportProtocolAgent::getDefaultInputDevice() {
+  // Device queries must be called from the message thread
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  
   DeviceInfo info;
   info.name = "None";
   info.id = "";
@@ -169,6 +175,9 @@ TransportProtocolAgent::DeviceInfo TransportProtocolAgent::getDefaultInputDevice
 }
 
 TransportProtocolAgent::DeviceInfo TransportProtocolAgent::getDefaultOutputDevice() {
+  // Device queries must be called from the message thread
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  
   // TODO: Get platform default output device
   DeviceInfo info;
   info.name = "Default Output";
@@ -181,6 +190,8 @@ TransportProtocolAgent::DeviceInfo TransportProtocolAgent::getDefaultOutputDevic
 bool TransportProtocolAgent::openDevice(const juce::String& deviceId,
                                         double sampleRate,
                                         int bufferSize) {
+  // Device management must be called from the message thread
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   jassert(sampleRate > 0.0 && bufferSize > 0);
   
   for (auto* type : deviceManager_->getAvailableDeviceTypes())
@@ -227,6 +238,9 @@ bool TransportProtocolAgent::openDevice(const juce::String& deviceId,
 }
 
 void TransportProtocolAgent::closeDevice() {
+  // Device management must be called from the message thread
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  
   if (deviceManager_) {
     deviceManager_->closeAudioDevice();
   }
@@ -273,7 +287,12 @@ void AudioBufferConverter::convertToPlanarFloat(const void* sourceData,
                                                 int numChannels,
                                                 BitDepth sourceFormat)
 {
-    // Resize buffer if needed (though usually caller handles this)
+    // RT-safety check: Ensure buffer is pre-allocated to avoid memory allocation
+    // in real-time contexts. Caller must allocate destBuffer before calling this.
+    jassert(destBuffer.getNumChannels() >= numChannels && 
+            destBuffer.getNumSamples() >= numSamples);
+    
+    // Resize buffer if needed (though caller should handle pre-allocation for RT safety)
     destBuffer.setSize(numChannels, numSamples, false, false, true);
 
     const int bytesPerSample = getBytesPerSample(sourceFormat);

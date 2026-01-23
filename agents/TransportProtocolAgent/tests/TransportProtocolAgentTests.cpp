@@ -221,6 +221,9 @@ static TransportProtocolAgentTests transportProtocolAgentTests;
 
 // Main entry point for the test app
 int main(int argc, char* argv[]) {
+  // Initialize JUCE - required for MessageManager assertions to work
+  juce::ScopedJuceInitialiser_GUI juceInitialiser;
+  
   juce::UnitTestRunner runner;
   runner.runAllTests();
   return 0;
