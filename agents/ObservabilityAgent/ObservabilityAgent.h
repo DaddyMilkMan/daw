@@ -18,6 +18,7 @@
 #include <condition_variable>
 #include <memory>
 #include <array>
+#include <map>
 
 namespace zenith {
 namespace agents {
@@ -159,6 +160,17 @@ private:
   static constexpr int kRingBufferSize = 4096;
   juce::AbstractFifo ringBufferFifo_{kRingBufferSize};
   std::vector<RawMetricEvent> ringBufferData_;
+
+  struct MetricState {
+      MetricType type = MetricType::Counter;
+      double value = 0.0;
+      uint64_t count = 0;
+  };
+
+  std::mutex metricsMutex_;
+  std::map<std::string, MetricState> metricStates_;
+
+  void processEvents();
 
   // TODO: Add metrics exporter (Prometheus, OpenTelemetry)
   // TODO: Add trace context propagation

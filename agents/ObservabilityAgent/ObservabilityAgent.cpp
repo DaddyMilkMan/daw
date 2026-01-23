@@ -183,15 +183,65 @@ void ObservabilityAgent::setMetricsFile(const juce::File& file) {
     metricsFile_ = file;
 }
 
+void ObservabilityAgent::processEvents() {
+    int start1, size1, start2, size2;
+    ringBufferFifo_.prepareToRead(kRingBufferSize, start1, size1, start2, size2);
+
+    if (size1 + size2 > 0) {
+        std::lock_guard<std::mutex> lock(metricsMutex_);
+
+        auto process = [this](int index) {
+            const auto& event = ringBufferData_[static_cast<size_t>(index)];
+
+            // Convert to string key
+            std::string key(event.name);
+            auto& state = metricStates_[key];
+
+            // If new, set type
+            if (state.count == 0 && state.value == 0.0) {
+                 state.type = event.type;
+            }
+
+            switch (event.type) {
+                case MetricType::Counter:
+                    state.value += event.value;
+                    break;
+                case MetricType::Gauge:
+                    state.value = event.value;
+                    break;
+                case MetricType::Timer:
+                    state.value += event.value; // Sum
+                    state.count++;
+                    break;
+                default:
+                    break;
+            }
+        };
+
+        for (int i = 0; i < size1; ++i) process(start1 + i);
+        for (int i = 0; i < size2; ++i) process(start2 + i);
+
+        ringBufferFifo_.finishedRead(size1 + size2);
+    }
+}
+
 void ObservabilityAgent::exportMetrics() {
   if (!enabled_.load(std::memory_order_acquire)) {
     return;
   }
 
-  // TODO: Drain lock-free ring buffer
-  // TODO: Send to configured exporters
+  auto metrics = getMetrics(); // Drains ring buffer
 
-  // For now, track export count for verification
+  juce::File dest;
+  {
+      std::lock_guard<std::mutex> lock(exportMutex_);
+      dest = metricsFile_;
+  }
+
+  if (exporter_) {
+      exporter_->exportMetrics(metrics, dest);
+  }
+
   exportCount_.fetch_add(1, std::memory_order_relaxed);
 }
 
@@ -204,28 +254,54 @@ void ObservabilityAgent::timerCallback() {
 }
 
 std::vector<ObservabilityAgent::Metric> ObservabilityAgent::getMetrics() {
+  processEvents();
+
   std::vector<Metric> metrics;
+  std::lock_guard<std::mutex> lock(metricsMutex_);
   
-  // Create a sample metric from the internal counter for testing/demonstration
-  // until the ring buffer is implemented.
+  auto now = std::chrono::steady_clock::now();
+
+  // Internal metric
   Metric m;
   m.name = "zenith_metrics_collected_total";
   m.type = MetricType::Counter;
   m.value = static_cast<double>(metricsCollected_.load(std::memory_order_relaxed));
-  m.timestamp = std::chrono::steady_clock::now();
-
+  m.timestamp = now;
   metrics.push_back(m);
 
-  // TODO: Read from lock-free ring buffer
-  // TODO: Aggregate metrics by name
-  // TODO: Apply time-based windowing
+  for (const auto& [name, state] : metricStates_) {
+      if (state.type == MetricType::Timer) {
+          // Timer: Export _sum and _count
+          Metric sum;
+          sum.name = name + "_sum";
+          sum.type = MetricType::Counter; // _sum is effectively a counter
+          sum.value = state.value;
+          sum.timestamp = now;
+          metrics.push_back(sum);
+
+          Metric count;
+          count.name = name + "_count";
+          count.type = MetricType::Counter;
+          count.value = static_cast<double>(state.count);
+          count.timestamp = now;
+          metrics.push_back(count);
+      } else {
+          Metric metric;
+          metric.name = name;
+          metric.type = state.type;
+          metric.value = state.value;
+          metric.timestamp = now;
+          metrics.push_back(metric);
+      }
+  }
   
   return metrics;
 }
 
 void ObservabilityAgent::clearMetrics() {
-  // TODO: Clear lock-free ring buffer
   metricsCollected_.store(0, std::memory_order_release);
+  std::lock_guard<std::mutex> lock(metricsMutex_);
+  metricStates_.clear();
 }
 
 void ObservabilityAgent::stopExportThread() {

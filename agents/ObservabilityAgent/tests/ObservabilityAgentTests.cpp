@@ -82,6 +82,66 @@ public:
     ObservabilityAgentTests() : juce::UnitTest("ObservabilityAgentTests", "Observability") {}
 
     void runTest() override {
+        beginTest("Aggregation Logic");
+        {
+            ObservabilityAgent agent;
+            agent.setEnabled(true);
+
+            // 1. Counter Test
+            agent.recordCounter("test_counter", 10.0);
+            agent.recordCounter("test_counter", 5.0);
+
+            // 2. Gauge Test
+            agent.recordGauge("test_gauge", 100.0);
+            agent.recordGauge("test_gauge", 200.0); // Should overwrite
+
+            // 3. Timer Test
+            auto start = agent.startTimer();
+            juce::Thread::sleep(10); // Sleep 10ms to ensure non-zero duration
+            agent.endTimer("test_timer", start);
+
+            // Trigger processing via getMetrics
+            auto metrics = agent.getMetrics();
+
+            // Verify Counter
+            bool foundCounter = false;
+            for (const auto& m : metrics) {
+                if (m.name == "test_counter") {
+                    expectEquals(m.value, 15.0, "Counter aggregation failed");
+                    expect(m.type == ObservabilityAgent::MetricType::Counter);
+                    foundCounter = true;
+                }
+            }
+            expect(foundCounter, "Counter metric not found");
+
+            // Verify Gauge
+            bool foundGauge = false;
+            for (const auto& m : metrics) {
+                if (m.name == "test_gauge") {
+                    expectEquals(m.value, 200.0, "Gauge aggregation failed");
+                    expect(m.type == ObservabilityAgent::MetricType::Gauge);
+                    foundGauge = true;
+                }
+            }
+            expect(foundGauge, "Gauge metric not found");
+
+            // Verify Timer
+            bool foundTimerSum = false;
+            bool foundTimerCount = false;
+            for (const auto& m : metrics) {
+                if (m.name == "test_timer_sum") {
+                    expect(m.value > 0.0, "Timer sum should be positive");
+                    foundTimerSum = true;
+                }
+                if (m.name == "test_timer_count") {
+                    expectEquals(m.value, 1.0, "Timer count should be 1");
+                    foundTimerCount = true;
+                }
+            }
+            expect(foundTimerSum, "Timer sum metric not found");
+            expect(foundTimerCount, "Timer count metric not found");
+        }
+
         beginTest("Integration Test");
         {
             ObservabilityAgent agent;
