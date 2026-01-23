@@ -23,6 +23,9 @@ try:
     NUMPY_AVAILABLE = True
 except ImportError:
     NUMPY_AVAILABLE = False
+    class MockNumpy:
+        class ndarray: pass
+    np = MockNumpy()
 
 
 class TestType(Enum):
@@ -161,11 +164,11 @@ class TestingAgent:
 
     # Unsafe operation patterns (Regex)
     UNSAFE_PATTERNS = {
-        "Allocation": re.compile(r"\b(new|delete|malloc|calloc|realloc|free|strdup)\b"),
+        "Allocation": re.compile(r"\b(new|delete|malloc|calloc|realloc|free|strdup|posix_memalign|aligned_alloc)\b"),
         "Smart Pointer": re.compile(r"\bstd::(make_unique|make_shared)\b"),
-        "Container Mutation": re.compile(r"\.(push_back|emplace_back|resize|reserve|insert)\s*\("),
+        "Container Mutation": re.compile(r"\.(push_back|emplace_back|push_front|emplace_front|resize|reserve|insert|emplace|clear|erase|pop_back|pop_front)\s*\("),
         "String Usage": re.compile(r"\b(std::string|juce::String)\b"),
-        "Lock": re.compile(r"\bstd::(mutex|lock_guard|unique_lock|condition_variable)\b|\bjuce::(CriticalSection|ScopedLock)\b"),
+        "Lock": re.compile(r"\bstd::(mutex|recursive_mutex|timed_mutex|recursive_timed_mutex|shared_mutex|shared_timed_mutex|lock_guard|unique_lock|shared_lock|scoped_lock|condition_variable|condition_variable_any)\b|\bjuce::(CriticalSection|ScopedLock|ReadWriteLock|ScopedReadLock|ScopedWriteLock)\b"),
         "I/O": re.compile(r"\b(std::cout|std::cerr|printf|fprintf|std::fstream)\b|\bjuce::(Logger|File)\b|\bDBG\b"),
         "Flow Control": re.compile(r"\b(throw|try|catch|dynamic_cast)\b"),
         "Waiting": re.compile(r"\b(sleep|std::this_thread::sleep_for)\b")
@@ -484,10 +487,8 @@ class TestingAgent:
             if found_trigger is None:
                 break
 
-            i = next_idx
-
-            # Move past trigger
-            i += len(found_trigger)
+            trigger_start = next_idx
+            i = trigger_start + len(found_trigger)
 
             # Find opening brace in MASKED source
             brace_idx = -1
@@ -514,7 +515,19 @@ class TestingAgent:
                     body = source[brace_idx:curr]
                     # Calculate line number
                     start_line = source.count('\n', 0, brace_idx) + 1
-                    extracted.append((found_trigger, body, start_line))
+
+                    # Determine display name
+                    if found_trigger == "// RT-SAFE":
+                        # Use masked source to avoid comments in signature
+                        sig = masked_source[i:brace_idx].strip()
+                    else:
+                        sig = masked_source[trigger_start:brace_idx].strip()
+
+                    display_name = " ".join(sig.split())
+                    if not display_name:
+                        display_name = found_trigger
+
+                    extracted.append((display_name, body, start_line))
 
                     # Continue search from after the function
                     i = curr
@@ -961,7 +974,7 @@ class TestingAgent:
                 for line in result.stdout.splitlines():
                     if "Creating '" in line:
                         # Extract filename from "Creating 'filename'"
-                        fname = line.split("'"[1]
+                        fname = line.split("'")[1]
                         generated_files.append(cwd / fname)
 
                 # Read and parse .gcov files
