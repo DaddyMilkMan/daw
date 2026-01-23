@@ -86,6 +86,9 @@ void ClockSyncAgent::setTimeSource(TimeSource source) {
   if (syncProtocol_) {
     syncProtocol_->onOffsetChanged = [this](int64_t offset) {
       clockOffsetNs_.store(offset, std::memory_order_release);
+      if (syncProtocol_) {
+        driftCompensation_.store(syncProtocol_->getDrift(), std::memory_order_release);
+      }
     };
     syncProtocol_->onSyncStateChanged = [this](bool sync) {
       synchronized_.store(sync, std::memory_order_release);
@@ -148,6 +151,7 @@ void ClockSyncAgent::resynchronize() {
   else if (source == TimeSource::NetworkNTP || source == TimeSource::NetworkPTP) {
     if (syncProtocol_) {
       syncProtocol_->forceSync();
+      driftCompensation_.store(syncProtocol_->getDrift(), std::memory_order_release);
     }
   }
 }
