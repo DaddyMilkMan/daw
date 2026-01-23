@@ -105,6 +105,9 @@ public:
   /// Set the destination file for metrics export
   void setMetricsFile(const juce::File& file);
 
+  /// Set the destination file for logging (async)
+  void setLogFile(const juce::File& file);
+
   /// Get collected metrics (non-RT)
   std::vector<Metric> getMetrics();
   
@@ -127,6 +130,7 @@ private:
   struct LogEntry {
       LogLevel level;
       uint64_t timestamp;
+      juce::Thread::ThreadID threadId;
       char message[512];
   };
 
@@ -143,6 +147,8 @@ private:
   
   std::unique_ptr<PrometheusExporter> exporter_;
   juce::File metricsFile_;
+
+  std::unique_ptr<juce::FileOutputStream> logStream_;
 
   std::thread exportThread_;
   std::atomic<bool> shouldExitExportThread_{false};

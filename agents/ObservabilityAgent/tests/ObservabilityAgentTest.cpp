@@ -19,9 +19,52 @@ public:
   void runTest() override {
     testMetricsCollection();
     testPeriodicExport();
+    testAsyncLogging();
   }
 
 private:
+  void testAsyncLogging() {
+    beginTest("Async Logging");
+
+    ObservabilityAgent agent;
+    auto tempLogFile = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                       .getChildFile("zenith_test_log.txt");
+
+    if (tempLogFile.exists()) tempLogFile.deleteFile();
+
+    agent.setLogFile(tempLogFile);
+    agent.setEnabled(true);
+
+    // Log messages
+    agent.log(ObservabilityAgent::LogLevel::Info, "Test info message");
+    agent.log(ObservabilityAgent::LogLevel::Error, "Test error message");
+
+    // Wait for consumer thread
+    juce::Thread::sleep(200);
+
+    // Verify file exists
+    expect(tempLogFile.exists(), "Log file not created");
+
+    if (tempLogFile.exists()) {
+        auto content = tempLogFile.loadFileAsString();
+
+        // Check format
+        expect(content.contains("[INFO]"), "Missing INFO level");
+        expect(content.contains("[ERROR]"), "Missing ERROR level");
+        expect(content.contains("Test info message"), "Missing info message");
+        expect(content.contains("Test error message"), "Missing error message");
+
+        // Check timestamp format (approx check for year 20xx)
+        expect(content.contains("20"), "Missing timestamp (approx check)");
+
+        // Check ThreadID format [0x...]
+        expect(content.contains("[0x"), "Missing ThreadID format");
+    }
+
+    // Cleanup
+    tempLogFile.deleteFile();
+  }
+
   void testMetricsCollection() {
     beginTest("Lock-free Ring Buffer Writes");
 
