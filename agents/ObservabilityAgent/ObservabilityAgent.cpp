@@ -168,7 +168,9 @@ void ObservabilityAgent::setExportInterval(std::chrono::milliseconds interval) {
     lock.unlock(); // Unlock before stopping to avoid deadlock
     stopExportThread();
   } else {
+      lock.unlock();
       // Wake up thread to pick up new interval if already running
+      // Notify after unlocking for better performance (avoids immediate re-block)
       exportCv_.notify_all();
   }
 }
@@ -253,12 +255,14 @@ void ObservabilityAgent::exportLoop() {
             
             if (interval.count() <= 0) break;
             
-            // Wait for the interval or until signaled to exit or interval changes
-            // Note: exportInterval_ is safe to read in predicate since we hold the lock
+            // Wait for the interval or until signaled to exit
+            // We check shouldExitExportThread_ in the predicate for responsiveness
+            // Note: We don't check exportInterval_ in the predicate to avoid races
+            // with setExportInterval(). Instead, we wake on any notification and
+            // re-check the interval at the start of the next loop iteration.
             // wait_for returns false on timeout, true if predicate becomes true before timeout
             bool predicateTrue = exportCv_.wait_for(lock, interval, [this] { 
-                return shouldExitExportThread_.load(std::memory_order_acquire) || 
-                       exportInterval_.count() <= 0; 
+                return shouldExitExportThread_.load(std::memory_order_acquire); 
             });
             
             // On timeout (predicate false), it's time to export
