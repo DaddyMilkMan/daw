@@ -18,6 +18,7 @@
 #include <condition_variable>
 #include <memory>
 #include <array>
+#include <map>
 
 namespace zenith {
 namespace agents {
@@ -124,6 +125,9 @@ private:
   void exportLoop();
   void stopExportThread();
 
+  // Internal helper to drain ring buffer
+  void processPendingMetrics();
+
   struct LogEntry {
       LogLevel level;
       uint64_t timestamp;
@@ -159,6 +163,13 @@ private:
   static constexpr int kRingBufferSize = 4096;
   juce::AbstractFifo ringBufferFifo_{kRingBufferSize};
   std::vector<RawMetricEvent> ringBufferData_;
+
+  // MPSC support for ring buffer
+  juce::SpinLock ringBufferWriteLock_;
+
+  // Aggregation state (Consumer side)
+  std::mutex metricsMutex_;
+  std::map<std::string, Metric> aggregatedMetrics_;
 
   // TODO: Add metrics exporter (Prometheus, OpenTelemetry)
   // TODO: Add trace context propagation
