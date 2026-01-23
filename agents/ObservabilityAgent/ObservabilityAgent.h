@@ -157,6 +157,7 @@ private:
 
   // Lock-free ring buffer for RT metrics
   static constexpr int kRingBufferSize = 4096;
+  juce::SpinLock ringBufferLock_;
   juce::AbstractFifo ringBufferFifo_{kRingBufferSize};
   std::vector<RawMetricEvent> ringBufferData_;
 

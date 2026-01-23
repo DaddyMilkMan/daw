@@ -44,6 +44,7 @@ void ObservabilityAgent::recordCounter(const char* name, double value) noexcept 
     return;
   }
   
+  const juce::SpinLock::ScopedLockType lock(ringBufferLock_);
   auto s1 = 0, s2 = 0, num1 = 0, num2 = 0;
   ringBufferFifo_.prepareToWrite(1, s1, num1, s2, num2);
   
@@ -63,6 +64,7 @@ void ObservabilityAgent::recordGauge(const char* name, double value) noexcept {
     return;
   }
   
+  const juce::SpinLock::ScopedLockType lock(ringBufferLock_);
   auto s1 = 0, s2 = 0, num1 = 0, num2 = 0;
   ringBufferFifo_.prepareToWrite(1, s1, num1, s2, num2);
   
@@ -92,6 +94,7 @@ void ObservabilityAgent::endTimer(const char* name, uint64_t startTime) noexcept
   auto endTime = static_cast<uint64_t>(now.time_since_epoch().count());
   auto duration = endTime - startTime;
   
+  const juce::SpinLock::ScopedLockType lock(ringBufferLock_);
   auto s1 = 0, s2 = 0, num1 = 0, num2 = 0;
   ringBufferFifo_.prepareToWrite(1, s1, num1, s2, num2);
   

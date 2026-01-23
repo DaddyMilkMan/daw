@@ -19,9 +19,47 @@ public:
   void runTest() override {
     testMetricsCollection();
     testPeriodicExport();
+    testConcurrentAccess();
   }
 
 private:
+  void testConcurrentAccess() {
+    beginTest("Concurrent Access");
+
+    ObservabilityAgent agent;
+    const int numThreads = 4;
+    const int numOpsPerThread = 100;
+    std::vector<std::thread> threads;
+    std::atomic<int> startFlag{0};
+
+    for (int i = 0; i < numThreads; ++i) {
+        threads.emplace_back([&agent, &startFlag, numOpsPerThread] {
+            while (startFlag.load() == 0) {
+                std::this_thread::yield();
+            }
+            for (int j = 0; j < numOpsPerThread; ++j) {
+                agent.recordCounter("concurrent_counter", 1.0);
+            }
+        });
+    }
+
+    startFlag.store(1);
+
+    for (auto& t : threads) {
+        t.join();
+    }
+
+    // Now drain the buffer
+    int totalEvents = 0;
+    int s1, s2, n1, n2;
+
+    agent.ringBufferFifo_.prepareToRead(agent.ringBufferFifo_.getTotalSize(), s1, n1, s2, n2);
+    totalEvents = n1 + n2;
+    agent.ringBufferFifo_.finishedRead(totalEvents);
+
+    expectEquals(totalEvents, numThreads * numOpsPerThread, "Should capture all concurrent events");
+  }
+
   void testMetricsCollection() {
     beginTest("Lock-free Ring Buffer Writes");
 
