@@ -24,6 +24,10 @@ try:
 except ImportError:
     NUMPY_AVAILABLE = False
 
+    class MockNumpy:
+        class ndarray: pass
+    np = MockNumpy()
+
 
 class TestType(Enum):
     """Types of tests supported."""
@@ -163,9 +167,9 @@ class TestingAgent:
     UNSAFE_PATTERNS = {
         "Allocation": re.compile(r"\b(new|delete|malloc|calloc|realloc|free|strdup)\b"),
         "Smart Pointer": re.compile(r"\bstd::(make_unique|make_shared)\b"),
-        "Container Mutation": re.compile(r"\.(push_back|emplace_back|resize|reserve|insert)\s*\("),
-        "String Usage": re.compile(r"\b(std::string|juce::String)\b"),
-        "Lock": re.compile(r"\bstd::(mutex|lock_guard|unique_lock|condition_variable)\b|\bjuce::(CriticalSection|ScopedLock)\b"),
+        "Container Mutation": re.compile(r"\.(push_back|emplace_back|resize|reserve|insert|erase|clear)\s*\("),
+        "String/ValueTree Usage": re.compile(r"\b(std::string|juce::String|juce::ValueTree|juce::var)\b"),
+        "Lock": re.compile(r"\bstd::(mutex|lock_guard|unique_lock|condition_variable)\b|\bjuce::(CriticalSection|ScopedLock|ReadWriteLock)\b"),
         "I/O": re.compile(r"\b(std::cout|std::cerr|printf|fprintf|std::fstream)\b|\bjuce::(Logger|File)\b|\bDBG\b"),
         "Flow Control": re.compile(r"\b(throw|try|catch|dynamic_cast)\b"),
         "Waiting": re.compile(r"\b(sleep|std::this_thread::sleep_for)\b")
@@ -961,7 +965,7 @@ class TestingAgent:
                 for line in result.stdout.splitlines():
                     if "Creating '" in line:
                         # Extract filename from "Creating 'filename'"
-                        fname = line.split("'"[1]
+                        fname = line.split("'")[1]
                         generated_files.append(cwd / fname)
 
                 # Read and parse .gcov files
