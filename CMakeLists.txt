@@ -614,6 +614,7 @@ if(BUILD_TESTS)
     target_sources(ObservabilityTest PRIVATE
         "agents/ObservabilityAgent/tests/RunTests.cpp"
         "agents/ObservabilityAgent/tests/ObservabilityAgentTest.cpp"
+        "agents/ObservabilityAgent/tests/ObservabilityAgentTests.cpp"
         "agents/ObservabilityAgent/ObservabilityAgent.cpp"
         "agents/ObservabilityAgent/PrometheusExporter.cpp"
     )

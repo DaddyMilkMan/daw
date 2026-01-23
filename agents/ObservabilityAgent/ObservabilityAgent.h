@@ -18,6 +18,7 @@
 #include <condition_variable>
 #include <memory>
 #include <array>
+#include <map>
 
 namespace zenith {
 namespace agents {
@@ -29,7 +30,7 @@ class PrometheusExporter;
     ObservabilityAgent provides lock-free metrics collection and monitoring
     for real-time audio systems without impacting RT thread performance.
 */
-class ObservabilityAgent : public juce::Thread, private juce::Timer {
+class ObservabilityAgent : public juce::Thread {
 public:
   //==============================================================================
   using Timestamp = std::chrono::steady_clock::time_point;
@@ -111,7 +112,7 @@ public:
   /// Clear collected metrics
   void clearMetrics();
 
-  /// Export accumulated metrics (called by timer or manually)
+  /// Export accumulated metrics (called by background thread or manually)
   void exportMetrics();
 
   /// Get number of export cycles completed (for testing)
@@ -120,9 +121,9 @@ public:
 private:
   //==============================================================================
   void run() override;
-  void timerCallback() override;
   void exportLoop();
   void stopExportThread();
+  void drainRingBuffer();
 
   struct LogEntry {
       LogLevel level;
@@ -157,8 +158,13 @@ private:
 
   // Lock-free ring buffer for RT metrics
   static constexpr int kRingBufferSize = 4096;
+  juce::SpinLock writeLock_; // Protects multi-producer writes to ring buffer
   juce::AbstractFifo ringBufferFifo_{kRingBufferSize};
   std::vector<RawMetricEvent> ringBufferData_;
+
+  // Metrics Aggregation
+  std::mutex metricsMutex_; // Protects aggregatedMetrics_
+  std::map<std::string, Metric> aggregatedMetrics_;
 
   // TODO: Add metrics exporter (Prometheus, OpenTelemetry)
   // TODO: Add trace context propagation

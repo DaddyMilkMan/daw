@@ -111,11 +111,9 @@ public:
             if (tempFile.exists()) {
                 auto content = tempFile.loadFileAsString();
                 expect(content.contains("zenith_metrics_collected_total"), "Internal metric missing");
-                // We recorded one counter above, so total should be at least 1 (plus potential others)
-                // The implementation increments 'metricsCollected_' on recordCounter.
-                // internal 'metricsCollected_' is exported.
-                // We called recordCounter once.
-                // The sample metric value should be >= 1.
+
+                // Now we expect the aggregated metric to be present
+                expect(content.contains("ignored_for_now"), "Aggregated metric 'ignored_for_now' missing from export");
             }
 
             // Cleanup

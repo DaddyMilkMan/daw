@@ -32,7 +32,7 @@ ObservabilityAgent::~ObservabilityAgent() {
   stopThread(1000);
   stopExportThread();
   // Flush any pending metrics
-  stopTimer();
+  drainRingBuffer();
   exportMetrics();
 }
 
@@ -44,6 +44,8 @@ void ObservabilityAgent::recordCounter(const char* name, double value) noexcept 
     return;
   }
   
+  const juce::SpinLock::ScopedLockType lock(writeLock_);
+
   auto s1 = 0, s2 = 0, num1 = 0, num2 = 0;
   ringBufferFifo_.prepareToWrite(1, s1, num1, s2, num2);
   
@@ -63,6 +65,8 @@ void ObservabilityAgent::recordGauge(const char* name, double value) noexcept {
     return;
   }
   
+  const juce::SpinLock::ScopedLockType lock(writeLock_);
+
   auto s1 = 0, s2 = 0, num1 = 0, num2 = 0;
   ringBufferFifo_.prepareToWrite(1, s1, num1, s2, num2);
   
@@ -92,6 +96,8 @@ void ObservabilityAgent::endTimer(const char* name, uint64_t startTime) noexcept
   auto endTime = static_cast<uint64_t>(now.time_since_epoch().count());
   auto duration = endTime - startTime;
   
+  const juce::SpinLock::ScopedLockType lock(writeLock_);
+
   auto s1 = 0, s2 = 0, num1 = 0, num2 = 0;
   ringBufferFifo_.prepareToWrite(1, s1, num1, s2, num2);
   
@@ -169,13 +175,6 @@ void ObservabilityAgent::setExportInterval(std::chrono::milliseconds interval) {
       // Wake up thread to pick up new interval if already running
       exportCv_.notify_all();
   }
-  
-  // Keep timer for compatibility if needed, or remove if thread supersedes
-  if (interval.count() > 0) {
-    juce::Timer::startTimer(static_cast<int>(interval.count()));
-  } else {
-    stopTimer();
-  }
 }
 
 void ObservabilityAgent::setMetricsFile(const juce::File& file) {
@@ -183,15 +182,84 @@ void ObservabilityAgent::setMetricsFile(const juce::File& file) {
     metricsFile_ = file;
 }
 
+void ObservabilityAgent::drainRingBuffer() {
+    int s1, s2, num1, num2;
+    // Consumer-only read, lock not required for AbstractFifo read side if SPSC,
+    // but the write side has MP protection.
+    // AbstractFifo documentation implies read side is safe if only one reader.
+    ringBufferFifo_.prepareToRead(kRingBufferSize, s1, num1, s2, num2);
+
+    if (num1 + num2 > 0) {
+        std::lock_guard<std::mutex> lock(metricsMutex_);
+
+        auto process = [&](int index) {
+            const auto& event = ringBufferData_[index];
+            std::string name = event.name;
+
+            if (event.type == MetricType::Counter) {
+                auto& m = aggregatedMetrics_[name];
+                if (m.name.empty()) {
+                    m.name = name;
+                    m.type = MetricType::Counter;
+                }
+                m.value += event.value;
+                m.timestamp = std::chrono::steady_clock::now(); // Use processing time for now
+            }
+            else if (event.type == MetricType::Gauge) {
+                auto& m = aggregatedMetrics_[name];
+                m.name = name;
+                m.type = MetricType::Gauge;
+                m.value = event.value; // Overwrite
+                m.timestamp = std::chrono::steady_clock::now();
+            }
+            else if (event.type == MetricType::Timer) {
+                // Aggregate timer as two counters: _sum and _count
+                std::string sumName = name + "_sum";
+                std::string countName = name + "_count";
+
+                auto& mSum = aggregatedMetrics_[sumName];
+                if (mSum.name.empty()) {
+                    mSum.name = sumName;
+                    mSum.type = MetricType::Timer; // Or Counter? Prometheus uses Counter for sum
+                }
+                mSum.value += event.value;
+                mSum.timestamp = std::chrono::steady_clock::now();
+
+                auto& mCount = aggregatedMetrics_[countName];
+                if (mCount.name.empty()) {
+                    mCount.name = countName;
+                    mCount.type = MetricType::Counter;
+                }
+                mCount.value += 1.0;
+                mCount.timestamp = std::chrono::steady_clock::now();
+            }
+        };
+
+        for (int i = 0; i < num1; ++i) process(s1 + i);
+        for (int i = 0; i < num2; ++i) process(s2 + i);
+
+        ringBufferFifo_.finishedRead(num1 + num2);
+    }
+}
+
 void ObservabilityAgent::exportMetrics() {
   if (!enabled_.load(std::memory_order_acquire)) {
     return;
   }
 
-  // TODO: Drain lock-free ring buffer
-  // TODO: Send to configured exporters
+  // Get current snapshot of metrics
+  auto metrics = getMetrics();
 
-  // For now, track export count for verification
+  juce::File dest;
+  {
+      std::lock_guard<std::mutex> lock(exportMutex_);
+      dest = metricsFile_;
+  }
+
+  if (exporter_) {
+      exporter_->exportMetrics(metrics, dest);
+  }
+
   exportCount_.fetch_add(1, std::memory_order_relaxed);
 }
 
@@ -199,33 +267,31 @@ uint64_t ObservabilityAgent::getExportCount() const {
   return exportCount_.load(std::memory_order_relaxed);
 }
 
-void ObservabilityAgent::timerCallback() {
-  exportMetrics();
-}
-
 std::vector<ObservabilityAgent::Metric> ObservabilityAgent::getMetrics() {
-  std::vector<Metric> metrics;
+  std::lock_guard<std::mutex> lock(metricsMutex_);
   
-  // Create a sample metric from the internal counter for testing/demonstration
-  // until the ring buffer is implemented.
+  std::vector<Metric> metrics;
+  metrics.reserve(aggregatedMetrics_.size() + 1);
+
+  // Add internal metric
   Metric m;
   m.name = "zenith_metrics_collected_total";
   m.type = MetricType::Counter;
   m.value = static_cast<double>(metricsCollected_.load(std::memory_order_relaxed));
   m.timestamp = std::chrono::steady_clock::now();
-
   metrics.push_back(m);
 
-  // TODO: Read from lock-free ring buffer
-  // TODO: Aggregate metrics by name
-  // TODO: Apply time-based windowing
+  for (const auto& pair : aggregatedMetrics_) {
+      metrics.push_back(pair.second);
+  }
   
   return metrics;
 }
 
 void ObservabilityAgent::clearMetrics() {
-  // TODO: Clear lock-free ring buffer
-  metricsCollected_.store(0, std::memory_order_release);
+    std::lock_guard<std::mutex> lock(metricsMutex_);
+    aggregatedMetrics_.clear();
+    metricsCollected_.store(0, std::memory_order_release);
 }
 
 void ObservabilityAgent::stopExportThread() {
@@ -260,15 +326,8 @@ void ObservabilityAgent::exportLoop() {
 
         // Export metrics
         if (enabled_.load(std::memory_order_acquire)) {
-            auto metrics = getMetrics();
-            juce::File dest;
-            {
-                std::lock_guard<std::mutex> lock(exportMutex_);
-                dest = metricsFile_;
-            }
-            if (exporter_) {
-                exporter_->exportMetrics(metrics, dest);
-            }
+            drainRingBuffer();
+            exportMetrics();
         }
     }
 }
@@ -281,8 +340,6 @@ void ObservabilityAgent::run() {
     if (size1 + size2 > 0) {
       auto process = [this](int index) {
         const auto& entry = logBuffer_[static_cast<size_t>(index)];
-        // Simple console output for now
-        // In production this would write to a file or aggregation service
         // DBG("[" << static_cast<int>(entry.level) << "] "
         //     << entry.timestamp << ": "
         //     << entry.message);
