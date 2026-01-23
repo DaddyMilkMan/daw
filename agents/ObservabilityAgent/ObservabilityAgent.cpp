@@ -245,6 +245,8 @@ void ObservabilityAgent::stopExportThread() {
 void ObservabilityAgent::exportLoop() {
     while (!shouldExitExportThread_.load(std::memory_order_acquire)) {
         std::chrono::milliseconds interval;
+        bool shouldExport = false;
+        
         {
             std::unique_lock<std::mutex> lock(exportMutex_);
             interval = exportInterval_;
@@ -252,19 +254,26 @@ void ObservabilityAgent::exportLoop() {
             if (interval.count() <= 0) break;
             
             // Wait for the interval or until signaled to exit or interval changes
-            exportCv_.wait_for(lock, interval, [this] { 
+            // Note: exportInterval_ is safe to read in predicate since we hold the lock
+            auto wakeReason = exportCv_.wait_for(lock, interval, [this] { 
                 return shouldExitExportThread_.load(std::memory_order_acquire) || 
                        exportInterval_.count() <= 0; 
             });
             
-            // Re-check interval after wait
-            if (exportInterval_.count() <= 0) break;
+            // If woken up early, check why
+            if (!wakeReason) {
+                // Timeout - time to export
+                shouldExport = true;
+            }
+            // If woken by notification, the while loop will handle the exit condition
         }
 
         if (shouldExitExportThread_.load(std::memory_order_acquire)) break;
 
-        // Export metrics (outside the lock)
-        exportMetrics();
+        // Export metrics if it's time (outside the lock)
+        if (shouldExport) {
+            exportMetrics();
+        }
     }
 }
 
