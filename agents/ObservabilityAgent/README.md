@@ -36,8 +36,8 @@ The ObservabilityAgent provides comprehensive monitoring, metrics collection, di
 
 ## Acceptance Criteria
 
-- [ ] Zero allocations in RT thread metric collection
-- [ ] Lock-free metric submission from audio thread
+- [x] Zero allocations in RT thread metric collection
+- [x] Lock-free metric submission from audio thread
 - [ ] < 1% CPU overhead for full observability
 - [ ] Support for distributed tracing across network sessions
 - [ ] Real-time performance metric streaming
@@ -46,13 +46,31 @@ The ObservabilityAgent provides comprehensive monitoring, metrics collection, di
 
 ## TODO: Next Steps
 
-- [ ] Implement lock-free ring buffer for RT thread metrics
-- [ ] Add Prometheus metrics exporter
+- [x] Implement lock-free ring buffer for RT thread metrics
+- [x] Add Prometheus metrics exporter
 - [ ] Create OpenTelemetry trace integration
-- [ ] Implement structured logging with log levels
+- [x] Implement structured logging with log levels
 - [ ] Add performance profiler with flame graphs
 - [ ] Create real-time metrics dashboard
 - [ ] Implement anomaly detection for audio dropouts
 - [ ] Add crash dump generation and symbolication
 - [ ] Create diagnostic snapshot capture
 - [ ] Document observability best practices
+
+## Implementation Notes
+
+### Thread Safety Model
+
+The ObservabilityAgent uses a strict single-producer, single-consumer (SPSC) model:
+
+- **Producer (Audio/RT Thread)**: Calls `recordCounter()`, `recordGauge()`, `startTimer()`, and `endTimer()` to submit metrics
+  - These methods are RT-safe: no allocations, no locks, only atomic operations
+  - Uses `juce::AbstractFifo` for lock-free coordination
+  - Assumes SINGLE producer thread (one audio callback thread)
+
+- **Consumer (Export Thread)**: Calls `processRingBuffer()` to drain and aggregate metrics
+  - Processes events from the ring buffer into aggregated metrics map
+  - Protected by `metricsMutex_` for safe access to aggregated data
+  - Runs asynchronously on background thread
+
+**IMPORTANT**: The current implementation assumes a single audio thread producer. If metrics are submitted from multiple threads concurrently, additional synchronization would be required.

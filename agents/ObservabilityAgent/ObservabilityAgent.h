@@ -29,6 +29,13 @@ class PrometheusExporter;
 /**
     ObservabilityAgent provides lock-free metrics collection and monitoring
     for real-time audio systems without impacting RT thread performance.
+    
+    Thread Safety:
+    - Metrics recording (recordCounter/recordGauge/startTimer/endTimer) is RT-safe
+    - Uses lock-free SPSC (Single-Producer, Single-Consumer) ring buffer
+    - IMPORTANT: Assumes metrics are recorded from a SINGLE producer thread
+    - Consumer thread asynchronously drains and aggregates metrics
+    - getMetrics/clearMetrics should only be called from non-RT threads
 */
 class ObservabilityAgent : public juce::Thread, private juce::Timer {
 public:
