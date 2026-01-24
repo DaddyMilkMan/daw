@@ -20,6 +20,7 @@ public:
     testMetricsCollection();
     testPeriodicExport();
     testLoggingConcurrency();
+    testLogTruncation();
   }
 
 private:
@@ -89,6 +90,24 @@ private:
     expectEquals((int)totalProcessed, (int)expected, "Total logs (written + dropped) should match expected");
 
     logFile.deleteFile();
+  }
+
+  void testLogTruncation() {
+      beginTest("Log Truncation");
+      ObservabilityAgent agent;
+      
+      // Test Truncation
+      juce::String longMsg;
+      for (int i=0; i<3000; ++i) longMsg += "a";
+      agent.log(ObservabilityAgent::LogLevel::Warning, longMsg);
+
+      // Wait for consumer
+      int retries = 10;
+      while (retries-- > 0 && agent.getTruncatedLogCount() == 0) {
+          juce::Thread::sleep(50);
+      }
+      
+      expectEquals(agent.getTruncatedLogCount(), (uint64_t)1, "Should record truncated log");
   }
 
   void testMetricsCollection() {

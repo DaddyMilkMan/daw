@@ -120,7 +120,10 @@ public:
   /// Get number of export cycles completed (for testing)
   uint64_t getExportCount() const;
 
+  /// Get number of dropped log messages (due to full queue or contention)
   uint64_t getDroppedLogCount() const;
+
+  /// Get number of truncated log messages
   uint64_t getTruncatedLogCount() const;
 
 private:
