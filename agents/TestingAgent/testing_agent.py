@@ -167,13 +167,17 @@ class TestingAgent:
     # Unsafe operation patterns (Regex)
     UNSAFE_PATTERNS = {
         "Allocation": re.compile(r"\b(new|delete|malloc|calloc|realloc|free|strdup)\b"),
-        "Smart Pointer": re.compile(r"\bstd::(make_unique|make_shared)\b"),
+        "Smart Pointer": re.compile(r"\bstd::(make_unique|make_shared|allocate_shared)\b"),
+        "Heavy Type": re.compile(r"\bstd::(function|any|variant)\b"),
         "Container Mutation": re.compile(r"\.(push_back|emplace_back|resize|reserve|insert)\s*\("),
         "String Usage": re.compile(r"\b(std::string|juce::String)\b"),
-        "Lock": re.compile(r"\bstd::(mutex|lock_guard|unique_lock|condition_variable)\b|\bjuce::(CriticalSection|ScopedLock)\b"),
-        "I/O": re.compile(r"\b(std::cout|std::cerr|printf|fprintf|std::fstream)\b|\bjuce::(Logger|File)\b|\bDBG\b"),
+        "JUCE Object": re.compile(r"\bjuce::(Array|OwnedArray|HashMap|ReferenceCountedObjectPtr)\b"),
+        "Lock": re.compile(r"\bstd::(mutex|lock_guard|unique_lock|condition_variable)\b|\bjuce::(CriticalSection|ScopedLock|MessageManagerLock)\b"),
+        "I/O": re.compile(r"\b(std::cout|std::cerr|printf|fprintf|std::fstream|fopen|fdopen)\b|\bjuce::(Logger|File)\b|\bDBG\b"),
+        "System Call": re.compile(r"\b(open|read|write|socket|recv|send)\s*\("),
+        "Formatting": re.compile(r"\b(std::format|fmt::format)\b|\.formatted\s*\(|\.toStdString\s*\("),
         "Flow Control": re.compile(r"\b(throw|try|catch|dynamic_cast)\b"),
-        "Waiting": re.compile(r"\b(sleep|std::this_thread::sleep_for)\b")
+        "Waiting": re.compile(r"\b(sleep|std::this_thread::sleep_for|std::atomic_wait)\b|\bwait\s*\(")
     }
 
     # Suppressions
@@ -587,8 +591,10 @@ class TestingAgent:
 
                         # Check masked line for violations
                         for violation_type, pattern in self.UNSAFE_PATTERNS.items():
-                            if pattern.search(masked_line):
-                                error_msg = f"RT-Safety Violation: {violation_type} detected in {func_name} at line {current_line_num}"
+                            match = pattern.search(masked_line)
+                            if match:
+                                matched_text = match.group(0).strip()
+                                error_msg = f"RT-Safety Violation: {violation_type} detected ('{matched_text}') in {func_name} at line {current_line_num}"
 
                                 results.append(TestCase(
                                     name=f"{file_path.name}::{func_name}::L{current_line_num}",
