@@ -920,7 +920,7 @@ void TransportBar::mouseMove(const juce::MouseEvent &e) {
     else if (viewToggleState_.isHovered) 
         globalHelpCallback("Switch View", "Toggles between linear Arranger and loop-based Session view. Shortcut: Tab.");
     else if (wingmanState_.isHovered)
-        globalHelpCallback("Wingman AI", "Your creative partner. Get intelligent suggestions for mixing, arrangement, and sound design.");
+        globalHelpCallback("Wingman AI", "Your creative partner. Get intelligent suggestions for mixing, arrangement, and sound design. Shortcut: Cmd+W.");
     else if (settingsState_.isHovered) 
         globalHelpCallback("Audio Settings", "Configure your sound card, buffer size, and MIDI hardware here.");
 
