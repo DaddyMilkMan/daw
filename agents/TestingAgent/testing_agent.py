@@ -116,20 +116,38 @@ class GcovParser:
         # Regex for line coverage: "   10:   42:code" or "#####:   42:code"
         # Group 1 is execution count ("#####" or number), Group 2 is line number
         # Note: headers start with "-:", which this regex won't match (good)
-        line_regex = re.compile(r"^\s*([0-9]+|#####):\s*[0-9]+:")
+        line_regex = re.compile(r"^\s*([0-9]+|#####):\s*([0-9]+):")
 
         # Regex for branch coverage: "branch  0 taken 1" or "branch  0 taken 50%"
         branch_regex = re.compile(r"^branch\s+\d+\s+taken\s+(\d+|[0-9.]+%)(?:$|\s|\()")
 
+        # Regex for source file path in header: "-:    0:Source:/path/to/file.cpp"
+        source_regex = re.compile(r"^\s*-:\s*0:Source:(.*)$")
+
+        lines_data = {} # line_num -> count
+        source_path = None
+
         lines = content.splitlines()
         for line in lines:
+            # Check for source path (usually at top)
+            if not source_path:
+                src_match = source_regex.match(line)
+                if src_match:
+                    source_path = src_match.group(1).strip()
+
             # Check for line execution
             match = line_regex.match(line)
             if match:
                 exec_count_str = match.group(1)
-                lines_total += 1
+                line_num = int(match.group(2))
+
+                count = 0
                 if exec_count_str != "#####":
+                    count = int(exec_count_str)
                     lines_covered += 1
+
+                lines_data[line_num] = count
+                lines_total += 1
                 continue
 
             # Check for branch execution
@@ -148,11 +166,13 @@ class GcovParser:
                         branches_covered += 1
 
         return {
+            'source_path': source_path,
             'lines_total': lines_total,
             'lines_covered': lines_covered,
             'branches_total': branches_total,
             'branches_covered': branches_covered,
-            'file_coverage': (lines_covered / lines_total * 100.0) if lines_total > 0 else 0.0
+            'file_coverage': (lines_covered / lines_total * 100.0) if lines_total > 0 else 0.0,
+            'lines_data': lines_data
         }
 
 
@@ -897,144 +917,368 @@ class TestingAgent:
             error_message=f"Generated {len(generated_files)} files in {corpus_dir}"
         )]
 
+    def _is_coverage_enabled(self, build_dir: Path) -> bool:
+        """Check if coverage is enabled in the build directory."""
+        cache_file = build_dir / "CMakeCache.txt"
+        if not cache_file.exists():
+            return False
+
+        try:
+            content = cache_file.read_text(encoding='utf-8', errors='ignore')
+            # Look for ZENITH_ENABLE_COVERAGE:BOOL=ON
+            if re.search(r"ZENITH_ENABLE_COVERAGE:BOOL=ON", content):
+                return True
+        except Exception:
+            pass
+        return False
+
+    def _rebuild_project(self, build_dir: Path):
+        """Reconfigure and rebuild the project with coverage enabled."""
+        print("Rebuilding project with coverage enabled...")
+
+        # Configure
+        cmd_config = ["cmake", "-B", str(build_dir), "-S", str(self.project_root), "-DZENITH_ENABLE_COVERAGE=ON"]
+        if shutil.which("ninja"):
+            cmd_config.extend(["-G", "Ninja"])
+
+        print(f"Running: {' '.join(cmd_config)}")
+        subprocess.run(cmd_config, check=True)
+
+        # Build
+        cmd_build = ["cmake", "--build", str(build_dir)]
+        print(f"Running: {' '.join(cmd_build)}")
+        subprocess.run(cmd_build, check=True)
+
+    def _open_file(self, path: str, mode: str):
+        """Wrapper for open() to facilitate mocking."""
+        return open(path, mode)
+
+    def _write_manual_lcov(self, file_stats_with_lines: List[Dict], output_file: Path):
+        """Generate LCOV info file manually from parsed Gcov data."""
+        with self._open_file(str(output_file), 'w') as f:
+            f.write("TN:\n")
+            for entry in file_stats_with_lines:
+                # Use absolute path if available, else relative
+                f.write(f"SF:{entry['file_path']}\n")
+
+                # Lines
+                for line_num, count in entry['lines'].items():
+                    f.write(f"DA:{line_num},{count}\n")
+
+                # Summary
+                f.write(f"LF:{entry['lines_total']}\n")
+                f.write(f"LH:{entry['lines_covered']}\n")
+                f.write("end_of_record\n")
+        print(f"LCOV report saved to {output_file} (manual generation)")
+
     def generate_coverage_report(self, 
-                                 build_dir: Optional[Path] = None) -> CoverageReport:
+                                 build_dir: Optional[Path] = None,
+                                 rebuild_if_needed: bool = True,
+                                 run_tests: bool = True,
+                                 formats: List[str] = ["json", "lcov"]) -> CoverageReport:
         """
         Generate code coverage report.
         
         Args:
             build_dir: Build directory with coverage data
+            rebuild_if_needed: Trigger rebuild if coverage not enabled
+            run_tests: Run tests to generate fresh data
+            formats: List of output formats ("json", "lcov", "html")
             
         Returns:
             Coverage statistics
         """
         print("Generating coverage report...")
-
-        if not shutil.which("gcov"):
-            print("Error: 'gcov' tool not found. Cannot generate coverage report.")
-            return CoverageReport()
         
         build_path = build_dir or self.project_root / "build"
+
+        # 1. Check/Enable Coverage
         if not build_path.exists():
-            print(f"Build directory {build_path} does not exist.")
-            return CoverageReport()
+            build_path.mkdir(parents=True, exist_ok=True)
 
-        # 1. Find .gcno files
+        if rebuild_if_needed:
+            if not self._is_coverage_enabled(build_path):
+                print("Coverage not enabled in build. Triggering rebuild...")
+                try:
+                    self._rebuild_project(build_path)
+                except subprocess.CalledProcessError as e:
+                    print(f"Error rebuilding project: {e}")
+                    return CoverageReport()
+
+        # 2. Run Tests
+        if run_tests:
+            print("Running tests to generate coverage data...")
+            results = self.run_unit_tests()
+            failed = sum(1 for t in results if t.status == TestStatus.FAILED)
+            if failed > 0:
+                print(f"Warning: {failed} tests failed. Coverage data might be incomplete.")
+
+        # 3. Detect Coverage Type (LLVM vs GCC)
+        # Check for Clang/LLVM .profraw
+        profraw_files = list(build_path.rglob("*.profraw"))
+        if profraw_files:
+            return self._process_llvm_coverage(build_path, formats)
+
+        # Check for GCC .gcno/.gcda
         gcno_files = list(build_path.rglob("*.gcno"))
-        if not gcno_files:
-            print("Error: Coverage artifacts (.gcno) not found.")
-            print("Please rebuild with -DZENITH_ENABLE_COVERAGE=ON.")
+        if gcno_files:
+            return self._process_gcov_coverage(build_path, gcno_files, formats)
+
+        print("Error: No coverage artifacts (.gcno or .profraw) found.")
+        print("Please ensure the build was successful and ZENITH_ENABLE_COVERAGE=ON.")
+        return CoverageReport()
+
+    def _process_llvm_coverage(self, build_path: Path, formats: List[str]) -> CoverageReport:
+        """Process LLVM/Clang coverage data."""
+        print("Detected LLVM/Clang coverage artifacts.")
+
+        llvm_profdata = shutil.which("llvm-profdata")
+        llvm_cov = shutil.which("llvm-cov")
+
+        if not llvm_profdata or not llvm_cov:
+            print("Error: llvm-profdata or llvm-cov not found.")
             return CoverageReport()
 
-        # 2. Check for .gcda files
+        # 1. Merge profiles
+        profdata_path = build_path / "coverage.profdata"
+        # Find all profraw files
+        cmd_merge = [llvm_profdata, "merge", "-sparse"]
+        cmd_merge.extend([str(p) for p in build_path.rglob("*.profraw")])
+        cmd_merge.extend(["-o", str(profdata_path)])
+
+        subprocess.run(cmd_merge, check=False)
+
+        if not profdata_path.exists():
+            print("Error: Failed to merge profile data.")
+            return CoverageReport()
+
+        # 2. Locate binary (needed for llvm-cov)
+        test_binary = self._find_test_binary("ZenithDAWTests")
+        if not test_binary:
+            print("Error: Test binary not found.")
+            return CoverageReport()
+
+        # 3. Generate Reports
+        report_stats = CoverageReport()
+
+        # Generate JSON for parsing
+        try:
+            cmd_export = [
+                llvm_cov, "export",
+                "-format=text",
+                str(test_binary),
+                f"-instr-profile={profdata_path}",
+                "-ignore-filename-regex=.*(test|Test|gtest|catch|JuceLibraryCode|external).*"
+            ]
+
+            result = subprocess.run(cmd_export, capture_output=True, text=True, check=False)
+            if result.returncode == 0:
+                data = json.loads(result.stdout)
+                # Parse summary from LLVM JSON
+                # Structure: data['data'][0]['totals']['lines']['count'] ...
+                if data.get('data'):
+                    totals = data['data'][0].get('totals', {})
+                    lines = totals.get('lines', {})
+                    branches = totals.get('branches', {})
+                    functions = totals.get('functions', {})
+
+                    report_stats = CoverageReport(
+                        lines_total=lines.get('count', 0),
+                        lines_covered=lines.get('covered', 0),
+                        branches_total=branches.get('count', 0),
+                        branches_covered=branches.get('covered', 0),
+                        functions_total=functions.get('count', 0),
+                        functions_covered=functions.get('covered', 0)
+                    )
+
+                    if "json" in formats:
+                        json_path = build_path / "coverage_report.json"
+                        with self._open_file(str(json_path), 'w') as f:
+                            json.dump(data, f, indent=2)
+                        print(f"JSON report saved to {json_path}")
+
+        except Exception as e:
+            print(f"Error processing LLVM JSON: {e}")
+
+        # Generate LCOV if requested
+        if "lcov" in formats:
+            lcov_path = build_path / "coverage.info"
+            cmd_lcov = [
+                llvm_cov, "export",
+                "-format=lcov",
+                str(test_binary),
+                f"-instr-profile={profdata_path}",
+                "-ignore-filename-regex=.*(test|Test|gtest|catch|JuceLibraryCode|external).*"
+            ]
+            with self._open_file(str(lcov_path), 'w') as f:
+                subprocess.run(cmd_lcov, stdout=f, check=False)
+            print(f"LCOV report saved to {lcov_path}")
+
+        # Generate HTML if requested (using llvm-cov show)
+        if "html" in formats:
+             html_dir = build_path / "coverage_html"
+             cmd_html = [
+                llvm_cov, "show",
+                "-format=html",
+                str(test_binary),
+                f"-instr-profile={profdata_path}",
+                "-ignore-filename-regex=.*(test|Test|gtest|catch|JuceLibraryCode|external).*",
+                f"-output-dir={html_dir}"
+             ]
+             subprocess.run(cmd_html, check=False)
+             print(f"HTML report saved to {html_dir}")
+
+        self.coverage = report_stats
+        return report_stats
+
+    def _process_gcov_coverage(self, build_path: Path, gcno_files: List[Path], formats: List[str]) -> CoverageReport:
+        """Process GCC/Gcov coverage data."""
+        print(f"Processing {len(gcno_files)} Gcov files...")
+
+        # Check for .gcda files
         gcda_files = list(build_path.rglob("*.gcda"))
         if not gcda_files:
             print("Warning: No execution data (.gcda) found.")
-            print("Did you run the tests yet?")
             return CoverageReport()
 
+        # 1. Internal Parsing (for JSON report and stats)
+        # Note: We reuse the existing logic but refactored slightly
         parser = GcovParser()
         total_lines = 0
         covered_lines = 0
         total_branches = 0
         covered_branches = 0
-
         file_stats = []
 
-        print(f"Processing {len(gcno_files)} coverage files...")
+        if shutil.which("gcov"):
+             for gcno in gcno_files:
+                try:
+                    cwd = gcno.parent
+                    cmd = ["gcov", "-b", "-c", gcno.name]
+                    result = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True, check=False)
 
-        # 3. Run gcov and parse
-        for gcno in gcno_files:
+                    if result.returncode != 0: continue
+
+                    # Find generated .gcov files
+                    generated_files = []
+                    for line in result.stdout.splitlines():
+                        if "Creating '" in line:
+                            try:
+                                fname = line.split("'")[1]
+                                generated_files.append(cwd / fname)
+                            except IndexError: pass
+
+                    for gcov_file in generated_files:
+                        if not gcov_file.exists(): continue
+
+                        # Parse
+                        content = gcov_file.read_text(encoding='utf-8', errors='ignore')
+                        stats = parser.parse_file(content)
+
+                        file_name = gcov_file.name.replace('.gcov', '')
+
+                        # Filter out system headers and tests if possible
+                        if any(x in file_name for x in ["test", "Test", "gtest", "catch", "JuceLibraryCode", "external"]):
+                             gcov_file.unlink()
+                             continue
+
+                        total_lines += stats['lines_total']
+                        covered_lines += stats['lines_covered']
+                        total_branches += stats['branches_total']
+                        covered_branches += stats['branches_covered']
+
+                        # Determine source path
+                        src_path = stats.get('source_path')
+                        if src_path:
+                            # If path is relative, try to resolve it relative to gcno directory (compilation dir)
+                            p = Path(src_path)
+                            if not p.is_absolute():
+                                p = (cwd / p).resolve()
+                            src_path = str(p)
+                        else:
+                            # Fallback: strip .gcov extension
+                            # e.g. foo.cpp.gcov -> foo.cpp
+                            src_path = file_name
+
+                        file_stats.append({
+                            'file': file_name,
+                            'file_path': src_path,
+                            'coverage_percent': stats['file_coverage'],
+                            'lines_total': stats['lines_total'],
+                            'lines_covered': stats['lines_covered'],
+                            'lines': stats['lines_data']
+                        })
+
+                        # Cleanup .gcov file to save space?
+                        # Or keep them if we want to parse line-by-line later?
+                        # For now, unlink as in original code
+                        gcov_file.unlink()
+
+                except Exception as e:
+                    print(f"Error processing {gcno}: {e}")
+        else:
+            print("Warning: 'gcov' tool not found. Skipping internal stats parsing.")
+
+        # Save JSON
+        if "json" in formats:
+            report_data = {
+                "summary": {
+                    "lines_total": total_lines,
+                    "lines_covered": covered_lines,
+                    "lines_percent": (covered_lines / total_lines * 100.0) if total_lines > 0 else 0.0,
+                    "branches_total": total_branches,
+                    "branches_covered": covered_branches,
+                     "branches_percent": (covered_branches / total_branches * 100.0) if total_branches > 0 else 0.0
+                },
+                "hotspots": sorted(file_stats, key=lambda x: x['coverage_percent'])[:5],
+                "files": [{k:v for k,v in f.items() if k != 'lines'} for f in file_stats] # Exclude heavy line data from JSON summary
+            }
+            json_path = build_path / "coverage_report.json"
             try:
-                # We cd to the directory of the gcno file to minimize path issues
-                # and ensure .gcov files are created there
-                cwd = gcno.parent
-                cmd = ["gcov", "-b", "-c", gcno.name]
-
-                # Run gcov
-                result = subprocess.run(
-                    cmd,
-                    cwd=str(cwd),
-                    capture_output=True,
-                    text=True,
-                    check=False
-                )
-
-                if result.returncode != 0:
-                    # Only print error if verbose or critical
-                    continue
-
-                # Parse output to find generated .gcov files
-                # Output format: "Creating 'test.cpp.gcov'"
-                generated_files = []
-                creating_regex = re.compile(r"Creating '([^']+)'")
-
-                for line in result.stdout.splitlines():
-                    match = creating_regex.search(line)
-                    if match:
-                        fname = match.group(1)
-                        generated_files.append(cwd / fname)
-                    elif "Creating '" in line:
-                        # Fallback for simple cases
-                        try:
-                            fname = line.split("'")[1]
-                            generated_files.append(cwd / fname)
-                        except IndexError:
-                            pass
-
-                # Read and parse .gcov files
-                for gcov_file in generated_files:
-                    if not gcov_file.exists():
-                        continue
-
-                    content = gcov_file.read_text(encoding='utf-8', errors='ignore')
-                    stats = parser.parse_file(content)
-
-                    file_name = gcov_file.name.replace('.gcov', '')
-
-                    # Accumulate totals
-                    total_lines += stats['lines_total']
-                    covered_lines += stats['lines_covered']
-                    total_branches += stats['branches_total']
-                    covered_branches += stats['branches_covered']
-
-                    file_stats.append({
-                        'file': file_name,
-                        'coverage_percent': stats['file_coverage'],
-                        'lines_total': stats['lines_total'],
-                        'lines_covered': stats['lines_covered'],
-                        'branches_total': stats['branches_total'],
-                        'branches_covered': stats['branches_covered']
-                    })
-
-                    # Cleanup
-                    gcov_file.unlink()
-
+                with self._open_file(str(json_path), 'w') as f:
+                    json.dump(report_data, f, indent=2)
+                print(f"JSON report saved to {json_path}")
             except Exception as e:
-                print(f"Error processing {gcno}: {e}")
+                print(f"Failed to save JSON report: {e}")
 
-        # 4. Generate JSON report
-        report_data = {
-            "summary": {
-                "lines_total": total_lines,
-                "lines_covered": covered_lines,
-                "lines_percent": (covered_lines / total_lines * 100.0) if total_lines > 0 else 0.0,
-                "branches_total": total_branches,
-                "branches_covered": covered_branches,
-                "branches_percent": (covered_branches / total_branches * 100.0) if total_branches > 0 else 0.0
-            },
-            "hotspots": sorted(file_stats, key=lambda x: x['coverage_percent'])[:5],
-            "files": file_stats
-        }
+        # 2. LCOV Generation
+        if "lcov" in formats:
+            lcov_path = build_path / "coverage.info"
 
-        json_path = build_path / "coverage_report.json"
-        try:
-            with open(json_path, 'w') as f:
-                json.dump(report_data, f, indent=2)
-            print(f"Coverage report saved to {json_path}")
-        except Exception as e:
-            print(f"Failed to save coverage report: {e}")
-        
+            if shutil.which("lcov"):
+                # capture
+                cmd_lcov = [
+                    "lcov", "--capture",
+                    "--directory", str(build_path),
+                    "--output-file", str(lcov_path),
+                    "--ignore-errors", "gcov"
+                ]
+                subprocess.run(cmd_lcov, check=False)
+
+                # filter
+                cmd_remove = [
+                    "lcov", "--remove", str(lcov_path),
+                    "*test*", "*Test*", "*gtest*", "*catch*", "*JuceLibraryCode*", "*external*", "/usr/*",
+                    "--output-file", str(lcov_path)
+                ]
+                subprocess.run(cmd_remove, check=False)
+
+                print(f"LCOV report saved to {lcov_path}")
+
+                # HTML from LCOV
+                if "html" in formats and shutil.which("genhtml"):
+                    html_dir = build_path / "coverage_html"
+                    cmd_genhtml = ["genhtml", str(lcov_path), "--output-directory", str(html_dir)]
+                    subprocess.run(cmd_genhtml, check=False)
+                    print(f"HTML report saved to {html_dir}")
+
+            elif file_stats:
+                # Fallback to manual generation
+                print("Generating LCOV report manually (lcov tool not found)...")
+                self._write_manual_lcov(file_stats, lcov_path)
+            else:
+                 print("Warning: No coverage data found to generate LCOV.")
+
         self.coverage = CoverageReport(
             lines_total=total_lines,
             lines_covered=covered_lines,
