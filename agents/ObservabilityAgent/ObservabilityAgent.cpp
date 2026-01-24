@@ -1,7 +1,8 @@
 /*
   ==============================================================================
     agents/ObservabilityAgent/ObservabilityAgent.cpp
-    Lock-free observability and metrics collection implementation.
+    RT-safe observability and metrics collection implementation.
+    Uses spinlock-protected MPSC ring buffer for multi-producer safety.
   ==============================================================================
 */
 

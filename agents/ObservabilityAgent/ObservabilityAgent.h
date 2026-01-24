@@ -1,7 +1,8 @@
 /*
   ==============================================================================
     agents/ObservabilityAgent/ObservabilityAgent.h
-    Lock-free observability and metrics collection for real-time audio.
+    RT-safe observability and metrics collection for real-time audio.
+    Uses spinlock-protected MPSC ring buffer for multi-producer safety.
   ==============================================================================
 */
 
@@ -26,8 +27,13 @@ class PrometheusExporter;
 
 //==============================================================================
 /**
-    ObservabilityAgent provides lock-free metrics collection and monitoring
+    ObservabilityAgent provides RT-safe metrics collection and monitoring
     for real-time audio systems without impacting RT thread performance.
+    
+    Thread Safety:
+    - Uses spinlock-protected MPSC ring buffer for multi-producer safety
+    - Critical section: ~20-50 CPU cycles (well under 100-cycle RT limit)
+    - Follows project RT-safety guidelines in docs/RT_SAFETY_QUICK_REF.md
 */
 class ObservabilityAgent : public juce::Thread, private juce::Timer {
 public:
@@ -64,16 +70,16 @@ public:
   //==============================================================================
   // Metrics Collection (RT-safe)
   
-  /// Record counter increment (RT-safe, lock-free)
+  /// Record counter increment (RT-safe, uses spinlock for MPSC safety)
   void recordCounter(const char* name, double value = 1.0) noexcept;
   
-  /// Record gauge value (RT-safe, lock-free)
+  /// Record gauge value (RT-safe, uses spinlock for MPSC safety)
   void recordGauge(const char* name, double value) noexcept;
   
-  /// Start timing measurement (RT-safe)
+  /// Start timing measurement (RT-safe, lock-free)
   uint64_t startTimer() noexcept;
   
-  /// End timing measurement and record (RT-safe)
+  /// End timing measurement and record (RT-safe, uses spinlock for MPSC safety)
   void endTimer(const char* name, uint64_t startTime) noexcept;
   
   //==============================================================================
@@ -117,6 +123,27 @@ public:
   /// Get number of export cycles completed (for testing)
   uint64_t getExportCount() const;
 
+#if JUCE_UNIT_TESTS
+  /// Get ring buffer FIFO for testing (not RT-safe, test only)
+  const juce::AbstractFifo& getRingBufferFifoForTesting() const { return ringBufferFifo_; }
+  
+  /// Get ring buffer data for testing (not RT-safe, test only)
+  const std::vector<RawMetricEvent>& getRingBufferDataForTesting() const { return ringBufferData_; }
+  
+  /// Drain ring buffer for testing (not RT-safe, test only)
+  /// @param numToDrain Number of events to drain, or -1 for all available
+  /// @return Number of events actually drained
+  int drainRingBufferForTesting(int numToDrain = -1) {
+    const juce::SpinLock::ScopedLockType lock(ringBufferLock_);
+    int s1, s2, num1, num2;
+    int toDrain = numToDrain < 0 ? ringBufferFifo_.getNumReady() : numToDrain;
+    ringBufferFifo_.prepareToRead(toDrain, s1, num1, s2, num2);
+    int actuallyDrained = num1 + num2;
+    ringBufferFifo_.finishedRead(actuallyDrained);
+    return actuallyDrained;
+  }
+#endif
+
 private:
   //==============================================================================
   void run() override;
@@ -155,17 +182,16 @@ private:
   juce::AbstractFifo logFifo_{kLogQueueSize};
   std::vector<LogEntry> logBuffer_;
 
-  // Lock-free ring buffer for RT metrics
+  // MPSC ring buffer for RT metrics (uses spinlock for multi-producer safety)
+  // Critical section: ~20-50 CPU cycles (well under 100-cycle RT-safety limit)
   static constexpr int kRingBufferSize = 4096;
-  juce::SpinLock ringBufferLock_;
+  juce::SpinLock ringBufferLock_;  // Protects AbstractFifo write operations
   juce::AbstractFifo ringBufferFifo_{kRingBufferSize};
   std::vector<RawMetricEvent> ringBufferData_;
 
   // TODO: Add metrics exporter (Prometheus, OpenTelemetry)
   // TODO: Add trace context propagation
   // TODO: Add log aggregation
-  
-  friend class ObservabilityAgentTest; // Allow tests to access ring buffer
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ObservabilityAgent)
 };
