@@ -156,7 +156,9 @@ struct AudioBufferConverter {
           case BitDepth::Int24: return 3;
           case BitDepth::Int32: return 4;
           case BitDepth::Float32: return 4;
-          default: return 0;
+          default:
+              jassertfalse; // Invalid BitDepth value
+              return 4;     // Return safe default to prevent undefined behavior
       }
   }
 };

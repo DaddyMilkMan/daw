@@ -6,6 +6,7 @@
 */
 
 #include "TransportProtocolAgent.h"
+#include <cstring> // For std::memset
 
 namespace zenith {
 namespace agents {
@@ -320,10 +321,16 @@ void AudioBufferConverter::convertToPlanarFloat(const void* sourceData,
                                                 int numChannels,
                                                 BitDepth sourceFormat)
 {
+    // Validate input parameters
+    jassert(sourceData != nullptr);
+    jassert(numSamples > 0);
+    jassert(numChannels > 0);
+    
     // Resize buffer if needed (though usually caller handles this)
     destBuffer.setSize(numChannels, numSamples, false, false, true);
 
     const int bytesPerSample = getBytesPerSample(sourceFormat);
+    jassert(bytesPerSample > 0); // Ensure valid BitDepth was provided
     const int strideBytes = bytesPerSample * numChannels;
     const char* rawSrc = static_cast<const char*>(sourceData);
 
@@ -364,13 +371,29 @@ void AudioBufferConverter::convertFromPlanarFloat(const juce::AudioBuffer<float>
                                                   int numChannels,
                                                   BitDepth destFormat)
 {
+    // Validate input parameters
+    jassert(destData != nullptr);
+    jassert(numSamples > 0);
+    jassert(numChannels > 0);
+    jassert(sourceBuffer.getNumChannels() >= numChannels); // Ensure source has enough channels
+    
     const int bytesPerSample = getBytesPerSample(destFormat);
+    jassert(bytesPerSample > 0); // Ensure valid BitDepth was provided
     const int strideBytes = bytesPerSample * numChannels;
     char* rawDest = static_cast<char*>(destData);
 
     for (int ch = 0; ch < numChannels; ++ch)
     {
-        if (ch >= sourceBuffer.getNumChannels()) break;
+        if (ch >= sourceBuffer.getNumChannels())
+        {
+            // Zero-fill missing channels to prevent uninitialized memory
+            void* channelDest = rawDest + (ch * bytesPerSample);
+            for (int sample = 0; sample < numSamples; ++sample)
+            {
+                std::memset(static_cast<char*>(channelDest) + (sample * strideBytes), 0, bytesPerSample);
+            }
+            continue;
+        }
 
         const float* srcChannel = sourceBuffer.getReadPointer(ch);
         void* channelDest = rawDest + (ch * bytesPerSample);
