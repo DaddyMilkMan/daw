@@ -157,14 +157,14 @@ private:
   juce::AbstractFifo logFifo_{kLogQueueSize};
   std::vector<LogEntry> logBuffer_;
 
-  // Lock-free ring buffer for RT metrics
+  // Lock-free ring buffer for RT metrics (single producer, single consumer)
+  // IMPORTANT: These are RT-safe for use from ONE audio thread (producer) and ONE consumer thread
   static constexpr int kRingBufferSize = 4096;
   juce::AbstractFifo ringBufferFifo_{kRingBufferSize};
   std::vector<RawMetricEvent> ringBufferData_;
-  juce::SpinLock ringBufferLock_; // Protects write access to ringBufferFifo_
 
-  // Aggregated metrics storage
-  std::mutex metricsMutex_; // Protects metricsMap_ and read access to ringBufferFifo_
+  // Aggregated metrics storage (accessed only by consumer thread)
+  std::mutex metricsMutex_; // Protects metricsMap_
   std::map<std::string, Metric> metricsMap_;
 
   // TODO: Add metrics exporter (Prometheus, OpenTelemetry)
