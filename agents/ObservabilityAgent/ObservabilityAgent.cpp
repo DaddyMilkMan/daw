@@ -29,7 +29,11 @@ ObservabilityAgent::ObservabilityAgent() : juce::Thread("ObservabilityAgent") {
 }
 
 ObservabilityAgent::~ObservabilityAgent() {
+  // Ensure the logging thread wakes up to exit
+  signalThreadShouldExit();
+  logEvent_.signal();
   stopThread(1000);
+
   stopExportThread();
   // Flush any pending metrics
   exportMetrics();
@@ -113,19 +117,45 @@ void ObservabilityAgent::log(LogLevel level, const char* message) noexcept {
     return;
   }
 
+  // Try to acquire the lock - drop if contended (RT requirement)
+  if (!logSpinLock_.tryEnter()) {
+    droppedLogCount_.fetch_add(1, std::memory_order_relaxed);
+    return;
+  }
+
+  // FIFO logic - protected by spinlock for MPSC safety
   int start1, size1, start2, size2;
   logFifo_.prepareToWrite(1, start1, size1, start2, size2);
 
   if (size1 > 0) {
     auto& entry = logBuffer_[static_cast<size_t>(start1)];
     entry.level = level;
-    entry.timestamp = startTimer();
+    entry.timestamp = juce::Time::currentTimeMillis();
+    entry.threadId = (uint64_t)(uintptr_t)juce::Thread::getCurrentThreadId();
 
-    // RT-safe string copy
-    std::strncpy(entry.message, message, sizeof(entry.message) - 1);
-    entry.message[sizeof(entry.message) - 1] = '\0';
+    // RT-safe string copy with truncation handling
+    size_t maxLen = sizeof(entry.message) - 1;
+    size_t msgLen = std::strlen(message);
+
+    if (msgLen > maxLen) {
+        std::memcpy(entry.message, message, maxLen - 3);
+        std::memcpy(entry.message + maxLen - 3, "...", 3);
+        entry.message[maxLen] = '\0';
+        truncatedLogCount_.fetch_add(1, std::memory_order_relaxed);
+    } else {
+        std::memcpy(entry.message, message, msgLen);
+        entry.message[msgLen] = '\0';
+    }
 
     logFifo_.finishedWrite(1);
+
+    // Release lock before signaling to minimize hold time
+    logSpinLock_.exit();
+    logEvent_.signal();
+  } else {
+    // Queue full
+    logSpinLock_.exit();
+    droppedLogCount_.fetch_add(1, std::memory_order_relaxed);
   }
 }
 
@@ -149,6 +179,22 @@ void ObservabilityAgent::logStructured(LogLevel level,
 
 //==============================================================================
 // Configuration
+
+void ObservabilityAgent::setLogFile(const juce::File& file) {
+    {
+        std::lock_guard<std::mutex> lock(logFileMutex_);
+        logFile_ = file;
+    }
+    logEvent_.signal(); // Wake up consumer to handle file switch
+}
+
+uint64_t ObservabilityAgent::getDroppedLogCount() const {
+    return droppedLogCount_.load(std::memory_order_relaxed);
+}
+
+uint64_t ObservabilityAgent::getTruncatedLogCount() const {
+    return truncatedLogCount_.load(std::memory_order_relaxed);
+}
 
 void ObservabilityAgent::setEnabled(bool enabled) {
   enabled_.store(enabled, std::memory_order_release);
@@ -262,18 +308,62 @@ void ObservabilityAgent::exportLoop() {
 }
 
 void ObservabilityAgent::run() {
+  // Local state for file handling
+  juce::File currentLogFile;
+
   while (!threadShouldExit()) {
+    // Check for file changes
+    juce::File targetFile;
+    {
+        std::lock_guard<std::mutex> lock(logFileMutex_);
+        targetFile = logFile_;
+    }
+
+    if (targetFile != currentLogFile) {
+        currentLogFile = targetFile;
+        logStream_.reset(); // Close existing
+
+        if (currentLogFile != juce::File()) {
+            logStream_ = currentLogFile.createOutputStream();
+            if (!logStream_) {
+                // Failed to open - fallback to debug
+                DBG("ObservabilityAgent: Failed to open log file " << currentLogFile.getFullPathName());
+            }
+        }
+    }
+
+    // Process queue
     int start1, size1, start2, size2;
     logFifo_.prepareToRead(kLogQueueSize, start1, size1, start2, size2);
 
     if (size1 + size2 > 0) {
       auto process = [this](int index) {
         const auto& entry = logBuffer_[static_cast<size_t>(index)];
-        // Simple console output for now
-        // In production this would write to a file or aggregation service
-        // DBG("[" << static_cast<int>(entry.level) << "] "
-        //     << entry.timestamp << ": "
-        //     << entry.message);
+
+        // Format: ISO8601 LEVEL [tid=...] Message
+        auto time = juce::Time(entry.timestamp);
+        juce::String levelStr;
+        switch (entry.level) {
+            case LogLevel::Debug:    levelStr = "DEBUG"; break;
+            case LogLevel::Info:     levelStr = "INFO"; break;
+            case LogLevel::Warning:  levelStr = "WARN"; break;
+            case LogLevel::Error:    levelStr = "ERROR"; break;
+            case LogLevel::Critical: levelStr = "CRIT"; break;
+        }
+
+        juce::String output = time.toISO8601(true) + " " +
+                              levelStr + " [tid=" +
+                              juce::String(entry.threadId) + "] " +
+                              juce::String(entry.message);
+
+        // Output to Debug
+        DBG(output);
+
+        // Output to File
+        if (logStream_) {
+            *logStream_ << output << juce::newLine;
+            logStream_->flush();
+        }
       };
 
       for (int i = 0; i < size1; ++i) process(start1 + i);
@@ -282,7 +372,8 @@ void ObservabilityAgent::run() {
       logFifo_.finishedRead(size1 + size2);
     }
 
-    wait(100);
+    // Wait for event or timeout
+    logEvent_.wait(1000);
   }
 }
 

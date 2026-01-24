@@ -104,6 +104,9 @@ public:
   /// Set the destination file for metrics export
   void setMetricsFile(const juce::File& file);
 
+  /// Set the destination file for logs
+  void setLogFile(const juce::File& file);
+
   /// Get collected metrics (non-RT)
   std::vector<Metric> getMetrics();
   
@@ -116,6 +119,12 @@ public:
   /// Get number of export cycles completed (for testing)
   uint64_t getExportCount() const;
 
+  /// Get number of dropped log messages (due to full queue or contention)
+  uint64_t getDroppedLogCount() const;
+
+  /// Get number of truncated log messages
+  uint64_t getTruncatedLogCount() const;
+
 private:
   //==============================================================================
   void run() override;
@@ -124,8 +133,9 @@ private:
 
   struct LogEntry {
       LogLevel level;
-      uint64_t timestamp;
-      char message[512];
+      int64_t timestamp;
+      char message[2048];
+      uint64_t threadId;
   };
 
   struct RawMetricEvent {
@@ -152,6 +162,16 @@ private:
   static constexpr int kLogQueueSize = 1024;
   juce::AbstractFifo logFifo_{kLogQueueSize};
   std::vector<LogEntry> logBuffer_;
+
+  // Logging members
+  juce::WaitableEvent logEvent_;
+  juce::SpinLock logSpinLock_;
+  std::atomic<uint64_t> droppedLogCount_{0};
+  std::atomic<uint64_t> truncatedLogCount_{0};
+
+  std::mutex logFileMutex_;
+  std::unique_ptr<juce::FileOutputStream> logStream_;
+  juce::File logFile_;
 
   // Lock-free ring buffer for RT metrics
   static constexpr int kRingBufferSize = 4096;
