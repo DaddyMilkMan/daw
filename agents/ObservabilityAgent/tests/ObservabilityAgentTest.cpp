@@ -19,78 +19,95 @@ public:
   void runTest() override {
     testMetricsCollection();
     testPeriodicExport();
-    testLogging();
-    testConcurrentLogging();
+    testLoggingConcurrency();
+    testLogTruncation();
   }
 
 private:
-  void testLogging() {
-      beginTest("Logging");
+  void testLoggingConcurrency() {
+    beginTest("Concurrent Logging");
+
+    ObservabilityAgent agent;
+    juce::File logFile = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                         .getChildFile("test_observability_log.txt");
+    logFile.deleteFile();
+    agent.setLogFile(logFile);
+
+    const int numThreads = 4;
+    const int numLogsPerThread = 100;
+    std::vector<std::thread> threads;
+
+    for (int i = 0; i < numThreads; ++i) {
+        threads.emplace_back([&agent, i, numLogsPerThread] {
+            for (int j = 0; j < numLogsPerThread; ++j) {
+                juce::String msg = "Thread " + juce::String(i) + " Log " + juce::String(j);
+                agent.log(ObservabilityAgent::LogLevel::Info, msg);
+                // Small yield to encourage interleaving
+                if (j % 10 == 0) std::this_thread::yield();
+            }
+        });
+    }
+
+    for (auto& t : threads) t.join();
+
+    // Wait for consumer to process
+    // We poll until we see enough lines or timeout
+    int maxRetries = 50; // 5 seconds
+    size_t totalProcessed = 0;
+    size_t expected = numThreads * numLogsPerThread;
+
+    while (maxRetries-- > 0) {
+        juce::Thread::sleep(100);
+
+        juce::StringArray lines;
+        logFile.readLines(lines);
+        totalProcessed = lines.size() + agent.getDroppedLogCount();
+
+        if (totalProcessed >= expected) break;
+    }
+
+    // Read file final state
+    juce::StringArray lines;
+    logFile.readLines(lines);
+
+    // removeEmptyStrings returns the number of strings removed, but modifies the array in place
+    lines.removeEmptyStrings();
+
+    totalProcessed = lines.size() + agent.getDroppedLogCount();
+
+    // Verify
+    expect(lines.size() > 0, "Log file should not be empty");
+
+    if (lines.size() > 0) {
+        juce::String firstLine = lines[0];
+        // Expect ISO8601...
+        // e.g. 2023-10-27T... INFO [tid=...] Thread X Log Y
+        expect(firstLine.contains("INFO"), "Line should contain level");
+        expect(firstLine.contains("tid="), "Line should contain thread ID");
+        expect(firstLine.contains("Thread"), "Line should contain message body");
+    }
+
+    expectEquals((int)totalProcessed, (int)expected, "Total logs (written + dropped) should match expected");
+
+    logFile.deleteFile();
+  }
+
+  void testLogTruncation() {
+      beginTest("Log Truncation");
       ObservabilityAgent agent;
-
-      // Simple log
-      agent.log(ObservabilityAgent::LogLevel::Info, "Test log message");
-
-      // We can't easily verify DBG output, but we can verify no crash.
-      // To verify processing, we can check if queue drains.
-      // The consumer runs in 'run()', which is started by constructor.
-      // We need to wait a bit.
-      juce::Thread::sleep(100);
-
-      // Check dropped count is 0
-      expectEquals(agent.getDroppedLogCount(), (uint64_t)0);
-      expectEquals(agent.getTruncatedLogCount(), (uint64_t)0);
-
+      
       // Test Truncation
       juce::String longMsg;
       for (int i=0; i<3000; ++i) longMsg += "a";
       agent.log(ObservabilityAgent::LogLevel::Warning, longMsg);
 
-      juce::Thread::sleep(100);
-      expectEquals(agent.getTruncatedLogCount(), (uint64_t)1);
-  }
-
-  void testConcurrentLogging() {
-      beginTest("Concurrent Logging");
-      ObservabilityAgent agent;
-
-      const int numThreads = 4;
-      const int logsPerThread = 100;
-      std::vector<std::thread> threads;
-
-      for (int i=0; i<numThreads; ++i) {
-          threads.emplace_back([&, i] {
-              for (int j=0; j<logsPerThread; ++j) {
-                  agent.log(ObservabilityAgent::LogLevel::Info,
-                           juce::String("Thread " + juce::String(i) + " Log " + juce::String(j)));
-                  // Small sleep to vary contention
-                  if (j % 10 == 0) juce::Thread::sleep(1);
-              }
-          });
-      }
-
-      for (auto& t : threads) t.join();
-
       // Wait for consumer
-      juce::Thread::sleep(500);
-
-      // We don't strictly assert dropped count is 0 because contention might cause drops
-      // with the spinlock try_lock.
-      // But we verify the system is stable.
-      expect(true, "Concurrent logging completed");
-
-      // Verify file logging
-      juce::File tempFile = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("test_log.txt");
-      tempFile.deleteFile();
-      agent.setLogFile(tempFile);
-
-      agent.log(ObservabilityAgent::LogLevel::Error, "File log test");
-      juce::Thread::sleep(200);
-
-      expect(tempFile.existsAsFile(), "Log file created");
-      expect(tempFile.getSize() > 0, "Log file not empty");
-
-      tempFile.deleteFile();
+      int retries = 10;
+      while (retries-- > 0 && agent.getTruncatedLogCount() == 0) {
+          juce::Thread::sleep(50);
+      }
+      
+      expectEquals(agent.getTruncatedLogCount(), (uint64_t)1, "Should record truncated log");
   }
 
   void testMetricsCollection() {
