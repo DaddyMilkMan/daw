@@ -19,6 +19,12 @@ namespace agents {
 /**
     TransportProtocolAgent provides unified cross-platform audio device access,
     abstracting ASIO, WASAPI, CoreAudio, ALSA, and JACK protocols.
+    
+    Thread Safety:
+    - enumerateDevices(), openDevice(), closeDevice(), getDefaultInputDevice(),
+      getDefaultOutputDevice() are MESSAGE THREAD ONLY
+    - getCurrentSampleRate(), getCurrentBufferSize(), getInputLatencySamples(),
+      getOutputLatencySamples() are safe from any thread (read-only device queries)
 */
 class TransportProtocolAgent {
 public:
@@ -117,15 +123,22 @@ enum class BitDepth {
 /**
     Utility for converting between interleaved audio data and planar JUCE AudioBuffers.
     Wraps juce::AudioDataConverters for optimized performance.
+    
+    Thread Safety:
+    - These methods should NOT be called from the audio thread with dynamic buffer allocation.
+    - Buffers MUST be pre-allocated before use in RT contexts to avoid memory allocation.
 */
 struct AudioBufferConverter {
   /**
       De-interleaves raw audio data from a device into a JUCE AudioBuffer.
       @param sourceData        Pointer to the raw interleaved data (e.g., from the driver)
-      @param destBuffer        The planar buffer to fill
+      @param destBuffer        The planar buffer to fill (MUST be pre-allocated for RT safety)
       @param numSamples        Number of samples to process per channel
       @param numChannels       Number of channels in the source/dest
       @param sourceFormat      Enum for Int16, Int24, Int32, or Float32
+      
+      WARNING: destBuffer must be pre-allocated with sufficient size to avoid 
+      memory allocation in real-time audio threads. Use with jassert in debug builds.
   */
   static void convertToPlanarFloat(const void* sourceData,
                                    juce::AudioBuffer<float>& destBuffer,
