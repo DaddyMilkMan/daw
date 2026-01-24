@@ -53,8 +53,14 @@ void ObservabilityAgent::recordCounter(const char* name, double value) noexcept 
     event.name = name;
     event.value = value;
     event.timestamp = startTimer(); // Reuse for current timestamp
+    
+    // Ensure all writes are visible before advancing the FIFO
+    std::atomic_thread_fence(std::memory_order_release);
     ringBufferFifo_.finishedWrite(1);
     metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  } else {
+    // Track dropped metrics for observability
+    metricsDropped_.fetch_add(1, std::memory_order_relaxed);
   }
 }
 
@@ -72,8 +78,14 @@ void ObservabilityAgent::recordGauge(const char* name, double value) noexcept {
     event.name = name;
     event.value = value;
     event.timestamp = startTimer(); // Reuse for current timestamp
+    
+    // Ensure all writes are visible before advancing the FIFO
+    std::atomic_thread_fence(std::memory_order_release);
     ringBufferFifo_.finishedWrite(1);
     metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  } else {
+    // Track dropped metrics for observability
+    metricsDropped_.fetch_add(1, std::memory_order_relaxed);
   }
 }
 
@@ -88,6 +100,9 @@ void ObservabilityAgent::endTimer(const char* name, uint64_t startTime) noexcept
     return;
   }
   
+  // NOTE: std::chrono::steady_clock::now() is not guaranteed to be RT-safe
+  // by the C++ standard. Most implementations use fast syscalls (VDSO), but
+  // this could potentially cause non-deterministic delays on some platforms.
   auto now = std::chrono::steady_clock::now();
   auto endTime = static_cast<uint64_t>(now.time_since_epoch().count());
   auto duration = endTime - startTime;
@@ -101,8 +116,14 @@ void ObservabilityAgent::endTimer(const char* name, uint64_t startTime) noexcept
     event.name = name;
     event.value = static_cast<double>(duration);
     event.timestamp = endTime;
+    
+    // Ensure all writes are visible before advancing the FIFO
+    std::atomic_thread_fence(std::memory_order_release);
     ringBufferFifo_.finishedWrite(1);
     metricsCollected_.fetch_add(1, std::memory_order_relaxed);
+  } else {
+    // Track dropped metrics for observability
+    metricsDropped_.fetch_add(1, std::memory_order_relaxed);
   }
 }
 
@@ -188,8 +209,19 @@ void ObservabilityAgent::processEvents() {
     ringBufferFifo_.prepareToRead(kRingBufferSize, start1, size1, start2, size2);
 
     if (size1 + size2 > 0) {
-        auto process = [this](int index) {
+        // Ensure all producer writes are visible
+        std::atomic_thread_fence(std::memory_order_acquire);
+        
+        // Pre-allocate strings for timer metrics to avoid allocation in loop
+        std::string countSuffix = "_count";
+        std::string sumSuffix = "_sum";
+        
+        // Lock once for the entire batch to improve performance
+        std::lock_guard<std::mutex> lock(metricStateMutex_);
+        
+        auto process = [this, &countSuffix, &sumSuffix](int index) {
             const auto& event = ringBufferData_[index];
+            
             switch (event.type) {
                 case MetricType::Counter:
                     metricState_[event.name] += event.value;
@@ -197,11 +229,14 @@ void ObservabilityAgent::processEvents() {
                 case MetricType::Gauge:
                     metricState_[event.name] = event.value;
                     break;
-                case MetricType::Timer:
+                case MetricType::Timer: {
                     // Prometheus Summary/Histogram pattern: _count and _sum
-                    metricState_[std::string(event.name) + "_count"] += 1.0;
-                    metricState_[std::string(event.name) + "_sum"] += event.value;
+                    // Use pre-allocated suffix strings to minimize allocations
+                    std::string baseName(event.name);
+                    metricState_[baseName + countSuffix] += 1.0;
+                    metricState_[baseName + sumSuffix] += event.value;
                     break;
+                }
                 default:
                     break;
             }
@@ -245,44 +280,59 @@ std::vector<ObservabilityAgent::Metric> ObservabilityAgent::getMetrics() {
   processEvents();
 
   std::vector<Metric> metrics;
-  metrics.reserve(metricState_.size() + 1);
   
-  // Internal diagnostic metric
   {
-      Metric m;
-      m.name = "zenith_metrics_collected_total";
-      m.type = MetricType::Counter;
-      m.value = static_cast<double>(metricsCollected_.load(std::memory_order_relaxed));
-      m.timestamp = std::chrono::steady_clock::now();
-      metrics.push_back(m);
-  }
+    std::lock_guard<std::mutex> lock(metricStateMutex_);
+    metrics.reserve(metricState_.size() + 2);
+  
+    // Internal diagnostic metrics
+    {
+        Metric m;
+        m.name = "zenith_metrics_collected_total";
+        m.type = MetricType::Counter;
+        m.value = static_cast<double>(metricsCollected_.load(std::memory_order_relaxed));
+        m.timestamp = std::chrono::steady_clock::now();
+        metrics.push_back(m);
+    }
+    
+    {
+        Metric m;
+        m.name = "zenith_metrics_dropped_total";
+        m.type = MetricType::Counter;
+        m.value = static_cast<double>(metricsDropped_.load(std::memory_order_relaxed));
+        m.timestamp = std::chrono::steady_clock::now();
+        metrics.push_back(m);
+    }
 
-  auto now = std::chrono::steady_clock::now();
-  for (const auto& pair : metricState_) {
-      Metric m;
-      m.name = pair.first;
-      m.value = pair.second;
-      m.timestamp = now;
+    auto now = std::chrono::steady_clock::now();
+    for (const auto& pair : metricState_) {
+        Metric m;
+        m.name = pair.first;
+        m.value = pair.second;
+        m.timestamp = now;
 
-      // Infer type for export metadata
-      // Ideally we would store the type, but for this MVP we infer counters.
-      if (juce::String(pair.first).endsWith("_count") ||
-          juce::String(pair.first).endsWith("_sum") ||
-          juce::String(pair.first).endsWith("_total")) {
-          m.type = MetricType::Counter;
-      } else {
-          m.type = MetricType::Gauge;
-      }
+        // Infer type for export metadata
+        // Ideally we would store the type, but for this MVP we infer counters.
+        if (juce::String(pair.first).endsWith("_count") ||
+            juce::String(pair.first).endsWith("_sum") ||
+            juce::String(pair.first).endsWith("_total")) {
+            m.type = MetricType::Counter;
+        } else {
+            m.type = MetricType::Gauge;
+        }
 
-      metrics.push_back(m);
+        metrics.push_back(m);
+    }
   }
   
   return metrics;
 }
 
 void ObservabilityAgent::clearMetrics() {
+  std::lock_guard<std::mutex> lock(metricStateMutex_);
   metricState_.clear();
   metricsCollected_.store(0, std::memory_order_release);
+  metricsDropped_.store(0, std::memory_order_release);
 }
 
 void ObservabilityAgent::stopExportThread() {

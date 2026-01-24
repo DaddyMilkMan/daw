@@ -140,6 +140,7 @@ private:
 
   std::atomic<bool> enabled_{true};
   std::atomic<uint64_t> metricsCollected_{0};
+  std::atomic<uint64_t> metricsDropped_{0};
   std::atomic<uint64_t> exportCount_{0};
   
   std::unique_ptr<PrometheusExporter> exporter_;
@@ -162,6 +163,7 @@ private:
   std::vector<RawMetricEvent> ringBufferData_;
 
   // Aggregated metric state (Non-RT only)
+  std::mutex metricStateMutex_;
   std::map<std::string, double> metricState_;
 
   /// process pending events from the ring buffer
