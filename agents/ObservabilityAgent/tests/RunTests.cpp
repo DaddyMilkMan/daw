@@ -6,7 +6,6 @@
 */
 
 #include <juce_core/juce_core.h>
-#include <juce_events/juce_events.h>
 #include <iostream>
 
 namespace juce {
@@ -15,12 +14,8 @@ namespace juce {
 }
 
 int main(int argc, char* argv[]) {
-  // Initialize MessageManager for Timer support
-  auto* mm = juce::MessageManager::getInstance();
-
   juce::UnitTestRunner runner;
   runner.runAllTests();
 
-  juce::MessageManager::deleteInstance();
   return 0;
 }
