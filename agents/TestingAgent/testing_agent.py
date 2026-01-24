@@ -23,8 +23,10 @@ try:
     NUMPY_AVAILABLE = True
 except ImportError:
     NUMPY_AVAILABLE = False
+    from typing import Any
     class MockNumpy:
-        class ndarray: pass
+        ndarray = Any
+        def __getattr__(self, _): return None
     np = MockNumpy()
 
 
@@ -917,6 +919,10 @@ class TestingAgent:
             Coverage statistics
         """
         print("Generating coverage report...")
+
+        if not shutil.which("gcov"):
+            print("Error: 'gcov' tool not found. Cannot generate coverage report.")
+            return CoverageReport()
         
         build_path = build_dir or self.project_root / "build"
         if not build_path.exists():
@@ -971,11 +977,20 @@ class TestingAgent:
                 # Parse output to find generated .gcov files
                 # Output format: "Creating 'test.cpp.gcov'"
                 generated_files = []
+                creating_regex = re.compile(r"Creating '([^']+)'")
+
                 for line in result.stdout.splitlines():
-                    if "Creating '" in line:
-                        # Extract filename from "Creating 'filename'"
-                        fname = line.split("'")[1]
+                    match = creating_regex.search(line)
+                    if match:
+                        fname = match.group(1)
                         generated_files.append(cwd / fname)
+                    elif "Creating '" in line:
+                        # Fallback for simple cases
+                        try:
+                            fname = line.split("'")[1]
+                            generated_files.append(cwd / fname)
+                        except IndexError:
+                            pass
 
                 # Read and parse .gcov files
                 for gcov_file in generated_files:
