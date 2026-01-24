@@ -4,15 +4,18 @@
 
 namespace zenith {
 
-void SampleGenerator::generateMissingSamples(juce::ThreadPool* threadPool, std::function<void()> onComplete) {
-    auto task = [onComplete]() {
+// Internal Job Class
+class SampleGenerationJob : public juce::ThreadPoolJob {
+public:
+    SampleGenerationJob(std::function<void()> onComplete)
+        : juce::ThreadPoolJob("SampleGeneration"), onCompleteCallback(onComplete) {}
+
+    JobStatus runJob() override {
         // Use stack-allocated random generator for thread safety
         juce::Random random;
         random.setSeedRandomly();
 
         auto contentRoot = ContentPaths::getInstance().getContentRoot();
-        // Ensure the Samples directory exists
-        // The path structure relies on Content/Examples/SampleMaps/Samples
         auto samplesDir = contentRoot.getChildFile("Examples")
                                 .getChildFile("SampleMaps")
                                 .getChildFile("Samples");
@@ -20,7 +23,6 @@ void SampleGenerator::generateMissingSamples(juce::ThreadPool* threadPool, std::
         if (!samplesDir.exists())
             samplesDir.createDirectory();
 
-        // List of files derived from the known .zsamplemap.json files
         juce::StringArray requiredFiles = {
             // 808 Essentials
             "808-kick.wav", "808-snare.wav", "808-hihat-closed.wav",
@@ -50,9 +52,8 @@ void SampleGenerator::generateMissingSamples(juce::ThreadPool* threadPool, std::
             "fx-riser.wav", "fx-impact.wav", "fx-reverse.wav", "fx-whoosh.wav"};
 
         juce::Array<juce::File> targetDirs;
-        targetDirs.add(samplesDir); // Examples/SampleMaps/Samples
+        targetDirs.add(samplesDir);
 
-        // Add Instruments/ZenithSampler/Samples
         auto instrumentsDir = contentRoot.getChildFile("Instruments")
                                     .getChildFile("ZenithSampler")
                                     .getChildFile("Samples");
@@ -61,12 +62,17 @@ void SampleGenerator::generateMissingSamples(juce::ThreadPool* threadPool, std::
         targetDirs.add(instrumentsDir);
 
         for (const auto &dir : targetDirs) {
+            // Check cancellation between directories
+            if (shouldExit()) return jobHasFinished;
+
             for (const auto &filename : requiredFiles) {
+                // Check cancellation between files
+                if (shouldExit()) return jobHasFinished;
+
                 auto file = dir.getChildFile(filename);
                 if (!file.existsAsFile()) {
                     DBG("Generating missing sample: " << filename);
 
-                    // Simple heuristic to create distinct sounds
                     float freq = 440.0f;
                     float duration = 0.5f;
                     bool isNoise = false;
@@ -87,13 +93,11 @@ void SampleGenerator::generateMissingSamples(juce::ThreadPool* threadPool, std::
                         duration = 1.0f;
                     } else if (filename.contains("piano")) {
                         freq = 261.63f; // C4
-                        if (filename.contains("C3"))
-                            freq = 130.81f;
-                        if (filename.contains("C5"))
-                            freq = 523.25f;
+                        if (filename.contains("C3")) freq = 130.81f;
+                        if (filename.contains("C5")) freq = 523.25f;
                         duration = 1.0f;
                     } else if (filename.contains("riser") || filename.contains("long")) {
-                        freq = 300.0f; // Sweep?
+                        freq = 300.0f;
                         duration = 2.0f;
                     }
 
@@ -102,72 +106,77 @@ void SampleGenerator::generateMissingSamples(juce::ThreadPool* threadPool, std::
             }
         }
 
-        if (onComplete) onComplete();
-    };
-
-    if (threadPool) {
-        threadPool->addJob(task);
-    } else {
-        task();
+        if (onCompleteCallback && !shouldExit()) onCompleteCallback();
+        return jobHasFinished;
     }
-}
 
-void SampleGenerator::createWavFile(const juce::File &file, float freq,
-                                    float durationSecs, juce::Random& random, bool isNoise) {
-    juce::WavAudioFormat wavFormat;
+private:
+    std::function<void()> onCompleteCallback;
 
-    // Write to a temp file first for atomicity
-    auto tempFile = file.getParentDirectory().getChildFile(file.getFileName() + ".tmp");
+    void createWavFile(const juce::File &file, float freq,
+                       float durationSecs, juce::Random& random, bool isNoise) {
+        juce::WavAudioFormat wavFormat;
 
-    // Ensure clean start
-    if (tempFile.exists()) tempFile.deleteFile();
+        // Write to a temp file first for atomicity
+        auto tempFile = file.getParentDirectory().getChildFile(file.getFileName() + ".tmp");
 
-    std::unique_ptr<juce::OutputStream> outStream(tempFile.createOutputStream());
-    if (!outStream)
-        return;
+        // Ensure clean start
+        if (tempFile.exists()) tempFile.deleteFile();
 
-    auto options = juce::AudioFormatWriterOptions()
-                     .withSampleRate(44100.0)
-                     .withNumChannels(1)
-                     .withBitsPerSample(16);
+        std::unique_ptr<juce::OutputStream> outStream(tempFile.createOutputStream());
+        if (!outStream)
+            return;
 
-    std::unique_ptr<juce::AudioFormatWriter> writer(
-      wavFormat.createWriterFor(outStream, options));
+        auto options = juce::AudioFormatWriterOptions()
+                         .withSampleRate(44100.0)
+                         .withNumChannels(1)
+                         .withBitsPerSample(16);
 
-    if (writer) {
-        outStream.release(); // Writer takes ownership
+        std::unique_ptr<juce::AudioFormatWriter> writer(
+          wavFormat.createWriterFor(outStream, options));
 
-        int numSamples = (int)(44100.0 * durationSecs);
-        juce::AudioBuffer<float> buffer(1, numSamples);
+        if (writer) {
+            outStream.release(); // Writer takes ownership
 
-        auto *ch = buffer.getWritePointer(0);
-        double phase = 0.0;
-        double phaseInc = freq * juce::MathConstants<double>::twoPi / 44100.0;
+            int numSamples = (int)(44100.0 * durationSecs);
+            juce::AudioBuffer<float> buffer(1, numSamples);
 
-        for (int i = 0; i < numSamples; ++i) {
-            // Simple decay
-            float env = 1.0f - ((float)i / numSamples);
-            env = env * env; // Exponential-ish
+            auto *ch = buffer.getWritePointer(0);
+            double phase = 0.0;
+            double phaseInc = freq * juce::MathConstants<double>::twoPi / 44100.0;
 
-            float sample = 0.0f;
-            if (isNoise || freq > 2000.0f) { // High freq noise-like or explicit noise
-                // Use passed random generator
-                sample = (random.nextFloat() * 2.0f - 1.0f) * env;
-            } else {
-                sample = (float)std::sin(phase) * env;
+            for (int i = 0; i < numSamples; ++i) {
+                float env = 1.0f - ((float)i / numSamples);
+                env = env * env;
+
+                float sample = 0.0f;
+                if (isNoise || freq > 2000.0f) {
+                    sample = (random.nextFloat() * 2.0f - 1.0f) * env;
+                } else {
+                    sample = (float)std::sin(phase) * env;
+                }
+
+                ch[i] = sample;
+                phase += phaseInc;
             }
 
-            ch[i] = sample;
-            phase += phaseInc;
+            writer->writeFromAudioSampleBuffer(buffer, 0, numSamples);
+            writer.reset(); // Flush writer
+
+            // Atomic move
+            tempFile.moveFileTo(file);
+        } else {
+            tempFile.deleteFile();
         }
+    }
+};
 
-        writer->writeFromAudioSampleBuffer(buffer, 0, numSamples);
-        writer.reset(); // Flush writer
-
-        // Atomic move
-        tempFile.moveFileTo(file);
+void SampleGenerator::generateMissingSamples(juce::ThreadPool* threadPool, std::function<void()> onComplete) {
+    if (threadPool) {
+        threadPool->addJob(new SampleGenerationJob(onComplete), true); // true = deleteJobWhenFinished
     } else {
-        tempFile.deleteFile();
+        SampleGenerationJob job(onComplete);
+        job.runJob();
     }
 }
 

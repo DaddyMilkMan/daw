@@ -122,6 +122,7 @@ set(ZENITH_TEST_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/AudioBufferConverterTest.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/ObservabilityAgentTest.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/SampleGeneratorBenchmark.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/SampleGeneratorTests.cpp"
 )
 
 # =============================================================================
@@ -686,6 +687,40 @@ if(BUILD_TESTS)
 
     if(UNIX AND NOT APPLE)
         target_link_libraries(SampleGeneratorBenchmarkApp PRIVATE pthread dl)
+    endif()
+
+    # =========================================================================
+    # SampleGeneratorTests - Verification tests for SampleGenerator
+    # =========================================================================
+    add_executable(SampleGeneratorTestsApp
+        "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/SampleGeneratorTests.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/utils/SampleGenerator.cpp"
+    )
+
+    target_include_directories(SampleGeneratorTestsApp PRIVATE
+        ${CMAKE_BINARY_DIR}/JuceLibraryCode
+    )
+
+    target_link_libraries(SampleGeneratorTestsApp PRIVATE
+        zenith_core_includes
+        zenith_juce_includes
+        juce::juce_core
+        juce::juce_audio_formats
+        juce::juce_audio_basics
+    )
+
+    target_compile_definitions(SampleGeneratorTestsApp PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        SAMPLE_GENERATOR_TESTS_STANDALONE=1
+        JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+        JUCE_STANDALONE_APPLICATION=1
+    )
+
+    target_compile_features(SampleGeneratorTestsApp PRIVATE cxx_std_20)
+
+    if(UNIX AND NOT APPLE)
+        target_link_libraries(SampleGeneratorTestsApp PRIVATE pthread dl)
     endif()
 
 endif()
