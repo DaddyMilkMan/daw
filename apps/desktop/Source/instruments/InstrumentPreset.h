@@ -74,11 +74,16 @@ struct ZenithInstrumentPreset {
 
   /**
    * @brief Create preset with existing ID (Optimized)
+   * @note The id_ parameter must not be empty. Use the name/instrumentId/author
+   *       constructor to generate an ID automatically.
    */
   ZenithInstrumentPreset(const std::string &id_, const std::string &name_,
                          const std::string &instrumentId_,
-                         const std::string &author_)
-      : id(id_), name(name_), instrumentId(instrumentId_), author(author_) {}
+                         const std::string &author_) noexcept
+      : id(id_), name(name_), instrumentId(instrumentId_), author(author_) {
+    // Assert in debug builds, but this is also checked at deserialization time
+    jassert(!id_.empty() && "Preset ID must not be empty");
+  }
 
   /**
    * @brief Set parameter value
@@ -183,6 +188,11 @@ struct ZenithInstrumentPreset {
         tree.getProperty("instrumentId", "").toString().toStdString();
     std::string author =
         tree.getProperty("author", "Unknown").toString().toStdString();
+
+    // Generate ID if missing to ensure all presets have valid IDs
+    if (id.empty()) {
+      id = generateId(name);
+    }
 
     ZenithInstrumentPreset preset(id, name, instrumentId, author);
 
@@ -328,6 +338,11 @@ struct ZenithInstrumentPreset {
     std::string instrumentId =
         obj->getProperty("instrumentId").toString().toStdString();
     std::string author = obj->getProperty("author").toString().toStdString();
+
+    // Generate ID if missing to ensure all presets have valid IDs
+    if (id.empty()) {
+      id = generateId(name);
+    }
 
     ZenithInstrumentPreset preset(id, name, instrumentId, author);
 
