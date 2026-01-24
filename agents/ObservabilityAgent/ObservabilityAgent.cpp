@@ -74,7 +74,7 @@ void ObservabilityAgent::recordGauge(const char* name, double value) noexcept {
     event.type = MetricType::Gauge;
     event.name = name;
     event.value = value;
-    event.timestamp = startTimer(); // Reuse for current timestamp
+    event.timestamp = startTimer(); // Capture timestamp
     ringBufferFifo_.finishedWrite(1);
     metricsCollected_.fetch_add(1, std::memory_order_relaxed);
   }
