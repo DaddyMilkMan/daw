@@ -84,6 +84,29 @@ private:
   SkiaWidget *activeWidget_ = nullptr; // Widget currently being dragged
   SkiaWidget *hoveredWidget_ = nullptr;
 
+  // Control References (owned by widgets_)
+  // Oscillators
+  ZenithKnob* osc1Wave_ = nullptr;
+  ZenithKnob* osc1Mix_ = nullptr;
+  ZenithKnob* osc2Wave_ = nullptr;
+  ZenithKnob* osc2Mix_ = nullptr;
+
+  // Filter
+  ZenithKnob* cutoff_ = nullptr;
+  ZenithKnob* resonance_ = nullptr;
+  ZenithKnob* envAmt_ = nullptr;
+
+  // Envelope
+  ZenithKnob* attack_ = nullptr;
+  ZenithKnob* decay_ = nullptr;
+  ZenithKnob* sustain_ = nullptr;
+  ZenithKnob* release_ = nullptr;
+
+  // Layout Areas
+  SkRect oscPanelBounds_;
+  SkRect filterPanelBounds_;
+  SkRect envPanelBounds_;
+
   // Complex Components (kept as JUCE components for now)
   std::unique_ptr<ZenithVisualizer> visualizer_;
   // std::unique_ptr<ZenithModMatrix> modMatrix_;
