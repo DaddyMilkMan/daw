@@ -15,7 +15,8 @@ namespace zenith {
 void PianoRollComponent::mouseMove(const juce::MouseEvent &e) {
   juce::MouseEvent event = e.withNewPosition(e.position.translated(-contentOffsetX_, 0));
   if (e.x < contentOffsetX_) {
-      setMouseCursor(juce::MouseCursor::NormalCursor);
+      currentCursorType = CursorType::Normal;
+      setMouseCursor(getMouseCursor());
       return;
   }
   float x = static_cast<float>(e.x);
@@ -41,8 +42,7 @@ void PianoRollComponent::mouseMove(const juce::MouseEvent &e) {
   auto newCursorType = getCursorForPosition(x, y);
   if (newCursorType != currentCursorType) {
     currentCursorType = newCursorType;
-    repaint(); // Cursor changes might affect tooltips or global state, keep
-               // simple for cursor
+    setMouseCursor(getMouseCursor());
   }
 
   // Track hovered note
