@@ -70,20 +70,9 @@ private:
     double counterValue = 1.0;
     agent.recordCounter(counterName, counterValue);
 
-    // Access via const test API
+    // Verify events were queued
     const auto& fifo = agent.getRingBufferFifoForTesting();
-    const auto& ringData = agent.getRingBufferDataForTesting();
-
-    // We expect 2 events
     expect(fifo.getNumReady() >= 2, "Should have at least 2 events in buffer");
-
-    // Read the events (indices based on FIFO state)
-    // Note: We can't directly manipulate the FIFO, so we read based on expected order
-    // For more robust testing, we'd use drainRingBufferForTesting()
-    
-    // For now, just verify the FIFO has data and check the counter was incremented
-    auto numReady = fifo.getNumReady();
-    expect(numReady >= 2, "Should have 2 events queued");
 
     // Drain and verify we got 2 events
     int drained = agent.drainRingBufferForTesting(2);
