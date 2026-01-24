@@ -2,12 +2,6 @@
   ==============================================================================
     agents/ObservabilityAgent/ObservabilityAgent.cpp
     Lock-free observability and metrics collection implementation.
-    
-    Thread Safety Model:
-    - recordCounter/recordGauge/startTimer/endTimer: RT-safe (can be called from audio thread)
-    - Uses lock-free AbstractFifo for single-producer/single-consumer pattern
-    - processRingBuffer: Called from consumer thread (export/message thread)
-    - getMetrics/clearMetrics: Non-RT, called from message/export thread
   ==============================================================================
 */
 
@@ -50,7 +44,8 @@ void ObservabilityAgent::recordCounter(const char* name, double value) noexcept 
     return;
   }
   
-  // RT-safe: AbstractFifo is lock-free for single producer
+  const juce::SpinLock::ScopedLockType lock(ringBufferLock_);
+
   auto s1 = 0, s2 = 0, num1 = 0, num2 = 0;
   ringBufferFifo_.prepareToWrite(1, s1, num1, s2, num2);
   
@@ -59,9 +54,7 @@ void ObservabilityAgent::recordCounter(const char* name, double value) noexcept 
     event.type = MetricType::Counter;
     event.name = name;
     event.value = value;
-    // Get current timestamp directly
-    auto now = std::chrono::steady_clock::now();
-    event.timestamp = static_cast<uint64_t>(now.time_since_epoch().count());
+    event.timestamp = startTimer(); // Reuse for current timestamp
     ringBufferFifo_.finishedWrite(1);
     metricsCollected_.fetch_add(1, std::memory_order_relaxed);
   }
@@ -72,7 +65,8 @@ void ObservabilityAgent::recordGauge(const char* name, double value) noexcept {
     return;
   }
   
-  // RT-safe: AbstractFifo is lock-free for single producer
+  const juce::SpinLock::ScopedLockType lock(ringBufferLock_);
+
   auto s1 = 0, s2 = 0, num1 = 0, num2 = 0;
   ringBufferFifo_.prepareToWrite(1, s1, num1, s2, num2);
   
@@ -81,9 +75,7 @@ void ObservabilityAgent::recordGauge(const char* name, double value) noexcept {
     event.type = MetricType::Gauge;
     event.name = name;
     event.value = value;
-    // Get current timestamp directly
-    auto now = std::chrono::steady_clock::now();
-    event.timestamp = static_cast<uint64_t>(now.time_since_epoch().count());
+    event.timestamp = startTimer(); // Reuse for current timestamp
     ringBufferFifo_.finishedWrite(1);
     metricsCollected_.fetch_add(1, std::memory_order_relaxed);
   }
@@ -104,7 +96,8 @@ void ObservabilityAgent::endTimer(const char* name, uint64_t startTime) noexcept
   auto endTime = static_cast<uint64_t>(now.time_since_epoch().count());
   auto duration = endTime - startTime;
   
-  // RT-safe: AbstractFifo is lock-free for single producer
+  const juce::SpinLock::ScopedLockType lock(ringBufferLock_);
+
   auto s1 = 0, s2 = 0, num1 = 0, num2 = 0;
   ringBufferFifo_.prepareToWrite(1, s1, num1, s2, num2);
   
