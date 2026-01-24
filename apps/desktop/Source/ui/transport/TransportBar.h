@@ -33,10 +33,13 @@ namespace zenith {
 
 #ifdef ZENITH_USE_SKIA
 
-class TransportBar : public SkiaComponent {
+class TransportBar : public SkiaComponent, public juce::TooltipClient {
 public:
   TransportBar();
   ~TransportBar() override;
+
+  // TooltipClient implementation
+  juce::String getTooltip() override;
 
   void drawSkia(SkCanvas *canvas) override;
   void resized() override;

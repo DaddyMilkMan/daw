@@ -328,6 +328,22 @@ void TransportBar::resized() {
   cachedBounds_ = skBounds;
 }
 
+juce::String TransportBar::getTooltip() {
+  auto pos = getMouseXYRelative();
+
+  if (playButtonBounds_.contains(pos)) return "Start Playback (Space)";
+  if (stopButtonBounds_.contains(pos)) return "Stop Playback";
+  if (recordButtonBounds_.contains(pos)) return "Record";
+  if (viewToggleButtonBounds_.contains(pos)) return "Switch View (Tab)";
+  if (wingmanButtonBounds_.contains(pos)) return "Wingman AI (Cmd+W)";
+  if (settingsButtonBounds_.contains(pos)) return "Audio Settings";
+  if (bpmHitBounds_.contains(pos)) return "Tempo (BPM) - Click to edit, Drag to adjust";
+  if (timeSigHitBounds_.contains(pos)) return "Time Signature - Click to edit, Drag to adjust";
+  if (cpuMeterBounds_.contains(pos)) return "CPU Usage";
+
+  return {};
+}
+
 void TransportBar::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
   SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
