@@ -5,7 +5,7 @@ This module provides test orchestration, execution, coverage analysis,
 and specialized testing for real-time audio systems.
 """
 
-from typing import Dict, List, Optional, Set, Callable, Tuple, Any
+from typing import Dict, List, Optional, Set, Callable, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -23,9 +23,9 @@ try:
     NUMPY_AVAILABLE = True
 except ImportError:
     NUMPY_AVAILABLE = False
+    # Mock numpy for type hints if not installed
     class MockNumpy:
-        ndarray = Any
-        def __getattr__(self, _): return None
+        class ndarray: pass
     np = MockNumpy()
 
 
@@ -909,10 +909,6 @@ class TestingAgent:
             Coverage statistics
         """
         print("Generating coverage report...")
-
-        if not shutil.which("gcov"):
-            print("Error: 'gcov' tool not found. Cannot generate coverage report.")
-            return CoverageReport()
         
         build_path = build_dir or self.project_root / "build"
         if not build_path.exists():
@@ -967,20 +963,11 @@ class TestingAgent:
                 # Parse output to find generated .gcov files
                 # Output format: "Creating 'test.cpp.gcov'"
                 generated_files = []
-                creating_regex = re.compile(r"Creating '([^']+)'")
-
                 for line in result.stdout.splitlines():
-                    match = creating_regex.search(line)
-                    if match:
-                        fname = match.group(1)
+                    if "Creating '" in line:
+                        # Extract filename from "Creating 'filename'"
+                        fname = line.split("'")[1]
                         generated_files.append(cwd / fname)
-                    elif "Creating '" in line:
-                        # Fallback for simple cases
-                        try:
-                            fname = line.split("'")[1]
-                            generated_files.append(cwd / fname)
-                        except IndexError:
-                            pass
 
                 # Read and parse .gcov files
                 for gcov_file in generated_files:
