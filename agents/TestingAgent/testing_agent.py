@@ -20,6 +20,8 @@ import os
 try:
     import numpy as np
     import scipy.io.wavfile as wavfile
+    import scipy.signal as signal
+    import scipy.fft as fft
     NUMPY_AVAILABLE = True
 except ImportError:
     NUMPY_AVAILABLE = False
@@ -28,6 +30,9 @@ except ImportError:
         ndarray = Any
         def __getattr__(self, _): return None
     np = MockNumpy()
+    # Mock scipy submodules if needed, or rely on NUMPY_AVAILABLE checks
+    signal = MockNumpy()
+    fft = MockNumpy()
 
 
 class TestType(Enum):
@@ -608,6 +613,38 @@ class TestingAgent:
         self.test_results.extend(results)
         return results
 
+    def _align_signals(self, ref: np.ndarray, deg: np.ndarray) -> np.ndarray:
+        """
+        Align degraded signal (deg) to reference signal (ref) using cross-correlation.
+        Returns aligned version of deg, trimmed/padded to match ref length.
+        """
+        if len(ref) == 0 or len(deg) == 0:
+            return deg
+
+        # Use FFT-based correlation for speed
+        correlation = signal.correlate(deg, ref, mode='full', method='fft')
+        lags = signal.correlation_lags(len(deg), len(ref), mode='full')
+        lag = lags[np.argmax(correlation)]
+
+        if lag > 0:
+            # deg is delayed relative to ref (common case)
+            # e.g., lag=100 means deg[100] matches ref[0]
+            aligned = deg[lag:]
+        elif lag < 0:
+            # deg is advanced relative to ref
+            # e.g., lag=-100 means deg[0] matches ref[100]
+            aligned = np.pad(deg, (-lag, 0))
+        else:
+            aligned = deg
+
+        # Ensure length matches ref
+        if len(aligned) > len(ref):
+            aligned = aligned[:len(ref)]
+        elif len(aligned) < len(ref):
+            aligned = np.pad(aligned, (0, len(ref) - len(aligned)))
+
+        return aligned
+
     def _generate_sine_wave(self, freq_hz: float, sample_rate: int, duration_sec: float) -> np.ndarray:
         """Generate a sine wave signal."""
         t = np.linspace(0, duration_sec, int(sample_rate * duration_sec), endpoint=False)
@@ -617,67 +654,112 @@ class TestingAgent:
         """Generate a silence signal."""
         return np.zeros(int(sample_rate * duration_sec), dtype=np.float32)
 
-    def _measure_thd(self, signal: np.ndarray, sample_rate: int, fundamental_freq: float) -> float:
+    def _measure_spectral_metrics(self, signal_in: np.ndarray, sample_rate: int, fundamental_freq: float) -> Tuple[float, float]:
         """
-        Measure Total Harmonic Distortion (THD) percentage.
-        THD = (sqrt(sum(harmonics^2)) / fundamental) * 100
-        """
-        if len(signal) == 0:
-            return 0.0
+        Measure THD (%) and SNR (dB) from a single tone signal using robust spectral analysis.
 
-        # Apply Hanning window to reduce spectral leakage
-        windowed_signal = signal * np.hanning(len(signal))
+        Returns:
+            (thd_percent, snr_db)
+        """
+        if len(signal_in) == 0:
+            return 0.0, 0.0
+
+        # Use Blackman-Harris window for superior sidelobe rejection (needed for high SNR/low THD measurement)
+        window = signal.windows.blackmanharris(len(signal_in))
+        # Compensate for coherent gain of the window?
+        # For ratio metrics (THD, SNR), gain cancels out, so raw windowing is fine.
+        windowed = signal_in * window
 
         # Compute FFT
-        fft = np.fft.rfft(windowed_signal)
-        mag = np.abs(fft)
-        freqs = np.fft.rfftfreq(len(signal), 1/sample_rate)
+        X = fft.rfft(windowed)
+        mag = np.abs(X)
+        freqs = fft.rfftfreq(len(signal_in), 1/sample_rate)
 
-        # Find fundamental peak index
-        # Search around expected frequency
         bin_width = freqs[1] - freqs[0]
-        target_idx = int(fundamental_freq / bin_width)
-        search_radius = max(1, int(50 / bin_width)) # search +/- 50Hz
+        if bin_width <= 0:
+            return 0.0, 0.0
+
+        # Helper to sum power in a band
+        def get_band_power(center_idx, radius):
+            s = max(0, center_idx - radius)
+            e = min(len(mag), center_idx + radius + 1)
+            return np.sum(mag[s:e]**2)
+
+        # 1. Find Fundamental
+        target_idx = int(round(fundamental_freq / bin_width))
+        search_radius = max(2, int(50 / bin_width)) # +/- 50Hz search
 
         start = max(0, target_idx - search_radius)
         end = min(len(mag), target_idx + search_radius)
 
-        if end <= start:
-            return 0.0
+        if start >= end:
+            return 0.0, 0.0
 
         peak_idx = start + np.argmax(mag[start:end])
-        fundamental_mag = mag[peak_idx]
 
-        if fundamental_mag < 1e-10:
-            return 0.0
+        # Main lobe radius: Blackman-Harris main lobe is wider (~4 bins).
+        # Use 5 bins radius to capture most energy.
+        lobe_radius = 5
 
-        # Sum power of harmonics (2f, 3f, 4f, ...)
-        harmonics_sum_sq = 0.0
+        fund_power = get_band_power(peak_idx, lobe_radius)
+        if fund_power < 1e-15:
+            return 0.0, 0.0
+
+        # 2. Identify Harmonics
+        harm_power = 0.0
         harmonic_order = 2
 
+        # Keep track of bins used by signal (fundamental + harmonics) to exclude from noise
+        used_indices = set(range(max(0, peak_idx - lobe_radius), min(len(mag), peak_idx + lobe_radius + 1)))
+
         while True:
-            harmonic_freq = fundamental_freq * harmonic_order
-            if harmonic_freq > sample_rate / 2:
+            h_freq = fundamental_freq * harmonic_order
+            if h_freq >= sample_rate / 2:
                 break
 
-            h_idx = int(harmonic_freq / bin_width)
-            # Sum energy in a small window around the harmonic
-            h_start = max(0, h_idx - search_radius)
-            h_end = min(len(mag), h_idx + search_radius)
+            h_idx = int(round(h_freq / bin_width))
 
-            if h_end > h_start:
-                # Take max in window to find the harmonic peak
-                harmonic_mag = np.max(mag[h_start:h_end])
-                harmonics_sum_sq += harmonic_mag ** 2
+            # Refine peak position
+            s = max(0, h_idx - search_radius)
+            e = min(len(mag), h_idx + search_radius)
+
+            if s < e:
+                local_peak = s + np.argmax(mag[s:e])
+                h_p = get_band_power(local_peak, lobe_radius)
+                harm_power += h_p
+
+                # Mark used bins
+                s_u = max(0, local_peak - lobe_radius)
+                e_u = min(len(mag), local_peak + lobe_radius + 1)
+                for i in range(s_u, e_u):
+                    used_indices.add(i)
 
             harmonic_order += 1
 
-        thd = (np.sqrt(harmonics_sum_sq) / fundamental_mag) * 100.0
-        return float(thd)
+        # 3. Calculate THD
+        thd = 100.0 * np.sqrt(harm_power) / np.sqrt(fund_power)
 
-    def _measure_snr(self, signal_peak_db: float, noise_floor_db: float) -> float:
-        """Measure Signal-to-Noise Ratio (dB)."""
-        return signal_peak_db - noise_floor_db
+        # 4. Calculate Noise (SNR)
+        # Sum all energy NOT in fundamental or harmonics (and ignore DC)
+        noise_power = 0.0
+
+        # Exclude DC (0 and maybe 1)
+        used_indices.add(0)
+
+        # We can optimize this loop
+        all_indices = np.arange(len(mag))
+        # Create mask
+        noise_mask = np.ones(len(mag), dtype=bool)
+        noise_mask[list(used_indices)] = False
+
+        noise_power = np.sum(mag[noise_mask]**2)
+
+        if noise_power < 1e-15:
+            snr = 100.0 # Cap SNR at 100dB to avoid Inf
+        else:
+            snr = 10 * np.log10(fund_power / noise_power)
+
+        return float(thd), float(snr)
 
     def _rms_amplitude_db(self, signal: np.ndarray) -> float:
         """Calculate RMS amplitude in dB."""
@@ -686,26 +768,118 @@ class TestingAgent:
             return -100.0
         return 20 * np.log10(rms)
 
-    def _detect_artifacts(self, signal: np.ndarray) -> tuple[bool, bool]:
+    def _measure_frequency_response(self, audio_processor: Callable[[np.ndarray], np.ndarray],
+                                  sample_rate: int) -> bool:
+        """
+        Measure frequency response flatness using Log Sine Sweep.
+        Returns True if flat within +/- 3dB from 20Hz to 20kHz.
+        """
+        duration = 0.5
+        # Log sweep 20Hz to 20kHz
+        t = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
+
+        # Logarithmic chirp
+        # Note: input_sweep magnitude is 1.0
+        input_sweep = signal.chirp(t, f0=20, f1=20000, t1=duration, method='logarithmic')
+
+        # Apply gentle fade in/out to avoid FFT edge artifacts
+        window = signal.windows.tukey(len(input_sweep), alpha=0.1)
+        input_sweep *= window
+
+        # Add silence padding for latency/decay
+        padding_samples = int(sample_rate * 0.2)
+        input_sweep = np.pad(input_sweep, (0, padding_samples))
+
+        try:
+            output_sweep = audio_processor(input_sweep.astype(np.float32))
+        except Exception as e:
+            print(f"Error processing sweep: {e}")
+            return False
+
+        # Align output to input
+        output_aligned = self._align_signals(input_sweep, output_sweep)
+
+        # Compute Transfer Function H(f) = Y(f) / X(f)
+        # Use a large FFT size covering the whole sweep
+        n_fft = 1 << (len(input_sweep) - 1).bit_length() # Next power of 2
+
+        # Pad to n_fft
+        input_padded = np.pad(input_sweep, (0, n_fft - len(input_sweep)))
+        # Pad output similarly (it might be shorter after alignment/trimming)
+        if len(output_aligned) < n_fft:
+            output_padded = np.pad(output_aligned, (0, n_fft - len(output_aligned)))
+        else:
+            output_padded = output_aligned[:n_fft]
+
+        X = fft.rfft(input_padded)
+        Y = fft.rfft(output_padded)
+
+        freqs = fft.rfftfreq(n_fft, 1/sample_rate)
+
+        # Analyze only 20Hz - 20kHz
+        mask = (freqs >= 20) & (freqs <= 20000)
+
+        if not np.any(mask):
+            print("Error: No frequencies in range 20-20000Hz")
+            return False
+
+        # Avoid division by zero
+        denom = np.abs(X[mask])
+        denom[denom < 1e-12] = 1e-12
+
+        H_mag = np.abs(Y[mask]) / denom
+
+        # Convert to dB
+        # Add small epsilon to avoid log(0)
+        mag_db = 20 * np.log10(H_mag + 1e-12)
+
+        # Normalize to mean (center around 0dB deviation)
+        mean_db = np.mean(mag_db)
+        mag_db_norm = mag_db - mean_db
+
+        # Check flatness (tolerance +/- 3dB)
+        min_dev = np.min(mag_db_norm)
+        max_dev = np.max(mag_db_norm)
+
+        is_flat = (min_dev > -3.0) and (max_dev < 3.0)
+
+        if not is_flat:
+             print(f"Freq Response Deviation: {min_dev:.2f}dB to {max_dev:.2f}dB")
+
+        return is_flat
+
+    def _detect_artifacts(self, signal_in: np.ndarray) -> tuple[bool, bool]:
         """
         Detect clicks/pops and DC offset.
+        Assumes input is a test signal (Sine/Silence) and NOT high-frequency full-scale noise.
+
         Returns: (no_clicks_pops, has_low_dc_offset)
         """
-        if len(signal) == 0:
+        if len(signal_in) == 0:
             return True, True
 
-        # DC Offset check (mean should be close to 0)
-        dc_offset = np.abs(np.mean(signal))
-        has_low_dc_offset = dc_offset < 0.01  # 1% threshold
+        # 1. DC Offset check
+        # Use simple mean. For integer number of cycles, mean is 0.
+        # For large N, mean approximates DC.
+        dc_offset = np.abs(np.mean(signal_in))
+        # Threshold: 0.01 (-40dB)
+        has_low_dc_offset = dc_offset < 0.01
 
-        # Clicks/Pops: check for sudden large jumps (derivatives)
-        # Normalize signal first? Assuming -1 to 1 audio.
-        diff = np.diff(signal)
+        # 2. Clicks/Pops (Discontinuities)
+        # Use first difference (derivative)
+        diff = np.diff(signal_in)
         max_jump = np.max(np.abs(diff))
-        # A full scale jump between samples is suspicious, but depends on frequency.
-        # Ideally < 0.5 for typical audio signals, though high freq can be higher.
-        # Let's set a conservative threshold.
-        no_clicks_pops = max_jump < 0.8
+
+        # Threshold: 0.5 (half of full scale range per sample)
+        # A 1kHz sine at 0dBFS has max slope ~0.14/sample at 44.1kHz.
+        # A 0.5 jump implies a very high frequency component or discontinuity.
+        no_clicks_pops = max_jump < 0.5
+
+        if not no_clicks_pops:
+             print(f"Artifact detail: Max sample-to-sample jump {max_jump:.4f}")
+
+        if not has_low_dc_offset:
+             print(f"Artifact detail: DC Offset {dc_offset:.4f}")
 
         return no_clicks_pops, has_low_dc_offset
 
@@ -731,65 +905,31 @@ class TestingAgent:
         duration = 1.0
         freq_1khz = 1000.0
 
-        # 1. THD Measurement (using 1kHz Sine)
+        # 1. THD & SNR Measurement (using 1kHz Sine)
         input_sine = self._generate_sine_wave(freq_1khz, sample_rate, duration)
         try:
             output_sine = audio_processor(input_sine)
-            thd = self._measure_thd(output_sine, sample_rate, freq_1khz)
+
+            # Align output to compensate for latency before analysis
+            # This ensures windowing covers the signal properly
+            output_sine_aligned = self._align_signals(input_sine, output_sine)
+
+            thd, snr = self._measure_spectral_metrics(output_sine_aligned, sample_rate, freq_1khz)
         except Exception as e:
             print(f"Error processing sine wave: {e}")
-            output_sine = np.zeros_like(input_sine)
+            output_sine_aligned = np.zeros_like(input_sine)
             thd = 0.0
+            snr = 0.0
 
-        # 2. SNR Measurement
-        # Signal level (from sine test)
-        signal_rms_db = self._rms_amplitude_db(output_sine)
-
-        # Noise floor (using Silence)
-        input_silence = self._generate_silence(sample_rate, duration)
-        try:
-            output_silence = audio_processor(input_silence)
-            noise_rms_db = self._rms_amplitude_db(output_silence)
-        except Exception as e:
-            print(f"Error processing silence: {e}")
-            output_silence = np.zeros_like(input_silence)
-            noise_rms_db = -100.0
-
-        snr = self._measure_snr(signal_rms_db, noise_rms_db)
-
-        # 3. Artifact Detection
-        no_clicks, valid_dc = self._detect_artifacts(output_sine)
+        # 2. Artifact Detection (on Sine output)
+        no_clicks, valid_dc = self._detect_artifacts(output_sine_aligned)
         if not no_clicks:
             print("Artifact detected: Clicks/Pops found in output.")
         if not valid_dc:
             print("Artifact detected: High DC Offset found in output.")
         
-        # 4. Frequency Response (Basic Check)
-        # Check if 1kHz gain is close to 1 (0dB) for pass-through/unity gain systems
-        # Or just checking if it's not zero.
-        # For a "flat" response check properly, we'd need a sweep or noise.
-        # Let's approximate "flat" as "has reasonable output" for now or implement a sweep.
-        # Implementing a quick Sweep check.
-        frequency_response_flat = False
-        try:
-            # Simple check: Compare low (100Hz) and high (10kHz) gain
-            # This is a crude "flatness" check but better than nothing.
-            t = np.linspace(0, 0.1, int(sample_rate * 0.1), endpoint=False)
-            in_100 = np.sin(2*np.pi*100*t).astype(np.float32)
-            in_10k = np.sin(2*np.pi*10000*t).astype(np.float32)
-
-            out_100 = audio_processor(in_100)
-            out_10k = audio_processor(in_10k)
-
-            rms_100 = np.sqrt(np.mean(out_100**2))
-            rms_10k = np.sqrt(np.mean(out_10k**2))
-
-            # Allow 3dB variance
-            if rms_100 > 0 and rms_10k > 0:
-                ratio = rms_100 / rms_10k
-                frequency_response_flat = 0.707 < ratio < 1.414
-        except Exception as e:
-            print(f"Error checking freq response: {e}")
+        # 3. Frequency Response (Log Sine Sweep)
+        frequency_response_flat = self._measure_frequency_response(audio_processor, sample_rate)
 
         metrics = AudioQualityMetrics(
             thd_percent=thd,
