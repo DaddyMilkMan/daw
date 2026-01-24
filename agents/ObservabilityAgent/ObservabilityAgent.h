@@ -119,10 +119,23 @@ public:
 
 #if JUCE_UNIT_TESTS
   /// Get ring buffer FIFO for testing (not RT-safe, test only)
-  juce::AbstractFifo& getRingBufferFifoForTesting() { return ringBufferFifo_; }
+  const juce::AbstractFifo& getRingBufferFifoForTesting() const { return ringBufferFifo_; }
   
   /// Get ring buffer data for testing (not RT-safe, test only)
-  std::vector<RawMetricEvent>& getRingBufferDataForTesting() { return ringBufferData_; }
+  const std::vector<RawMetricEvent>& getRingBufferDataForTesting() const { return ringBufferData_; }
+  
+  /// Drain ring buffer for testing (not RT-safe, test only)
+  /// @param numToDrain Number of events to drain, or -1 for all available
+  /// @return Number of events actually drained
+  int drainRingBufferForTesting(int numToDrain = -1) {
+    const juce::SpinLock::ScopedLockType lock(ringBufferLock_);
+    int s1, s2, num1, num2;
+    int toDrain = numToDrain < 0 ? ringBufferFifo_.getNumReady() : numToDrain;
+    ringBufferFifo_.prepareToRead(toDrain, s1, num1, s2, num2);
+    int actuallyDrained = num1 + num2;
+    ringBufferFifo_.finishedRead(actuallyDrained);
+    return actuallyDrained;
+  }
 #endif
 
 private:
