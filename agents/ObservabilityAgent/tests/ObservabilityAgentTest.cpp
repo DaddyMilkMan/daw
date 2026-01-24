@@ -19,9 +19,78 @@ public:
   void runTest() override {
     testMetricsCollection();
     testPeriodicExport();
+    testLoggingConcurrency();
   }
 
 private:
+  void testLoggingConcurrency() {
+    beginTest("Concurrent Logging");
+
+    ObservabilityAgent agent;
+    juce::File logFile = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                         .getChildFile("test_observability_log.txt");
+    logFile.deleteFile();
+    agent.setLogFile(logFile);
+
+    const int numThreads = 4;
+    const int numLogsPerThread = 100;
+    std::vector<std::thread> threads;
+
+    for (int i = 0; i < numThreads; ++i) {
+        threads.emplace_back([&agent, i, numLogsPerThread] {
+            for (int j = 0; j < numLogsPerThread; ++j) {
+                juce::String msg = "Thread " + juce::String(i) + " Log " + juce::String(j);
+                agent.log(ObservabilityAgent::LogLevel::Info, msg);
+                // Small yield to encourage interleaving
+                if (j % 10 == 0) std::this_thread::yield();
+            }
+        });
+    }
+
+    for (auto& t : threads) t.join();
+
+    // Wait for consumer to process
+    // We poll until we see enough lines or timeout
+    int maxRetries = 50; // 5 seconds
+    size_t totalProcessed = 0;
+    size_t expected = numThreads * numLogsPerThread;
+
+    while (maxRetries-- > 0) {
+        juce::Thread::sleep(100);
+
+        juce::StringArray lines;
+        logFile.readLines(lines);
+        totalProcessed = lines.size() + agent.getDroppedLogCount();
+
+        if (totalProcessed >= expected) break;
+    }
+
+    // Read file final state
+    juce::StringArray lines;
+    logFile.readLines(lines);
+
+    // removeEmptyStrings returns the number of strings removed, but modifies the array in place
+    lines.removeEmptyStrings();
+
+    totalProcessed = lines.size() + agent.getDroppedLogCount();
+
+    // Verify
+    expect(lines.size() > 0, "Log file should not be empty");
+
+    if (lines.size() > 0) {
+        juce::String firstLine = lines[0];
+        // Expect ISO8601...
+        // e.g. 2023-10-27T... INFO [tid=...] Thread X Log Y
+        expect(firstLine.contains("INFO"), "Line should contain level");
+        expect(firstLine.contains("tid="), "Line should contain thread ID");
+        expect(firstLine.contains("Thread"), "Line should contain message body");
+    }
+
+    expectEquals((int)totalProcessed, (int)expected, "Total logs (written + dropped) should match expected");
+
+    logFile.deleteFile();
+  }
+
   void testMetricsCollection() {
     beginTest("Lock-free Ring Buffer Writes");
 
