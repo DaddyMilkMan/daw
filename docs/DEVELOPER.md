@@ -170,3 +170,13 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug \
 2. **UI**: Target 60 FPS, use dirty region repainting
 3. **Memory**: Stream large audio files, don't load entirely
 4. **Plugins**: Process in parallel when possible
+
+## UX Guidance (User Experience)
+
+Focus on user workflows and responsiveness alongside UI polish:
+
+1. **State-driven UX**: Route user actions through `ProjectState` so undo/redo and UI updates stay consistent.
+2. **Predictable interactions**: Use standard DAW behaviors for selection, dragging, snapping, and transport controls.
+3. **Clear feedback**: Provide visible status for long operations (plugin scans, exports, AI calls).
+4. **Error handling**: Prefer friendly, actionable messages over silent failure.
+5. **Accessibility & scale**: Plan for UI scaling and keyboard shortcuts early; avoid fixed-size assumptions.
