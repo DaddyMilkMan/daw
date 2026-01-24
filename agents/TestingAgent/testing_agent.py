@@ -462,10 +462,10 @@ class TestingAgent:
 
         return "".join(out)
 
-    def _extract_rt_function_bodies(self, source: str) -> List[Tuple[str, str, int]]:
+    def _extract_rt_function_bodies(self, source: str) -> List[Tuple[str, str, int, str]]:
         """
         Extract bodies of functions that must be RT-safe.
-        Returns list of (function_name, body_text, start_line_number).
+        Returns list of (function_name, body_text, start_line_number, signature_suffix).
         """
         extracted = []
 
@@ -521,9 +521,12 @@ class TestingAgent:
                 if balance == 0:
                     # Extract body from ORIGINAL source using indices
                     body = source[brace_idx:curr]
+                    # Extract signature (text between trigger and body start)
+                    signature = source[i:brace_idx]
+
                     # Calculate line number
                     start_line = source.count('\n', 0, brace_idx) + 1
-                    extracted.append((found_trigger, body, start_line))
+                    extracted.append((found_trigger, body, start_line, signature))
 
                     # Continue search from after the function
                     i = curr
@@ -567,7 +570,22 @@ class TestingAgent:
                 # Extract function bodies
                 functions = self._extract_rt_function_bodies(content)
 
-                for func_name, body, start_line in functions:
+                for func_name, body, start_line, signature in functions:
+                    # Check for noexcept in signature
+                    # We mask comments/strings in signature to avoid false positives (e.g. noexcept in comment)
+                    masked_signature = self._mask_comments_and_strings(signature, preserve_rt_safe=False)
+
+                    # Only check the last part of the signature after any potential intervening declarations
+                    relevant_signature = masked_signature.rpartition(';')[2]
+
+                    if "noexcept" not in relevant_signature:
+                        results.append(TestCase(
+                            name=f"{file_path.name}::{func_name}::Signature",
+                            test_type=TestType.RT_SAFETY,
+                            status=TestStatus.FAILED,
+                            error_message=f"RT-Safety Violation: Missing 'noexcept' specifier in {func_name}"
+                        ))
+
                     # 1. Mask the body for checking violations (do NOT preserve RT-SAFE here)
                     masked_body = self._mask_comments_and_strings(body, preserve_rt_safe=False)
 

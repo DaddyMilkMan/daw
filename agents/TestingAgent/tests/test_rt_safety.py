@@ -248,5 +248,46 @@ class TestRTSafety(unittest.TestCase):
         results = self._scan_file(path)
         self.assertEqual(len(results), 0)
 
+    def test_safe_code(self):
+        content = """
+        void processBlock(AudioBuffer& buffer) noexcept {
+            float x = 0.0f;
+            for(int i=0; i<buffer.getNumSamples(); ++i) {
+                x += 1.0f;
+            }
+        }
+        """
+        path = self._create_file("safe.cpp", content)
+        results = self._scan_file(path)
+
+        self.assertEqual(len(results), 0, f"Should not report errors for safe code. Found: {results}")
+
+    def test_missing_noexcept(self):
+        content = """
+        void processBlock(AudioBuffer& buffer) {
+            // Safe code but missing noexcept
+        }
+        """
+        path = self._create_file("missing_noexcept.cpp", content)
+        results = self._scan_file(path)
+
+        found = any("noexcept" in r.error_message for r in results)
+        self.assertTrue(found, "Should detect missing noexcept specifier")
+
+    def test_intervening_declaration(self):
+        content = """
+        // RT-SAFE
+        void helper() noexcept; // Intervening declaration
+        void unsafe() {
+            // This function is missing noexcept
+        }
+        """
+        path = self._create_file("intervening.cpp", content)
+        results = self._scan_file(path)
+
+        # Should detect missing noexcept in unsafe()
+        found = any("noexcept" in r.error_message for r in results)
+        self.assertTrue(found, "Should detect missing noexcept specifier even with intervening declaration")
+
 if __name__ == '__main__':
     unittest.main()

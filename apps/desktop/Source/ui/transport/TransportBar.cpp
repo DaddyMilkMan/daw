@@ -931,6 +931,13 @@ void TransportBar::mouseMove(const juce::MouseEvent &e) {
       setMouseCursor(juce::MouseCursor::UpDownResizeCursor);
   } else if (timeSigTemplateBounds_.contains(pos)) {
       setMouseCursor(juce::MouseCursor::PointingHandCursor);
+  } else if (playButtonBounds_.contains(pos) ||
+             stopButtonBounds_.contains(pos) ||
+             recordButtonBounds_.contains(pos) ||
+             viewToggleButtonBounds_.contains(pos) ||
+             wingmanButtonBounds_.contains(pos) ||
+             settingsButtonBounds_.contains(pos)) {
+      setMouseCursor(juce::MouseCursor::PointingHandCursor);
   } else {
       setMouseCursor(juce::MouseCursor::NormalCursor);
   }
