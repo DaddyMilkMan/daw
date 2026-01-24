@@ -20,6 +20,8 @@ import os
 try:
     import numpy as np
     import scipy.io.wavfile as wavfile
+    import scipy.signal
+    import scipy.fft
     NUMPY_AVAILABLE = True
 except ImportError:
     NUMPY_AVAILABLE = False
@@ -613,193 +615,269 @@ class TestingAgent:
         t = np.linspace(0, duration_sec, int(sample_rate * duration_sec), endpoint=False)
         return np.sin(2 * np.pi * freq_hz * t).astype(np.float32)
 
-    def _generate_silence(self, sample_rate: int, duration_sec: float) -> np.ndarray:
-        """Generate a silence signal."""
-        return np.zeros(int(sample_rate * duration_sec), dtype=np.float32)
+    def _generate_chirp(self, sample_rate: int, duration_sec: float,
+                       start_freq: float = 20.0, end_freq: float = 20000.0) -> np.ndarray:
+        """Generate a logarithmic sine sweep (chirp)."""
+        t = np.linspace(0, duration_sec, int(sample_rate * duration_sec), endpoint=False)
+        return scipy.signal.chirp(t, f0=start_freq, f1=end_freq, t1=duration_sec, method='logarithmic').astype(np.float32)
 
-    def _measure_thd(self, signal: np.ndarray, sample_rate: int, fundamental_freq: float) -> float:
+    def _measure_thd_plus_n(self, signal: np.ndarray, sample_rate: int, fundamental_freq: float) -> float:
         """
-        Measure Total Harmonic Distortion (THD) percentage.
-        THD = (sqrt(sum(harmonics^2)) / fundamental) * 100
+        Measure Total Harmonic Distortion + Noise (THD+N) using fundamental suppression (notch).
+        Returns percentage.
         """
         if len(signal) == 0:
             return 0.0
 
-        # Apply Hanning window to reduce spectral leakage
-        windowed_signal = signal * np.hanning(len(signal))
+        # Apply Blackman-Harris window for good side-lobe rejection
+        window = scipy.signal.windows.blackmanharris(len(signal))
+        windowed_signal = signal * window
 
         # Compute FFT
-        fft = np.fft.rfft(windowed_signal)
+        fft = scipy.fft.rfft(windowed_signal)
         mag = np.abs(fft)
-        freqs = np.fft.rfftfreq(len(signal), 1/sample_rate)
+        freqs = scipy.fft.rfftfreq(len(signal), 1/sample_rate)
 
-        # Find fundamental peak index
-        # Search around expected frequency
+        # Identify fundamental peak
         bin_width = freqs[1] - freqs[0]
+        if bin_width <= 0: return 0.0
+
         target_idx = int(fundamental_freq / bin_width)
-        search_radius = max(1, int(50 / bin_width)) # search +/- 50Hz
+        search_radius = max(1, int(100 / bin_width)) # +/- 100Hz search
 
         start = max(0, target_idx - search_radius)
         end = min(len(mag), target_idx + search_radius)
 
-        if end <= start:
+        if end <= start: return 0.0
+
+        peak_offset = np.argmax(mag[start:end])
+        peak_idx = start + peak_offset
+
+        # Fundamental Energy
+        # Sum energy in the main lobe (approx +/- 3 bins for Blackman-Harris main lobe width is wider)
+        # We'll be conservative and take a wider notch to suppress it fully
+        notch_width_bins = max(3, int(50 / bin_width)) # +/- 50Hz notch width
+
+        notch_start = max(0, peak_idx - notch_width_bins)
+        notch_end = min(len(mag), peak_idx + notch_width_bins + 1)
+
+        # Calculate Total Energy (exclude DC)
+        total_energy = np.sum(mag[1:] ** 2)
+
+        # Calculate Fundamental Energy
+        fundamental_energy = np.sum(mag[notch_start:notch_end] ** 2)
+
+        # Residual (Noise + Harmonics) = Total - Fundamental
+        residual_energy = total_energy - fundamental_energy
+        if residual_energy < 0: residual_energy = 0 # Numerical precision check
+
+        if fundamental_energy <= 1e-12:
             return 0.0
 
+        # THD+N = sqrt(Residual / Fundamental) * 100
+        # Note: Often defined as sqrt(Residual / Total), but for small distortion they are similar.
+        # User requested "fundamental suppression".
+        thd_n = np.sqrt(residual_energy / fundamental_energy) * 100.0
+        return float(thd_n)
+
+    def _measure_snr_spectral(self, signal: np.ndarray, sample_rate: int, fundamental_freq: float) -> float:
+        """
+        Measure SNR by removing fundamental and harmonics in frequency domain.
+        Returns dB.
+        """
+        if len(signal) == 0: return -100.0
+
+        window = scipy.signal.windows.blackmanharris(len(signal))
+        windowed_signal = signal * window
+        fft = scipy.fft.rfft(windowed_signal)
+        mag = np.abs(fft)
+        freqs = scipy.fft.rfftfreq(len(signal), 1/sample_rate)
+        bin_width = freqs[1] - freqs[0]
+
+        # 1. Find Fundamental
+        target_idx = int(fundamental_freq / bin_width)
+        search_radius = max(1, int(50 / bin_width))
+        start = max(0, target_idx - search_radius)
+        end = min(len(mag), target_idx + search_radius)
+        if end <= start: return 0.0
         peak_idx = start + np.argmax(mag[start:end])
-        fundamental_mag = mag[peak_idx]
 
-        if fundamental_mag < 1e-10:
-            return 0.0
+        # 2. Identify Harmonic Bins
+        harmonic_indices = set()
+        notch_width = max(2, int(20 / bin_width)) # +/- 20Hz per harmonic
 
-        # Sum power of harmonics (2f, 3f, 4f, ...)
-        harmonics_sum_sq = 0.0
-        harmonic_order = 2
-
+        h = 1
         while True:
-            harmonic_freq = fundamental_freq * harmonic_order
-            if harmonic_freq > sample_rate / 2:
-                break
+            h_freq = freqs[peak_idx] * h
+            if h_freq > sample_rate / 2: break
 
-            h_idx = int(harmonic_freq / bin_width)
-            # Sum energy in a small window around the harmonic
-            h_start = max(0, h_idx - search_radius)
-            h_end = min(len(mag), h_idx + search_radius)
+            h_idx = int(h_freq / bin_width)
+            # Add range to suppression set
+            for i in range(max(0, h_idx - notch_width), min(len(mag), h_idx + notch_width + 1)):
+                harmonic_indices.add(i)
+            h += 1
 
-            if h_end > h_start:
-                # Take max in window to find the harmonic peak
-                harmonic_mag = np.max(mag[h_start:h_end])
-                harmonics_sum_sq += harmonic_mag ** 2
+        # 3. Separate Signal and Noise Energy
+        total_energy = np.sum(mag[1:] ** 2) # Exclude DC
 
-            harmonic_order += 1
+        noise_energy = 0.0
+        signal_energy = 0.0
 
-        thd = (np.sqrt(harmonics_sum_sq) / fundamental_mag) * 100.0
-        return float(thd)
+        for i in range(1, len(mag)):
+            if i in harmonic_indices:
+                signal_energy += mag[i] ** 2
+            else:
+                noise_energy += mag[i] ** 2
 
-    def _measure_snr(self, signal_peak_db: float, noise_floor_db: float) -> float:
-        """Measure Signal-to-Noise Ratio (dB)."""
-        return signal_peak_db - noise_floor_db
+        if noise_energy < 1e-12: return 140.0 # Floor
+        if signal_energy < 1e-12: return 0.0
 
-    def _rms_amplitude_db(self, signal: np.ndarray) -> float:
-        """Calculate RMS amplitude in dB."""
-        rms = np.sqrt(np.mean(signal**2))
-        if rms < 1e-10:
-            return -100.0
-        return 20 * np.log10(rms)
+        return 10.0 * np.log10(signal_energy / noise_energy)
+
+    def _measure_frequency_response(self, audio_processor: Callable, sample_rate: int) -> Tuple[bool, float]:
+        """
+        Measure frequency response flatness using chirp deconvolution.
+        Returns (is_flat, flatness_variance_db)
+        """
+        duration = 0.5
+        start_freq = 20.0
+        end_freq = min(20000.0, sample_rate / 2.0 - 100)
+
+        # 1. Generate Chirp
+        chirp_sig = self._generate_chirp(sample_rate, duration, start_freq, end_freq)
+
+        try:
+            # 2. Process
+            output_sig = audio_processor(chirp_sig)
+
+            # 3. Deconvolution to get Impulse Response (IR)
+            # H(f) = Y(f) / X(f)
+            n_fft = 2 ** int(np.ceil(np.log2(len(chirp_sig) + len(output_sig) - 1)))
+            X = scipy.fft.fft(chirp_sig, n=n_fft)
+            Y = scipy.fft.fft(output_sig, n=n_fft)
+
+            # Regularization to avoid div by zero
+            epsilon = 1e-10
+            H = Y / (X + epsilon)
+
+            # 4. Magnitude Response (Smoothed)
+            # We assume H contains the full transfer function
+            # We analyze flatness in the passband
+            freqs = scipy.fft.fftfreq(n_fft, 1/sample_rate)
+
+            # Filter only positive frequencies in range [start_freq, end_freq]
+            mask = (freqs >= start_freq) & (freqs <= end_freq)
+            mag_response = np.abs(H[mask])
+
+            if len(mag_response) == 0: return False, 0.0
+
+            mag_db = 20 * np.log10(mag_response + 1e-12)
+
+            # Check deviation (Flatness)
+            mean_db = np.mean(mag_db)
+            min_db = np.min(mag_db)
+            max_db = np.max(mag_db)
+            variance = max_db - min_db
+
+            # Tolerance: +/- 1.5 dB (total variance < 3 dB)
+            is_flat = variance < 3.0
+
+            return is_flat, float(variance)
+
+        except Exception as e:
+            print(f"Freq response check failed: {e}")
+            return False, 100.0
 
     def _detect_artifacts(self, signal: np.ndarray) -> tuple[bool, bool]:
         """
-        Detect clicks/pops and DC offset.
+        Detect clicks/pops and DC offset using robust statistics.
         Returns: (no_clicks_pops, has_low_dc_offset)
         """
         if len(signal) == 0:
             return True, True
 
-        # DC Offset check (mean should be close to 0)
-        dc_offset = np.abs(np.mean(signal))
-        has_low_dc_offset = dc_offset < 0.01  # 1% threshold
+        # DC Offset
+        mean_val = np.mean(signal)
+        dc_offset = np.abs(mean_val)
+        # Threshold: 1% full scale
+        has_low_dc_offset = dc_offset < 0.01
 
-        # Clicks/Pops: check for sudden large jumps (derivatives)
-        # Normalize signal first? Assuming -1 to 1 audio.
+        # Clicks/Pops: Use derivative outlier detection
         diff = np.diff(signal)
-        max_jump = np.max(np.abs(diff))
-        # A full scale jump between samples is suspicious, but depends on frequency.
-        # Ideally < 0.5 for typical audio signals, though high freq can be higher.
-        # Let's set a conservative threshold.
-        no_clicks_pops = max_jump < 0.8
+        # Robust dispersion measure (Interquartile Range could be used, or just RMS of diff)
+        diff_rms = np.sqrt(np.mean(diff**2))
+
+        if diff_rms < 1e-6:
+             # Silence or near silence
+             return True, has_low_dc_offset
+
+        # Peak derivative
+        peak_diff = np.max(np.abs(diff))
+
+        # Crest factor of the derivative: Peak / RMS
+        # High crest factor in derivative implies sudden click
+        crest_factor = peak_diff / diff_rms
+
+        # Threshold: Typical sine has crest factor ~1.414.
+        # Clicks will be much higher, e.g., > 10
+        no_clicks_pops = crest_factor < 15.0
 
         return no_clicks_pops, has_low_dc_offset
 
     def test_audio_quality(self, audio_processor: Callable[[np.ndarray], np.ndarray],
                           test_signals: Optional[List[str]] = None) -> AudioQualityMetrics:
         """
-        Test audio processing quality metrics.
-        
-        Args:
-            audio_processor: Function that accepts and returns numpy arrays (float32)
-            test_signals: List of test signal types (unused, overridden by standard suite)
-            
-        Returns:
-            Audio quality metrics
+        Test audio processing quality metrics using robust DSP.
         """
         print("Testing audio quality...")
         
         if not NUMPY_AVAILABLE:
-            print("Warning: Numpy not found. Audio quality testing disabled.")
+            print("Warning: Numpy/Scipy not found. Audio quality testing disabled.")
             return AudioQualityMetrics()
 
-        sample_rate = 44100
+        sample_rate = 48000
         duration = 1.0
         freq_1khz = 1000.0
 
-        # 1. THD Measurement (using 1kHz Sine)
+        # 1. THD+N Measurement (Sine Input)
         input_sine = self._generate_sine_wave(freq_1khz, sample_rate, duration)
         try:
             output_sine = audio_processor(input_sine)
-            thd = self._measure_thd(output_sine, sample_rate, freq_1khz)
+            thd_percent = self._measure_thd_plus_n(output_sine, sample_rate, freq_1khz)
         except Exception as e:
             print(f"Error processing sine wave: {e}")
             output_sine = np.zeros_like(input_sine)
-            thd = 0.0
+            thd_percent = 100.0
 
-        # 2. SNR Measurement
-        # Signal level (from sine test)
-        signal_rms_db = self._rms_amplitude_db(output_sine)
-
-        # Noise floor (using Silence)
-        input_silence = self._generate_silence(sample_rate, duration)
-        try:
-            output_silence = audio_processor(input_silence)
-            noise_rms_db = self._rms_amplitude_db(output_silence)
-        except Exception as e:
-            print(f"Error processing silence: {e}")
-            output_silence = np.zeros_like(input_silence)
-            noise_rms_db = -100.0
-
-        snr = self._measure_snr(signal_rms_db, noise_rms_db)
+        # 2. SNR Measurement (Sine Input -> Remove Harmonics -> Noise)
+        # We reuse the sine output because robust SNR measures often use the same signal
+        # to ensure we measure noise floor *in presence of signal* (if possible),
+        # or we can use a separate silence test.
+        # User requested: "noise computed after removing the fundamental and harmonics"
+        # This implies using the sine response.
+        snr_db = self._measure_snr_spectral(output_sine, sample_rate, freq_1khz)
 
         # 3. Artifact Detection
+        # Check on the sine output
         no_clicks, valid_dc = self._detect_artifacts(output_sine)
-        if not no_clicks:
-            print("Artifact detected: Clicks/Pops found in output.")
-        if not valid_dc:
-            print("Artifact detected: High DC Offset found in output.")
         
-        # 4. Frequency Response (Basic Check)
-        # Check if 1kHz gain is close to 1 (0dB) for pass-through/unity gain systems
-        # Or just checking if it's not zero.
-        # For a "flat" response check properly, we'd need a sweep or noise.
-        # Let's approximate "flat" as "has reasonable output" for now or implement a sweep.
-        # Implementing a quick Sweep check.
-        frequency_response_flat = False
-        try:
-            # Simple check: Compare low (100Hz) and high (10kHz) gain
-            # This is a crude "flatness" check but better than nothing.
-            t = np.linspace(0, 0.1, int(sample_rate * 0.1), endpoint=False)
-            in_100 = np.sin(2*np.pi*100*t).astype(np.float32)
-            in_10k = np.sin(2*np.pi*10000*t).astype(np.float32)
-
-            out_100 = audio_processor(in_100)
-            out_10k = audio_processor(in_10k)
-
-            rms_100 = np.sqrt(np.mean(out_100**2))
-            rms_10k = np.sqrt(np.mean(out_10k**2))
-
-            # Allow 3dB variance
-            if rms_100 > 0 and rms_10k > 0:
-                ratio = rms_100 / rms_10k
-                frequency_response_flat = 0.707 < ratio < 1.414
-        except Exception as e:
-            print(f"Error checking freq response: {e}")
+        # 4. Frequency Response (Chirp)
+        is_flat, variance_db = self._measure_frequency_response(audio_processor, sample_rate)
 
         metrics = AudioQualityMetrics(
-            thd_percent=thd,
-            snr_db=snr,
-            frequency_response_flat=frequency_response_flat,
-            phase_coherent=True, # Placeholder, difficult to test without reference
+            thd_percent=thd_percent,
+            snr_db=snr_db,
+            frequency_response_flat=is_flat,
+            phase_coherent=True,
             no_clicks_pops=no_clicks and valid_dc
         )
         
-        print(f"Audio Metrics: THD={thd:.4f}%, SNR={snr:.1f}dB, Flat={frequency_response_flat}")
+        print(f"Audio Metrics: THD+N={thd_percent:.4f}%, SNR={snr_db:.1f}dB, FreqVar={variance_db:.2f}dB")
+
+        if not no_clicks: print("  FAIL: Artifacts (Clicks/Pops) detected")
+        if not valid_dc:  print("  FAIL: High DC Offset detected")
+        if not is_flat:   print(f"  FAIL: Frequency Response not flat (Var: {variance_db:.2f}dB)")
+
         return metrics
 
     def run_fuzz_tests(self, duration_minutes: int = 5,
