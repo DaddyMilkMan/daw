@@ -6,8 +6,9 @@
 */
 
 #include <juce_core/juce_core.h>
-#include <juce_events/juce_events.h>
 #include "../ObservabilityAgent.h"
+#include <thread>
+#include <chrono>
 
 namespace zenith {
 namespace agents {
@@ -93,31 +94,27 @@ private:
     // Set interval to 50ms
     agent.setExportInterval(std::chrono::milliseconds(50));
 
-    // Wait for at least one export (allow 150ms to be safe)
-    // We must pump the message loop to allow the Timer to fire
+    // Wait for at least one export (allow up to 500ms)
+    auto start = std::chrono::steady_clock::now();
+    bool exported = false;
 
-    // Ensure message manager is initialized
-    if (auto* mm = juce::MessageManager::getInstance()) {
-        juce::Timer::callAfterDelay(150, [mm] { mm->stopDispatchLoop(); });
-        mm->runDispatchLoop();
-    } else {
-        // Fallback if no message manager (shouldn't happen with correct runner)
-        // But for Timer to work, MessageManager MUST be present.
-        expect(false, "MessageManager not initialized, Timer cannot run");
+    while (std::chrono::steady_clock::now() - start < std::chrono::milliseconds(500)) {
+        if (agent.getExportCount() > 0) {
+            exported = true;
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
     // Check that exports happened
-    expect(agent.getExportCount() > 0, "Metrics should have been exported at least once");
+    expect(exported, "Metrics should have been exported at least once");
 
     // Stop export
     agent.setExportInterval(std::chrono::milliseconds(0));
     uint64_t countAfterStop = agent.getExportCount();
 
     // Wait again
-    if (auto* mm = juce::MessageManager::getInstance()) {
-        juce::Timer::callAfterDelay(150, [mm] { mm->stopDispatchLoop(); });
-        mm->runDispatchLoop();
-    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(150));
 
     expectEquals(agent.getExportCount(), countAfterStop, "Metrics should not be exported after stopping");
   }

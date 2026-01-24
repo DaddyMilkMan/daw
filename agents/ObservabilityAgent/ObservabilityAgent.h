@@ -8,7 +8,6 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
-#include <juce_events/juce_events.h>
 #include <atomic>
 #include <chrono>
 #include <string>
@@ -29,7 +28,7 @@ class PrometheusExporter;
     ObservabilityAgent provides lock-free metrics collection and monitoring
     for real-time audio systems without impacting RT thread performance.
 */
-class ObservabilityAgent : public juce::Thread, private juce::Timer {
+class ObservabilityAgent : public juce::Thread {
 public:
   //==============================================================================
   using Timestamp = std::chrono::steady_clock::time_point;
@@ -111,7 +110,7 @@ public:
   /// Clear collected metrics
   void clearMetrics();
 
-  /// Export accumulated metrics (called by timer or manually)
+  /// Export accumulated metrics (called by export thread or manually)
   void exportMetrics();
 
   /// Get number of export cycles completed (for testing)
@@ -120,7 +119,6 @@ public:
 private:
   //==============================================================================
   void run() override;
-  void timerCallback() override;
   void exportLoop();
   void stopExportThread();
 
@@ -160,10 +158,6 @@ private:
   juce::AbstractFifo ringBufferFifo_{kRingBufferSize};
   std::vector<RawMetricEvent> ringBufferData_;
 
-  // TODO: Add metrics exporter (Prometheus, OpenTelemetry)
-  // TODO: Add trace context propagation
-  // TODO: Add log aggregation
-  
   friend class ObservabilityAgentTest; // Allow tests to access ring buffer
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ObservabilityAgent)
