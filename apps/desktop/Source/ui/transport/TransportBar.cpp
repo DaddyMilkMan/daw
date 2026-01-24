@@ -919,6 +919,8 @@ void TransportBar::mouseMove(const juce::MouseEvent &e) {
         globalHelpCallback("Record", "Begins recording onto armed tracks. Pro Tip: Use 'Count-in' in settings for a lead-in.");
     else if (viewToggleState_.isHovered) 
         globalHelpCallback("Switch View", "Toggles between linear Arranger and loop-based Session view. Shortcut: Tab.");
+    else if (wingmanState_.isHovered)
+        globalHelpCallback("Wingman AI", "Your creative partner. Get intelligent suggestions for mixing, arrangement, and sound design. Shortcut: Cmd+W.");
     else if (settingsState_.isHovered) 
         globalHelpCallback("Audio Settings", "Configure your sound card, buffer size, and MIDI hardware here.");
 
