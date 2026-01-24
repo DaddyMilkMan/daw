@@ -161,5 +161,103 @@ private:
 
 static ClockSyncAgentMidiTest clockSyncAgentMidiTest;
 
+class ClockSyncAgentGeneralTest : public juce::UnitTest {
+public:
+  ClockSyncAgentGeneralTest() : juce::UnitTest("ClockSyncAgent General", "ClockSyncAgent") {}
+
+  void runTest() override {
+    testInitialState();
+    testLatencyCalculation();
+    testNetworkSourceSwitching();
+    testResynchronize();
+  }
+
+  void shutdown() override {
+    agent.reset();
+  }
+
+private:
+  std::unique_ptr<ClockSyncAgent> agent;
+
+  void setup() {
+    agent = std::make_unique<ClockSyncAgent>();
+  }
+
+  void testInitialState() {
+    beginTest("Initial State");
+    setup();
+    auto status = agent->getSyncStatus();
+    expect(status.currentSource == ClockSyncAgent::TimeSource::LocalClock, "Initial source should be LocalClock");
+    expect(status.synchronized, "LocalClock should be synchronized initially");
+  }
+
+  void testLatencyCalculation() {
+    beginTest("Latency Calculation");
+    setup();
+
+    using namespace std::chrono;
+    auto t1 = nanoseconds(100000000); // 100ms
+    auto t2 = nanoseconds(110000000); // 110ms
+    auto t3 = nanoseconds(120000000); // 120ms
+    auto t4 = nanoseconds(140000000); // 140ms
+
+    agent->updateNetworkMetrics(t1, t2, t3, t4);
+
+    auto status = agent->getSyncStatus();
+
+    double expectedLatency = 15.0;
+    int64_t expectedOffset = -5000000;
+
+    expect(std::abs(status.latencyMs - expectedLatency) < 0.001, "Latency calculation incorrect");
+    expect(status.offsetNanoseconds == expectedOffset, "Offset calculation incorrect");
+  }
+
+  void testNetworkSourceSwitching() {
+    beginTest("Network Source Switching");
+    setup();
+
+    // NTP
+    agent->setTimeSource(ClockSyncAgent::TimeSource::NetworkNTP);
+    auto status = agent->getSyncStatus();
+    expect(status.currentSource == ClockSyncAgent::TimeSource::NetworkNTP, "Source should be NetworkNTP");
+
+    // PTP
+    agent->setTimeSource(ClockSyncAgent::TimeSource::NetworkPTP);
+    status = agent->getSyncStatus();
+    expect(status.currentSource == ClockSyncAgent::TimeSource::NetworkPTP, "Source should be NetworkPTP");
+  }
+
+  void testResynchronize() {
+    beginTest("Resynchronize");
+    setup();
+
+    // Local
+    agent->setTimeSource(ClockSyncAgent::TimeSource::LocalClock);
+    // Inject offset
+    using namespace std::chrono;
+    agent->updateNetworkMetrics(nanoseconds(100), nanoseconds(110), nanoseconds(120), nanoseconds(130)); // Offset != 0
+    expect(agent->getSyncStatus().offsetNanoseconds != 0, "Offset should be injected");
+
+    agent->resynchronize();
+    auto status = agent->getSyncStatus();
+    expect(status.offsetNanoseconds == 0, "Resynchronize (Local) should reset offset");
+    expect(status.synchronized, "Resynchronize (Local) should be synchronized");
+
+    // Network (PTP)
+    agent->setTimeSource(ClockSyncAgent::TimeSource::NetworkPTP);
+    // PTP resets sync to false on setTimeSource
+    // But let's call resynchronize anyway
+    agent->resynchronize();
+    status = agent->getSyncStatus();
+    // PTP doesn't set sync to true until packet received
+    expect(!status.synchronized, "PTP should not be synchronized immediately after resync");
+
+    // Check drift is updated (should be 1.0)
+    expect(std::abs(status.driftPPM) < 0.0001, "Drift should be ~0 PPM (1.0 ratio)");
+  }
+};
+
+static ClockSyncAgentGeneralTest clockSyncAgentGeneralTest;
+
 } // namespace agents
 } // namespace zenith
