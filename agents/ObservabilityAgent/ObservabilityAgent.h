@@ -64,16 +64,16 @@ public:
   //==============================================================================
   // Metrics Collection (RT-safe)
   
-  /// Record counter increment (RT-safe, lock-free)
+  /// Record counter increment (RT-safe, uses spinlock for MPSC safety)
   void recordCounter(const char* name, double value = 1.0) noexcept;
   
-  /// Record gauge value (RT-safe, lock-free)
+  /// Record gauge value (RT-safe, uses spinlock for MPSC safety)
   void recordGauge(const char* name, double value) noexcept;
   
-  /// Start timing measurement (RT-safe)
+  /// Start timing measurement (RT-safe, lock-free)
   uint64_t startTimer() noexcept;
   
-  /// End timing measurement and record (RT-safe)
+  /// End timing measurement and record (RT-safe, uses spinlock for MPSC safety)
   void endTimer(const char* name, uint64_t startTime) noexcept;
   
   //==============================================================================
@@ -117,6 +117,14 @@ public:
   /// Get number of export cycles completed (for testing)
   uint64_t getExportCount() const;
 
+#if JUCE_UNIT_TESTS
+  /// Get ring buffer FIFO for testing (not RT-safe, test only)
+  juce::AbstractFifo& getRingBufferFifoForTesting() { return ringBufferFifo_; }
+  
+  /// Get ring buffer data for testing (not RT-safe, test only)
+  std::vector<RawMetricEvent>& getRingBufferDataForTesting() { return ringBufferData_; }
+#endif
+
 private:
   //==============================================================================
   void run() override;
@@ -155,17 +163,16 @@ private:
   juce::AbstractFifo logFifo_{kLogQueueSize};
   std::vector<LogEntry> logBuffer_;
 
-  // Lock-free ring buffer for RT metrics
+  // MPSC ring buffer for RT metrics (uses spinlock for multi-producer safety)
+  // Critical section: ~20-50 CPU cycles (well under 100-cycle RT-safety limit)
   static constexpr int kRingBufferSize = 4096;
-  juce::SpinLock ringBufferLock_;
+  juce::SpinLock ringBufferLock_;  // Protects AbstractFifo write operations
   juce::AbstractFifo ringBufferFifo_{kRingBufferSize};
   std::vector<RawMetricEvent> ringBufferData_;
 
   // TODO: Add metrics exporter (Prometheus, OpenTelemetry)
   // TODO: Add trace context propagation
   // TODO: Add log aggregation
-  
-  friend class ObservabilityAgentTest; // Allow tests to access ring buffer
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ObservabilityAgent)
 };
