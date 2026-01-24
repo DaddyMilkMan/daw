@@ -35,63 +35,62 @@ ObservabilityAgent::ObservabilityAgent() : juce::Thread("ObservabilityAgent") {
 ObservabilityAgent::~ObservabilityAgent() {
   // Flush remaining logs before shutting down
   int start1, size1, start2, size2;
-  logFifo_.prepareToRead(kLogQueueSize, start1, size1, start2, size2);
+  int numReady = logFifo_.getNumReady();
+  logFifo_.prepareToRead(numReady, start1, size1, start2, size2);
   int numToRead = size1 + size2;
   
-  if (numToRead > 0 && logStream_) {
-    auto batchSteadyNow = std::chrono::steady_clock::now();
-    auto batchSystemNow = std::chrono::system_clock::now();
-    
-    auto process = [&](int index) {
-      const auto& entry = logBuffer_[static_cast<size_t>(index)];
-      
-      using SteadyDur = std::chrono::steady_clock::duration;
-      SteadyDur entryDur(entry.timestamp);
-      std::chrono::steady_clock::time_point entryTime(entryDur);
-      
-      auto timeSinceBatch = entryTime - batchSteadyNow;
-      auto wallTime = batchSystemNow + timeSinceBatch;
-      
-      auto timeT = std::chrono::system_clock::to_time_t(wallTime);
-      auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(wallTime.time_since_epoch()) % 1000;
-      
-      std::tm tm{};
-      #ifdef JUCE_WINDOWS
-      localtime_s(&tm, &timeT);
-      #else
-      localtime_r(&timeT, &tm);
-      #endif
-      
-      std::stringstream ss;
-      ss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S") << "." << std::setfill('0') << std::setw(3) << ms.count();
-      auto timeStr = ss.str();
-      
-      const char* levelStr = "UNKNOWN";
-      switch (entry.level) {
-        case LogLevel::Debug:    levelStr = "DEBUG"; break;
-        case LogLevel::Info:     levelStr = "INFO"; break;
-        case LogLevel::Warning:  levelStr = "WARNING"; break;
-        case LogLevel::Error:    levelStr = "ERROR"; break;
-        case LogLevel::Critical: levelStr = "CRITICAL"; break;
-      }
-      
-      juce::String msg = juce::String::formatted("[%s] [%s] [%p] %s",
-          timeStr.c_str(), levelStr, entry.threadId, entry.message);
-      
-      std::lock_guard<std::mutex> lock(exportMutex_);
-      if (logStream_) {
-        logStream_->writeText(msg + juce::newLine, false, false, nullptr);
-      }
-    };
-    
-    for (int i = 0; i < size1; ++i) process(start1 + i);
-    for (int i = 0; i < size2; ++i) process(start2 + i);
-    
-    logFifo_.finishedRead(numToRead);
-    
+  if (numToRead > 0) {
+    std::lock_guard<std::mutex> lock(exportMutex_);
     if (logStream_) {
+      auto batchSteadyNow = std::chrono::steady_clock::now();
+      auto batchSystemNow = std::chrono::system_clock::now();
+      
+      auto process = [&](int index) {
+        const auto& entry = logBuffer_[static_cast<size_t>(index)];
+        
+        using SteadyDur = std::chrono::steady_clock::duration;
+        SteadyDur entryDur(entry.timestamp);
+        std::chrono::steady_clock::time_point entryTime(entryDur);
+        
+        auto timeSinceBatch = entryTime - batchSteadyNow;
+        auto wallTime = batchSystemNow + timeSinceBatch;
+        
+        auto timeT = std::chrono::system_clock::to_time_t(wallTime);
+        auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(wallTime.time_since_epoch()) % 1000;
+        
+        std::tm tm{};
+        #ifdef JUCE_WINDOWS
+        localtime_s(&tm, &timeT);
+        #else
+        localtime_r(&timeT, &tm);
+        #endif
+        
+        std::stringstream ss;
+        ss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S") << "." << std::setfill('0') << std::setw(3) << ms.count();
+        auto timeStr = ss.str();
+        
+        const char* levelStr = "UNKNOWN";
+        switch (entry.level) {
+          case LogLevel::Debug:    levelStr = "DEBUG"; break;
+          case LogLevel::Info:     levelStr = "INFO"; break;
+          case LogLevel::Warning:  levelStr = "WARNING"; break;
+          case LogLevel::Error:    levelStr = "ERROR"; break;
+          case LogLevel::Critical: levelStr = "CRITICAL"; break;
+        }
+        
+        juce::String msg = juce::String::formatted("[%s] [%s] [%p] %s",
+            timeStr.c_str(), levelStr, entry.threadId, entry.message);
+        
+        logStream_->writeText(msg + juce::newLine, false, false, nullptr);
+      };
+      
+      for (int i = 0; i < size1; ++i) process(start1 + i);
+      for (int i = 0; i < size2; ++i) process(start2 + i);
+      
       logStream_->flush();
     }
+    
+    logFifo_.finishedRead(numToRead);
   }
   
   stopThread(1000);
