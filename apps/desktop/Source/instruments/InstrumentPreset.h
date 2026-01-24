@@ -42,10 +42,10 @@ struct ZenithInstrumentPreset {
   std::string instrumentId; ///< Target instrument (e.g., "zenith_poly_synth")
 
   // New taxonomy fields
-  std::string soundType;            /// < Sound type (e.g., "Bass", "Pad")
-  std::vector<std::string> engines; /// < Engine tags (e.g., "VA", "FM")
+  std::string soundType;            ///< Sound type (e.g., "Bass", "Pad")
+  std::vector<std::string> engines; ///< Engine tags (e.g., "VA", "FM")
   std::vector<std::string>
-      characters; /// < Character tags (e.g., "Bright", "Warm")
+      characters; ///< Character tags (e.g., "Bright", "Warm")
 
   // Metadata
   std::string category;    ///< Category (e.g., "Bass", "Lead", "Pad", "808")
@@ -63,6 +63,10 @@ struct ZenithInstrumentPreset {
 
   /**
    * @brief Create preset with basic info
+   * @param name_ Preset name
+   * @param instrumentId_ Target instrument ID
+   * @param author_ Preset author (default: "Factory")
+   * @param id_ Optional preset ID. If empty, generates a unique ID from name and timestamp
    */
   ZenithInstrumentPreset(const std::string &name_,
                          const std::string &instrumentId_,
@@ -320,18 +324,18 @@ struct ZenithInstrumentPreset {
       return ZenithInstrumentPreset();
 
     // Basic info
-    std::string id = obj->getProperty("id").toString().toStdString();
-    std::string name = obj->getProperty("name").toString().toStdString();
+    std::string id = obj->getProperty("id", "").toString().toStdString();
+    std::string name = obj->getProperty("name", "").toString().toStdString();
     std::string instrumentId =
-        obj->getProperty("instrumentId").toString().toStdString();
-    std::string author = obj->getProperty("author").toString().toStdString();
+        obj->getProperty("instrumentId", "").toString().toStdString();
+    std::string author = obj->getProperty("author", "").toString().toStdString();
 
     ZenithInstrumentPreset preset(name, instrumentId, author, id);
 
-    preset.category = obj->getProperty("category").toString().toStdString();
+    preset.category = obj->getProperty("category", "").toString().toStdString();
     preset.description =
-        obj->getProperty("description").toString().toStdString();
-    preset.version = obj->getProperty("version").toString().toStdString();
+        obj->getProperty("description", "").toString().toStdString();
+    preset.version = obj->getProperty("version", "").toString().toStdString();
 
     // Tags array
     if (obj->hasProperty("tags")) {
