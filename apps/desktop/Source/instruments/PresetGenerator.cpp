@@ -359,13 +359,12 @@ ZenithInstrumentPreset PresetGenerator::createPresetFromParameters(
     const juce::String &instrumentId, const juce::String &presetName,
     const juce::String &description, const juce::var &parameters,
     const juce::String &genre) {
-  ZenithInstrumentPreset preset;
+  ZenithInstrumentPreset preset = ZenithInstrumentPreset::createNew(
+      presetName.isEmpty() ? "AI Generated" : presetName.toStdString(),
+      instrumentId.toStdString(), "Grok AI");
 
-  preset.name =
-      presetName.isEmpty() ? "AI Generated" : presetName.toStdString();
   preset.category = "AI Generated";
   preset.description = description.toStdString();
-  preset.author = "Grok AI";
   // preset.tags = ... ZenithInstrumentPreset uses vector<string> for tags
   if (genre.isNotEmpty())
     preset.tags.push_back(genre.toStdString());
