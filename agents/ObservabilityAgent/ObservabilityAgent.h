@@ -1,7 +1,8 @@
 /*
   ==============================================================================
     agents/ObservabilityAgent/ObservabilityAgent.h
-    Lock-free observability and metrics collection for real-time audio.
+    RT-safe observability and metrics collection for real-time audio.
+    Uses spinlock-protected MPSC ring buffer for multi-producer safety.
   ==============================================================================
 */
 
@@ -26,8 +27,13 @@ class PrometheusExporter;
 
 //==============================================================================
 /**
-    ObservabilityAgent provides lock-free metrics collection and monitoring
+    ObservabilityAgent provides RT-safe metrics collection and monitoring
     for real-time audio systems without impacting RT thread performance.
+    
+    Thread Safety:
+    - Uses spinlock-protected MPSC ring buffer for multi-producer safety
+    - Critical section: ~20-50 CPU cycles (well under 100-cycle RT limit)
+    - Follows project RT-safety guidelines in docs/RT_SAFETY_QUICK_REF.md
 */
 class ObservabilityAgent : public juce::Thread, private juce::Timer {
 public:
