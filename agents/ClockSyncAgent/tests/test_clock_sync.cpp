@@ -111,7 +111,7 @@ int main() {
         std::chrono::nanoseconds(100),
         std::chrono::nanoseconds(110),
         std::chrono::nanoseconds(120),
-        std::chrono::nanoseconds(130)
+        std::chrono::nanoseconds(140)
     );
     // Offset should be non-zero
     status = agent.getSyncStatus();

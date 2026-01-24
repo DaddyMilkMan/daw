@@ -8,7 +8,6 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
-#include <juce_events/juce_events.h>
 #include <atomic>
 #include <chrono>
 #include <string>
@@ -29,7 +28,7 @@ class PrometheusExporter;
     ObservabilityAgent provides lock-free metrics collection and monitoring
     for real-time audio systems without impacting RT thread performance.
 */
-class ObservabilityAgent : public juce::Thread, private juce::Timer {
+class ObservabilityAgent : public juce::Thread {
 public:
   //==============================================================================
   using Timestamp = std::chrono::steady_clock::time_point;
@@ -105,29 +104,38 @@ public:
   /// Set the destination file for metrics export
   void setMetricsFile(const juce::File& file);
 
+  /// Set the destination file for logs
+  void setLogFile(const juce::File& file);
+
   /// Get collected metrics (non-RT)
   std::vector<Metric> getMetrics();
   
   /// Clear collected metrics
   void clearMetrics();
 
-  /// Export accumulated metrics (called by timer or manually)
+  /// Export accumulated metrics (called by export thread or manually)
   void exportMetrics();
 
   /// Get number of export cycles completed (for testing)
   uint64_t getExportCount() const;
 
+  /// Get number of dropped log messages (due to full queue or contention)
+  uint64_t getDroppedLogCount() const;
+
+  /// Get number of truncated log messages
+  uint64_t getTruncatedLogCount() const;
+
 private:
   //==============================================================================
   void run() override;
-  void timerCallback() override;
   void exportLoop();
   void stopExportThread();
 
   struct LogEntry {
       LogLevel level;
-      uint64_t timestamp;
-      char message[512];
+      int64_t timestamp;
+      char message[2048];
+      uint64_t threadId;
   };
 
   struct RawMetricEvent {
@@ -155,15 +163,21 @@ private:
   juce::AbstractFifo logFifo_{kLogQueueSize};
   std::vector<LogEntry> logBuffer_;
 
+  // Logging members
+  juce::WaitableEvent logEvent_;
+  juce::SpinLock logSpinLock_;
+  std::atomic<uint64_t> droppedLogCount_{0};
+  std::atomic<uint64_t> truncatedLogCount_{0};
+
+  std::mutex logFileMutex_;
+  std::unique_ptr<juce::FileOutputStream> logStream_;
+  juce::File logFile_;
+
   // Lock-free ring buffer for RT metrics
   static constexpr int kRingBufferSize = 4096;
   juce::AbstractFifo ringBufferFifo_{kRingBufferSize};
   std::vector<RawMetricEvent> ringBufferData_;
 
-  // TODO: Add metrics exporter (Prometheus, OpenTelemetry)
-  // TODO: Add trace context propagation
-  // TODO: Add log aggregation
-  
   friend class ObservabilityAgentTest; // Allow tests to access ring buffer
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ObservabilityAgent)

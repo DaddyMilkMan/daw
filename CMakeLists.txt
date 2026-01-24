@@ -33,6 +33,17 @@ include(cmake/PlatformDetection.cmake OPTIONAL)
 # =============================================================================
 
 option(ZENITH_BUILD_APP "Build the main application" ON)
+option(ZENITH_ENABLE_COVERAGE "Enable code coverage instrumentation" OFF)
+
+if(ZENITH_ENABLE_COVERAGE)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        add_compile_options(-O0 -g --coverage)
+        add_link_options(--coverage)
+        message(STATUS "Code coverage instrumentation enabled (GCC/Clang)")
+    else()
+        message(WARNING "Code coverage enabled but compiler '${CMAKE_CXX_COMPILER_ID}' is not explicitly supported by this configuration.")
+    endif()
+endif()
 
 # Default to Release build for Skia compatibility
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)

@@ -23,6 +23,11 @@ try:
     NUMPY_AVAILABLE = True
 except ImportError:
     NUMPY_AVAILABLE = False
+    from typing import Any
+    class MockNumpy:
+        ndarray = Any
+        def __getattr__(self, _): return None
+    np = MockNumpy()
 
 
 class TestType(Enum):
@@ -162,13 +167,17 @@ class TestingAgent:
     # Unsafe operation patterns (Regex)
     UNSAFE_PATTERNS = {
         "Allocation": re.compile(r"\b(new|delete|malloc|calloc|realloc|free|strdup)\b"),
-        "Smart Pointer": re.compile(r"\bstd::(make_unique|make_shared)\b"),
+        "Smart Pointer": re.compile(r"\bstd::(make_unique|make_shared|allocate_shared)\b"),
+        "Heavy Type": re.compile(r"\bstd::(function|any|variant)\b"),
         "Container Mutation": re.compile(r"\.(push_back|emplace_back|resize|reserve|insert)\s*\("),
         "String Usage": re.compile(r"\b(std::string|juce::String)\b"),
-        "Lock": re.compile(r"\bstd::(mutex|lock_guard|unique_lock|condition_variable)\b|\bjuce::(CriticalSection|ScopedLock)\b"),
-        "I/O": re.compile(r"\b(std::cout|std::cerr|printf|fprintf|std::fstream)\b|\bjuce::(Logger|File)\b|\bDBG\b"),
+        "JUCE Object": re.compile(r"\bjuce::(Array|OwnedArray|HashMap|ReferenceCountedObjectPtr)\b"),
+        "Lock": re.compile(r"\bstd::(mutex|lock_guard|unique_lock|condition_variable)\b|\bjuce::(CriticalSection|ScopedLock|MessageManagerLock)\b"),
+        "I/O": re.compile(r"\b(std::cout|std::cerr|printf|fprintf|std::fstream|fopen|fdopen)\b|\bjuce::(Logger|File)\b|\bDBG\b"),
+        "System Call": re.compile(r"\b(open|read|write|socket|recv|send)\s*\("),
+        "Formatting": re.compile(r"\b(std::format|fmt::format)\b|\.formatted\s*\(|\.toStdString\s*\("),
         "Flow Control": re.compile(r"\b(throw|try|catch|dynamic_cast)\b"),
-        "Waiting": re.compile(r"\b(sleep|std::this_thread::sleep_for)\b")
+        "Waiting": re.compile(r"\b(sleep|std::this_thread::sleep_for|std::atomic_wait)\b|\bwait\s*\(")
     }
 
     # Suppressions
@@ -453,10 +462,10 @@ class TestingAgent:
 
         return "".join(out)
 
-    def _extract_rt_function_bodies(self, source: str) -> List[Tuple[str, str, int]]:
+    def _extract_rt_function_bodies(self, source: str) -> List[Tuple[str, str, int, str]]:
         """
         Extract bodies of functions that must be RT-safe.
-        Returns list of (function_name, body_text, start_line_number).
+        Returns list of (function_name, body_text, start_line_number, signature_suffix).
         """
         extracted = []
 
@@ -512,9 +521,12 @@ class TestingAgent:
                 if balance == 0:
                     # Extract body from ORIGINAL source using indices
                     body = source[brace_idx:curr]
+                    # Extract signature (text between trigger and body start)
+                    signature = source[i:brace_idx]
+
                     # Calculate line number
                     start_line = source.count('\n', 0, brace_idx) + 1
-                    extracted.append((found_trigger, body, start_line))
+                    extracted.append((found_trigger, body, start_line, signature))
 
                     # Continue search from after the function
                     i = curr
@@ -558,7 +570,22 @@ class TestingAgent:
                 # Extract function bodies
                 functions = self._extract_rt_function_bodies(content)
 
-                for func_name, body, start_line in functions:
+                for func_name, body, start_line, signature in functions:
+                    # Check for noexcept in signature
+                    # We mask comments/strings in signature to avoid false positives (e.g. noexcept in comment)
+                    masked_signature = self._mask_comments_and_strings(signature, preserve_rt_safe=False)
+
+                    # Only check the last part of the signature after any potential intervening declarations
+                    relevant_signature = masked_signature.rpartition(';')[2]
+
+                    if "noexcept" not in relevant_signature:
+                        results.append(TestCase(
+                            name=f"{file_path.name}::{func_name}::Signature",
+                            test_type=TestType.RT_SAFETY,
+                            status=TestStatus.FAILED,
+                            error_message=f"RT-Safety Violation: Missing 'noexcept' specifier in {func_name}"
+                        ))
+
                     # 1. Mask the body for checking violations (do NOT preserve RT-SAFE here)
                     masked_body = self._mask_comments_and_strings(body, preserve_rt_safe=False)
 
@@ -582,8 +609,10 @@ class TestingAgent:
 
                         # Check masked line for violations
                         for violation_type, pattern in self.UNSAFE_PATTERNS.items():
-                            if pattern.search(masked_line):
-                                error_msg = f"RT-Safety Violation: {violation_type} detected in {func_name} at line {current_line_num}"
+                            match = pattern.search(masked_line)
+                            if match:
+                                matched_text = match.group(0).strip()
+                                error_msg = f"RT-Safety Violation: {violation_type} detected ('{matched_text}') in {func_name} at line {current_line_num}"
 
                                 results.append(TestCase(
                                     name=f"{file_path.name}::{func_name}::L{current_line_num}",
@@ -904,6 +933,10 @@ class TestingAgent:
             Coverage statistics
         """
         print("Generating coverage report...")
+
+        if not shutil.which("gcov"):
+            print("Error: 'gcov' tool not found. Cannot generate coverage report.")
+            return CoverageReport()
         
         build_path = build_dir or self.project_root / "build"
         if not build_path.exists():
@@ -958,11 +991,20 @@ class TestingAgent:
                 # Parse output to find generated .gcov files
                 # Output format: "Creating 'test.cpp.gcov'"
                 generated_files = []
+                creating_regex = re.compile(r"Creating '([^']+)'")
+
                 for line in result.stdout.splitlines():
-                    if "Creating '" in line:
-                        # Extract filename from "Creating 'filename'"
-                        fname = line.split("'"[1]
+                    match = creating_regex.search(line)
+                    if match:
+                        fname = match.group(1)
                         generated_files.append(cwd / fname)
+                    elif "Creating '" in line:
+                        # Fallback for simple cases
+                        try:
+                            fname = line.split("'")[1]
+                            generated_files.append(cwd / fname)
+                        except IndexError:
+                            pass
 
                 # Read and parse .gcov files
                 for gcov_file in generated_files:

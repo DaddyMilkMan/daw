@@ -151,6 +151,8 @@ void ClockSyncAgent::resynchronize() {
   else if (source == TimeSource::NetworkNTP || source == TimeSource::NetworkPTP) {
     if (syncProtocol_) {
       syncProtocol_->forceSync();
+      // Update local state in case protocol has newer values already
+      clockOffsetNs_.store(syncProtocol_->getOffset(), std::memory_order_release);
       driftCompensation_.store(syncProtocol_->getDrift(), std::memory_order_release);
     }
   }
