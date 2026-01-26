@@ -234,6 +234,41 @@ void ZenithControl::modifierKeysChanged(const juce::ModifierKeys &modifiers) {
   }
 }
 
+bool ZenithControl::keyPressed(const juce::KeyPress &key) {
+  if (!isEnabled())
+    return false;
+
+  // Arrow keys for value adjustment
+  if (key.isKeyCode(juce::KeyPress::upKey) ||
+      key.isKeyCode(juce::KeyPress::downKey) ||
+      key.isKeyCode(juce::KeyPress::leftKey) ||
+      key.isKeyCode(juce::KeyPress::rightKey)) {
+
+    float step = (range_.end - range_.start) * 0.01f; // 1% default
+
+    // Use interval if set and meaningful
+    if (range_.interval > 0.0f) {
+        step = range_.interval;
+    }
+
+    if (key.getModifiers().isShiftDown()) {
+      step *= fineControlMultiplier_;
+    }
+
+    float direction = (key.isKeyCode(juce::KeyPress::upKey) ||
+                       key.isKeyCode(juce::KeyPress::rightKey))
+                          ? 1.0f
+                          : -1.0f;
+
+    setValue(getValue() + step * direction, true);
+    return true;
+  }
+
+  // Pass to base class for standard behaviors (Esc, Enter, Menu)
+  // Note: SkiaComponent implements KeyListener::keyPressed (2 args), not Component::keyPressed (1 arg).
+  return SkiaComponent::keyPressed(key, this);
+}
+
 float ZenithControl::constrainValue(float value) const {
   return juce::jlimit(range_.start, range_.end, value);
 }

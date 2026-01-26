@@ -13,6 +13,7 @@
 */
 
 #include "../ui/common/ResizablePanelContainer.h"
+#include "../ui/controls/ZenithControl.h"
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
@@ -35,6 +36,7 @@ public:
     testPanelDividerAccessibility();
     testTabGroupAccessibility();
     testComponentHierarchyAccessibility();
+    testZenithControlKeyboardNavigation();
   }
 
 private:
@@ -240,6 +242,41 @@ private:
       } else {
         logMessage("Note: No accessibility handlers available (headless environment)");
       }
+    }
+  }
+
+  /**
+   * @brief Test keyboard navigation for ZenithControl
+   * Verifies that Arrow keys adjust value and Shift modifier applies fine control.
+   */
+  void testZenithControlKeyboardNavigation() {
+    beginTest("ZenithControl Keyboard Navigation");
+    {
+       zenith::ZenithControl control("Test Control");
+       control.setRange(0.0f, 100.0f);
+       control.setValue(50.0f, false);
+
+       // Test Up Key (Increment)
+       // step should be 1% of 100 = 1.0
+       control.keyPressed(juce::KeyPress(juce::KeyPress::upKey));
+       expectWithinAbsoluteError(control.getValue(), 51.0f, 0.001f, "Up key should increment by 1%");
+
+       // Test Down Key (Decrement)
+       control.keyPressed(juce::KeyPress(juce::KeyPress::downKey));
+       expectWithinAbsoluteError(control.getValue(), 50.0f, 0.001f, "Down key should decrement by 1%");
+
+       // Test Right Key (Increment)
+       control.keyPressed(juce::KeyPress(juce::KeyPress::rightKey));
+       expectWithinAbsoluteError(control.getValue(), 51.0f, 0.001f, "Right key should increment by 1%");
+
+       // Test Left Key (Decrement)
+       control.keyPressed(juce::KeyPress(juce::KeyPress::leftKey));
+       expectWithinAbsoluteError(control.getValue(), 50.0f, 0.001f, "Left key should decrement by 1%");
+
+       // Test Shift + Up (Fine control)
+       // fine multiplier is 0.1f by default. Step = 1.0 * 0.1 = 0.1.
+       control.keyPressed(juce::KeyPress(juce::KeyPress::upKey, juce::ModifierKeys::shiftModifier, 0));
+       expectWithinAbsoluteError(control.getValue(), 50.1f, 0.001f, "Shift+Up should increment by 0.1%");
     }
   }
 };
