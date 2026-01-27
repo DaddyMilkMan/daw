@@ -234,6 +234,34 @@ void ZenithControl::modifierKeysChanged(const juce::ModifierKeys &modifiers) {
   }
 }
 
+bool ZenithControl::keyPressed(const juce::KeyPress &key) {
+  if (!isEnabled())
+    return false;
+
+  float step = (range_.end - range_.start) * 0.01f;
+  if (range_.interval > 0.0f) {
+    step = range_.interval;
+  }
+
+  if (key.getModifiers().isShiftDown()) {
+    step *= fineControlMultiplier_;
+  }
+
+  if (key.isKeyCode(juce::KeyPress::upKey) ||
+      key.isKeyCode(juce::KeyPress::rightKey)) {
+    setValue(getValue() + step, true);
+    return true;
+  }
+
+  if (key.isKeyCode(juce::KeyPress::downKey) ||
+      key.isKeyCode(juce::KeyPress::leftKey)) {
+    setValue(getValue() - step, true);
+    return true;
+  }
+
+  return SkiaComponent::keyPressed(key, this);
+}
+
 float ZenithControl::constrainValue(float value) const {
   return juce::jlimit(range_.start, range_.end, value);
 }

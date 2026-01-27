@@ -129,6 +129,9 @@ protected:
                       const juce::MouseWheelDetails &wheel) override;
   void modifierKeysChanged(const juce::ModifierKeys &modifiers) override;
 
+  // ----- Keyboard Handlers -----
+  bool keyPressed(const juce::KeyPress &key) override;
+
   // ----- Helpers -----
   float constrainValue(float value) const;
   void notifyValueChange();
