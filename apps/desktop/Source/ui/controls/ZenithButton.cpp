@@ -25,6 +25,51 @@
 
 namespace zenith {
 
+namespace {
+class ZenithButtonAccessibilityHandler : public juce::AccessibilityHandler {
+public:
+  ZenithButtonAccessibilityHandler(ZenithButton &button)
+      : juce::AccessibilityHandler(
+            button,
+            button.isToggleable() ? juce::AccessibilityRole::toggleButton
+                                  : juce::AccessibilityRole::button,
+            juce::AccessibilityActions().addAction(
+                juce::AccessibilityActionType::press,
+                [&button] {
+                  button.triggerClick();
+                  return true;
+                })),
+        button_(button) {}
+
+  juce::String getTitle() const override {
+    // Priority 1: Visible Text
+    if (button_.getText().isNotEmpty() &&
+        button_.getIconPosition() != ZenithButton::IconPosition::Only) {
+      return button_.getText();
+    }
+
+    // Priority 2: Tooltip (Accessible Name)
+    if (button_.getTooltip().isNotEmpty()) {
+      return button_.getTooltip();
+    }
+
+    // Priority 3: Fallback
+    return button_.getText().isNotEmpty() ? button_.getText() : "Button";
+  }
+
+  juce::AccessibilityToggleState getToggleState() const override {
+    if (button_.isToggleable()) {
+      return button_.getToggleState() ? juce::AccessibilityToggleState::on
+                                      : juce::AccessibilityToggleState::off;
+    }
+    return juce::AccessibilityToggleState::off;
+  }
+
+private:
+  ZenithButton &button_;
+};
+} // namespace
+
 ZenithButton::ZenithButton() : text_(""), iconText_("") {
   setWantsKeyboardFocus(true);
 }
@@ -114,6 +159,19 @@ void ZenithButton::setAudioLevel(float level) {
   }
 }
 
+void ZenithButton::triggerClick() {
+  if (!isEnabled())
+    return;
+
+  if (toggleable_) {
+    setToggleState(!toggleState_, true);
+  }
+
+  if (onClick) {
+    onClick();
+  }
+}
+
 void ZenithButton::setEnabled(bool enabled) {
   if (isEnabled() != enabled) {
     juce::Component::setEnabled(enabled);
@@ -149,13 +207,7 @@ void ZenithButton::mouseUp(const juce::MouseEvent &e) {
     pressed_ = false;
 
     if (isEnabled() && contains(e.position.toInt())) {
-      if (toggleable_) {
-        setToggleState(!toggleState_, true);
-      }
-
-      if (onClick) {
-        onClick();
-      }
+      triggerClick();
     }
 
     repaint();
@@ -207,6 +259,19 @@ float ZenithButton::getFontSize() const {
   default:
     return 13.0f; // Medium
   }
+}
+
+std::unique_ptr<juce::AccessibilityHandler>
+ZenithButton::createAccessibilityHandler() {
+  return std::make_unique<ZenithButtonAccessibilityHandler>(*this);
+}
+
+bool ZenithButton::keyPressed(const juce::KeyPress &key) {
+  if (key == juce::KeyPress::returnKey || key == juce::KeyPress::spaceKey) {
+    triggerClick();
+    return true;
+  }
+  return SkiaComponent::keyPressed(key, this);
 }
 
 void ZenithButton::drawSkia(SkCanvas *canvas) {
