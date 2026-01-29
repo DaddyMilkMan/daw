@@ -1022,6 +1022,22 @@ bool TransportBar::hitTest(int x, int y) {
     return false;
 }
 
+juce::String TransportBar::getTooltip() {
+    auto pos = getMouseXYRelative();
+
+    if (playButtonBounds_.contains(pos)) return "Play (Space)";
+    if (stopButtonBounds_.contains(pos)) return "Stop (Return)";
+    if (recordButtonBounds_.contains(pos)) return "Record";
+    if (viewToggleButtonBounds_.contains(pos)) return "Toggle View (Tab)";
+    if (wingmanButtonBounds_.contains(pos)) return "Wingman AI (Cmd+W)";
+    if (settingsButtonBounds_.contains(pos)) return "Audio Settings";
+
+    if (bpmHitBounds_.contains(pos)) return "BPM: Drag to change";
+    if (timeSigHitBounds_.contains(pos)) return "Time Signature";
+
+    return {};
+}
+
 } // namespace zenith
 
 #endif // ZENITH_USE_SKIA

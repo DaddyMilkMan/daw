@@ -52,6 +52,7 @@ public:
   void mouseEnter(const juce::MouseEvent &e) override;
   void mouseExit(const juce::MouseEvent &e) override;
   bool hitTest(int x, int y) override;
+  juce::String getTooltip() override;
 
   void onAnimationTick(float deltaMs) override;
   void visibilityChanged() override;
