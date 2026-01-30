@@ -25,6 +25,60 @@
 
 namespace zenith {
 
+class ZenithButtonAccessibilityHandler : public juce::AccessibilityHandler
+{
+public:
+    explicit ZenithButtonAccessibilityHandler (ZenithButton& b)
+        : AccessibilityHandler (b, b.isToggleable() ? juce::AccessibilityRole::toggleButton : juce::AccessibilityRole::button),
+          button (b)
+    {
+    }
+
+    juce::String getTitle() const override
+    {
+        auto text = button.getButtonText();
+        if (text.isNotEmpty())
+            return text;
+
+        auto tooltip = button.getTooltip();
+        if (tooltip.isNotEmpty())
+            return tooltip;
+
+        return "Button";
+    }
+
+    juce::String getHelp() const override
+    {
+        return button.getTooltip();
+    }
+
+    void performAction (const juce::AccessibilityAction& action) override
+    {
+        if (action.type == juce::AccessibilityActionType::press)
+        {
+             button.triggerClick();
+        }
+        else if (action.type == juce::AccessibilityActionType::toggle)
+        {
+             if (button.isToggleable())
+             {
+                 button.setToggleState(!button.getToggleState(), true);
+             }
+        }
+    }
+
+    juce::AccessibilityState getState() const override
+    {
+        auto state = juce::AccessibilityHandler::getState();
+        if (button.isToggleable())
+            state.checked = button.getToggleState() ? juce::AccessibilityState::CheckedState::checked : juce::AccessibilityState::CheckedState::unchecked;
+        return state;
+    }
+
+private:
+    ZenithButton& button;
+};
+
 ZenithButton::ZenithButton() : text_(""), iconText_("") {
   setWantsKeyboardFocus(true);
 }
@@ -142,6 +196,19 @@ void ZenithButton::mouseDown(const juce::MouseEvent &e) {
   repaint();
 }
 
+void ZenithButton::triggerClick() {
+  if (!isEnabled())
+    return;
+
+  if (toggleable_) {
+    setToggleState(!toggleState_, true);
+  }
+
+  if (onClick) {
+    onClick();
+  }
+}
+
 void ZenithButton::mouseUp(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
 
@@ -149,17 +216,24 @@ void ZenithButton::mouseUp(const juce::MouseEvent &e) {
     pressed_ = false;
 
     if (isEnabled() && contains(e.position.toInt())) {
-      if (toggleable_) {
-        setToggleState(!toggleState_, true);
-      }
-
-      if (onClick) {
-        onClick();
-      }
+      triggerClick();
     }
 
     repaint();
   }
+}
+
+std::unique_ptr<juce::AccessibilityHandler> ZenithButton::createAccessibilityHandler() {
+    return std::make_unique<ZenithButtonAccessibilityHandler>(*this);
+}
+
+bool ZenithButton::keyPressed(const juce::KeyPress& key) {
+    if (isEnabled() && (key == juce::KeyPress::spaceKey || key == juce::KeyPress::returnKey)) {
+        triggerClick();
+        return true;
+    }
+    // Delegate to SkiaComponent's KeyListener implementation (handles Shift+F10 etc)
+    return SkiaComponent::keyPressed(key, this);
 }
 
 void ZenithButton::focusGained(juce::Component::FocusChangeType cause) {

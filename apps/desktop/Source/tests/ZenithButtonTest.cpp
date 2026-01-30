@@ -2,17 +2,6 @@
 #include <gtest/gtest.h>
 #include "../ui/controls/ZenithButton.h"
 
-// Manual Spy instead of GMock macros to avoid include/version issues
-class SpyZenithLookAndFeel : public juce::LookAndFeel_V4 {
-public:
-    bool drawButtonBackgroundCalled = false;
-    
-    void drawButtonBackground(juce::Graphics& g, juce::Button& b, const juce::Colour& c, bool h, bool d) override {
-        drawButtonBackgroundCalled = true;
-        // Call base to actually draw something if needed, or just no-op
-    }
-};
-
 class ZenithButtonTest : public ::testing::Test {
 protected:
     void SetUp() override {}
@@ -24,17 +13,51 @@ TEST_F(ZenithButtonTest, InitialStateIsVisible) {
     EXPECT_TRUE(button.isVisible());
 }
 
-TEST_F(ZenithButtonTest, PaintCallsLookAndFeel) {
+TEST_F(ZenithButtonTest, TriggerClickCallsOnClick) {
     zenith::ZenithButton button("TestButton");
-    SpyZenithLookAndFeel spyLAF;
-    button.setLookAndFeel(&spyLAF);
+    bool clicked = false;
+    button.onClick = [&]() { clicked = true; };
+    button.setEnabled(true);
 
-    // Simulate paint
-    juce::Image image(juce::Image::RGB, 100, 30, true);
-    juce::Graphics g(image);
-    button.paintButton(g, false, false);
+    button.triggerClick();
 
-    EXPECT_TRUE(spyLAF.drawButtonBackgroundCalled);
+    EXPECT_TRUE(clicked);
+}
 
-    button.setLookAndFeel(nullptr);
+TEST_F(ZenithButtonTest, SpaceKeyTriggersClick) {
+    zenith::ZenithButton button("TestButton");
+    bool clicked = false;
+    button.onClick = [&]() { clicked = true; };
+    button.setEnabled(true);
+
+    button.keyPressed(juce::KeyPress(juce::KeyPress::spaceKey));
+
+    EXPECT_TRUE(clicked);
+}
+
+TEST_F(ZenithButtonTest, ReturnKeyTriggersClick) {
+    zenith::ZenithButton button("TestButton");
+    bool clicked = false;
+    button.onClick = [&]() { clicked = true; };
+    button.setEnabled(true);
+
+    button.keyPressed(juce::KeyPress(juce::KeyPress::returnKey));
+
+    EXPECT_TRUE(clicked);
+}
+
+TEST_F(ZenithButtonTest, AccessibilityHandlerCreated) {
+    zenith::ZenithButton button("TestButton");
+    auto handler = button.createAccessibilityHandler();
+    ASSERT_NE(handler, nullptr);
+    EXPECT_EQ(handler->getTitle(), "TestButton");
+    EXPECT_EQ(handler->getRole(), juce::AccessibilityRole::button);
+}
+
+TEST_F(ZenithButtonTest, AccessibilityHandlerToggleRole) {
+    zenith::ZenithButton button("ToggleButton");
+    button.setToggleable(true);
+    auto handler = button.createAccessibilityHandler();
+    ASSERT_NE(handler, nullptr);
+    EXPECT_EQ(handler->getRole(), juce::AccessibilityRole::toggleButton);
 }

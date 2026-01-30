@@ -108,8 +108,13 @@ public:
   bool isHovered() const { return hovered_; }
 
   // ----- Callbacks -----
+  void triggerClick();
   std::function<void()> onClick;
   std::function<void(bool)> onToggle;
+
+  // ----- Accessibility & Input -----
+  std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
+  bool keyPressed(const juce::KeyPress& key) override;
 
   // ----- TooltipClient -----
   juce::String getTooltip() override { return tooltip_; }
