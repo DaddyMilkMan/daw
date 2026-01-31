@@ -100,6 +100,10 @@ void ZenithButton::setToggleState(bool state, bool sendNotification) {
     if (sendNotification && onToggle) {
       onToggle(toggleState_);
     }
+
+    if (auto* handler = getAccessibilityHandler()) {
+      handler->notifyAccessibilityEvent(juce::AccessibilityEvent::stateChanged);
+    }
   }
 }
 
@@ -149,17 +153,101 @@ void ZenithButton::mouseUp(const juce::MouseEvent &e) {
     pressed_ = false;
 
     if (isEnabled() && contains(e.position.toInt())) {
-      if (toggleable_) {
-        setToggleState(!toggleState_, true);
-      }
+      triggerClick();
+    } else {
+      repaint();
+    }
+  }
+}
 
-      if (onClick) {
-        onClick();
-      }
+void ZenithButton::triggerClick() {
+  if (!isEnabled())
+    return;
+
+  if (toggleable_) {
+    setToggleState(!toggleState_, true);
+  }
+
+  if (onClick) {
+    onClick();
+  }
+
+  repaint();
+}
+
+bool ZenithButton::keyPressed(const juce::KeyPress &key, juce::Component *origin) {
+  if (!isEnabled())
+    return false;
+
+  if (key.isKeyCode(juce::KeyPress::spaceKey)) {
+    triggerClick();
+    return true;
+  }
+
+  return SkiaComponent::keyPressed(key, origin);
+}
+
+void ZenithButton::onEnterPressed() {
+  triggerClick();
+}
+
+// Helper class for Accessibility
+class ZenithButtonAccessibilityHandler : public juce::AccessibilityHandler {
+public:
+  ZenithButtonAccessibilityHandler(ZenithButton &button)
+      : juce::AccessibilityHandler(
+            button, button.isToggleable()
+                        ? juce::AccessibilityRole::toggleButton
+                        : juce::AccessibilityRole::button) {}
+
+  juce::String getTitle() const override {
+    auto &button = dynamic_cast<ZenithButton &>(getComponent());
+    auto text = button.getText();
+    if (text.isNotEmpty())
+      return text;
+
+    // Fallback to tooltip if text is empty (icon-only buttons)
+    auto tooltip = button.getTooltip();
+    if (tooltip.isNotEmpty())
+      return tooltip;
+
+    return "Button";
+  }
+
+  juce::AccessibilityState getCurrentState() const override {
+    auto &button = dynamic_cast<ZenithButton &>(getComponent());
+    juce::AccessibilityState state;
+
+    if (!button.isEnabled())
+      state = state.withDisabled();
+
+    if (button.isToggleable()) {
+      if (button.getToggleState())
+        state = state.withChecked();
     }
 
-    repaint();
+    return state;
   }
+
+  void getActions(std::vector<juce::AccessibilityAction> &actions) const override {
+    auto &button = dynamic_cast<ZenithButton &>(getComponent());
+    if (button.isEnabled()) {
+      actions.push_back(juce::AccessibilityAction(
+          juce::AccessibilityActionType::press, "Press",
+          [this] { dynamic_cast<ZenithButton &>(getComponent()).triggerClick(); }));
+
+      if (button.isToggleable()) {
+        actions.push_back(juce::AccessibilityAction(
+            juce::AccessibilityActionType::toggle, "Toggle",
+            [this] { dynamic_cast<ZenithButton &>(getComponent()).triggerClick(); }));
+      }
+    }
+  }
+};
+
+std::unique_ptr<juce::AccessibilityHandler>
+ZenithButton::createAccessibilityHandler() {
+  return std::make_unique<ZenithButtonAccessibilityHandler>(*this);
 }
 
 void ZenithButton::focusGained(juce::Component::FocusChangeType cause) {

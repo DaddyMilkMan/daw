@@ -111,9 +111,17 @@ public:
   std::function<void()> onClick;
   std::function<void(bool)> onToggle;
 
+  // ----- Actions -----
+  void triggerClick();
+
   // ----- TooltipClient -----
   juce::String getTooltip() override { return tooltip_; }
   void setTooltip(const juce::String &text) { tooltip_ = text; }
+
+  // ----- Accessibility & Keyboard -----
+  std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
+  bool keyPressed(const juce::KeyPress &key, juce::Component *origin) override;
+  void onEnterPressed() override;
 
   // ----- Rendering -----
   void drawSkia(SkCanvas *canvas) override;
