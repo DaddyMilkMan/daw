@@ -38,6 +38,7 @@
 #include <memory>
 #include <vector>
 #include "MidiNote.h"
+#include "../dsp/Resampling.h"
 
 namespace zenith {
 
@@ -302,6 +303,9 @@ private:
   std::vector<float> wsolaWindow_;
   std::vector<float> wsolaOutputBuffer_;
   double readPosition_ = 0.0; // Fractional read position for interpolation
+
+  // High-Quality Resampler
+  std::unique_ptr<dsp::WindowedSincInterpolator> sincResampler_;
 
   //==============================================================================
   // Processing state

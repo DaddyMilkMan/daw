@@ -59,30 +59,35 @@ void RoutingGraph::updateSnapshot() {
     }
   }
 
-  // Queue for nodes with 0 in-degree
-  std::vector<std::string> queue;
+  // Queue for nodes with 0 in-degree (Layer 0)
+  std::vector<std::string> currentLayer;
   for (const auto &pair : inDegree) {
     if (pair.second == 0) {
-      queue.push_back(pair.first);
+      currentLayer.push_back(pair.first);
     }
   }
 
-  // Process queue
-  size_t queueIndex = 0;
-  while (queueIndex < queue.size()) {
-    std::string u = queue[queueIndex++];
-    nextTopology->processingOrder.push_back(u);
+  // Process Layers
+  while (!currentLayer.empty()) {
+    nextTopology->processingLayers.push_back(currentLayer);
+    std::vector<std::string> nextLayer;
 
-    for (const auto &v : adjList[u]) {
-      inDegree[v]--;
-      if (inDegree[v] == 0) {
-        queue.push_back(v);
-      }
+    for (const auto& u : currentLayer) {
+        nextTopology->processingOrder.push_back(u);
+
+        for (const auto &v : adjList[u]) {
+          inDegree[v]--;
+          if (inDegree[v] == 0) {
+            nextLayer.push_back(v);
+          }
+        }
     }
+    currentLayer = nextLayer;
   }
 
-  // Handle Cycles
+  // Handle Cycles (Append to a final fallback layer)
   if (nextTopology->processingOrder.size() < nodes_.size()) {
+    std::vector<std::string> cycleLayer;
     for (const auto &pair : nodes_) {
       bool alreadyAdded = false;
       for (const auto &id : nextTopology->processingOrder) {
@@ -93,7 +98,11 @@ void RoutingGraph::updateSnapshot() {
       }
       if (!alreadyAdded) {
         nextTopology->processingOrder.push_back(pair.second.id);
+        cycleLayer.push_back(pair.second.id);
       }
+    }
+    if (!cycleLayer.empty()) {
+        nextTopology->processingLayers.push_back(cycleLayer);
     }
   }
 
@@ -131,24 +140,8 @@ void RoutingGraph::updateSnapshotWithPointers(
     newSnapshot->auxBusLookup[key] = value;
   }
 
-  // Precompute render list
-  newSnapshot->renderList.reserve(newSnapshot->topology->processingOrder.size());
-  
-  // Create a fast lookup for aux bus indices
-  std::unordered_map<AuxBus*, int> auxBusIndices;
-  int busIdx = 0;
-  // We need to know the order of aux buses as they appear in the engine's auxBuses_ vector
-  // but we don't have that here. 
-  // WAIT: AudioRenderer receives std::span<AuxBus* const> auxBuses.
-  // The index in that span is what matters.
-  // However, updateSnapshotWithPointers is called with a map.
-  
-  // Let's assume for now that we can determine the index from the track/bus itself if they stored it.
-  // Tracks HAVE trackIndex. AuxBuses DON'T.
-  
-  // Let's refine the plan: the Engine should probably provide the ordered lists.
-  
-  for (const auto& nodeId : newSnapshot->topology->processingOrder) {
+  // Helper lambda to create a RenderNode
+  auto createRenderNode = [&](const juce::String& nodeId) -> std::optional<RenderNode> {
       RenderNode rn;
       auto trackIt = trackMap.find(nodeId);
       if (trackIt != trackMap.end()) {
@@ -162,7 +155,7 @@ void RoutingGraph::updateSnapshotWithPointers(
               rn.auxBus = busIt->second.get();
               rn.bufferIndex = rn.auxBus->getBusIndex();
           } else {
-              continue; // Not a track or bus (could be Master or something else)
+              return std::nullopt;
           }
       }
       
@@ -174,8 +167,29 @@ void RoutingGraph::updateSnapshotWithPointers(
               break;
           }
       }
+      return rn;
+  };
+
+  // Precompute render list (Serial)
+  newSnapshot->renderList.reserve(newSnapshot->topology->processingOrder.size());
+  for (const auto& nodeId : newSnapshot->topology->processingOrder) {
+      if (auto rn = createRenderNode(nodeId)) {
+          newSnapshot->renderList.push_back(*rn);
+      }
+  }
+
+  // Precompute render layers (Parallel)
+  newSnapshot->renderLayers.resize(newSnapshot->topology->processingLayers.size());
+  for (size_t i = 0; i < newSnapshot->topology->processingLayers.size(); ++i) {
+      const auto& layerIds = newSnapshot->topology->processingLayers[i];
+      auto& renderLayer = newSnapshot->renderLayers[i];
+      renderLayer.reserve(layerIds.size());
       
-      newSnapshot->renderList.push_back(rn);
+      for (const auto& nodeId : layerIds) {
+           if (auto rn = createRenderNode(nodeId)) {
+               renderLayer.push_back(*rn);
+           }
+      }
   }
 
   // Atomic swap

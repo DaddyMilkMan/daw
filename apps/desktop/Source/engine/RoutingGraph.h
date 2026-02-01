@@ -99,6 +99,8 @@ public:
   struct Topology {
     std::vector<Connection> connections;
     std::vector<juce::String> processingOrder;
+    // Parallel Processing Layers (Layer 0 = Independent, Layer N depends on N-1)
+    std::vector<std::vector<juce::String>> processingLayers;
     int version = 0;
   };
 
@@ -116,8 +118,11 @@ public:
     std::unordered_map<std::string, Node> nodes;
     std::shared_ptr<Topology> topology;
 
-    // Precomputed render list for the audio thread
+    // Precomputed render list for the audio thread (Serial)
     std::vector<RenderNode> renderList;
+
+    // Precomputed render layers for the audio thread (Parallel)
+    std::vector<std::vector<RenderNode>> renderLayers;
 
     // Fast lookup maps (populated by RoutingGraph::updateSnapshot)
     std::unordered_map<juce::String, std::weak_ptr<Track>> trackLookup;
