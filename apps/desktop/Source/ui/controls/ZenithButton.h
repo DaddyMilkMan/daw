@@ -113,7 +113,10 @@ public:
 
   // ----- TooltipClient -----
   juce::String getTooltip() override { return tooltip_; }
-  void setTooltip(const juce::String &text) { tooltip_ = text; }
+  void setTooltip(const juce::String &text);
+
+  // ----- Accessibility -----
+  std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
   // ----- Rendering -----
   void drawSkia(SkCanvas *canvas) override;

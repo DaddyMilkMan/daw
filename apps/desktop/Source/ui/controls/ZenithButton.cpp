@@ -43,6 +43,22 @@ void ZenithButton::setButtonText(const juce::String &text) {
     textDirty_ = true;
     layoutDirty_ = true;
     repaint();
+
+    if (auto *handler = getAccessibilityHandler()) {
+      handler->notifyAccessibilityEvent(juce::AccessibilityEvent::titleChanged);
+    }
+  }
+}
+
+void ZenithButton::setTooltip(const juce::String &text) {
+  if (tooltip_ != text) {
+    tooltip_ = text;
+    // Update title if falling back to tooltip (icon-only mode)
+    if (text_.isEmpty()) {
+      if (auto *handler = getAccessibilityHandler()) {
+        handler->notifyAccessibilityEvent(juce::AccessibilityEvent::titleChanged);
+      }
+    }
   }
 }
 
@@ -96,6 +112,10 @@ void ZenithButton::setToggleState(bool state, bool sendNotification) {
   if (toggleState_ != state) {
     toggleState_ = state;
     repaint();
+
+    if (auto *handler = getAccessibilityHandler()) {
+      handler->notifyAccessibilityEvent(juce::AccessibilityEvent::stateChanged);
+    }
 
     if (sendNotification && onToggle) {
       onToggle(toggleState_);
@@ -542,5 +562,67 @@ void ZenithButton::calculateLayout() {
 }
 
 #endif // ZENITH_USE_SKIA
+
+class ZenithButtonAccessibilityHandler : public juce::AccessibilityHandler {
+public:
+  explicit ZenithButtonAccessibilityHandler(ZenithButton &button)
+      : juce::AccessibilityHandler(button), button_(button) {}
+
+  juce::String getTitle() const override {
+    auto title = button_.getText();
+    if (title.isEmpty())
+      title = button_.getTooltip();
+    if (title.isEmpty())
+      title = "Button";
+    return title;
+  }
+
+  juce::AccessibilityRole getRole() const override {
+    return button_.isToggleable() ? juce::AccessibilityRole::toggleButton
+                                  : juce::AccessibilityRole::button;
+  }
+
+  juce::AccessibilityState getCurrentState() const override {
+    auto state = juce::AccessibilityState().withEnabled(button_.isEnabled());
+    if (button_.isToggleable()) {
+      state = button_.getToggleState() ? state.withChecked()
+                                       : state.withUnchecked();
+    }
+    return state;
+  }
+
+  std::vector<juce::AccessibilityActionType> getSupportedActions() const override {
+    std::vector<juce::AccessibilityActionType> actions;
+    actions.push_back(juce::AccessibilityActionType::press);
+    if (button_.isToggleable()) {
+      actions.push_back(juce::AccessibilityActionType::toggle);
+    }
+    return actions;
+  }
+
+  void performAction(juce::AccessibilityActionType action) override {
+    if (!button_.isEnabled())
+      return;
+
+    if (action == juce::AccessibilityActionType::press) {
+      if (button_.isToggleable()) {
+        button_.setToggleState(!button_.getToggleState(), true);
+      }
+      if (button_.onClick) {
+        button_.onClick();
+      }
+    } else if (action == juce::AccessibilityActionType::toggle &&
+               button_.isToggleable()) {
+      button_.setToggleState(!button_.getToggleState(), true);
+    }
+  }
+
+private:
+  ZenithButton &button_;
+};
+
+std::unique_ptr<juce::AccessibilityHandler> ZenithButton::createAccessibilityHandler() {
+  return std::make_unique<ZenithButtonAccessibilityHandler>(*this);
+}
 
 } // namespace zenith
