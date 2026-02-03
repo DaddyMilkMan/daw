@@ -5,10 +5,17 @@ This module provides WebRTC peer connection management, audio streaming,
 and low-latency collaboration features for the DAW.
 """
 
-from typing import Dict, List, Optional, Callable
+from typing import Dict, List, Optional, Callable, Any
 from dataclasses import dataclass
 from enum import Enum
 import asyncio
+
+try:
+    from aiortc import RTCPeerConnection, RTCConfiguration, RTCIceServer
+except ImportError:
+    RTCPeerConnection = None
+    RTCConfiguration = None
+    RTCIceServer = None
 
 
 class ConnectionState(Enum):
@@ -28,6 +35,7 @@ class PeerConnection:
     latency_ms: float = 0.0
     packet_loss_percent: float = 0.0
     bitrate_kbps: int = 0
+    pc: Any = None
 
 
 @dataclass
@@ -63,13 +71,24 @@ class WebRTCGatewayAgent:
         self.peers: Dict[str, PeerConnection] = {}
         self.stream_config = AudioStreamConfig()
         self._running = False
+        self.rtc_config = None
 
     async def start(self) -> None:
         """Start the WebRTC gateway."""
+        if RTCPeerConnection is None:
+            raise RuntimeError("aiortc is required. Install with: pip install aiortc")
+
         self._running = True
-        # TODO: Initialize WebRTC backend
-        # TODO: Setup ICE servers
-        # TODO: Start connection manager
+
+        # Initialize WebRTC backend and Setup ICE servers
+        ice_servers = []
+        for url in self.stun_servers:
+            ice_servers.append(RTCIceServer(urls=url))
+        for turn in self.turn_servers:
+            ice_servers.append(RTCIceServer(**turn))
+
+        self.rtc_config = RTCConfiguration(iceServers=ice_servers)
+
         print("WebRTC Gateway Agent started")
 
     async def stop(self) -> None:
@@ -92,13 +111,19 @@ class WebRTCGatewayAgent:
         Returns:
             PeerConnection object
         """
-        # TODO: Create RTCPeerConnection with ICE configuration
+        if not self._running:
+            await self.start()
+
+        # Create RTCPeerConnection with ICE configuration
+        pc = RTCPeerConnection(configuration=self.rtc_config)
+
         # TODO: Setup audio tracks
         # TODO: Register callbacks
         
         peer = PeerConnection(
             peer_id=peer_id,
-            state=ConnectionState.CONNECTING
+            state=ConnectionState.CONNECTING,
+            pc=pc
         )
         self.peers[peer_id] = peer
         return peer
