@@ -111,6 +111,7 @@ set(ZENITH_TEST_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/Midi2Tests.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/AITests.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/AccessibilityTests.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/ZenithButtonAccessibilityTest.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/CRDTSyncTests.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/OnnxPipelineTests.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/PluginAutomationTests.cpp"
