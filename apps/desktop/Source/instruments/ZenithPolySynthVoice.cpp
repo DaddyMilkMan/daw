@@ -80,6 +80,8 @@ ZenithPolySynthVoice::ZenithPolySynthVoice() {
   // We'll allocate for 4x oversampling at 4096 samples block size to be safe
   oversamplingBuffer_.setSize(2, 4096 * 4);
   downsamplingBuffer_.setSize(2, 4096);
+
+  updateUnisonRatios();
 }
 
 void ZenithPolySynthVoice::noteStarted() {
@@ -418,11 +420,11 @@ void ZenithPolySynthVoice::renderInnerBlock(
             modulationState_.get(ModulationDestination::Osc3Shape));
 
     // Osc 1 (Includes Detune + Mod)
-    float osc1Freq =
-        baseFreq *
-        std::exp2((osc1Detune_ / 100.0f +
-                   modulationState_.get(ModulationDestination::Osc1Pitch)) /
-                  12.0f);
+    float osc1Mod = modulationState_.get(ModulationDestination::Osc1Pitch);
+    float osc1Freq = baseFreq * osc1DetuneRatio_;
+    if (std::abs(osc1Mod) > 1e-6f)
+      osc1Freq *= std::exp2(osc1Mod / 12.0f);
+
     double p1_before = osc1_.getPhase();
     float osc1Sample = osc1_.getNextSample(osc1Freq, sh1);
     double p1_after = osc1_.getPhase();
@@ -430,11 +432,11 @@ void ZenithPolySynthVoice::renderInnerBlock(
       osc2_.resetPhase();
 
     // Osc 2
-    float osc2Freq =
-        baseFreq *
-        std::exp2((osc2Detune_ / 100.0f +
-                   modulationState_.get(ModulationDestination::Osc2Pitch)) /
-                  12.0f);
+    float osc2Mod = modulationState_.get(ModulationDestination::Osc2Pitch);
+    float osc2Freq = baseFreq * osc2DetuneRatio_;
+    if (std::abs(osc2Mod) > 1e-6f)
+      osc2Freq *= std::exp2(osc2Mod / 12.0f);
+
     if (osc2FM_ > 0.0f) {
       float fmAmountHz = osc2FM_ * 3000.0f;
       osc2Freq += osc1Sample * fmAmountHz;
@@ -448,11 +450,11 @@ void ZenithPolySynthVoice::renderInnerBlock(
     }
 
     // Osc 3
-    float osc3Freq =
-        baseFreq *
-        std::exp2((osc3Detune_ / 100.0f +
-                   modulationState_.get(ModulationDestination::Osc3Pitch)) /
-                  12.0f);
+    float osc3Mod = modulationState_.get(ModulationDestination::Osc3Pitch);
+    float osc3Freq = baseFreq * osc3DetuneRatio_;
+    if (std::abs(osc3Mod) > 1e-6f)
+      osc3Freq *= std::exp2(osc3Mod / 12.0f);
+
     float osc3Sample = osc3_.getNextSample(osc3Freq, sh3);
 
     // Mix
@@ -478,12 +480,9 @@ void ZenithPolySynthVoice::renderInnerBlock(
 
     // Unison
     if (unisonVoices_ > 1) {
-      float unisonSpread = unisonDetune_ / 100.0f;
       float unisonGain = 1.0f / std::sqrt(static_cast<float>(unisonVoices_));
       for (int u = 0; u < unisonVoices_ - 1 && u < 7; ++u) {
-        float detune =
-            (u % 2 == 0 ? 1.0f : -1.0f) * ((u / 2 + 1) * unisonSpread);
-        float uFreq = baseFreq * std::exp2(detune / 12.0f);
+        float uFreq = baseFreq * unisonRatios_[u];
         unisonOscillators_[u].setWaveform(osc1_.getWaveform());
         sample += unisonOscillators_[u].getNextSample(uFreq, sh1) *
                   osc1Mix_.getCurrentValue() * unisonGain;
@@ -685,6 +684,14 @@ float ZenithPolySynthVoice::getModulationSourceValue(ModulationSource source) {
     return timbre_;
   default:
     return 0.0f;
+  }
+}
+
+void ZenithPolySynthVoice::updateUnisonRatios() {
+  float unisonSpread = unisonDetune_ / 100.0f;
+  for (int u = 0; u < static_cast<int>(unisonRatios_.size()); ++u) {
+    float detune = (u % 2 == 0 ? 1.0f : -1.0f) * ((u / 2 + 1) * unisonSpread);
+    unisonRatios_[u] = std::exp2(detune / 12.0f);
   }
 }
 
