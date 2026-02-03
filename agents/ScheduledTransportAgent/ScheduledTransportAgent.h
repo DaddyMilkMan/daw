@@ -46,6 +46,15 @@ public:
 
   //==============================================================================
   // Transport Control (UI thread)
+
+  class Listener {
+  public:
+    virtual ~Listener() = default;
+    virtual void transportStateChanged(TransportState newState) {}
+  };
+
+  void addListener(Listener* listener);
+  void removeListener(Listener* listener);
   
   void play();
   void stop();
@@ -85,6 +94,8 @@ private:
   std::atomic<int64_t> loopStart_{0};
   std::atomic<int64_t> loopEnd_{0};
   
+  juce::ListenerList<Listener> listeners_;
+
   // TODO: Add lock-free tempo map
   // TODO: Add sample-accurate event queue
   // TODO: Add external sync handling
