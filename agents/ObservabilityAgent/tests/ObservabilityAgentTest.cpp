@@ -22,9 +22,57 @@ public:
     testPeriodicExport();
     testLoggingConcurrency();
     testLogTruncation();
+    testStructuredLogging();
   }
 
 private:
+  void testStructuredLogging() {
+    beginTest("Structured Logging");
+    ObservabilityAgent agent;
+
+    // Set up log file
+    juce::File logFile = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                         .getChildFile("test_observability_structured.txt");
+    logFile.deleteFile();
+    agent.setLogFile(logFile);
+
+    // Create structured data
+    auto* obj = new juce::DynamicObject();
+    obj->setProperty("user_id", 12345);
+    obj->setProperty("action", "login");
+    obj->setProperty("success", true);
+    juce::var data(obj);
+
+    // Log structured
+    agent.logStructured(ObservabilityAgent::LogLevel::Info, "User login event", data);
+
+    // Wait for log to appear
+    int retries = 20;
+    bool found = false;
+    while (retries-- > 0) {
+        juce::Thread::sleep(50);
+        if (logFile.existsAsFile() && logFile.getSize() > 0) {
+            found = true;
+            break;
+        }
+    }
+
+    expect(found, "Log file should exist and have content");
+
+    if (found) {
+        juce::String content = logFile.loadFileAsString();
+        expect(content.contains("User login event"), "Should contain message");
+        // JSON key order is not guaranteed, but usually stable in JUCE implementation or at least the string should contain the parts.
+        // Also checking spacing might be tricky depending on how compact 'true' argument works.
+        // true means "all on one line". It usually has spaces.
+        // Let's check for keys and values generally.
+        expect(content.contains("\"user_id\": 12345") || content.contains("\"user_id\":12345"), "Should contain user_id");
+        expect(content.contains("\"action\": \"login\"") || content.contains("\"action\":\"login\""), "Should contain action");
+    }
+
+    logFile.deleteFile();
+  }
+
   void testLoggingConcurrency() {
     beginTest("Concurrent Logging");
 
