@@ -331,6 +331,138 @@ int TransportProtocolAgent::getOutputLatencySamples() const {
 }
 
 //==============================================================================
+// Platform-Specific Backends
+
+std::vector<TransportProtocolAgent::BackendType> TransportProtocolAgent::getAvailableBackends() const {
+  std::vector<BackendType> backends;
+  for (auto* type : deviceManager_->getAvailableDeviceTypes()) {
+    if (type) {
+      backends.push_back(juceNameToBackendType(type->getTypeName()));
+    }
+  }
+  return backends;
+}
+
+TransportProtocolAgent::BackendType TransportProtocolAgent::getCurrentBackend() const {
+  if (auto* type = deviceManager_->getCurrentDeviceTypeObject()) {
+    return juceNameToBackendType(type->getTypeName());
+  }
+  return BackendType::Unknown;
+}
+
+bool TransportProtocolAgent::setBackend(BackendType backend, bool treatAsChosenDevice) {
+  juce::String typeName = backendTypeToJuceName(backend);
+  if (typeName.isEmpty()) return false;
+
+  // AudioDeviceManager::setCurrentAudioDeviceType returns void but prints errors to stderr if fails,
+  // however, we can verify if it changed.
+  // Actually, setCurrentAudioDeviceType(...) sets the type. We should check if it's available first?
+  // The manager handles it.
+
+  deviceManager_->setCurrentAudioDeviceType(typeName, treatAsChosenDevice);
+
+  return getCurrentBackend() == backend;
+}
+
+//==============================================================================
+// Device Control Panel
+
+bool TransportProtocolAgent::currentDeviceHasControlPanel() const {
+  if (auto* device = deviceManager_->getCurrentAudioDevice()) {
+    return device->hasControlPanel();
+  }
+  return false;
+}
+
+bool TransportProtocolAgent::showCurrentDeviceControlPanel() {
+  if (auto* device = deviceManager_->getCurrentAudioDevice()) {
+    if (device->hasControlPanel()) {
+      return device->showControlPanel();
+    }
+  }
+  return false;
+}
+
+//==============================================================================
+// WASAPI Specifics
+
+bool TransportProtocolAgent::setWasapiMode(WasapiMode mode) {
+  BackendType targetType = (mode == WasapiMode::Exclusive)
+                           ? BackendType::WASAPI_Exclusive
+                           : BackendType::WASAPI_Shared;
+  return setBackend(targetType);
+}
+
+TransportProtocolAgent::WasapiMode TransportProtocolAgent::getWasapiMode() const {
+  BackendType current = getCurrentBackend();
+  if (current == BackendType::WASAPI_Exclusive) return WasapiMode::Exclusive;
+  return WasapiMode::Shared;
+}
+
+//==============================================================================
+// ALSA Specifics
+
+std::vector<juce::String> TransportProtocolAgent::enumerateAlsaDeviceNames(bool inputs) const {
+  std::vector<juce::String> names;
+
+  // Find ALSA type
+  for (auto* type : deviceManager_->getAvailableDeviceTypes()) {
+    if (type->getTypeName().containsIgnoreCase("ALSA")) {
+      type->scanForDevices();
+      auto deviceNames = type->getDeviceNames(inputs);
+      for (const auto& name : deviceNames) {
+        names.push_back(name);
+      }
+      break;
+    }
+  }
+  return names;
+}
+
+bool TransportProtocolAgent::openAlsaDeviceByName(const juce::String& deviceName,
+                                                  double sampleRate,
+                                                  int bufferSize) {
+  // Ensure we are on ALSA backend
+  if (getCurrentBackend() != BackendType::ALSA) {
+    if (!setBackend(BackendType::ALSA)) return false;
+  }
+
+  // Use openDevice logic which sets up the device
+  return openDevice(deviceName, sampleRate, bufferSize);
+}
+
+//==============================================================================
+// Private Helpers
+
+juce::String TransportProtocolAgent::backendTypeToJuceName(BackendType b) const {
+  // We need to match what JUCE uses.
+  // Since specific names might vary, we might need to search available types for best match.
+  // But for now we try standard mapping.
+
+  switch (b) {
+    case BackendType::ASIO: return "ASIO";
+    case BackendType::WASAPI_Shared: return "Windows Audio";
+    case BackendType::WASAPI_Exclusive: return "Windows Audio (Exclusive Mode)";
+    case BackendType::ALSA: return "ALSA";
+    case BackendType::CoreAudio: return "CoreAudio";
+    case BackendType::JACK: return "JACK";
+    default: return {};
+  }
+}
+
+TransportProtocolAgent::BackendType TransportProtocolAgent::juceNameToBackendType(const juce::String& typeName) const {
+  if (typeName == "ASIO") return BackendType::ASIO;
+  if (typeName == "Windows Audio") return BackendType::WASAPI_Shared;
+  if (typeName.contains("Windows Audio") && typeName.contains("Exclusive")) return BackendType::WASAPI_Exclusive;
+  if (typeName == "ALSA") return BackendType::ALSA;
+  if (typeName == "CoreAudio") return BackendType::CoreAudio;
+  if (typeName == "JACK") return BackendType::JACK;
+
+  return BackendType::Unknown;
+}
+
+
+//==============================================================================
 // AudioBufferConverter Implementation
 
 void AudioBufferConverter::convertToPlanarFloat(const void* sourceData,

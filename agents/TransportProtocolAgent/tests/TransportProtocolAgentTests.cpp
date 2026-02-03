@@ -191,6 +191,77 @@ public:
             expect(foundActive);
             expect(foundInactive);
         }
+
+        beginTest("Backend Switching");
+        {
+            auto manager = std::make_unique<juce::AudioDeviceManager>();
+
+            // Mock multiple backends
+            auto asioType = std::make_unique<MockAudioIODeviceType>("ASIO");
+            auto wasapiType = std::make_unique<MockAudioIODeviceType>("Windows Audio");
+
+            manager->addAudioDeviceType(std::move(asioType));
+            manager->addAudioDeviceType(std::move(wasapiType));
+
+            zenith::agents::TransportProtocolAgent agent(std::move(manager));
+
+            // Initial state (manager picks one by default, let's say we start clean or check availability)
+            auto backends = agent.getAvailableBackends();
+            expect(backends.size() >= 2);
+
+            // Test switch to ASIO
+            bool success = agent.setBackend(zenith::agents::TransportProtocolAgent::BackendType::ASIO);
+            expect(success);
+            expect(agent.getCurrentBackend() == zenith::agents::TransportProtocolAgent::BackendType::ASIO);
+
+            // Test switch to WASAPI Shared
+            success = agent.setBackend(zenith::agents::TransportProtocolAgent::BackendType::WASAPI_Shared);
+            expect(success);
+            expect(agent.getCurrentBackend() == zenith::agents::TransportProtocolAgent::BackendType::WASAPI_Shared);
+        }
+
+        beginTest("WASAPI Mode Switching");
+        {
+            auto manager = std::make_unique<juce::AudioDeviceManager>();
+
+            auto sharedType = std::make_unique<MockAudioIODeviceType>("Windows Audio");
+            auto exclusiveType = std::make_unique<MockAudioIODeviceType>("Windows Audio (Exclusive Mode)");
+
+            manager->addAudioDeviceType(std::move(sharedType));
+            manager->addAudioDeviceType(std::move(exclusiveType));
+
+            zenith::agents::TransportProtocolAgent agent(std::move(manager));
+
+            // Set Exclusive
+            agent.setWasapiMode(zenith::agents::TransportProtocolAgent::WasapiMode::Exclusive);
+            expect(agent.getWasapiMode() == zenith::agents::TransportProtocolAgent::WasapiMode::Exclusive);
+            expect(agent.getCurrentBackend() == zenith::agents::TransportProtocolAgent::BackendType::WASAPI_Exclusive);
+
+            // Set Shared
+            agent.setWasapiMode(zenith::agents::TransportProtocolAgent::WasapiMode::Shared);
+            expect(agent.getWasapiMode() == zenith::agents::TransportProtocolAgent::WasapiMode::Shared);
+            expect(agent.getCurrentBackend() == zenith::agents::TransportProtocolAgent::BackendType::WASAPI_Shared);
+        }
+
+        beginTest("ALSA Enumeration");
+        {
+            auto manager = std::make_unique<juce::AudioDeviceManager>();
+            auto alsaType = std::make_unique<MockAudioIODeviceType>("ALSA");
+
+            // MockAudioIODeviceType implementation of getDeviceNames just returns the member variable inputDevices
+            alsaType->setInputDevices({"hw:0,0", "hw:0,1", "default"});
+
+            manager->addAudioDeviceType(std::move(alsaType));
+
+            zenith::agents::TransportProtocolAgent agent(std::move(manager));
+
+            auto alsaNames = agent.enumerateAlsaDeviceNames(true); // inputs
+            expectEquals(alsaNames.size(), (size_t)3);
+            if (alsaNames.size() == 3) {
+                expectEquals(alsaNames[0], juce::String("hw:0,0"));
+                expectEquals(alsaNames[2], juce::String("default"));
+            }
+        }
     }
 };
 
