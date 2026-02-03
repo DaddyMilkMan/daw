@@ -86,6 +86,7 @@ private:
   //==============================================================================
   // Member variables
   std::atomic<bool> isRunning_{false};
+  std::atomic<bool> insideAudioCallback_{false};
   std::atomic<double> sampleRate_{44100.0};
   std::atomic<int> bufferSize_{512};
   
