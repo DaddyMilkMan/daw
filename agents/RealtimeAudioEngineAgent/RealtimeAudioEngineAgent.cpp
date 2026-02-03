@@ -30,14 +30,18 @@ void RealtimeAudioEngineAgent::processBlock(juce::AudioBuffer<float>& buffer,
   // 1. Process pending commands from UI/Management threads
   processCommands();
   
-  // TODO: Process plugin chain
-  // TODO: Update metrics atomically (partially done below)
+  // Delegate processing to the routing graph
+  if (mainGraph_ != nullptr)
+  {
+      mainGraph_->processBlock(buffer, midi);
+  }
+  else
+  {
+      buffer.clear();
+  }
   
   const auto numSamples = buffer.getNumSamples();
   metrics_.samplesProcessed.fetch_add(numSamples, std::memory_order_relaxed);
-  
-  // Placeholder: clear buffer (silence)
-  buffer.clear();
 }
 
 //==============================================================================
@@ -50,8 +54,30 @@ void RealtimeAudioEngineAgent::initialize(double sampleRate, int bufferSize) {
   // Reset Fifo
   commandFifo_.reset();
   
-  // TODO: Prepare plugin chain
-  // TODO: Setup routing graph
+  // Initialize Routing Graph
+  mainGraph_ = std::make_unique<juce::AudioProcessorGraph>();
+
+  // Configure graph for Stereo (2 in, 2 out)
+  // This assumes a standard stereo configuration as default
+  mainGraph_->setPlayConfigDetails(2, 2, sampleRate, bufferSize);
+  mainGraph_->prepareToPlay(sampleRate, bufferSize);
+
+  // Add IO Nodes
+  using AudioGraphIOProcessor = juce::AudioProcessorGraph::AudioGraphIOProcessor;
+
+  auto inputNode = std::make_unique<AudioGraphIOProcessor>(AudioGraphIOProcessor::audioInputNode);
+  auto outputNode = std::make_unique<AudioGraphIOProcessor>(AudioGraphIOProcessor::audioOutputNode);
+
+  audioInputNode_ = mainGraph_->addNode(std::move(inputNode));
+  audioOutputNode_ = mainGraph_->addNode(std::move(outputNode));
+
+  // Connect Input to Output (Pass-through)
+  if (audioInputNode_ && audioOutputNode_) {
+    for (int ch = 0; ch < 2; ++ch) {
+      mainGraph_->addConnection({ { audioInputNode_->nodeID, ch },
+                                  { audioOutputNode_->nodeID, ch } });
+    }
+  }
 }
 
 //==============================================================================
