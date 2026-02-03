@@ -151,8 +151,6 @@ GeneratedProgression ChordProgressionGenerator::generateFromPattern(
     
     for (size_t i = 0; i < pattern.degrees.size(); ++i) {
         Chord chord;
-        chord.root = (rootNote + result.scale.getNoteAtDegree(pattern.degrees[i], 0) % 12 - (rootNote + 12)) % 12;
-        if (chord.root < 0) chord.root += 12;
         chord.root = (rootNote + Scale::getIntervals(ScaleType::Major)[static_cast<size_t>(pattern.degrees[i] - 1)]) % 12;
         
         if (i < pattern.qualities.size()) {
