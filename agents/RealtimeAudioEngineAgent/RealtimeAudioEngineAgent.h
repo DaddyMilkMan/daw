@@ -95,6 +95,8 @@ private:
   static constexpr int kCommandBufferSize = 1024;
   juce::AbstractFifo commandFifo_{kCommandBufferSize};
   std::vector<EngineEvent> commandBuffer_{kCommandBufferSize};
+
+  float cpuUsageSmoothed_ = 0.0f;
   
   // TODO: Add plugin chain management
   // TODO: Add routing graph

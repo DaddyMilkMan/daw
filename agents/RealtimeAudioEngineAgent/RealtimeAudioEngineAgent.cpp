@@ -26,18 +26,50 @@ RealtimeAudioEngineAgent::~RealtimeAudioEngineAgent() {
 void RealtimeAudioEngineAgent::processBlock(juce::AudioBuffer<float>& buffer,
                                             juce::MidiBuffer& midi) noexcept {
   // RT-safe processing - no allocations, no locks
+  const auto startTicks = juce::Time::getHighResolutionTicks();
   
   // 1. Process pending commands from UI/Management threads
   processCommands();
   
   // TODO: Process plugin chain
-  // TODO: Update metrics atomically (partially done below)
   
   const auto numSamples = buffer.getNumSamples();
-  metrics_.samplesProcessed.fetch_add(numSamples, std::memory_order_relaxed);
   
   // Placeholder: clear buffer (silence)
   buffer.clear();
+
+  // Metrics Update
+  const auto endTicks = juce::Time::getHighResolutionTicks();
+  const double processingSeconds = juce::Time::highResolutionTicksToSeconds(endTicks - startTicks);
+
+  // Calculate block duration
+  // Use local copy of atomic sampleRate to ensure consistency within block
+  const double sr = sampleRate_.load(std::memory_order_relaxed);
+  const double blockDurationSeconds = (sr > 0.0) ? (static_cast<double>(numSamples) / sr) : 0.0;
+
+  // Update CPU Usage (EMA)
+  float instantCpu = 0.0f;
+  if (blockDurationSeconds > 0.000001) {
+    instantCpu = static_cast<float>(processingSeconds / blockDurationSeconds);
+    // Clamp to reasonable range [0, 4.0] to avoid spikes messing up UI
+    instantCpu = juce::jlimit(0.0f, 4.0f, instantCpu);
+  }
+
+  constexpr float alpha = 0.05f;
+  cpuUsageSmoothed_ = (cpuUsageSmoothed_ * (1.0f - alpha)) + (instantCpu * alpha);
+  metrics_.cpuUsage.store(cpuUsageSmoothed_, std::memory_order_relaxed);
+
+  // Update Overload/Underrun
+  // Tolerance 1% to avoid jitter false positives
+  const bool overloaded = (processingSeconds > blockDurationSeconds * 1.01);
+  metrics_.overloadDetected.store(overloaded, std::memory_order_relaxed);
+
+  if (overloaded) {
+    // Count deadline misses as underruns (fallback behavior)
+    metrics_.bufferUnderruns.fetch_add(1, std::memory_order_relaxed);
+  }
+
+  metrics_.samplesProcessed.fetch_add(numSamples, std::memory_order_relaxed);
 }
 
 //==============================================================================
