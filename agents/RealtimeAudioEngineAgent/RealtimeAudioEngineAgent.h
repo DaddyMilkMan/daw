@@ -9,6 +9,7 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
+#include <juce_audio_processors/juce_audio_processors.h>
 #include <atomic>
 #include <memory>
 #include <vector>
@@ -96,8 +97,10 @@ private:
   juce::AbstractFifo commandFifo_{kCommandBufferSize};
   std::vector<EngineEvent> commandBuffer_{kCommandBufferSize};
   
-  // TODO: Add plugin chain management
-  // TODO: Add routing graph
+  // Audio Graph
+  std::unique_ptr<juce::AudioProcessorGraph> graph_;
+  juce::AudioProcessorGraph::NodeID inputNodeId_;
+  juce::AudioProcessorGraph::NodeID outputNodeId_;
   
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RealtimeAudioEngineAgent)
 };

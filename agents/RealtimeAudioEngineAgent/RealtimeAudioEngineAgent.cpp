@@ -30,14 +30,18 @@ void RealtimeAudioEngineAgent::processBlock(juce::AudioBuffer<float>& buffer,
   // 1. Process pending commands from UI/Management threads
   processCommands();
   
-  // TODO: Process plugin chain
-  // TODO: Update metrics atomically (partially done below)
+  // Process plugin chain
+  if (graph_)
+  {
+    graph_->processBlock(buffer, midi);
+  }
+  else
+  {
+    buffer.clear();
+  }
   
   const auto numSamples = buffer.getNumSamples();
   metrics_.samplesProcessed.fetch_add(numSamples, std::memory_order_relaxed);
-  
-  // Placeholder: clear buffer (silence)
-  buffer.clear();
 }
 
 //==============================================================================
@@ -50,8 +54,26 @@ void RealtimeAudioEngineAgent::initialize(double sampleRate, int bufferSize) {
   // Reset Fifo
   commandFifo_.reset();
   
-  // TODO: Prepare plugin chain
-  // TODO: Setup routing graph
+  // Prepare plugin chain
+  graph_ = std::make_unique<juce::AudioProcessorGraph>();
+  graph_->setPlayConfigDetails(2, 2, sampleRate, bufferSize);
+  graph_->prepareToPlay(sampleRate, bufferSize);
+
+  // Setup routing graph
+  using AudioGraphIOProcessor = juce::AudioProcessorGraph::AudioGraphIOProcessor;
+
+  auto inputNode = graph_->addNode(std::make_unique<AudioGraphIOProcessor>(AudioGraphIOProcessor::audioInputNode));
+  auto outputNode = graph_->addNode(std::make_unique<AudioGraphIOProcessor>(AudioGraphIOProcessor::audioOutputNode));
+
+  if (inputNode != nullptr && outputNode != nullptr)
+  {
+      inputNodeId_ = inputNode->nodeID;
+      outputNodeId_ = outputNode->nodeID;
+
+      // Stereo pass-through
+      graph_->addConnection({ { inputNodeId_, 0 }, { outputNodeId_, 0 } });
+      graph_->addConnection({ { inputNodeId_, 1 }, { outputNodeId_, 1 } });
+  }
 }
 
 //==============================================================================
