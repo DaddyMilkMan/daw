@@ -428,10 +428,12 @@ void TransportBar::drawTransportButton(SkCanvas *canvas, GhostButton& btn,
   // Sync Interaction State from JUCE Component
   bool isHovered = btn.isMouseOver();
   bool isDown = btn.isDown();
+  bool isFocused = btn.hasKeyboardFocus(true);
   
   // Update our animation state helper
   state.isHovered = isHovered;
   state.isPressed = isDown;
+  state.isFocused = isFocused;
   
   // Get bounds from the component
   auto b = btn.getBounds();
@@ -455,6 +457,9 @@ void TransportBar::drawTransportButton(SkCanvas *canvas, GhostButton& btn,
       hoverBg.setColor(SkColorSetA(SK_ColorWHITE, (uint8_t)(20 * state.hoverAmount)));
       canvas->drawRoundRect(rect, 6.0f, 6.0f, hoverBg);
   }
+
+  // Draw focus ring
+  InteractionHelper::drawFocusRing(canvas, rect, state.focusAmount, 6.0f);
   
   icons::IconStyle style;
   style.strokeWidth = 2.0f;

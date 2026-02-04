@@ -90,8 +90,17 @@ private:
   // Internal "Ghost" Button for Accessibility & Standard Input
   class GhostButton : public juce::Button {
   public:
-      GhostButton(const juce::String& name) : juce::Button(name) {}
+      GhostButton(const juce::String& name) : juce::Button(name) {
+          setWantsKeyboardFocus(true);
+      }
       void paintButton(juce::Graphics&, bool, bool) override {} // Invisible
+
+      void focusGained(juce::Component::FocusChangeType) override {
+          if (auto* p = getParentComponent()) p->repaint();
+      }
+      void focusLost(juce::Component::FocusChangeType) override {
+          if (auto* p = getParentComponent()) p->repaint();
+      }
   };
 
   void createButtons();
