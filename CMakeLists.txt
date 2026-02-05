@@ -552,6 +552,41 @@ if(BUILD_TESTS)
     endif()
 
     # =========================================================================
+    # RealtimeAudioEngineAgentTests - Lightweight test for RealtimeAudioEngineAgent
+    # =========================================================================
+    add_executable(RealtimeAudioEngineAgentTests)
+
+    target_sources(RealtimeAudioEngineAgentTests PRIVATE
+        "agents/RealtimeAudioEngineAgent/tests/RunTests.cpp"
+        "agents/RealtimeAudioEngineAgent/tests/RealtimeAudioEngineAgentTest.cpp"
+        "agents/RealtimeAudioEngineAgent/RealtimeAudioEngineAgent.cpp"
+    )
+
+    target_include_directories(RealtimeAudioEngineAgentTests PRIVATE
+        ${CMAKE_BINARY_DIR}/RealtimeAudioEngineAgentTests_artefacts/JuceLibraryCode
+        ${CMAKE_BINARY_DIR}/JuceLibraryCode
+        "agents/RealtimeAudioEngineAgent"
+    )
+
+    target_link_libraries(RealtimeAudioEngineAgentTests PRIVATE
+        juce::juce_core
+        juce::juce_audio_basics
+    )
+
+    target_compile_definitions(RealtimeAudioEngineAgentTests PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+        JUCE_STANDALONE_APPLICATION=1
+    )
+
+    if (UNIX AND NOT APPLE)
+        target_link_libraries(RealtimeAudioEngineAgentTests PRIVATE pthread dl)
+    endif()
+
+    target_compile_features(RealtimeAudioEngineAgentTests PRIVATE cxx_std_20)
+
+    # =========================================================================
     # ClockSyncAgentTests - Lightweight test for ClockSyncAgent
     # =========================================================================
     add_executable(ClockSyncAgentTests)
