@@ -549,6 +549,43 @@ if(BUILD_TESTS)
     )
 
     target_compile_features(WavetableBenchmark PRIVATE cxx_std_20)
+
+    # =========================================================================
+    # PolySynthBenchmark - Performance benchmark for PolySynth Voice
+    # =========================================================================
+    add_executable(PolySynthBenchmark
+        "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/PolySynthBenchmark.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/instruments/ZenithPolySynthVoice.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/instruments/ZenithOscillator.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/instruments/ZenithFilter.cpp"
+    )
+
+    target_include_directories(PolySynthBenchmark PRIVATE
+        ${CMAKE_BINARY_DIR}/PolySynthBenchmark_artefacts/JuceLibraryCode
+        ${CMAKE_BINARY_DIR}/JuceLibraryCode
+    )
+
+    target_link_libraries(PolySynthBenchmark PRIVATE
+        zenith_juce_includes
+        juce::juce_core
+        juce::juce_audio_basics
+        juce::juce_audio_devices
+        juce::juce_dsp
+    )
+
+    if (UNIX AND NOT APPLE)
+        target_link_libraries(PolySynthBenchmark PRIVATE pthread dl)
+    endif()
+
+    target_compile_definitions(PolySynthBenchmark PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+        JUCE_STANDALONE_APPLICATION=1
+        POLYSYNTH_BENCHMARK_STANDALONE=1
+    )
+
+    target_compile_features(PolySynthBenchmark PRIVATE cxx_std_20)
     endif()
 
     # =========================================================================

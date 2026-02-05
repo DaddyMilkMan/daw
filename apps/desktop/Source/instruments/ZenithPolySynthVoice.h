@@ -57,8 +57,12 @@ public:
 
   void setUnisonVoices(int voices) {
     unisonVoices_ = juce::jlimit(1, 7, voices);
+    updateUnisonRatios();
   }
-  void setUnisonDetune(float cents) { unisonDetune_ = cents; }
+  void setUnisonDetune(float cents) {
+    unisonDetune_ = cents;
+    updateUnisonRatios();
+  }
 
   void setFilterType(FilterType type) { filter1_.setType(type); }
   void setFilterCutoff(float cutoff) { filterCutoff_ = cutoff; }
@@ -108,9 +112,18 @@ public:
   void setOsc1Mix(float mix) { osc1Mix_.setTargetValue(mix); }
   void setOsc2Mix(float mix) { osc2Mix_.setTargetValue(mix); }
   void setOsc3Mix(float mix) { osc3Mix_.setTargetValue(mix); }
-  void setOsc1Detune(float d) { osc1Detune_ = d; }
-  void setOsc2Detune(float d) { osc2Detune_ = d; }
-  void setOsc3Detune(float d) { osc3Detune_ = d; }
+  void setOsc1Detune(float d) {
+    osc1Detune_ = d;
+    osc1DetuneRatio_ = std::exp2(d / 1200.0f);
+  }
+  void setOsc2Detune(float d) {
+    osc2Detune_ = d;
+    osc2DetuneRatio_ = std::exp2(d / 1200.0f);
+  }
+  void setOsc3Detune(float d) {
+    osc3Detune_ = d;
+    osc3DetuneRatio_ = std::exp2(d / 1200.0f);
+  }
 
   // Store previous frequency for glide
   void storePreviousFrequency() { previousFrequency_ = currentFrequency_; }
@@ -180,11 +193,17 @@ private:
 
   int unisonVoices_ = 1;
   float unisonDetune_ = 0.0f;
+  std::array<float, 8> unisonRatios_;
 
   // Per-oscillator detune in cents
   float osc1Detune_ = 0.0f;
   float osc2Detune_ = 0.0f;
   float osc3Detune_ = 0.0f;
+
+  // Cached detune ratios (2^(detune/1200))
+  float osc1DetuneRatio_ = 1.0f;
+  float osc2DetuneRatio_ = 1.0f;
+  float osc3DetuneRatio_ = 1.0f;
 
   float filterCutoff_ = 1000.0f;
   float filter2Cutoff_ = 1000.0f;
@@ -268,6 +287,7 @@ private:
   void computeModulation();
   float getModulationSourceValue(ModulationSource source);
   float computeLFOValue(double phase, LFOWaveform waveform, float &shValue);
+  void updateUnisonRatios();
 
   // Oversampling support
   void renderInnerBlock(juce::AudioBuffer<float> &buffer, int startSample,
