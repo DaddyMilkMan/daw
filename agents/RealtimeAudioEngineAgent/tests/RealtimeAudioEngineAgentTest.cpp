@@ -70,7 +70,7 @@ private:
 
     // Verify metrics updated
     const auto& metrics = agent.getMetrics();
-    expectEquals((int64_t)metrics.samplesProcessed, (int64_t)512, "Samples processed should be updated");
+    expectEquals((int64_t)metrics.samplesProcessed.load(), (int64_t)512, "Samples processed should be updated");
   }
 
   void testAudioPassThrough() {

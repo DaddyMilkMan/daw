@@ -695,28 +695,32 @@ if(BUILD_TESTS)
     target_compile_features(ObservabilityTest PRIVATE cxx_std_20)
 
     # =========================================================================
-    # RealtimeAudioEngineTest - Lightweight test for RealtimeAudioEngineAgent
     # =========================================================================
-    add_executable(RealtimeAudioEngineTest)
+    # RealtimeAudioEngineAgentTest - Lightweight test for RealtimeAudioEngineAgent
+    # =========================================================================
+    add_executable(RealtimeAudioEngineAgentTest)
 
-    target_sources(RealtimeAudioEngineTest PRIVATE
+    target_sources(RealtimeAudioEngineAgentTest PRIVATE
         "agents/RealtimeAudioEngineAgent/tests/RunTests.cpp"
         "agents/RealtimeAudioEngineAgent/tests/RealtimeAudioEngineAgentTest.cpp"
         "agents/RealtimeAudioEngineAgent/RealtimeAudioEngineAgent.cpp"
     )
 
-    target_include_directories(RealtimeAudioEngineTest PRIVATE
-        ${CMAKE_BINARY_DIR}/RealtimeAudioEngineTest_artefacts/JuceLibraryCode
+    target_include_directories(RealtimeAudioEngineAgentTest PRIVATE
+        ${CMAKE_BINARY_DIR}/RealtimeAudioEngineAgentTest_artefacts/JuceLibraryCode
         ${CMAKE_BINARY_DIR}/JuceLibraryCode
         "agents/RealtimeAudioEngineAgent"
+        "apps/desktop/Source"
     )
 
-    target_link_libraries(RealtimeAudioEngineTest PRIVATE
+    target_link_libraries(RealtimeAudioEngineAgentTest PRIVATE
         juce::juce_core
         juce::juce_audio_basics
+        juce::juce_audio_processors
+        juce::juce_events
     )
 
-    target_compile_definitions(RealtimeAudioEngineTest PRIVATE
+    target_compile_definitions(RealtimeAudioEngineAgentTest PRIVATE
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
         JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
@@ -724,10 +728,10 @@ if(BUILD_TESTS)
     )
 
     if (UNIX AND NOT APPLE)
-        target_link_libraries(RealtimeAudioEngineTest PRIVATE pthread dl)
+        target_link_libraries(RealtimeAudioEngineAgentTest PRIVATE pthread dl)
     endif()
 
-    target_compile_features(RealtimeAudioEngineTest PRIVATE cxx_std_20)
+    target_compile_features(RealtimeAudioEngineAgentTest PRIVATE cxx_std_20)
 
     # =========================================================================
     # SampleGeneratorBenchmark - Performance benchmark for SampleGenerator
@@ -796,40 +800,6 @@ if(BUILD_TESTS)
     if(UNIX AND NOT APPLE)
         target_link_libraries(SampleGeneratorTestsApp PRIVATE pthread dl)
     endif()
-
-    # =========================================================================
-    # RealtimeAudioEngineAgentTest - Standalone for headless env
-    # =========================================================================
-    add_executable(RealtimeAudioEngineAgentTest)
-
-    target_sources(RealtimeAudioEngineAgentTest PRIVATE
-        "agents/RealtimeAudioEngineAgent/tests/RealtimeAudioEngineAgentTest.cpp"
-        "agents/RealtimeAudioEngineAgent/RealtimeAudioEngineAgent.cpp"
-    )
-
-    target_include_directories(RealtimeAudioEngineAgentTest PRIVATE
-        ${CMAKE_BINARY_DIR}/JuceLibraryCode
-        "agents/RealtimeAudioEngineAgent"
-    )
-
-    target_link_libraries(RealtimeAudioEngineAgentTest PRIVATE
-        juce::juce_core
-        juce::juce_audio_basics
-        juce::juce_audio_processors
-    )
-
-    target_compile_definitions(RealtimeAudioEngineAgentTest PRIVATE
-        JUCE_WEB_BROWSER=0
-        JUCE_USE_CURL=0
-        JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
-        JUCE_STANDALONE_APPLICATION=1
-    )
-
-    if (UNIX AND NOT APPLE)
-        target_link_libraries(RealtimeAudioEngineAgentTest PRIVATE pthread dl)
-    endif()
-
-    target_compile_features(RealtimeAudioEngineAgentTest PRIVATE cxx_std_20)
 
 endif()
 
