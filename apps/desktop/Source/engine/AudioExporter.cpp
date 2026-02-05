@@ -9,12 +9,14 @@
     - Two-pass normalization
     - TPDF dithering with noise shaping
     - Asynchronous multi-file stem export
+    - MP3 and AAC encoding via external tools
 
   ==============================================================================
 */
 
 #include "AudioExporter.h"
 #include "../dsp/Dither.h"
+#include "../export/AudioEncoder.h"
 #include "AudioRenderer.h"
 #include "Engine.h"
 #include "Track.h"
@@ -46,6 +48,8 @@ juce::AudioFormat* AudioExporter::getFormatForType(ExportFormat format) {
   case ExportFormat::FLAC: return formatManager_.findFormatForFileExtension("flac");
   case ExportFormat::OGG:  return formatManager_.findFormatForFileExtension("ogg");
   case ExportFormat::AIFF: return formatManager_.findFormatForFileExtension("aiff");
+  case ExportFormat::MP3:  return formatManager_.findFormatForFileExtension("wav"); // Use WAV for intermediate
+  case ExportFormat::AAC:  return formatManager_.findFormatForFileExtension("wav"); // Use WAV for intermediate
   }
   return nullptr;
 }
@@ -100,6 +104,34 @@ bool AudioExporter::exportProject(const ExportOptions &options) {
     duration = engine_.autoDetectProjectDuration();
   }
   DBG("AudioExporter: Duration: " + juce::String(duration, 2) + "s");
+
+  // Check if we need external encoding (MP3/AAC)
+  const bool needsExternalEncoder = (options.format == ExportFormat::MP3 || 
+                                      options.format == ExportFormat::AAC);
+  
+  // For MP3/AAC, we render to a temp WAV then encode
+  juce::File actualOutputFile = options.outputFile;
+  juce::File tempWavFile;
+  
+  if (needsExternalEncoder) {
+    // Verify encoder is available
+    EncoderType encoderType = (options.format == ExportFormat::MP3) 
+                               ? EncoderType::MP3 : EncoderType::AAC;
+    if (!AudioEncoder::isEncoderAvailable(encoderType)) {
+      DBG("AudioExporter: ERROR - No encoder available for format");
+      isExporting_.store(false);
+      return false;
+    }
+    
+    // Create temp WAV file for intermediate rendering
+    tempWavFile = options.outputFile.getParentDirectory().getChildFile(
+        "zenith_encode_temp_" + juce::String(juce::Time::currentTimeMillis()) + ".wav");
+    actualOutputFile = tempWavFile;
+    
+    DBG("AudioExporter: Will encode to " + 
+        (options.format == ExportFormat::MP3 ? "MP3" : "AAC") + 
+        " using " + AudioEncoder::getEncoderName(encoderType));
+  }
 
   // Two-pass normalization path
   if (options.normalize) {

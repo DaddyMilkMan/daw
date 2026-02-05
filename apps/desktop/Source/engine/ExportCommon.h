@@ -21,7 +21,14 @@
 namespace zenith {
 
 /// Export format enumeration
-enum class ExportFormat { WAV, FLAC, OGG, AIFF };
+enum class ExportFormat { 
+    WAV,   ///< Uncompressed WAV (PCM)
+    FLAC,  ///< Lossless FLAC compression
+    OGG,   ///< Lossy Ogg Vorbis
+    AIFF,  ///< Uncompressed AIFF
+    MP3,   ///< Lossy MP3 (requires LAME or FFmpeg)
+    AAC    ///< Lossy AAC (requires FFmpeg)
+};
 
 /// Progress callback type for export operations
 using ExportProgressCallback = std::function<void(float progress, const juce::String& status)>;
