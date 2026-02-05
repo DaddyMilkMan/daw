@@ -9,3 +9,7 @@
 ## 2025-12-14 - [JUCE Accessibility Handlers & Skia Components]
 **Learning:** Custom components (especially those inheriting from `SkiaComponent`) require manual implementation of `createAccessibilityHandler`. The API has evolved: `AccessibilityHandler` constructor now requires passing Role and Actions upfront. `AccessibleState` (not `AccessibilityState`) uses a builder pattern (`withChecked()`, `withFocusable()`).
 **Action:** Always implement `createAccessibilityHandler()` for interactive `SkiaComponent` subclasses. Define a helper `AccessibilityHandler` subclass that calculates Role and Actions in its constructor and use `AccessibleState` correctly.
+
+## 2025-12-14 - [Safe Component Callbacks]
+**Learning:** In UI components, input handlers (like `keyPressed` or Accessibility actions) often trigger callbacks (like `onClick`) that may result in the immediate destruction of the component (e.g., closing a dialog). Accessing member variables or scheduling timers after invoking these callbacks leads to Use-After-Free crashes.
+**Action:** Always use `juce::Component::SafePointer` to guard access to `this` after invoking user-supplied callbacks or when scheduling asynchronous UI updates.

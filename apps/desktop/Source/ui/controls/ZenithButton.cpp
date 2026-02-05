@@ -91,15 +91,119 @@ private:
 
 ZenithButton::ZenithButton() : text_(""), iconText_("") {
   setWantsKeyboardFocus(true);
+  setMouseCursor(juce::MouseCursor::PointingHandCursor);
 }
 
 ZenithButton::ZenithButton(const juce::String &text,
                            std::function<void()> clickHandler)
     : text_(text), iconText_(""), onClick(clickHandler) {
   setWantsKeyboardFocus(true);
+  setMouseCursor(juce::MouseCursor::PointingHandCursor);
 }
 
 ZenithButton::~ZenithButton() = default;
+
+// ============================================================================
+// ACCESSIBILITY & INPUT
+// ============================================================================
+
+bool ZenithButton::keyPressed(const juce::KeyPress &key, juce::Component *origin) {
+  if (!isEnabled())
+    return false;
+
+  if (key == juce::KeyPress::returnKey || key == juce::KeyPress::spaceKey) {
+    // Simulate press visual
+    pressed_ = true;
+    repaint();
+
+    // Perform action
+    if (toggleable_) {
+      setToggleState(!toggleState_, true);
+    }
+
+    // Use SafePointer because onClick might destroy this component (e.g. Close button)
+    juce::Component::SafePointer<ZenithButton> sp(this);
+
+    if (onClick) {
+      onClick();
+    }
+
+    // If component was deleted during callback, stop here
+    if (sp == nullptr) return true;
+
+    // Animate press
+    animateTo("scale", 0.95f, 50);
+
+    // Release after short delay to restore visual state
+    juce::Timer::callAfterDelay(100, [sp] {
+        if (sp != nullptr) {
+            sp->pressed_ = false;
+            sp->animateTo("scale", 1.0f, 150);
+            sp->repaint();
+        }
+    });
+
+    return true;
+  }
+
+  return SkiaComponent::keyPressed(key, origin);
+}
+
+class ZenithButtonAccessibilityHandler : public juce::AccessibilityHandler {
+public:
+  ZenithButtonAccessibilityHandler(ZenithButton &button)
+      : juce::AccessibilityHandler(
+            button, button.isToggleable()
+                        ? juce::AccessibilityRole::toggleButton
+                        : juce::AccessibilityRole::button),
+        button_(button) {
+
+    // Capture SafePointer to avoid use-after-free if action destroys button
+    juce::Component::SafePointer<ZenithButton> sp(&button);
+
+    addAction(juce::AccessibilityActionType::press, [sp] {
+        if (sp == nullptr) return;
+        if (sp->onClick) sp->onClick();
+
+        if (sp != nullptr && sp->isToggleable()) {
+            sp->setToggleState(!sp->getToggleState(), true);
+        }
+    });
+
+    if (button_.isToggleable()) {
+        addAction(juce::AccessibilityActionType::toggle, [sp] {
+            if (sp != nullptr) {
+                sp->setToggleState(!sp->getToggleState(), true);
+            }
+        });
+    }
+  }
+
+  juce::String getTitle() const override {
+    // 1. Prefer explicit text
+    if (button_.getButtonText().isNotEmpty())
+      return button_.getButtonText();
+
+    // 2. Fallback to tooltip (icon-only buttons)
+    if (button_.getTooltip().isNotEmpty())
+      return button_.getTooltip();
+
+    // 3. Fallback to Component ID/Name
+    return button_.getName();
+  }
+
+  juce::String getHelp() const override {
+      return button_.getTooltip();
+  }
+
+private:
+  ZenithButton &button_;
+};
+
+std::unique_ptr<juce::AccessibilityHandler>
+ZenithButton::createAccessibilityHandler() {
+  return std::make_unique<ZenithButtonAccessibilityHandler>(*this);
+}
 
 void ZenithButton::setButtonText(const juce::String &text) {
   if (text_ != text) {

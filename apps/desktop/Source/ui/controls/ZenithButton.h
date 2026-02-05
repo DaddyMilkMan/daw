@@ -125,6 +125,10 @@ public:
   // ----- Rendering -----
   void drawSkia(SkCanvas *canvas) override;
 
+  // ----- Accessibility & Input -----
+  std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
+  bool keyPressed(const juce::KeyPress &key, juce::Component *origin) override;
+
 protected:
   void mouseEnter(const juce::MouseEvent &e) override;
   void mouseExit(const juce::MouseEvent &e) override;
