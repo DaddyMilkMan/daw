@@ -55,6 +55,22 @@ const juce::Identifier MIXER{"MIXER"};
 
 namespace zenith {
 
+/**
+ * @brief Fade curve types for audio clip fades
+ * 
+ * Controls the shape of fade in/out curves:
+ * - Linear: Straight line fade
+ * - Exponential: Fast start, slow finish (logarithmic feel)
+ * - SCurve: Slow start, fast middle, slow finish (equal power)
+ * - Logarithmic: Slow start, fast finish
+ */
+enum class FadeType {
+  Linear = 0,       ///< Linear fade (straight line)
+  Exponential = 1,  ///< Exponential curve (fast start)
+  SCurve = 2,       ///< S-curve / equal power crossfade
+  Logarithmic = 3   ///< Logarithmic curve (slow start)
+};
+
 class TrackStateManager;
 class ClipStateManager;
 class MidiNoteStateManager;
@@ -142,6 +158,9 @@ public:
   static const juce::Identifier PROP_LOOP_LENGTH;
   static const juce::Identifier PROP_FADE_IN;
   static const juce::Identifier PROP_FADE_OUT;
+  static const juce::Identifier PROP_FADE_IN_TYPE;
+  static const juce::Identifier PROP_FADE_OUT_TYPE;
+  static const juce::Identifier PROP_CROSSFADE_LENGTH;
   static const juce::Identifier PROP_LANE_INDEX;
   static const juce::Identifier PROP_MANUALLY_COLORED;
   static const juce::Identifier PROP_IS_QUARANTINE;
