@@ -6,6 +6,7 @@
     Author:  David Chen + Isabella Moretti
 
     Layout container for Wingman console and scratch pads.
+    Positioned on LEFT side as copilot (named "RightSidePanel" for legacy).
 
   ==============================================================================
 */

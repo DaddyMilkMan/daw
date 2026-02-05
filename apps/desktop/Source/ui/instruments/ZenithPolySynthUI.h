@@ -16,14 +16,21 @@
 #include "../../Settings.h"
 #include "../../instruments/ZenithPolySynth.h"
 #include "../../instruments/ZenithPresetManager.h"
+#include "../../ai/WingmanSynthBridge.h"
 #include "../../rendering/SkiaRenderer.h"
 #include "../controls/ZenithUIComponents.h"
+#include "../visualizations/FilterResponseDisplay.h"
+#include "../visualizations/ModulationVisualizer.h"
+#include "../visualizations/SynthOscilloscope.h"
 #include "RenderTree.h"
 #include "SkiaMainWindowIntegration.h"
 #include "ZenithLookAndFeel.h"
 #include <JuceHeader.h>
 
 namespace zenith {
+
+// Forward declaration
+class WingmanParameterChange;
 
 //==============================================================================
 /**
@@ -33,7 +40,8 @@ namespace zenith {
 */
 class ZenithPolySynthUI : public juce::AudioProcessorEditor,
                           public juce::ChangeListener,
-                          public juce::Timer { // Listen for settings changes
+                          public juce::Timer,
+                          public WingmanSynthListener { // Listen for Wingman parameter changes
 public:
   ZenithPolySynthUI(ZenithPolySynthProcessor &p);
   ~ZenithPolySynthUI() override;
@@ -51,6 +59,12 @@ public:
 
   // Settings Listener
   void changeListenerCallback(juce::ChangeBroadcaster *) override;
+  
+  // WingmanSynthListener interface
+  void wingmanParameterChanged(const WingmanParameterChange& change) override;
+  void wingmanBatchStart() override;
+  void wingmanBatchEnd() override;
+  void wingmanSoundGenerated(const juce::String& description) override;
 
 protected:
   // Skia draw callback
@@ -80,12 +94,15 @@ private:
   static constexpr int kAdvancedHeight = 600;
 
   // Lightweight Widget Container
-  std::vector<std::unique_ptr<SkiaWidget>> widgets_;
-  SkiaWidget *activeWidget_ = nullptr; // Widget currently being dragged
-  SkiaWidget *hoveredWidget_ = nullptr;
+  std::vector<std::unique_ptr<ZenithControl>> widgets_;
+  ZenithControl *activeWidget_ = nullptr; // Widget currently being dragged
+  ZenithControl *hoveredWidget_ = nullptr;
 
   // Complex Components (kept as JUCE components for now)
   std::unique_ptr<ZenithVisualizer> visualizer_;
+  std::unique_ptr<FilterResponseDisplay> filterResponseDisplay_;
+  std::unique_ptr<ModulationVisualizer> modulationVisualizer_;
+  std::unique_ptr<SynthOscilloscope> oscilloscope_;
   // std::unique_ptr<ZenithModMatrix> modMatrix_;
   // std::unique_ptr<ZenithPresetBar> presetBar_;
 
@@ -110,7 +127,33 @@ private:
   void refreshPresetList();
 
   // Initialization
-
+  
+  // ========================================================================
+  // WINGMAN ANIMATION SYSTEM
+  // ========================================================================
+  
+  /**
+   * Active widget animation state for smooth parameter transitions
+   */
+  struct WidgetAnimation {
+    ZenithControl* widget;
+    float startValue;
+    float targetValue;
+    float progress;
+    float speed;
+    double startTime;
+    
+    WidgetAnimation() : widget(nullptr), startValue(0.0f), targetValue(0.0f),
+                      progress(0.0f), speed(0.3f), startTime(0.0) {}
+  };
+  
+  juce::Array<WidgetAnimation> activeAnimations_;
+  
+  /**
+   * Animate a widget to a new value with smooth easing
+   */
+  void animateWidgetToValue(ZenithControl* widget, float targetValue, float speed);
+  
   // ========================================================================
   // RENDER TREE (PHASE 1: Thread Safety)
   // ========================================================================

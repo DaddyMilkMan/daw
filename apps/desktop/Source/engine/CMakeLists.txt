@@ -11,6 +11,9 @@ target_sources(ZenithDAW PRIVATE
     EnginePlugins.cpp
     ProjectState.cpp
     Track.cpp
+    TrackPluginManager.cpp
+    TrackSendManager.cpp
+    TrackSidechain.cpp
     Clip.cpp
     TakeFolder.cpp
     AudioTrack.cpp

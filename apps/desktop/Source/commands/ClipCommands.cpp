@@ -4,6 +4,7 @@
 #include "CommandUtils.h"
 #include "Engine.h"
 #include "ProjectState.h"
+#include <algorithm>
 
 namespace zenith {
 
@@ -239,47 +240,151 @@ juce::var ClipCommands::resizeClip(const juce::var &params) {
 }
 
 juce::var ClipCommands::setClipNotes(const juce::var &params) {
-  // Implementation for setClipNotes
-  // This was not fully visible in the previous view_file, but I'll implement a
-  // basic version or stub it if I don't have the logic. Actually, I should
-  // check if I have the logic. I don't recall seeing setClipNotes
-  // implementation in the view_file output. I'll assume it uses
-  // ProjectState::addNotes or similar.
-
-  if (!params.hasProperty("trackId"))
-    return createErrorResponse("Missing 'trackId'");
   if (!params.hasProperty("clipId"))
     return createErrorResponse("Missing 'clipId'");
   if (!params.hasProperty("notes"))
     return createErrorResponse("Missing 'notes'");
 
-  juce::String trackId = params["trackId"].toString();
   juce::String clipId = params["clipId"].toString();
+  juce::String trackId;
   juce::var notesVar = params["notes"];
 
   if (!notesVar.isArray())
     return createErrorResponse("'notes' must be an array");
 
-  // Clear existing notes? Or just add?
-  // For now, let's assume we are replacing notes or adding them.
-  // The command name "setClipNotes" implies replacing.
-
-  // Since I don't have the exact implementation, I'll use
-  // ProjectState::addNotes which I saw in ProjectState.h
-
-  std::vector<ProjectState::MidiNoteSpec> notes;
-  for (const auto &noteVar : *notesVar.getArray()) {
-    ProjectState::MidiNoteSpec spec;
-    spec.pitch = noteVar["pitch"];
-    spec.startBeats = noteVar["start"];
-    spec.lengthBeats = noteVar["length"];
-    spec.velocity = noteVar["velocity"];
-    notes.push_back(spec);
+  juce::ValueTree clipTree;
+  if (params.hasProperty("trackId")) {
+    trackId = params["trackId"].toString();
+    clipTree = projectState.getClip(trackId, clipId);
   }
 
-  projectState.addNotes(clipId, notes, "Set Clip Notes");
+  if (!clipTree.isValid()) {
+    auto [trackTree, foundClip] = projectState.findClip(clipId);
+    clipTree = foundClip;
+    if (trackTree.isValid()) {
+      trackId = trackTree[ProjectState::PROP_ID].toString();
+    }
+  }
 
-  return createSuccessResponse(juce::var());
+  if (!clipTree.isValid())
+    return createErrorResponse("Clip not found: " + clipId);
+
+  auto clipType =
+      clipTree.getProperty(ProjectState::PROP_TYPE, juce::String())
+          .toString()
+          .toLowerCase();
+  if (clipType != "midi")
+    return createErrorResponse("Clip is not MIDI: " + clipId);
+
+  struct ParsedNote {
+    juce::ValueTree tree;
+  };
+  std::vector<ParsedNote> parsedNotes;
+  parsedNotes.reserve(notesVar.getArray()->size());
+
+  for (const auto &noteVar : *notesVar.getArray()) {
+    if (!noteVar.isObject())
+      return createErrorResponse("Note entries must be objects");
+
+    const bool hasStart = noteVar.hasProperty("start") ||
+                          noteVar.hasProperty("startBeats");
+    const bool hasLength = noteVar.hasProperty("length") ||
+                           noteVar.hasProperty("lengthBeats");
+    if (!noteVar.hasProperty("pitch") || !hasStart || !hasLength ||
+        !noteVar.hasProperty("velocity")) {
+      return createErrorResponse(
+          "Each note requires pitch, start/startBeats, length/lengthBeats, velocity");
+    }
+
+    int pitch = static_cast<int>(noteVar["pitch"]);
+    double startBeats = noteVar.hasProperty("startBeats")
+                            ? static_cast<double>(noteVar["startBeats"])
+                            : static_cast<double>(noteVar["start"]);
+    double lengthBeats = noteVar.hasProperty("lengthBeats")
+                             ? static_cast<double>(noteVar["lengthBeats"])
+                             : static_cast<double>(noteVar["length"]);
+    double velocityVal = static_cast<double>(noteVar["velocity"]);
+
+    pitch = juce::jlimit(0, 127, pitch);
+    startBeats = std::max(0.0, startBeats);
+    lengthBeats = std::max(0.001, lengthBeats);
+
+    int midiVelocity = 0;
+    if (velocityVal <= 1.0) {
+      midiVelocity = juce::jlimit(
+          0, 127, static_cast<int>(velocityVal * 127.0 + 0.5));
+    } else {
+      midiVelocity = juce::jlimit(0, 127, static_cast<int>(velocityVal));
+    }
+
+    juce::ValueTree noteTree(ProjectState::ID_NOTE);
+    if (noteVar.hasProperty("id")) {
+      noteTree.setProperty(ProjectState::PROP_ID,
+                           noteVar["id"].toString(), nullptr);
+    } else {
+      noteTree.setProperty(
+          ProjectState::PROP_ID,
+          "note_" + juce::Uuid().toString().substring(0, 8), nullptr);
+    }
+    noteTree.setProperty(ProjectState::PROP_PITCH, pitch, nullptr);
+    noteTree.setProperty(ProjectState::PROP_START_BEATS, startBeats, nullptr);
+    noteTree.setProperty(ProjectState::PROP_LENGTH_BEATS, lengthBeats, nullptr);
+    noteTree.setProperty(ProjectState::PROP_VELOCITY, midiVelocity, nullptr);
+
+    if (noteVar.hasProperty("muted") &&
+        static_cast<bool>(noteVar["muted"])) {
+      noteTree.setProperty(ProjectState::PROP_MUTE, true, nullptr);
+    }
+    if (noteVar.hasProperty("probability")) {
+      noteTree.setProperty(ProjectState::PROP_PROBABILITY,
+                           static_cast<double>(noteVar["probability"]),
+                           nullptr);
+    }
+    if (noteVar.hasProperty("condition")) {
+      noteTree.setProperty(ProjectState::PROP_CONDITION,
+                           noteVar["condition"].toString(), nullptr);
+    }
+    if (noteVar.hasProperty("recurrence")) {
+      noteTree.setProperty(ProjectState::PROP_RECURRENCE,
+                           noteVar["recurrence"].toString(), nullptr);
+    }
+    if (noteVar.hasProperty("articulationId")) {
+      noteTree.setProperty(ProjectState::PROP_ARTICULATION_ID,
+                           static_cast<int>(noteVar["articulationId"]),
+                           nullptr);
+    }
+    if (noteVar.hasProperty("tension")) {
+      noteTree.setProperty(ProjectState::PROP_NOTE_TENSION,
+                           static_cast<double>(noteVar["tension"]),
+                           nullptr);
+    }
+
+    parsedNotes.push_back({noteTree});
+  }
+
+  auto &undo = projectState.getUndoManager();
+  undo.beginNewTransaction("Set Clip Notes");
+
+  auto notesNode = clipTree.getChildWithName(ProjectState::ID_NOTES);
+  if (!notesNode.isValid()) {
+    notesNode = juce::ValueTree(ProjectState::ID_NOTES);
+    clipTree.appendChild(notesNode, &undo);
+  } else {
+    notesNode.removeAllChildren(&undo);
+  }
+
+  for (auto &note : parsedNotes) {
+    notesNode.appendChild(note.tree, &undo);
+  }
+
+  auto *resultObj = new juce::DynamicObject();
+  resultObj->setProperty("clipId", clipId);
+  if (trackId.isNotEmpty())
+    resultObj->setProperty("trackId", trackId);
+  resultObj->setProperty("noteCount",
+                         static_cast<int>(parsedNotes.size()));
+
+  return createSuccessResponse(juce::var(resultObj));
 }
 
 } // namespace zenith

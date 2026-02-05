@@ -1,0 +1,57 @@
+# Zenith DAW - Proprietary Software License
+
+## Copyright Notice
+
+Copyright (c) 2025 Zenith DAW Project. All rights reserved.
+
+## License Terms
+
+**Zenith DAW is 100% proprietary closed-source software.** All rights reserved.
+
+### Pricing
+
+**Zenith DAW Application:** $100 (one-time purchase)
+
+**AI Wingman Add-on (Subscription):**
+- Zenith Light: $10/month
+- Zenith Pro: $20/month
+- Zenith Heavy: $50/month
+
+You may not:
+- Reverse engineer, decompile, or disassemble software
+- Distribute copies of software
+- Modify or create derivative works
+- Remove or alter any proprietary notices
+
+For licensing inquiries, commercial use, or redistribution requests, please contact:
+[Insert Contact Information]
+
+## Third-Party Licenses
+
+Zenith DAW incorporates the following open-source components, each licensed under their respective terms:
+
+### JUCE Framework
+- **License:** Commercial License
+- **Source:** https://github.com/juce-framework/JUCE
+- Zenith DAW uses JUCE under a commercial license agreement
+
+### VST3 SDK
+- **License:** MIT License
+- **Source:** https://github.com/steinbergmedia/vst3sdk
+- Copyright (c) Steinberg Media Technologies GmbH
+
+### Skia Graphics Library
+- **License:** BSD 3-Clause
+- **Source:** https://skia.org/
+
+### vcpkg Package Manager
+- **License:** MIT License
+- **Source:** https://github.com/microsoft/vcpkg
+
+## Warranty Disclaimer
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+## Warranty Disclaimer
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

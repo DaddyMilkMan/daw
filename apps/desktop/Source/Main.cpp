@@ -2,28 +2,25 @@
  * @file Main.cpp
  * @brief Zenith DAW - Main application entry point
  *
- * This file initializes the JUCE application and creates the main window.
+ * This file initializes the JUCE application and the main window.
  */
 
-// JUCE includes first
-#include <juce_audio_basics/juce_audio_basics.h>
-#include <juce_audio_devices/juce_audio_devices.h>
-#include <juce_audio_formats/juce_audio_formats.h>
-#include <juce_core/juce_core.h>
-#include <juce_data_structures/juce_data_structures.h>
-#include <juce_events/juce_events.h>
-#include <juce_graphics/juce_graphics.h>
-#include <juce_gui_basics/juce_gui_basics.h>
-#include <juce_gui_extra/juce_gui_extra.h>
+// Prevent ProjectInfo redefinition when other headers include JuceHeader.h
+#define JUCE_DONT_DECLARE_PROJECTINFO 1
 
-// Project includes after JUCE
-#include "ui/common/MainWindow.h"
+// Include all JUCE modules using manual JuceHeader.h
+#include "JuceHeader.h"
 #include "engine/ProjectState.h"
+#include "engine/Engine.h"
+#include "commands/CommandAPI.h"
 #include "utils/SampleGenerator.h"
 #include "utils/PlatformSystemUtils.h"
 #include "ui/design-system/FontManager.h"
 #include "engine/ZenithLogger.h"
 #include "Settings.h"
+#include "ui/common/MainWindow.h"
+#include "network/MCPServer.h"
+#include <cstdlib>
 
 
 //==============================================================================
@@ -53,7 +50,16 @@ public:
   //==========================================================================
   void initialise(const juce::String &commandLine) override {
     // Input validation should be added here for production releases
-    juce::ignoreUnused(commandLine);
+    auto args = juce::StringArray::fromTokens(commandLine, true);
+    const bool mcpServerMode = args.contains("--mcp-server");
+    const bool mcpStdioGui = args.contains("--mcp-stdio");
+    if (mcpStdioGui) {
+#if JUCE_WINDOWS
+      _putenv_s("MCP_STDIO", "1");
+#else
+      setenv("MCP_STDIO", "1", 1);
+#endif
+    }
     
     // Load settings immediately on startup
     // FIX: This was missing, causing changes to be lost on relaunch
@@ -66,6 +72,25 @@ public:
 
     // Log system info
     ::zenith::PlatformSystemUtils::logSystemInfo();
+
+    if (mcpServerMode) {
+      mcpHeadless_ = true;
+
+      mcpProjectState_ = std::make_unique<::zenith::ProjectState>();
+      mcpEngine_ = std::make_unique<::zenith::Engine>();
+      mcpCommandAPI_ = std::make_unique<::zenith::CommandAPI>(*mcpProjectState_, *mcpEngine_);
+
+      mcpEngine_->setProjectState(mcpProjectState_.get());
+      mcpEngine_->initialize();
+
+      mcpServer_ = std::make_unique<::zenith::mcp::MCPServer>(
+          *mcpCommandAPI_, *mcpProjectState_, *mcpEngine_, nullptr);
+      mcpServer_->onStop = [this]() { quit(); };
+      mcpServer_->start();
+
+      ZENITH_LOG_INFO("[MCP STDIO] Headless MCP server running (--mcp-server)");
+      return;
+    }
 
     // Ensure content validity (Generate missing samples if needed)
     // Run asynchronously to unblock startup
@@ -88,6 +113,19 @@ public:
 
     // Stop background tasks
     threadPool.removeAllJobs(true, 4000);
+
+    if (mcpHeadless_) {
+      if (mcpServer_) {
+        mcpServer_->stop();
+        mcpServer_.reset();
+      }
+      if (mcpEngine_) {
+        mcpEngine_->shutdown();
+        mcpEngine_.reset();
+      }
+      mcpCommandAPI_.reset();
+      mcpProjectState_.reset();
+    }
 
     // Close main window (releases all resources)
     mainWindow.reset();
@@ -123,6 +161,11 @@ private:
   //==========================================================================
   std::unique_ptr<::zenith::MainWindow> mainWindow;
   juce::ThreadPool threadPool;
+  bool mcpHeadless_ = false;
+  std::unique_ptr<::zenith::ProjectState> mcpProjectState_;
+  std::unique_ptr<::zenith::Engine> mcpEngine_;
+  std::unique_ptr<::zenith::CommandAPI> mcpCommandAPI_;
+  std::unique_ptr<::zenith::mcp::MCPServer> mcpServer_;
 };
 
 //==============================================================================

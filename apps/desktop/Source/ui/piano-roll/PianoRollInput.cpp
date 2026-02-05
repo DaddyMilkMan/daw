@@ -4,6 +4,7 @@
  */
 
 #include "PianoRollComponent.h"
+#include <unordered_map>
 #include "../design-system/ZenithDesignSystem.h"
 
 namespace zenith {
@@ -186,19 +187,23 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
       });
       menu->addItem(3, "Legato", true, false, [this]() { applyLegato(); });
       menu->addItem(4, "Humanize...", true, false, [this]() { 
-          auto* w = new juce::AlertWindow("Humanize", "Adjust randomization parameters:", juce::AlertWindow::QuestionIcon);
-          w->addTextEditor("velocity", "10", "Velocity Range (+/-):");
-          w->addTextEditor("timing", "0.05", "Timing Range (beats):");
-          w->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
-          w->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+          // BUG FIX: Use shared ownership to prevent memory leak
+          auto window = std::make_shared<juce::AlertWindow>("Humanize", "Adjust randomization parameters:", juce::AlertWindow::QuestionIcon);
+          window->addTextEditor("velocity", "10", "Velocity Range (+/-):");
+          window->addTextEditor("timing", "0.05", "Timing Range (beats):");
+          window->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
+          window->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
           
-          w->enterModalState(true, juce::ModalCallbackFunction::create([this, w](int result) {
-              if (result != 0) {
-                  double velRange = w->getTextEditorContents("velocity").getDoubleValue();
-                  double timeRange = w->getTextEditorContents("timing").getDoubleValue();
-                  projectState.humanizeClip(currentClip.clipId, velRange, timeRange, "Humanize Selected");
+          auto safeThis = juce::Component::SafePointer<PianoRollComponent>(this);
+          auto clipId = currentClip.clipId;
+
+          window->enterModalState(true, juce::ModalCallbackFunction::create([safeThis, window, clipId](int result) {
+              if (result != 0 && safeThis) {
+                  double velRange = window->getTextEditorContents("velocity").getDoubleValue();
+                  double timeRange = window->getTextEditorContents("timing").getDoubleValue();
+                  safeThis->projectState.humanizeClip(clipId, velRange, timeRange, "Humanize Selected");
               }
-              delete w;
+              // shared_ptr handles deletion
           }), true);
       });
       menu->addSeparator();
@@ -207,6 +212,14 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
             if (getSelectedNoteCount() == 0) return;
             
             projectState.getUndoManager().beginNewTransaction("Duplicate Notes");
+            
+            // BUG FIX: Optimization - Pre-fetch note specs 
+            auto allNoteSpecs = projectState.getMidiNotesForClip(currentClip.clipId);
+            std::unordered_map<juce::String, zenith::ProjectState::MidiNoteSpec> specMap;
+            for (const auto& spec : allNoteSpecs) {
+                specMap[spec.id] = spec;
+            }
+
             // Find end of selection to shift
             for (const auto& note : noteRects) {
                 if (note.selected) {
@@ -215,17 +228,16 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
                      newNote.pitch = note.pitch;
                      newNote.startBeats = note.startBeats + gridBeats; // Offset by grid
                      newNote.lengthBeats = note.lengthBeats;
-                     newNote.velocity = 100;
-                     // Let's fetch original note spec.
-                     auto noteSpec = projectState.getMidiNotesForClip(currentClip.clipId);
-                     // Find spec
-                     for (const auto& spec : noteSpec) {
-                         if (spec.id == note.id) {
-                             newNote.velocity = spec.velocity;
-                             newNote.muted = spec.muted;
-                             break;
-                         }
+                     
+                     auto it = specMap.find(note.id);
+                     if (it != specMap.end()) {
+                         newNote.velocity = it->second.velocity;
+                         newNote.muted = it->second.muted;
+                     } else {
+                         newNote.velocity = 100;
+                         newNote.muted = false;
                      }
+
                      projectState.addMidiNote(currentClip.clipId, newNote, "Duplicate Note");
                 }
             }
@@ -410,6 +422,9 @@ void PianoRollComponent::mouseDrag(const juce::MouseEvent &e) {
   case DragMode::MarqueeSelect:
     updateMarqueeSelect(e);
     break;
+  case DragMode::ExpressionTension:
+    updateExpressionTension(e);
+    break;
   default:
     break;
   }
@@ -430,6 +445,9 @@ void PianoRollComponent::mouseUp(const juce::MouseEvent &e) {
     break;
   case DragMode::MarqueeSelect:
     finishMarqueeSelect();
+    break;
+  case DragMode::ExpressionTension:
+    finishExpressionTension();
     break;
   default:
     break;
@@ -696,8 +714,42 @@ void PianoRollComponent::updateMarqueeSelect(const juce::MouseEvent \u0026e) {
 
 void PianoRollComponent::finishMarqueeSelect() {
   selectNotesInRectangle(marqueeRect);
-  marqueeRect = juce::Rectangle\u003cfloat\u003e();
+  marqueeRect = juce::Rectangle<float>();
   repaint();
+}
+
+//==============================================================================
+// Expression Tension Editing
+//==============================================================================
+
+void PianoRollComponent::startEditingExpressionTension(const juce::MouseEvent &e) {
+  currentDragMode = DragMode::ExpressionTension;
+  dragStartPos = e.position;
+  repaint();
+}
+
+void PianoRollComponent::updateExpressionTension(const juce::MouseEvent &e) {
+  if (currentDragMode != DragMode::ExpressionTension) return;
+  
+  float deltaY = static_cast<float>(e.y - dragStartPos.y);
+  float sensitivity = 0.01f;
+  float tensionChange = -deltaY * sensitivity;
+  tensionChange = juce::jlimit(-1.0f, 1.0f, tensionChange);
+  
+  for (auto &note : noteRects) {
+    if (note.selected) {
+      float currentTension = note.tension;
+      float newTension = juce::jlimit(-1.0f, 1.0f, currentTension + tensionChange);
+      note.tension = newTension;
+      projectState.setMidiNoteTension(currentClip.clipId, note.id, newTension, "Edit expression tension");
+    }
+  }
+  
+  dragStartPos = e.position;
+  repaint();
+}
+
+void PianoRollComponent::finishExpressionTension() {
 }
 
 } // namespace zenith

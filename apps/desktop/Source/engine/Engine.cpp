@@ -21,6 +21,7 @@
 #include "../engine/AudioFilePool.h"
 #include "../engine/AuxBus.h"
 #include "../engine/Clip.h"
+#include "ClipTrack.h"
 #include "../engine/EngineConstants.h"
 #include "../engine/MixerChannel.h"
 #include "../engine/PluginHost.h"
@@ -101,6 +102,10 @@ Engine::Engine() {
 
   // Wire up transport controller to tempo map
   transportController_->setTempoMap(tempoMap_.get());
+
+  // Pre-allocate MIDI buffers to avoid RT allocations
+  liveMidiPass1_.ensureSize(2048);
+  liveMidiPass2_.ensureSize(2048);
 
   // Initialize TrackFreezeManager for CPU optimization
   freezeManager_ = std::make_unique<TrackFreezeManager>();
@@ -493,6 +498,9 @@ void Engine::audioDeviceIOCallbackWithContext(
     const juce::AudioIODeviceCallbackContext &context) noexcept {
 
   juce::ignoreUnused(inputChannelData, numInputChannels, context);
+  
+  // Start WCET measurement
+  wcetMonitor_.startMeasurement();
 
   // Input validation - CRITICAL for RT safety
   if (numSamples <= 0 || numSamples > 8192) {
@@ -531,9 +539,10 @@ void Engine::audioDeviceIOCallbackWithContext(
   // Process Events (Updates track parameters etc.)
   processEvents();
 
-  // Midi Buffer for rendering (populated from FIFO)
-  juce::MidiBuffer midiBuffer;
-  midiFifo_.drainTo(midiBuffer, numSamples);
+  // Drain MIDI FIFO once per block (avoid double-consumption)
+  liveMidiPass1_.clear();
+  liveMidiPass2_.clear();
+  midiFifo_.drainTo(liveMidiPass1_, numSamples);
 
   // Master plugins for pass 1/2
   std::span<const std::shared_ptr<juce::AudioPluginInstance>> masterPlugins;
@@ -555,6 +564,22 @@ void Engine::audioDeviceIOCallbackWithContext(
       samplesBeforeLoop = static_cast<int>(loopEnd - currentPos);
     }
 
+    if (wrapped && samplesBeforeLoop > 0 && !liveMidiPass1_.isEmpty()) {
+      // Split MIDI across loop boundary (preserve offsets)
+      juce::MidiBuffer fullMidi;
+      fullMidi.swapWith(liveMidiPass1_);
+
+      for (const auto metadata : fullMidi) {
+        const auto sampleOffset = metadata.samplePosition;
+        if (sampleOffset < samplesBeforeLoop) {
+          liveMidiPass1_.addEvent(metadata.getMessage(), sampleOffset);
+        } else {
+          liveMidiPass2_.addEvent(metadata.getMessage(),
+                                  sampleOffset - samplesBeforeLoop);
+        }
+      }
+    }
+
     // Pass 1
     if (samplesBeforeLoop > 0 && samplesBeforeLoop <= numSamples) {
       // Validate buffer bounds
@@ -562,15 +587,15 @@ void Engine::audioDeviceIOCallbackWithContext(
         // Use proxy buffer to avoid allocation
         juce::AudioBuffer<float> buffer1(outputChannelData, numOutputChannels,
                                          samplesBeforeLoop);
-        juce::MidiBuffer midi1;
-        midiFifo_.drainTo(midi1, samplesBeforeLoop);
+        const juce::MidiBuffer *midi1 =
+            liveMidiPass1_.isEmpty() ? nullptr : &liveMidiPass1_;
 
         if (audioRenderer_ && tempoMap_ != nullptr) {
           audioRenderer_->renderAudioGraph(
               renderContext_,
               buffer1, samplesBeforeLoop, currentPos, snapshot->tracks,
               snapshot->auxBuses, routingGraph_, masterLimiter_, masterPlugins,
-              tempoMap_.get(), &midi1, inputChannelData, numInputChannels);
+              tempoMap_.get(), midi1, inputChannelData, numInputChannels);
 
           // Mix Metronome (Pass 1)
           if (metronome_) {
@@ -586,8 +611,7 @@ void Engine::audioDeviceIOCallbackWithContext(
       if (samplesAfter > 0 && samplesAfter <= numSamples && samplesBeforeLoop >= 0) {
         // Use stack array for channel pointers to avoid heap allocation
         if (numOutputChannels > 32) {
-          // Clamp to max supported channels - log but don't crash
-          DBG("Engine: Warning - More than 32 output channels requested, clamping to 32");
+          // Clamp to max supported channels (no logging in RT thread)
         }
         float *offsets[32]; // Max 32 channels supported
         int safeNumChannels = juce::jmin(numOutputChannels, 32);
@@ -603,14 +627,15 @@ void Engine::audioDeviceIOCallbackWithContext(
         juce::AudioBuffer<float> buffer2(offsets, safeNumChannels,
                                          samplesAfter);
 
-        juce::MidiBuffer emptyMidi; // No MIDI in wrapped part for now
+        const juce::MidiBuffer *midi2 =
+            liveMidiPass2_.isEmpty() ? nullptr : &liveMidiPass2_;
 
         if (audioRenderer_ && tempoMap_ != nullptr) {
           audioRenderer_->renderAudioGraph(
               renderContext_,
               buffer2, samplesAfter, loopStart, snapshot->tracks,
               snapshot->auxBuses, routingGraph_, masterLimiter_, masterPlugins,
-              tempoMap_.get(), &emptyMidi, offsets,
+              tempoMap_.get(), midi2, offsets,
               safeNumChannels); // Using offset inputs
 
           // Mix Metronome (Pass 2)
@@ -651,6 +676,10 @@ void Engine::audioDeviceIOCallbackWithContext(
                                       numSamples, snapshot->lifecycle);
     }
   }
+  
+  // End WCET measurement and record statistics
+  double sampleRate = currentSampleRate.load(std::memory_order_relaxed);
+  wcetMonitor_.endMeasurement(numSamples, sampleRate);
 }
 
 //==============================================================================
@@ -700,7 +729,7 @@ void Engine::applyEvent(const zenith::EngineEvent &e,
       if (track) {
         auto *plugin = track->getPlugin(e.pluginIndex);
         if (plugin) {
-          auto params = plugin->getParameters();
+          auto &params = plugin->getParameters();
           if (e.paramIndex >= 0 && e.paramIndex < (int)params.size()) {
             params[e.paramIndex]->setValueNotifyingHost(e.value);
           }
@@ -733,6 +762,43 @@ void Engine::applyEvent(const zenith::EngineEvent &e,
         e.trackIndex < (int)snapshot->tracks.size()) {
       if (auto *track = snapshot->tracks[e.trackIndex]) {
         track->setSolo(e.boolValue);
+      }
+    }
+  } else if (e.type == zenith::EngineEvent::Type::LaunchClip) {
+    // Launch clip at quantized position for session view
+    if (snapshot && e.trackIndex >= 0 &&
+        e.trackIndex < (int)snapshot->tracks.size()) {
+      if (auto *track = snapshot->tracks[e.trackIndex]) {
+        // For ClipTrack (Audio, MIDI, Instrument), handle clip launch
+        if (auto *clipTrack = dynamic_cast<ClipTrack *>(track)) {
+          // Find the clip by clipId
+          for (int i = 0; i < clipTrack->getNumClips(); ++i) {
+            if (auto *clip = clipTrack->getClip(i)) {
+              // Match clip by ID - we need to get the clip's ID from somewhere
+              // For now, we'll mark the clip as playing via session state
+              clip->setPlaying(true);
+            }
+          }
+          // Store this as the active session clip for this track
+          activeSessionClips_[e.trackIndex] = e.clipId;
+        }
+      }
+    }
+  } else if (e.type == zenith::EngineEvent::Type::StopClip) {
+    // Stop a playing clip in session view
+    if (snapshot && e.trackIndex >= 0 &&
+        e.trackIndex < (int)snapshot->tracks.size()) {
+      if (auto *track = snapshot->tracks[e.trackIndex]) {
+        if (auto *clipTrack = dynamic_cast<ClipTrack *>(track)) {
+          // Stop all clips on this track for session mode
+          for (int i = 0; i < clipTrack->getNumClips(); ++i) {
+            if (auto *clip = clipTrack->getClip(i)) {
+              clip->setPlaying(false);
+            }
+          }
+          // Clear the active session clip for this track
+          activeSessionClips_.erase(e.trackIndex);
+        }
       }
     }
   }

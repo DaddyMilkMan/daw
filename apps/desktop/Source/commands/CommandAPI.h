@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "Engine.h"
+#include "../engine/Engine.h"
 #include "ProjectState.h"
 #include <functional>
 #include <map>
@@ -18,6 +18,7 @@ namespace zenith {
     class TrackCommands;
     class ClipCommands;
     class TransportCommands;
+    class WingmanSynthBridge;
     namespace ai { class UXDirectorAgent; class PresetGeneticistAgent; }
 }
 
@@ -50,7 +51,23 @@ public:
       StopEvolution,
       GetEvolutionStats,
       // Routing Graph Commands
-      GetRoutingGraph, ConnectNodes, DisconnectNodes
+      GetRoutingGraph, ConnectNodes, DisconnectNodes,
+      // Synth Control Commands (Wingman → ZenithPolySynth)
+      SetSynthParameter, SetSynthOscillatorWave, SetSynthOscillatorDetune, SetSynthOscillatorMix,
+      SetSynthFilterType, SetSynthFilterCutoff, SetSynthFilterResonance, SetSynthFilterDrive,
+      SetSynthAmpEnvelope, SetSynthFilterEnvelope, SetSynthLFORate, SetSynthLFOAmount,
+      SetSynthDistortion, SetSynthChorus, SetSynthReverb, SetSynthDelay, SetSynthModulation,
+      ApplySynthPreset, RandomizeSynthPatch, AnalyzeSynthPatch,
+      // NEW: Unison, Arpeggiator, Step LFO Commands
+      SetSynthUnisonVoices, SetSynthUnisonDetune, SetSynthUnisonSpread, SetSynthUnisonPanRandom,
+      SetSynthArpEnable, SetSynthArpMode, SetSynthArpRate, SetSynthArpGate, SetSynthArpSwing, SetSynthArpHold,
+      SetSynthStepLFO1Enable, SetSynthStepLFO1Steps, SetSynthStepLFO1Rate, SetSynthStepLFO1Smoothing,
+      SetSynthStepLFO2Enable, SetSynthStepLFO2Steps, SetSynthStepLFO2Rate, SetSynthStepLFO2Smoothing,
+      SetSynthStepLFO3Enable, SetSynthStepLFO3Steps, SetSynthStepLFO3Rate, SetSynthStepLFO3Smoothing,
+      SetSynthStepLFO4Enable, SetSynthStepLFO4Steps, SetSynthStepLFO4Rate, SetSynthStepLFO4Smoothing,
+      // AI MIDI Pattern Generation Commands
+      GenerateDrums, GenerateBass, GenerateChords, GenerateMelody, GenerateArpeggio,
+      GenerateFullPattern
   };
 
   //==========================================================================
@@ -160,6 +177,67 @@ private:
   juce::var connectNodes(const juce::var& params);
   juce::var disconnectNodes(const juce::var& params);
 
+  // Synth Control Handlers (Wingman → ZenithPolySynth)
+  juce::var setSynthOscillatorWave(const juce::var& params);
+  juce::var setSynthOscillatorDetune(const juce::var& params);
+  juce::var setSynthOscillatorMix(const juce::var& params);
+  juce::var setSynthFilterType(const juce::var& params);
+  juce::var setSynthFilterCutoff(const juce::var& params);
+  juce::var setSynthFilterResonance(const juce::var& params);
+  juce::var setSynthFilterDrive(const juce::var& params);
+  juce::var setSynthAmpEnvelope(const juce::var& params);
+  juce::var setSynthFilterEnvelope(const juce::var& params);
+  juce::var setSynthLFORate(const juce::var& params);
+  juce::var setSynthLFOAmount(const juce::var& params);
+  juce::var setSynthDistortion(const juce::var& params);
+  juce::var setSynthChorus(const juce::var& params);
+  juce::var setSynthReverb(const juce::var& params);
+  juce::var setSynthDelay(const juce::var& params);
+  juce::var setSynthModulation(const juce::var& params);
+  juce::var applySynthPreset(const juce::var& params);
+  juce::var randomizeSynthPatch(const juce::var& params);
+  juce::var analyzeSynthPatch(const juce::var& params);
+
+  // NEW: Unison Commands
+  juce::var setSynthUnisonVoices(const juce::var& params);
+  juce::var setSynthUnisonDetune(const juce::var& params);
+  juce::var setSynthUnisonSpread(const juce::var& params);
+  juce::var setSynthUnisonPanRandom(const juce::var& params);
+
+  // NEW: Arpeggiator Commands
+  juce::var setSynthArpEnable(const juce::var& params);
+  juce::var setSynthArpMode(const juce::var& params);
+  juce::var setSynthArpRate(const juce::var& params);
+  juce::var setSynthArpGate(const juce::var& params);
+  juce::var setSynthArpSwing(const juce::var& params);
+  juce::var setSynthArpHold(const juce::var& params);
+
+  // NEW: Step LFO Commands
+  juce::var setSynthStepLFO1Enable(const juce::var& params);
+  juce::var setSynthStepLFO1Steps(const juce::var& params);
+  juce::var setSynthStepLFO1Rate(const juce::var& params);
+  juce::var setSynthStepLFO1Smoothing(const juce::var& params);
+  juce::var setSynthStepLFO2Enable(const juce::var& params);
+  juce::var setSynthStepLFO2Steps(const juce::var& params);
+  juce::var setSynthStepLFO2Rate(const juce::var& params);
+  juce::var setSynthStepLFO2Smoothing(const juce::var& params);
+  juce::var setSynthStepLFO3Enable(const juce::var& params);
+  juce::var setSynthStepLFO3Steps(const juce::var& params);
+  juce::var setSynthStepLFO3Rate(const juce::var& params);
+  juce::var setSynthStepLFO3Smoothing(const juce::var& params);
+  juce::var setSynthStepLFO4Enable(const juce::var& params);
+  juce::var setSynthStepLFO4Steps(const juce::var& params);
+  juce::var setSynthStepLFO4Rate(const juce::var& params);
+  juce::var setSynthStepLFO4Smoothing(const juce::var& params);
+
+  // AI MIDI Pattern Generation Commands
+  juce::var generateDrums(const juce::var& params);
+  juce::var generateBass(const juce::var& params);
+  juce::var generateChords(const juce::var& params);
+  juce::var generateMelody(const juce::var& params);
+  juce::var generateArpeggio(const juce::var& params);
+  juce::var generateFullPattern(const juce::var& params);
+
   // Helpers
   juce::String createResponse(const juce::var &data) const;
   juce::String createErrorResponse(const juce::String &errorMessage) const;
@@ -179,6 +257,9 @@ private:
 
   ai::UXDirectorAgent* uxDirector_ = nullptr;
   ai::PresetGeneticistAgent* presetGeneticist_ = nullptr;
+
+  // Helper to get WingmanSynthBridge for active track
+  WingmanSynthBridge* getSynthBridgeForActiveTrack();
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CommandAPI)
 };

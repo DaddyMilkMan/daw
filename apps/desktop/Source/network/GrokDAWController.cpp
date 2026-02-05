@@ -19,6 +19,47 @@
 #include <unordered_map>
 
 namespace zenith {
+namespace {
+bool shouldUseToolsForPrompt(const juce::String &text) {
+  auto lower = text.toLowerCase();
+  if (lower.contains("track") || lower.contains("tracks") ||
+      lower.contains("clip") || lower.contains("clips") ||
+      lower.contains("project") || lower.contains("session") ||
+      lower.contains("timeline") || lower.contains("arrangement") ||
+      lower.contains("midi") || lower.contains("preset") ||
+      lower.contains("plugin") || lower.contains("routing") ||
+      lower.contains("route") || lower.contains("bus") ||
+      lower.contains("stem") || lower.contains("export") ||
+      lower.contains("record") || lower.contains("play") ||
+      lower.contains("stop") || lower.contains("mute") ||
+      lower.contains("solo") || lower.contains("arm") ||
+      lower.contains("tempo") || lower.contains("bpm") ||
+      lower.contains("automation") || lower.contains("mixer") ||
+      lower.contains("master") || lower.contains("mix") ||
+      lower.contains("analyze") || lower.contains("analysis")) {
+    return true;
+  }
+  return false;
+}
+
+bool shouldUseLiveSearchForPrompt(const juce::String &text) {
+  auto lower = text.toLowerCase();
+  if (lower.contains("do your research") || lower.contains("look it up") ||
+      lower.contains("web search") || lower.contains("search the web") ||
+      lower.contains("latest") || lower.contains("current") ||
+      lower.contains("news") || lower.contains("release") ||
+      lower.contains("version") || lower.contains("price") ||
+      lower.contains("pricing") || lower.contains("availability") ||
+      lower.contains("policy") || lower.contains("documentation") ||
+      lower.contains("spec") || lower.contains("citation") ||
+      lower.contains("source") || lower.contains("link") ||
+      lower.contains("search") || lower.contains("lookup") ||
+      lower.contains("web") || lower.contains("website")) {
+    return true;
+  }
+  return false;
+}
+} // namespace
 
 // Implementation class
 //==============================================================================
@@ -226,10 +267,11 @@ public:
           result = commandAPI.executeCommand(idIt->second, call.arguments);
         } else {
           // Fallback Path: String Dispatch
-          auto *cmd = new juce::DynamicObject();
+          // Create DynamicObject and wrap in var for proper ownership
+          juce::DynamicObject::Ptr cmd = new juce::DynamicObject();
           cmd->setProperty("command", call.functionName);
           cmd->setProperty("params", call.arguments);
-          result = commandAPI.executeCommand(juce::var(cmd));
+          result = commandAPI.executeCommand(juce::var(cmd.getObject()));
         }
 
         if (result.getProperty("success", false)) {
@@ -399,6 +441,21 @@ void GrokDAWController::executeCommand(
     std::function<void(juce::String response)> onResponse,
     std::function<void(juce::String error)> onError,
     std::function<void(juce::String status)> onProgress) {
+  executeCommandWithReasoning(
+      userCommand, mode,
+      [onResponse](juce::String response, juce::String) {
+        if (onResponse) onResponse(response);
+      },
+      onError, onProgress);
+}
+
+void GrokDAWController::executeCommandWithReasoning(
+    const juce::String &userCommand, GrokMode mode,
+    std::function<void(juce::String response, juce::String reasoning)>
+        onResponse,
+    std::function<void(juce::String error)> onError,
+    std::function<void(juce::String status)> onProgress,
+    Settings::WingmanChatStyle style) {
   if (!isReady()) {
     onError("Grok controller not initialized");
     return;
@@ -408,17 +465,25 @@ void GrokDAWController::executeCommand(
     onProgress("Processing command...");
 
   // Task 4: Use helper for system prompt
-  auto systemPrompt = AIPrompts::buildSystemPrompt(pImpl->contextProvider);
+  auto systemPrompt = AIPrompts::buildSystemPrompt(pImpl->contextProvider, style);
 
   // Task 4: Use helper for tool definitions
-  auto functions = AITools::getAvailableFunctions();
+  auto functions = shouldUseToolsForPrompt(userCommand)
+                       ? AITools::getAvailableFunctions()
+                       : juce::Array<GrokFunction>();
+  bool enableLiveSearch = shouldUseLiveSearchForPrompt(userCommand);
 
   // Send to Grok
-  pImpl->grokClient.sendChat(
-      userCommand, mode, functions, systemPrompt, onResponse,
+  pImpl->grokClient.sendChatWithReasoning(
+      userCommand, mode, functions, systemPrompt, enableLiveSearch, onResponse,
       [this, onResponse, onError, onProgress](GrokFunctionCall call) {
         // Grok wants to call a function -> Dispatch via Registry
-        pImpl->handleFunctionCall(call, onResponse, onError, onProgress);
+        pImpl->handleFunctionCall(
+            call,
+            [onResponse](juce::String response) {
+              if (onResponse) onResponse(response, "");
+            },
+            onError, onProgress);
       },
       onError);
 }
@@ -463,6 +528,7 @@ void GrokDAWController::generatePreset(
       "You are an expert sound designer. Generate synthesizer presets based "
       "on "
       "descriptions.",
+      true,
       [this, instrumentId, description, genre, onComplete,
        onError](juce::String response) {
         // Parse Grok's response as JSON (using robust utility)

@@ -1,4 +1,5 @@
 #include "InstrumentTrack.h"
+#include "TrackProcessor.h"
 
 namespace zenith {
 

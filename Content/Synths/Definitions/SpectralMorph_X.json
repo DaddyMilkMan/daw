@@ -1,0 +1,106 @@
+{
+  "name": "SpectralMorph X",
+  "category": "Wavetable",
+  "description": "Advanced wavetable synth with spectral morphing and formant shifting",
+  "tags": ["modern", "evolving", "ambient", "cinematic", "electronic"],
+  "architecture": {
+    "oscillators": [
+      {
+        "id": "osc1",
+        "type": "Wavetable",
+        "wavetable": "Spectral_A",
+        "morph_position": 0.0,
+        "detune": 0,
+        "mix": 1.0,
+        "unison": 8,
+        "unison_detune": 10,
+        "unison_spread": 0.7
+      },
+      {
+        "id": "osc2",
+        "type": "Wavetable",
+        "wavetable": "Spectral_B",
+        "morph_position": 1.0,
+        "detune": 5,
+        "mix": 0.8,
+        "unison": 4,
+        "unison_detune": 15,
+        "unison_spread": 0.5
+      }
+    ],
+    "filter": {
+      "type": "Multiband",
+      "bands": [
+        {"cutoff": 500, "resonance": 0.3, "gain": 0.0},
+        {"cutoff": 2000, "resonance": 0.5, "gain": 0.0},
+        {"cutoff": 6000, "resonance": 0.3, "gain": -3.0}
+      ]
+    },
+    "envelopes": [
+      {
+        "id": "morph_env",
+        "type": "MultiStage",
+        "stages": [
+          {"time": 0.0, "level": 0.0},
+          {"time": 0.1, "level": 0.3},
+          {"time": 0.5, "level": 0.7},
+          {"time": 1.0, "level": 1.0},
+          {"time": 2.0, "level": 0.5},
+          {"time": 3.0, "level": 0.8}
+        ],
+        "loop": true,
+        "sustain_stage": 3,
+        "target": "wavetable_morph"
+      },
+      {
+        "id": "amp_env",
+        "type": "ADSR",
+        "attack": 0.05,
+        "decay": 0.5,
+        "sustain": 0.7,
+        "release": 1.5
+      }
+    ],
+    "lfo": {
+      "id": "lfo1",
+      "type": "PolyLFO",
+      "voices": 4,
+      "waveform": "sine",
+      "rate": 0.25,
+      "destinations": [
+        {"target": "wavetable_morph", "amount": 0.3},
+        {"target": "filter_cutoff_1", "amount": 0.2},
+        {"target": "filter_cutoff_2", "amount": 0.4},
+        {"target": "pan", "amount": 0.5}
+      ]
+    },
+    "modulation": {
+      "matrix": [
+        {"source": "velocity", "destination": "morph_env_time", "amount": 0.3},
+        {"source": "keytrack", "destination": "filter_cutoff_2", "amount": 0.4},
+        {"source": "modwheel", "destination": "wavetable_morph", "amount": 0.7}
+      ]
+    },
+    "effects": [
+      {
+        "type": "Reverb",
+        "algorithm": "plate",
+        "size": 0.7,
+        "decay": 2.5,
+        "predelay": 0.05,
+        "mix": 0.4
+      },
+      {
+        "type": "Delay",
+        "time": 0.333,
+        "feedback": 0.5,
+        "filter": 3000,
+        "mix": 0.3,
+        "ping_pong": true
+      }
+    ]
+  },
+  "polyphony": 16,
+  "voice_mode": "poly",
+  "glide": 0.0
+}

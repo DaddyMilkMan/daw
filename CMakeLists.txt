@@ -34,6 +34,7 @@ include(cmake/PlatformDetection.cmake OPTIONAL)
 
 option(ZENITH_BUILD_APP "Build the main application" ON)
 option(ZENITH_ENABLE_COVERAGE "Enable code coverage instrumentation" OFF)
+option(ZENITH_ENABLE_WCET "Enable WCET (Worst-Case Execution Time) monitoring" ON)
 
 if(ZENITH_ENABLE_COVERAGE)
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
@@ -123,6 +124,8 @@ set(ZENITH_TEST_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/ObservabilityAgentTest.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/SampleGeneratorBenchmark.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/SampleGeneratorTests.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/WCETStressTests.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/TrackManagersTest.cpp"
 )
 
 # =============================================================================
@@ -140,7 +143,7 @@ juce_add_gui_app(ZenithDAW
 )
 
 # Generate JuceHeader.h
-# juce_generate_juce_header(ZenithDAW)
+juce_generate_juce_header(ZenithDAW)
 
 # Add source files
 target_sources(ZenithDAW PRIVATE ${ZENITH_ALL_SOURCES})
@@ -204,6 +207,7 @@ target_compile_definitions(ZenithDAW PRIVATE
     JUCE_PLUGINHOST_VST3=1
     JUCE_PLUGINHOST_AU=1
     JUCE_ALSA=1  # Ensure ALSA is used on Linux
+    JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1  # Prevent "No global header file was included!" error
 )
 
 # =============================================================================
@@ -227,8 +231,23 @@ target_link_libraries(ZenithDAW PRIVATE zenith_app_includes)
 # LIBRARY LINKING
 # =============================================================================
 
-# Link JUCE modules
-target_link_libraries(ZenithDAW PRIVATE ${ZENITH_JUCE_MODULES})
+# JUCE modules - explicit linking for required modules
+target_link_libraries(ZenithDAW PRIVATE
+    juce::juce_core
+    juce::juce_events
+    juce::juce_graphics
+    juce::juce_data_structures
+    juce::juce_gui_basics
+    juce::juce_gui_extra
+    juce::juce_audio_basics
+    juce::juce_audio_devices
+    juce::juce_audio_formats
+    juce::juce_audio_processors
+    juce::juce_audio_utils
+    juce::juce_dsp
+    juce::juce_cryptography
+    juce::juce_opengl
+)
 
 
 # =============================================================================
@@ -262,6 +281,16 @@ if(ZENITH_ENABLE_SKIA)
             find_package(X11 REQUIRED)
             target_link_libraries(ZenithDAW PRIVATE ${X11_LIBRARIES})
             target_include_directories(ZenithDAW PRIVATE ${X11_INCLUDE_DIR})
+            
+            # Fontconfig for Skia font management
+            find_package(PkgConfig REQUIRED)
+            pkg_check_modules(FONTCONFIG REQUIRED fontconfig)
+            target_link_libraries(ZenithDAW PRIVATE ${FONTCONFIG_LIBRARIES})
+            target_include_directories(ZenithDAW PRIVATE ${FONTCONFIG_INCLUDE_DIRS})
+            
+            # GL/GLX for Skia GPU rendering
+            find_package(OpenGL REQUIRED)
+            target_link_libraries(ZenithDAW PRIVATE OpenGL::GL OpenGL::GLX)
         endif()
     else()
         message(WARNING "Skia integration file not found. Skia will be disabled.")
@@ -307,12 +336,32 @@ endif()
 
 if(ZENITH_ENABLE_COLLAB)
     # Link against standard targets defined in Dependencies.cmake
-    target_link_libraries(ZenithDAW PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+    target_link_libraries(ZenithDAW PRIVATE OpenSSL::SSL OpenSSL::Crypto Opus::opus)
 
     if (UNIX AND NOT APPLE)
         target_link_libraries(ZenithDAW PRIVATE dl)
     endif()
 endif()
+# =============================================================================
+# RUBBER BAND (Pro Pitch Shifting)
+# =============================================================================
+
+find_library(RUBBERBAND_LIBRARY 
+    NAMES rubberband
+    PATHS "${CMAKE_CURRENT_SOURCE_DIR}/external/vcpkg/installed/x64-linux/lib"
+    NO_DEFAULT_PATH
+)
+
+if(RUBBERBAND_LIBRARY)
+    target_link_libraries(ZenithDAW PRIVATE ${RUBBERBAND_LIBRARY})
+    target_include_directories(ZenithDAW PRIVATE 
+        "${CMAKE_CURRENT_SOURCE_DIR}/external/vcpkg/installed/x64-linux/include"
+    )
+    message(STATUS "Rubber Band library found: ${RUBBERBAND_LIBRARY}")
+else()
+    message(WARNING "Rubber Band library not found - pitch correction will use basic algorithm")
+endif()
+
 # =============================================================================
 # COMPILE DEFINITIONS
 # =============================================================================
@@ -323,6 +372,14 @@ target_compile_definitions(ZenithDAW PRIVATE
     JUCE_VST3_CAN_REPLACE_VST2=0
     JUCE_REPORT_APP_USAGE=0
 )
+
+# WCET Monitoring
+if(ZENITH_ENABLE_WCET)
+    target_compile_definitions(ZenithDAW PRIVATE ZENITH_ENABLE_WCET=1)
+    message(STATUS "Zenith DAW: WCET monitoring ENABLED")
+else()
+    message(STATUS "Zenith DAW: WCET monitoring DISABLED")
+endif()
 
 # =============================================================================
 # COMPILER FEATURES
@@ -401,6 +458,7 @@ if(BUILD_TESTS)
     target_compile_definitions(ZenithDAWTests PRIVATE
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
+        ZENITH_ENABLE_WCET=1
     )
 
     target_compile_features(ZenithDAWTests PRIVATE cxx_std_20)
@@ -419,6 +477,38 @@ if(BUILD_TESTS)
         if(SKIA_LIBRARY)
             target_link_libraries(ZenithDAWTests PRIVATE ${SKIA_LIBRARY})
         endif()
+        
+        # Add Skia SVG module (needed by SvgIcon.cpp)
+        find_library(SKIA_SVG_LIBRARY NAMES svg skia_svg PATHS ${SKIA_ROOT}/lib NO_DEFAULT_PATH)
+        if(SKIA_SVG_LIBRARY)
+            target_link_libraries(ZenithDAWTests PRIVATE ${SKIA_SVG_LIBRARY})
+            target_link_libraries(ZenithDAWTests PRIVATE ${SKIA_LIBRARY})  # Link order fix
+        endif()
+        
+        # Add optional Skia modules
+        set(_skia_optional_libs skshaper skparagraph skunicode_core skunicode_icu sksg skottie)
+        foreach(_lib ${_skia_optional_libs})
+            find_library(SKIA_OPTIONAL_${_lib} NAMES ${_lib} PATHS ${SKIA_ROOT}/lib NO_DEFAULT_PATH)
+            if(SKIA_OPTIONAL_${_lib})
+                target_link_libraries(ZenithDAWTests PRIVATE ${SKIA_OPTIONAL_${_lib}})
+            endif()
+        endforeach()
+        
+        # Add ICU libraries (needed by skunicode_icu)
+        set(_icu_libs icuuc icui18n icudata)
+        foreach(_iculib ${_icu_libs})
+            find_library(ICU_${_iculib} NAMES ${_iculib} PATHS ${SKIA_ROOT}/lib NO_DEFAULT_PATH)
+            if(ICU_${_iculib})
+                target_link_libraries(ZenithDAWTests PRIVATE ${ICU_${_iculib}})
+            endif()
+        endforeach()
+        
+        # Add Expat (needed by Skia XML)
+        find_library(EXPAT_LIBRARY NAMES expat PATHS ${SKIA_ROOT}/lib NO_DEFAULT_PATH)
+        if(EXPAT_LIBRARY)
+            target_link_libraries(ZenithDAWTests PRIVATE ${EXPAT_LIBRARY})
+        endif()
+        
         target_compile_definitions(ZenithDAWTests PRIVATE ZENITH_USE_SKIA=1)
 
         # Platform libs similar to ZenithDAW
@@ -721,6 +811,52 @@ if(BUILD_TESTS)
 
     if(UNIX AND NOT APPLE)
         target_link_libraries(SampleGeneratorTestsApp PRIVATE pthread dl)
+    endif()
+
+    # =========================================================================
+    # WCETStressTests - Worst-Case Execution Time analysis
+    # =========================================================================
+    if(ZENITH_ENABLE_WCET AND FALSE)  # Disabled: missing dependencies
+        juce_add_console_app(WCETStressTests
+            PRODUCT_NAME "WCETStressTests"
+        )
+
+        juce_generate_juce_header(WCETStressTests)
+
+        target_sources(WCETStressTests PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/WCETStressTests.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/WCETMonitor.cpp"
+        )
+
+        target_include_directories(WCETStressTests PRIVATE
+            ${CMAKE_BINARY_DIR}/WCETStressTests_artefacts/JuceLibraryCode
+            ${CMAKE_BINARY_DIR}/JuceLibraryCode
+            "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source"
+        )
+
+        target_link_libraries(WCETStressTests PRIVATE
+            zenith_juce_includes
+            juce::juce_core
+            juce::juce_audio_basics
+            juce::juce_audio_devices
+            juce::juce_audio_formats
+            juce::juce_audio_processors
+            juce::juce_events
+        )
+
+        target_compile_definitions(WCETStressTests PRIVATE
+            JUCE_WEB_BROWSER=0
+            JUCE_USE_CURL=0
+            ZENITH_ENABLE_WCET=1
+            JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+            JUCE_STANDALONE_APPLICATION=1
+        )
+
+        target_compile_features(WCETStressTests PRIVATE cxx_std_20)
+
+        if(UNIX AND NOT APPLE)
+            target_link_libraries(WCETStressTests PRIVATE pthread dl)
+        endif()
     endif()
 
 endif()

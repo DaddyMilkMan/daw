@@ -1,5 +1,7 @@
 # Contributing to Zenith DAW
 
+**Note:** Zenith DAW is **100% proprietary closed-source software**. This document provides development guidelines for internal development only. There are no open-source components at this time.
+
 ## Development Setup
 
 1. Clone with submodules:
@@ -27,13 +29,18 @@ cmake --build build -j$(nproc)
 - `PascalCase` for classes
 - Doxygen comments for public APIs
 
-## Pull Request Process
+## Pull Request Process (Future Open Source Components)
 
+**For Synth Engine (when open-sourced):**
 1. Create a feature branch from `develop`
 2. Write tests for new functionality
 3. Ensure all tests pass
 4. Update documentation if needed
 5. Submit PR against `develop`
+
+**For Internal Development:**
+- Follow company branching and review processes
+- Contact engineering leads for guidance
 
 ## Architecture Guidelines
 

@@ -54,6 +54,8 @@ const juce::Identifier ProjectState::ID_POINTS("POINTS");
 const juce::Identifier ProjectState::ID_POINT("POINT");
 const juce::Identifier ProjectState::ID_NOTES("NOTES");
 const juce::Identifier ProjectState::ID_NOTE("NOTE");
+const juce::Identifier ProjectState::ID_EXPRESSIONS("EXPRESSIONS");
+const juce::Identifier ProjectState::ID_EXPRESSION("EXPRESSION");
 const juce::Identifier ProjectState::ID_TEMPO_MAP("TEMPO_MAP");
 const juce::Identifier ProjectState::ID_TEMPO_POINT("TEMPO_POINT");
 const juce::Identifier ProjectState::ID_MARKERS("MARKERS");
@@ -119,6 +121,8 @@ const juce::Identifier ProjectState::PROP_VALUE("value");
 const juce::Identifier ProjectState::PROP_CURVE_TYPE("curveType");
 const juce::Identifier ProjectState::PROP_TENSION("tension");
 const juce::Identifier ProjectState::PROP_TAKE_INDEX("takeIndex");
+const juce::Identifier ProjectState::PROP_EXPRESSION_TYPE("expressionType");
+const juce::Identifier ProjectState::PROP_TIME_OFFSET("timeOffset");
 
 // Plugin Automation Properties
 const juce::Identifier ProjectState::PROP_PLUGIN_INDEX("pluginIndex");
@@ -738,6 +742,18 @@ void ProjectState::redo() {
 // MIDI Note Management (Phase 8)
 //==============================================================================
 
+juce::ValueTree ProjectState::getOrCreateNotesContainer(const juce::String &clipId) {
+  if (midiNoteStateManager)
+    return midiNoteStateManager->getOrCreateNotesContainer(clipId);
+  return {};
+}
+
+juce::ValueTree ProjectState::getNotes(const juce::String &clipId) const {
+  if (midiNoteStateManager)
+    return midiNoteStateManager->getNotesContainer(clipId);
+  return {};
+}
+
 juce::Array<ProjectState::MidiNoteSpec>
 ProjectState::getMidiNotesForClip(const juce::String &clipId) const {
   if (midiNoteStateManager)
@@ -862,6 +878,25 @@ void ProjectState::setMidiNoteTension(const juce::String &clipId,
   }
 }
 
+void ProjectState::setMidiNoteExpression(
+    const juce::String &clipId, const juce::String &noteId,
+    NoteExpressionType type,
+    const std::vector<NoteExpressionPoint> &points,
+    const juce::String &actionName) {
+  if (midiNoteStateManager)
+    midiNoteStateManager->setNoteExpression(clipId, noteId, type, points,
+                                            actionName);
+}
+
+std::vector<NoteExpressionPoint>
+ProjectState::getMidiNoteExpression(const juce::String &clipId,
+                                    const juce::String &noteId,
+                                    NoteExpressionType type) const {
+  if (midiNoteStateManager)
+    return midiNoteStateManager->getNoteExpression(clipId, noteId, type);
+  return {};
+}
+
 void ProjectState::humanizeClip(const juce::String &clipId, double velocityRange,
                                 double timeRangeBeats,
                                 const juce::String &actionName) {
@@ -974,11 +1009,18 @@ void ProjectState::addNotes(const juce::String &clipId,
     
     for (const auto& note : notes) {
         MidiNoteSpec spec;
+        spec.id = note.id;
         spec.startBeats = note.startBeats;
         spec.lengthBeats = note.lengthBeats;
         spec.pitch = note.pitch;
         spec.velocity = note.velocity;
-        spec.probability = 1.0f; // Default
+        spec.muted = note.muted;
+        spec.probability = note.probability;
+        spec.condition = note.condition;
+        spec.recurrence = note.recurrence;
+        spec.articulationId = note.articulationId;
+        spec.tension = note.tension;
+        spec.expressions = note.expressions;
         
         addMidiNote(clipId, spec, actionName);
     }
@@ -1268,4 +1310,3 @@ juce::String ProjectState::addNote(const juce::String &clipId, double startBeats
 }
 
 } // namespace zenith
-

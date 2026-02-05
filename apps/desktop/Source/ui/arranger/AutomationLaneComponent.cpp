@@ -109,7 +109,7 @@ void AutomationLaneComponent::drawSkia(SkCanvas *canvas) {
 
   // Background with subtle tint
   SkPaint bgPaint;
-  bgPaint.setColor(zenith::design::colors::BG_DARKER);
+  bgPaint.setColor(colors::BG_DARKER);
   bgPaint.setAntiAlias(true);
   canvas->drawRect(SkRect::MakeWH(getWidth(), getHeight()), bgPaint);
 
@@ -251,7 +251,7 @@ void AutomationLaneComponent::drawSkia(SkCanvas *canvas) {
                                " @ " + juce::String(hoveredPointTime, 2) +
                                " beats";
 
-    SkFont font = zenith::design::typography::getSkFont(typography::FONT_XS);
+    SkFont font = typography::getSkFont(typography::FONT_XS);
 
     auto textStr = tooltipText.toStdString();
     SkRect textBounds;
@@ -294,7 +294,7 @@ void AutomationLaneComponent::drawSkia(SkCanvas *canvas) {
   }
 
   // Draw parameter name (Design System)
-  SkFont nameFont = zenith::design::typography::getSkFont(typography::FONT_SM, FontWeight::Medium);
+  SkFont nameFont = typography::getSkFont(typography::FONT_SM, FontWeight::Medium);
 
   SkPaint namePaint;
   namePaint.setColor(colors::TEXT_TERTIARY);

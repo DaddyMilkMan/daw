@@ -1,0 +1,146 @@
+{
+  "name": "FM-7 Vintage",
+  "category": "FM",
+  "description": "6-operator FM synth modeled after Yamaha DX7 with classic algorithms",
+  "tags": ["bell", "electric piano", "metallic", "percussive", "80s"],
+  "architecture": {
+    "fm_engine": {
+      "algorithm": 5,
+      "operators": [
+        {
+          "id": "op1",
+          "ratio": 1.0,
+          "index": 0.0,
+          "feedback": 0.0,
+          "envelope": {
+            "attack": 0.0,
+            "decay1": 0.5,
+            "decay2": 0.5,
+            "sustain": 0.0,
+            "release": 0.5
+          },
+          "output_level": 99,
+          "key_scaling": 0,
+          "amp_mod_sensitivity": 0
+        },
+        {
+          "id": "op2",
+          "ratio": 1.0,
+          "index": 0.0,
+          "feedback": 0.0,
+          "envelope": {
+            "attack": 0.0,
+            "decay1": 0.5,
+            "decay2": 0.5,
+            "sustain": 0.0,
+            "release": 0.5
+          },
+          "output_level": 99,
+          "key_scaling": 0,
+          "amp_mod_sensitivity": 0
+        },
+        {
+          "id": "op3",
+          "ratio": 1.0,
+          "index": 10.0,
+          "feedback": 0.0,
+          "envelope": {
+            "attack": 0.001,
+            "decay1": 0.5,
+            "decay2": 0.3,
+            "sustain": 0.0,
+            "release": 0.2
+          },
+          "output_level": 85,
+          "key_scaling": 2,
+          "amp_mod_sensitivity": 0
+        },
+        {
+          "id": "op4",
+          "ratio": 2.0,
+          "index": 0.0,
+          "feedback": 0.0,
+          "envelope": {
+            "attack": 0.0,
+            "decay1": 0.8,
+            "decay2": 0.5,
+            "sustain": 0.0,
+            "release": 0.3
+          },
+          "output_level": 75,
+          "key_scaling": 1,
+          "amp_mod_sensitivity": 0
+        },
+        {
+          "id": "op5",
+          "ratio": 1.0,
+          "index": 20.0,
+          "feedback": 0.0,
+          "envelope": {
+            "attack": 0.001,
+            "decay1": 0.2,
+            "decay2": 0.5,
+            "sustain": 0.5,
+            "release": 0.5
+          },
+          "output_level": 90,
+          "key_scaling": 3,
+          "amp_mod_sensitivity": 0
+        },
+        {
+          "id": "op6",
+          "ratio": 14.0,
+          "index": 0.0,
+          "feedback": 0.0,
+          "envelope": {
+            "attack": 0.0,
+            "decay1": 0.1,
+            "decay2": 0.1,
+            "sustain": 0.0,
+            "release": 0.1
+          },
+          "output_level": 99,
+          "key_scaling": 0,
+          "amp_mod_sensitivity": 0
+        }
+      ],
+      "algorithm_connections": [
+        {"modulator": "op3", "carrier": "op2"},
+        {"modulator": "op4", "carrier": "op2"},
+        {"modulator": "op2", "carrier": "op1"},
+        {"modulator": "op5", "carrier": "op1"},
+        {"modulator": "op1", "carrier": "output"},
+        {"modulator": "op6", "carrier": "output"}
+      ],
+      "feedback_loop": {
+        "enabled": false,
+        "operator": "op1",
+        "amount": 0.0
+      }
+    },
+    "pitch_envelope": {
+      "attack": 0.0,
+      "decay": 0.0,
+      "depth": 0
+    },
+    "lfo": {
+      "type": "MultiLFO",
+      "waveform": "sine",
+      "rate": 6.0,
+      "delay": 0.0,
+      "pitch_mod_depth": 0,
+      "amp_mod_depth": 0
+    },
+    "effects": [
+      {
+        "type": "Chorus",
+        "voices": 2,
+        "rate": 0.3,
+        "depth": 0.2,
+        "mix": 0.3
+      }
+    ]
+  },
+  "polyphony": 16,
+  "voice_mode": "poly"
+}

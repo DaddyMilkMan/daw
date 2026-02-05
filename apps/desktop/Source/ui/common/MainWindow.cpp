@@ -25,6 +25,7 @@
 #include "ZenithHubComponent.h"
 #include "MainLayoutComponent.h"
 #include "RightSidePanel.h"
+#include "WingmanPanel.h"
 #include "TitleBarComponent.h"
 #include "../framework/PlatformWindowUtils.h"
 #include <memory>
@@ -67,7 +68,8 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
         if (onLoadProject_) {
           onLoadProject_(projectPath);
         }
-        setMainUiVisible(true);
+        // Visibility is now handled by onLoadProject_ (MainWindow::loadProject)
+        // after async load completes to prevent crashes
       },
       [this]() {
         if (onNewProject_) {
@@ -85,17 +87,24 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   addAndMakeVisible(hubComponent.get());
 
   // Create Transport Bar
-  // Create Transport Bar
   transportBar = std::make_unique<TransportBar>();
-  /*
-  transportBar->onPlayClicked = [this] {
-      if (engine.isPlaying()) engine.stop(); 
-      else engine.play();
+  transportBar->onPlayClicked = [&api, this] {
+      auto response =
+          api.executeCommand(CommandAPI::CommandID::Play, juce::var());
+      if (response.hasProperty("success") && !(bool)response["success"]) {
+          DBG("TransportBar: play failed - " + response["error"].toString());
+      }
       transportBar->setPlaying(engine.isPlaying());
   };
-  // ... other callbacks ...
-  // addAndMakeVisible(transportBar.get()); 
-  */ 
+  transportBar->onStopClicked = [&api, this] {
+      auto response =
+          api.executeCommand(CommandAPI::CommandID::Stop, juce::var());
+      if (response.hasProperty("success") && !(bool)response["success"]) {
+          DBG("TransportBar: stop failed - " + response["error"].toString());
+      }
+      transportBar->setPlaying(engine.isPlaying());
+      transportBar->setRecording(engine.isRecording());
+  };
   
   // Create Title Bar
   titleBar = std::make_unique<TitleBarComponent>();
@@ -160,6 +169,23 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   addChildComponent(mainLayout.get());
   ZENITH_LOG_INFO("MainComponent: MainLayoutComponent added as child");
 
+  // Create New Glassmorphism UI (views2)
+  ZENITH_LOG_INFO("MainComponent: Creating ZenithMainLayout (new UI)");
+  newUILayout = std::make_unique<ui::ZenithMainLayout>();
+  addChildComponent(newUILayout.get());
+  ZENITH_LOG_INFO("MainComponent: ZenithMainLayout created and added");
+  
+  // Create RightSidePanel with Wingman (for new UI)
+  ZENITH_LOG_INFO("MainComponent: Creating RightSidePanel with Wingman");
+  rightSidePanel_ = std::make_unique<RightSidePanel>(api, engine, projectState);
+  addChildComponent(rightSidePanel_.get());
+  ZENITH_LOG_INFO("MainComponent: RightSidePanel created and added");
+  
+  // Wire up transport bar Wingman toggle
+  transportBar->onWingmanClicked = [this] {
+    toggleWingman();
+  };
+
   // Ensure Top Bar is at the absolute front
   titleBar->toFront(false);
   transportBar->toFront(false);
@@ -179,18 +205,8 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   addChildComponent(settingsPanel.get()); // Keep as child component since it's a modal
   ZENITH_LOG_INFO("MainComponent: ModernSettingsPanel added as child");
   
-  // Set up settings panel close callback
-  settingsPanel->onCloseRequested = [this] {
-      if (settingsPanel) {
-          settingsPanel->setVisible(false);
-      }
-  };
-
   transportBar->onViewToggleClicked = [this] {
       if (mainLayout) mainLayout->toggleView();
-  };
-  transportBar->onWingmanClicked = [this] {
-      if (mainLayout) mainLayout->toggleWingman();
   };
   transportBar->onSettingsClicked = [this] {
       DBG("Settings button clicked!");
@@ -306,10 +322,31 @@ bool MainComponent::keyPressed(const juce::KeyPress &key, Component *originating
   
   // Wingman Toggle (Cmd+W)
   if (key == juce::KeyPress('w', juce::ModifierKeys::commandModifier, 0)) {
-    if (mainLayout) {
-        mainLayout->toggleWingman();
+    toggleWingman();
+    return true;
+  }
+  
+  // View switching shortcuts (Cmd+1/2/3)
+  if (key.getModifiers().isCommandDown()) {
+    if (newUILayout) {
+      if (key.getTextCharacter() == '1') {
+        newUILayout->setActiveView(ui::ViewType::Arrangement);
         return true;
+      }
+      if (key.getTextCharacter() == '2') {
+        newUILayout->setActiveView(ui::ViewType::Session);
+        return true;
+      }
+      if (key.getTextCharacter() == '3') {
+        newUILayout->setActiveView(ui::ViewType::AIJam);
+        return true;
+      }
     }
+  }
+  
+  // Forward to new UI layout for Tab/Shift+Tab view switching
+  if (newUILayout && newUILayout->isVisible()) {
+    return newUILayout->keyPressed(key, originatingComponent);
   }
 
   return false;
@@ -331,6 +368,21 @@ void MainComponent::handleAnimationTimer() {
       transportBar->setPlaying(engine.isPlaying());
       transportBar->setRecording(engine.isRecording());
       transportBar->setTempo(projectState.getTempo());
+  }
+  
+  // Update new UI layout (with ViewSwitcher)
+  if (newUILayout && newUILayout->isVisible()) {
+    newUILayout->setCPULoad(engine.getCpuUsage());
+    newUILayout->setTempo(projectState.getTempo());
+    
+    // Update arrangement view playhead position
+    if (engine.isPlaying()) {
+      // Calculate current beat position from engine
+      // This is a simplified calculation - real implementation would query playhead
+      static double lastBeat = 0.0;
+      lastBeat += (projectState.getTempo() / 60.0) * 0.016; // Advance by one frame
+      newUILayout->setPosition(lastBeat);
+    }
   }
   
   if (titleBar && hubComponent) {
@@ -388,7 +440,25 @@ void MainComponent::drawSkiaContent(SkCanvas *canvas) {
           canvas->restore();
       }
       
-      // 3. Draw Top Bar Elements (drawn AFTER mainLayout so they're on top)
+      // 3. Draw New UI Layout (with ViewSwitcher containing Arrangement/Session/AI Jam)
+      if (newUILayout && newUILayout->isVisible()) {
+          canvas->save();
+          canvas->translate(newUILayout->getX(), newUILayout->getY());
+          canvas->clipRect(SkRect::MakeWH(newUILayout->getWidth(), newUILayout->getHeight()));
+          newUILayout->drawSkia(canvas);
+          canvas->restore();
+      }
+      
+      // 4. Draw Wingman Panel (RightSidePanel)
+      if (rightSidePanel_ && rightSidePanel_->isVisible()) {
+          canvas->save();
+          canvas->translate(rightSidePanel_->getX(), rightSidePanel_->getY());
+          canvas->clipRect(SkRect::MakeWH(rightSidePanel_->getWidth(), rightSidePanel_->getHeight()));
+          rightSidePanel_->drawSkia(canvas);
+          canvas->restore();
+      }
+      
+      // 5. Draw Top Bar Elements (drawn LAST so they're on top of everything)
       if (titleBar && titleBar->isVisible()) {
           canvas->save();
           canvas->translate(titleBar->getX(), titleBar->getY());
@@ -442,8 +512,18 @@ void MainComponent::parentHierarchyChanged() {
 }
 
 void MainComponent::setMainUiVisible(bool shouldBeVisible) {
-  if (mainLayout) {
+  // Show new UI or old UI based on toggle
+  if (useNewUI_ && newUILayout) {
+      newUILayout->setVisible(shouldBeVisible);
+      if (mainLayout) mainLayout->setVisible(false);
+      // Show/hide Wingman panel with new UI
+      if (rightSidePanel_) {
+          rightSidePanel_->setVisible(shouldBeVisible && wingmanVisible_);
+      }
+  } else if (mainLayout) {
       mainLayout->setVisible(shouldBeVisible);
+      if (newUILayout) newUILayout->setVisible(false);
+      if (rightSidePanel_) rightSidePanel_->setVisible(false);
   }
   
   if (transportBar) {
@@ -471,6 +551,16 @@ void MainComponent::setMainUiVisible(bool shouldBeVisible) {
   repaint();
 }
 
+void MainComponent::toggleWingman() {
+  wingmanVisible_ = !wingmanVisible_;
+  if (rightSidePanel_) {
+    rightSidePanel_->setVisible(wingmanVisible_);
+  }
+  // Trigger layout update
+  resized();
+  repaint();
+}
+
 void MainComponent::visibilityChanged() {
   DBG("MainComponent::visibilityChanged called, visible=" << (isVisible() ? "yes" : "no"));
   ZENITH_LOG_INFO("MainComponent::visibilityChanged called");
@@ -479,6 +569,9 @@ void MainComponent::visibilityChanged() {
 
 void MainComponent::resized() {
   auto bounds = getLocalBounds();
+  
+  // Early exit if no size yet (can happen during initialization)
+  if (bounds.isEmpty()) return;
   
   // Hub Mode check
   bool isHubVisible = hubComponent && hubComponent->isVisible();
@@ -505,6 +598,24 @@ void MainComponent::resized() {
   if (mainLayout) {
       // Main DAW always wants area below top bar
       mainLayout->setBounds(bounds);
+  }
+  
+  // New UI layout with Wingman panel on LEFT side (copilot position)
+  if (useNewUI_ && newUILayout) {
+    // Reserve space for Wingman panel on the left if visible
+    if (rightSidePanel_ && wingmanVisible_) {
+      const int wingmanWidth = juce::jmin(320, bounds.getWidth() / 3);  // Max 1/3 width
+      auto mainBounds = bounds;
+      auto wingmanBounds = mainBounds.removeFromLeft(wingmanWidth);
+
+      newUILayout->setBounds(mainBounds);
+      rightSidePanel_->setBounds(wingmanBounds);
+    } else {
+      newUILayout->setBounds(bounds);
+      if (rightSidePanel_) rightSidePanel_->setBounds(bounds.withWidth(0));
+    }
+  } else if (newUILayout) {
+    newUILayout->setBounds(bounds);
   }
   ZENITH_LOG_INFO("MainComponent::resized() - MainLayout bounds set");
 
@@ -585,9 +696,19 @@ MainWindow::MainWindow(const juce::String &name)
   // presetGeneticist = std::make_unique<ai::PresetGeneticistAgent>();
   // commandAPI->setPresetGeneticist(presetGeneticist.get());
 
-  // mcpServer = std::make_unique<zenith::mcp::MCPServer>(
-  //     *commandAPI, *projectState, *engine, this);
-  // mcpServer->start();
+  auto shouldStartMcpStdio = [](const char* value) -> bool {
+    if (!value) return false;
+    juce::String v(value);
+    v = v.trim().toLowerCase();
+    return v == "1" || v == "true" || v == "yes" || v == "on";
+  };
+
+  if (shouldStartMcpStdio(std::getenv("MCP_STDIO"))) {
+    mcpServer = std::make_unique<zenith::mcp::MCPServer>(
+        *commandAPI, *projectState, *engine, this);
+    mcpServer->start();
+    ZENITH_LOG_INFO("[MCP STDIO] Started stdio MCP server (GUI mode)");
+  }
 
   // Disable Native Title Bar (Use custom TitleBarComponent)
   setUsingNativeTitleBar(false);
@@ -658,6 +779,12 @@ MainWindow::MainWindow(const juce::String &name)
 MainWindow::~MainWindow() {
   ZENITH_LOG_INFO("MainWindow::Destructor STARTED");
   stopTimer();
+
+  if (mcpServer) {
+    ZENITH_LOG_INFO("[MCP STDIO] Stopping stdio MCP server");
+    mcpServer->stop();
+    mcpServer.reset();
+  }
   
   ZENITH_LOG_INFO("MainWindow: Shutting down engine...");
   engine->shutdown();
@@ -752,6 +879,10 @@ void MainWindow::resized() {
         unsavedChangesModal_->setBounds(getLocalBounds());
     }
 }
+
+
+
+
 
 void MainWindow::createManualBackup() {
   if (!fileIO_)
@@ -924,6 +1055,11 @@ bool MainWindow::loadProject(const juce::File &file) {
         recentProjectManager_->save();
       }
       updateWindowTitle();
+      
+      // CRITICAL: Only show the main UI once data is fully loaded to prevent Skia crashes
+      if (mainComponent) {
+          mainComponent->setMainUiVisible(true);
+      }
       repaint();
   });
 

@@ -89,6 +89,54 @@ inline SkPath Record() {
   return path;
 }
 
+/** Loop - two arrows forming a cycle */
+inline SkPath Loop() {
+  SkPath path;
+  // Outer arrow (clockwise) - top and right sides
+  path.moveTo(12.0f, 4.0f);   // Top center
+  path.lineTo(18.0f, 4.0f);   // Top right
+  path.lineTo(18.0f, 6.0f);
+  path.lineTo(14.0f, 6.0f);
+  path.lineTo(14.0f, 3.0f);
+  path.lineTo(17.0f, 3.0f);
+  path.lineTo(12.0f, 7.0f);   // Center top
+  path.lineTo(10.0f, 5.0f);
+  path.lineTo(14.0f, 9.0f);   // Center right
+  path.lineTo(14.0f, 12.0f);
+  path.lineTo(17.0f, 12.0f);
+  path.lineTo(14.0f, 15.0f);
+  path.lineTo(10.0f, 15.0f);  // Center right lower
+  path.lineTo(12.0f, 17.0f); // Center bottom
+  path.lineTo(7.0f, 12.0f);  // Center left
+  path.lineTo(10.0f, 9.0f);
+  path.lineTo(7.0f, 12.0f);  // Center left lower
+  path.lineTo(10.0f, 12.0f);
+  path.lineTo(10.0f, 15.0f);
+  path.lineTo(7.0f, 15.0f);
+  path.lineTo(10.0f, 18.0f);  // Bottom center
+  path.lineTo(10.0f, 16.0f);
+  path.lineTo(14.0f, 20.0f); // Bottom right (tail)
+  path.lineTo(14.0f, 17.0f);
+  path.lineTo(7.0f, 17.0f);  // Center
+  path.lineTo(4.0f, 14.0f);  // Left
+  path.lineTo(7.0f, 14.0f);
+  path.lineTo(7.0f, 17.0f);
+  path.lineTo(4.0f, 17.0f);  // Left tail
+  path.lineTo(4.0f, 7.0f);   // Top left
+  path.lineTo(7.0f, 7.0f);
+  path.lineTo(7.0f, 10.0f);
+  path.lineTo(10.0f, 10.0f);
+  path.lineTo(10.0f, 7.0f);
+  path.lineTo(14.0f, 3.0f);
+  path.lineTo(10.0f, 3.0f);
+  path.lineTo(10.0f, 6.0f);
+  path.lineTo(6.0f, 6.0f);
+  path.lineTo(6.0f, 4.0f);
+  path.lineTo(12.0f, 4.0f);  // Close at top
+  path.close();
+  return path;
+}
+
 /** Fast Forward - two right-pointing triangles */
 inline SkPath FastForward() {
   SkPath path;
@@ -149,31 +197,7 @@ inline SkPath SkipBack() {
   return path;
 }
 
-/** Loop - circular arrow (stroked) */
-inline SkPath Loop() {
-  SkPath path;
-  // Main circle arc (about 300 degrees)
-  SkRect oval = SkRect::MakeLTRB(5.0f, 5.0f, 19.0f, 19.0f);
-  path.arcTo(oval, -60.0f, 300.0f, true);
-  // Arrow head at the end (connected)
-  // End of arc is roughly at (-60 + 300) = 240 deg.
-  // Actually, visual inspection: the arrow is near the top right/bottom right.
-  // Let's just connect it using lineTo if it's close.
-  // The original moveTo(17, 4) was likely near the START or END depending on
-  // direction. Let's assume we want to attach arrow to the end of the arc.
-  // However, Skia arcTo leaves the pen at the end of the arc.
-  // If we just lineTo the arrow vertices, it will be connected.
-  // Re-defining for correct look:
-  path.lineTo(14.0f, 7.0f); // Back of arrow
-  path.moveTo(17.5f, 5.0f); // Tip (adjusted) - actually let's keep it simple
-  // Disconnected arrow is common for "refresh" icons if styled that way, but
-  // let's connect it. To verify connection, we'd need exact coords. For now, I
-  // will use lineTo to the first point of the arrowhead.
-  path.lineTo(17.0f, 4.0f);
-  path.lineTo(20.0f, 7.0f);
-  path.lineTo(14.0f, 7.0f);
-  return path;
-}
+
 
 /** Metronome/Click track */
 inline SkPath Metronome() {
@@ -1077,6 +1101,49 @@ inline SkPath SendArrow() {
   path.lineTo(20.0f, 12.0f);
   path.lineTo(14.0f, 17.0f);
   
+  return path;
+}
+
+/** SendArrowUp icon - upward arrow for primary action */
+inline SkPath SendArrowUp() {
+  SkPath path;
+  // Arrow body (bottom to top)
+  path.moveTo(12.0f, 20.0f);
+  path.lineTo(12.0f, 6.0f);
+  // Arrow head
+  path.moveTo(7.0f, 10.0f);
+  path.lineTo(12.0f, 5.0f);
+  path.lineTo(17.0f, 10.0f);
+  return path;
+}
+
+/** History icon - clock */
+inline SkPath History() {
+  SkPath path;
+  path.addCircle(12.0f, 12.0f, 7.0f);
+  path.moveTo(12.0f, 12.0f);
+  path.lineTo(12.0f, 8.0f);
+  path.moveTo(12.0f, 12.0f);
+  path.lineTo(16.0f, 12.0f);
+  return path;
+}
+
+/** Lightbulb icon - idea */
+inline SkPath Lightbulb() {
+  SkPath path;
+  path.addCircle(12.0f, 10.0f, 5.5f);
+  path.addRect(SkRect::MakeLTRB(9.0f, 15.0f, 15.0f, 19.0f));
+  return path;
+}
+
+/** Refresh icon - circular arrow */
+inline SkPath Refresh() {
+  SkPath path;
+  SkRect oval = SkRect::MakeLTRB(5.0f, 5.0f, 19.0f, 19.0f);
+  path.addArc(oval, -45.0f, 270.0f);
+  path.moveTo(16.5f, 4.5f);
+  path.lineTo(20.0f, 4.5f);
+  path.lineTo(20.0f, 8.0f);
   return path;
 }
 

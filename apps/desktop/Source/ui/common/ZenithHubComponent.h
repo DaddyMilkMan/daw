@@ -24,7 +24,7 @@
 #include "../framework/AuroraBackground.h"
 #include "../framework/GlassmorphicPanel.h"
 #include "../framework/SkiaComponent.h"
-#include "../controls/SkiaTextInput.h"
+#include "../controls/SkiaTextEditor.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../framework/AnimationCoordinator.h"
 #include <functional>
@@ -195,7 +195,7 @@ private:
   juce::String greetingText_ = "Welcome back, User";
   SkRect greetingTextBounds_;
   SkRect greetingEditIconBounds_;
-  std::unique_ptr<SkiaTextInput> greetingEditor_;
+  std::unique_ptr<SkiaTextEditor> greetingEditor_;
   std::atomic<bool> isGreetingHovered_{false};
 
   void showGreetingEditor();

@@ -87,7 +87,7 @@ void TempoLaneComponent::drawGrid(SkCanvas* canvas) const
             // Label
             SkPaint textPaint;
             textPaint.setColor(colors::TEXT_TERTIARY);
-            SkFont font = zenith::design::typography::getMonoFont(10.0f);
+            SkFont font = typography::getMonoFont(10.0f);
             canvas->drawString(juce::String(bpm).toStdString().c_str(), 5, y - 2, font, textPaint);
         }
     }

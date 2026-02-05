@@ -12,12 +12,45 @@
 
 #include "TrackFreeze.h"
 #include "../instruments/Instrument.h"
-#include "Track.h"
 #include "Clip.h"
 #include "Engine.h"
 #include "EngineConstants.h"
+#include "RealTimeGarbageCollector.h"
+#include "Track.h"
 
 namespace zenith {
+
+//==============================================================================
+void TrackFreezeState::setFreezeFile(const juce::File& file) {
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    freezeFile_ = file;
+    std::shared_ptr<juce::AudioBuffer<float>> newBuffer = nullptr;
+
+    if (file.existsAsFile()) {
+        if (freezeFormatManager_.getNumKnownFormats() == 0) {
+            freezeFormatManager_.registerBasicFormats();
+        }
+
+        std::unique_ptr<juce::AudioFormatReader> reader(
+            freezeFormatManager_.createReaderFor(file));
+        if (reader != nullptr) {
+            if (reader->lengthInSamples > 0 &&
+                reader->lengthInSamples < 200 * 60 * 48000) {
+                newBuffer = std::make_shared<juce::AudioBuffer<float>>(
+                    reader->numChannels, (int)reader->lengthInSamples);
+                reader->read(newBuffer.get(), 0,
+                             (int)reader->lengthInSamples, 0, true, true);
+            }
+        }
+    }
+
+    if (freezeBufferOwner_) {
+        RealTimeGarbageCollector::getInstance().deferDelete(freezeBufferOwner_);
+    }
+
+    freezeBufferOwner_ = newBuffer;
+    activeFreezeBuffer_.store(newBuffer.get(), std::memory_order_release);
+}
 
 //==============================================================================
 TrackFreezeManager::~TrackFreezeManager() {

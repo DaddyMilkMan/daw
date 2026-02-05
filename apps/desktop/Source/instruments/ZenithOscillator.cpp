@@ -54,6 +54,14 @@ float ZenithOscillator::getNextSample(float frequency, float shape) {
     return processNoise();
   case OscillatorWaveform::Supersaw:
     return processSupersaw(frequency);
+  case OscillatorWaveform::Wavefolder:
+    return processWavefolder(frequency);
+  case OscillatorWaveform::PhaseDist:
+    return processPhaseDist(frequency);
+  case OscillatorWaveform::Additive:
+    return processAdditive(frequency);
+  case OscillatorWaveform::Granular:
+    return processGranular(frequency);
   default:
     return 0.0f;
   }
@@ -253,6 +261,54 @@ float ZenithOscillator::processRealWavetable(float frequency, float shape) {
   lastWavetableFreq_ = actualFreq;
 
   return sample;
+}
+
+//==============================================================================
+// PHASE 2: Advanced Oscillator Processing
+//==============================================================================
+
+float ZenithOscillator::processWavefolder(float frequency) {
+  // Generate sine wave, then apply Buchla wavefolding
+  float sine = processSine(frequency);
+  
+  // Access wavefolder from advanced engine
+  auto& wavefolder = advancedEngine_.getWavefolder();
+  
+  // Process with wavefolder
+  float folded = wavefolder.processSample(sine, static_cast<float>(phase_));
+  
+  // Update phase for oscillator (wavefolder doesn't manage phase)
+  phase_ += frequency / sampleRate_;
+  if (phase_ >= 1.0) phase_ -= 1.0;
+  
+  return folded;
+}
+
+float ZenithOscillator::processPhaseDist(float frequency) {
+  // Use Casio CZ-style phase distortion
+  auto& phaseDist = advancedEngine_.getPhaseDist();
+  
+  return phaseDist.processSample(frequency);
+}
+
+float ZenithOscillator::processAdditive(float frequency) {
+  // Use additive synthesis engine
+  auto& additive = advancedEngine_.getAdditive();
+  return additive.processSample(frequency);
+}
+
+float ZenithOscillator::processGranular(float frequency) {
+  // Use granular synthesis engine
+  // Note: Granular doesn't use frequency directly, it uses sample playback
+  // For now, use frequency as a trigger signal
+  auto& granular = advancedEngine_.getGranular();
+  
+  // Trigger grains periodically based on frequency
+  float trigger = (phase_ < 0.01) ? 1.0f : 0.0f;
+  phase_ += frequency / sampleRate_;
+  if (phase_ >= 1.0) phase_ -= 1.0;
+  
+  return granular.processSample(trigger);
 }
 
 } // namespace zenith

@@ -12,7 +12,8 @@
 
 namespace zenith {
 
-juce::String AIPrompts::buildSystemPrompt(const std::function<juce::var()>& contextProvider)
+juce::String AIPrompts::buildSystemPrompt(const std::function<juce::var()>& contextProvider,
+                                          Settings::WingmanChatStyle style)
 {
     juce::String prompt;
     
@@ -57,11 +58,55 @@ juce::String AIPrompts::buildSystemPrompt(const std::function<juce::var()>& cont
             "- Search for plugins and inspect signal routing\n"
             "\n"
             "Formatting:\n"
-            "- Use Mermaid diagrams (```mermaid) to visualize audio routing.\n"
-            "- Use Markdown tables for plugin search results.\n"
+            "- Use Markdown for organization (# for headers, ## for subheaders).\n"
+            "- Use Markdown tables (| cell |) for data, summaries, or plugin lists.\n"
+            "- Use bulleted lists (- item) for step-by-step instructions.\n"
+            "- Use bold (**text**) for emphasis.\n"
+            "- Use inline code (`text`) for parameter names or commands.\n"
+            "- Use code blocks (```mermaid) to visualize audio routing.\n"
             "\n"
-            "Use available functions to fulfill user requests. "
-            "Confirm actions concisely.\n";
+            "Use available functions to fulfill user requests.\n";
+    }
+    
+    prompt += "\n";
+    prompt += "General Rules:\n"
+              "- Answer general questions and creative guidance directly without calling tools.\n"
+              "- Only call tools when the user explicitly asks to inspect or change DAW state.\n"
+              "- Use live search only when you are unsure or need up-to-date info; otherwise answer directly.\n"
+              "- Do not ask for Zenith DAW context unless the user explicitly asks about their project or DAW state.\n"
+              "- Follow up questions should inherit the user's general music context unless they pivot to DAW actions.\n"
+              "- Do not auto-inject suggestions, onboarding prompts, or command lists unless asked.\n\n";
+
+    // Inject Persona Instructions
+    switch (style) {
+        case Settings::WingmanChatStyle::Professional:
+            prompt += 
+                "ROLE: PROFESSIONAL\n"
+                "You are a professional, high-efficiency assistant. Execute the user's request EXACTLY. "
+                "Do not offer unsolicited advice, opinions, or 'nice to haves'. "
+                "Do not explain 'why' unless specifically asked. Be concise. "
+                "If a request is ambiguous, ask ONE clarifying question. Otherwise, just do it.\n";
+            break;
+
+        case Settings::WingmanChatStyle::Teacher:
+            prompt += 
+                "ROLE: TEACHER\n"
+                "You are an expert tutor. Execute the request, but you MUST explain your actions. "
+                "Structure response as: \n"
+                "1. Action taken.\n"
+                "2. Explanation of 'How' and 'Why' (audio theory).\n"
+                "3. How the user can do this manually.\n"
+                "You may suggest alternative approaches if you can justify why they are better.\n";
+            break;
+
+        case Settings::WingmanChatStyle::Creative:
+            prompt += 
+                "ROLE: CREATIVE CO-PRODUCER\n"
+                "You are a creative co-producer. First, execute the user's base request. "
+                "Then, evaluate the context and propose ONE optional enhancement that would elevate the track. "
+                "You MUST present this option with a [Yes] / [No] selection. "
+                "Do not apply the enhancement unless the user confirms.\n";
+            break;
     }
     
     prompt += "\n";

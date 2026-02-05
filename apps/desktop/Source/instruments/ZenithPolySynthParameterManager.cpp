@@ -46,6 +46,10 @@ const juce::String ZenithPolySynthParameterManager::UnisonVoices =
     "unison_voices";
 const juce::String ZenithPolySynthParameterManager::UnisonDetune =
     "unison_detune";
+const juce::String ZenithPolySynthParameterManager::UnisonSpread =
+    "unison_spread";
+const juce::String ZenithPolySynthParameterManager::UnisonPanRandom =
+    "unison_pan_random";
 
 // Filter
 const juce::String ZenithPolySynthParameterManager::FilterType = "filter_type";
@@ -125,6 +129,39 @@ const juce::String ZenithPolySynthParameterManager::DelaySync = "delay_sync";
 const juce::String ZenithPolySynthParameterManager::DelaySyncRate =
     "delay_sync_rate";
 
+// Arpeggiator
+const juce::String ZenithPolySynthParameterManager::ArpEnable = "arp_enable";
+const juce::String ZenithPolySynthParameterManager::ArpMode = "arp_mode";
+const juce::String ZenithPolySynthParameterManager::ArpRate = "arp_rate";
+const juce::String ZenithPolySynthParameterManager::ArpSync = "arp_sync";
+const juce::String ZenithPolySynthParameterManager::ArpSyncRate = "arp_sync_rate";
+const juce::String ZenithPolySynthParameterManager::ArpGate = "arp_gate";
+const juce::String ZenithPolySynthParameterManager::ArpOctaves = "arp_octaves";
+const juce::String ZenithPolySynthParameterManager::ArpSwing = "arp_swing";
+const juce::String ZenithPolySynthParameterManager::ArpHold = "arp_hold";
+
+// Step LFOs
+const juce::String ZenithPolySynthParameterManager::StepLFO1Enable = "steplfo1_enable";
+const juce::String ZenithPolySynthParameterManager::StepLFO1Steps = "steplfo1_steps";
+const juce::String ZenithPolySynthParameterManager::StepLFO1Rate = "steplfo1_rate";
+const juce::String ZenithPolySynthParameterManager::StepLFO1Sync = "steplfo1_sync";
+const juce::String ZenithPolySynthParameterManager::StepLFO1Smoothing = "steplfo1_smoothing";
+const juce::String ZenithPolySynthParameterManager::StepLFO2Enable = "steplfo2_enable";
+const juce::String ZenithPolySynthParameterManager::StepLFO2Steps = "steplfo2_steps";
+const juce::String ZenithPolySynthParameterManager::StepLFO2Rate = "steplfo2_rate";
+const juce::String ZenithPolySynthParameterManager::StepLFO2Sync = "steplfo2_sync";
+const juce::String ZenithPolySynthParameterManager::StepLFO2Smoothing = "steplfo2_smoothing";
+const juce::String ZenithPolySynthParameterManager::StepLFO3Enable = "steplfo3_enable";
+const juce::String ZenithPolySynthParameterManager::StepLFO3Steps = "steplfo3_steps";
+const juce::String ZenithPolySynthParameterManager::StepLFO3Rate = "steplfo3_rate";
+const juce::String ZenithPolySynthParameterManager::StepLFO3Sync = "steplfo3_sync";
+const juce::String ZenithPolySynthParameterManager::StepLFO3Smoothing = "steplfo3_smoothing";
+const juce::String ZenithPolySynthParameterManager::StepLFO4Enable = "steplfo4_enable";
+const juce::String ZenithPolySynthParameterManager::StepLFO4Steps = "steplfo4_steps";
+const juce::String ZenithPolySynthParameterManager::StepLFO4Rate = "steplfo4_rate";
+const juce::String ZenithPolySynthParameterManager::StepLFO4Sync = "steplfo4_sync";
+const juce::String ZenithPolySynthParameterManager::StepLFO4Smoothing = "steplfo4_smoothing";
+
 //==============================================================================
 // Constructor
 //==============================================================================
@@ -188,6 +225,10 @@ ZenithPolySynthParameterManager::createParameterLayout() {
       UnisonVoices, "Unison Voices", 1, 7, 1));
   params.push_back(std::make_unique<juce::AudioParameterFloat>(
       UnisonDetune, "Unison Detune", 0.0f, 100.0f, 10.0f));
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+      UnisonSpread, "Unison Spread", 0.0f, 1.0f, 0.5f));
+  params.push_back(std::make_unique<juce::AudioParameterBool>(
+      UnisonPanRandom, "Unison Pan Random", false));
 
   // Flagship Features
   params.push_back(
@@ -334,6 +375,85 @@ ZenithPolySynthParameterManager::createParameterLayout() {
                         "2/1", "4/1"},
       4));
 
+  // =========================================================================
+  // ARPEGGIATOR
+  // =========================================================================
+  juce::StringArray arpModes = {"Up", "Down", "Up/Down", "Random", "Chord", "Order", "As Played"};
+  params.push_back(std::make_unique<juce::AudioParameterBool>(
+      ArpEnable, "Arp Enable", false));
+  params.push_back(std::make_unique<juce::AudioParameterChoice>(
+      ArpMode, "Arp Mode", arpModes, 0));
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+      ArpRate, "Arp Rate", 0.1f, 50.0f, 4.0f));
+  params.push_back(std::make_unique<juce::AudioParameterBool>(
+      ArpSync, "Arp Sync", false));
+  params.push_back(std::make_unique<juce::AudioParameterChoice>(
+      ArpSyncRate, "Arp Sync Rate",
+      juce::StringArray{"1/64", "1/32", "1/16", "1/8", "1/4", "1/2", "1/1",
+                        "2/1", "4/1"},
+      4));
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+      ArpGate, "Arp Gate", 0.01f, 1.0f, 0.8f));
+  params.push_back(std::make_unique<juce::AudioParameterInt>(
+      ArpOctaves, "Arp Octaves", 1, 4, 1));
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+      ArpSwing, "Arp Swing", 0.0f, 1.0f, 0.0f));
+  params.push_back(std::make_unique<juce::AudioParameterBool>(
+      ArpHold, "Arp Hold", false));
+
+  // =========================================================================
+  // STEP LFOS
+  // =========================================================================
+  juce::StringArray smoothModes = {"Step", "Linear", "Cubic"};
+
+  // Step LFO 1
+  params.push_back(std::make_unique<juce::AudioParameterBool>(
+      StepLFO1Enable, "Step LFO 1 Enable", false));
+  params.push_back(std::make_unique<juce::AudioParameterInt>(
+      StepLFO1Steps, "Step LFO 1 Steps", 1, 64, 16));
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+      StepLFO1Rate, "Step LFO 1 Rate", 0.01f, 50.0f, 1.0f));
+  params.push_back(std::make_unique<juce::AudioParameterBool>(
+      StepLFO1Sync, "Step LFO 1 Sync", false));
+  params.push_back(std::make_unique<juce::AudioParameterChoice>(
+      StepLFO1Smoothing, "Step LFO 1 Smoothing", smoothModes, 0));
+
+  // Step LFO 2
+  params.push_back(std::make_unique<juce::AudioParameterBool>(
+      StepLFO2Enable, "Step LFO 2 Enable", false));
+  params.push_back(std::make_unique<juce::AudioParameterInt>(
+      StepLFO2Steps, "Step LFO 2 Steps", 1, 64, 16));
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+      StepLFO2Rate, "Step LFO 2 Rate", 0.01f, 50.0f, 1.0f));
+  params.push_back(std::make_unique<juce::AudioParameterBool>(
+      StepLFO2Sync, "Step LFO 2 Sync", false));
+  params.push_back(std::make_unique<juce::AudioParameterChoice>(
+      StepLFO2Smoothing, "Step LFO 2 Smoothing", smoothModes, 0));
+
+  // Step LFO 3
+  params.push_back(std::make_unique<juce::AudioParameterBool>(
+      StepLFO3Enable, "Step LFO 3 Enable", false));
+  params.push_back(std::make_unique<juce::AudioParameterInt>(
+      StepLFO3Steps, "Step LFO 3 Steps", 1, 64, 16));
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+      StepLFO3Rate, "Step LFO 3 Rate", 0.01f, 50.0f, 1.0f));
+  params.push_back(std::make_unique<juce::AudioParameterBool>(
+      StepLFO3Sync, "Step LFO 3 Sync", false));
+  params.push_back(std::make_unique<juce::AudioParameterChoice>(
+      StepLFO3Smoothing, "Step LFO 3 Smoothing", smoothModes, 0));
+
+  // Step LFO 4
+  params.push_back(std::make_unique<juce::AudioParameterBool>(
+      StepLFO4Enable, "Step LFO 4 Enable", false));
+  params.push_back(std::make_unique<juce::AudioParameterInt>(
+      StepLFO4Steps, "Step LFO 4 Steps", 1, 64, 16));
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+      StepLFO4Rate, "Step LFO 4 Rate", 0.01f, 50.0f, 1.0f));
+  params.push_back(std::make_unique<juce::AudioParameterBool>(
+      StepLFO4Sync, "Step LFO 4 Sync", false));
+  params.push_back(std::make_unique<juce::AudioParameterChoice>(
+      StepLFO4Smoothing, "Step LFO 4 Smoothing", smoothModes, 0));
+
   return {params.begin(), params.end()};
 }
 
@@ -377,6 +497,10 @@ void ZenithPolySynthParameterManager::fetchAllParameters() {
       static_cast<int>(parameters_.getRawParameterValue(UnisonVoices)->load());
   cachedParams_.unisonDetune =
       parameters_.getRawParameterValue(UnisonDetune)->load();
+  cachedParams_.unisonSpread =
+      parameters_.getRawParameterValue(UnisonSpread)->load();
+  cachedParams_.unisonPanRandom =
+      parameters_.getRawParameterValue(UnisonPanRandom)->load() != 0.0f;
 
   // Flagship Features
   cachedParams_.osc2Sync =
@@ -480,6 +604,63 @@ void ZenithPolySynthParameterManager::fetchAllParameters() {
   // System
   cachedParams_.maxVoices =
       static_cast<int>(parameters_.getRawParameterValue(MaxVoices)->load());
+
+  // Arpeggiator
+  cachedParams_.arpEnable =
+      parameters_.getRawParameterValue(ArpEnable)->load() > 0.5f;
+  cachedParams_.arpMode =
+      static_cast<int>(parameters_.getRawParameterValue(ArpMode)->load());
+  cachedParams_.arpRate = parameters_.getRawParameterValue(ArpRate)->load();
+  cachedParams_.arpSync =
+      parameters_.getRawParameterValue(ArpSync)->load() > 0.5f;
+  cachedParams_.arpSyncRate =
+      static_cast<int>(parameters_.getRawParameterValue(ArpSyncRate)->load());
+  cachedParams_.arpGate = parameters_.getRawParameterValue(ArpGate)->load();
+  cachedParams_.arpOctaves =
+      static_cast<int>(parameters_.getRawParameterValue(ArpOctaves)->load());
+  cachedParams_.arpSwing = parameters_.getRawParameterValue(ArpSwing)->load();
+  cachedParams_.arpHold =
+      parameters_.getRawParameterValue(ArpHold)->load() > 0.5f;
+
+  // Step LFO 1
+  cachedParams_.stepLFO1Enable =
+      parameters_.getRawParameterValue(StepLFO1Enable)->load() > 0.5f;
+  cachedParams_.stepLFO1Steps =
+      static_cast<int>(parameters_.getRawParameterValue(StepLFO1Steps)->load());
+  cachedParams_.stepLFO1Rate = parameters_.getRawParameterValue(StepLFO1Rate)->load();
+  cachedParams_.stepLFO1Sync =
+      parameters_.getRawParameterValue(StepLFO1Sync)->load() > 0.5f;
+  cachedParams_.stepLFO1Smoothing = parameters_.getRawParameterValue(StepLFO1Smoothing)->load();
+
+  // Step LFO 2
+  cachedParams_.stepLFO2Enable =
+      parameters_.getRawParameterValue(StepLFO2Enable)->load() > 0.5f;
+  cachedParams_.stepLFO2Steps =
+      static_cast<int>(parameters_.getRawParameterValue(StepLFO2Steps)->load());
+  cachedParams_.stepLFO2Rate = parameters_.getRawParameterValue(StepLFO2Rate)->load();
+  cachedParams_.stepLFO2Sync =
+      parameters_.getRawParameterValue(StepLFO2Sync)->load() > 0.5f;
+  cachedParams_.stepLFO2Smoothing = parameters_.getRawParameterValue(StepLFO2Smoothing)->load();
+
+  // Step LFO 3
+  cachedParams_.stepLFO3Enable =
+      parameters_.getRawParameterValue(StepLFO3Enable)->load() > 0.5f;
+  cachedParams_.stepLFO3Steps =
+      static_cast<int>(parameters_.getRawParameterValue(StepLFO3Steps)->load());
+  cachedParams_.stepLFO3Rate = parameters_.getRawParameterValue(StepLFO3Rate)->load();
+  cachedParams_.stepLFO3Sync =
+      parameters_.getRawParameterValue(StepLFO3Sync)->load() > 0.5f;
+  cachedParams_.stepLFO3Smoothing = parameters_.getRawParameterValue(StepLFO3Smoothing)->load();
+
+  // Step LFO 4
+  cachedParams_.stepLFO4Enable =
+      parameters_.getRawParameterValue(StepLFO4Enable)->load() > 0.5f;
+  cachedParams_.stepLFO4Steps =
+      static_cast<int>(parameters_.getRawParameterValue(StepLFO4Steps)->load());
+  cachedParams_.stepLFO4Rate = parameters_.getRawParameterValue(StepLFO4Rate)->load();
+  cachedParams_.stepLFO4Sync =
+      parameters_.getRawParameterValue(StepLFO4Sync)->load() > 0.5f;
+  cachedParams_.stepLFO4Smoothing = parameters_.getRawParameterValue(StepLFO4Smoothing)->load();
 }
 
 //==============================================================================
@@ -515,6 +696,8 @@ void ZenithPolySynthParameterManager::applyToVoice(ZenithPolySynthVoice &voice,
   // Unison
   voice.setUnisonVoices(p.unisonVoices);
   voice.setUnisonDetune(p.unisonDetune);
+  voice.setUnisonSpread(p.unisonSpread);
+  voice.setUnisonPanRandom(p.unisonPanRandom);
 
   // Flagship Features
   voice.setOsc2Sync(p.osc2Sync);

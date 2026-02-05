@@ -1,5 +1,9 @@
 # AI Agents module
 target_sources(ZenithDAW PRIVATE
+    # MIDI Pattern Generation
+    MIDIPatternGenerator.h
+    MIDIPatternGenerator.cpp
+
     # Core Infrastructure
     AIStatusManager.h
     AIStatusManager.cpp

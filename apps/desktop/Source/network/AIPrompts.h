@@ -15,11 +15,14 @@
 #include <juce_core/juce_core.h>
 #include <functional>
 
+#include "../Settings.h"
+
 namespace zenith {
 
 class AIPrompts {
 public:
-    static juce::String buildSystemPrompt(const std::function<juce::var()>& contextProvider);
+    static juce::String buildSystemPrompt(const std::function<juce::var()>& contextProvider,
+                                          Settings::WingmanChatStyle style = Settings::WingmanChatStyle::Professional);
 };
 
 } // namespace zenith

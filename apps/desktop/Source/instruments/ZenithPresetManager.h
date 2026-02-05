@@ -111,6 +111,9 @@ struct PresetMetadata {
   std::vector<juce::String> tags;
   juce::String instrumentId;
   juce::String filePath; ///< Absolute path to preset file
+  int userRating = 0;     ///< User rating 0-5 (0 = not rated)
+  int playCount = 0;      ///< How many times this preset was loaded
+  juce::String lastPlayed; ///< ISO8601 timestamp of last play
 
   /**
    * @brief Convert to JSON var for API responses

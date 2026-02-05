@@ -33,6 +33,7 @@
 
 #include <atomic>
 #include <functional>
+#include <unordered_map>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -53,6 +54,7 @@
 #include "../Source/engine/RoutingGraph.h"
 #include "AudioRenderer.h"
 #include "EngineEvent.h"
+#include "WCETMonitor.h"
 #include "../utils/PowerManagement.h"
 
 // Forward declarations
@@ -909,6 +911,16 @@ public:
 
   Midi2DiscoveryService* getMidi2DiscoveryService() const { return midi2DiscoveryService_.get(); }
 
+  //==========================================================================
+  // WCET Monitoring (Performance Analysis)
+  //==========================================================================
+  
+  /**
+   * @brief Get the WCET monitor for performance analysis
+   * @return Reference to the WCET monitor
+   */
+  profiling::WCETMonitor& getWCETMonitor() { return wcetMonitor_; }
+  const profiling::WCETMonitor& getWCETMonitor() const { return wcetMonitor_; }
 
 private:
   //==========================================================================
@@ -1082,6 +1094,11 @@ private:
   // Project state reference
   ProjectState *projectState_ = nullptr;
 
+  // Session clip tracking (for session view clip launching)
+  // Maps track index -> active clip ID for session playback
+  std::unordered_map<int, juce::String> activeSessionClips_;
+  juce::CriticalSection sessionClipsLock_;
+
   // Automation synchronizer
   std::unique_ptr<TrackAutomationSynchronizer> automationSynchronizer;
 
@@ -1144,6 +1161,9 @@ private:
 
   // Macro Bank
   MacroBank macroBank_;
+  
+  // WCET Monitor (Performance analysis)
+  profiling::WCETMonitor wcetMonitor_;
 
   juce::WeakReference<Engine>::Master masterReference;
   friend class juce::WeakReference<Engine>;

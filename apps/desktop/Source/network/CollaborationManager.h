@@ -5,8 +5,10 @@
 #include <functional>
 #include <vector>
 #include <atomic>
+#include <array>
 #include "ZenithCRDT.h"
 #include "DTLSSocket.h"
+#include "AudioStreamingManager.h"
 
 namespace zenith {
 
@@ -26,6 +28,7 @@ enum class PacketType {
   EditCommand = 2,
   CRDTUpdate = 5,
   SelectionUpdate = 6,
+  AudioData = 10,
   KeepAlive = 99
 };
 
@@ -82,6 +85,17 @@ public:
   Zenith::ValueTreeCRDTBridge* getCRDTBridge() const { return crdtBridge.get(); }
 #endif
 
+  // --- Audio Streaming ---
+  // Called from audio thread - lock-free, real-time safe
+  void broadcastAudio(const juce::AudioBuffer<float>& buffer);
+  
+  // Called from audio thread to get remote audio - lock-free, real-time safe
+  void getRemoteAudio(juce::AudioBuffer<float>& outputBuffer) {
+      if (audioStreamer) {
+          audioStreamer->getNextAudioBlock(outputBuffer);
+      }
+  }
+
 private:
   CollaborationManager();
   ~CollaborationManager();
@@ -89,7 +103,7 @@ private:
   // Loop
   void run() override;
 
-  // CRITIC FIX: currentState MUST be atomic - accessed from message thread and network thread
+  // CRITICAL FIX: currentState MUST be atomic - accessed from message thread and network thread
   std::atomic<ConnectionState> currentState{ConnectionState::Disconnected};
   juce::String sessionCode;
   juce::String localUserName = "User";
@@ -113,7 +127,6 @@ private:
   bool isHost = false;
   bool allowRemoteEditing = false;
 
-
   // TCP Helper
   juce::String registerWithSignalingTCP();
   bool verifyCodeTCP(const juce::String &code);
@@ -133,14 +146,28 @@ private:
   std::unique_ptr<Zenith::ValueTreeCRDTBridge> crdtBridge;
 #endif
 
-  struct PeerConnection {
-      juce::String ip;
-      int port;
-      bool authenticated = false;
-      juce::uint64 lastSeen = 0;
+  // --- Audio Streaming ---
+  static constexpr int AUDIO_PACKET_QUEUE_SIZE = 64;
+  static constexpr int MAX_AUDIO_PACKET_SIZE = 4000;
+  
+  struct AudioPacket {
+      std::array<juce::uint8, MAX_AUDIO_PACKET_SIZE> data;
+      size_t size = 0;
+      std::atomic<bool> ready{false};
   };
-  std::vector<PeerConnection> activePeers;
-  mutable juce::CriticalSection peersLock; // CRITIC FIX: Protect activePeers from race conditions
+  
+  // Lock-free audio packet queue (single producer: audio thread, single consumer: network thread)
+  std::array<AudioPacket, AUDIO_PACKET_QUEUE_SIZE> audioPacketQueue;
+  std::atomic<int> audioQueueWriteIdx{0};
+  std::atomic<int> audioQueueReadIdx{0};
+  
+  std::unique_ptr<network::AudioStreamingManager> audioStreamer;
+  
+  // Internal Helper to process audio
+  void processAudioPacket(const void* data, int size, const juce::String& senderIP, int senderPort);
+  
+  // Network thread: drain audio packet queue
+  void sendQueuedAudioPackets();
 };
 
 } // namespace zenith

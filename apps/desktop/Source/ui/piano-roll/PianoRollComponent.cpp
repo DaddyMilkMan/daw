@@ -5,6 +5,7 @@
  */
 
 #include "PianoRollComponent.h"
+#include "MPEExpressionHelpers.h"
 #include "../design-system/ColorBridge.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../framework/GlassmorphicPanel.h"
@@ -27,6 +28,7 @@
 #include "../../network/CollaborationManager.h"
 
 #include <unordered_set>
+#include <unordered_map>
 #include <vector>
 
 using namespace zenith;
@@ -542,19 +544,24 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
       });
       menu->addItem(3, "Legato", true, false, [this]() { applyLegato(); });
       menu->addItem(4, "Humanize...", true, false, [this]() { 
-          auto* w = new juce::AlertWindow("Humanize", "Adjust randomization parameters:", juce::AlertWindow::QuestionIcon);
-          w->addTextEditor("velocity", "10", "Velocity Range (+/-):");
-          w->addTextEditor("timing", "0.05", "Timing Range (beats):");
-          w->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
-          w->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+          // BUG FIX: Use shared ownership to prevent memory leak if modal is dismissed without callback
+          auto window = std::make_shared<juce::AlertWindow>("Humanize", "Adjust randomization parameters:", juce::AlertWindow::QuestionIcon);
+          window->addTextEditor("velocity", "10", "Velocity Range (+/-):");
+          window->addTextEditor("timing", "0.05", "Timing Range (beats):");
+          window->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
+          window->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
           
-          w->enterModalState(true, juce::ModalCallbackFunction::create([this, w](int result) {
-              if (result != 0) {
-                  double velRange = w->getTextEditorContents("velocity").getDoubleValue();
-                  double timeRange = w->getTextEditorContents("timing").getDoubleValue();
-                  projectState.humanizeClip(currentClip.clipId, velRange, timeRange, "Humanize Selected");
+          // Capture shared_ptr to keep window alive until callback completes
+          auto safeThis = juce::Component::SafePointer<PianoRollComponent>(this);
+          auto clipId = currentClip.clipId;  // Copy clipId for safety
+          
+          window->enterModalState(true, juce::ModalCallbackFunction::create([safeThis, window, clipId](int result) {
+              if (result != 0 && safeThis) {
+                  double velRange = window->getTextEditorContents("velocity").getDoubleValue();
+                  double timeRange = window->getTextEditorContents("timing").getDoubleValue();
+                  safeThis->projectState.humanizeClip(clipId, velRange, timeRange, "Humanize Selected");
               }
-              delete w;
+              // shared_ptr will automatically clean up when lambda is destroyed
           }), true);
       });
       menu->addSeparator();
@@ -563,11 +570,14 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
             if (getSelectedNoteCount() == 0) return;
             
             projectState.getUndoManager().beginNewTransaction("Duplicate Notes");
-            // Find end of selection to shift
-            // Simple duplication: shift by grid or selection length?
-            // Standard behavior: shift by length of selection or grid.
-            // Let's shift by grid for immediate feedback or just offset.
-            // Actually, best might be to use clipboard logic, but for now simple offset:
+            
+            // BUG FIX: Fetch note specs ONCE before the loop for O(1) lookup instead of O(N^2)
+            auto allNoteSpecs = projectState.getMidiNotesForClip(currentClip.clipId);
+            std::unordered_map<juce::String, zenith::ProjectState::MidiNoteSpec> specMap;
+            for (const auto& spec : allNoteSpecs) {
+                specMap[spec.id] = spec;
+            }
+            
             for (const auto& note : noteRects) {
                 if (note.selected) {
                      zenith::ProjectState::MidiNoteSpec newNote;
@@ -575,18 +585,15 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
                      newNote.pitch = note.pitch;
                      newNote.startBeats = note.startBeats + gridBeats; // Offset by grid
                      newNote.lengthBeats = note.lengthBeats;
-                     newNote.velocity = 100; // note.velocity isn't in NoteRect, fetch from state? NoteRect has basic info.
-                     // We need to fetch full spec or store velocity in NoteRect.
-                     // NoteRect doesn't seem to have velocity.
-                     // Let's fetch original note spec.
-                     auto noteSpec = projectState.getMidiNotesForClip(currentClip.clipId);
-                     // Find spec
-                     for (const auto& spec : noteSpec) {
-                         if (spec.id == note.id) {
-                             newNote.velocity = spec.velocity;
-                             newNote.muted = spec.muted;
-                             break;
-                         }
+                     
+                     // Use pre-fetched spec map for O(1) lookup
+                     auto it = specMap.find(note.id);
+                     if (it != specMap.end()) {
+                         newNote.velocity = it->second.velocity;
+                         newNote.muted = it->second.muted;
+                     } else {
+                         newNote.velocity = 100;  // Default fallback
+                         newNote.muted = false;
                      }
                      projectState.addMidiNote(currentClip.clipId, newNote, "Duplicate Note");
                 }
@@ -1263,6 +1270,16 @@ bool PianoRollComponent::keyPressed(const juce::KeyPress &key) {
   }
   if (key == juce::KeyPress('q', 0, 0)) {
     quantizeSelected(gridBeats, 1.0f, 0.0f);
+    return true;
+  }
+  // Toggle all expression lanes (Cmd+E)
+  if (key == juce::KeyPress('e', juce::ModifierKeys::commandModifier, 0)) {
+    bool newState = !getExpressionLaneVisible(ExpressionType::Pressure);
+    setExpressionLaneVisible(ExpressionType::Pressure, newState);
+    setExpressionLaneVisible(ExpressionType::PitchBend, newState);
+    setExpressionLaneVisible(ExpressionType::Slide, newState);
+    setExpressionLaneVisible(ExpressionType::Expression, newState);
+    DBG("Expression Lanes: " + juce::String(newState ? "Visible" : "Hidden"));
     return true;
   }
 
@@ -2337,6 +2354,48 @@ PianoRollComponent::getNoteExpression(const juce::String &noteId,
   return {};
 }
 
+bool PianoRollComponent::removeExpressionPoint(const juce::String &noteId,
+                                               ExpressionType type,
+                                               size_t pointIndex) {
+  auto noteIt = noteExpressions.find(noteId);
+  if (noteIt == noteExpressions.end()) {
+    return false;
+  }
+
+  auto typeIt = noteIt->second.find(type);
+  if (typeIt == noteIt->second.end()) {
+    return false;
+  }
+
+  auto& points = typeIt->second;
+  if (pointIndex >= points.size()) {
+    return false;
+  }
+
+  points.erase(points.begin() + pointIndex);
+
+  // If no points left, remove the entry entirely
+  if (points.empty()) {
+    noteIt->second.erase(typeIt);
+  }
+
+  repaint();
+  return true;
+}
+
+void PianoRollComponent::clearNoteExpression(const juce::String &noteId,
+                                              ExpressionType type) {
+  auto noteIt = noteExpressions.find(noteId);
+  if (noteIt != noteExpressions.end()) {
+    noteIt->second.erase(type);
+    // Clean up empty note entries
+    if (noteIt->second.empty()) {
+      noteExpressions.erase(noteIt);
+    }
+  }
+  repaint();
+}
+
 void PianoRollComponent::drawExpressionLanes(SkCanvas *canvas,
                                              const SkRect &area) {
   using namespace zenith::design;
@@ -2362,20 +2421,21 @@ void PianoRollComponent::drawExpressionLanes(SkCanvas *canvas,
       canvas->drawLine(laneRect.left(), laneRect.top(), laneRect.right(),
                        laneRect.top(), line);
 
-      // Label
-      juce::String label;
-      switch (type) {
-      case ExpressionType::PitchBend: label = "PITCH"; break;
-      case ExpressionType::Pressure: label = "PRESSURE"; break;
-      case ExpressionType::Slide: label = "SLIDE (MPE)"; break;
-      case ExpressionType::Expression: label = "EXPRESSION"; break;
-      }
+      const auto helperType =
+          static_cast<::zenith::ExpressionType>(static_cast<int>(type));
 
-      SkFont labelFont = typography::getMonoFont(10.0f);
+      // Label with color coding and accessibility symbol
+      juce::String label = getExpressionLabel(helperType);
+      const char* symbol = getExpressionSymbol(helperType);
+      juce::String labelWithSymbol = label + " " + symbol;
+
+      SkFont labelFont = typography::getMonoFont(design::colors::mpe::LABEL_FONT_SIZE);
       SkPaint labelPaint;
-      labelPaint.setColor(withAlpha(colors::TEXT_SECONDARY, 0.7f));
-      canvas->drawString(label.toStdString().c_str(), laneRect.left() + 5,
-                         laneRect.top() + 12, labelFont, labelPaint);
+      configureExpressionLabelPaint(labelPaint, helperType);
+      canvas->drawString(labelWithSymbol.toStdString().c_str(),
+                         laneRect.left() + design::colors::mpe::LABEL_POSITION_X,
+                         laneRect.top() + design::colors::mpe::LABEL_POSITION_Y,
+                         labelFont, labelPaint);
 
       // Draw Curves for Selected Notes
       bool hasSelection = false;
@@ -2419,18 +2479,16 @@ void PianoRollComponent::drawExpressionLanes(SkCanvas *canvas,
             }
             prevX = x;
             prevY = y;
-            
-            // Draw point
+
+            // Draw point with matching color (configured via helper)
             SkPaint pointPaint;
-            pointPaint.setColor(colors::ACCENT_SECONDARY);
-            canvas->drawCircle(x, y, 3.0f, pointPaint);
+            configureExpressionPointPaint(pointPaint, helperType);
+            canvas->drawCircle(x, y, design::colors::mpe::POINT_RADIUS, pointPaint);
           }
-          
+
+          // Color-coded curves based on expression type (configured via helper)
           SkPaint curvePaint;
-          curvePaint.setStyle(SkPaint::kStroke_Style);
-          curvePaint.setColor(colors::ACCENT_PRIMARY);
-          curvePaint.setStrokeWidth(1.5f);
-          curvePaint.setAntiAlias(true);
+          configureExpressionCurvePaint(curvePaint, helperType);
           canvas->drawPath(path, curvePaint);
         }
       }

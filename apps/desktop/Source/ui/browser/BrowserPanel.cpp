@@ -149,12 +149,23 @@ void BrowserPanel::showContextMenu(int itemIndex, juce::Point<int> position) {
   menu->addSeparator();
 
   menu->addItem(2, "Add Tag...", true, false, [this, item]() {
-    auto *alert = new juce::AlertWindow("Add Tag", "Enter tag:", juce::MessageBoxIconType::NoIcon);
+    auto alert = std::make_shared<juce::AlertWindow>("Add Tag", "Enter tag:", juce::MessageBoxIconType::NoIcon);
     alert->addTextEditor("tag", "");
     alert->addButton("Add", 1); alert->addButton("Cancel", 0);
-    alert->enterModalState(true, juce::ModalCallbackFunction::create([this, item, alert](int res) {
-      if (res == 1) { juce::String t = alert->getTextEditorContents("tag"); if (t.isNotEmpty()) { model_.addTagToItem(item, t); repaint(); } }
-    }));
+    
+    // Use SafePointer just in case 'this' (BrowserPanel) is deleted while dialog is open
+    auto safeThis = juce::Component::SafePointer<BrowserPanel>(this);
+
+    alert->enterModalState(true, juce::ModalCallbackFunction::create([safeThis, item, alert](int res) {
+      if (res == 1 && safeThis) { 
+          juce::String t = alert->getTextEditorContents("tag"); 
+          if (t.isNotEmpty()) { 
+              safeThis->model_.addTagToItem(item, t); 
+              safeThis->repaint(); 
+          } 
+      }
+      // shared_ptr 'alert' is destroyed here, deleting the window
+    }), true);
   });
 
   if (!item->metadata.tags.empty()) {

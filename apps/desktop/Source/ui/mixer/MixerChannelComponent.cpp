@@ -1,4 +1,5 @@
 /**
+#include "../design-system/ThemeManager.h"
  * @file MixerChannelComponent.cpp
  * @brief Full-featured mixer channel strip implementation
  *
@@ -80,7 +81,7 @@ constexpr float kPanCenterTolerance = 0.01f;    // Pan values within this are co
 class MixerChannelAccessibilityHandler : public juce::AccessibilityHandler {
 public:
   MixerChannelAccessibilityHandler(MixerChannelComponent &component)
-      : AccessibilityHandler(component, juce::AccessibilityRole::panel,
+      : AccessibilityHandler(component, juce::AccessibilityRole::group,
                             juce::AccessibilityActions()
                               .addAction(juce::AccessibilityActionType::focus,
                                         [comp = juce::Component::SafePointer<MixerChannelComponent>(&component)]() {
@@ -108,7 +109,7 @@ public:
   juce::String getTitle() const override {
     // Thread-safe access: Cache track name on message thread via component
     // Accessibility handlers can be called from any thread
-    if (auto *comp = dynamic_cast<MixerChannelComponent*>(&getComponent())) {
+    if (auto *comp = dynamic_cast<const MixerChannelComponent*>(&getComponent())) {
       if (auto *track = comp->getTrack()) {
         // juce::String is reference-counted but NOT thread-safe for concurrent read/write
         // Access track name only if we can guarantee message thread, otherwise use cached value
@@ -126,7 +127,7 @@ public:
     // Build dynamic description with current control states
     juce::String desc;
     
-    auto *comp = dynamic_cast<MixerChannelComponent*>(&getComponent());
+    auto *comp = dynamic_cast<const MixerChannelComponent*>(&getComponent());
     if (comp == nullptr || comp->getTrack() == nullptr) {
       return "Unassigned mixer channel strip. No track connected.";
     }
@@ -205,7 +206,7 @@ MixerChannelComponent::MixerChannelComponent(Track *track, ProjectState& state, 
       muteButton_("Mute"), soloButton_("Solo"), armButton_("Record") {
   jassert(track_ != nullptr);
   track_->addChangeListener(this);
-  zenith::design::ThemeManager::getInstance().addChangeListener(this);
+  design::ThemeManager::getInstance().addChangeListener(this);
   
   // Accessibility: Set up as focus container so screen readers can navigate to child controls
   // The channel strip itself can receive focus, but we want Tab to navigate to child controls
@@ -318,7 +319,7 @@ MixerChannelComponent::MixerChannelComponent(Track *track, ProjectState& state, 
 MixerChannelComponent::~MixerChannelComponent() {
   if (track_)
     track_->removeChangeListener(this);
-  zenith::design::ThemeManager::getInstance().removeChangeListener(this);
+  design::ThemeManager::getInstance().removeChangeListener(this);
   ZENITH_UNREGISTER_ANIMATION();
 }
 
@@ -327,7 +328,7 @@ void MixerChannelComponent::changeListenerCallback(
   if (source == track_) {
     // UI update on message thread
     updateFromTrack();
-  } else if (source == &zenith::design::ThemeManager::getInstance()) {
+  } else if (source == &design::ThemeManager::getInstance()) {
     repaint();
   }
 }

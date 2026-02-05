@@ -1,0 +1,93 @@
+{
+  "name": "Additive Harmonics",
+  "category": "Additive",
+  "description": "64-partial additive synthesizer with harmonic editing and drawbar control",
+  "tags": ["organ", "experimental", "textural", "evolving"],
+  "architecture": {
+    "oscillators": [
+      {
+        "id": "additive1",
+        "type": "Additive",
+        "num_partials": 64,
+        "partials": [
+          {"harmonic": 1, "level": 0.8, "ratio": 1.0},
+          {"harmonic": 2, "level": 0.6, "ratio": 2.0},
+          {"harmonic": 3, "level": 0.4, "ratio": 3.0},
+          {"harmonic": 4, "level": 0.5, "ratio": 4.0},
+          {"harmonic": 5, "level": 0.3, "ratio": 5.0},
+          {"harmonic": 6, "level": 0.2, "ratio": 6.0},
+          {"harmonic": 7, "level": 0.15, "ratio": 7.0},
+          {"harmonic": 8, "level": 0.1, "ratio": 8.0},
+          {"harmonic": 9, "level": 0.08, "ratio": 9.0},
+          {"harmonic": 10, "level": 0.05, "ratio": 10.0},
+          {"harmonic": 11, "level": 0.03, "ratio": 11.0},
+          {"harmonic": 12, "level": 0.02, "ratio": 12.0},
+          {"harmonic": 13, "level": 0.01, "ratio": 13.0},
+          {"harmonic": 14, "level": 0.01, "ratio": 14.0},
+          {"harmonic": 15, "level": 0.01, "ratio": 15.0},
+          {"harmonic": 16, "level": 0.0, "ratio": 16.0}
+        ],
+        "inharmonic_mode": false
+      }
+    ],
+    "filter": {
+      "type": "StateVariable",
+      "filter_type": "lowpass",
+      "cutoff": 8000,
+      "resonance": 0.1
+    },
+    "envelopes": [
+      {
+        "id": "partial_env",
+        "type": "MultiStage",
+        "stages": [
+          {"time": 0.0, "level": 0.0},
+          {"time": 0.1, "level": 1.0},
+          {"time": 0.5, "level": 0.5},
+          {"time": 1.0, "level": 0.8},
+          {"time": 2.0, "level": 0.3}
+        ],
+        "loop": false,
+        "target": "partial_levels",
+        "partial_targets": [0, 2, 4, 6, 8]
+      },
+      {
+        "id": "amp_env",
+        "type": "ADSR",
+        "attack": 0.01,
+        "decay": 0.2,
+        "sustain": 0.7,
+        "release": 0.5
+      }
+    ],
+    "lfo": {
+      "id": "lfo1",
+      "type": "MultiLFO",
+      "waveform": "sine",
+      "rate": 3.0,
+      "destinations": [
+        {"target": "partial_5_level", "amount": 0.3},
+        {"target": "partial_7_level", "amount": 0.5},
+        {"target": "partial_11_level", "amount": 0.7}
+      ]
+    },
+    "modulation": {
+      "matrix": [
+        {"source": "velocity", "destination": "partial_3_level", "amount": 0.4},
+        {"source": "velocity", "destination": "partial_5_level", "amount": 0.3},
+        {"source": "keytrack", "destination": "partial_brightness", "amount": 0.5}
+      ]
+    },
+    "effects": [
+      {
+        "type": "Reverb",
+        "algorithm": "hall",
+        "size": 0.8,
+        "decay": 3.0,
+        "mix": 0.3
+      }
+    ]
+  },
+  "polyphony": 8,
+  "voice_mode": "poly"
+}

@@ -52,6 +52,8 @@ struct CachedSynthParameters {
   // Unison
   int unisonVoices = 1;
   float unisonDetune = 10.0f;
+  float unisonSpread = 0.5f;
+  bool unisonPanRandom = false;
 
   // Flagship Features
   bool osc2Sync = false;
@@ -119,6 +121,39 @@ struct CachedSynthParameters {
 
   // Voice count
   int maxVoices = 16;
+
+  // Arpeggiator
+  bool arpEnable = false;
+  int arpMode = 0; // ArpMode::Up
+  float arpRate = 4.0f;
+  bool arpSync = false;
+  int arpSyncRate = 4; // _1_4
+  float arpGate = 0.8f;
+  int arpOctaves = 1;
+  float arpSwing = 0.0f;
+  bool arpHold = false;
+
+  // Step LFOs
+  bool stepLFO1Enable = false;
+  int stepLFO1Steps = 16;
+  float stepLFO1Rate = 1.0f;
+  bool stepLFO1Sync = false;
+  float stepLFO1Smoothing = 0.0f;
+  bool stepLFO2Enable = false;
+  int stepLFO2Steps = 16;
+  float stepLFO2Rate = 1.0f;
+  bool stepLFO2Sync = false;
+  float stepLFO2Smoothing = 0.0f;
+  bool stepLFO3Enable = false;
+  int stepLFO3Steps = 16;
+  float stepLFO3Rate = 1.0f;
+  bool stepLFO3Sync = false;
+  float stepLFO3Smoothing = 0.0f;
+  bool stepLFO4Enable = false;
+  int stepLFO4Steps = 16;
+  float stepLFO4Rate = 1.0f;
+  bool stepLFO4Sync = false;
+  float stepLFO4Smoothing = 0.0f;
 };
 
 //==============================================================================
@@ -160,6 +195,8 @@ public:
   // Unison
   static const juce::String UnisonVoices;
   static const juce::String UnisonDetune;
+  static const juce::String UnisonSpread;
+  static const juce::String UnisonPanRandom;
 
   // Filter
   static const juce::String FilterType;
@@ -221,6 +258,39 @@ public:
   static const juce::String DelayMix;
   static const juce::String DelaySync;
   static const juce::String DelaySyncRate;
+
+  // Arpeggiator
+  static const juce::String ArpEnable;
+  static const juce::String ArpMode;
+  static const juce::String ArpRate;
+  static const juce::String ArpSync;
+  static const juce::String ArpSyncRate;
+  static const juce::String ArpGate;
+  static const juce::String ArpOctaves;
+  static const juce::String ArpSwing;
+  static const juce::String ArpHold;
+
+  // Step LFOs
+  static const juce::String StepLFO1Enable;
+  static const juce::String StepLFO1Steps;
+  static const juce::String StepLFO1Rate;
+  static const juce::String StepLFO1Sync;
+  static const juce::String StepLFO1Smoothing;
+  static const juce::String StepLFO2Enable;
+  static const juce::String StepLFO2Steps;
+  static const juce::String StepLFO2Rate;
+  static const juce::String StepLFO2Sync;
+  static const juce::String StepLFO2Smoothing;
+  static const juce::String StepLFO3Enable;
+  static const juce::String StepLFO3Steps;
+  static const juce::String StepLFO3Rate;
+  static const juce::String StepLFO3Sync;
+  static const juce::String StepLFO3Smoothing;
+  static const juce::String StepLFO4Enable;
+  static const juce::String StepLFO4Steps;
+  static const juce::String StepLFO4Rate;
+  static const juce::String StepLFO4Sync;
+  static const juce::String StepLFO4Smoothing;
 
   //==========================================================================
   // Constructor / Destructor

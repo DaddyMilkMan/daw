@@ -15,6 +15,7 @@
 #include "Engine.h"
 #include "ProjectState.h"
 #include "../transport/TransportBar.h"
+#include "../views2/ZenithUI.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -33,11 +34,13 @@
 
 namespace zenith {
 
-// TEMPORARILY DISABLED: namespace network { class EmbeddedMCPHttpServer; }
+namespace mcp { class MCPServer; }
+namespace network { class EmbeddedMCPHttpServer; }
 
 class ProjectRecoveryModal;
 class MainLayoutComponent;
 class RightSidePanel;
+class WingmanPanel;
 class ZenithHubComponent;
 class ProjectFileIO;
 
@@ -81,6 +84,7 @@ public:
   
   void handleAnimationTimer();
   void startAnimations();
+  void setMainUiVisible(bool shouldBeVisible);
 
 protected:
   void drawSkiaContent(SkCanvas *canvas) override;
@@ -104,7 +108,8 @@ private:
   float animationTime_ = 0.0f;
 
   void openPianoRoll(const juce::String &trackId, const juce::String &clipId);
-  void setMainUiVisible(bool shouldBeVisible);
+
+  void toggleWingman();  // Toggle Wingman panel visibility
 
   Engine &engine;
   ProjectState &projectState;
@@ -116,10 +121,14 @@ private:
   std::unique_ptr<TransportBar> transportBar;
   std::unique_ptr<TitleBarComponent> titleBar;
   std::unique_ptr<MainLayoutComponent> mainLayout;
+  std::unique_ptr<ui::ZenithMainLayout> newUILayout;  // New glassmorphism UI
+  std::unique_ptr<RightSidePanel> rightSidePanel_;   // Wingman panel (positioned LEFT as copilot)
+  bool useNewUI_ = true;  // Toggle between old and new UI
+  bool wingmanVisible_ = true;  // Wingman visibility toggle
   
   std::unique_ptr<ExportDialog> exportDialog;
   std::unique_ptr<ModernSettingsPanel> settingsPanel;
-  // TEMPORARILY DISABLED: std::unique_ptr<network::EmbeddedMCPHttpServer> mcpHttpServer;
+  std::unique_ptr<network::EmbeddedMCPHttpServer> mcpHttpServer;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
@@ -136,6 +145,10 @@ public:
 
   void closeButtonPressed() override;
   void resized() override;
+  
+  // Constrain window size to available screen area
+
+
 
   zenith::ProjectState *getProjectState() const { return projectState.get(); }
 
@@ -166,6 +179,7 @@ private:
   std::unique_ptr<CommandAPI> commandAPI;
   std::unique_ptr<RecentProjectManager> recentProjectManager_;
   std::unique_ptr<ZenithLookAndFeel> lookAndFeel;
+  std::unique_ptr<mcp::MCPServer> mcpServer;
 
   std::unique_ptr<MainComponent> mainComponent;
 

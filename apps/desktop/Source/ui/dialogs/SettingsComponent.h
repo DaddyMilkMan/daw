@@ -213,6 +213,13 @@ public:
     void resized() override;
     void drawSkia(SkCanvas* canvas) override;
 
+    void setChatReasoningStateProvider(std::function<bool()> provider) {
+        chatReasoningStateProvider_ = std::move(provider);
+    }
+    void setChatGoToChatAction(std::function<void()> action) {
+        chatGoToChatAction_ = std::move(action);
+    }
+
 private:
     void createNavButton(const juce::String& name, int index);
     void setActiveTab(int index);
@@ -232,6 +239,8 @@ private:
     std::unique_ptr<AboutTab> aboutTab_;
 
     SkiaComponent* currentTab_ = nullptr;
+    std::function<bool()> chatReasoningStateProvider_;
+    std::function<void()> chatGoToChatAction_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SettingsComponent)
 };

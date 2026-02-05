@@ -15,6 +15,7 @@
 #include "ZenithFilter.h"
 #include "ZenithOscillator.h"
 #include "ZenithPolySynthDefs.h"
+#include <atomic>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_dsp/juce_dsp.h>
 
@@ -32,6 +33,7 @@ public:
   ~ZenithPolySynthVoice() override = default;
 
   // MPE Overrides
+  // RT-SAFE: All MPE handlers below are called from audio thread, must not allocate or block
   void noteStarted() override;
   void noteStopped(bool allowTailOff) override;
   void notePressureChanged() override;
@@ -57,8 +59,24 @@ public:
 
   void setUnisonVoices(int voices) {
     unisonVoices_ = juce::jlimit(1, 7, voices);
+    unisonPansInitialized_ = false; // Reinitialize pans when voice count changes
   }
   void setUnisonDetune(float cents) { unisonDetune_ = cents; }
+  void setUnisonSpread(float spread) { unisonSpread_ = juce::jlimit(0.0f, 1.0f, spread); }
+  void setUnisonPanRandom(bool random) {
+    if (random != unisonPanRandom_) {
+      unisonPanRandom_ = random;
+      unisonPansInitialized_ = false; // Reinitialize when switching modes
+    }
+  }
+
+  // Step LFO values (set by processor each block)
+  void setStepLFOValues(const float values[4]) {
+    stepLFO1Value_.store(values[0], std::memory_order_relaxed);
+    stepLFO2Value_.store(values[1], std::memory_order_relaxed);
+    stepLFO3Value_.store(values[2], std::memory_order_relaxed);
+    stepLFO4Value_.store(values[3], std::memory_order_relaxed);
+  }
 
   void setFilterType(FilterType type) { filter1_.setType(type); }
   void setFilterCutoff(float cutoff) { filterCutoff_ = cutoff; }
@@ -173,6 +191,12 @@ private:
   float lfo1Value_ = 0.0f;
   float lfo2Value_ = 0.0f;
 
+  // Step LFO values - atomic for thread safety between audio thread and processor
+  std::atomic<float> stepLFO1Value_{0.0f};
+  std::atomic<float> stepLFO2Value_{0.0f};
+  std::atomic<float> stepLFO3Value_{0.0f};
+  std::atomic<float> stepLFO4Value_{0.0f};
+
   // Parameters
   juce::SmoothedValue<float> osc1Mix_;
   juce::SmoothedValue<float> osc2Mix_;
@@ -180,6 +204,10 @@ private:
 
   int unisonVoices_ = 1;
   float unisonDetune_ = 0.0f;
+  float unisonSpread_ = 0.5f;
+  bool unisonPanRandom_ = false;
+  std::array<float, 7> unisonPanPositions_{-1.0f, -0.66f, -0.33f, 0.0f, 0.33f, 0.66f, 1.0f};
+  bool unisonPansInitialized_ = false;
 
   // Per-oscillator detune in cents
   float osc1Detune_ = 0.0f;
@@ -253,6 +281,7 @@ private:
 
   // Noise generator
   juce::Random noiseRandom_;
+  juce::Random lfoRandom_;
 
   // Flagship State
   bool osc2Sync_ = false;
@@ -268,17 +297,19 @@ private:
   void computeModulation();
   float getModulationSourceValue(ModulationSource source);
   float computeLFOValue(double phase, LFOWaveform waveform, float &shValue);
+  void applyPendingQuality();
+  void updateSampleRateForQuality();
+  void prepareOversamplers();
 
   // Oversampling support
   void renderInnerBlock(juce::AudioBuffer<float> &buffer, int startSample,
                         int numSamples);
-  void updateSampleRate(); // Propagate currentSampleRate to sub-components
 
-  std::unique_ptr<juce::dsp::Oversampling<float>> oversampler_;
-  juce::CriticalSection oversamplerLock_;
-  juce::AudioBuffer<float>
-      oversamplingBuffer_; // Pre-allocated upsampled buffer
-  juce::AudioBuffer<float> downsamplingBuffer_; // Pre-allocated temp buffer
+  std::unique_ptr<juce::dsp::Oversampling<float>> oversampler2x_;
+  std::unique_ptr<juce::dsp::Oversampling<float>> oversampler4x_;
+  std::atomic<int> requestedQuality_{
+      static_cast<int>(QualityPreset::Medium)};
+  QualityPreset activeQuality_ = QualityPreset::Medium;
   int maxBlockSize_ = 4096;                     // Safe maximum
 
   int oversamplingFactor_ = 1;

@@ -87,7 +87,7 @@ void BrowserPreviewPanel::drawWaveform(SkCanvas *canvas, const SkRect &bounds) {
   canvas->drawRoundRect(bounds, 6, 6, bg);
 
   if (waveformData_.empty()) {
-    SkFont f = zenith::design::getSkFont(zenith::design::typography::FONT_SM);
+    SkFont f = design::typography::getSkFont(design::typography::FONT_SM);
     SkPaint tp; tp.setColor(design::withAlpha(colors::TEXT_PRIMARY, 0.25f));
     canvas->drawString("Select audio to preview", bounds.centerX() - 65, bounds.centerY() + 4, f, tp);
     return;

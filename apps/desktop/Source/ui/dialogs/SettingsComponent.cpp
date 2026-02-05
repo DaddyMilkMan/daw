@@ -12,7 +12,9 @@
 */
 
 #include "SettingsComponent.h"
+#include "../design-system/ThemeManager.h"
 #include "../design-system/ColorBridge.h"
+#include "../design-system/ThemeManager.h"
 
 namespace zenith {
 
@@ -361,7 +363,7 @@ void AISettingsTab::validateKey() {
     testClient_->setAPIKey(key);
 
     testClient_->sendChat(
-        "Release check", GrokMode::Fast, {}, "",
+        "Release check", GrokMode::Fast, {}, "", false,
         [this, key](juce::String response) {
             juce::MessageManager::callAsync([this, key]() {
                 SecureKeyStore::storeKey(SecureKeyStore::GrokAPIKey, key);
@@ -812,4 +814,3 @@ void SettingsComponent::setActiveTab(int index) {
 }
 
 } // namespace zenith
-

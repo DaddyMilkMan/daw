@@ -1,52 +1,40 @@
+/*
+  ==============================================================================
+    PresetBrowserComponent.h
+    STUB - Original file disabled due to Skia API incompatibilities
+    TODO: Refactor to use SkiaComponent base class properly
+  ==============================================================================
+*/
+
 #pragma once
-#include "../instruments/ZenithPresetManager.h"
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "../instruments/ZenithPresetManager.h"
 
-#include "../controls/SkiaListBox.h"
-#include "../controls/ZenithButton.h"
-#include <functional>
+namespace zenith {
 
-class PresetBrowserComponent : public juce::Component,
-                               public zenith::SkiaListBox::Model {
+// Stub implementation until full refactor
+class PresetBrowserComponent : public juce::Component {
 public:
-  PresetBrowserComponent();
-  ~PresetBrowserComponent() override;
-
-  void paint(juce::Graphics &g) override;
-  void resized() override;
-
-  // SkiaListBox::Model overrides
-  int getNumRows() override;
-  void paintListBoxItem(int rowNumber, SkCanvas &canvas, int width, int height,
-                        bool rowIsSelected) override;
-  // void selectedRowsChanged(int lastRowSelected) override; // SkiaListBox
-  // doesn't have this virtual, uses callbacks
-  void listBoxItemClicked(int row, const juce::MouseEvent &e) override;
-
-  void refreshPresets();
-  void setInstrumentId(const juce::String &instrumentId);
-
-  using LoadCallback = std::function<void(const zenith::Preset &)>;
-  using CaptureCallback = std::function<zenith::Preset()>;
-
-  void setLoadPresetCallback(LoadCallback cb) { loadCallback = cb; }
-  void setCaptureStateCallback(CaptureCallback cb) { captureCallback = cb; }
-
+    using LoadPresetCallback = std::function<void(const Preset&)>;
+    using CaptureStateCallback = std::function<zenith::Preset()>;
+    
+    PresetBrowserComponent() = default;
+    ~PresetBrowserComponent() override = default;
+    
+    void setEngine(class Engine*) {}
+    void setInstrumentId(const juce::String&) {}
+    void setLoadPresetCallback(LoadPresetCallback) {}
+    void setCaptureStateCallback(CaptureStateCallback) {}
+    
+    void paint(juce::Graphics& g) override { 
+        g.fillAll(juce::Colour(0xFF1a1a2e)); 
+        g.setColour(juce::Colours::white);
+        g.drawText("PresetBrowser: Pending Skia Refactor", getLocalBounds(), juce::Justification::centred);
+    }
+    void resized() override {}
+    
 private:
-  LoadCallback loadCallback;
-  CaptureCallback captureCallback;
-  zenith::SkiaListBox presetList;
-  std::vector<zenith::PresetMetadata> presets;
-  juce::String currentInstrumentId = "ZenithPolySynth"; // Default
-
-  zenith::ZenithButton loadButton{"Load"};
-  zenith::ZenithButton saveButton{"Save"};
-  zenith::ZenithButton deleteButton{"Delete"};
-  zenith::ZenithButton refreshButton{"Refresh"};
-
-  void loadSelectedPreset();
-  void saveCurrentPreset();
-  void deleteSelectedPreset();
-
-  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PresetBrowserComponent)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PresetBrowserComponent)
 };
+
+} // namespace zenith

@@ -25,6 +25,7 @@
 
 #ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
+#include "../design-system/SvgIcon.h"
 #include <core/SkPath.h>
 
 #endif
@@ -91,6 +92,17 @@ public:
   bool isPlaying() const { return isPlaying_; }
   bool isRecording() const { return isRecording_; }
 
+  // Loop state
+  void setLooping(bool looping) {
+    isLooping_ = looping;
+    requestRepaint();
+  }
+  bool isLooping() const { return isLooping_; }
+  void setLoopPosition(double startSeconds, double endSeconds) {
+    loopStart_ = startSeconds;
+    loopEnd_ = endSeconds;
+  }
+
   // New setters
   void setTimeSignature(int num, int den) {
     timeSigNum_ = num;
@@ -117,6 +129,9 @@ public:
 private:
   bool isPlaying_ = false;
   bool isRecording_ = false;
+  bool isLooping_ = false;      // Loop enable state
+  double loopStart_ = 0.0;      // Loop start position in seconds
+  double loopEnd_ = 8.0;        // Loop end position in seconds
   double tempo_ = 120.0;
   float cpuUsage_ = 0.0f;
   float smoothedCpu_ = 0.0f; // FIX: Smoothed value for display
@@ -150,6 +165,7 @@ private:
   juce::Rectangle<int> playButtonBounds_;
   juce::Rectangle<int> stopButtonBounds_;
   juce::Rectangle<int> recordButtonBounds_;
+  juce::Rectangle<int> loopButtonBounds_;       // Loop toggle button
   juce::Rectangle<int> viewToggleButtonBounds_;
   juce::Rectangle<int> wingmanButtonBounds_;   // AI Assistant button
   juce::Rectangle<int> settingsButtonBounds_;
@@ -167,6 +183,7 @@ private:
   InteractionState playState_;
   InteractionState stopState_;
   InteractionState recordState_;
+  InteractionState loopState_;      // Loop toggle button state
   InteractionState viewToggleState_;
   InteractionState wingmanState_;   // AI Assistant button
   InteractionState settingsState_;
@@ -177,6 +194,10 @@ private:
                            const SkPath &iconPath, bool isActive,
                            uint32_t color, const InteractionState &state,
                            bool isFilled = true);
+  void drawTransportSvgButton(SkCanvas *canvas, const juce::Rectangle<int> &bounds,
+                              svgicons::IconId iconId, bool isActive,
+                              uint32_t color, const InteractionState &state,
+                              bool isFilled = true, float iconScale = 0.48f);
   void drawMeter(SkCanvas *canvas, const juce::Rectangle<int> &bounds,
                  float value, const char *label);
 

@@ -22,6 +22,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <memory>
+#include <span>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -69,13 +70,18 @@ public:
   bool disconnect(const juce::String &sourceId, const juce::String &destId);
 
   //==============================================================================
-  // Lock-free Queries (ANY THREAD - RT-SAFE)
+  // Lock-free Queries (ANY THREAD)
+  // NOTE: getConnectionsFrom/To/getProcessingOrder allocate. Use *RT methods on
+  // the audio thread to avoid allocations.
   bool hasNode(const juce::String &nodeId) const;
   const Node *getNode(const juce::String &nodeId) const;
   std::vector<Connection>
   getConnectionsFrom(const juce::String &sourceId) const;
   std::vector<Connection> getConnectionsTo(const juce::String &destId) const;
   std::vector<juce::String> getProcessingOrder() const;
+  std::span<const Connection> getConnectionsFromRT(const juce::String &sourceId) const;
+  std::span<const Connection> getConnectionsToRT(const juce::String &destId) const;
+  std::span<const juce::String> getProcessingOrderRT() const;
 
   /**
    * @brief Update snapshot with direct pointers (MESSAGE THREAD ONLY)
@@ -99,6 +105,8 @@ public:
   struct Topology {
     std::vector<Connection> connections;
     std::vector<juce::String> processingOrder;
+    std::unordered_map<juce::String, std::vector<Connection>> connectionsFrom;
+    std::unordered_map<juce::String, std::vector<Connection>> connectionsTo;
     int version = 0;
   };
 
@@ -113,7 +121,7 @@ public:
   };
 
   struct Snapshot {
-    std::unordered_map<std::string, Node> nodes;
+    std::unordered_map<juce::String, Node> nodes;
     std::shared_ptr<Topology> topology;
 
     // Precomputed render list for the audio thread
@@ -124,7 +132,7 @@ public:
     std::unordered_map<juce::String, std::weak_ptr<AuxBus>> auxBusLookup;
 
     Snapshot() : topology(std::make_shared<Topology>()) {}
-    Snapshot(const std::unordered_map<std::string, Node> &n,
+    Snapshot(const std::unordered_map<juce::String, Node> &n,
              std::shared_ptr<Topology> t)
         : nodes(n), topology(t) {}
   };
@@ -132,7 +140,7 @@ public:
 private:
 
   // Owning data (message thread only, protected by lock)
-  std::unordered_map<std::string, Node> nodes_;
+  std::unordered_map<juce::String, Node> nodes_;
   std::vector<Connection> connections_;
   std::shared_ptr<Topology> currentTopology_;
   int nextTopologyVersion_ = 1;

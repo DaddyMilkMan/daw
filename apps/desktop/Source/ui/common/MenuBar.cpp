@@ -15,24 +15,25 @@ namespace zenith {
 ZenithMenuBar::ZenithMenuBar() {
   setOpaque(false); // Allow glassmorphism transparency
 
-  // Initialize menu items with icons
-  items_ = {
-    {"File", {}, {}, icons::File()},
-    {"Edit", {}, {}, icons::Edit()},
-    {"View", {}, {}, icons::ViewToggle()},
-    {"Help", {}, {}, icons::Info()}
-  };
+  // Initialize menu items with icons (store icon functions to avoid copy issues)
+  items_.push_back({"File", {}, {}, icons::File()});
+  items_.push_back({"Edit", {}, {}, icons::Edit()});
+  items_.push_back({"View", {}, {}, icons::ViewToggle()});
+  items_.push_back({"Help", {}, {}, icons::Info()});
 
   // Initialize cached fonts
   updateCachedPaints();
+  
+  // Start timer for animations - REQUIRED for hover/press animations
+  startTimerHz(60);
 }
 
 void ZenithMenuBar::updateCachedPaints() {
   // Menu item font - medium weight for readability
-  menuFont_ = design::getSkFont(14.0f, design::FontWeight::Medium);
+  menuFont_ = design::typography::getSkFont(14.0f, design::FontWeight::Medium);
   
   // Small font for secondary elements
-  smallFont_ = design::getSkFont(12.0f, design::FontWeight::Regular);
+  smallFont_ = design::typography::getSkFont(12.0f, design::FontWeight::Regular);
 }
 
 void ZenithMenuBar::visibilityChanged() {
@@ -161,14 +162,17 @@ void ZenithMenuBar::drawMenuItem(SkCanvas *canvas, const MenuItem &item,
     iconStyle.glowColor = design::colors::CYAN;
   }
 
-  // Draw icon centered vertically
+  // Draw icon centered vertically - use explicit bounds
   SkRect iconBounds = SkRect::MakeXYWH(iconX, iconY - iconSize / 2.0f, 
                                         iconSize, iconSize);
-  icons::drawIconCentered(canvas, item.icon, iconBounds, iconSize, iconStyle);
+  
+  // Draw the icon path directly to ensure it's visible
+  SkPath iconPath = item.icon;
+  icons::drawIconCentered(canvas, iconPath, iconBounds, iconSize, iconStyle);
 
-  // Text positioning - after icon
+  // Text positioning - after icon with proper spacing
   float textX = iconX + iconSize + design::spacing::XS;
-  float textY = rect.centerY() + 5.0f; // Approximate vertical center
+  float textY = rect.centerY() + 5.0f; // Approximate vertical center for text baseline
 
   // Text color: secondary at rest, primary on hover
   SkColor textColor = design::interpolateColor(
@@ -253,24 +257,31 @@ void ZenithMenuBar::resized() {
 }
 
 void ZenithMenuBar::updateLayout() {
+  if (getWidth() <= 0 || getHeight() <= 0) return;
+  
   int x = static_cast<int>(design::spacing::MD);
   int itemHeight = getHeight() - 8; // 4px padding top and bottom
   int itemY = 4;
 
   // Calculate item widths based on content
   for (auto &item : items_) {
-    // Icon (16) + spacing (4) + text (~40-60) + padding (16)
-    int itemWidth = 16 + 4 + 50 + 16; // ~86px per item
+    // Icon (16) + spacing (8) + text (~40-60) + padding (16)
+    int itemWidth = 16 + 8 + 50 + 16; // ~90px per item
     item.bounds = juce::Rectangle<int>(x, itemY, itemWidth, itemHeight);
     x += itemWidth + static_cast<int>(design::spacing::XS);
   }
 
-  // Collab button on right side
+  // Collab button on right side (optional - can be hidden if no space)
   int collabWidth = 90;
   int collabHeight = itemHeight;
-  collabButtonBounds_ = juce::Rectangle<int>(
-      getWidth() - collabWidth - static_cast<int>(design::spacing::MD),
-      itemY, collabWidth, collabHeight);
+  int collabX = getWidth() - collabWidth - static_cast<int>(design::spacing::MD);
+  
+  // Only show collab button if there's space
+  if (collabX > x + 100) {
+    collabButtonBounds_ = juce::Rectangle<int>(collabX, itemY, collabWidth, collabHeight);
+  } else {
+    collabButtonBounds_ = juce::Rectangle<int>(); // Empty = hidden
+  }
 }
 
 void ZenithMenuBar::mouseMove(const juce::MouseEvent &e) {

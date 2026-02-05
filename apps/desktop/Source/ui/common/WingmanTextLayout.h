@@ -39,7 +39,8 @@ enum class BlockType {
     Header1,
     Header2,
     CodeBlock,
-    ListBullet
+    ListBullet,
+    Table
 };
 
 enum class SpanStyle {
@@ -62,9 +63,21 @@ struct TextLine {
     float height = 0.0f;
 };
 
+struct TableCell {
+    std::vector<TextLine> lines;
+    float width = 0.0f;
+    float height = 0.0f;
+};
+
+struct TableRow {
+    std::vector<TableCell> cells;
+    float height = 0.0f;
+};
+
 struct LayoutBlock {
     BlockType type;
     std::vector<TextLine> lines; // For text-based blocks
+    std::vector<TableRow> rows;  // For tables
     std::string rawContent;      // For code blocks (raw text)
     float height = 0.0f;
     float width = 0.0f;
@@ -104,6 +117,7 @@ public:
         std::vector<std::string> currentBuffer;
         bool inCodeBlock = false;
         std::string codeBlockContent;
+        std::vector<std::string> tableBuffer;
 
         auto flushBuffer = [&](BlockType type) {
             if (currentBuffer.empty()) return;
@@ -114,9 +128,19 @@ public:
             currentBuffer.clear();
         };
 
+        auto flushTable = [&]() {
+            if (tableBuffer.empty()) return;
+            LayoutBlock block;
+            block.type = BlockType::Table;
+            processTableBuffer(block, tableBuffer, maxWidth, baseFontSize);
+            layout.blocks.push_back(block);
+            tableBuffer.clear();
+        };
+
         for (const auto& line : lines) {
             // Code Block Handling
             if (startsWith(line, "```")) {
+                flushTable();
                 if (inCodeBlock) {
                     // End code block
                     LayoutBlock block;
@@ -161,6 +185,15 @@ public:
                 continue;
             }
 
+            // Table detection
+            if (startsWith(trim(line), "|")) {
+                flushBuffer(BlockType::Paragraph);
+                tableBuffer.push_back(line);
+                continue;
+            } else if (!tableBuffer.empty()) {
+                flushTable();
+            }
+
             // Headers
             if (startsWith(line, "# ")) {
                 flushBuffer(BlockType::Paragraph);
@@ -198,6 +231,7 @@ public:
         }
         
         flushBuffer(BlockType::Paragraph);
+        flushTable();
 
         // Calculate total dimensions
         layout.totalWidth = maxWidth;
@@ -210,6 +244,13 @@ public:
     }
 
 private:
+    static std::string trim(const std::string& s) {
+        auto first = s.find_first_not_of(" \t\n\r");
+        if (std::string::npos == first) return s;
+        auto last = s.find_last_not_of(" \t\n\r");
+        return s.substr(first, (last - first + 1));
+    }
+
     static bool startsWith(const std::string& str, const std::string& prefix) {
         return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
     }
@@ -223,6 +264,123 @@ private:
             lines.push_back(line);
         }
         return lines;
+    }
+
+    static void processTableBuffer(LayoutBlock& block, const std::vector<std::string>& tableLines, float maxWidth, float baseFontSize) {
+        block.marginTop = 8.0f;
+        block.marginBottom = 8.0f;
+        
+        if (tableLines.empty()) return;
+
+        SkFont headerFont = design::getSkFont(baseFontSize, design::FontWeight::Bold);
+        SkFont bodyFont = design::getSkFont(baseFontSize, design::FontWeight::Regular);
+        float bodyLineHeight = bodyFont.getSpacing();
+        if (bodyLineHeight == 0) bodyLineHeight = baseFontSize * 1.25f;
+        float headerLineHeight = headerFont.getSpacing();
+        if (headerLineHeight == 0) headerLineHeight = baseFontSize * 1.3f;
+
+        // 1. Parse into raw data
+        std::vector<std::vector<std::string>> rawRows;
+        for (const auto& line : tableLines) {
+            if (line.find("---") != std::string::npos && line.find("|") != std::string::npos) continue; // Skip separator
+
+            std::vector<std::string> cells;
+            std::stringstream ss(line);
+            std::string cell;
+            while (std::getline(ss, cell, '|')) {
+                std::string trimmed = trim(cell);
+                if (!trimmed.empty() || (&line[0] != &cell[0])) { // keep empty cells if not the very first prefix
+                     cells.push_back(trimmed);
+                }
+            }
+            if (!cells.empty()) rawRows.push_back(cells);
+        }
+
+        if (rawRows.empty()) return;
+
+        // Determine columns
+        size_t colCount = 0;
+        for (const auto& r : rawRows) colCount = std::max(colCount, r.size());
+        if (colCount == 0) return;
+
+        const float cellPadX = 6.0f;
+        const float cellPadY = 6.0f;
+        const float minColW = 40.0f;
+
+        std::vector<float> colPreferred(colCount, minColW);
+        std::vector<float> colMin(colCount, minColW);
+
+        for (size_t ri = 0; ri < rawRows.size(); ++ri) {
+            const bool isHeader = (ri == 0);
+            SkFont& font = isHeader ? headerFont : bodyFont;
+
+            for (size_t ci = 0; ci < colCount; ++ci) {
+                std::string content = (ci < rawRows[ri].size()) ? rawRows[ri][ci] : "";
+                std::vector<TextSpan> spans = parseSpans(content, font);
+                float contentWidth = 0.0f;
+                float longestWord = 0.0f;
+                for (const auto& span : spans) {
+                    contentWidth += span.width;
+                    std::vector<std::string> words = splitWords(span.text);
+                    for (const auto& word : words) {
+                        float wordW = span.font.measureText(word.c_str(), word.length(), SkTextEncoding::kUTF8);
+                        longestWord = std::max(longestWord, wordW);
+                    }
+                }
+                colPreferred[ci] = std::max(colPreferred[ci], contentWidth + cellPadX * 2.0f);
+                colMin[ci] = std::max(colMin[ci], longestWord + cellPadX * 2.0f);
+            }
+        }
+
+        float totalPreferred = 0.0f;
+        for (float w : colPreferred) totalPreferred += w;
+
+        std::vector<float> colWidths = colPreferred;
+        if (totalPreferred > maxWidth) {
+            float shrinkable = 0.0f;
+            for (size_t i = 0; i < colCount; ++i) {
+                shrinkable += std::max(0.0f, colWidths[i] - colMin[i]);
+            }
+            float overflow = totalPreferred - maxWidth;
+            if (shrinkable > 0.0f) {
+                for (size_t i = 0; i < colCount; ++i) {
+                    float flex = std::max(0.0f, colWidths[i] - colMin[i]);
+                    colWidths[i] -= (flex / shrinkable) * overflow;
+                    colWidths[i] = std::max(20.0f, colWidths[i]);
+                }
+            } else if (totalPreferred > 0.0f) {
+                float scale = maxWidth / totalPreferred;
+                for (size_t i = 0; i < colCount; ++i) {
+                    colWidths[i] = std::max(20.0f, colWidths[i] * scale);
+                }
+            }
+        }
+
+        // 2. Layout cells
+        for (size_t ri = 0; ri < rawRows.size(); ++ri) {
+            TableRow row;
+            float maxRowH = 0.0f;
+            bool isHeader = (ri == 0);
+            SkFont& font = isHeader ? headerFont : bodyFont;
+            float lineHeight = isHeader ? headerLineHeight : bodyLineHeight;
+
+            for (size_t ci = 0; ci < colCount; ++ci) {
+                TableCell cell;
+                std::string content = (ci < rawRows[ri].size()) ? rawRows[ri][ci] : "";
+                
+                std::vector<TextSpan> spans = parseSpans(content, font);
+                const float cellW = colWidths[ci];
+                cell.lines = wrapSpans(spans, std::max(1.0f, cellW - cellPadX * 2.0f), lineHeight);
+                cell.width = cellW;
+                cell.height = cell.lines.size() * lineHeight + cellPadY * 2.0f;
+                
+                maxRowH = std::max(maxRowH, cell.height);
+                row.cells.push_back(cell);
+            }
+            row.height = maxRowH;
+            block.rows.push_back(row);
+            block.height += row.height;
+        }
     }
 
     static void processTextBuffer(LayoutBlock& block, const std::vector<std::string>& content, float maxWidth, float baseFontSize, BlockType type) {

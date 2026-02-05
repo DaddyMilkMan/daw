@@ -241,8 +241,10 @@ void TakeFolderComponent::drawTakeWaveform(SkCanvas* canvas, const juce::ValueTr
 
     const auto* cache = gridUtils_.getWaveformCache(path);
     if (!cache || !cache->isValid || cache->minPeaks.empty()) {
-        // Trigger build and draw placeholder
+        // Trigger async waveform cache build
         gridUtils_.buildWaveformCache(path);
+
+        // Draw temporary loading indicator (waveform will appear on next repaint after cache is ready)
         
         SkPaint paint;
         paint.setColor(color);

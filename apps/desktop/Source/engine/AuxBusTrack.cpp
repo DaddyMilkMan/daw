@@ -1,5 +1,6 @@
 #include "AuxBusTrack.h"
 #include "EngineConstants.h"
+#include "TrackProcessor.h"
 
 namespace zenith {
 

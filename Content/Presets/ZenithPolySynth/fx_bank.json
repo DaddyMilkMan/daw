@@ -3,7 +3,7 @@
   "bank_name": "FX Bank",
   "category": "FX",
   "version": "1.0",
-  "preset_count": 48,
+  "preset_count": 116,
   "presets": [
     {
       "id": "riser_noise",
@@ -1011,6 +1011,1570 @@
         "decay": 0.086,
         "sustain": 0.0,
         "release": 0.003
+      }
+    },
+    {
+      "id": "sweep_whoosh_x001",
+      "name": "Sweep Whoosh X001",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sweep Whoosh",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.485,
+        "filter_resonance": 0.697,
+        "attack": 0.0,
+        "decay": 0.368,
+        "sustain": 0.293,
+        "release": 0.205
+      }
+    },
+    {
+      "id": "sweep_whoosh_03_x002",
+      "name": "Sweep Whoosh 03 X002",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sweep Whoosh 03",
+      "parameters": {
+        "osc_type": 1.027,
+        "filter_cutoff": 0.565,
+        "filter_resonance": 0.74,
+        "attack": 0.033,
+        "decay": 0.348,
+        "sustain": 0.271,
+        "release": 0.231
+      }
+    },
+    {
+      "id": "zap_02_x003",
+      "name": "Zap 02 X003",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "zap",
+        "laser",
+        "sci-fi",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Zap 02",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.742,
+        "filter_resonance": 0.605,
+        "attack": 0.0,
+        "decay": 0.185,
+        "sustain": 0.0,
+        "release": 0.084
+      }
+    },
+    {
+      "id": "zap_02_x004",
+      "name": "Zap 02 X004",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "zap",
+        "laser",
+        "sci-fi",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Zap 02",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.738,
+        "filter_resonance": 0.556,
+        "attack": 0.015,
+        "decay": 0.224,
+        "sustain": 0.006,
+        "release": 0.0
+      }
+    },
+    {
+      "id": "sweep_whoosh_01_x005",
+      "name": "Sweep Whoosh 01 X005",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sweep Whoosh 01",
+      "parameters": {
+        "osc_type": 0.887,
+        "filter_cutoff": 0.489,
+        "filter_resonance": 0.759,
+        "attack": 0.176,
+        "decay": 0.407,
+        "sustain": 0.31,
+        "release": 0.25
+      }
+    },
+    {
+      "id": "atmosphere_05_x006",
+      "name": "Atmosphere 05 X006",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "atmosphere",
+        "ambient",
+        "background",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Atmosphere 05",
+      "parameters": {
+        "osc_type": 0.598,
+        "filter_cutoff": 0.678,
+        "filter_resonance": 0.356,
+        "attack": 0.68,
+        "decay": 0.429,
+        "sustain": 0.82,
+        "release": 0.974
+      }
+    },
+    {
+      "id": "drone_fx_01_x007",
+      "name": "Drone FX 01 X007",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "drone",
+        "resonant",
+        "texture",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Drone FX 01",
+      "parameters": {
+        "osc_type": 1.111,
+        "filter_cutoff": 0.478,
+        "filter_resonance": 0.853,
+        "attack": 0.526,
+        "decay": 0.599,
+        "sustain": 1.0,
+        "release": 0.778
+      }
+    },
+    {
+      "id": "impact_boom_03_x008",
+      "name": "Impact Boom 03 X008",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "boom",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Boom 03",
+      "parameters": {
+        "osc_type": 0.025,
+        "filter_cutoff": 0.386,
+        "filter_resonance": 0.219,
+        "attack": 0.016,
+        "decay": 0.547,
+        "sustain": 0.006,
+        "release": 0.302
+      }
+    },
+    {
+      "id": "sweep_whoosh_01_x009",
+      "name": "Sweep Whoosh 01 X009",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sweep Whoosh 01",
+      "parameters": {
+        "osc_type": 0.887,
+        "filter_cutoff": 0.526,
+        "filter_resonance": 0.782,
+        "attack": 0.014,
+        "decay": 0.46,
+        "sustain": 0.267,
+        "release": 0.212
+      }
+    },
+    {
+      "id": "downlifter_05_x010",
+      "name": "Downlifter 05 X010",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "down",
+        "transition",
+        "fall",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Downlifter 05",
+      "parameters": {
+        "osc_type": 0.954,
+        "filter_cutoff": 0.855,
+        "filter_resonance": 0.495,
+        "attack": 0.0,
+        "decay": 0.822,
+        "sustain": 0.002,
+        "release": 0.463
+      }
+    },
+    {
+      "id": "static_burst_02_x011",
+      "name": "Static Burst 02 X011",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "static",
+        "burst",
+        "glitch",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Static Burst 02",
+      "parameters": {
+        "osc_type": 1.077,
+        "filter_cutoff": 0.605,
+        "filter_resonance": 0.511,
+        "attack": 0.086,
+        "decay": 0.063,
+        "sustain": 0.0,
+        "release": 0.137
+      }
+    },
+    {
+      "id": "drone_fx_04_x012",
+      "name": "Drone FX 04 X012",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "drone",
+        "resonant",
+        "texture",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Drone FX 04",
+      "parameters": {
+        "osc_type": 1.051,
+        "filter_cutoff": 0.492,
+        "filter_resonance": 0.772,
+        "attack": 0.555,
+        "decay": 0.417,
+        "sustain": 0.898,
+        "release": 0.67
+      }
+    },
+    {
+      "id": "downlifter_x013",
+      "name": "Downlifter X013",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "down",
+        "transition",
+        "fall",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Downlifter",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.936,
+        "filter_resonance": 0.402,
+        "attack": 0.021,
+        "decay": 0.77,
+        "sustain": 0.143,
+        "release": 0.323
+      }
+    },
+    {
+      "id": "sweep_whoosh_02_x014",
+      "name": "Sweep Whoosh 02 X014",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sweep Whoosh 02",
+      "parameters": {
+        "osc_type": 1.094,
+        "filter_cutoff": 0.477,
+        "filter_resonance": 0.687,
+        "attack": 0.064,
+        "decay": 0.416,
+        "sustain": 0.169,
+        "release": 0.225
+      }
+    },
+    {
+      "id": "zap_x015",
+      "name": "Zap X015",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "zap",
+        "laser",
+        "sci-fi",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Zap",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.77,
+        "filter_resonance": 0.637,
+        "attack": 0.089,
+        "decay": 0.18,
+        "sustain": 0.036,
+        "release": 0.165
+      }
+    },
+    {
+      "id": "riser_noise_05_x016",
+      "name": "Riser Noise 05 X016",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser Noise 05",
+      "parameters": {
+        "osc_type": 0.892,
+        "filter_cutoff": 0.281,
+        "filter_resonance": 0.658,
+        "attack": 0.859,
+        "decay": 0.177,
+        "sustain": 0.908,
+        "release": 0.393
+      }
+    },
+    {
+      "id": "zap_x017",
+      "name": "Zap X017",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "zap",
+        "laser",
+        "sci-fi",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Zap",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.821,
+        "filter_resonance": 0.541,
+        "attack": 0.0,
+        "decay": 0.195,
+        "sustain": 0.0,
+        "release": 0.19
+      }
+    },
+    {
+      "id": "riser_noise_04_x018",
+      "name": "Riser Noise 04 X018",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser Noise 04",
+      "parameters": {
+        "osc_type": 0.852,
+        "filter_cutoff": 0.249,
+        "filter_resonance": 0.564,
+        "attack": 0.957,
+        "decay": 0.229,
+        "sustain": 1.0,
+        "release": 0.509
+      }
+    },
+    {
+      "id": "sweep_whoosh_03_x019",
+      "name": "Sweep Whoosh 03 X019",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sweep Whoosh 03",
+      "parameters": {
+        "osc_type": 1.027,
+        "filter_cutoff": 0.462,
+        "filter_resonance": 0.68,
+        "attack": 0.196,
+        "decay": 0.46,
+        "sustain": 0.183,
+        "release": 0.237
+      }
+    },
+    {
+      "id": "riser_noise_x020",
+      "name": "Riser Noise X020",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser Noise",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.231,
+        "filter_resonance": 0.537,
+        "attack": 0.842,
+        "decay": 0.148,
+        "sustain": 0.812,
+        "release": 0.56
+      }
+    },
+    {
+      "id": "riser_noise_04_x021",
+      "name": "Riser Noise 04 X021",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser Noise 04",
+      "parameters": {
+        "osc_type": 0.852,
+        "filter_cutoff": 0.307,
+        "filter_resonance": 0.591,
+        "attack": 0.838,
+        "decay": 0.198,
+        "sustain": 0.854,
+        "release": 0.63
+      }
+    },
+    {
+      "id": "atmosphere_x022",
+      "name": "Atmosphere X022",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "atmosphere",
+        "ambient",
+        "background",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Atmosphere",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.659,
+        "filter_resonance": 0.338,
+        "attack": 0.67,
+        "decay": 0.429,
+        "sustain": 0.806,
+        "release": 0.88
+      }
+    },
+    {
+      "id": "sweep_whoosh_x023",
+      "name": "Sweep Whoosh X023",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sweep Whoosh",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.48,
+        "filter_resonance": 0.649,
+        "attack": 0.0,
+        "decay": 0.305,
+        "sustain": 0.123,
+        "release": 0.407
+      }
+    },
+    {
+      "id": "impact_boom_05_x024",
+      "name": "Impact Boom 05 X024",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "boom",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Boom 05",
+      "parameters": {
+        "osc_type": 0.028,
+        "filter_cutoff": 0.36,
+        "filter_resonance": 0.403,
+        "attack": 0.011,
+        "decay": 0.379,
+        "sustain": 0.02,
+        "release": 0.369
+      }
+    },
+    {
+      "id": "downlifter_05_x025",
+      "name": "Downlifter 05 X025",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "down",
+        "transition",
+        "fall",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Downlifter 05",
+      "parameters": {
+        "osc_type": 0.954,
+        "filter_cutoff": 0.962,
+        "filter_resonance": 0.471,
+        "attack": 0.0,
+        "decay": 0.811,
+        "sustain": 0.0,
+        "release": 0.327
+      }
+    },
+    {
+      "id": "impact_boom_05_x026",
+      "name": "Impact Boom 05 X026",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "boom",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Boom 05",
+      "parameters": {
+        "osc_type": 0.028,
+        "filter_cutoff": 0.405,
+        "filter_resonance": 0.381,
+        "attack": 0.0,
+        "decay": 0.378,
+        "sustain": 0.0,
+        "release": 0.334
+      }
+    },
+    {
+      "id": "impact_boom_x027",
+      "name": "Impact Boom X027",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "boom",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Boom",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.362,
+        "filter_resonance": 0.367,
+        "attack": 0.0,
+        "decay": 0.566,
+        "sustain": 0.026,
+        "release": 0.27
+      }
+    },
+    {
+      "id": "atmosphere_02_x028",
+      "name": "Atmosphere 02 X028",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "atmosphere",
+        "ambient",
+        "background",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Atmosphere 02",
+      "parameters": {
+        "osc_type": 0.471,
+        "filter_cutoff": 0.611,
+        "filter_resonance": 0.349,
+        "attack": 0.758,
+        "decay": 0.547,
+        "sustain": 0.796,
+        "release": 0.895
+      }
+    },
+    {
+      "id": "atmosphere_x029",
+      "name": "Atmosphere X029",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "atmosphere",
+        "ambient",
+        "background",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Atmosphere",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.518,
+        "filter_resonance": 0.406,
+        "attack": 0.703,
+        "decay": 0.488,
+        "sustain": 0.739,
+        "release": 0.865
+      }
+    },
+    {
+      "id": "zap_04_x030",
+      "name": "Zap 04 X030",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "zap",
+        "laser",
+        "sci-fi",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Zap 04",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.776,
+        "filter_resonance": 0.628,
+        "attack": 0.0,
+        "decay": 0.232,
+        "sustain": 0.03,
+        "release": 0.0
+      }
+    },
+    {
+      "id": "sweep_whoosh_02_x031",
+      "name": "Sweep Whoosh 02 X031",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sweep Whoosh 02",
+      "parameters": {
+        "osc_type": 1.094,
+        "filter_cutoff": 0.609,
+        "filter_resonance": 0.682,
+        "attack": 0.063,
+        "decay": 0.319,
+        "sustain": 0.217,
+        "release": 0.233
+      }
+    },
+    {
+      "id": "drone_fx_03_x032",
+      "name": "Drone FX 03 X032",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "drone",
+        "resonant",
+        "texture",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Drone FX 03",
+      "parameters": {
+        "osc_type": 0.9,
+        "filter_cutoff": 0.364,
+        "filter_resonance": 0.803,
+        "attack": 0.606,
+        "decay": 0.576,
+        "sustain": 0.862,
+        "release": 0.901
+      }
+    },
+    {
+      "id": "drone_fx_x033",
+      "name": "Drone FX X033",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "drone",
+        "resonant",
+        "texture",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Drone FX",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.515,
+        "filter_resonance": 0.86,
+        "attack": 0.611,
+        "decay": 0.485,
+        "sustain": 0.837,
+        "release": 0.906
+      }
+    },
+    {
+      "id": "sweep_whoosh_x034",
+      "name": "Sweep Whoosh X034",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sweep Whoosh",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.478,
+        "filter_resonance": 0.689,
+        "attack": 0.009,
+        "decay": 0.438,
+        "sustain": 0.268,
+        "release": 0.297
+      }
+    },
+    {
+      "id": "sweep_whoosh_05_x035",
+      "name": "Sweep Whoosh 05 X035",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sweep Whoosh 05",
+      "parameters": {
+        "osc_type": 1.085,
+        "filter_cutoff": 0.504,
+        "filter_resonance": 0.757,
+        "attack": 0.133,
+        "decay": 0.318,
+        "sustain": 0.196,
+        "release": 0.252
+      }
+    },
+    {
+      "id": "drone_fx_05_x036",
+      "name": "Drone FX 05 X036",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "drone",
+        "resonant",
+        "texture",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Drone FX 05",
+      "parameters": {
+        "osc_type": 1.037,
+        "filter_cutoff": 0.468,
+        "filter_resonance": 0.925,
+        "attack": 0.605,
+        "decay": 0.517,
+        "sustain": 0.929,
+        "release": 0.899
+      }
+    },
+    {
+      "id": "sweep_whoosh_05_x037",
+      "name": "Sweep Whoosh 05 X037",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sweep Whoosh 05",
+      "parameters": {
+        "osc_type": 1.085,
+        "filter_cutoff": 0.505,
+        "filter_resonance": 0.804,
+        "attack": 0.0,
+        "decay": 0.295,
+        "sustain": 0.122,
+        "release": 0.156
+      }
+    },
+    {
+      "id": "sweep_whoosh_04_x038",
+      "name": "Sweep Whoosh 04 X038",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sweep Whoosh 04",
+      "parameters": {
+        "osc_type": 0.944,
+        "filter_cutoff": 0.424,
+        "filter_resonance": 0.657,
+        "attack": 0.0,
+        "decay": 0.492,
+        "sustain": 0.205,
+        "release": 0.174
+      }
+    },
+    {
+      "id": "downlifter_03_x039",
+      "name": "Downlifter 03 X039",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "down",
+        "transition",
+        "fall",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Downlifter 03",
+      "parameters": {
+        "osc_type": 0.945,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.371,
+        "attack": 0.0,
+        "decay": 0.734,
+        "sustain": 0.072,
+        "release": 0.457
+      }
+    },
+    {
+      "id": "drone_fx_02_x040",
+      "name": "Drone FX 02 X040",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "drone",
+        "resonant",
+        "texture",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Drone FX 02",
+      "parameters": {
+        "osc_type": 0.904,
+        "filter_cutoff": 0.459,
+        "filter_resonance": 0.774,
+        "attack": 0.48,
+        "decay": 0.473,
+        "sustain": 0.864,
+        "release": 0.798
+      }
+    },
+    {
+      "id": "zap_x041",
+      "name": "Zap X041",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "zap",
+        "laser",
+        "sci-fi",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Zap",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.826,
+        "filter_resonance": 0.528,
+        "attack": 0.0,
+        "decay": 0.173,
+        "sustain": 0.038,
+        "release": 0.084
+      }
+    },
+    {
+      "id": "sweep_whoosh_02_x042",
+      "name": "Sweep Whoosh 02 X042",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sweep Whoosh 02",
+      "parameters": {
+        "osc_type": 1.094,
+        "filter_cutoff": 0.609,
+        "filter_resonance": 0.69,
+        "attack": 0.063,
+        "decay": 0.388,
+        "sustain": 0.06,
+        "release": 0.371
+      }
+    },
+    {
+      "id": "atmosphere_04_x043",
+      "name": "Atmosphere 04 X043",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "atmosphere",
+        "ambient",
+        "background",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Atmosphere 04",
+      "parameters": {
+        "osc_type": 0.555,
+        "filter_cutoff": 0.588,
+        "filter_resonance": 0.3,
+        "attack": 0.659,
+        "decay": 0.457,
+        "sustain": 0.915,
+        "release": 1.084
+      }
+    },
+    {
+      "id": "static_burst_03_x044",
+      "name": "Static Burst 03 X044",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "static",
+        "burst",
+        "glitch",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Static Burst 03",
+      "parameters": {
+        "osc_type": 1.066,
+        "filter_cutoff": 0.756,
+        "filter_resonance": 0.471,
+        "attack": 0.026,
+        "decay": 0.055,
+        "sustain": 0.0,
+        "release": 0.15
+      }
+    },
+    {
+      "id": "drone_fx_03_x045",
+      "name": "Drone FX 03 X045",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "drone",
+        "resonant",
+        "texture",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Drone FX 03",
+      "parameters": {
+        "osc_type": 0.9,
+        "filter_cutoff": 0.417,
+        "filter_resonance": 0.807,
+        "attack": 0.567,
+        "decay": 0.57,
+        "sustain": 0.943,
+        "release": 0.871
+      }
+    },
+    {
+      "id": "static_burst_01_x046",
+      "name": "Static Burst 01 X046",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "static",
+        "burst",
+        "glitch",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Static Burst 01",
+      "parameters": {
+        "osc_type": 1.042,
+        "filter_cutoff": 0.639,
+        "filter_resonance": 0.488,
+        "attack": 0.078,
+        "decay": 0.091,
+        "sustain": 0.069,
+        "release": 0.0
+      }
+    },
+    {
+      "id": "downlifter_03_x047",
+      "name": "Downlifter 03 X047",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "down",
+        "transition",
+        "fall",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Downlifter 03",
+      "parameters": {
+        "osc_type": 0.945,
+        "filter_cutoff": 0.944,
+        "filter_resonance": 0.428,
+        "attack": 0.0,
+        "decay": 0.805,
+        "sustain": 0.242,
+        "release": 0.439
+      }
+    },
+    {
+      "id": "static_burst_04_x048",
+      "name": "Static Burst 04 X048",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "static",
+        "burst",
+        "glitch",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Static Burst 04",
+      "parameters": {
+        "osc_type": 0.98,
+        "filter_cutoff": 0.816,
+        "filter_resonance": 0.472,
+        "attack": 0.0,
+        "decay": 0.0,
+        "sustain": 0.0,
+        "release": 0.082
+      }
+    },
+    {
+      "id": "downlifter_02_x049",
+      "name": "Downlifter 02 X049",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "down",
+        "transition",
+        "fall",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Downlifter 02",
+      "parameters": {
+        "osc_type": 0.997,
+        "filter_cutoff": 0.952,
+        "filter_resonance": 0.459,
+        "attack": 0.135,
+        "decay": 0.772,
+        "sustain": 0.142,
+        "release": 0.535
+      }
+    },
+    {
+      "id": "zap_03_x050",
+      "name": "Zap 03 X050",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "zap",
+        "laser",
+        "sci-fi",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Zap 03",
+      "parameters": {
+        "osc_type": 1.902,
+        "filter_cutoff": 0.744,
+        "filter_resonance": 0.558,
+        "attack": 0.0,
+        "decay": 0.251,
+        "sustain": 0.055,
+        "release": 0.03
+      }
+    },
+    {
+      "id": "sweep_whoosh_04_x051",
+      "name": "Sweep Whoosh 04 X051",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sweep Whoosh 04",
+      "parameters": {
+        "osc_type": 0.944,
+        "filter_cutoff": 0.545,
+        "filter_resonance": 0.701,
+        "attack": 0.0,
+        "decay": 0.455,
+        "sustain": 0.213,
+        "release": 0.254
+      }
+    },
+    {
+      "id": "downlifter_04_x052",
+      "name": "Downlifter 04 X052",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "down",
+        "transition",
+        "fall",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Downlifter 04",
+      "parameters": {
+        "osc_type": 0.905,
+        "filter_cutoff": 0.931,
+        "filter_resonance": 0.391,
+        "attack": 0.0,
+        "decay": 0.935,
+        "sustain": 0.0,
+        "release": 0.406
+      }
+    },
+    {
+      "id": "impact_boom_05_x053",
+      "name": "Impact Boom 05 X053",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "boom",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Boom 05",
+      "parameters": {
+        "osc_type": 0.028,
+        "filter_cutoff": 0.393,
+        "filter_resonance": 0.389,
+        "attack": 0.059,
+        "decay": 0.411,
+        "sustain": 0.0,
+        "release": 0.388
+      }
+    },
+    {
+      "id": "static_burst_x054",
+      "name": "Static Burst X054",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "static",
+        "burst",
+        "glitch",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Static Burst",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.715,
+        "filter_resonance": 0.454,
+        "attack": 0.0,
+        "decay": 0.0,
+        "sustain": 0.0,
+        "release": 0.0
+      }
+    },
+    {
+      "id": "downlifter_04_x055",
+      "name": "Downlifter 04 X055",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "down",
+        "transition",
+        "fall",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Downlifter 04",
+      "parameters": {
+        "osc_type": 0.905,
+        "filter_cutoff": 0.821,
+        "filter_resonance": 0.365,
+        "attack": 0.032,
+        "decay": 0.858,
+        "sustain": 0.141,
+        "release": 0.402
+      }
+    },
+    {
+      "id": "sweep_whoosh_x056",
+      "name": "Sweep Whoosh X056",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sweep Whoosh",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.54,
+        "filter_resonance": 0.641,
+        "attack": 0.0,
+        "decay": 0.337,
+        "sustain": 0.118,
+        "release": 0.298
+      }
+    },
+    {
+      "id": "drone_fx_03_x057",
+      "name": "Drone FX 03 X057",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "drone",
+        "resonant",
+        "texture",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Drone FX 03",
+      "parameters": {
+        "osc_type": 0.9,
+        "filter_cutoff": 0.309,
+        "filter_resonance": 0.768,
+        "attack": 0.519,
+        "decay": 0.414,
+        "sustain": 1.0,
+        "release": 0.873
+      }
+    },
+    {
+      "id": "sweep_whoosh_01_x058",
+      "name": "Sweep Whoosh 01 X058",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sweep Whoosh 01",
+      "parameters": {
+        "osc_type": 0.887,
+        "filter_cutoff": 0.382,
+        "filter_resonance": 0.778,
+        "attack": 0.107,
+        "decay": 0.367,
+        "sustain": 0.119,
+        "release": 0.311
+      }
+    },
+    {
+      "id": "impact_boom_x059",
+      "name": "Impact Boom X059",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "boom",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Boom",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.406,
+        "filter_resonance": 0.291,
+        "attack": 0.0,
+        "decay": 0.427,
+        "sustain": 0.096,
+        "release": 0.349
+      }
+    },
+    {
+      "id": "impact_boom_01_x060",
+      "name": "Impact Boom 01 X060",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "boom",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Boom 01",
+      "parameters": {
+        "osc_type": 0.002,
+        "filter_cutoff": 0.355,
+        "filter_resonance": 0.245,
+        "attack": 0.0,
+        "decay": 0.526,
+        "sustain": 0.004,
+        "release": 0.413
+      }
+    },
+    {
+      "id": "impact_boom_02_x061",
+      "name": "Impact Boom 02 X061",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "boom",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Boom 02",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.415,
+        "filter_resonance": 0.254,
+        "attack": 0.011,
+        "decay": 0.423,
+        "sustain": 0.0,
+        "release": 0.352
+      }
+    },
+    {
+      "id": "downlifter_02_x062",
+      "name": "Downlifter 02 X062",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "down",
+        "transition",
+        "fall",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Downlifter 02",
+      "parameters": {
+        "osc_type": 0.997,
+        "filter_cutoff": 0.973,
+        "filter_resonance": 0.487,
+        "attack": 0.149,
+        "decay": 0.785,
+        "sustain": 0.172,
+        "release": 0.452
+      }
+    },
+    {
+      "id": "riser_noise_05_x063",
+      "name": "Riser Noise 05 X063",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser Noise 05",
+      "parameters": {
+        "osc_type": 0.892,
+        "filter_cutoff": 0.307,
+        "filter_resonance": 0.61,
+        "attack": 0.933,
+        "decay": 0.135,
+        "sustain": 1.0,
+        "release": 0.45
+      }
+    },
+    {
+      "id": "riser_noise_02_x064",
+      "name": "Riser Noise 02 X064",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser Noise 02",
+      "parameters": {
+        "osc_type": 1.018,
+        "filter_cutoff": 0.386,
+        "filter_resonance": 0.604,
+        "attack": 0.864,
+        "decay": 0.071,
+        "sustain": 1.0,
+        "release": 0.389
+      }
+    },
+    {
+      "id": "static_burst_02_x065",
+      "name": "Static Burst 02 X065",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "static",
+        "burst",
+        "glitch",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Static Burst 02",
+      "parameters": {
+        "osc_type": 1.077,
+        "filter_cutoff": 0.706,
+        "filter_resonance": 0.583,
+        "attack": 0.0,
+        "decay": 0.082,
+        "sustain": 0.0,
+        "release": 0.169
+      }
+    },
+    {
+      "id": "drone_fx_03_x066",
+      "name": "Drone FX 03 X066",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "drone",
+        "resonant",
+        "texture",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Drone FX 03",
+      "parameters": {
+        "osc_type": 0.9,
+        "filter_cutoff": 0.293,
+        "filter_resonance": 0.757,
+        "attack": 0.646,
+        "decay": 0.475,
+        "sustain": 1.0,
+        "release": 0.74
+      }
+    },
+    {
+      "id": "static_burst_04_x067",
+      "name": "Static Burst 04 X067",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "static",
+        "burst",
+        "glitch",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Static Burst 04",
+      "parameters": {
+        "osc_type": 0.98,
+        "filter_cutoff": 0.822,
+        "filter_resonance": 0.51,
+        "attack": 0.0,
+        "decay": 0.067,
+        "sustain": 0.0,
+        "release": 0.014
+      }
+    },
+    {
+      "id": "atmosphere_02_x068",
+      "name": "Atmosphere 02 X068",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "atmosphere",
+        "ambient",
+        "background",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Atmosphere 02",
+      "parameters": {
+        "osc_type": 0.471,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.398,
+        "attack": 0.767,
+        "decay": 0.47,
+        "sustain": 0.805,
+        "release": 0.986
       }
     }
   ]

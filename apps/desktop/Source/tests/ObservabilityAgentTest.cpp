@@ -5,7 +5,7 @@
 */
 
 #include <juce_core/juce_core.h>
-#include "agents/ObservabilityAgent/ObservabilityAgent.h"
+#include "ObservabilityAgent.h"
 
 namespace zenith {
 namespace tests {

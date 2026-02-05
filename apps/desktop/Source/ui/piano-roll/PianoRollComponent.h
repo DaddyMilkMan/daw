@@ -421,6 +421,12 @@ public:
   std::vector<ExpressionPoint> getNoteExpression(const juce::String &noteId,
                                                  ExpressionType type) const;
 
+  /** Remove a specific expression point from a note */
+  bool removeExpressionPoint(const juce::String &noteId, ExpressionType type, size_t pointIndex);
+
+  /** Clear all expression points for a note */
+  void clearNoteExpression(const juce::String &noteId, ExpressionType type);
+
   //==========================================================================
   // MIDI CC Lanes (Standard MIDI Control Change)
   //==========================================================================

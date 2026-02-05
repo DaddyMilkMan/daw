@@ -1,7 +1,9 @@
 # Known Issues
 
-**Last Updated**: January 3, 2026  
+**Last Updated**: February 3, 2026  
 **Version**: 0.1.0-alpha
+
+**HONEST STATUS: This DAW is 18+ months from production-ready. See ZENITH_DAW_BRUTAL_ASSESSMENT.md for details.**
 
 This document lists all known bugs, limitations, and unfinished features in Zenith DAW.
 
@@ -91,7 +93,7 @@ This document lists all known bugs, limitations, and unfinished features in Zeni
 ### 5. VST3 Scanner Crashes on Some Plugins
 **Location**: `apps/desktop/Source/engine/PluginHost.cpp`  
 **Severity**: High  
-**Status**: Not Fixed  
+**Status**: Partially Mitigated  
 
 **Symptoms:**
 - Application hangs during plugin scan
@@ -108,11 +110,14 @@ This document lists all known bugs, limitations, and unfinished features in Zeni
 - Manually delete problematic plugins from scan folders
 - Clear plugin cache: Delete `AppData/Roaming/Zenith/PluginCache.xml`
 
-**Fix Required**:
-1. Implement out-of-process plugin scanning
-2. Add timeout mechanism (5 seconds max per plugin)
-3. Blacklist crashing plugins
-4. Log failed scans for debugging
+**Fix Applied**:
+1. ✅ Out-of-process scanning via `ZenithPluginScanner`
+2. ✅ Per-plugin timeout (5 seconds) with kill-on-timeout
+
+**Remaining Work**:
+1. Add persistent blacklist of crashing plugins
+2. Improve failure logging and surface in UI
+3. Add retry policy for transient scan failures
 
 ---
 
@@ -143,27 +148,20 @@ This document lists all known bugs, limitations, and unfinished features in Zeni
 
 ---
 
-### 7. Thread Safety Not Validated
+### 7. Thread Safety Not Fully Validated
 **Location**: Multiple files  
 **Severity**: High  
 **Status**: Not Fixed  
 
 **Problem:**
-- `Track.h:432` uses `juce::CriticalSection` (mutex) for MIDI notes
-- Claims to be "lock-free" but uses locks in audio thread
+- RT-safety audit is incomplete across engine modules
+- Some locks still exist (e.g., `juce::SpinLock` for sidechain routing)
 - AddressSanitizer and ThreadSanitizer disabled in CMake
 - No thread safety tests
 
-**Known Unsafe Patterns:**
-```cpp
-// Track.h - Claims lock-free but uses mutex
-juce::CriticalSection activeNotesLock;  // NOT LOCK-FREE!
-std::vector<ActiveNote> activeNotes;
-```
-
 **Fix Required**:
 1. Enable ASAN/TSAN in debug builds
-2. Replace `CriticalSection` with lock-free alternatives
+2. Eliminate remaining locks in audio-thread paths
 3. Audit all audio thread code paths
 4. Add thread safety tests
 
@@ -194,22 +192,19 @@ std::vector<ActiveNote> activeNotes;
 
 ---
 
-### 9. No Offline Audio Export
-**Location**: Not implemented  
+### 9. Offline Audio Export is Limited
+**Location**: `apps/desktop/Source/engine/EngineExport.cpp`  
 **Severity**: Medium  
-**Status**: Not Started  
+**Status**: Partially Implemented  
 
 **Problem:**
-- Can't bounce/export projects to audio files
-- Real-time playback only
-- No stems export
-- No region export
+- Offline export exists but UI polish and workflows are incomplete
+- Stems export and batch region export are still missing
 
 **Fix Required**:
-1. Implement non-realtime rendering pipeline
-2. Add export dialog (format, sample rate, bit depth)
-3. Support WAV, AIFF, MP3, FLAC
-4. Multi-track/stems export option
+1. Finish export UI (format, sample rate, bit depth)
+2. Add stems and region export options
+3. Improve progress reporting/cancellation
 
 ---
 

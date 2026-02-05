@@ -21,6 +21,7 @@
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 #include <vector>
 
 class SkCanvas;
@@ -78,6 +79,36 @@ inline SkColor BG_DARKER = BG_01;
 inline SkColor BG_DARK = BG_02;
 inline SkColor BG_MEDIUM = BG_03;
 inline SkColor BG_LIGHT = BG_04;
+
+// ============================================================================
+// MPE EXPRESSION LANE (Industry-Standard Color Scheme)
+// ============================================================================
+
+// MPE Expression Type Colors (Colorblind-safe palette)
+// These colors are WCAG 2.1 AAA compliant when paired with BG_01 (0x121212)
+inline SkColor MPE_PRESSURE = 0xFFFF5050;      // Red (intensity/force)
+inline SkColor MPE_TIMBRE = 0xFF50A0FF;        // Blue (brightness/filter)
+inline SkColor MPE_PITCHBEND = 0xFF50C878;     // Green (pitch/frequency)
+inline SkColor MPE_EXPRESSION = 0xFFC89650;    // Orange (continuous control)
+
+// MPE Expression Lane Constants (single source of truth)
+namespace mpe {
+  constexpr float LANE_HEIGHT_MIN = 40.0f;     // Minimum lane height (pixels)
+  constexpr float LANE_HEIGHT_DEFAULT = 60.0f; // Default lane height (pixels)
+  constexpr float LANE_HEIGHT_MAX = 120.0f;    // Maximum lane height (pixels)
+  
+  constexpr float CURVE_WIDTH = 2.0f;          // Expression curve stroke width
+  constexpr float POINT_RADIUS = 4.0f;         // Expression point radius
+  constexpr float LABEL_FONT_SIZE = 11.0f;     // Label text size
+  constexpr float LABEL_POSITION_X = 8.0f;     // Label X offset
+  constexpr float LABEL_POSITION_Y = 14.0f;    // Label Y offset
+  
+  constexpr float LABEL_ALPHA = 0.9f;          // Label text alpha (0.0-1.0)
+  constexpr float HINT_ALPHA = 0.4f;           // Hint text alpha (0.0-1.0)
+  
+  // Keyboard shortcuts
+  constexpr char TOGGLE_LANES_KEY = 'e';
+} // namespace mpe
 
 // Semantic Aliases
 inline SkColor ACCENT_PRIMARY = CYAN;
@@ -292,113 +323,8 @@ inline bool meetsWCAG_AA_UI(SkColor fg, SkColor bg) {
 } // namespace accessibility
 
 // ============================================================================
-// THEME MANAGER
+// THEME MANAGER - see ThemeManager.h (included at end of file)
 // ============================================================================
-
-/**
- * @brief Theme preset enumeration for built-in themes
- */
-enum class ThemePreset {
-  Dark,   // Neon Noir - vibrant accents on dark backgrounds
-  Darker, // OLED Black - pure black backgrounds for power saving
-  Light   // Light mode - inverted palette for daylight use
-};
-
-/**
- * @brief Listener interface for theme change notifications
- */
-class ThemeListener {
-public:
-  virtual ~ThemeListener() = default;
-  virtual void themeChanged(ThemePreset newTheme) = 0;
-};
-
-class ThemeManager : public juce::ChangeBroadcaster {
-public:
-  static ThemeManager &getInstance() {
-    static ThemeManager instance;
-    return instance;
-  }
-
-  struct Theme {
-    juce::String name;
-    std::map<juce::String, uint32_t> colors; // name -> ARGB
-  };
-
-  // Built-in preset management
-  void setActiveTheme(ThemePreset preset);
-  ThemePreset getActiveTheme() const { return activePreset_; }
-
-  // Listener management
-  void addListener(ThemeListener *listener);
-  void removeListener(ThemeListener *listener);
-
-  // Custom theme management
-  void saveTheme(const juce::String &name);
-  void loadTheme(const juce::String &name);
-  void deleteTheme(const juce::String &name);
-
-  juce::StringArray getAvailableThemes() const;
-
-  // Apply current colors to ZenithDesignSystem::Colors
-  void applyTheme(const Theme &theme);
-  
-  // Reset state for testing
-  void resetToDefault();
-
-  // Palette accessors for current theme
-  struct ThemePalette {
-    // Backgrounds
-    SkColor bgDarkest;
-    SkColor bgDarker;
-    SkColor bgDark;
-    SkColor bgMedium;
-    SkColor bgLight;
-
-    // Accents
-    SkColor accentPrimary;
-    SkColor accentSecondary;
-
-    // Text
-    SkColor textPrimary;
-    SkColor textSecondary;
-    SkColor textTertiary;
-
-    // Borders
-    SkColor borderDefault;
-    SkColor borderSubtle;
-    SkColor borderFocus;
-
-    // Semantic
-    SkColor success;
-    SkColor warning;
-    SkColor error;
-  };
-
-  const ThemePalette &getPalette() const { return currentPalette_; }
-
-private:
-  ThemeManager();
-
-  void applyDarkTheme();
-  void applyDarkerTheme();
-  void applyLightTheme();
-  void notifyListeners();
-
-  ThemePreset activePreset_ = ThemePreset::Dark;
-  ThemePalette currentPalette_;
-  std::vector<ThemeListener *> listeners_;
-
-  juce::File getThemeDir() const {
-    auto dir =
-        juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-            .getChildFile("ZenithDAW/Themes");
-    if (!dir.exists())
-      dir.createDirectory();
-    return dir;
-  }
-};
-
 
 // ============================================================================
 // LAYOUT MANAGER
@@ -545,7 +471,7 @@ inline juce::Font getJuceMonoFont(float size) {
  */
 [[deprecated("Use getSkFont(size, weight) instead.")]]
 inline SkFont getSkFontWithSize(float size) {
-  return zenith::design::typography::getSkFont(size, FontWeight::Regular);
+  return getSkFont(size, FontWeight::Regular);
 }
 
 // ============================================================================
@@ -1006,3 +932,6 @@ struct Settings {
 
 } // namespace design
 } // namespace zenith
+
+// Include ThemeManager AFTER namespace closes to avoid nested namespace issue
+#include "ThemeManager.h"

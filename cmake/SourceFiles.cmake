@@ -24,6 +24,7 @@ set(ZENITH_ENGINE_SOURCES
     apps/desktop/Source/engine/TrackStateManager.cpp
     apps/desktop/Source/engine/PluginChain.cpp
     apps/desktop/Source/engine/PluginAutomationBinding.cpp
+    apps/desktop/Source/engine/PluginBlacklist.cpp
     apps/desktop/Source/engine/Track.cpp
     apps/desktop/Source/engine/Clip.cpp
     apps/desktop/Source/engine/ClipStateManager.cpp
@@ -50,10 +51,14 @@ set(ZENITH_ENGINE_SOURCES
     apps/desktop/Source/engine/AuxBusTrack.cpp
     apps/desktop/Source/engine/AutomationManager.cpp
     apps/desktop/Source/engine/TempoMap.cpp
-    apps/desktop/Source/engine/TempoMap.cpp
     apps/desktop/Source/engine/RecentProjectManager.cpp
     apps/desktop/Source/engine/MidiNoteStateManager.cpp
     apps/desktop/Source/engine/PlatformAudioUtils.cpp
+    apps/desktop/Source/engine/WCETMonitor.cpp
+    apps/desktop/Source/engine/TrackProcessor.cpp
+    apps/desktop/Source/engine/TrackPluginManager.cpp
+    apps/desktop/Source/engine/TrackSendManager.cpp
+    apps/desktop/Source/engine/TrackSidechain.cpp
 )
 
 # Legacy/Deprecated components (kept for compatibility)
@@ -67,16 +72,17 @@ set(ZENITH_LEGACY_SOURCES
 # UI Framework sources
 set(ZENITH_UI_FRAMEWORK_SOURCES
     apps/desktop/Source/ui/design-system/ZenithLayout.cpp
+    apps/desktop/Source/ui/design-system/ThemeManager.cpp
     apps/desktop/Source/ui/framework/SkiaMainWindowIntegration.cpp
     apps/desktop/Source/ui/framework/AuroraBackground.cpp
     apps/desktop/Source/ui/framework/SkiaComponent.cpp
     apps/desktop/Source/ui/framework/SkiaLayout.cpp
     apps/desktop/Source/ui/framework/PlatformWindowUtils.cpp
-    apps/desktop/Source/ui/framework/PlatformWindowUtils.cpp
     apps/desktop/Source/ui/framework/PlatformPathUtils.cpp
     apps/desktop/Source/ui/framework/PlatformDisplayUtils.cpp
     apps/desktop/Source/ui/design-system/ZenithTheme.cpp
     apps/desktop/Source/ui/design-system/ZenithDesignSystem.cpp
+    apps/desktop/Source/ui/design-system/SvgIcon.cpp
     apps/desktop/Source/ui/design-system/ZenithLookAndFeel.cpp
     apps/desktop/Source/ui/design-system/FontManager.cpp
     apps/desktop/Source/ui/design-system/PlatformFontUtils.cpp
@@ -86,6 +92,15 @@ set(ZENITH_UI_FRAMEWORK_SOURCES
     apps/desktop/Source/rendering/SkiaLinkerFix.cpp
     apps/desktop/Source/ui/framework/AnimationCoordinator.cpp
     apps/desktop/Source/ui/design-system/MeterRenderer.cpp
+    # New views2 UI system
+    apps/desktop/Source/ui/views2/core/ViewSwitcher.cpp
+    apps/desktop/Source/ui/views2/arranger/SkiaArrangementView.cpp
+    apps/desktop/Source/ui/views2/session/SkiaSessionView.cpp
+    apps/desktop/Source/ui/views2/ai-jam/SkiaAIJamView.cpp
+    apps/desktop/Source/ui/views2/common/SkiaTransportBar.cpp
+    apps/desktop/Source/ui/views2/ZenithMainLayout.cpp
+    apps/desktop/Source/ui/views2/controllers/ArrangementController.cpp
+    apps/desktop/Source/ui/views2/controllers/SessionController.cpp
 )
 
 # UI Components sources
@@ -150,7 +165,7 @@ set(ZENITH_UI_BROWSER_SOURCES
     apps/desktop/Source/ui/panels/BrowserWaveformLoader.cpp
     apps/desktop/Source/ui/panels/InstrumentBrowserPanel.cpp
     apps/desktop/Source/ui/panels/PluginBrowserComponent.cpp
-    apps/desktop/Source/ui/panels/PresetBrowserComponent.cpp
+    # apps/desktop/Source/ui/panels/PresetBrowserComponent.cpp  # Disabled: needs Skia refactor
 )
 
 # Specialized UI sources
@@ -181,6 +196,7 @@ set(ZENITH_UI_SPECIALIZED_SOURCES
     apps/desktop/Source/ui/views/SessionViewComponent.cpp
     apps/desktop/Source/ui/sample-editor/SampleEditorComponent.cpp
     apps/desktop/Source/ui/instruments/ZenithPolySynthUI.cpp
+    apps/desktop/Source/ui/visualizations/FilterResponseDisplay.cpp
 )
 
 # Dialog sources
@@ -191,6 +207,7 @@ set(ZENITH_UI_DIALOGS_SOURCES
     apps/desktop/Source/ui/dialogs/SettingsComponent.cpp
     apps/desktop/Source/ui/dialogs/ProjectRecoveryModal.cpp
     apps/desktop/Source/ui/settings/GlobalSettingsPanel.cpp
+    apps/desktop/Source/ui/settings/ModernSettingsPanel.cpp
     apps/desktop/Source/ui/dialogs/UnsavedChangesModal.cpp
 )
 
@@ -208,6 +225,9 @@ set(ZENITH_INSTRUMENTS_SOURCES
     apps/desktop/Source/instruments/ZenithPolySynth.cpp
     apps/desktop/Source/instruments/ZenithPolySynthParameterManager.cpp
     apps/desktop/Source/instruments/ZenithPolySynthEditor.cpp
+    apps/desktop/Source/instruments/ZenithPolySynth/sequencer/Arpeggiator.cpp
+    apps/desktop/Source/instruments/ZenithPolySynth/lfos/StepLFO.cpp
+    apps/desktop/Source/instruments/ZenithPolySynth/oscillators/UnisonManager.cpp
     apps/desktop/Source/instruments/ZenithPresetManager.cpp
     apps/desktop/Source/instruments/ZenithSampler.cpp
     apps/desktop/Source/instruments/ZenithSamplerEditor.cpp
@@ -238,6 +258,7 @@ set(ZENITH_DSP_SOURCES
 # AI and Network sources
 set(ZENITH_AI_NETWORK_SOURCES
     agents/ObservabilityAgent/ObservabilityAgent.cpp
+    agents/ObservabilityAgent/PrometheusExporter.cpp
     apps/desktop/Source/ai/AIEventBus.cpp
     apps/desktop/Source/ai/AIStatusManager.cpp
     apps/desktop/Source/ai/AudioFitnessEvaluator.cpp
@@ -250,6 +271,7 @@ set(ZENITH_AI_NETWORK_SOURCES
     apps/desktop/Source/ai/SampleHunterAgent.cpp
     apps/desktop/Source/ai/SessionDebuggerAgent.cpp
     apps/desktop/Source/ai/UXDirectorAgent.cpp
+    apps/desktop/Source/ai/WingmanSynthBridge.cpp
     apps/desktop/Source/network/SecureKeyStore.cpp
     apps/desktop/Source/network/GrokUtils.cpp
     apps/desktop/Source/network/GrokDAWController.cpp
@@ -262,6 +284,9 @@ set(ZENITH_AI_NETWORK_SOURCES
     apps/desktop/Source/network/AuthenticationService.cpp
     apps/desktop/Source/network/OAuthRedirectServer.cpp
     apps/desktop/Source/network/MCPServer.cpp
+    apps/desktop/Source/network/EmbeddedMCPHttpServer.cpp
+    apps/desktop/Source/network/AudioStreamingManager.cpp
+    apps/desktop/Source/network/EmbeddedMCPHttpServer_httplib.cpp
     apps/desktop/Source/network/AudioAnalysisService.cpp
     apps/desktop/Source/network/UpdateService.cpp
     apps/desktop/Source/utils/PlatformSystemUtils.cpp

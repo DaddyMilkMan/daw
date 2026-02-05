@@ -6,6 +6,7 @@
 */
 
 #include "TransportProtocolAgent.h"
+#include <cstdint>
 
 namespace zenith {
 namespace agents {
@@ -342,37 +343,51 @@ void AudioBufferConverter::convertToPlanarFloat(const void* sourceData,
     // Resize buffer if needed (though usually caller handles this)
     destBuffer.setSize(numChannels, numSamples, false, false, true);
 
-    const int bytesPerSample = getBytesPerSample(sourceFormat);
-    const int strideBytes = bytesPerSample * numChannels;
-    const char* rawSrc = static_cast<const char*>(sourceData);
+    using DestFormat = juce::AudioData::Format<juce::AudioData::Float32,
+                                               juce::AudioData::NativeEndian>;
+    auto* const* destPtrs = destBuffer.getArrayOfWritePointers();
 
-    for (int ch = 0; ch < numChannels; ++ch)
+    switch (sourceFormat)
     {
-        float* destChannel = destBuffer.getWritePointer(ch);
-        const void* channelSrc = rawSrc + (ch * bytesPerSample);
-
-        switch (sourceFormat)
-        {
-            case BitDepth::Int16:
-                // srcBytesPerSample arg handles the stride for us
-                juce::AudioDataConverters::convertInt16LEToFloat(
-                    channelSrc, destChannel, numSamples, strideBytes);
-                break;
-
-            case BitDepth::Int24:
-                juce::AudioDataConverters::convertInt24LEToFloat(
-                    channelSrc, destChannel, numSamples, strideBytes);
-                break;
-
-            case BitDepth::Int32:
-                juce::AudioDataConverters::convertInt32LEToFloat(
-                    channelSrc, destChannel, numSamples, strideBytes);
-                break;
-
-            case BitDepth::Float32:
-                juce::AudioDataConverters::convertFloat32LEToFloat(
-                    channelSrc, destChannel, numSamples, strideBytes);
-                break;
+        case BitDepth::Int16: {
+            using SourceFormat = juce::AudioData::Format<juce::AudioData::Int16,
+                                                         juce::AudioData::LittleEndian>;
+            juce::AudioData::deinterleaveSamples(
+                juce::AudioData::InterleavedSource<SourceFormat>{
+                    static_cast<const std::uint16_t*>(sourceData), numChannels},
+                juce::AudioData::NonInterleavedDest<DestFormat>{destPtrs, numChannels},
+                numSamples);
+            break;
+        }
+        case BitDepth::Int24: {
+            using SourceFormat = juce::AudioData::Format<juce::AudioData::Int24,
+                                                         juce::AudioData::LittleEndian>;
+            juce::AudioData::deinterleaveSamples(
+                juce::AudioData::InterleavedSource<SourceFormat>{
+                    static_cast<const char*>(sourceData), numChannels},
+                juce::AudioData::NonInterleavedDest<DestFormat>{destPtrs, numChannels},
+                numSamples);
+            break;
+        }
+        case BitDepth::Int32: {
+            using SourceFormat = juce::AudioData::Format<juce::AudioData::Int32,
+                                                         juce::AudioData::LittleEndian>;
+            juce::AudioData::deinterleaveSamples(
+                juce::AudioData::InterleavedSource<SourceFormat>{
+                    static_cast<const std::uint32_t*>(sourceData), numChannels},
+                juce::AudioData::NonInterleavedDest<DestFormat>{destPtrs, numChannels},
+                numSamples);
+            break;
+        }
+        case BitDepth::Float32: {
+            using SourceFormat = juce::AudioData::Format<juce::AudioData::Float32,
+                                                         juce::AudioData::LittleEndian>;
+            juce::AudioData::deinterleaveSamples(
+                juce::AudioData::InterleavedSource<SourceFormat>{
+                    static_cast<const float*>(sourceData), numChannels},
+                juce::AudioData::NonInterleavedDest<DestFormat>{destPtrs, numChannels},
+                numSamples);
+            break;
         }
     }
 }
@@ -383,38 +398,51 @@ void AudioBufferConverter::convertFromPlanarFloat(const juce::AudioBuffer<float>
                                                   int numChannels,
                                                   BitDepth destFormat)
 {
-    const int bytesPerSample = getBytesPerSample(destFormat);
-    const int strideBytes = bytesPerSample * numChannels;
-    char* rawDest = static_cast<char*>(destData);
+    using SourceFormat = juce::AudioData::Format<juce::AudioData::Float32,
+                                                 juce::AudioData::NativeEndian>;
+    auto* const* sourcePtrs = sourceBuffer.getArrayOfReadPointers();
 
-    for (int ch = 0; ch < numChannels; ++ch)
+    switch (destFormat)
     {
-        if (ch >= sourceBuffer.getNumChannels()) break;
-
-        const float* srcChannel = sourceBuffer.getReadPointer(ch);
-        void* channelDest = rawDest + (ch * bytesPerSample);
-
-        switch (destFormat)
-        {
-            case BitDepth::Int16:
-                juce::AudioDataConverters::convertFloatToInt16LE(
-                    srcChannel, channelDest, numSamples, strideBytes);
-                break;
-
-            case BitDepth::Int24:
-                juce::AudioDataConverters::convertFloatToInt24LE(
-                    srcChannel, channelDest, numSamples, strideBytes);
-                break;
-
-            case BitDepth::Int32:
-                juce::AudioDataConverters::convertFloatToInt32LE(
-                    srcChannel, channelDest, numSamples, strideBytes);
-                break;
-
-            case BitDepth::Float32:
-                juce::AudioDataConverters::convertFloatToFloat32LE(
-                    srcChannel, channelDest, numSamples, strideBytes);
-                break;
+        case BitDepth::Int16: {
+            using DestFormat = juce::AudioData::Format<juce::AudioData::Int16,
+                                                       juce::AudioData::LittleEndian>;
+            juce::AudioData::interleaveSamples(
+                juce::AudioData::NonInterleavedSource<SourceFormat>{sourcePtrs, numChannels},
+                juce::AudioData::InterleavedDest<DestFormat>{
+                    static_cast<std::uint16_t*>(destData), numChannels},
+                numSamples);
+            break;
+        }
+        case BitDepth::Int24: {
+            using DestFormat = juce::AudioData::Format<juce::AudioData::Int24,
+                                                       juce::AudioData::LittleEndian>;
+            juce::AudioData::interleaveSamples(
+                juce::AudioData::NonInterleavedSource<SourceFormat>{sourcePtrs, numChannels},
+                juce::AudioData::InterleavedDest<DestFormat>{
+                    static_cast<char*>(destData), numChannels},
+                numSamples);
+            break;
+        }
+        case BitDepth::Int32: {
+            using DestFormat = juce::AudioData::Format<juce::AudioData::Int32,
+                                                       juce::AudioData::LittleEndian>;
+            juce::AudioData::interleaveSamples(
+                juce::AudioData::NonInterleavedSource<SourceFormat>{sourcePtrs, numChannels},
+                juce::AudioData::InterleavedDest<DestFormat>{
+                    static_cast<std::uint32_t*>(destData), numChannels},
+                numSamples);
+            break;
+        }
+        case BitDepth::Float32: {
+            using DestFormat = juce::AudioData::Format<juce::AudioData::Float32,
+                                                       juce::AudioData::LittleEndian>;
+            juce::AudioData::interleaveSamples(
+                juce::AudioData::NonInterleavedSource<SourceFormat>{sourcePtrs, numChannels},
+                juce::AudioData::InterleavedDest<DestFormat>{
+                    static_cast<float*>(destData), numChannels},
+                numSamples);
+            break;
         }
     }
 }

@@ -7,8 +7,12 @@
 #include "MIDITrack.h"
 #include "PluginHost.h"
 #include "ProjectState.h"
+#include "TrackFreeze.h"
+#include "TrackPluginManager.h"
+#include "TrackProcessor.h"
+#include "TrackSendManager.h"
+#include "TrackSidechain.h"
 #include "TempoMap.h"
-#include "RealTimeGarbageCollector.h"
 #include <algorithm>
 #include "ZenithLogger.h"
 
@@ -32,13 +36,15 @@ std::unique_ptr<Track> Track::create(const juce::String &name, Type type) {
 }
 
 //==============================================================================
-  Track::Track(const juce::String &name, Type type)
+Track::Track(const juce::String &name, Type type)
     : trackName(name), trackType(type),
-      processor(std::make_unique<TrackProcessor>()) {
-    for (int i = 0; i < numSends; ++i) {
-      sendDestinations[i].store(-1); // -1 means no destination
-    }
-  }
+      processor(std::make_unique<TrackProcessor>()),
+      freezeState_(std::make_unique<TrackFreezeState>()),
+      sidechain_(std::make_unique<TrackSidechain>(*processor)),
+      sendManager_(std::make_unique<TrackSendManager>(processor->getMixerChannel())),
+      pluginManager_(std::make_unique<TrackPluginManager>(*processor,
+                                                          currentSampleRate,
+                                                          currentBlockSize)) {}
 
 Track::~Track() {}
 
@@ -58,7 +64,14 @@ void Track::releaseResources() {
   processor->releaseResources();
 }
 
+void Track::getNextAudioBlock(
+    const juce::AudioSourceChannelInfo &bufferToFill) {
+  getNextAudioBlock(bufferToFill, 0, nullptr, {}, nullptr, nullptr);
+}
+
 //==============================================================================
+const juce::String &Track::getName() const { return trackName; }
+
 void Track::setName(const juce::String &newName) {
   trackName = newName;
   // Ensure sendChangeMessage called from message thread (Bug 93)
@@ -68,6 +81,12 @@ void Track::setName(const juce::String &newName) {
     juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
   }
 }
+
+const juce::String &Track::getTrackId() const { return trackId; }
+const juce::String &Track::getId() const { return trackId; }
+void Track::setTrackId(const juce::String &id) { trackId = id; }
+
+Track::Type Track::getType() const { return trackType; }
 
 juce::String Track::getTypeString() const {
   switch (trackType) {
@@ -82,6 +101,63 @@ juce::String Track::getTypeString() const {
   default:
     return "Unknown";
   }
+}
+
+int Track::getTrackIndex() const { return trackIndex; }
+void Track::setTrackIndex(int index) { trackIndex = index; }
+
+void Track::setColor(juce::Colour newColor) {
+  trackColor = newColor;
+  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+    sendChangeMessage();
+  } else {
+    juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
+  }
+}
+
+juce::Colour Track::getColor() const { return trackColor; }
+
+void Track::setOutputId(const juce::String &id) {
+  outputId = id;
+  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+    sendChangeMessage();
+  } else {
+    juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
+  }
+}
+
+juce::String Track::getOutputId() const { return outputId; }
+
+void Track::setVolume(float newVolume) {
+  processor->getMixerChannel().setVolume(newVolume);
+}
+
+float Track::getVolume() const {
+  return processor->getMixerChannel().getVolume();
+}
+
+void Track::setPan(float newPan) { processor->getMixerChannel().setPan(newPan); }
+
+float Track::getPan() const { return processor->getMixerChannel().getPan(); }
+
+void Track::setMuted(bool shouldBeMuted) {
+  processor->getMixerChannel().setMuted(shouldBeMuted);
+}
+
+bool Track::isMuted() const { return processor->getMixerChannel().isMuted(); }
+
+void Track::setSolo(bool shouldBeSolo) {
+  processor->getMixerChannel().setSolo(shouldBeSolo);
+}
+
+bool Track::isSolo() const { return processor->getMixerChannel().isSolo(); }
+
+void Track::setSilencedBySolo(bool silenced) {
+  processor->getMixerChannel().setSilencedBySolo(silenced);
+}
+
+bool Track::isSilencedBySolo() const {
+  return processor->getMixerChannel().isSilencedBySolo();
 }
 
 void Track::setArmed(bool shouldBeArmed) {
@@ -114,63 +190,60 @@ void Track::setSoloed(bool shouldBeSoloed) {
 
 bool Track::isSoloed() const { return processor->getMixerChannel().isSolo(); }
 
-void Track::setColor(juce::Colour newColor) {
-  trackColor = newColor;
-  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
-    sendChangeMessage();
-  } else {
-    juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
-  }
-}
-
-void Track::setOutputId(const juce::String &id) {
-  outputId = id;
-  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
-    sendChangeMessage();
-  } else {
-    juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
-  }
-}
-
 //==============================================================================
+void Track::setInputMonitorEnabled(bool enabled) {
+  inputMonitor_.store(enabled);
+}
+
+bool Track::isInputMonitorEnabled() const { return inputMonitor_.load(); }
+
+void Track::setInputChannel(int channel) { inputChannelIndex.store(channel); }
+
+int Track::getInputChannel() const { return inputChannelIndex.load(); }
+
+void Track::setFrozen(bool shouldBeFrozen) {
+  freezeState_->setFrozen(shouldBeFrozen);
+}
+
+bool Track::isFrozen() const { return freezeState_->isFrozen(); }
+
+void Track::setBeingFrozen(bool shouldBeFrozen) {
+  freezeState_->setBeingFrozen(shouldBeFrozen);
+}
+
+bool Track::isBeingFrozen() const { return freezeState_->isBeingFrozen(); }
+
 void Track::setFreezeFile(const juce::File &file) {
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-  freezeFile_ = file;
-  std::shared_ptr<juce::AudioBuffer<float>> newBuffer = nullptr;
+  freezeState_->setFreezeFile(file);
+}
 
-  if (file.existsAsFile()) {
-    if (freezeFormatManager_.getNumKnownFormats() == 0) {
-      freezeFormatManager_.registerBasicFormats();
-    }
+const juce::File &Track::getFreezeFile() const {
+  return freezeState_->getFreezeFile();
+}
 
-    std::unique_ptr<juce::AudioFormatReader> reader(
-        freezeFormatManager_.createReaderFor(file));
-    if (reader != nullptr) {
-      if (reader->lengthInSamples > 0 &&
-          reader->lengthInSamples < 200 * 60 * 48000) {
-        newBuffer = std::make_shared<juce::AudioBuffer<float>>(
-            reader->numChannels, (int)reader->lengthInSamples);
-        reader->read(newBuffer.get(), 0, (int)reader->lengthInSamples, 0, true,
-                     true);
-      }
-    }
-  }
+juce::AudioBuffer<float> *Track::getFreezeBuffer() const {
+  return freezeState_->getFreezeBuffer();
+}
 
-  // FIX: RCU atomic update for lock-free audio thread access
+juce::AudioBuffer<float> &Track::getSidechainBuffer() {
+  return processor->getSidechainBuffer();
+}
 
-  // 1. Keep old buffer alive until safe (Garbage Collection)
-  if (freezeBufferOwner_)
-    RealTimeGarbageCollector::getInstance().deferDelete(freezeBufferOwner_);
+TrackProcessor *Track::getProcessor() const { return processor.get(); }
 
-  // 2. Take ownership of new buffer
-  freezeBufferOwner_ = newBuffer;
+MixerChannel &Track::getMixerChannel() { return processor->getMixerChannel(); }
 
-  // 3. Atomically publish pointer to audio thread
-  activeFreezeBuffer_.store(newBuffer.get(), std::memory_order_release);
+const MixerChannel &Track::getMixerChannel() const {
+  return processor->getMixerChannel();
 }
 
 //==============================================================================
-//==============================================================================
+void Track::addClip(Clip *clip) {
+  juce::ignoreUnused(clip);
+  // Base Track class does not manage clips directly.
+  // Subclasses (ClipTrack, AudioTrack, MIDITrack) should override this.
+}
+
 void Track::addClip(std::unique_ptr<Clip> clip) {
   juce::ignoreUnused(clip);
   // Base Track class does not manage clips directly.
@@ -178,7 +251,7 @@ void Track::addClip(std::unique_ptr<Clip> clip) {
 }
 
 void Track::addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin) {
-  processor->getPluginChain().addPlugin(std::move(plugin), currentSampleRate, currentBlockSize);
+  pluginManager_->addPlugin(std::move(plugin));
   if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
     sendChangeMessage();
   } else {
@@ -187,7 +260,7 @@ void Track::addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin) {
 }
 
 void Track::removePlugin(int pluginIndex) {
-  processor->getPluginChain().removePlugin(pluginIndex);
+  pluginManager_->removePlugin(pluginIndex);
   if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
     sendChangeMessage();
   } else {
@@ -196,7 +269,7 @@ void Track::removePlugin(int pluginIndex) {
 }
 
 void Track::clearPlugins() {
-  processor->getPluginChain().clearPlugins();
+  pluginManager_->clearPlugins();
   if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
     sendChangeMessage();
   } else {
@@ -204,9 +277,9 @@ void Track::clearPlugins() {
   }
 }
 
-int Track::getNumPlugins() const { return processor->getPluginChain().getNumPlugins(); }
+int Track::getNumPlugins() const { return pluginManager_->getNumPlugins(); }
 juce::AudioPluginInstance *Track::getPlugin(int index) const {
-  return processor->getPluginChain().getPlugin(index);
+  return pluginManager_->getPlugin(index);
 }
 
 //==============================================================================
@@ -214,54 +287,42 @@ juce::AudioPluginInstance *Track::getPlugin(int index) const {
 
 //==============================================================================
 void Track::setSendDestination(int sendIndex, int auxBusIndex) {
-  if (juce::isPositiveAndBelow(sendIndex, numSends)) {
-    sendDestinations[sendIndex].store(auxBusIndex);
-    sendChangeMessage();
-    // Routing changes will be handled by the Engine observing this track
-  }
+  sendManager_->setSendDestination(sendIndex, auxBusIndex);
+  sendChangeMessage();
+  // Routing changes will be handled by the Engine observing this track
 }
 
 int Track::getSendDestination(int sendIndex) const {
-  if (juce::isPositiveAndBelow(sendIndex, numSends)) {
-    return sendDestinations[sendIndex].load();
-  }
-  return -1;
+  return sendManager_->getSendDestination(sendIndex);
 }
 
 void Track::setSendLevel(int sendIndex, float level) {
-  processor->getMixerChannel().setSendLevel(sendIndex, level);
+  sendManager_->setSendLevel(sendIndex, level);
 }
 
 float Track::getSendLevel(int sendIndex) const {
-  return processor->getMixerChannel().getSendLevel(sendIndex);
+  return sendManager_->getSendLevel(sendIndex);
 }
 
 void Track::setSendPreFader(int sendIndex, bool preFader) {
-  processor->getMixerChannel().setSendPreFader(sendIndex, preFader);
+  sendManager_->setSendPreFader(sendIndex, preFader);
 }
 
 bool Track::isSendPreFader(int sendIndex) const {
-  return processor->getMixerChannel().isSendPreFader(sendIndex);
+  return sendManager_->isSendPreFader(sendIndex);
 }
 
 void Track::setPluginSidechainSource(int pluginIndex, std::shared_ptr<Track> sourceTrack) {
-    {
-        const juce::SpinLock::ScopedLockType lock(sidechainLock_);
-        sidechainSourceTrack_ = sourceTrack;
-    }
+  sidechain_->setPluginSidechainSource(pluginIndex, sourceTrack);
+  if (sourceTrack != nullptr) {
+    DBG("Track " + trackName + ": Set sidechain source to " + sourceTrack->getName());
+  } else {
+    DBG("Track " + trackName + ": Cleared sidechain source");
+  }
+}
 
-    if (processor) {
-        // Pass weak_ptr or raw ptr? TrackProcessor is owned by Track, so raw ptr is okay-ish 
-        // if we change TrackProcessor to store weak_ptr.
-        // For now, let's update TrackProcessor to take the shared_ptr and store weak_ptr.
-        processor->setSidechainSource(pluginIndex, sourceTrack);
-    }
-    
-    if (sourceTrack != nullptr) {
-        DBG("Track " + trackName + ": Set sidechain source to " + sourceTrack->getName());
-    } else {
-        DBG("Track " + trackName + ": Cleared sidechain source");
-    }
+std::shared_ptr<Track> Track::getSidechainSource() const {
+  return sidechain_->getSidechainSource();
 }
 
 //==============================================================================
@@ -325,6 +386,61 @@ void Track::injectLiveMidiMessage(const juce::MidiMessage &message) {
   noteFifo_.push(message);
 }
 
+int Track::getNumClips() const { return 0; }
+
+Clip *Track::getClip(int index) const {
+  juce::ignoreUnused(index);
+  return nullptr;
+}
+
+// Note: addClip() implementations are at lines 242+ (not stubbed here)
+
+Instrument *Track::getInstrument() const { return nullptr; }
+
+bool Track::hasInstrument() const { return getInstrument() != nullptr; }
+
+float Track::getCurrentLevel() const {
+  return processor->getMixerChannel().getOutputLevel();
+}
+
+float Track::getPeakLevel() const {
+  return processor->getMixerChannel().getOutputPeak();
+}
+
+void Track::resetPeakLevel() { processor->getMixerChannel().resetPeaks(); }
+
+void Track::addAutomationLane(const juce::String &paramId,
+                              std::shared_ptr<AutomationLane> lane) {
+  automationManager.addLane(paramId, lane);
+}
+
+void Track::clearAutomationLanes() { automationManager.clearLanes(); }
+
+std::vector<PluginChain::ParameterInfo>
+Track::getPluginParameters(int pluginIndex) const {
+  return pluginManager_->getPluginParameters(pluginIndex);
+}
+
+std::vector<PluginChain::ParameterInfo>
+Track::getAllPluginParameters() const {
+  return pluginManager_->getAllPluginParameters();
+}
+
+void Track::setPluginParameterValue(int pluginIndex, int paramIndex,
+                                    float normalizedValue) {
+  pluginManager_->setPluginParameterValue(pluginIndex, paramIndex,
+                                          normalizedValue);
+}
+
+int Track::getPluginNumParameters(int pluginIndex) const {
+  return pluginManager_->getPluginNumParameters(pluginIndex);
+}
+
+juce::String Track::getPluginParameterName(int pluginIndex,
+                                           int paramIndex) const {
+  return pluginManager_->getPluginParameterName(pluginIndex, paramIndex);
+}
+
 void Track::updateClipPositions(juce::int64 playheadPosition) {
   for (int i = 0; i < getNumClips(); ++i) {
     if (auto *clip = getClip(i)) {
@@ -332,5 +448,10 @@ void Track::updateClipPositions(juce::int64 playheadPosition) {
     }
   }
 }
+
+//==============================================================================
+bool Track::isArmed() const { return armed.load(); }
+
+bool Track::isEnabled() const { return enabled.load(); }
 
 } // namespace zenith

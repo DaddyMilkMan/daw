@@ -11,9 +11,22 @@
 */
 
 #include "PluginHost.h"
+#include "PluginBlacklist.h"
 #include "../plugins/InternalPluginFormat.h"
 
 namespace zenith {
+
+juce::String PluginHost::ScanStatistics::getSummary() const
+{
+    juce::String summary;
+    summary << "Scanned: " << totalScanned << ", ";
+    summary << "Found: " << found << ", ";
+    if (crashed > 0) summary << "Crashed: " << crashed << ", ";
+    if (timedOut > 0) summary << "Timed out: " << timedOut << ", ";
+    if (blacklisted > 0) summary << "Skipped (blacklisted): " << blacklisted << ", ";
+    if (parseErrors > 0) summary << "Parse errors: " << parseErrors;
+    return summary.trimCharactersAtEnd(", ");
+}
 
 //==============================================================================
 PluginHost::PluginHost() {
@@ -41,6 +54,10 @@ PluginHost::PluginHost() {
   if (vst3Format == nullptr) {
     DBG("PluginHost: WARNING - VST3 format not available!");
   }
+
+  // Initialize blacklist
+  blacklist_ = std::make_unique<PluginBlacklist>();
+  DBG("PluginHost: Blacklist loaded with " + juce::String(blacklist_->getBlacklistCount()) + " entries");
 
   DBG("PluginHost: Initialized");
 }
@@ -111,8 +128,21 @@ int PluginHost::scanInternal(
   return foundCount;
 }
 
-bool PluginHost::scanFileOutProcess(const juce::File& file, juce::PluginDescription& result)
+PluginHost::ScanResult PluginHost::scanFileWithDetails(const juce::File& file)
 {
+    ScanResult result;
+    result.filePath = file.getFullPathName();
+    
+    // Check blacklist first
+    if (blacklist_ && blacklist_->isBlacklisted(file.getFullPathName()))
+    {
+        result.success = false;
+        result.errorType = "blacklisted";
+        result.errorMessage = "Plugin is in blacklist due to previous crashes";
+        DBG("PluginHost: Skipping blacklisted plugin " + file.getFileName());
+        return result;
+    }
+
     juce::File currentApp = juce::File::getSpecialLocation(juce::File::currentApplicationFile);
     juce::File scannerExe = currentApp.getSiblingFile("ZenithPluginScanner");
     
@@ -121,68 +151,124 @@ bool PluginHost::scanFileOutProcess(const juce::File& file, juce::PluginDescript
     #endif
 
     if (!scannerExe.existsAsFile()) {
-        // Fallback for Debug builds where it might be in same dir
         DBG("PluginHost: Scanner not found at " + scannerExe.getFullPathName());
-        return false;
+        result.success = false;
+        result.errorType = "scanner_not_found";
+        result.errorMessage = "Plugin scanner executable not found";
+        return result;
     }
 
     juce::ChildProcess process;
     juce::StringArray args;
     args.add(scannerExe.getFullPathName());
-    args.add("--scan");
-    args.add(file.getFullPathName());
+    args.add(file.getFullPathName());  // Note: removed --scan flag, scanner takes path directly
 
-    if (process.start(args))
+    if (!process.start(args))
     {
-        juce::String output = process.readAllProcessOutput();
-        process.waitForProcessToFinish(5000); // 5 sec timeout
+        result.success = false;
+        result.errorType = "process_start_failed";
+        result.errorMessage = "Failed to start plugin scanner process";
+        return result;
+    }
+
+    // Wait for process with timeout
+    constexpr int kTimeoutMs = 8000;  // 8 second timeout (increased from 5)
+    bool finished = process.waitForProcessToFinish(kTimeoutMs);
+    
+    if (!finished) {
+        process.kill();
+        process.waitForProcessToFinish(1000);
         
-        if (process.getExitCode() == 0)
-        {
-            try {
-                // Parse YAML output (simple key: value format)
-                output = output.trim();
-                
-                // Split into lines and parse key-value pairs
-                auto lines = juce::StringArray::fromLines(output);
-                bool foundSuccess = false;
-                
-                for (const auto& line : lines) {
-                    auto trimmed = line.trim();
-                    
-                    if (trimmed.startsWith("status:")) {
-                        auto status = trimmed.fromFirstOccurrenceOf("status:", false, false).trim();
-                        if (status == "success") {
-                            foundSuccess = true;
-                        }
-                    } else if (trimmed.startsWith("name:")) {
-                        result.name = trimmed.fromFirstOccurrenceOf("name:", false, false).trim();
-                    } else if (trimmed.startsWith("manufacturer:")) {
-                        result.manufacturerName = trimmed.fromFirstOccurrenceOf("manufacturer:", false, false).trim();
-                    } else if (trimmed.startsWith("version:")) {
-                        result.version = trimmed.fromFirstOccurrenceOf("version:", false, false).trim();
-                    } else if (trimmed.startsWith("uid:")) {
-                        result.uniqueId = trimmed.fromFirstOccurrenceOf("uid:", false, false).trim().getIntValue();
-                    } else if (trimmed.startsWith("is_instrument:")) {
-                        auto isInstStr = trimmed.fromFirstOccurrenceOf("is_instrument:", false, false).trim();
-                        result.isInstrument = (isInstStr == "true");
-                    } else if (trimmed.startsWith("format:")) {
-                        result.pluginFormatName = trimmed.fromFirstOccurrenceOf("format:", false, false).trim();
-                    }
-                }
-                
-                if (foundSuccess) {
-                    result.fileOrIdentifier = file.getFullPathName();
-                    result.lastInfoUpdateTime = juce::Time::getCurrentTime();
-                    return true;
-                }
-} catch (const std::exception& e) {
-                DBG("PluginHost: Parse error: " + juce::String(e.what()));
+        result.success = false;
+        result.errorType = "timeout";
+        result.errorMessage = "Plugin scan timed out (plugin may be hung)";
+        
+        // Record failure and potentially blacklist
+        if (blacklist_)
+            blacklist_->recordFailure(file.getFullPathName(), "timeout", result.errorMessage);
+        
+        DBG("PluginHost: Scan timeout for " + file.getFileName());
+        return result;
+    }
+
+    juce::String output = process.readAllProcessOutput();
+    int exitCode = process.getExitCode();
+    
+    // Check for crash/non-zero exit
+    if (exitCode != 0)
+    {
+        result.success = false;
+        result.errorType = "crash";
+        result.errorMessage = "Scanner process crashed or returned error code " + juce::String(exitCode);
+        
+        // Record failure and blacklist
+        if (blacklist_)
+            blacklist_->recordFailure(file.getFullPathName(), "crash", result.errorMessage);
+        
+        DBG("PluginHost: Crash detected scanning " + file.getFileName() + " (exit code " + juce::String(exitCode) + ")");
+        return result;
+    }
+
+    // Parse YAML output
+    output = output.trim();
+    auto lines = juce::StringArray::fromLines(output);
+    bool foundSuccess = false;
+    
+    for (const auto& line : lines) {
+        auto trimmed = line.trim();
+        
+        if (trimmed.startsWith("status:")) {
+            auto status = trimmed.fromFirstOccurrenceOf("status:", false, false).trim();
+            if (status == "success") {
+                foundSuccess = true;
+            } else if (status == "error") {
+                foundSuccess = false;
             }
+        } else if (trimmed.startsWith("error_type:")) {
+            result.errorType = trimmed.fromFirstOccurrenceOf("error_type:", false, false).trim();
+        } else if (trimmed.startsWith("message:")) {
+            result.errorMessage = trimmed.fromFirstOccurrenceOf("message:", false, false).trim();
+        } else if (trimmed.startsWith("name:")) {
+            result.description.name = trimmed.fromFirstOccurrenceOf("name:", false, false).trim();
+        } else if (trimmed.startsWith("manufacturer:")) {
+            result.description.manufacturerName = trimmed.fromFirstOccurrenceOf("manufacturer:", false, false).trim();
+        } else if (trimmed.startsWith("version:")) {
+            result.description.version = trimmed.fromFirstOccurrenceOf("version:", false, false).trim();
+        } else if (trimmed.startsWith("uid:")) {
+            result.description.uniqueId = trimmed.fromFirstOccurrenceOf("uid:", false, false).trim().getIntValue();
+        } else if (trimmed.startsWith("is_instrument:")) {
+            auto isInstStr = trimmed.fromFirstOccurrenceOf("is_instrument:", false, false).trim();
+            result.description.isInstrument = (isInstStr == "true");
+        } else if (trimmed.startsWith("format:")) {
+            result.description.pluginFormatName = trimmed.fromFirstOccurrenceOf("format:", false, false).trim();
         }
-        else {
-             DBG("PluginHost: Detailed Crash detected scanning " + file.getFileName());
-        }
+    }
+    
+    if (foundSuccess) {
+        result.success = true;
+        result.errorType = "success";
+        result.description.fileOrIdentifier = file.getFullPathName();
+        result.description.lastInfoUpdateTime = juce::Time::getCurrentTime();
+        return result;
+    } else {
+        result.success = false;
+        if (result.errorType.isEmpty())
+            result.errorType = "parse_error";
+        if (result.errorMessage.isEmpty())
+            result.errorMessage = "Failed to parse plugin description";
+        
+        DBG("PluginHost: Parse error for " + file.getFileName());
+        return result;
+    }
+}
+
+bool PluginHost::scanFileOutProcess(const juce::File& file, juce::PluginDescription& result)
+{
+    auto scanResult = scanFileWithDetails(file);
+    
+    if (scanResult.success) {
+        result = scanResult.description;
+        return true;
     }
     
     return false;
@@ -211,6 +297,10 @@ void PluginHost::scanAsync(
   isScanning_ = true;
   shouldCancel_ = false;
 
+  if (scanThread_.joinable()) {
+    scanThread_.join();
+  }
+
   scanThread_ = std::thread([this, progressCallback]() {
     DBG("PluginHost: Starting async scan...");
 
@@ -226,8 +316,6 @@ void PluginHost::scanAsync(
 
     DBG("PluginHost: Async scan complete.");
   });
-
-  scanThread_.detach();
 }
 
 void PluginHost::cancelScan() { shouldCancel_ = true; }
@@ -402,5 +490,76 @@ void PluginHost::addToKnownPlugins(const juce::PluginDescription& desc) {
     knownPlugins.addType(desc);
 }
 
-} // namespace zenith
+std::vector<PluginHost::ScanResult> PluginHost::scanWithResults(const juce::File& path)
+{
+    std::vector<ScanResult> results;
+    
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
+    if (vst3Format == nullptr) {
+        DBG("PluginHost: Cannot scan - VST3 format not available");
+        return results;
+    }
+
+    if (!path.exists()) {
+        DBG("PluginHost: Path does not exist: " + path.getFullPathName());
+        return results;
+    }
+
+    DBG("PluginHost: Scanning path with results: " + path.getFullPathName());
+
+    // Collect files to scan
+    juce::Array<juce::File> filesToScan;
+    if (path.isDirectory()) {
+        path.findChildFiles(filesToScan, juce::File::findFiles, true, "*.vst3");
+    } else if (path.hasFileExtension(".vst3")) {
+        filesToScan.add(path);
+    }
+
+    // Scan each file with detailed results
+    for (const auto& file : filesToScan) {
+        auto result = scanFileWithDetails(file);
+        results.push_back(result);
+        
+        if (result.success && !knowsAboutPlugin(result.description)) {
+            addToKnownPlugins(result.description);
+        }
+    }
+
+    // Store results
+    {
+        std::lock_guard<std::mutex> lock(scanResultsMutex_);
+        lastScanResults_ = results;
+    }
+
+    DBG("PluginHost: Scan complete - " + juce::String(results.size()) + " plugins attempted");
+    
+    return results;
+}
+
+PluginHost::ScanStatistics PluginHost::getLastScanStatistics() const
+{
+    ScanStatistics stats;
+    
+    std::lock_guard<std::mutex> lock(scanResultsMutex_);
+    
+    stats.totalScanned = static_cast<int>(lastScanResults_.size());
+    
+    for (const auto& result : lastScanResults_) {
+        if (result.success) {
+            stats.found++;
+        } else if (result.errorType == "blacklisted") {
+            stats.blacklisted++;
+        } else if (result.errorType == "timeout") {
+            stats.timedOut++;
+        } else if (result.errorType == "crash") {
+            stats.crashed++;
+        } else {
+            stats.parseErrors++;
+        }
+    }
+    
+    return stats;
+}
+
+} // namespace zenith

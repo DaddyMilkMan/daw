@@ -1,8 +1,30 @@
 #pragma once
 
+#include <array>
+#include <vector>
 #include <juce_core/juce_core.h>
 
 namespace zenith {
+
+enum class NoteExpressionType {
+    PitchBend = 0,
+    Pressure,
+    Slide,
+    Expression,
+    Count
+};
+
+struct NoteExpressionPoint {
+    double timeOffset = 0.0; ///< Offset from note start in beats
+    float value = 0.0f;      ///< 0.0 to 1.0
+    float tension = 0.0f;    ///< -1.0 to 1.0
+};
+
+constexpr size_t kNoteExpressionTypeCount =
+    static_cast<size_t>(NoteExpressionType::Count);
+
+using NoteExpressionSeries = std::vector<NoteExpressionPoint>;
+using NoteExpressionMap = std::array<NoteExpressionSeries, kNoteExpressionTypeCount>;
 
 /**
  * @brief Canonical MIDI note representation for Zenith DAW.
@@ -24,6 +46,7 @@ struct MidiNote {
     juce::String recurrence;  ///< Loop recurrence (e.g. "1:4")
     int articulationId = 0;   ///< Articulation/Keyswitch ID
     float tension = 0.0f;     ///< -1.0 to 1.0 (swing/timing curve)
+    NoteExpressionMap expressions; ///< Per-note expression data (MPE)
 
     MidiNote() = default;
 

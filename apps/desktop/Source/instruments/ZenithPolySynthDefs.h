@@ -12,7 +12,6 @@
 
 #pragma once
 
-#include <array>
 #include <juce_core/juce_core.h>
 
 namespace zenith {
@@ -32,6 +31,10 @@ enum class OscillatorWaveform {
   Noise,
   Supersaw,
   Wavetable,
+  Wavefolder,
+  PhaseDist,
+  Additive,
+  Granular,
   NumWaveforms
 };
 
@@ -43,7 +46,16 @@ enum class FilterType { Lowpass = 0, Bandpass, Highpass, NumTypes };
 /**
     Filter model types
 */
-enum class FilterModelType { SVF = 0, Ladder };
+enum class FilterModelType { 
+    SVF = 0, 
+    Ladder,
+    MoogLadder,
+    MS20,
+    Prophet,
+    SEM,
+    TB303,
+    NumModels
+};
 
 /**
     Quality preset for CPU optimization
@@ -114,12 +126,17 @@ enum class ModulationSource {
   None = 0,   // No modulation
   LFO1,       // Low-frequency oscillator 1 (sine wave, -1 to +1)
   LFO2,       // Low-frequency oscillator 2 (sine wave, -1 to +1)
+  StepLFO1,   // Step sequencer LFO 1 (-1 to +1)
+  StepLFO2,   // Step sequencer LFO 2 (-1 to +1)
+  StepLFO3,   // Step sequencer LFO 3 (-1 to +1)
+  StepLFO4,   // Step sequencer LFO 4 (-1 to +1)
   Env1,       // Amplitude envelope (0 to 1, ADSR)
   Env2,       // Modulation envelope (0 to 1, ADSR)
   Velocity,   // Note-on velocity (0 to 1)
   ModWheel,   // MIDI mod wheel CC#1 (0 to 1)
   Aftertouch, // MIDI channel pressure (0 to 1)
   Timbre,     // MPE Y-axis (CC#74) (0 to 1)
+  Arp,        // Arpeggiator gate (0 to 1)
   NumSources
 };
 
@@ -142,6 +159,12 @@ enum class ModulationDestination {
   Osc3Shape,
   LFO1Rate,
   LFO2Rate,
+  StepLFO1Rate,
+  StepLFO2Rate,
+  StepLFO3Rate,
+  StepLFO4Rate,
+  UnisonDetune,
+  UnisonSpread,
   NumDestinations
 };
 
@@ -164,23 +187,25 @@ struct ModulationSlot {
 */
 struct ModulationState {
   // Pre-computed modulation amounts for each destination
-  std::array<float, static_cast<size_t>(ModulationDestination::NumDestinations)>
-      values;
+  juce::Array<float> values;
 
-  ModulationState() { reset(); }
+  ModulationState() {
+    values.resize(static_cast<int>(ModulationDestination::NumDestinations));
+    reset();
+  }
 
   void reset() { values.fill(0.0f); }
 
   float get(ModulationDestination dest) const {
-    return values[static_cast<size_t>(dest)];
+    return values[static_cast<int>(dest)];
   }
 
   void set(ModulationDestination dest, float value) {
-    values[static_cast<size_t>(dest)] = value;
+    values.set(static_cast<int>(dest), value);
   }
 
   void add(ModulationDestination dest, float value) {
-    values[static_cast<size_t>(dest)] += value;
+    values.set(static_cast<int>(dest), get(dest) + value);
   }
 };
 

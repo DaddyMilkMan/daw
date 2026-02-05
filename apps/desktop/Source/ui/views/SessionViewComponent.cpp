@@ -13,6 +13,7 @@
 #include "SessionViewComponent.h"
 #include "../design-system/ColorBridge.h"
 #include "../design-system/ZenithDesignSystem.h"
+#include "../engine/EngineEvent.h"
 #include "../engine/Track.h"
 #include "FontManager.h"
 
@@ -329,18 +330,21 @@ void SessionViewComponent::launchClip(int trackIndex, int sceneIndex) {
 
   auto &slot = clipGrid_[trackIndex][sceneIndex];
   if (slot.hasClip) {
-    // In a full implementation, this would trigger clip playback via engine
+    // Queue clip launch event to engine
+    zenith::EngineEvent event;
+    event.type = zenith::EngineEvent::Type::LaunchClip;
+    event.trackIndex = trackIndex;
+    event.sceneIndex = sceneIndex;
+    event.clipId = slot.clipId;
+    engine_.queueEvent(event);
+
+    // Mark as queued - will be set to playing when engine acknowledges
     slot.isQueued = true;
 
-    // Simulated: Set clip as playing after queue
-    juce::Timer::callAfterDelay(100, [this, trackIndex, sceneIndex]() {
-      if (trackIndex < static_cast<int>(clipGrid_.size()) &&
-          sceneIndex < static_cast<int>(clipGrid_[trackIndex].size())) {
-        clipGrid_[trackIndex][sceneIndex].isQueued = false;
-        clipGrid_[trackIndex][sceneIndex].isPlaying = true;
-        repaint();
-      }
-    });
+    // If transport is not playing, start it
+    if (!engine_.isPlaying()) {
+      engine_.play();
+    }
   }
   repaint();
 }
@@ -353,6 +357,16 @@ void SessionViewComponent::stopClip(int trackIndex, int sceneIndex) {
     return;
 
   auto &slot = clipGrid_[trackIndex][sceneIndex];
+  if (slot.hasClip) {
+    // Queue stop clip event to engine
+    zenith::EngineEvent event;
+    event.type = zenith::EngineEvent::Type::StopClip;
+    event.trackIndex = trackIndex;
+    event.clipId = slot.clipId;
+    engine_.queueEvent(event);
+  }
+
+  // Immediately update UI state
   slot.isPlaying = false;
   slot.isQueued = false;
   repaint();

@@ -1,1 +1,11 @@
 zenith-core/Resources/models/htdemucs.onnx.data filter=lfs diff=lfs merge=lfs -text
+
+# Exclude external dependencies from GitHub language stats
+external/** linguist-generated=true linguist-vendored=true
+shimboot/** linguist-generated=true
+old_logs/** linguist-generated=true
+
+# Exclude Python venv and cache
+backend/.venv/** linguist-generated=true
+**/__pycache__/** linguist-generated=true
+*.pyc linguist-generated=true

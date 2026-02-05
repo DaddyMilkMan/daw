@@ -84,28 +84,27 @@ void SkiaTextInput::drawSkia(SkCanvas* canvas) {
   textAreaWidth_ = bounds.getWidth() - padding * 2;
   
   //==========================================================================
-  // 1. Background
+  // 1. Background + Border (optional)
   //==========================================================================
-  SkPaint bgPaint;
-  bgPaint.setAntiAlias(true);
-  bgPaint.setColor(design::withAlpha(design::colors::BG_02, 0.6f));
-  canvas->drawRoundRect(rect, radius, radius, bgPaint);
-  
-  //==========================================================================
-  // 2. Border
-  //==========================================================================
-  SkPaint borderPaint;
-  borderPaint.setAntiAlias(true);
-  borderPaint.setStyle(SkPaint::kStroke_Style);
-  
-  if (isFocused_) {
-    borderPaint.setStrokeWidth(1.5f);
-    borderPaint.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.6f));
-  } else {
-    borderPaint.setStrokeWidth(0.5f);
-    borderPaint.setColor(design::withAlpha(design::colors::BORDER_SUBTLE, 0.5f));
+  if (drawBackground_) {
+    SkPaint bgPaint;
+    bgPaint.setAntiAlias(true);
+    bgPaint.setColor(design::withAlpha(design::colors::BG_02, 0.6f));
+    canvas->drawRoundRect(rect, radius, radius, bgPaint);
+    
+    SkPaint borderPaint;
+    borderPaint.setAntiAlias(true);
+    borderPaint.setStyle(SkPaint::kStroke_Style);
+    
+    if (isFocused_) {
+      borderPaint.setStrokeWidth(1.5f);
+      borderPaint.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.6f));
+    } else {
+      borderPaint.setStrokeWidth(0.5f);
+      borderPaint.setColor(design::withAlpha(design::colors::BORDER_SUBTLE, 0.5f));
+    }
+    canvas->drawRoundRect(rect, radius, radius, borderPaint);
   }
-  canvas->drawRoundRect(rect, radius, radius, borderPaint);
   
   //==========================================================================
   // 3. Text Area (clipped for scroll)
@@ -122,7 +121,7 @@ void SkiaTextInput::drawSkia(SkCanvas* canvas) {
   
   if (text_.isEmpty() && !isFocused_) {
     // Placeholder
-    textPaint.setColor(design::colors::TEXT_TERTIARY);
+    textPaint.setColor(placeholderColor_);
     canvas->drawString(placeholder_.toStdString().c_str(), textX, textY, cachedFont_, textPaint);
   } else {
     // Selection highlight
@@ -142,7 +141,7 @@ void SkiaTextInput::drawSkia(SkCanvas* canvas) {
     }
     
     // Text
-    textPaint.setColor(design::colors::TEXT_PRIMARY);
+    textPaint.setColor(textColor_);
     canvas->drawString(text_.toStdString().c_str(), textX, textY, cachedFont_, textPaint);
     
     // Cursor
@@ -151,7 +150,7 @@ void SkiaTextInput::drawSkia(SkCanvas* canvas) {
       
       SkPaint cursorPaint;
       cursorPaint.setAntiAlias(true);
-      cursorPaint.setColor(design::colors::ACCENT_PRIMARY);
+      cursorPaint.setColor(cursorColor_);
       cursorPaint.setStrokeWidth(2.0f);
       
       canvas->drawLine(cursorX, 6, cursorX, bounds.getHeight() - 6, cursorPaint);
@@ -163,7 +162,7 @@ void SkiaTextInput::drawSkia(SkCanvas* canvas) {
   //==========================================================================
   // 4. Scroll indicators (fade gradients at edges)
   //==========================================================================
-  if (scrollOffset_ > 0) {
+  if (drawBackground_ && scrollOffset_ > 0) {
     // Left fade
     SkPaint fadePaint;
     SkPoint pts[2] = {{padding, 0}, {padding + 20, 0}};
@@ -172,7 +171,7 @@ void SkiaTextInput::drawSkia(SkCanvas* canvas) {
     canvas->drawRect(SkRect::MakeLTRB(padding, 0, padding + 20, bounds.getHeight()), fadePaint);
   }
   
-  if (totalTextWidth_ > textAreaWidth_ + scrollOffset_) {
+  if (drawBackground_ && totalTextWidth_ > textAreaWidth_ + scrollOffset_) {
     // Right fade
     SkPaint fadePaint;
     float rightEdge = bounds.getWidth() - padding;

@@ -36,7 +36,7 @@ class Issue:
     """GitHub issue representation."""
     number: int
     title: str
-    body: str
+    body: Optional[str]
     author: str
     labels: Set[str] = field(default_factory=set)
     assignees: List[str] = field(default_factory=list)
@@ -84,8 +84,17 @@ class TriageBot:
         """Pre-compile regex patterns for performance."""
         # Issue Type Patterns
         issue_type_keywords = {
-            "BUG": ["crash", "crashes", "crashed", "crashing", "segfault", "error", "broken", "fails", "failed", "failure"],
-            "SECURITY": ["security", "vulnerability", "cve"],
+            "BUG": [
+                "crash", "crashes", "crashed", "crashing", "segfault", "segv", "error",
+                "broken", "broke", "fails", "failed", "failure",
+                "freeze", "freezes", "frozen", "freezing",
+                "hang", "hangs", "hanging", "hung",
+                "stuck", "unresponsive",
+                "assertion", "panic", "trap",
+                "data loss", "corruption", "corrupt",
+                "regression"
+            ],
+            "SECURITY": ["security", "vulnerability", "cve", "exploit", "breach", "rce", "injection"],
             "PERFORMANCE": ["slow", "performance", "lag", "latency"],
             "FEATURE_REQUEST": ["feature request", "would be nice", "add support"],
             "QUESTION": ["how to", "how do i", "question", "help"],
@@ -95,8 +104,12 @@ class TriageBot:
 
         # Priority Patterns
         priority_keywords = {
-            "CRITICAL": ["crash", "crashes", "crashed", "crashing", "segfault", "data loss", "security", "vulnerability", "cannot use"],
-            "HIGH": ["broken", "not working", "unusable", "blocking"]
+            "CRITICAL": [
+                "crash", "crashes", "crashed", "crashing", "segfault", "segv",
+                "data loss", "corruption", "corrupt", "panic", "assertion",
+                "cannot use", "unresponsive", "hang", "hung"
+            ],
+            "HIGH": ["broken", "broke", "not working", "unusable", "blocking", "regression"]
         }
         self.priority_regex = self._build_compiled_regex(priority_keywords)
 
@@ -144,6 +157,27 @@ class TriageBot:
 
         full_pattern = "|".join(patterns)
         return re.compile(full_pattern, re.IGNORECASE)
+
+    def _issue_text(self, issue: Issue) -> str:
+        """Safely combine title and body (handles None)."""
+        return (issue.title or "") + " " + (issue.body or "")
+
+    def _normalize_word(self, word: str) -> str:
+        """Normalize/stem a single word for similarity matching."""
+        synonyms = {
+            "sound": "audio",
+            "sounds": "audio",
+        }
+        word = synonyms.get(word, word)
+
+        for suffix in ("ing", "ed", "es", "s"):
+            if word.endswith(suffix) and len(word) > len(suffix) + 2:
+                return word[: -len(suffix)]
+        return word
+
+    def _stemmed_words(self, text: str) -> Set[str]:
+        words = re.findall(r"[a-zA-Z0-9]+", text.lower())
+        return {self._normalize_word(word) for word in words}
 
     def _load_maintainer_expertise(self) -> Dict[str, List[str]]:
         """Load maintainer expertise areas."""
@@ -196,7 +230,7 @@ class TriageBot:
 
     def _classify_issue_type(self, issue: Issue) -> IssueType:
         """Classify issue type from title and body."""
-        text = issue.title + " " + issue.body
+        text = self._issue_text(issue)
 
         matches = {m.lastgroup for m in self.issue_type_regex.finditer(text)}
         
@@ -223,7 +257,7 @@ class TriageBot:
 
     def _determine_priority(self, issue: Issue, issue_type: IssueType) -> Priority:
         """Determine issue priority."""
-        text = issue.title + " " + issue.body
+        text = self._issue_text(issue)
         
         matches = {m.lastgroup for m in self.priority_regex.finditer(text)}
         
@@ -235,7 +269,13 @@ class TriageBot:
         
         # Security issues are always at least high priority
         if issue_type == IssueType.SECURITY:
-            return Priority.CRITICAL
+            critical_security = [
+                "vulnerability", "exploit", "cve", "breach", "rce", "injection"
+            ]
+            lowered = text.lower()
+            if any(kw in lowered for kw in critical_security):
+                return Priority.CRITICAL
+            return Priority.HIGH
         
         # Bug issues default to medium
         if issue_type == IssueType.BUG:
@@ -257,7 +297,7 @@ class TriageBot:
         labels.add(priority.value)
         
         # Add component labels based on content
-        text = issue.title + " " + issue.body
+        text = self._issue_text(issue)
         
         component_matches = {m.lastgroup for m in self.component_regex.finditer(text)}
         for component in component_matches:
@@ -289,8 +329,8 @@ class TriageBot:
         # TODO: Use better similarity metric (embeddings, TF-IDF)
         
         # Simple word overlap
-        words1 = set(text1.lower().split())
-        words2 = set(text2.lower().split())
+        words1 = self._stemmed_words(text1)
+        words2 = self._stemmed_words(text2)
         
         if not words1 or not words2:
             return 0.0
@@ -303,7 +343,7 @@ class TriageBot:
     def _route_to_maintainer(self, issue: Issue, 
                             issue_type: IssueType) -> List[str]:
         """Route issue to appropriate maintainer."""
-        text = issue.title + " " + issue.body
+        text = self._issue_text(issue)
         
         # Find all maintainers with matching expertise
         matches = {m.lastgroup for m in self.maintainer_regex.finditer(text)}

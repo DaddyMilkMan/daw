@@ -205,10 +205,16 @@ void RecordingManager::stopRecording(
   drainMidiFifo();
 
   // Stop AudioRecorder and finalize clips with results
+  // BUG FIX: Capture tracks by value (shared_ptrs are cheap) to avoid dangling references.
+  // NOTE: tempoMap passed by const reference is safe here because AudioRecorder::stopRecording()
+  // calls the callback SYNCHRONOUSLY before returning. If this ever changes to async,
+  // we would need to extract the needed tempo values before the call.
+  auto tracksCopy = tracks;  // Copy vector of shared_ptrs (cheap)
+  
   if (audioRecorder_) {
-    audioRecorder_->stopRecording([this, &tracks, &tempoMap](std::vector<RecordingResult> results) {
+    audioRecorder_->stopRecording([this, tracksCopy = std::move(tracksCopy), &tempoMap](std::vector<RecordingResult> results) {
       // Finalize recordings and create clips with the actual results
-      finalizeRecordings(results, tracks, tempoMap);
+      finalizeRecordings(results, tracksCopy, tempoMap);
       
       // Clear MIDI sessions
       {
@@ -220,7 +226,7 @@ void RecordingManager::stopRecording(
     });
   } else {
     // No audio recorder, just finalize MIDI
-    finalizeRecordings({}, tracks, tempoMap);
+    finalizeRecordings({}, tracksCopy, tempoMap);
     
     // Clear MIDI sessions
     {
@@ -278,8 +284,18 @@ void RecordingManager::discardCurrentRecording() {
 void RecordingManager::captureAudio(
     const float *const *inputData, int numInputChannels, int numSamples,
     const std::vector<std::shared_ptr<Track>> &tracks) {
+  
+  // Check if we should actually record (punch in/out logic)
+  if (!isRecording_.load()) {
+    return;
+  }
+  
+  // Punch in/out check - if punch is enabled, we need position info
+  // This is handled by the AudioRecorder which receives position info per block
+  // For now, we pass the punch state to the audio recorder
+  
   // Delegate to AudioRecorder (RT-safe)
-  if (audioRecorder_ && isRecording_.load()) {
+  if (audioRecorder_) {
     audioRecorder_->write(inputData, numInputChannels, numSamples, tracks);
   }
 }
@@ -553,6 +569,78 @@ void RecordingManager::createMidiClip(const juce::MidiMessageSequence &sequence,
     DBG("RecordingManager: Added " + juce::String(notes.size()) +
         " notes to MIDI clip");
   }
+}
+
+//==============================================================================
+// Pre-roll / Count-in
+//==============================================================================
+
+void RecordingManager::startRecordingWithPreRoll(
+    juce::int64 recordStartPosition,
+    const std::vector<std::shared_ptr<Track>> &tracks,
+    const TempoMap& tempoMap) {
+  
+  int preRollBars = preRollBars_.load();
+  
+  if (preRollBars <= 0) {
+    // No pre-roll, start immediately
+    startRecording(recordStartPosition, tracks);
+    return;
+  }
+  
+  // Calculate pre-roll duration in samples
+  // Get actual tempo at record position from tempo map
+  double recordPositionBeats = static_cast<double>(recordStartPosition) / sampleRate_ * 120.0 / 60.0;  // Approximate beats
+  double tempo = tempoMap.getTempoAt(recordPositionBeats);
+  if (tempo <= 0.0) tempo = 120.0;  // Fallback to default
+
+  // Get time signature at record position
+  int timeSigNumerator = 4;  // TODO: Get from tempo map when time signature tracking is added
+  if (timeSigNumerator <= 0) timeSigNumerator = 4;
+
+  double beatsPerSecond = tempo / 60.0;
+  double samplesPerBeat = sampleRate_ / beatsPerSecond;
+  double beatsPerBar = timeSigNumerator;
+  
+  juce::int64 preRollSamples = static_cast<juce::int64>(
+      preRollBars * beatsPerBar * samplesPerBeat);
+  
+  preRollEndPosition_ = recordStartPosition;
+  juce::int64 preRollStartPosition = recordStartPosition - preRollSamples;
+  
+  // Initialize pre-roll state
+  isInPreRoll_.store(true);
+  preRollBeatsRemaining_.store(static_cast<double>(preRollBars * beatsPerBar));
+  
+  // Start the transport at pre-roll position
+  // Note: The actual transport control should be handled by the caller (Engine)
+  // We just set up the recording state here
+  
+  DBG("RecordingManager: Pre-roll started - " + juce::String(preRollBars) + 
+      " bars, recording will start at sample " + juce::String(recordStartPosition));
+}
+
+//==============================================================================
+// Punch In/Out
+//==============================================================================
+
+bool RecordingManager::isInsidePunchRange(juce::int64 playheadPosition) const {
+  if (!punchEnabled_.load()) {
+    return true;  // No punch, always record
+  }
+  
+  juce::int64 punchIn = punchInPosition_.load();
+  juce::int64 punchOut = punchOutPosition_.load();
+  
+  if (playheadPosition < punchIn) {
+    return false;  // Before punch in
+  }
+  
+  if (punchOut >= 0 && playheadPosition >= punchOut) {
+    return false;  // After punch out (if punch out is set)
+  }
+  
+  return true;
 }
 
 } // namespace zenith

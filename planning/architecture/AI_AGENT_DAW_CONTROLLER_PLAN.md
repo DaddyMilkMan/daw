@@ -778,20 +778,20 @@ ai-daw-controller/
 
 ## Business Model & Licensing
 
-### Open Source Core + Commercial Extensions
+### Commercial DAW Only (100% Proprietary)
 
-**Free & Open Source:**
-- Basic plugin shell (VST3/CLAP)
-- OSC/MCU control surface code
-- Communication bridge
-- Simple command execution
+**Zenith DAW Application:**
+- Complete proprietary DAW application
+- All source code is closed-source
+- Built-in instruments (ZenithPolySynth, ZenithSampler) are proprietary
 
-**Commercial/Premium:**
-- Advanced AI models (mixing assistant, arrangement AI)
-- Cloud-based LLM processing
-- Premium sound libraries
-- Priority DAW support
-- Commercial license for studios
+**AI Wingman Subscription (Add-on):**
+- Zenith Light ($10/month): Basic AI assistance
+- Zenith Pro ($20/month): Advanced AI features
+- Zenith Heavy ($50/month): Professional AI tools
+
+**One-Time Purchase:**
+- Zenith DAW Application: $100
 
 ### Pricing Ideas
 - **Free Tier:** Basic automation, limited AI calls

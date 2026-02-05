@@ -40,8 +40,8 @@ void RoutingGraph::updateSnapshot() {
   nextTopology->version = nextTopologyVersion_++;
   nextTopology->connections = connections_; // Copy master connections list
 
-  std::unordered_map<std::string, int> inDegree;
-  std::unordered_map<std::string, std::vector<std::string>> adjList;
+  std::unordered_map<juce::String, int> inDegree;
+  std::unordered_map<juce::String, std::vector<juce::String>> adjList;
 
   // Initialize in-degrees
   for (const auto &pair : nodes_) {
@@ -50,17 +50,17 @@ void RoutingGraph::updateSnapshot() {
 
   // Build graph and calculate in-degrees
   for (const auto &c : nextTopology->connections) {
-    std::string src = c.sourceId.toStdString();
-    std::string dst = c.destId.toStdString();
+    const juce::String &src = c.sourceId;
+    const juce::String &dst = c.destId;
 
-    if (nodes_.count(src) && nodes_.count(dst)) {
+    if (nodes_.find(src) != nodes_.end() && nodes_.find(dst) != nodes_.end()) {
       adjList[src].push_back(dst);
       inDegree[dst]++;
     }
   }
 
   // Queue for nodes with 0 in-degree
-  std::vector<std::string> queue;
+  std::vector<juce::String> queue;
   for (const auto &pair : inDegree) {
     if (pair.second == 0) {
       queue.push_back(pair.first);
@@ -70,7 +70,7 @@ void RoutingGraph::updateSnapshot() {
   // Process queue
   size_t queueIndex = 0;
   while (queueIndex < queue.size()) {
-    std::string u = queue[queueIndex++];
+    juce::String u = queue[queueIndex++];
     nextTopology->processingOrder.push_back(u);
 
     for (const auto &v : adjList[u]) {
@@ -95,6 +95,14 @@ void RoutingGraph::updateSnapshot() {
         nextTopology->processingOrder.push_back(pair.second.id);
       }
     }
+  }
+
+  // Precompute connection lookups for RT-safe access
+  nextTopology->connectionsFrom.clear();
+  nextTopology->connectionsTo.clear();
+  for (const auto &c : nextTopology->connections) {
+    nextTopology->connectionsFrom[c.sourceId].push_back(c);
+    nextTopology->connectionsTo[c.destId].push_back(c);
   }
 
   // Update state
@@ -192,7 +200,7 @@ void RoutingGraph::addNode(const Node &node) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
   const juce::ScopedLock sl(writeLock_);
-  nodes_[node.id.toStdString()] = node;
+  nodes_[node.id] = node;
   updateSnapshot();
 }
 
@@ -202,7 +210,7 @@ void RoutingGraph::removeNode(const juce::String &nodeId) {
   const juce::ScopedLock sl(writeLock_);
 
   // Remove node
-  nodes_.erase(nodeId.toStdString());
+  nodes_.erase(nodeId);
 
   // Remove associated connections
   connections_.erase(std::remove_if(connections_.begin(), connections_.end(),
@@ -223,8 +231,8 @@ bool RoutingGraph::connect(const juce::String &sourceId,
   const juce::ScopedLock sl(writeLock_);
 
   // Validate nodes exist
-  if (nodes_.find(sourceId.toStdString()) == nodes_.end() ||
-      nodes_.find(destId.toStdString()) == nodes_.end()) {
+  if (nodes_.find(sourceId) == nodes_.end() ||
+      nodes_.find(destId) == nodes_.end()) {
     return false;
   }
 
@@ -267,7 +275,7 @@ bool RoutingGraph::disconnect(const juce::String &sourceId,
 }
 
 //==============================================================================
-// Lock-free Queries (ANY THREAD - RT-SAFE)
+// Lock-free Queries (ANY THREAD)
 //==============================================================================
 
 bool RoutingGraph::hasNode(const juce::String &nodeId) const {
@@ -275,7 +283,7 @@ bool RoutingGraph::hasNode(const juce::String &nodeId) const {
   const auto *snapshot = getSnapshot();
   if (!snapshot)
     return false;
-  return snapshot->nodes.find(nodeId.toStdString()) != snapshot->nodes.end();
+  return snapshot->nodes.find(nodeId) != snapshot->nodes.end();
 }
 
 const RoutingGraph::Node *
@@ -285,7 +293,7 @@ RoutingGraph::getNode(const juce::String &nodeId) const {
   if (!snapshot)
     return nullptr;
 
-  auto it = snapshot->nodes.find(nodeId.toStdString());
+  auto it = snapshot->nodes.find(nodeId);
   if (it != snapshot->nodes.end())
     return &it->second;
   return nullptr;
@@ -293,44 +301,54 @@ RoutingGraph::getNode(const juce::String &nodeId) const {
 
 std::vector<RoutingGraph::Connection>
 RoutingGraph::getConnectionsFrom(const juce::String &sourceId) const {
-  // RT-SAFE: Uses atomic snapshot load
-  const auto *snapshot = getSnapshot();
-  if (!snapshot || !snapshot->topology)
-    return {};
-
-  std::vector<Connection> result;
-  result.reserve(
-      snapshot->topology->connections.size()); // Over-reserve to avoid realloc
-  for (const auto &c : snapshot->topology->connections) {
-    if (c.sourceId == sourceId)
-      result.push_back(c);
-  }
-  return result;
+  auto span = getConnectionsFromRT(sourceId);
+  return std::vector<Connection>(span.begin(), span.end());
 }
 
 std::vector<RoutingGraph::Connection>
 RoutingGraph::getConnectionsTo(const juce::String &destId) const {
-  // RT-SAFE: Uses atomic snapshot load
-  const auto *snapshot = getSnapshot();
-  if (!snapshot || !snapshot->topology)
-    return {};
-
-  std::vector<Connection> result;
-  result.reserve(
-      snapshot->topology->connections.size()); // Over-reserve to avoid realloc
-  for (const auto &c : snapshot->topology->connections) {
-    if (c.destId == destId)
-      result.push_back(c);
-  }
-  return result;
+  auto span = getConnectionsToRT(destId);
+  return std::vector<Connection>(span.begin(), span.end());
 }
 
 std::vector<juce::String> RoutingGraph::getProcessingOrder() const {
-  // RT-SAFE: Uses atomic snapshot load
+  auto span = getProcessingOrderRT();
+  return std::vector<juce::String>(span.begin(), span.end());
+}
+
+std::span<const RoutingGraph::Connection>
+RoutingGraph::getConnectionsFromRT(const juce::String &sourceId) const {
   const auto *snapshot = getSnapshot();
   if (!snapshot || !snapshot->topology)
     return {};
-  return snapshot->topology->processingOrder;
+
+  const auto &map = snapshot->topology->connectionsFrom;
+  auto it = map.find(sourceId);
+  if (it == map.end())
+    return {};
+  return std::span<const Connection>(it->second.data(), it->second.size());
+}
+
+std::span<const RoutingGraph::Connection>
+RoutingGraph::getConnectionsToRT(const juce::String &destId) const {
+  const auto *snapshot = getSnapshot();
+  if (!snapshot || !snapshot->topology)
+    return {};
+
+  const auto &map = snapshot->topology->connectionsTo;
+  auto it = map.find(destId);
+  if (it == map.end())
+    return {};
+  return std::span<const Connection>(it->second.data(), it->second.size());
+}
+
+std::span<const juce::String> RoutingGraph::getProcessingOrderRT() const {
+  const auto *snapshot = getSnapshot();
+  if (!snapshot || !snapshot->topology)
+    return {};
+
+  const auto &order = snapshot->topology->processingOrder;
+  return std::span<const juce::String>(order.data(), order.size());
 }
 
 //==============================================================================
@@ -389,7 +407,7 @@ void RoutingGraph::fromVar(const juce::var &data) {
           node.name = nodeObj->getProperty("name").toString();
           node.type = static_cast<NodeType>(
               static_cast<int>(nodeObj->getProperty("type")));
-          nodes_[node.id.toStdString()] = node;
+          nodes_[node.id] = node;
         }
       }
     }

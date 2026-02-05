@@ -585,12 +585,12 @@ void ArrangerRenderer::drawClipWaveform(SkCanvas* canvas, const ClipView& clip, 
         
         // Draw loading text centered
         const char* loadingText = "Loading waveform...";
-        canvas->drawString(loadingText, clipRect.centerX() - 40.0f, clipRect.centerY() + 4.0f, 
+        canvas->drawString(loadingText, clipRect.centerX() - 40.0f, clipRect.centerY() + 4.0f,
                           loadingFont, loadingPaint);
-        
-        // Draw subtle horizontal line as placeholder
+
+        // Draw subtle horizontal line as loading indicator (waveform computation in progress)
         loadingPaint.setColor(design::withAlpha(design::colors::TEXT_TERTIARY, 0.2f));
-        canvas->drawLine(clipRect.left() + 4.0f, clipRect.centerY(), 
+        canvas->drawLine(clipRect.left() + 4.0f, clipRect.centerY(),
                         clipRect.right() - 4.0f, clipRect.centerY(), loadingPaint);
         return;
     }
@@ -646,12 +646,12 @@ void ArrangerRenderer::drawClipMidiBlobs(SkCanvas* canvas, const ClipView& clip,
         
         // Draw loading text centered
         const char* loadingText = "Loading MIDI...";
-        canvas->drawString(loadingText, clipRect.centerX() - 35.0f, clipRect.centerY() + 4.0f, 
+        canvas->drawString(loadingText, clipRect.centerX() - 35.0f, clipRect.centerY() + 4.0f,
                           loadingFont, loadingPaint);
-        
-        // Draw subtle horizontal line as placeholder
+
+        // Draw subtle horizontal line as loading indicator (MIDI processing in progress)
         loadingPaint.setColor(design::withAlpha(design::colors::TEXT_TERTIARY, 0.2f));
-        canvas->drawLine(clipRect.left() + 4.0f, clipRect.centerY(), 
+        canvas->drawLine(clipRect.left() + 4.0f, clipRect.centerY(),
                         clipRect.right() - 4.0f, clipRect.centerY(), loadingPaint);
         return;
     }

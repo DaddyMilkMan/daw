@@ -107,6 +107,8 @@ private:
     
     // Move constructor/assignment to properly transfer ownership
     TrashItem() = default;
+    TrashItem(std::function<void()> deleterIn, uint32_t timeMs)
+      : deleter(std::move(deleterIn)), insertionTimeMs(timeMs) {}
     TrashItem(TrashItem&& other) noexcept 
       : deleter(std::move(other.deleter)), 
         insertionTimeMs(other.insertionTimeMs) {

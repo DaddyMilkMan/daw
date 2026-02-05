@@ -1,0 +1,111 @@
+{
+  "name": "Mini-65",
+  "category": "Classic Subtractive",
+  "description": "Faithful Minimoog Model D emulation with 3 oscillators, ladder filter, and extensive modulation",
+  "tags": ["bass", "lead", "classic", "analog", "warm"],
+  "architecture": {
+    "oscillators": [
+      {
+        "id": "osc1",
+        "type": "ClassicAnalog",
+        "waveform": "saw",
+        "detune": 0,
+        "mix": 1.0,
+        "octave": 0,
+        "semitones": 0
+      },
+      {
+        "id": "osc2",
+        "type": "ClassicAnalog",
+        "waveform": "square",
+        "detune": 7,
+        "mix": 0.8,
+        "octave": 0,
+        "semitones": 0
+      },
+      {
+        "id": "osc3",
+        "type": "ClassicAnalog",
+        "waveform": "saw",
+        "detune": -5,
+        "mix": 0.6,
+        "octave": -1,
+        "semitones": 0
+      }
+    ],
+    "filter": {
+      "type": "Ladder",
+      "cutoff": 2000,
+      "resonance": 0.7,
+      "drive": 0.3,
+      "keytrack": 0.3
+    },
+    "envelopes": [
+      {
+        "id": "amp_env",
+        "type": "ADSR",
+        "target": "amplitude",
+        "attack": 0.01,
+        "decay": 0.3,
+        "sustain": 0.5,
+        "release": 0.2
+      },
+      {
+        "id": "filter_env",
+        "type": "ADSR",
+        "target": "filter_cutoff",
+        "attack": 0.05,
+        "decay": 0.2,
+        "sustain": 0.0,
+        "release": 0.5,
+        "amount": 3000
+      }
+    ],
+    "lfo": {
+      "id": "lfo1",
+      "type": "MultiLFO",
+      "waveform": "triangle",
+      "rate": 5.0,
+      "depth": 0.5,
+      "destinations": [
+        {"target": "osc1_pitch", "amount": 0.3},
+        {"target": "filter_cutoff", "amount": 0.4}
+      ]
+    },
+    "noise": {
+      "enabled": true,
+      "type": "white",
+      "level": 0.1,
+      "color": 0.5
+    },
+    "effects": [
+      {
+        "type": "Distortion",
+        "algorithm": "soft_clip",
+        "drive": 0.2,
+        "mix": 0.5
+      },
+      {
+        "type": "Delay",
+        "time": 0.3,
+        "feedback": 0.4,
+        "mix": 0.3
+      }
+    ],
+    "modulation_matrix": [
+      {"source": "velocity", "destination": "filter_cutoff", "amount": 0.2},
+      {"source": "modwheel", "destination": "vibrato", "amount": 0.5},
+      {"source": "pressure", "destination": "filter_resonance", "amount": 0.3}
+    ]
+  },
+  "polyphony": 8,
+  "voice_mode": "poly",
+  "glide": 0.0,
+  "unison": {
+    "enabled": false,
+    "voices": 4,
+    "detune": 5.0,
+    "spread": 0.5
+  },
+  "default_preset": "Mini-65_Init"
+}

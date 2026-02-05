@@ -14,6 +14,7 @@
 #pragma once
 
 #include "GrokDAWClient.h"
+#include "../Settings.h"
 #include "AudioAnalysisService.h"
 #include "../commands/CommandAPI.h"
 #include <juce_core/juce_core.h>
@@ -70,6 +71,18 @@ public:
         std::function<void(juce::String response)> onResponse,
         std::function<void(juce::String error)> onError,
         std::function<void(juce::String status)> onProgress = nullptr
+    );
+
+    /**
+        Execute a natural language command with reasoning payload
+    */
+    void executeCommandWithReasoning(
+        const juce::String& userCommand,
+        GrokMode mode,
+        std::function<void(juce::String response, juce::String reasoning)> onResponse,
+        std::function<void(juce::String error)> onError,
+        std::function<void(juce::String status)> onProgress = nullptr,
+        Settings::WingmanChatStyle style = Settings::WingmanChatStyle::Professional
     );
     
     /**

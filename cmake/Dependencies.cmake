@@ -142,3 +142,33 @@ endif()
 # )
 # FetchContent_MakeAvailable(LuaBridge)
 
+
+# =============================================================================
+# 5. Opus Audio Codec (Real-time Collaboration)
+# =============================================================================
+if(ZENITH_ENABLE_COLLAB)
+    find_package(Opus QUIET)
+
+    if(NOT Opus_FOUND)
+        message(STATUS "Zenith DAW: System Opus not found, fetching v1.3.1...")
+        
+        FetchContent_Declare(
+            Opus
+            GIT_REPOSITORY https://github.com/xiph/opus.git
+            GIT_TAG v1.3.1
+        )
+        FetchContent_MakeAvailable(Opus)
+        
+        # Opus CMake (if built from source) usually creates an 'opus' target
+        if(TARGET opus)
+             # Alias it to match standard usage if needed, or just use 'opus'
+             if(NOT TARGET Opus::opus)
+                 add_library(Opus::opus ALIAS opus)
+             endif()
+        endif()
+        
+        message(STATUS "Zenith DAW: Using fetched Opus v1.3.1")
+    else()
+        message(STATUS "Zenith DAW: Using system Opus")
+    endif()
+endif()

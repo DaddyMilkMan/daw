@@ -1,0 +1,79 @@
+{
+  "name": "Prophet-5 Rev 3",
+  "category": "Classic Subtractive",
+  "description": "Classic Prophet-5 with Curtis filters and warm analog character",
+  "tags": ["poly", "pad", "strings", "classic", "80s"],
+  "architecture": {
+    "oscillators": [
+      {
+        "id": "osc1",
+        "type": "ClassicAnalog",
+        "waveform": "saw",
+        "detune": 0,
+        "mix": 1.0,
+        "pulse_width": 0.5
+      },
+      {
+        "id": "osc2",
+        "type": "ClassicAnalog",
+        "waveform": "saw",
+        "detune": 3,
+        "mix": 1.0,
+        "pulse_width": 0.5
+      }
+    ],
+    "filter": {
+      "type": "Curtis",
+      "cutoff": 2500,
+      "resonance": 0.5,
+      "drive": 0.2
+    },
+    "envelopes": [
+      {
+        "id": "amp_env",
+        "type": "ADSR",
+        "attack": 0.01,
+        "decay": 0.4,
+        "sustain": 0.6,
+        "release": 0.3
+      },
+      {
+        "id": "filter_env",
+        "type": "ADSR",
+        "attack": 0.02,
+        "decay": 0.3,
+        "sustain": 0.0,
+        "release": 0.4,
+        "amount": 2500
+      }
+    ],
+    "lfo": {
+      "id": "lfo1",
+      "type": "MultiLFO",
+      "waveform": "triangle",
+      "rate": 6.0,
+      "destinations": [
+        {"target": "osc1_pitch", "amount": 0.2},
+        {"target": "osc2_pitch", "amount": 0.2},
+        {"target": "pulse_width", "amount": 0.5}
+      ]
+    },
+    "effects": [
+      {
+        "type": "Chorus",
+        "voices": 4,
+        "rate": 0.5,
+        "depth": 0.3,
+        "mix": 0.4
+      }
+    ]
+  },
+  "polyphony": 5,
+  "voice_mode": "poly",
+  "unison": {
+    "enabled": true,
+    "voices": 4,
+    "detune": 7.0,
+    "spread": 0.6
+  }
+}

@@ -122,7 +122,22 @@ public:
         GrokMode mode,
         const juce::Array<GrokFunction>& availableFunctions,
         const juce::String& systemPrompt,
+        bool enableLiveSearch,
         std::function<void(juce::String response)> onResponse,
+        std::function<void(GrokFunctionCall call)> onFunctionCall,
+        std::function<void(juce::String error)> onError
+    );
+
+    /**
+        Send a chat message with optional reasoning payload
+    */
+    void sendChatWithReasoning(
+        const juce::String& userMessage,
+        GrokMode mode,
+        const juce::Array<GrokFunction>& availableFunctions,
+        const juce::String& systemPrompt,
+        bool enableLiveSearch,
+        std::function<void(juce::String response, juce::String reasoning)> onResponse,
         std::function<void(GrokFunctionCall call)> onFunctionCall,
         std::function<void(juce::String error)> onError
     );

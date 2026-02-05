@@ -64,7 +64,7 @@ public:
                        float cornerRadius = 0.0f) {
     using namespace design;
 
-    float globalGlow = zenith::Settings::getInstance().getGlowIntensity();
+    float globalGlow = ::zenith::Settings::getInstance().getGlowIntensity();
     if (globalGlow < 0.01f)
       return;
 
@@ -96,7 +96,7 @@ public:
                               float strokeWidth = 2.0f) {
     using namespace design;
 
-    float globalGlow = zenith::Settings::getInstance().getGlowIntensity();
+    float globalGlow = ::zenith::Settings::getInstance().getGlowIntensity();
     if (globalGlow < 0.01f)
       return;
 
@@ -148,7 +148,7 @@ public:
                            Intensity intensity = Intensity::Medium) {
     using namespace design;
 
-    float globalGlow = zenith::Settings::getInstance().getGlowIntensity();
+    float globalGlow = ::zenith::Settings::getInstance().getGlowIntensity();
     if (globalGlow < 0.01f) {
       // No glow, just draw text
       SkPaint textPaint;
@@ -184,7 +184,7 @@ public:
                              Intensity intensity = Intensity::Strong) {
     using namespace design;
 
-    float globalGlow = zenith::Settings::getInstance().getGlowIntensity();
+    float globalGlow = ::zenith::Settings::getInstance().getGlowIntensity();
     if (globalGlow < 0.01f)
       return;
 
@@ -220,7 +220,7 @@ public:
                               float cornerRadius = 0.0f) {
     using namespace design;
 
-    float globalGlow = zenith::Settings::getInstance().getGlowIntensity();
+    float globalGlow = ::zenith::Settings::getInstance().getGlowIntensity();
     if (globalGlow < 0.01f)
       return;
 
@@ -260,7 +260,7 @@ public:
     if (value < 0.001f)
       return;
 
-    float globalGlow = zenith::Settings::getInstance().getGlowIntensity();
+    float globalGlow = ::zenith::Settings::getInstance().getGlowIntensity();
 
     // Determine peak color based on level
     // Determine peak color based on level
@@ -306,7 +306,7 @@ public:
                                float bottom, SkColor color = 0xFFFFFFFF) {
     using namespace design;
 
-    float globalGlow = zenith::Settings::getInstance().getGlowIntensity();
+    float globalGlow = ::zenith::Settings::getInstance().getGlowIntensity();
 
     // Glow layer
     if (globalGlow > 0.01f) {

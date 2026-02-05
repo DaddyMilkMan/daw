@@ -3,7 +3,7 @@
   "bank_name": "FX Bank",
   "category": "FX",
   "version": "1.0",
-  "preset_count": 45,
+  "preset_count": 250,
   "presets": [
     {
       "id": "impact_hit",
@@ -1038,6 +1038,5131 @@
         "tune": 0.193,
         "gain": 0.72,
         "character": 0.404
+      }
+    },
+    {
+      "id": "whoosh_08_x001",
+      "name": "Whoosh 08 X001",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 08",
+      "parameters": {
+        "attack": 0.025,
+        "decay": 0.0,
+        "sustain": 0.044,
+        "release": 0.35,
+        "filter_cutoff": 0.652,
+        "filter_resonance": 0.746,
+        "tune": -2.293,
+        "gain": 0.946,
+        "character": 0.572
+      }
+    },
+    {
+      "id": "whoosh_01_x002",
+      "name": "Whoosh 01 X002",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 01",
+      "parameters": {
+        "attack": 0.271,
+        "decay": 0.382,
+        "sustain": 0.026,
+        "release": 0.0,
+        "filter_cutoff": 0.595,
+        "filter_resonance": 0.612,
+        "tune": 0.569,
+        "gain": 1.075,
+        "character": 0.514
+      }
+    },
+    {
+      "id": "impact_hit_06_x003",
+      "name": "Impact Hit 06 X003",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 06",
+      "parameters": {
+        "attack": 0.064,
+        "decay": 0.947,
+        "sustain": 0.008,
+        "release": 0.583,
+        "filter_cutoff": 0.399,
+        "filter_resonance": 0.329,
+        "tune": 0.631,
+        "gain": 1.2,
+        "character": 0.771
+      }
+    },
+    {
+      "id": "texture_05_x004",
+      "name": "Texture 05 X004",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 05",
+      "parameters": {
+        "attack": 0.823,
+        "decay": 0.287,
+        "sustain": 0.682,
+        "release": 1.541,
+        "filter_cutoff": 0.613,
+        "filter_resonance": 0.46,
+        "tune": 1.234,
+        "gain": 0.654,
+        "character": 0.491
+      }
+    },
+    {
+      "id": "impact_hit_03_x005",
+      "name": "Impact Hit 03 X005",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 03",
+      "parameters": {
+        "attack": 0.106,
+        "decay": 0.472,
+        "sustain": 0.038,
+        "release": 0.152,
+        "filter_cutoff": 0.527,
+        "filter_resonance": 0.327,
+        "tune": -2.169,
+        "gain": 1.2,
+        "character": 0.629
+      }
+    },
+    {
+      "id": "texture_01_x006",
+      "name": "Texture 01 X006",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 01",
+      "parameters": {
+        "attack": 0.389,
+        "decay": 1.065,
+        "sustain": 0.575,
+        "release": 1.537,
+        "filter_cutoff": 0.646,
+        "filter_resonance": 0.29,
+        "tune": -2.114,
+        "gain": 0.761,
+        "character": 0.341
+      }
+    },
+    {
+      "id": "impact_hit_x007",
+      "name": "Impact Hit X007",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit",
+      "parameters": {
+        "attack": 0.08,
+        "decay": 0.33,
+        "sustain": 0.017,
+        "release": 1.056,
+        "filter_cutoff": 0.526,
+        "filter_resonance": 0.251,
+        "tune": 0.04,
+        "gain": 1.2,
+        "character": 0.745
+      }
+    },
+    {
+      "id": "impact_hit_03_x008",
+      "name": "Impact Hit 03 X008",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 03",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.284,
+        "sustain": 0.113,
+        "release": 0.249,
+        "filter_cutoff": 0.513,
+        "filter_resonance": 0.345,
+        "tune": -2.364,
+        "gain": 1.2,
+        "character": 0.63
+      }
+    },
+    {
+      "id": "whoosh_05_x009",
+      "name": "Whoosh 05 X009",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 05",
+      "parameters": {
+        "attack": 0.188,
+        "decay": 0.479,
+        "sustain": 0.16,
+        "release": 0.734,
+        "filter_cutoff": 0.595,
+        "filter_resonance": 0.574,
+        "tune": 0.106,
+        "gain": 0.827,
+        "character": 0.544
+      }
+    },
+    {
+      "id": "riser_05_x010",
+      "name": "Riser 05 X010",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 05",
+      "parameters": {
+        "attack": 0.212,
+        "decay": 1.321,
+        "sustain": 0.925,
+        "release": 0.764,
+        "filter_cutoff": 0.296,
+        "filter_resonance": 0.56,
+        "tune": 1.022,
+        "gain": 0.866,
+        "character": 0.65
+      }
+    },
+    {
+      "id": "texture_04_x011",
+      "name": "Texture 04 X011",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 04",
+      "parameters": {
+        "attack": 0.054,
+        "decay": 0.996,
+        "sustain": 0.741,
+        "release": 1.08,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.358,
+        "tune": -2.364,
+        "gain": 0.685,
+        "character": 0.381
+      }
+    },
+    {
+      "id": "vox_shot_06_x012",
+      "name": "Vox Shot 06 X012",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 06",
+      "parameters": {
+        "attack": 0.364,
+        "decay": 0.47,
+        "sustain": 0.0,
+        "release": 1.142,
+        "filter_cutoff": 0.793,
+        "filter_resonance": 0.212,
+        "tune": 0.349,
+        "gain": 0.657,
+        "character": 0.583
+      }
+    },
+    {
+      "id": "riser_08_x013",
+      "name": "Riser 08 X013",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 08",
+      "parameters": {
+        "attack": 0.545,
+        "decay": 1.102,
+        "sustain": 0.829,
+        "release": 2.479,
+        "filter_cutoff": 0.314,
+        "filter_resonance": 0.553,
+        "tune": -0.235,
+        "gain": 0.778,
+        "character": 0.541
+      }
+    },
+    {
+      "id": "texture_05_x014",
+      "name": "Texture 05 X014",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 05",
+      "parameters": {
+        "attack": 0.647,
+        "decay": 0.408,
+        "sustain": 0.701,
+        "release": 1.236,
+        "filter_cutoff": 0.681,
+        "filter_resonance": 0.45,
+        "tune": 1.211,
+        "gain": 0.717,
+        "character": 0.487
+      }
+    },
+    {
+      "id": "texture_01_x015",
+      "name": "Texture 01 X015",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 01",
+      "parameters": {
+        "attack": 0.3,
+        "decay": 0.987,
+        "sustain": 0.645,
+        "release": 1.574,
+        "filter_cutoff": 0.629,
+        "filter_resonance": 0.336,
+        "tune": -1.893,
+        "gain": 0.83,
+        "character": 0.403
+      }
+    },
+    {
+      "id": "texture_05_x016",
+      "name": "Texture 05 X016",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 05",
+      "parameters": {
+        "attack": 0.831,
+        "decay": 0.511,
+        "sustain": 0.771,
+        "release": 1.489,
+        "filter_cutoff": 0.699,
+        "filter_resonance": 0.418,
+        "tune": 1.166,
+        "gain": 0.714,
+        "character": 0.548
+      }
+    },
+    {
+      "id": "riser_02_x017",
+      "name": "Riser 02 X017",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 02",
+      "parameters": {
+        "attack": 0.541,
+        "decay": 1.027,
+        "sustain": 0.898,
+        "release": 2.314,
+        "filter_cutoff": 0.223,
+        "filter_resonance": 0.611,
+        "tune": 0.3,
+        "gain": 1.073,
+        "character": 0.605
+      }
+    },
+    {
+      "id": "impact_hit_04_x018",
+      "name": "Impact Hit 04 X018",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 04",
+      "parameters": {
+        "attack": 0.178,
+        "decay": 0.495,
+        "sustain": 0.04,
+        "release": 0.557,
+        "filter_cutoff": 0.478,
+        "filter_resonance": 0.247,
+        "tune": 0.898,
+        "gain": 1.042,
+        "character": 0.775
+      }
+    },
+    {
+      "id": "impact_hit_04_x019",
+      "name": "Impact Hit 04 X019",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 04",
+      "parameters": {
+        "attack": 0.189,
+        "decay": 0.672,
+        "sustain": 0.038,
+        "release": 0.559,
+        "filter_cutoff": 0.513,
+        "filter_resonance": 0.258,
+        "tune": 0.639,
+        "gain": 1.077,
+        "character": 0.789
+      }
+    },
+    {
+      "id": "riser_x020",
+      "name": "Riser X020",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser",
+      "parameters": {
+        "attack": 0.473,
+        "decay": 0.896,
+        "sustain": 0.746,
+        "release": 1.557,
+        "filter_cutoff": 0.324,
+        "filter_resonance": 0.478,
+        "tune": 0.235,
+        "gain": 0.905,
+        "character": 0.596
+      }
+    },
+    {
+      "id": "texture_05_x021",
+      "name": "Texture 05 X021",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 05",
+      "parameters": {
+        "attack": 0.652,
+        "decay": 0.377,
+        "sustain": 0.696,
+        "release": 1.53,
+        "filter_cutoff": 0.593,
+        "filter_resonance": 0.379,
+        "tune": 1.651,
+        "gain": 0.701,
+        "character": 0.513
+      }
+    },
+    {
+      "id": "impact_hit_02_x022",
+      "name": "Impact Hit 02 X022",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 02",
+      "parameters": {
+        "attack": 0.157,
+        "decay": 0.441,
+        "sustain": 0.036,
+        "release": 1.53,
+        "filter_cutoff": 0.541,
+        "filter_resonance": 0.426,
+        "tune": 2.34,
+        "gain": 1.2,
+        "character": 0.804
+      }
+    },
+    {
+      "id": "vox_shot_06_x023",
+      "name": "Vox Shot 06 X023",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 06",
+      "parameters": {
+        "attack": 0.399,
+        "decay": 0.465,
+        "sustain": 0.098,
+        "release": 1.113,
+        "filter_cutoff": 0.787,
+        "filter_resonance": 0.288,
+        "tune": -0.267,
+        "gain": 0.787,
+        "character": 0.621
+      }
+    },
+    {
+      "id": "texture_01_x024",
+      "name": "Texture 01 X024",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 01",
+      "parameters": {
+        "attack": 0.29,
+        "decay": 1.268,
+        "sustain": 0.615,
+        "release": 1.507,
+        "filter_cutoff": 0.602,
+        "filter_resonance": 0.296,
+        "tune": -2.071,
+        "gain": 0.926,
+        "character": 0.412
+      }
+    },
+    {
+      "id": "riser_07_x025",
+      "name": "Riser 07 X025",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 07",
+      "parameters": {
+        "attack": 0.471,
+        "decay": 0.62,
+        "sustain": 0.834,
+        "release": 2.368,
+        "filter_cutoff": 0.22,
+        "filter_resonance": 0.349,
+        "tune": -2.364,
+        "gain": 1.011,
+        "character": 0.648
+      }
+    },
+    {
+      "id": "riser_07_x026",
+      "name": "Riser 07 X026",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 07",
+      "parameters": {
+        "attack": 0.343,
+        "decay": 0.552,
+        "sustain": 0.82,
+        "release": 2.351,
+        "filter_cutoff": 0.35,
+        "filter_resonance": 0.408,
+        "tune": -2.266,
+        "gain": 0.875,
+        "character": 0.662
+      }
+    },
+    {
+      "id": "riser_x027",
+      "name": "Riser X027",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser",
+      "parameters": {
+        "attack": 0.459,
+        "decay": 0.861,
+        "sustain": 0.737,
+        "release": 1.32,
+        "filter_cutoff": 0.245,
+        "filter_resonance": 0.53,
+        "tune": -0.131,
+        "gain": 0.829,
+        "character": 0.564
+      }
+    },
+    {
+      "id": "riser_01_x028",
+      "name": "Riser 01 X028",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 01",
+      "parameters": {
+        "attack": 0.471,
+        "decay": 0.919,
+        "sustain": 0.685,
+        "release": 2.139,
+        "filter_cutoff": 0.224,
+        "filter_resonance": 0.481,
+        "tune": -0.882,
+        "gain": 0.746,
+        "character": 0.643
+      }
+    },
+    {
+      "id": "texture_x029",
+      "name": "Texture X029",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture",
+      "parameters": {
+        "attack": 0.313,
+        "decay": 0.664,
+        "sustain": 0.73,
+        "release": 1.296,
+        "filter_cutoff": 0.674,
+        "filter_resonance": 0.397,
+        "tune": -0.491,
+        "gain": 0.794,
+        "character": 0.442
+      }
+    },
+    {
+      "id": "vox_shot_x030",
+      "name": "Vox Shot X030",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot",
+      "parameters": {
+        "attack": 0.023,
+        "decay": 0.247,
+        "sustain": 0.021,
+        "release": 0.142,
+        "filter_cutoff": 0.765,
+        "filter_resonance": 0.196,
+        "tune": -0.564,
+        "gain": 0.829,
+        "character": 0.53
+      }
+    },
+    {
+      "id": "texture_08_x031",
+      "name": "Texture 08 X031",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 1.136,
+        "sustain": 0.779,
+        "release": 1.816,
+        "filter_cutoff": 0.606,
+        "filter_resonance": 0.407,
+        "tune": 0.331,
+        "gain": 0.702,
+        "character": 0.447
+      }
+    },
+    {
+      "id": "impact_hit_07_x032",
+      "name": "Impact Hit 07 X032",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 07",
+      "parameters": {
+        "attack": 0.342,
+        "decay": 0.448,
+        "sustain": 0.113,
+        "release": 1.469,
+        "filter_cutoff": 0.489,
+        "filter_resonance": 0.286,
+        "tune": 1.152,
+        "gain": 1.2,
+        "character": 0.649
+      }
+    },
+    {
+      "id": "texture_04_x033",
+      "name": "Texture 04 X033",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 04",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.781,
+        "sustain": 0.746,
+        "release": 0.865,
+        "filter_cutoff": 0.761,
+        "filter_resonance": 0.406,
+        "tune": -2.364,
+        "gain": 0.57,
+        "character": 0.378
+      }
+    },
+    {
+      "id": "riser_07_x034",
+      "name": "Riser 07 X034",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 07",
+      "parameters": {
+        "attack": 0.522,
+        "decay": 0.673,
+        "sustain": 0.857,
+        "release": 2.241,
+        "filter_cutoff": 0.355,
+        "filter_resonance": 0.365,
+        "tune": -1.988,
+        "gain": 0.912,
+        "character": 0.662
+      }
+    },
+    {
+      "id": "texture_03_x035",
+      "name": "Texture 03 X035",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 03",
+      "parameters": {
+        "attack": 0.021,
+        "decay": 0.839,
+        "sustain": 0.735,
+        "release": 2.329,
+        "filter_cutoff": 0.707,
+        "filter_resonance": 0.3,
+        "tune": 0.738,
+        "gain": 0.963,
+        "character": 0.401
+      }
+    },
+    {
+      "id": "whoosh_07_x036",
+      "name": "Whoosh 07 X036",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 07",
+      "parameters": {
+        "attack": 0.163,
+        "decay": 0.0,
+        "sustain": 0.0,
+        "release": 0.783,
+        "filter_cutoff": 0.732,
+        "filter_resonance": 0.58,
+        "tune": -1.922,
+        "gain": 0.682,
+        "character": 0.498
+      }
+    },
+    {
+      "id": "impact_hit_08_x037",
+      "name": "Impact Hit 08 X037",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 08",
+      "parameters": {
+        "attack": 0.108,
+        "decay": 0.659,
+        "sustain": 0.0,
+        "release": 1.565,
+        "filter_cutoff": 0.429,
+        "filter_resonance": 0.25,
+        "tune": -2.145,
+        "gain": 1.2,
+        "character": 0.766
+      }
+    },
+    {
+      "id": "texture_06_x038",
+      "name": "Texture 06 X038",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 06",
+      "parameters": {
+        "attack": 0.506,
+        "decay": 0.502,
+        "sustain": 0.728,
+        "release": 1.214,
+        "filter_cutoff": 0.623,
+        "filter_resonance": 0.322,
+        "tune": -0.124,
+        "gain": 0.875,
+        "character": 0.522
+      }
+    },
+    {
+      "id": "texture_01_x039",
+      "name": "Texture 01 X039",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 01",
+      "parameters": {
+        "attack": 0.27,
+        "decay": 1.106,
+        "sustain": 0.573,
+        "release": 1.54,
+        "filter_cutoff": 0.596,
+        "filter_resonance": 0.312,
+        "tune": -1.503,
+        "gain": 0.805,
+        "character": 0.376
+      }
+    },
+    {
+      "id": "riser_03_x040",
+      "name": "Riser 03 X040",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 03",
+      "parameters": {
+        "attack": 0.274,
+        "decay": 0.994,
+        "sustain": 0.884,
+        "release": 2.63,
+        "filter_cutoff": 0.362,
+        "filter_resonance": 0.551,
+        "tune": -1.716,
+        "gain": 0.714,
+        "character": 0.647
+      }
+    },
+    {
+      "id": "vox_shot_04_x041",
+      "name": "Vox Shot 04 X041",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 04",
+      "parameters": {
+        "attack": 0.241,
+        "decay": 0.313,
+        "sustain": 0.051,
+        "release": 0.732,
+        "filter_cutoff": 0.739,
+        "filter_resonance": 0.266,
+        "tune": -1.903,
+        "gain": 0.754,
+        "character": 0.526
+      }
+    },
+    {
+      "id": "whoosh_08_x042",
+      "name": "Whoosh 08 X042",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.274,
+        "sustain": 0.117,
+        "release": 0.346,
+        "filter_cutoff": 0.626,
+        "filter_resonance": 0.659,
+        "tune": -1.625,
+        "gain": 0.952,
+        "character": 0.62
+      }
+    },
+    {
+      "id": "texture_04_x043",
+      "name": "Texture 04 X043",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 04",
+      "parameters": {
+        "attack": 0.005,
+        "decay": 0.868,
+        "sustain": 0.859,
+        "release": 0.557,
+        "filter_cutoff": 0.771,
+        "filter_resonance": 0.374,
+        "tune": -2.117,
+        "gain": 0.583,
+        "character": 0.346
+      }
+    },
+    {
+      "id": "texture_01_x044",
+      "name": "Texture 01 X044",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 01",
+      "parameters": {
+        "attack": 0.349,
+        "decay": 1.258,
+        "sustain": 0.645,
+        "release": 1.769,
+        "filter_cutoff": 0.626,
+        "filter_resonance": 0.383,
+        "tune": -2.179,
+        "gain": 0.82,
+        "character": 0.4
+      }
+    },
+    {
+      "id": "whoosh_02_x045",
+      "name": "Whoosh 02 X045",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 02",
+      "parameters": {
+        "attack": 0.429,
+        "decay": 0.382,
+        "sustain": 0.121,
+        "release": 0.0,
+        "filter_cutoff": 0.658,
+        "filter_resonance": 0.477,
+        "tune": -2.344,
+        "gain": 0.946,
+        "character": 0.488
+      }
+    },
+    {
+      "id": "whoosh_04_x046",
+      "name": "Whoosh 04 X046",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 04",
+      "parameters": {
+        "attack": 0.113,
+        "decay": 0.156,
+        "sustain": 0.184,
+        "release": 0.206,
+        "filter_cutoff": 0.712,
+        "filter_resonance": 0.587,
+        "tune": 0.965,
+        "gain": 0.941,
+        "character": 0.457
+      }
+    },
+    {
+      "id": "riser_06_x047",
+      "name": "Riser 06 X047",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 06",
+      "parameters": {
+        "attack": 1.065,
+        "decay": 1.3,
+        "sustain": 0.921,
+        "release": 2.674,
+        "filter_cutoff": 0.181,
+        "filter_resonance": 0.627,
+        "tune": -1.52,
+        "gain": 0.854,
+        "character": 0.683
+      }
+    },
+    {
+      "id": "riser_01_x048",
+      "name": "Riser 01 X048",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 01",
+      "parameters": {
+        "attack": 0.435,
+        "decay": 0.997,
+        "sustain": 0.699,
+        "release": 2.379,
+        "filter_cutoff": 0.252,
+        "filter_resonance": 0.43,
+        "tune": -1.344,
+        "gain": 0.75,
+        "character": 0.71
+      }
+    },
+    {
+      "id": "whoosh_01_x049",
+      "name": "Whoosh 01 X049",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 01",
+      "parameters": {
+        "attack": 0.401,
+        "decay": 0.459,
+        "sustain": 0.095,
+        "release": 0.283,
+        "filter_cutoff": 0.63,
+        "filter_resonance": 0.549,
+        "tune": 0.946,
+        "gain": 0.906,
+        "character": 0.566
+      }
+    },
+    {
+      "id": "whoosh_01_x050",
+      "name": "Whoosh 01 X050",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 01",
+      "parameters": {
+        "attack": 0.464,
+        "decay": 0.41,
+        "sustain": 0.147,
+        "release": 0.0,
+        "filter_cutoff": 0.635,
+        "filter_resonance": 0.566,
+        "tune": 1.116,
+        "gain": 1.011,
+        "character": 0.543
+      }
+    },
+    {
+      "id": "impact_hit_03_x051",
+      "name": "Impact Hit 03 X051",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 03",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.211,
+        "sustain": 0.131,
+        "release": 0.0,
+        "filter_cutoff": 0.545,
+        "filter_resonance": 0.322,
+        "tune": -2.364,
+        "gain": 1.174,
+        "character": 0.585
+      }
+    },
+    {
+      "id": "texture_01_x052",
+      "name": "Texture 01 X052",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 01",
+      "parameters": {
+        "attack": 0.19,
+        "decay": 0.974,
+        "sustain": 0.603,
+        "release": 1.752,
+        "filter_cutoff": 0.669,
+        "filter_resonance": 0.305,
+        "tune": -1.176,
+        "gain": 0.763,
+        "character": 0.417
+      }
+    },
+    {
+      "id": "whoosh_04_x053",
+      "name": "Whoosh 04 X053",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 04",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.0,
+        "sustain": 0.098,
+        "release": 0.061,
+        "filter_cutoff": 0.654,
+        "filter_resonance": 0.644,
+        "tune": 0.472,
+        "gain": 0.946,
+        "character": 0.433
+      }
+    },
+    {
+      "id": "riser_02_x054",
+      "name": "Riser 02 X054",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 02",
+      "parameters": {
+        "attack": 0.413,
+        "decay": 1.159,
+        "sustain": 0.88,
+        "release": 2.338,
+        "filter_cutoff": 0.21,
+        "filter_resonance": 0.622,
+        "tune": 0.334,
+        "gain": 1.084,
+        "character": 0.677
+      }
+    },
+    {
+      "id": "impact_hit_03_x055",
+      "name": "Impact Hit 03 X055",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 03",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.167,
+        "sustain": 0.102,
+        "release": 0.0,
+        "filter_cutoff": 0.583,
+        "filter_resonance": 0.303,
+        "tune": -2.018,
+        "gain": 1.2,
+        "character": 0.593
+      }
+    },
+    {
+      "id": "texture_06_x056",
+      "name": "Texture 06 X056",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 06",
+      "parameters": {
+        "attack": 0.373,
+        "decay": 0.351,
+        "sustain": 0.838,
+        "release": 0.945,
+        "filter_cutoff": 0.676,
+        "filter_resonance": 0.375,
+        "tune": -0.64,
+        "gain": 0.884,
+        "character": 0.508
+      }
+    },
+    {
+      "id": "whoosh_07_x057",
+      "name": "Whoosh 07 X057",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 07",
+      "parameters": {
+        "attack": 0.301,
+        "decay": 0.0,
+        "sustain": 0.126,
+        "release": 0.614,
+        "filter_cutoff": 0.731,
+        "filter_resonance": 0.609,
+        "tune": -1.578,
+        "gain": 0.829,
+        "character": 0.531
+      }
+    },
+    {
+      "id": "impact_hit_07_x058",
+      "name": "Impact Hit 07 X058",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 07",
+      "parameters": {
+        "attack": 0.405,
+        "decay": 0.34,
+        "sustain": 0.145,
+        "release": 1.565,
+        "filter_cutoff": 0.542,
+        "filter_resonance": 0.268,
+        "tune": 0.528,
+        "gain": 1.2,
+        "character": 0.65
+      }
+    },
+    {
+      "id": "vox_shot_01_x059",
+      "name": "Vox Shot 01 X059",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 01",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.455,
+        "sustain": 0.0,
+        "release": 0.0,
+        "filter_cutoff": 0.828,
+        "filter_resonance": 0.195,
+        "tune": -1.189,
+        "gain": 0.793,
+        "character": 0.471
+      }
+    },
+    {
+      "id": "riser_08_x060",
+      "name": "Riser 08 X060",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 08",
+      "parameters": {
+        "attack": 0.535,
+        "decay": 1.074,
+        "sustain": 0.819,
+        "release": 2.048,
+        "filter_cutoff": 0.309,
+        "filter_resonance": 0.561,
+        "tune": 0.469,
+        "gain": 0.721,
+        "character": 0.59
+      }
+    },
+    {
+      "id": "texture_x061",
+      "name": "Texture X061",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture",
+      "parameters": {
+        "attack": 0.205,
+        "decay": 0.671,
+        "sustain": 0.74,
+        "release": 1.124,
+        "filter_cutoff": 0.633,
+        "filter_resonance": 0.328,
+        "tune": 0.315,
+        "gain": 0.855,
+        "character": 0.422
+      }
+    },
+    {
+      "id": "riser_03_x062",
+      "name": "Riser 03 X062",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 03",
+      "parameters": {
+        "attack": 0.271,
+        "decay": 1.012,
+        "sustain": 0.881,
+        "release": 2.476,
+        "filter_cutoff": 0.365,
+        "filter_resonance": 0.503,
+        "tune": -1.642,
+        "gain": 0.843,
+        "character": 0.598
+      }
+    },
+    {
+      "id": "impact_hit_07_x063",
+      "name": "Impact Hit 07 X063",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 07",
+      "parameters": {
+        "attack": 0.514,
+        "decay": 0.334,
+        "sustain": 0.131,
+        "release": 1.576,
+        "filter_cutoff": 0.529,
+        "filter_resonance": 0.269,
+        "tune": 1.237,
+        "gain": 1.2,
+        "character": 0.659
+      }
+    },
+    {
+      "id": "riser_02_x064",
+      "name": "Riser 02 X064",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 02",
+      "parameters": {
+        "attack": 0.434,
+        "decay": 1.076,
+        "sustain": 0.894,
+        "release": 2.334,
+        "filter_cutoff": 0.272,
+        "filter_resonance": 0.521,
+        "tune": 1.197,
+        "gain": 1.042,
+        "character": 0.671
+      }
+    },
+    {
+      "id": "texture_01_x065",
+      "name": "Texture 01 X065",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 01",
+      "parameters": {
+        "attack": 0.39,
+        "decay": 1.134,
+        "sustain": 0.699,
+        "release": 1.551,
+        "filter_cutoff": 0.596,
+        "filter_resonance": 0.3,
+        "tune": -1.157,
+        "gain": 0.866,
+        "character": 0.412
+      }
+    },
+    {
+      "id": "vox_shot_x066",
+      "name": "Vox Shot X066",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot",
+      "parameters": {
+        "attack": 0.107,
+        "decay": 0.085,
+        "sustain": 0.0,
+        "release": 0.0,
+        "filter_cutoff": 0.756,
+        "filter_resonance": 0.272,
+        "tune": 0.023,
+        "gain": 0.93,
+        "character": 0.544
+      }
+    },
+    {
+      "id": "texture_02_x067",
+      "name": "Texture 02 X067",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 02",
+      "parameters": {
+        "attack": 0.523,
+        "decay": 0.65,
+        "sustain": 0.701,
+        "release": 1.392,
+        "filter_cutoff": 0.611,
+        "filter_resonance": 0.277,
+        "tune": -0.966,
+        "gain": 0.613,
+        "character": 0.411
+      }
+    },
+    {
+      "id": "riser_08_x068",
+      "name": "Riser 08 X068",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 08",
+      "parameters": {
+        "attack": 0.481,
+        "decay": 1.09,
+        "sustain": 0.97,
+        "release": 2.242,
+        "filter_cutoff": 0.2,
+        "filter_resonance": 0.58,
+        "tune": 0.202,
+        "gain": 0.882,
+        "character": 0.516
+      }
+    },
+    {
+      "id": "whoosh_x069",
+      "name": "Whoosh X069",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.541,
+        "sustain": 0.198,
+        "release": 0.55,
+        "filter_cutoff": 0.538,
+        "filter_resonance": 0.55,
+        "tune": -0.148,
+        "gain": 0.937,
+        "character": 0.514
+      }
+    },
+    {
+      "id": "riser_03_x070",
+      "name": "Riser 03 X070",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 03",
+      "parameters": {
+        "attack": 0.346,
+        "decay": 0.938,
+        "sustain": 0.8,
+        "release": 2.187,
+        "filter_cutoff": 0.284,
+        "filter_resonance": 0.5,
+        "tune": -1.811,
+        "gain": 0.815,
+        "character": 0.558
+      }
+    },
+    {
+      "id": "texture_07_x071",
+      "name": "Texture 07 X071",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 07",
+      "parameters": {
+        "attack": 0.538,
+        "decay": 0.579,
+        "sustain": 0.742,
+        "release": 1.496,
+        "filter_cutoff": 0.611,
+        "filter_resonance": 0.322,
+        "tune": -0.512,
+        "gain": 0.583,
+        "character": 0.381
+      }
+    },
+    {
+      "id": "whoosh_03_x072",
+      "name": "Whoosh 03 X072",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 03",
+      "parameters": {
+        "attack": 0.249,
+        "decay": 0.475,
+        "sustain": 0.207,
+        "release": 0.56,
+        "filter_cutoff": 0.498,
+        "filter_resonance": 0.631,
+        "tune": -0.513,
+        "gain": 0.811,
+        "character": 0.445
+      }
+    },
+    {
+      "id": "whoosh_x073",
+      "name": "Whoosh X073",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.407,
+        "sustain": 0.066,
+        "release": 0.727,
+        "filter_cutoff": 0.609,
+        "filter_resonance": 0.592,
+        "tune": -0.241,
+        "gain": 0.9,
+        "character": 0.473
+      }
+    },
+    {
+      "id": "vox_shot_x074",
+      "name": "Vox Shot X074",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot",
+      "parameters": {
+        "attack": 0.046,
+        "decay": 0.302,
+        "sustain": 0.107,
+        "release": 0.0,
+        "filter_cutoff": 0.731,
+        "filter_resonance": 0.262,
+        "tune": 0.149,
+        "gain": 0.764,
+        "character": 0.55
+      }
+    },
+    {
+      "id": "riser_01_x075",
+      "name": "Riser 01 X075",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 01",
+      "parameters": {
+        "attack": 0.483,
+        "decay": 1.09,
+        "sustain": 0.762,
+        "release": 2.477,
+        "filter_cutoff": 0.302,
+        "filter_resonance": 0.487,
+        "tune": -1.895,
+        "gain": 0.689,
+        "character": 0.73
+      }
+    },
+    {
+      "id": "texture_07_x076",
+      "name": "Texture 07 X076",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 07",
+      "parameters": {
+        "attack": 0.531,
+        "decay": 0.419,
+        "sustain": 0.726,
+        "release": 1.531,
+        "filter_cutoff": 0.652,
+        "filter_resonance": 0.294,
+        "tune": 0.077,
+        "gain": 0.698,
+        "character": 0.386
+      }
+    },
+    {
+      "id": "texture_06_x077",
+      "name": "Texture 06 X077",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 06",
+      "parameters": {
+        "attack": 0.515,
+        "decay": 0.31,
+        "sustain": 0.801,
+        "release": 1.314,
+        "filter_cutoff": 0.567,
+        "filter_resonance": 0.304,
+        "tune": -0.744,
+        "gain": 0.874,
+        "character": 0.481
+      }
+    },
+    {
+      "id": "riser_06_x078",
+      "name": "Riser 06 X078",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 06",
+      "parameters": {
+        "attack": 0.994,
+        "decay": 1.298,
+        "sustain": 0.812,
+        "release": 2.429,
+        "filter_cutoff": 0.182,
+        "filter_resonance": 0.606,
+        "tune": -1.38,
+        "gain": 0.767,
+        "character": 0.647
+      }
+    },
+    {
+      "id": "vox_shot_04_x079",
+      "name": "Vox Shot 04 X079",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 04",
+      "parameters": {
+        "attack": 0.239,
+        "decay": 0.418,
+        "sustain": 0.08,
+        "release": 0.792,
+        "filter_cutoff": 0.777,
+        "filter_resonance": 0.219,
+        "tune": -1.805,
+        "gain": 0.818,
+        "character": 0.548
+      }
+    },
+    {
+      "id": "whoosh_x080",
+      "name": "Whoosh X080",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.358,
+        "sustain": 0.04,
+        "release": 0.426,
+        "filter_cutoff": 0.559,
+        "filter_resonance": 0.541,
+        "tune": 0.459,
+        "gain": 0.958,
+        "character": 0.47
+      }
+    },
+    {
+      "id": "vox_shot_02_x081",
+      "name": "Vox Shot 02 X081",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 02",
+      "parameters": {
+        "attack": 0.276,
+        "decay": 0.436,
+        "sustain": 0.087,
+        "release": 1.267,
+        "filter_cutoff": 0.692,
+        "filter_resonance": 0.229,
+        "tune": -2.29,
+        "gain": 0.634,
+        "character": 0.536
+      }
+    },
+    {
+      "id": "whoosh_05_x082",
+      "name": "Whoosh 05 X082",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 05",
+      "parameters": {
+        "attack": 0.115,
+        "decay": 0.473,
+        "sustain": 0.072,
+        "release": 0.921,
+        "filter_cutoff": 0.604,
+        "filter_resonance": 0.534,
+        "tune": -0.174,
+        "gain": 0.858,
+        "character": 0.469
+      }
+    },
+    {
+      "id": "whoosh_06_x083",
+      "name": "Whoosh 06 X083",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 06",
+      "parameters": {
+        "attack": 0.188,
+        "decay": 0.856,
+        "sustain": 0.03,
+        "release": 0.0,
+        "filter_cutoff": 0.687,
+        "filter_resonance": 0.705,
+        "tune": -0.979,
+        "gain": 0.774,
+        "character": 0.55
+      }
+    },
+    {
+      "id": "riser_05_x084",
+      "name": "Riser 05 X084",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 05",
+      "parameters": {
+        "attack": 0.18,
+        "decay": 1.048,
+        "sustain": 0.861,
+        "release": 0.934,
+        "filter_cutoff": 0.243,
+        "filter_resonance": 0.505,
+        "tune": 1.175,
+        "gain": 0.855,
+        "character": 0.616
+      }
+    },
+    {
+      "id": "texture_06_x085",
+      "name": "Texture 06 X085",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 06",
+      "parameters": {
+        "attack": 0.526,
+        "decay": 0.47,
+        "sustain": 0.849,
+        "release": 1.354,
+        "filter_cutoff": 0.635,
+        "filter_resonance": 0.323,
+        "tune": -0.483,
+        "gain": 0.906,
+        "character": 0.523
+      }
+    },
+    {
+      "id": "whoosh_04_x086",
+      "name": "Whoosh 04 X086",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 04",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.0,
+        "sustain": 0.165,
+        "release": 0.0,
+        "filter_cutoff": 0.744,
+        "filter_resonance": 0.656,
+        "tune": 1.396,
+        "gain": 0.93,
+        "character": 0.42
+      }
+    },
+    {
+      "id": "texture_06_x087",
+      "name": "Texture 06 X087",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 06",
+      "parameters": {
+        "attack": 0.368,
+        "decay": 0.423,
+        "sustain": 0.705,
+        "release": 1.324,
+        "filter_cutoff": 0.588,
+        "filter_resonance": 0.387,
+        "tune": -0.174,
+        "gain": 0.879,
+        "character": 0.526
+      }
+    },
+    {
+      "id": "vox_shot_01_x088",
+      "name": "Vox Shot 01 X088",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 01",
+      "parameters": {
+        "attack": 0.073,
+        "decay": 0.615,
+        "sustain": 0.0,
+        "release": 0.179,
+        "filter_cutoff": 0.834,
+        "filter_resonance": 0.221,
+        "tune": -1.661,
+        "gain": 0.716,
+        "character": 0.44
+      }
+    },
+    {
+      "id": "whoosh_08_x089",
+      "name": "Whoosh 08 X089",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.205,
+        "sustain": 0.093,
+        "release": 0.0,
+        "filter_cutoff": 0.67,
+        "filter_resonance": 0.697,
+        "tune": -1.549,
+        "gain": 0.829,
+        "character": 0.541
+      }
+    },
+    {
+      "id": "whoosh_05_x090",
+      "name": "Whoosh 05 X090",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 05",
+      "parameters": {
+        "attack": 0.216,
+        "decay": 0.517,
+        "sustain": 0.209,
+        "release": 1.164,
+        "filter_cutoff": 0.603,
+        "filter_resonance": 0.492,
+        "tune": 0.043,
+        "gain": 0.843,
+        "character": 0.525
+      }
+    },
+    {
+      "id": "whoosh_06_x091",
+      "name": "Whoosh 06 X091",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 06",
+      "parameters": {
+        "attack": 0.057,
+        "decay": 0.871,
+        "sustain": 0.02,
+        "release": 0.0,
+        "filter_cutoff": 0.712,
+        "filter_resonance": 0.712,
+        "tune": -1.411,
+        "gain": 0.677,
+        "character": 0.55
+      }
+    },
+    {
+      "id": "texture_06_x092",
+      "name": "Texture 06 X092",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 06",
+      "parameters": {
+        "attack": 0.541,
+        "decay": 0.352,
+        "sustain": 0.824,
+        "release": 1.132,
+        "filter_cutoff": 0.598,
+        "filter_resonance": 0.376,
+        "tune": 0.115,
+        "gain": 0.973,
+        "character": 0.442
+      }
+    },
+    {
+      "id": "whoosh_02_x093",
+      "name": "Whoosh 02 X093",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 02",
+      "parameters": {
+        "attack": 0.475,
+        "decay": 0.274,
+        "sustain": 0.109,
+        "release": 0.149,
+        "filter_cutoff": 0.539,
+        "filter_resonance": 0.564,
+        "tune": -1.641,
+        "gain": 0.889,
+        "character": 0.513
+      }
+    },
+    {
+      "id": "texture_01_x094",
+      "name": "Texture 01 X094",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 01",
+      "parameters": {
+        "attack": 0.234,
+        "decay": 1.07,
+        "sustain": 0.612,
+        "release": 1.846,
+        "filter_cutoff": 0.527,
+        "filter_resonance": 0.284,
+        "tune": -1.244,
+        "gain": 0.77,
+        "character": 0.385
+      }
+    },
+    {
+      "id": "texture_01_x095",
+      "name": "Texture 01 X095",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 01",
+      "parameters": {
+        "attack": 0.314,
+        "decay": 1.135,
+        "sustain": 0.617,
+        "release": 1.499,
+        "filter_cutoff": 0.597,
+        "filter_resonance": 0.373,
+        "tune": -1.09,
+        "gain": 0.793,
+        "character": 0.378
+      }
+    },
+    {
+      "id": "riser_05_x096",
+      "name": "Riser 05 X096",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 05",
+      "parameters": {
+        "attack": 0.263,
+        "decay": 1.212,
+        "sustain": 0.89,
+        "release": 0.847,
+        "filter_cutoff": 0.229,
+        "filter_resonance": 0.506,
+        "tune": 1.494,
+        "gain": 0.827,
+        "character": 0.564
+      }
+    },
+    {
+      "id": "whoosh_03_x097",
+      "name": "Whoosh 03 X097",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 03",
+      "parameters": {
+        "attack": 0.368,
+        "decay": 0.587,
+        "sustain": 0.108,
+        "release": 0.15,
+        "filter_cutoff": 0.521,
+        "filter_resonance": 0.706,
+        "tune": -0.197,
+        "gain": 0.817,
+        "character": 0.481
+      }
+    },
+    {
+      "id": "riser_01_x098",
+      "name": "Riser 01 X098",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 01",
+      "parameters": {
+        "attack": 0.344,
+        "decay": 0.999,
+        "sustain": 0.714,
+        "release": 2.314,
+        "filter_cutoff": 0.305,
+        "filter_resonance": 0.478,
+        "tune": -1.099,
+        "gain": 0.696,
+        "character": 0.731
+      }
+    },
+    {
+      "id": "impact_hit_x099",
+      "name": "Impact Hit X099",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.599,
+        "sustain": 0.0,
+        "release": 0.765,
+        "filter_cutoff": 0.497,
+        "filter_resonance": 0.306,
+        "tune": -0.093,
+        "gain": 1.2,
+        "character": 0.741
+      }
+    },
+    {
+      "id": "riser_07_x100",
+      "name": "Riser 07 X100",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 07",
+      "parameters": {
+        "attack": 0.41,
+        "decay": 0.49,
+        "sustain": 0.733,
+        "release": 2.327,
+        "filter_cutoff": 0.284,
+        "filter_resonance": 0.362,
+        "tune": -2.112,
+        "gain": 1.048,
+        "character": 0.622
+      }
+    },
+    {
+      "id": "impact_hit_03_x101",
+      "name": "Impact Hit 03 X101",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 03",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.351,
+        "sustain": 0.032,
+        "release": 0.0,
+        "filter_cutoff": 0.509,
+        "filter_resonance": 0.362,
+        "tune": -2.364,
+        "gain": 1.2,
+        "character": 0.608
+      }
+    },
+    {
+      "id": "whoosh_07_x102",
+      "name": "Whoosh 07 X102",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 07",
+      "parameters": {
+        "attack": 0.235,
+        "decay": 0.132,
+        "sustain": 0.031,
+        "release": 0.592,
+        "filter_cutoff": 0.719,
+        "filter_resonance": 0.58,
+        "tune": -1.539,
+        "gain": 0.707,
+        "character": 0.463
+      }
+    },
+    {
+      "id": "riser_02_x103",
+      "name": "Riser 02 X103",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 02",
+      "parameters": {
+        "attack": 0.539,
+        "decay": 1.066,
+        "sustain": 0.812,
+        "release": 1.782,
+        "filter_cutoff": 0.271,
+        "filter_resonance": 0.592,
+        "tune": 0.701,
+        "gain": 1.083,
+        "character": 0.631
+      }
+    },
+    {
+      "id": "whoosh_07_x104",
+      "name": "Whoosh 07 X104",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 07",
+      "parameters": {
+        "attack": 0.311,
+        "decay": 0.0,
+        "sustain": 0.075,
+        "release": 0.809,
+        "filter_cutoff": 0.706,
+        "filter_resonance": 0.569,
+        "tune": -1.094,
+        "gain": 0.768,
+        "character": 0.48
+      }
+    },
+    {
+      "id": "texture_01_x105",
+      "name": "Texture 01 X105",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 01",
+      "parameters": {
+        "attack": 0.389,
+        "decay": 1.098,
+        "sustain": 0.75,
+        "release": 1.976,
+        "filter_cutoff": 0.572,
+        "filter_resonance": 0.299,
+        "tune": -1.956,
+        "gain": 0.781,
+        "character": 0.423
+      }
+    },
+    {
+      "id": "texture_07_x106",
+      "name": "Texture 07 X106",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 07",
+      "parameters": {
+        "attack": 0.665,
+        "decay": 0.464,
+        "sustain": 0.757,
+        "release": 1.229,
+        "filter_cutoff": 0.724,
+        "filter_resonance": 0.371,
+        "tune": -0.137,
+        "gain": 0.617,
+        "character": 0.377
+      }
+    },
+    {
+      "id": "vox_shot_08_x107",
+      "name": "Vox Shot 08 X107",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 08",
+      "parameters": {
+        "attack": 0.075,
+        "decay": 0.304,
+        "sustain": 0.0,
+        "release": 0.791,
+        "filter_cutoff": 0.721,
+        "filter_resonance": 0.206,
+        "tune": -2.364,
+        "gain": 0.776,
+        "character": 0.546
+      }
+    },
+    {
+      "id": "texture_01_x108",
+      "name": "Texture 01 X108",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 01",
+      "parameters": {
+        "attack": 0.234,
+        "decay": 1.173,
+        "sustain": 0.622,
+        "release": 1.533,
+        "filter_cutoff": 0.558,
+        "filter_resonance": 0.312,
+        "tune": -1.671,
+        "gain": 0.813,
+        "character": 0.408
+      }
+    },
+    {
+      "id": "vox_shot_06_x109",
+      "name": "Vox Shot 06 X109",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 06",
+      "parameters": {
+        "attack": 0.53,
+        "decay": 0.352,
+        "sustain": 0.0,
+        "release": 0.893,
+        "filter_cutoff": 0.763,
+        "filter_resonance": 0.257,
+        "tune": -0.18,
+        "gain": 0.622,
+        "character": 0.614
+      }
+    },
+    {
+      "id": "texture_x110",
+      "name": "Texture X110",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture",
+      "parameters": {
+        "attack": 0.407,
+        "decay": 0.646,
+        "sustain": 0.746,
+        "release": 1.474,
+        "filter_cutoff": 0.64,
+        "filter_resonance": 0.287,
+        "tune": 0.006,
+        "gain": 0.718,
+        "character": 0.494
+      }
+    },
+    {
+      "id": "whoosh_05_x111",
+      "name": "Whoosh 05 X111",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 05",
+      "parameters": {
+        "attack": 0.17,
+        "decay": 0.324,
+        "sustain": 0.164,
+        "release": 1.151,
+        "filter_cutoff": 0.624,
+        "filter_resonance": 0.503,
+        "tune": -0.309,
+        "gain": 0.843,
+        "character": 0.535
+      }
+    },
+    {
+      "id": "impact_hit_05_x112",
+      "name": "Impact Hit 05 X112",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 05",
+      "parameters": {
+        "attack": 0.009,
+        "decay": 0.586,
+        "sustain": 0.029,
+        "release": 1.319,
+        "filter_cutoff": 0.616,
+        "filter_resonance": 0.261,
+        "tune": 2.11,
+        "gain": 1.2,
+        "character": 0.647
+      }
+    },
+    {
+      "id": "impact_hit_05_x113",
+      "name": "Impact Hit 05 X113",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 05",
+      "parameters": {
+        "attack": 0.022,
+        "decay": 0.583,
+        "sustain": 0.0,
+        "release": 1.243,
+        "filter_cutoff": 0.534,
+        "filter_resonance": 0.241,
+        "tune": 2.147,
+        "gain": 1.2,
+        "character": 0.609
+      }
+    },
+    {
+      "id": "whoosh_02_x114",
+      "name": "Whoosh 02 X114",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 02",
+      "parameters": {
+        "attack": 0.547,
+        "decay": 0.233,
+        "sustain": 0.267,
+        "release": 0.0,
+        "filter_cutoff": 0.598,
+        "filter_resonance": 0.55,
+        "tune": -1.618,
+        "gain": 0.911,
+        "character": 0.475
+      }
+    },
+    {
+      "id": "riser_02_x115",
+      "name": "Riser 02 X115",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 02",
+      "parameters": {
+        "attack": 0.455,
+        "decay": 0.95,
+        "sustain": 0.878,
+        "release": 2.293,
+        "filter_cutoff": 0.198,
+        "filter_resonance": 0.634,
+        "tune": 1.036,
+        "gain": 0.983,
+        "character": 0.675
+      }
+    },
+    {
+      "id": "impact_hit_02_x116",
+      "name": "Impact Hit 02 X116",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 02",
+      "parameters": {
+        "attack": 0.186,
+        "decay": 0.307,
+        "sustain": 0.022,
+        "release": 1.443,
+        "filter_cutoff": 0.615,
+        "filter_resonance": 0.436,
+        "tune": 1.955,
+        "gain": 1.2,
+        "character": 0.71
+      }
+    },
+    {
+      "id": "riser_01_x117",
+      "name": "Riser 01 X117",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 01",
+      "parameters": {
+        "attack": 0.472,
+        "decay": 0.969,
+        "sustain": 0.65,
+        "release": 2.541,
+        "filter_cutoff": 0.225,
+        "filter_resonance": 0.456,
+        "tune": -1.147,
+        "gain": 0.647,
+        "character": 0.671
+      }
+    },
+    {
+      "id": "vox_shot_07_x118",
+      "name": "Vox Shot 07 X118",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 07",
+      "parameters": {
+        "attack": 0.1,
+        "decay": 0.063,
+        "sustain": 0.077,
+        "release": 0.475,
+        "filter_cutoff": 0.659,
+        "filter_resonance": 0.145,
+        "tune": 2.166,
+        "gain": 1.074,
+        "character": 0.623
+      }
+    },
+    {
+      "id": "texture_06_x119",
+      "name": "Texture 06 X119",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 06",
+      "parameters": {
+        "attack": 0.417,
+        "decay": 0.411,
+        "sustain": 0.867,
+        "release": 1.081,
+        "filter_cutoff": 0.607,
+        "filter_resonance": 0.313,
+        "tune": -0.435,
+        "gain": 0.926,
+        "character": 0.46
+      }
+    },
+    {
+      "id": "vox_shot_04_x120",
+      "name": "Vox Shot 04 X120",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 04",
+      "parameters": {
+        "attack": 0.324,
+        "decay": 0.302,
+        "sustain": 0.0,
+        "release": 0.364,
+        "filter_cutoff": 0.767,
+        "filter_resonance": 0.295,
+        "tune": -1.198,
+        "gain": 0.857,
+        "character": 0.512
+      }
+    },
+    {
+      "id": "texture_05_x121",
+      "name": "Texture 05 X121",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 05",
+      "parameters": {
+        "attack": 0.641,
+        "decay": 0.431,
+        "sustain": 0.61,
+        "release": 1.206,
+        "filter_cutoff": 0.571,
+        "filter_resonance": 0.379,
+        "tune": 0.897,
+        "gain": 0.719,
+        "character": 0.476
+      }
+    },
+    {
+      "id": "impact_hit_08_x122",
+      "name": "Impact Hit 08 X122",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 08",
+      "parameters": {
+        "attack": 0.006,
+        "decay": 0.607,
+        "sustain": 0.0,
+        "release": 1.382,
+        "filter_cutoff": 0.457,
+        "filter_resonance": 0.258,
+        "tune": -2.364,
+        "gain": 1.147,
+        "character": 0.775
+      }
+    },
+    {
+      "id": "riser_05_x123",
+      "name": "Riser 05 X123",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 05",
+      "parameters": {
+        "attack": 0.224,
+        "decay": 1.193,
+        "sustain": 0.899,
+        "release": 1.052,
+        "filter_cutoff": 0.309,
+        "filter_resonance": 0.496,
+        "tune": 1.584,
+        "gain": 0.866,
+        "character": 0.634
+      }
+    },
+    {
+      "id": "impact_hit_04_x124",
+      "name": "Impact Hit 04 X124",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 04",
+      "parameters": {
+        "attack": 0.083,
+        "decay": 0.642,
+        "sustain": 0.053,
+        "release": 0.677,
+        "filter_cutoff": 0.555,
+        "filter_resonance": 0.306,
+        "tune": 1.22,
+        "gain": 1.045,
+        "character": 0.764
+      }
+    },
+    {
+      "id": "vox_shot_06_x125",
+      "name": "Vox Shot 06 X125",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 06",
+      "parameters": {
+        "attack": 0.387,
+        "decay": 0.464,
+        "sustain": 0.051,
+        "release": 0.729,
+        "filter_cutoff": 0.778,
+        "filter_resonance": 0.309,
+        "tune": 0.639,
+        "gain": 0.698,
+        "character": 0.544
+      }
+    },
+    {
+      "id": "riser_x126",
+      "name": "Riser X126",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser",
+      "parameters": {
+        "attack": 0.532,
+        "decay": 1.099,
+        "sustain": 0.827,
+        "release": 1.503,
+        "filter_cutoff": 0.277,
+        "filter_resonance": 0.512,
+        "tune": 0.445,
+        "gain": 0.848,
+        "character": 0.552
+      }
+    },
+    {
+      "id": "vox_shot_07_x127",
+      "name": "Vox Shot 07 X127",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 07",
+      "parameters": {
+        "attack": 0.111,
+        "decay": 0.056,
+        "sustain": 0.0,
+        "release": 0.174,
+        "filter_cutoff": 0.62,
+        "filter_resonance": 0.205,
+        "tune": 2.399,
+        "gain": 0.909,
+        "character": 0.628
+      }
+    },
+    {
+      "id": "whoosh_07_x128",
+      "name": "Whoosh 07 X128",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 07",
+      "parameters": {
+        "attack": 0.222,
+        "decay": 0.105,
+        "sustain": 0.031,
+        "release": 0.526,
+        "filter_cutoff": 0.631,
+        "filter_resonance": 0.575,
+        "tune": -1.914,
+        "gain": 0.75,
+        "character": 0.454
+      }
+    },
+    {
+      "id": "texture_05_x129",
+      "name": "Texture 05 X129",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 05",
+      "parameters": {
+        "attack": 0.792,
+        "decay": 0.42,
+        "sustain": 0.791,
+        "release": 1.02,
+        "filter_cutoff": 0.575,
+        "filter_resonance": 0.404,
+        "tune": 1.963,
+        "gain": 0.72,
+        "character": 0.496
+      }
+    },
+    {
+      "id": "riser_08_x130",
+      "name": "Riser 08 X130",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 08",
+      "parameters": {
+        "attack": 0.578,
+        "decay": 1.248,
+        "sustain": 0.921,
+        "release": 2.279,
+        "filter_cutoff": 0.278,
+        "filter_resonance": 0.539,
+        "tune": -0.334,
+        "gain": 0.779,
+        "character": 0.592
+      }
+    },
+    {
+      "id": "texture_03_x131",
+      "name": "Texture 03 X131",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 03",
+      "parameters": {
+        "attack": 0.087,
+        "decay": 0.953,
+        "sustain": 0.691,
+        "release": 2.32,
+        "filter_cutoff": 0.705,
+        "filter_resonance": 0.341,
+        "tune": 0.967,
+        "gain": 0.926,
+        "character": 0.345
+      }
+    },
+    {
+      "id": "impact_hit_08_x132",
+      "name": "Impact Hit 08 X132",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.657,
+        "sustain": 0.098,
+        "release": 1.306,
+        "filter_cutoff": 0.481,
+        "filter_resonance": 0.204,
+        "tune": -2.364,
+        "gain": 1.2,
+        "character": 0.765
+      }
+    },
+    {
+      "id": "impact_hit_04_x133",
+      "name": "Impact Hit 04 X133",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 04",
+      "parameters": {
+        "attack": 0.083,
+        "decay": 0.574,
+        "sustain": 0.0,
+        "release": 0.882,
+        "filter_cutoff": 0.487,
+        "filter_resonance": 0.303,
+        "tune": 0.603,
+        "gain": 1.022,
+        "character": 0.735
+      }
+    },
+    {
+      "id": "whoosh_04_x134",
+      "name": "Whoosh 04 X134",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 04",
+      "parameters": {
+        "attack": 0.115,
+        "decay": 0.148,
+        "sustain": 0.089,
+        "release": 0.0,
+        "filter_cutoff": 0.658,
+        "filter_resonance": 0.612,
+        "tune": 0.632,
+        "gain": 0.902,
+        "character": 0.504
+      }
+    },
+    {
+      "id": "vox_shot_x135",
+      "name": "Vox Shot X135",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.249,
+        "sustain": 0.0,
+        "release": 0.078,
+        "filter_cutoff": 0.764,
+        "filter_resonance": 0.293,
+        "tune": 0.14,
+        "gain": 0.811,
+        "character": 0.516
+      }
+    },
+    {
+      "id": "impact_hit_06_x136",
+      "name": "Impact Hit 06 X136",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 06",
+      "parameters": {
+        "attack": 0.055,
+        "decay": 0.94,
+        "sustain": 0.073,
+        "release": 0.491,
+        "filter_cutoff": 0.476,
+        "filter_resonance": 0.359,
+        "tune": -0.444,
+        "gain": 1.2,
+        "character": 0.779
+      }
+    },
+    {
+      "id": "whoosh_x137",
+      "name": "Whoosh X137",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh",
+      "parameters": {
+        "attack": 0.089,
+        "decay": 0.504,
+        "sustain": 0.201,
+        "release": 0.286,
+        "filter_cutoff": 0.58,
+        "filter_resonance": 0.619,
+        "tune": 0.289,
+        "gain": 0.944,
+        "character": 0.503
+      }
+    },
+    {
+      "id": "riser_07_x138",
+      "name": "Riser 07 X138",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 07",
+      "parameters": {
+        "attack": 0.481,
+        "decay": 0.62,
+        "sustain": 0.73,
+        "release": 2.533,
+        "filter_cutoff": 0.243,
+        "filter_resonance": 0.353,
+        "tune": -1.847,
+        "gain": 0.885,
+        "character": 0.659
+      }
+    },
+    {
+      "id": "riser_04_x139",
+      "name": "Riser 04 X139",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 04",
+      "parameters": {
+        "attack": 0.549,
+        "decay": 1.34,
+        "sustain": 0.853,
+        "release": 0.32,
+        "filter_cutoff": 0.342,
+        "filter_resonance": 0.464,
+        "tune": 0.236,
+        "gain": 1.003,
+        "character": 0.66
+      }
+    },
+    {
+      "id": "riser_03_x140",
+      "name": "Riser 03 X140",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 03",
+      "parameters": {
+        "attack": 0.264,
+        "decay": 0.745,
+        "sustain": 0.885,
+        "release": 2.268,
+        "filter_cutoff": 0.287,
+        "filter_resonance": 0.507,
+        "tune": -2.052,
+        "gain": 0.747,
+        "character": 0.562
+      }
+    },
+    {
+      "id": "whoosh_02_x141",
+      "name": "Whoosh 02 X141",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 02",
+      "parameters": {
+        "attack": 0.527,
+        "decay": 0.257,
+        "sustain": 0.131,
+        "release": 0.0,
+        "filter_cutoff": 0.558,
+        "filter_resonance": 0.462,
+        "tune": -1.748,
+        "gain": 0.944,
+        "character": 0.428
+      }
+    },
+    {
+      "id": "impact_hit_01_x142",
+      "name": "Impact Hit 01 X142",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 01",
+      "parameters": {
+        "attack": 0.148,
+        "decay": 0.672,
+        "sustain": 0.0,
+        "release": 1.494,
+        "filter_cutoff": 0.466,
+        "filter_resonance": 0.369,
+        "tune": 1.231,
+        "gain": 1.077,
+        "character": 0.703
+      }
+    },
+    {
+      "id": "impact_hit_02_x143",
+      "name": "Impact Hit 02 X143",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 02",
+      "parameters": {
+        "attack": 0.225,
+        "decay": 0.426,
+        "sustain": 0.0,
+        "release": 1.49,
+        "filter_cutoff": 0.626,
+        "filter_resonance": 0.447,
+        "tune": 2.399,
+        "gain": 1.2,
+        "character": 0.803
+      }
+    },
+    {
+      "id": "impact_hit_02_x144",
+      "name": "Impact Hit 02 X144",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 02",
+      "parameters": {
+        "attack": 0.246,
+        "decay": 0.508,
+        "sustain": 0.065,
+        "release": 1.302,
+        "filter_cutoff": 0.54,
+        "filter_resonance": 0.422,
+        "tune": 1.888,
+        "gain": 1.2,
+        "character": 0.734
+      }
+    },
+    {
+      "id": "whoosh_08_x145",
+      "name": "Whoosh 08 X145",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.239,
+        "sustain": 0.0,
+        "release": 0.223,
+        "filter_cutoff": 0.681,
+        "filter_resonance": 0.676,
+        "tune": -1.785,
+        "gain": 0.991,
+        "character": 0.614
+      }
+    },
+    {
+      "id": "texture_07_x146",
+      "name": "Texture 07 X146",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 07",
+      "parameters": {
+        "attack": 0.465,
+        "decay": 0.681,
+        "sustain": 0.667,
+        "release": 1.602,
+        "filter_cutoff": 0.715,
+        "filter_resonance": 0.295,
+        "tune": -0.575,
+        "gain": 0.618,
+        "character": 0.345
+      }
+    },
+    {
+      "id": "riser_08_x147",
+      "name": "Riser 08 X147",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 08",
+      "parameters": {
+        "attack": 0.507,
+        "decay": 0.966,
+        "sustain": 0.971,
+        "release": 2.312,
+        "filter_cutoff": 0.318,
+        "filter_resonance": 0.56,
+        "tune": 0.515,
+        "gain": 0.815,
+        "character": 0.532
+      }
+    },
+    {
+      "id": "riser_02_x148",
+      "name": "Riser 02 X148",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 02",
+      "parameters": {
+        "attack": 0.537,
+        "decay": 1.18,
+        "sustain": 0.883,
+        "release": 2.09,
+        "filter_cutoff": 0.288,
+        "filter_resonance": 0.606,
+        "tune": 0.803,
+        "gain": 1.034,
+        "character": 0.653
+      }
+    },
+    {
+      "id": "texture_01_x149",
+      "name": "Texture 01 X149",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 01",
+      "parameters": {
+        "attack": 0.221,
+        "decay": 1.236,
+        "sustain": 0.703,
+        "release": 1.773,
+        "filter_cutoff": 0.543,
+        "filter_resonance": 0.308,
+        "tune": -1.55,
+        "gain": 0.755,
+        "character": 0.409
+      }
+    },
+    {
+      "id": "texture_05_x150",
+      "name": "Texture 05 X150",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 05",
+      "parameters": {
+        "attack": 0.732,
+        "decay": 0.368,
+        "sustain": 0.7,
+        "release": 1.083,
+        "filter_cutoff": 0.674,
+        "filter_resonance": 0.346,
+        "tune": 1.863,
+        "gain": 0.576,
+        "character": 0.507
+      }
+    },
+    {
+      "id": "vox_shot_08_x151",
+      "name": "Vox Shot 08 X151",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 08",
+      "parameters": {
+        "attack": 0.05,
+        "decay": 0.4,
+        "sustain": 0.045,
+        "release": 0.839,
+        "filter_cutoff": 0.725,
+        "filter_resonance": 0.195,
+        "tune": -2.364,
+        "gain": 0.637,
+        "character": 0.628
+      }
+    },
+    {
+      "id": "whoosh_04_x152",
+      "name": "Whoosh 04 X152",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 04",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.093,
+        "sustain": 0.003,
+        "release": 0.0,
+        "filter_cutoff": 0.728,
+        "filter_resonance": 0.595,
+        "tune": 1.126,
+        "gain": 0.947,
+        "character": 0.493
+      }
+    },
+    {
+      "id": "impact_hit_02_x153",
+      "name": "Impact Hit 02 X153",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 02",
+      "parameters": {
+        "attack": 0.373,
+        "decay": 0.557,
+        "sustain": 0.0,
+        "release": 1.483,
+        "filter_cutoff": 0.566,
+        "filter_resonance": 0.326,
+        "tune": 2.177,
+        "gain": 1.2,
+        "character": 0.748
+      }
+    },
+    {
+      "id": "vox_shot_03_x154",
+      "name": "Vox Shot 03 X154",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 03",
+      "parameters": {
+        "attack": 0.027,
+        "decay": 0.234,
+        "sustain": 0.045,
+        "release": 0.156,
+        "filter_cutoff": 0.877,
+        "filter_resonance": 0.217,
+        "tune": 2.191,
+        "gain": 0.715,
+        "character": 0.503
+      }
+    },
+    {
+      "id": "vox_shot_06_x155",
+      "name": "Vox Shot 06 X155",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 06",
+      "parameters": {
+        "attack": 0.497,
+        "decay": 0.43,
+        "sustain": 0.001,
+        "release": 0.89,
+        "filter_cutoff": 0.686,
+        "filter_resonance": 0.317,
+        "tune": -0.176,
+        "gain": 0.645,
+        "character": 0.613
+      }
+    },
+    {
+      "id": "riser_08_x156",
+      "name": "Riser 08 X156",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 08",
+      "parameters": {
+        "attack": 0.554,
+        "decay": 1.106,
+        "sustain": 0.84,
+        "release": 2.383,
+        "filter_cutoff": 0.332,
+        "filter_resonance": 0.566,
+        "tune": 0.361,
+        "gain": 0.864,
+        "character": 0.542
+      }
+    },
+    {
+      "id": "texture_06_x157",
+      "name": "Texture 06 X157",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 06",
+      "parameters": {
+        "attack": 0.43,
+        "decay": 0.183,
+        "sustain": 0.88,
+        "release": 0.982,
+        "filter_cutoff": 0.559,
+        "filter_resonance": 0.304,
+        "tune": -0.58,
+        "gain": 0.897,
+        "character": 0.491
+      }
+    },
+    {
+      "id": "vox_shot_08_x158",
+      "name": "Vox Shot 08 X158",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 08",
+      "parameters": {
+        "attack": 0.025,
+        "decay": 0.384,
+        "sustain": 0.0,
+        "release": 0.965,
+        "filter_cutoff": 0.744,
+        "filter_resonance": 0.218,
+        "tune": -2.332,
+        "gain": 0.801,
+        "character": 0.58
+      }
+    },
+    {
+      "id": "whoosh_08_x159",
+      "name": "Whoosh 08 X159",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 08",
+      "parameters": {
+        "attack": 0.092,
+        "decay": 0.012,
+        "sustain": 0.033,
+        "release": 0.035,
+        "filter_cutoff": 0.593,
+        "filter_resonance": 0.685,
+        "tune": -1.486,
+        "gain": 0.931,
+        "character": 0.561
+      }
+    },
+    {
+      "id": "texture_02_x160",
+      "name": "Texture 02 X160",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 02",
+      "parameters": {
+        "attack": 0.422,
+        "decay": 0.897,
+        "sustain": 0.782,
+        "release": 1.077,
+        "filter_cutoff": 0.593,
+        "filter_resonance": 0.271,
+        "tune": -0.57,
+        "gain": 0.647,
+        "character": 0.337
+      }
+    },
+    {
+      "id": "whoosh_05_x161",
+      "name": "Whoosh 05 X161",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 05",
+      "parameters": {
+        "attack": 0.172,
+        "decay": 0.486,
+        "sustain": 0.115,
+        "release": 1.062,
+        "filter_cutoff": 0.567,
+        "filter_resonance": 0.578,
+        "tune": -0.589,
+        "gain": 0.773,
+        "character": 0.468
+      }
+    },
+    {
+      "id": "whoosh_05_x162",
+      "name": "Whoosh 05 X162",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 05",
+      "parameters": {
+        "attack": 0.193,
+        "decay": 0.272,
+        "sustain": 0.17,
+        "release": 1.143,
+        "filter_cutoff": 0.571,
+        "filter_resonance": 0.531,
+        "tune": -0.069,
+        "gain": 0.755,
+        "character": 0.505
+      }
+    },
+    {
+      "id": "whoosh_04_x163",
+      "name": "Whoosh 04 X163",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 04",
+      "parameters": {
+        "attack": 0.088,
+        "decay": 0.019,
+        "sustain": 0.182,
+        "release": 0.239,
+        "filter_cutoff": 0.725,
+        "filter_resonance": 0.675,
+        "tune": 1.237,
+        "gain": 1.038,
+        "character": 0.489
+      }
+    },
+    {
+      "id": "riser_08_x164",
+      "name": "Riser 08 X164",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 08",
+      "parameters": {
+        "attack": 0.617,
+        "decay": 0.982,
+        "sustain": 0.969,
+        "release": 2.254,
+        "filter_cutoff": 0.316,
+        "filter_resonance": 0.56,
+        "tune": 0.086,
+        "gain": 0.74,
+        "character": 0.554
+      }
+    },
+    {
+      "id": "riser_04_x165",
+      "name": "Riser 04 X165",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 04",
+      "parameters": {
+        "attack": 0.694,
+        "decay": 1.542,
+        "sustain": 0.765,
+        "release": 0.472,
+        "filter_cutoff": 0.33,
+        "filter_resonance": 0.441,
+        "tune": -0.174,
+        "gain": 0.984,
+        "character": 0.677
+      }
+    },
+    {
+      "id": "impact_hit_01_x166",
+      "name": "Impact Hit 01 X166",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 01",
+      "parameters": {
+        "attack": 0.12,
+        "decay": 0.658,
+        "sustain": 0.093,
+        "release": 1.218,
+        "filter_cutoff": 0.502,
+        "filter_resonance": 0.355,
+        "tune": 1.487,
+        "gain": 1.081,
+        "character": 0.702
+      }
+    },
+    {
+      "id": "vox_shot_03_x167",
+      "name": "Vox Shot 03 X167",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 03",
+      "parameters": {
+        "attack": 0.092,
+        "decay": 0.145,
+        "sustain": 0.0,
+        "release": 0.038,
+        "filter_cutoff": 0.796,
+        "filter_resonance": 0.287,
+        "tune": 2.0,
+        "gain": 0.686,
+        "character": 0.492
+      }
+    },
+    {
+      "id": "impact_hit_x168",
+      "name": "Impact Hit X168",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit",
+      "parameters": {
+        "attack": 0.102,
+        "decay": 0.446,
+        "sustain": 0.0,
+        "release": 0.854,
+        "filter_cutoff": 0.571,
+        "filter_resonance": 0.258,
+        "tune": 0.213,
+        "gain": 1.182,
+        "character": 0.729
+      }
+    },
+    {
+      "id": "texture_05_x169",
+      "name": "Texture 05 X169",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 05",
+      "parameters": {
+        "attack": 0.793,
+        "decay": 0.228,
+        "sustain": 0.585,
+        "release": 1.344,
+        "filter_cutoff": 0.652,
+        "filter_resonance": 0.439,
+        "tune": 1.189,
+        "gain": 0.754,
+        "character": 0.498
+      }
+    },
+    {
+      "id": "riser_08_x170",
+      "name": "Riser 08 X170",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 08",
+      "parameters": {
+        "attack": 0.467,
+        "decay": 1.252,
+        "sustain": 0.789,
+        "release": 2.165,
+        "filter_cutoff": 0.322,
+        "filter_resonance": 0.576,
+        "tune": 0.261,
+        "gain": 0.783,
+        "character": 0.508
+      }
+    },
+    {
+      "id": "whoosh_06_x171",
+      "name": "Whoosh 06 X171",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 06",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.994,
+        "sustain": 0.027,
+        "release": 0.0,
+        "filter_cutoff": 0.687,
+        "filter_resonance": 0.636,
+        "tune": -1.22,
+        "gain": 0.626,
+        "character": 0.556
+      }
+    },
+    {
+      "id": "whoosh_03_x172",
+      "name": "Whoosh 03 X172",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 03",
+      "parameters": {
+        "attack": 0.194,
+        "decay": 0.694,
+        "sustain": 0.089,
+        "release": 0.371,
+        "filter_cutoff": 0.521,
+        "filter_resonance": 0.696,
+        "tune": -0.346,
+        "gain": 0.878,
+        "character": 0.506
+      }
+    },
+    {
+      "id": "texture_05_x173",
+      "name": "Texture 05 X173",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 05",
+      "parameters": {
+        "attack": 0.784,
+        "decay": 0.529,
+        "sustain": 0.692,
+        "release": 1.573,
+        "filter_cutoff": 0.67,
+        "filter_resonance": 0.366,
+        "tune": 1.637,
+        "gain": 0.624,
+        "character": 0.53
+      }
+    },
+    {
+      "id": "texture_x174",
+      "name": "Texture X174",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture",
+      "parameters": {
+        "attack": 0.369,
+        "decay": 0.93,
+        "sustain": 0.711,
+        "release": 1.219,
+        "filter_cutoff": 0.708,
+        "filter_resonance": 0.289,
+        "tune": 0.334,
+        "gain": 0.732,
+        "character": 0.421
+      }
+    },
+    {
+      "id": "vox_shot_07_x175",
+      "name": "Vox Shot 07 X175",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 07",
+      "parameters": {
+        "attack": 0.083,
+        "decay": 0.0,
+        "sustain": 0.18,
+        "release": 0.304,
+        "filter_cutoff": 0.742,
+        "filter_resonance": 0.225,
+        "tune": 1.969,
+        "gain": 1.048,
+        "character": 0.672
+      }
+    },
+    {
+      "id": "vox_shot_04_x176",
+      "name": "Vox Shot 04 X176",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 04",
+      "parameters": {
+        "attack": 0.328,
+        "decay": 0.257,
+        "sustain": 0.082,
+        "release": 0.8,
+        "filter_cutoff": 0.768,
+        "filter_resonance": 0.186,
+        "tune": -1.097,
+        "gain": 0.77,
+        "character": 0.532
+      }
+    },
+    {
+      "id": "vox_shot_01_x177",
+      "name": "Vox Shot 01 X177",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 01",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.612,
+        "sustain": 0.029,
+        "release": 0.124,
+        "filter_cutoff": 0.784,
+        "filter_resonance": 0.297,
+        "tune": -2.023,
+        "gain": 0.775,
+        "character": 0.454
+      }
+    },
+    {
+      "id": "impact_hit_07_x178",
+      "name": "Impact Hit 07 X178",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 07",
+      "parameters": {
+        "attack": 0.304,
+        "decay": 0.261,
+        "sustain": 0.007,
+        "release": 1.281,
+        "filter_cutoff": 0.549,
+        "filter_resonance": 0.234,
+        "tune": 1.241,
+        "gain": 1.2,
+        "character": 0.585
+      }
+    },
+    {
+      "id": "impact_hit_08_x179",
+      "name": "Impact Hit 08 X179",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 08",
+      "parameters": {
+        "attack": 0.049,
+        "decay": 0.604,
+        "sustain": 0.0,
+        "release": 1.351,
+        "filter_cutoff": 0.427,
+        "filter_resonance": 0.183,
+        "tune": -1.877,
+        "gain": 1.137,
+        "character": 0.79
+      }
+    },
+    {
+      "id": "impact_hit_03_x180",
+      "name": "Impact Hit 03 X180",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 03",
+      "parameters": {
+        "attack": 0.039,
+        "decay": 0.319,
+        "sustain": 0.117,
+        "release": 0.066,
+        "filter_cutoff": 0.534,
+        "filter_resonance": 0.357,
+        "tune": -2.241,
+        "gain": 1.2,
+        "character": 0.578
+      }
+    },
+    {
+      "id": "texture_05_x181",
+      "name": "Texture 05 X181",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 05",
+      "parameters": {
+        "attack": 0.792,
+        "decay": 0.248,
+        "sustain": 0.587,
+        "release": 1.442,
+        "filter_cutoff": 0.635,
+        "filter_resonance": 0.413,
+        "tune": 1.894,
+        "gain": 0.703,
+        "character": 0.464
+      }
+    },
+    {
+      "id": "whoosh_03_x182",
+      "name": "Whoosh 03 X182",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 03",
+      "parameters": {
+        "attack": 0.375,
+        "decay": 0.494,
+        "sustain": 0.099,
+        "release": 0.27,
+        "filter_cutoff": 0.491,
+        "filter_resonance": 0.643,
+        "tune": 0.419,
+        "gain": 0.814,
+        "character": 0.444
+      }
+    },
+    {
+      "id": "riser_x183",
+      "name": "Riser X183",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser",
+      "parameters": {
+        "attack": 0.463,
+        "decay": 1.159,
+        "sustain": 0.791,
+        "release": 1.694,
+        "filter_cutoff": 0.241,
+        "filter_resonance": 0.475,
+        "tune": -0.491,
+        "gain": 0.825,
+        "character": 0.608
+      }
+    },
+    {
+      "id": "whoosh_03_x184",
+      "name": "Whoosh 03 X184",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 03",
+      "parameters": {
+        "attack": 0.264,
+        "decay": 0.737,
+        "sustain": 0.127,
+        "release": 0.204,
+        "filter_cutoff": 0.517,
+        "filter_resonance": 0.692,
+        "tune": -0.575,
+        "gain": 0.875,
+        "character": 0.476
+      }
+    },
+    {
+      "id": "riser_03_x185",
+      "name": "Riser 03 X185",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 03",
+      "parameters": {
+        "attack": 0.305,
+        "decay": 0.928,
+        "sustain": 0.765,
+        "release": 2.535,
+        "filter_cutoff": 0.299,
+        "filter_resonance": 0.526,
+        "tune": -1.679,
+        "gain": 0.821,
+        "character": 0.635
+      }
+    },
+    {
+      "id": "impact_hit_04_x186",
+      "name": "Impact Hit 04 X186",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 04",
+      "parameters": {
+        "attack": 0.213,
+        "decay": 0.477,
+        "sustain": 0.087,
+        "release": 0.639,
+        "filter_cutoff": 0.565,
+        "filter_resonance": 0.304,
+        "tune": 0.411,
+        "gain": 1.017,
+        "character": 0.7
+      }
+    },
+    {
+      "id": "vox_shot_01_x187",
+      "name": "Vox Shot 01 X187",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 01",
+      "parameters": {
+        "attack": 0.113,
+        "decay": 0.465,
+        "sustain": 0.0,
+        "release": 0.061,
+        "filter_cutoff": 0.833,
+        "filter_resonance": 0.22,
+        "tune": -1.667,
+        "gain": 0.772,
+        "character": 0.427
+      }
+    },
+    {
+      "id": "vox_shot_01_x188",
+      "name": "Vox Shot 01 X188",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 01",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.34,
+        "sustain": 0.0,
+        "release": 0.125,
+        "filter_cutoff": 0.855,
+        "filter_resonance": 0.298,
+        "tune": -1.785,
+        "gain": 0.73,
+        "character": 0.455
+      }
+    },
+    {
+      "id": "texture_03_x189",
+      "name": "Texture 03 X189",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 03",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.908,
+        "sustain": 0.654,
+        "release": 1.911,
+        "filter_cutoff": 0.642,
+        "filter_resonance": 0.282,
+        "tune": 1.217,
+        "gain": 0.908,
+        "character": 0.42
+      }
+    },
+    {
+      "id": "riser_04_x190",
+      "name": "Riser 04 X190",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 04",
+      "parameters": {
+        "attack": 0.65,
+        "decay": 1.487,
+        "sustain": 0.916,
+        "release": 0.535,
+        "filter_cutoff": 0.333,
+        "filter_resonance": 0.47,
+        "tune": -0.35,
+        "gain": 0.976,
+        "character": 0.613
+      }
+    },
+    {
+      "id": "impact_hit_07_x191",
+      "name": "Impact Hit 07 X191",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 07",
+      "parameters": {
+        "attack": 0.473,
+        "decay": 0.497,
+        "sustain": 0.156,
+        "release": 1.237,
+        "filter_cutoff": 0.604,
+        "filter_resonance": 0.303,
+        "tune": 0.598,
+        "gain": 1.2,
+        "character": 0.645
+      }
+    },
+    {
+      "id": "whoosh_01_x192",
+      "name": "Whoosh 01 X192",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 01",
+      "parameters": {
+        "attack": 0.433,
+        "decay": 0.471,
+        "sustain": 0.187,
+        "release": 0.02,
+        "filter_cutoff": 0.612,
+        "filter_resonance": 0.549,
+        "tune": 0.772,
+        "gain": 0.968,
+        "character": 0.584
+      }
+    },
+    {
+      "id": "riser_x193",
+      "name": "Riser X193",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser",
+      "parameters": {
+        "attack": 0.59,
+        "decay": 1.13,
+        "sustain": 0.746,
+        "release": 1.737,
+        "filter_cutoff": 0.324,
+        "filter_resonance": 0.548,
+        "tune": -0.57,
+        "gain": 0.957,
+        "character": 0.556
+      }
+    },
+    {
+      "id": "texture_x194",
+      "name": "Texture X194",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture",
+      "parameters": {
+        "attack": 0.189,
+        "decay": 0.928,
+        "sustain": 0.66,
+        "release": 1.164,
+        "filter_cutoff": 0.629,
+        "filter_resonance": 0.321,
+        "tune": 0.085,
+        "gain": 0.864,
+        "character": 0.448
+      }
+    },
+    {
+      "id": "riser_05_x195",
+      "name": "Riser 05 X195",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Riser 05",
+      "parameters": {
+        "attack": 0.114,
+        "decay": 1.183,
+        "sustain": 0.846,
+        "release": 0.649,
+        "filter_cutoff": 0.246,
+        "filter_resonance": 0.523,
+        "tune": 1.661,
+        "gain": 0.868,
+        "character": 0.581
+      }
+    },
+    {
+      "id": "impact_hit_x196",
+      "name": "Impact Hit X196",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.345,
+        "sustain": 0.028,
+        "release": 0.949,
+        "filter_cutoff": 0.456,
+        "filter_resonance": 0.317,
+        "tune": -0.019,
+        "gain": 1.2,
+        "character": 0.679
+      }
+    },
+    {
+      "id": "vox_shot_07_x197",
+      "name": "Vox Shot 07 X197",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 07",
+      "parameters": {
+        "attack": 0.162,
+        "decay": 0.0,
+        "sustain": 0.003,
+        "release": 0.029,
+        "filter_cutoff": 0.654,
+        "filter_resonance": 0.176,
+        "tune": 2.144,
+        "gain": 0.898,
+        "character": 0.63
+      }
+    },
+    {
+      "id": "texture_05_x198",
+      "name": "Texture 05 X198",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 05",
+      "parameters": {
+        "attack": 0.835,
+        "decay": 0.343,
+        "sustain": 0.684,
+        "release": 1.179,
+        "filter_cutoff": 0.64,
+        "filter_resonance": 0.401,
+        "tune": 1.793,
+        "gain": 0.753,
+        "character": 0.542
+      }
+    },
+    {
+      "id": "impact_hit_05_x199",
+      "name": "Impact Hit 05 X199",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 05",
+      "parameters": {
+        "attack": 0.097,
+        "decay": 0.357,
+        "sustain": 0.0,
+        "release": 1.581,
+        "filter_cutoff": 0.566,
+        "filter_resonance": 0.208,
+        "tune": 2.399,
+        "gain": 1.2,
+        "character": 0.658
+      }
+    },
+    {
+      "id": "impact_hit_02_x200",
+      "name": "Impact Hit 02 X200",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 02",
+      "parameters": {
+        "attack": 0.238,
+        "decay": 0.508,
+        "sustain": 0.0,
+        "release": 1.221,
+        "filter_cutoff": 0.649,
+        "filter_resonance": 0.376,
+        "tune": 1.694,
+        "gain": 1.2,
+        "character": 0.787
+      }
+    },
+    {
+      "id": "impact_hit_x201",
+      "name": "Impact Hit X201",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit",
+      "parameters": {
+        "attack": 0.051,
+        "decay": 0.338,
+        "sustain": 0.018,
+        "release": 1.049,
+        "filter_cutoff": 0.455,
+        "filter_resonance": 0.262,
+        "tune": -0.549,
+        "gain": 1.178,
+        "character": 0.708
+      }
+    },
+    {
+      "id": "vox_shot_02_x202",
+      "name": "Vox Shot 02 X202",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vox Shot 02",
+      "parameters": {
+        "attack": 0.362,
+        "decay": 0.721,
+        "sustain": 0.0,
+        "release": 1.023,
+        "filter_cutoff": 0.74,
+        "filter_resonance": 0.138,
+        "tune": -1.918,
+        "gain": 0.758,
+        "character": 0.615
+      }
+    },
+    {
+      "id": "whoosh_02_x203",
+      "name": "Whoosh 02 X203",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Whoosh 02",
+      "parameters": {
+        "attack": 0.559,
+        "decay": 0.49,
+        "sustain": 0.149,
+        "release": 0.134,
+        "filter_cutoff": 0.609,
+        "filter_resonance": 0.533,
+        "tune": -1.825,
+        "gain": 0.937,
+        "character": 0.461
+      }
+    },
+    {
+      "id": "texture_04_x204",
+      "name": "Texture 04 X204",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Texture 04",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.891,
+        "sustain": 0.682,
+        "release": 0.994,
+        "filter_cutoff": 0.76,
+        "filter_resonance": 0.327,
+        "tune": -1.968,
+        "gain": 0.646,
+        "character": 0.314
+      }
+    },
+    {
+      "id": "impact_hit_03_x205",
+      "name": "Impact Hit 03 X205",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Impact Hit 03",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.427,
+        "sustain": 0.0,
+        "release": 0.0,
+        "filter_cutoff": 0.579,
+        "filter_resonance": 0.309,
+        "tune": -2.036,
+        "gain": 1.2,
+        "character": 0.619
       }
     }
   ]

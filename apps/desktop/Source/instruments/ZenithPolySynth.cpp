@@ -15,8 +15,11 @@
 
 #include "ZenithPolySynth.h"
 #include "../ui/instruments/ZenithPolySynthUI.h"
+#include "../ai/WingmanSynthBridge.h"
 #include "ContentPaths.h"
 #include "ZenithPolySynthVoice.h"
+#include "ZenithPolySynth/sequencer/Arpeggiator.h"
+#include "ZenithPolySynth/lfos/StepLFO.h"
 #include <juce_core/juce_core.h>
 
 namespace zenith {
@@ -64,6 +67,10 @@ const juce::String &ZenithPolySynthProcessor::UnisonVoices =
     ZenithPolySynthParameterManager::UnisonVoices;
 const juce::String &ZenithPolySynthProcessor::UnisonDetune =
     ZenithPolySynthParameterManager::UnisonDetune;
+const juce::String &ZenithPolySynthProcessor::UnisonSpread =
+    ZenithPolySynthParameterManager::UnisonSpread;
+const juce::String &ZenithPolySynthProcessor::UnisonPanRandom =
+    ZenithPolySynthParameterManager::UnisonPanRandom;
 
 const juce::String &ZenithPolySynthProcessor::FilterType =
     ZenithPolySynthParameterManager::FilterType;
@@ -166,6 +173,68 @@ const juce::String &ZenithPolySynthProcessor::DelaySync =
 const juce::String &ZenithPolySynthProcessor::DelaySyncRate =
     ZenithPolySynthParameterManager::DelaySyncRate;
 
+// Arpeggiator Parameters
+const juce::String &ZenithPolySynthProcessor::ArpEnable =
+    ZenithPolySynthParameterManager::ArpEnable;
+const juce::String &ZenithPolySynthProcessor::ArpMode =
+    ZenithPolySynthParameterManager::ArpMode;
+const juce::String &ZenithPolySynthProcessor::ArpRate =
+    ZenithPolySynthParameterManager::ArpRate;
+const juce::String &ZenithPolySynthProcessor::ArpSync =
+    ZenithPolySynthParameterManager::ArpSync;
+const juce::String &ZenithPolySynthProcessor::ArpSyncRate =
+    ZenithPolySynthParameterManager::ArpSyncRate;
+const juce::String &ZenithPolySynthProcessor::ArpGate =
+    ZenithPolySynthParameterManager::ArpGate;
+const juce::String &ZenithPolySynthProcessor::ArpOctaves =
+    ZenithPolySynthParameterManager::ArpOctaves;
+const juce::String &ZenithPolySynthProcessor::ArpSwing =
+    ZenithPolySynthParameterManager::ArpSwing;
+const juce::String &ZenithPolySynthProcessor::ArpHold =
+    ZenithPolySynthParameterManager::ArpHold;
+
+// Step LFO Parameters
+const juce::String &ZenithPolySynthProcessor::StepLFO1Enable =
+    ZenithPolySynthParameterManager::StepLFO1Enable;
+const juce::String &ZenithPolySynthProcessor::StepLFO1Steps =
+    ZenithPolySynthParameterManager::StepLFO1Steps;
+const juce::String &ZenithPolySynthProcessor::StepLFO1Rate =
+    ZenithPolySynthParameterManager::StepLFO1Rate;
+const juce::String &ZenithPolySynthProcessor::StepLFO1Sync =
+    ZenithPolySynthParameterManager::StepLFO1Sync;
+const juce::String &ZenithPolySynthProcessor::StepLFO1Smoothing =
+    ZenithPolySynthParameterManager::StepLFO1Smoothing;
+const juce::String &ZenithPolySynthProcessor::StepLFO2Enable =
+    ZenithPolySynthParameterManager::StepLFO2Enable;
+const juce::String &ZenithPolySynthProcessor::StepLFO2Steps =
+    ZenithPolySynthParameterManager::StepLFO2Steps;
+const juce::String &ZenithPolySynthProcessor::StepLFO2Rate =
+    ZenithPolySynthParameterManager::StepLFO2Rate;
+const juce::String &ZenithPolySynthProcessor::StepLFO2Sync =
+    ZenithPolySynthParameterManager::StepLFO2Sync;
+const juce::String &ZenithPolySynthProcessor::StepLFO2Smoothing =
+    ZenithPolySynthParameterManager::StepLFO2Smoothing;
+const juce::String &ZenithPolySynthProcessor::StepLFO3Enable =
+    ZenithPolySynthParameterManager::StepLFO3Enable;
+const juce::String &ZenithPolySynthProcessor::StepLFO3Steps =
+    ZenithPolySynthParameterManager::StepLFO3Steps;
+const juce::String &ZenithPolySynthProcessor::StepLFO3Rate =
+    ZenithPolySynthParameterManager::StepLFO3Rate;
+const juce::String &ZenithPolySynthProcessor::StepLFO3Sync =
+    ZenithPolySynthParameterManager::StepLFO3Sync;
+const juce::String &ZenithPolySynthProcessor::StepLFO3Smoothing =
+    ZenithPolySynthParameterManager::StepLFO3Smoothing;
+const juce::String &ZenithPolySynthProcessor::StepLFO4Enable =
+    ZenithPolySynthParameterManager::StepLFO4Enable;
+const juce::String &ZenithPolySynthProcessor::StepLFO4Steps =
+    ZenithPolySynthParameterManager::StepLFO4Steps;
+const juce::String &ZenithPolySynthProcessor::StepLFO4Rate =
+    ZenithPolySynthParameterManager::StepLFO4Rate;
+const juce::String &ZenithPolySynthProcessor::StepLFO4Sync =
+    ZenithPolySynthParameterManager::StepLFO4Sync;
+const juce::String &ZenithPolySynthProcessor::StepLFO4Smoothing =
+    ZenithPolySynthParameterManager::StepLFO4Smoothing;
+
 //==============================================================================
 // ZenithPolySynthProcessor
 //==============================================================================
@@ -176,6 +245,20 @@ ZenithPolySynthProcessor::ZenithPolySynthProcessor()
       parameters_(*this, nullptr, "PARAMS",
                   ZenithPolySynthParameterManager::createParameterLayout()),
       paramManager_(parameters_) {
+  
+  // Initialize Wingman bridge AFTER all other members
+  wingmanBridge_ = new WingmanSynthBridge(*this);
+
+  // Initialize Arpeggiator
+  arpeggiator_ = std::make_unique<Arpeggiator>();
+  arpeggiator_->setBPM(currentBpm_.get());
+
+  // Initialize Step LFOs
+  for (int i = 0; i < 4; ++i) {
+    stepLFOs_[i] = std::make_unique<StepLFO>();
+    stepLFOs_[i]->setBPM(currentBpm_.get());
+  }
+  
   for (int i = 0; i < currentMaxVoices_; ++i) {
     // Bug 21: addVoice takes ownership of the voice object
     synthesiser_.addVoice(new ZenithPolySynthVoice());
@@ -186,7 +269,13 @@ ZenithPolySynthProcessor::ZenithPolySynthProcessor()
   synthesiser_.setZoneLayout(juce::MPEZoneLayout());
 }
 
-ZenithPolySynthProcessor::~ZenithPolySynthProcessor() {}
+ZenithPolySynthProcessor::~ZenithPolySynthProcessor() {
+  // Cleanup Wingman bridge BEFORE other members
+  if (wingmanBridge_ != nullptr) {
+    delete wingmanBridge_;
+    wingmanBridge_ = nullptr;
+  }
+}
 
 void ZenithPolySynthProcessor::prepareToPlay(double sampleRate,
                                              int samplesPerBlock) {
@@ -196,6 +285,13 @@ void ZenithPolySynthProcessor::prepareToPlay(double sampleRate,
   effects_.setSampleRate(sampleRate);
   effects_.setBlockSize(samplesPerBlock);  // Propagate buffer size to effects
   effects_.reset();
+
+  // Initialize StepLFOs with sample rate
+  for (int i = 0; i < 4; ++i) {
+    if (stepLFOs_[i]) {
+      stepLFOs_[i]->setSampleRate(sampleRate);
+    }
+  }
 
   visualizerFifo_.reset();
   std::fill(visualizerBuffer_.begin(), visualizerBuffer_.end(), 0.0f);
@@ -219,15 +315,24 @@ void ZenithPolySynthProcessor::processBlock(juce::AudioBuffer<float> &buffer,
   if (auto *ph = getPlayHead()) {
     if (auto pos = ph->getPosition()) {
       if (pos->getBpm())
-        currentBpm_.store(*pos->getBpm());
+        currentBpm_.set(*pos->getBpm());
     }
   }
 
   // Update voice parameters before processing
   updateVoiceParameters();
 
+  // Process Step LFOs - do this before voice rendering so voices can read current values
+  processStepLFOs(buffer.getNumSamples());
+
+  // Update voices with current StepLFO outputs
+  updateVoicesWithStepLFOs();
+
+  // Process Arpeggiator - transforms MIDI before sending to synthesiser
+  processArpeggiator(midiMessages, buffer.getNumSamples());
+
   buffer.clear();
-  
+
   {
       // Bug 8 Fix: usage of voiceLock_
       const juce::SpinLock::ScopedLockType sl(voiceLock_);
@@ -284,14 +389,14 @@ void ZenithPolySynthProcessor::updateVoiceParameters() {
   paramManager_.fetchAllParameters();
 
   // Apply effect parameters
-  paramManager_.applyToEffects(effects_, currentBpm_.load());
+  paramManager_.applyToEffects(effects_, currentBpm_.get());
 
   // Apply parameters to each voice
   for (int i = 0; i < synthesiser_.getNumVoices(); ++i) {
     // Bug 75: Use static_cast for performance in audio path (type guaranteed by constructor)
     if (auto *voice =
             static_cast<ZenithPolySynthVoice *>(synthesiser_.getVoice(i))) {
-      paramManager_.applyToVoice(*voice, currentBpm_.load());
+      paramManager_.applyToVoice(*voice, currentBpm_.get());
     }
   }
 }
@@ -363,6 +468,187 @@ void ZenithPolySynthProcessor::pushToVisualizer(const float *buffer,
     memcpy(visualizerBuffer_.data() + start2, buffer + size1,
            size2 * sizeof(float));
   visualizerFifo_.finishedWrite(size1 + size2);
+}
+
+//==============================================================================
+// Step LFO Access
+//==============================================================================
+
+float ZenithPolySynthProcessor::getStepLFOOutput(int index) const {
+    if (index >= 0 && index < 4) {
+        return stepLFOOutputs_[index];
+    }
+    return 0.0f;
+}
+
+void ZenithPolySynthProcessor::getStepLFOOutputs(float outputs[4]) const {
+    for (int i = 0; i < 4; ++i) {
+        outputs[i] = stepLFOOutputs_[i];
+    }
+}
+
+//==============================================================================
+// Arpeggiator Parameter Updates
+//==============================================================================
+
+void ZenithPolySynthProcessor::updateArpeggiatorParameters(const CachedSynthParameters& params) {
+    if (!arpeggiator_) return;
+
+    arpeggiator_->setMode(static_cast<zenith::ArpMode>(params.arpMode));
+    arpeggiator_->setRate(params.arpRate);
+    arpeggiator_->setSyncRate(static_cast<zenith::ArpSyncRate>(params.arpSyncRate));
+    arpeggiator_->setBPM(currentBpm_.get());
+    arpeggiator_->setGate(params.arpGate);
+    arpeggiator_->setOctaveRange(params.arpOctaves);
+    arpeggiator_->setSwing(params.arpSwing);
+    arpeggiator_->setHoldMode(params.arpHold);
+}
+
+//==============================================================================
+// Step LFO Parameter Updates
+//==============================================================================
+
+void ZenithPolySynthProcessor::updateStepLFOParameters(const CachedSynthParameters& params) {
+    for (int i = 0; i < 4; ++i) {
+        if (!stepLFOs_[i]) continue;
+
+        bool enable = false;
+        int steps = 16;
+        float rate = 1.0f;
+        bool sync = false;
+        float smoothing = 0.0f;
+
+        switch (i) {
+        case 0:
+            enable = params.stepLFO1Enable;
+            steps = params.stepLFO1Steps;
+            rate = params.stepLFO1Rate;
+            sync = params.stepLFO1Sync;
+            smoothing = params.stepLFO1Smoothing;
+            break;
+        case 1:
+            enable = params.stepLFO2Enable;
+            steps = params.stepLFO2Steps;
+            rate = params.stepLFO2Rate;
+            sync = params.stepLFO2Sync;
+            smoothing = params.stepLFO2Smoothing;
+            break;
+        case 2:
+            enable = params.stepLFO3Enable;
+            steps = params.stepLFO3Steps;
+            rate = params.stepLFO3Rate;
+            sync = params.stepLFO3Sync;
+            smoothing = params.stepLFO3Smoothing;
+            break;
+        case 3:
+            enable = params.stepLFO4Enable;
+            steps = params.stepLFO4Steps;
+            rate = params.stepLFO4Rate;
+            sync = params.stepLFO4Sync;
+            smoothing = params.stepLFO4Smoothing;
+            break;
+        }
+
+        stepLFOs_[i]->setNumSteps(steps);
+        stepLFOs_[i]->setRate(rate);
+        stepLFOs_[i]->setSyncRate(static_cast<zenith::ArpSyncRate>(sync ? 4 : 0)); // Default to 1/4 if sync
+        stepLFOs_[i]->setBPM(currentBpm_.get());
+        stepLFOs_[i]->setSmoothing(smoothing);
+    }
+}
+
+//==============================================================================
+// Arpeggiator Processing
+//==============================================================================
+
+void ZenithPolySynthProcessor::processArpeggiator(juce::MidiBuffer& midiMessages, int numSamples) {
+    const auto& params = paramManager_.getCachedParameters();
+
+    if (!params.arpEnable) {
+        // When arpeggiator is disabled, just clear active notes
+        if (arpeggiator_) {
+            arpeggiator_->reset();
+        }
+        return;
+    }
+
+    if (!arpeggiator_) return;
+
+    // Update arpeggiator with latest parameters
+    updateArpeggiatorParameters(params);
+
+    // Track original note events for the arpeggiator
+    juce::MidiBuffer originalMessages = midiMessages;
+
+    // Clear the buffer - arpeggiator will generate new messages
+    midiMessages.clear();
+
+    // First, process incoming MIDI to update arpeggiator state
+    for (const auto metadata : originalMessages) {
+        const auto msg = metadata.getMessage();
+        if (msg.isNoteOn()) {
+            arpeggiator_->noteOn(msg.getNoteNumber(), msg.getVelocity());
+        } else if (msg.isNoteOff()) {
+            arpeggiator_->noteOff(msg.getNoteNumber());
+        } else {
+            // Pass through non-note messages
+            midiMessages.addEvent(msg, metadata.samplePosition);
+        }
+    }
+
+    // Let the arpeggiator generate new note messages
+    double sampleRate = getSampleRate();
+    arpeggiator_->process(midiMessages, sampleRate, numSamples);
+}
+
+//==============================================================================
+// Step LFO Processing
+//==============================================================================
+
+void ZenithPolySynthProcessor::processStepLFOs(int numSamples) {
+    const auto& params = paramManager_.getCachedParameters();
+    updateStepLFOParameters(params);
+
+    // Create a temp buffer for processing
+    std::array<float, 32> tempBuffer;
+    int samplesToProcess = juce::jmin(static_cast<int>(tempBuffer.size()), numSamples);
+
+    for (int i = 0; i < 4; ++i) {
+        if (!stepLFOs_[i]) continue;
+
+        bool enabled = false;
+        switch (i) {
+        case 0: enabled = params.stepLFO1Enable; break;
+        case 1: enabled = params.stepLFO2Enable; break;
+        case 2: enabled = params.stepLFO3Enable; break;
+        case 3: enabled = params.stepLFO4Enable; break;
+        }
+
+        if (!enabled) {
+            stepLFOOutputs_[i] = 0.0f;
+            continue;
+        }
+
+        // Process the LFO and get the last output value
+        stepLFOs_[i]->processBlock(tempBuffer.data(), samplesToProcess);
+        stepLFOOutputs_[i] = stepLFOs_[i]->getCurrentOutput();
+    }
+}
+
+//==============================================================================
+// Update Voices with Step LFO Values
+//==============================================================================
+
+void ZenithPolySynthProcessor::updateVoicesWithStepLFOs() {
+    // Get current StepLFO outputs and pass to all voices
+    float lfoOutputs[4];
+    getStepLFOOutputs(lfoOutputs);
+
+    for (int i = 0; i < synthesiser_.getNumVoices(); ++i) {
+        if (auto* voice = static_cast<ZenithPolySynthVoice*>(synthesiser_.getVoice(i))) {
+            voice->setStepLFOValues(lfoOutputs);
+        }
+    }
 }
 
 //==============================================================================

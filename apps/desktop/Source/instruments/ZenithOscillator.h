@@ -4,10 +4,12 @@
     ZenithOscillator.h
     Created: 2025-12-06
     Refactored: 2025-12-20 (Pro Wavetable Update)
+    Updated: 2025-02-01 (Phase 2: Advanced Oscillators)
     Author:  Zenith DAW
 
     Oscillator component for ZenithPolySynth.
-    Now includes REAL wavetable support with MIP-mapping.
+    Now includes professional oscillators: wavefolding, phase distortion,
+    additive synthesis, granular synthesis, and wavetable import.
 
   ==============================================================================
 */
@@ -16,6 +18,7 @@
 
 #include "WavetableData.h"
 #include "ZenithPolySynthDefs.h"
+#include "ZenithAdvancedOscillators.h"
 #include <array>
 #include <cmath>
 #include <juce_audio_basics/juce_audio_basics.h>
@@ -29,16 +32,26 @@ class Wavetable;
 
 /**
     Single oscillator with multiple waveforms, wavetables, and detune
+    Now with professional-grade advanced oscillators.
 */
 class ZenithOscillator {
 public:
-  ZenithOscillator() = default;
+  ZenithOscillator() {
+    // Initialize advanced oscillators
+    advancedEngine_.prepare(44100.0);
+  }
 
   void setWaveform(OscillatorWaveform waveform) { waveform_ = waveform; }
   OscillatorWaveform getWaveform() const { return waveform_; }
   void setDetune(float detuneCents);
-  void setSampleRate(double sampleRate) { sampleRate_ = sampleRate; }
-  void reset() { phase_ = 0.0; }
+  void setSampleRate(double sampleRate) { 
+    sampleRate_ = sampleRate; 
+    advancedEngine_.prepare(sampleRate);
+  }
+  void reset() { 
+    phase_ = 0.0; 
+    advancedEngine_.reset();
+  }
   void randomizePhase() { phase_ = random_.nextFloat(); }
 
   /**
@@ -69,6 +82,9 @@ public:
   bool hasWavetable() const {
     return wavetable_ != nullptr && wavetable_->isValid();
   }
+  
+  // Access to advanced oscillators
+  AdvancedOscillatorEngine& getAdvancedEngine() { return advancedEngine_; }
 
 private:
   OscillatorWaveform waveform_ = OscillatorWaveform::Saw;
@@ -84,6 +100,9 @@ private:
   const Wavetable *wavetable_ =
       nullptr;                     // Non-owning pointer to loaded wavetable
   float lastWavetableFreq_ = 0.0f; // For MIP level calculation
+  
+  // Advanced oscillator engine
+  AdvancedOscillatorEngine advancedEngine_;
 
   float processSine(float frequency);
   float processSaw(float frequency);
@@ -93,7 +112,11 @@ private:
   float processSupersaw(float frequency);
   float processWavetable(float frequency, float shape);
   float processRealWavetable(float frequency,
-                             float shape); // NEW: Real wavetable playback
+                              float shape); // NEW: Real wavetable playback
+  float processWavefolder(float frequency);
+  float processPhaseDist(float frequency);
+  float processAdditive(float frequency);
+  float processGranular(float frequency);
 
   // Supersaw state
   std::array<double, 7> supersawPhases_ = {0.0};

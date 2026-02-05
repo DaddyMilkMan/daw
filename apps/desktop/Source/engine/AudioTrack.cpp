@@ -1,4 +1,5 @@
 #include "AudioTrack.h"
+#include "TrackProcessor.h"
 #include "Clip.h"
 #include "TempoMap.h"
 

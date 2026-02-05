@@ -23,13 +23,21 @@
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
+#include <memory>
 
 namespace zenith {
 
+// Forward declarations
+class WingmanSynthBridge;
+class Arpeggiator;
+class StepLFO;
+class ZenithPolySynthParameterManager;
+struct CachedSynthParameters;
+
 //==============================================================================
-/**
-    Main Processor Class
-*/
+class WingmanSynthBridge;
+
+//==============================================================================
 class ZenithPolySynthProcessor : public juce::AudioProcessor {
 public:
   ZenithPolySynthProcessor();
@@ -75,6 +83,9 @@ public:
     return paramManager_;
   }
 
+  // Accessor for Wingman bridge
+  WingmanSynthBridge* getWingmanBridge() { return wingmanBridge_; }
+
   // Parameter ID Aliases (for backward compatibility)
   static const juce::String &Osc1Wave;
   static const juce::String &Osc1Detune;
@@ -96,6 +107,8 @@ public:
 
   static const juce::String &UnisonVoices;
   static const juce::String &UnisonDetune;
+  static const juce::String &UnisonSpread;
+  static const juce::String &UnisonPanRandom;
 
   static const juce::String
       &FilterType; // Renamed from FilterTypeParam to match manager
@@ -155,6 +168,39 @@ public:
   static const juce::String &DelaySync;
   static const juce::String &DelaySyncRate;
 
+  // Arpeggiator Parameters
+  static const juce::String &ArpEnable;
+  static const juce::String &ArpMode;
+  static const juce::String &ArpRate;
+  static const juce::String &ArpSync;
+  static const juce::String &ArpSyncRate;
+  static const juce::String &ArpGate;
+  static const juce::String &ArpOctaves;
+  static const juce::String &ArpSwing;
+  static const juce::String &ArpHold;
+
+  // Step LFO Parameters
+  static const juce::String &StepLFO1Enable;
+  static const juce::String &StepLFO1Steps;
+  static const juce::String &StepLFO1Rate;
+  static const juce::String &StepLFO1Sync;
+  static const juce::String &StepLFO1Smoothing;
+  static const juce::String &StepLFO2Enable;
+  static const juce::String &StepLFO2Steps;
+  static const juce::String &StepLFO2Rate;
+  static const juce::String &StepLFO2Sync;
+  static const juce::String &StepLFO2Smoothing;
+  static const juce::String &StepLFO3Enable;
+  static const juce::String &StepLFO3Steps;
+  static const juce::String &StepLFO3Rate;
+  static const juce::String &StepLFO3Sync;
+  static const juce::String &StepLFO3Smoothing;
+  static const juce::String &StepLFO4Enable;
+  static const juce::String &StepLFO4Steps;
+  static const juce::String &StepLFO4Rate;
+  static const juce::String &StepLFO4Sync;
+  static const juce::String &StepLFO4Smoothing;
+
   // Modulation Matrix Access
   float getModulationMatrix(ModulationSource src,
                             ModulationDestination dst) const;
@@ -170,10 +216,22 @@ public:
   void setChorus(float amount) { effects_.setChorus(amount); }
   void setReverb(float amount) { effects_.setReverb(amount); }
 
-private:
+  // Step LFO Access (for modulation matrix)
+  float getStepLFOOutput(int index) const;
+  void getStepLFOOutputs(float outputs[4]) const;
+  Arpeggiator* getArpeggiator() { return arpeggiator_.get(); }
+
+  // Processing helpers
+  void updateArpeggiatorParameters(const CachedSynthParameters& params);
+  void updateStepLFOParameters(const CachedSynthParameters& params);
+  void processArpeggiator(juce::MidiBuffer& midiMessages, int numSamples);
+  void processStepLFOs(int numSamples);
+  void updateVoicesWithStepLFOs();
+
+ private:
   juce::SpinLock voiceLock_;
   juce::MPESynthesiser synthesiser_;
-  std::atomic<double> currentBpm_{120.0};
+  juce::Atomic<double> currentBpm_{120.0};
   juce::AudioProcessorValueTreeState parameters_;
 
   // The new parameter manager
@@ -184,11 +242,21 @@ private:
 
   // Modulation Matrix Storage (Global for UI, applied to voices)
   juce::SpinLock modMatrixLock_;
-  std::array<ModulationSlot, 64> globalModMatrix_;
+  juce::Array<ModulationSlot> globalModMatrix_;
 
   // Visualizer Buffer
   juce::AbstractFifo visualizerFifo_{4096};
-  std::vector<float> visualizerBuffer_{4096};
+  juce::Array<float> visualizerBuffer_;
+
+  // Arpeggiator and Step LFOs
+  std::unique_ptr<Arpeggiator> arpeggiator_;
+  std::array<std::unique_ptr<StepLFO>, 4> stepLFOs_;
+  std::array<float, 4> stepLFOOutputs_{0.0f, 0.0f, 0.0f, 0.0f};
+  std::array<juce::uint64, 4> stepLFOSampleCount_{0, 0, 0, 0};
+
+  // Wingman integration
+  friend class WingmanSynthBridge;
+  WingmanSynthBridge* wingmanBridge_;
 
   // Internal state
   static constexpr int DEFAULT_VOICE_COUNT = 16;

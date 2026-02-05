@@ -348,6 +348,13 @@ void Engine::removeTrack(int index) {
   // Remove from vector
   tracks_.erase(tracks_.begin() + index);
 
+  // Reindex remaining tracks to keep buffer indices stable
+  for (size_t i = 0; i < tracks_.size(); ++i) {
+    if (tracks_[i] != nullptr) {
+      tracks_[i]->setTrackIndex(static_cast<int>(i));
+    }
+  }
+
   // Remove from RoutingGraph
   routingGraph_.removeNode(id);
 

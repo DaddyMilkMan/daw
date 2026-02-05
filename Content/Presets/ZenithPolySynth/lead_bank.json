@@ -3,7 +3,7 @@
   "bank_name": "Lead Bank",
   "category": "Lead",
   "version": "1.0",
-  "preset_count": 72,
+  "preset_count": 174,
   "presets": [
     {
       "id": "festival_supersaw",
@@ -1515,6 +1515,2352 @@
         "decay": 0.229,
         "sustain": 0.865,
         "release": 0.21
+      }
+    },
+    {
+      "id": "glide_lead_05_x001",
+      "name": "Glide Lead 05 X001",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "glide",
+        "smooth",
+        "melodic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Glide Lead 05",
+      "parameters": {
+        "osc_type": 1.039,
+        "filter_cutoff": 0.718,
+        "filter_resonance": 0.414,
+        "attack": 0.0,
+        "decay": 0.227,
+        "sustain": 0.804,
+        "release": 0.153
+      }
+    },
+    {
+      "id": "sync_lead_02_x002",
+      "name": "Sync Lead 02 X002",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sync",
+        "sharp",
+        "cutting",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sync Lead 02",
+      "parameters": {
+        "osc_type": 0.859,
+        "filter_cutoff": 0.857,
+        "filter_resonance": 0.692,
+        "attack": 0.047,
+        "decay": 0.12,
+        "sustain": 0.822,
+        "release": 0.26
+      }
+    },
+    {
+      "id": "soft_sine_lead_03_x003",
+      "name": "Soft Sine Lead 03 X003",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sine",
+        "soft",
+        "melodic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Soft Sine Lead 03",
+      "parameters": {
+        "osc_type": 0.029,
+        "filter_cutoff": 0.717,
+        "filter_resonance": 0.151,
+        "attack": 0.0,
+        "decay": 0.153,
+        "sustain": 0.767,
+        "release": 0.188
+      }
+    },
+    {
+      "id": "festival_supersaw_01_x004",
+      "name": "Festival Supersaw 01 X004",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Festival Supersaw 01",
+      "parameters": {
+        "osc_type": 1.16,
+        "filter_cutoff": 0.929,
+        "filter_resonance": 0.271,
+        "attack": 0.073,
+        "decay": 0.252,
+        "sustain": 0.899,
+        "release": 0.212
+      }
+    },
+    {
+      "id": "classic_lead_x005",
+      "name": "Classic Lead X005",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "classic",
+        "versatile",
+        "analog",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Classic Lead",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.748,
+        "filter_resonance": 0.404,
+        "attack": 0.005,
+        "decay": 0.219,
+        "sustain": 0.794,
+        "release": 0.283
+      }
+    },
+    {
+      "id": "soft_sine_lead_01_x006",
+      "name": "Soft Sine Lead 01 X006",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sine",
+        "soft",
+        "melodic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Soft Sine Lead 01",
+      "parameters": {
+        "osc_type": 0.12,
+        "filter_cutoff": 0.657,
+        "filter_resonance": 0.229,
+        "attack": 0.016,
+        "decay": 0.257,
+        "sustain": 0.787,
+        "release": 0.208
+      }
+    },
+    {
+      "id": "vocal_lead_01_x007",
+      "name": "Vocal Lead 01 X007",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "vocal",
+        "singing",
+        "expressive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vocal Lead 01",
+      "parameters": {
+        "osc_type": 0.877,
+        "filter_cutoff": 0.592,
+        "filter_resonance": 0.762,
+        "attack": 0.084,
+        "decay": 0.151,
+        "sustain": 0.791,
+        "release": 0.267
+      }
+    },
+    {
+      "id": "dirty_lead_04_x008",
+      "name": "Dirty Lead 04 X008",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "dirty",
+        "distorted",
+        "aggressive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Dirty Lead 04",
+      "parameters": {
+        "osc_type": 1.968,
+        "filter_cutoff": 0.671,
+        "filter_resonance": 0.73,
+        "attack": 0.011,
+        "decay": 0.21,
+        "sustain": 0.88,
+        "release": 0.182
+      }
+    },
+    {
+      "id": "dirty_lead_04_x009",
+      "name": "Dirty Lead 04 X009",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "dirty",
+        "distorted",
+        "aggressive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Dirty Lead 04",
+      "parameters": {
+        "osc_type": 1.968,
+        "filter_cutoff": 0.689,
+        "filter_resonance": 0.741,
+        "attack": 0.008,
+        "decay": 0.219,
+        "sustain": 0.907,
+        "release": 0.175
+      }
+    },
+    {
+      "id": "soft_sine_lead_04_x010",
+      "name": "Soft Sine Lead 04 X010",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sine",
+        "soft",
+        "melodic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Soft Sine Lead 04",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.815,
+        "filter_resonance": 0.135,
+        "attack": 0.01,
+        "decay": 0.173,
+        "sustain": 0.737,
+        "release": 0.29
+      }
+    },
+    {
+      "id": "breathy_lead_02_x011",
+      "name": "Breathy Lead 02 X011",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "breathy",
+        "airy",
+        "soft",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Breathy Lead 02",
+      "parameters": {
+        "osc_type": 0.585,
+        "filter_cutoff": 0.804,
+        "filter_resonance": 0.368,
+        "attack": 0.071,
+        "decay": 0.291,
+        "sustain": 0.75,
+        "release": 0.275
+      }
+    },
+    {
+      "id": "mono_screamer_01_x012",
+      "name": "Mono Screamer 01 X012",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "mono",
+        "aggressive",
+        "edm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mono Screamer 01",
+      "parameters": {
+        "osc_type": 1.079,
+        "filter_cutoff": 0.809,
+        "filter_resonance": 0.468,
+        "attack": 0.038,
+        "decay": 0.056,
+        "sustain": 0.904,
+        "release": 0.225
+      }
+    },
+    {
+      "id": "trance_lead_01_x013",
+      "name": "Trance Lead 01 X013",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "trance",
+        "uplifting",
+        "euphoric",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trance Lead 01",
+      "parameters": {
+        "osc_type": 0.874,
+        "filter_cutoff": 0.89,
+        "filter_resonance": 0.631,
+        "attack": 0.053,
+        "decay": 0.17,
+        "sustain": 0.886,
+        "release": 0.253
+      }
+    },
+    {
+      "id": "dirty_lead_02_x014",
+      "name": "Dirty Lead 02 X014",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "dirty",
+        "distorted",
+        "aggressive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Dirty Lead 02",
+      "parameters": {
+        "osc_type": 1.841,
+        "filter_cutoff": 0.731,
+        "filter_resonance": 0.759,
+        "attack": 0.053,
+        "decay": 0.264,
+        "sustain": 0.765,
+        "release": 0.15
+      }
+    },
+    {
+      "id": "breathy_lead_01_x015",
+      "name": "Breathy Lead 01 X015",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "breathy",
+        "airy",
+        "soft",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Breathy Lead 01",
+      "parameters": {
+        "osc_type": 0.561,
+        "filter_cutoff": 0.801,
+        "filter_resonance": 0.285,
+        "attack": 0.073,
+        "decay": 0.222,
+        "sustain": 0.678,
+        "release": 0.272
+      }
+    },
+    {
+      "id": "festival_supersaw_01_x016",
+      "name": "Festival Supersaw 01 X016",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Festival Supersaw 01",
+      "parameters": {
+        "osc_type": 1.16,
+        "filter_cutoff": 0.929,
+        "filter_resonance": 0.364,
+        "attack": 0.076,
+        "decay": 0.276,
+        "sustain": 0.878,
+        "release": 0.219
+      }
+    },
+    {
+      "id": "dirty_lead_02_x017",
+      "name": "Dirty Lead 02 X017",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "dirty",
+        "distorted",
+        "aggressive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Dirty Lead 02",
+      "parameters": {
+        "osc_type": 1.841,
+        "filter_cutoff": 0.708,
+        "filter_resonance": 0.642,
+        "attack": 0.056,
+        "decay": 0.255,
+        "sustain": 0.751,
+        "release": 0.114
+      }
+    },
+    {
+      "id": "vocal_lead_03_x018",
+      "name": "Vocal Lead 03 X018",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "vocal",
+        "singing",
+        "expressive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vocal Lead 03",
+      "parameters": {
+        "osc_type": 0.98,
+        "filter_cutoff": 0.747,
+        "filter_resonance": 0.76,
+        "attack": 0.104,
+        "decay": 0.266,
+        "sustain": 0.773,
+        "release": 0.279
+      }
+    },
+    {
+      "id": "breathy_lead_03_x019",
+      "name": "Breathy Lead 03 X019",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "breathy",
+        "airy",
+        "soft",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Breathy Lead 03",
+      "parameters": {
+        "osc_type": 0.631,
+        "filter_cutoff": 0.745,
+        "filter_resonance": 0.247,
+        "attack": 0.086,
+        "decay": 0.3,
+        "sustain": 0.717,
+        "release": 0.375
+      }
+    },
+    {
+      "id": "vocal_lead_04_x020",
+      "name": "Vocal Lead 04 X020",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "vocal",
+        "singing",
+        "expressive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vocal Lead 04",
+      "parameters": {
+        "osc_type": 1.122,
+        "filter_cutoff": 0.693,
+        "filter_resonance": 0.675,
+        "attack": 0.004,
+        "decay": 0.21,
+        "sustain": 0.776,
+        "release": 0.27
+      }
+    },
+    {
+      "id": "classic_lead_05_x021",
+      "name": "Classic Lead 05 X021",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "classic",
+        "versatile",
+        "analog",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Classic Lead 05",
+      "parameters": {
+        "osc_type": 1.098,
+        "filter_cutoff": 0.872,
+        "filter_resonance": 0.454,
+        "attack": 0.0,
+        "decay": 0.241,
+        "sustain": 0.866,
+        "release": 0.239
+      }
+    },
+    {
+      "id": "sync_lead_05_x022",
+      "name": "Sync Lead 05 X022",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sync",
+        "sharp",
+        "cutting",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sync Lead 05",
+      "parameters": {
+        "osc_type": 1.12,
+        "filter_cutoff": 0.761,
+        "filter_resonance": 0.758,
+        "attack": 0.0,
+        "decay": 0.142,
+        "sustain": 0.817,
+        "release": 0.272
+      }
+    },
+    {
+      "id": "festival_supersaw_01_x023",
+      "name": "Festival Supersaw 01 X023",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Festival Supersaw 01",
+      "parameters": {
+        "osc_type": 1.16,
+        "filter_cutoff": 0.994,
+        "filter_resonance": 0.25,
+        "attack": 0.075,
+        "decay": 0.232,
+        "sustain": 0.901,
+        "release": 0.195
+      }
+    },
+    {
+      "id": "classic_lead_x024",
+      "name": "Classic Lead X024",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "classic",
+        "versatile",
+        "analog",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Classic Lead",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.801,
+        "filter_resonance": 0.389,
+        "attack": 0.005,
+        "decay": 0.192,
+        "sustain": 0.826,
+        "release": 0.254
+      }
+    },
+    {
+      "id": "sync_lead_03_x025",
+      "name": "Sync Lead 03 X025",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sync",
+        "sharp",
+        "cutting",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sync Lead 03",
+      "parameters": {
+        "osc_type": 1.038,
+        "filter_cutoff": 0.723,
+        "filter_resonance": 0.785,
+        "attack": 0.081,
+        "decay": 0.159,
+        "sustain": 0.878,
+        "release": 0.29
+      }
+    },
+    {
+      "id": "glide_lead_03_x026",
+      "name": "Glide Lead 03 X026",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "glide",
+        "smooth",
+        "melodic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Glide Lead 03",
+      "parameters": {
+        "osc_type": 0.963,
+        "filter_cutoff": 0.69,
+        "filter_resonance": 0.339,
+        "attack": 0.009,
+        "decay": 0.272,
+        "sustain": 0.733,
+        "release": 0.199
+      }
+    },
+    {
+      "id": "saw_stack_lead_03_x027",
+      "name": "Saw Stack Lead 03 X027",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "saw",
+        "thick",
+        "trance",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Saw Stack Lead 03",
+      "parameters": {
+        "osc_type": 0.874,
+        "filter_cutoff": 0.73,
+        "filter_resonance": 0.383,
+        "attack": 0.086,
+        "decay": 0.15,
+        "sustain": 0.814,
+        "release": 0.286
+      }
+    },
+    {
+      "id": "festival_supersaw_04_x028",
+      "name": "Festival Supersaw 04 X028",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Festival Supersaw 04",
+      "parameters": {
+        "osc_type": 1.031,
+        "filter_cutoff": 0.905,
+        "filter_resonance": 0.172,
+        "attack": 0.081,
+        "decay": 0.145,
+        "sustain": 0.745,
+        "release": 0.359
+      }
+    },
+    {
+      "id": "sync_lead_03_x029",
+      "name": "Sync Lead 03 X029",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sync",
+        "sharp",
+        "cutting",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sync Lead 03",
+      "parameters": {
+        "osc_type": 1.038,
+        "filter_cutoff": 0.765,
+        "filter_resonance": 0.739,
+        "attack": 0.085,
+        "decay": 0.163,
+        "sustain": 0.899,
+        "release": 0.253
+      }
+    },
+    {
+      "id": "mono_screamer_05_x030",
+      "name": "Mono Screamer 05 X030",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "mono",
+        "aggressive",
+        "edm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mono Screamer 05",
+      "parameters": {
+        "osc_type": 1.017,
+        "filter_cutoff": 0.933,
+        "filter_resonance": 0.448,
+        "attack": 0.0,
+        "decay": 0.097,
+        "sustain": 0.843,
+        "release": 0.115
+      }
+    },
+    {
+      "id": "breathy_lead_04_x031",
+      "name": "Breathy Lead 04 X031",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "breathy",
+        "airy",
+        "soft",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Breathy Lead 04",
+      "parameters": {
+        "osc_type": 0.468,
+        "filter_cutoff": 0.822,
+        "filter_resonance": 0.301,
+        "attack": 0.012,
+        "decay": 0.225,
+        "sustain": 0.746,
+        "release": 0.31
+      }
+    },
+    {
+      "id": "trance_lead_02_x032",
+      "name": "Trance Lead 02 X032",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "trance",
+        "uplifting",
+        "euphoric",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trance Lead 02",
+      "parameters": {
+        "osc_type": 1.054,
+        "filter_cutoff": 0.836,
+        "filter_resonance": 0.5,
+        "attack": 0.051,
+        "decay": 0.262,
+        "sustain": 0.857,
+        "release": 0.37
+      }
+    },
+    {
+      "id": "festival_supersaw_03_x033",
+      "name": "Festival Supersaw 03 X033",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Festival Supersaw 03",
+      "parameters": {
+        "osc_type": 1.036,
+        "filter_cutoff": 0.902,
+        "filter_resonance": 0.24,
+        "attack": 0.076,
+        "decay": 0.234,
+        "sustain": 0.711,
+        "release": 0.312
+      }
+    },
+    {
+      "id": "breathy_lead_02_x034",
+      "name": "Breathy Lead 02 X034",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "breathy",
+        "airy",
+        "soft",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Breathy Lead 02",
+      "parameters": {
+        "osc_type": 0.585,
+        "filter_cutoff": 0.784,
+        "filter_resonance": 0.398,
+        "attack": 0.085,
+        "decay": 0.286,
+        "sustain": 0.775,
+        "release": 0.287
+      }
+    },
+    {
+      "id": "trance_lead_01_x035",
+      "name": "Trance Lead 01 X035",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "trance",
+        "uplifting",
+        "euphoric",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trance Lead 01",
+      "parameters": {
+        "osc_type": 0.874,
+        "filter_cutoff": 0.922,
+        "filter_resonance": 0.664,
+        "attack": 0.071,
+        "decay": 0.117,
+        "sustain": 0.855,
+        "release": 0.224
+      }
+    },
+    {
+      "id": "mono_screamer_04_x036",
+      "name": "Mono Screamer 04 X036",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "mono",
+        "aggressive",
+        "edm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mono Screamer 04",
+      "parameters": {
+        "osc_type": 0.945,
+        "filter_cutoff": 0.875,
+        "filter_resonance": 0.577,
+        "attack": 0.056,
+        "decay": 0.177,
+        "sustain": 0.842,
+        "release": 0.201
+      }
+    },
+    {
+      "id": "dirty_lead_05_x037",
+      "name": "Dirty Lead 05 X037",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "dirty",
+        "distorted",
+        "aggressive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Dirty Lead 05",
+      "parameters": {
+        "osc_type": 1.85,
+        "filter_cutoff": 0.687,
+        "filter_resonance": 0.684,
+        "attack": 0.0,
+        "decay": 0.217,
+        "sustain": 0.877,
+        "release": 0.165
+      }
+    },
+    {
+      "id": "festival_supersaw_04_x038",
+      "name": "Festival Supersaw 04 X038",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Festival Supersaw 04",
+      "parameters": {
+        "osc_type": 1.031,
+        "filter_cutoff": 0.951,
+        "filter_resonance": 0.236,
+        "attack": 0.086,
+        "decay": 0.14,
+        "sustain": 0.745,
+        "release": 0.302
+      }
+    },
+    {
+      "id": "vocal_lead_05_x039",
+      "name": "Vocal Lead 05 X039",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "vocal",
+        "singing",
+        "expressive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vocal Lead 05",
+      "parameters": {
+        "osc_type": 1.085,
+        "filter_cutoff": 0.643,
+        "filter_resonance": 0.604,
+        "attack": 0.088,
+        "decay": 0.193,
+        "sustain": 0.849,
+        "release": 0.246
+      }
+    },
+    {
+      "id": "mono_screamer_05_x040",
+      "name": "Mono Screamer 05 X040",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "mono",
+        "aggressive",
+        "edm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mono Screamer 05",
+      "parameters": {
+        "osc_type": 1.017,
+        "filter_cutoff": 0.952,
+        "filter_resonance": 0.444,
+        "attack": 0.005,
+        "decay": 0.078,
+        "sustain": 0.825,
+        "release": 0.062
+      }
+    },
+    {
+      "id": "trance_lead_x041",
+      "name": "Trance Lead X041",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "trance",
+        "uplifting",
+        "euphoric",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trance Lead",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.905,
+        "filter_resonance": 0.654,
+        "attack": 0.018,
+        "decay": 0.201,
+        "sustain": 0.805,
+        "release": 0.358
+      }
+    },
+    {
+      "id": "breathy_lead_04_x042",
+      "name": "Breathy Lead 04 X042",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "breathy",
+        "airy",
+        "soft",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Breathy Lead 04",
+      "parameters": {
+        "osc_type": 0.468,
+        "filter_cutoff": 0.798,
+        "filter_resonance": 0.194,
+        "attack": 0.005,
+        "decay": 0.22,
+        "sustain": 0.717,
+        "release": 0.338
+      }
+    },
+    {
+      "id": "mono_screamer_03_x043",
+      "name": "Mono Screamer 03 X043",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "mono",
+        "aggressive",
+        "edm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mono Screamer 03",
+      "parameters": {
+        "osc_type": 0.897,
+        "filter_cutoff": 0.874,
+        "filter_resonance": 0.57,
+        "attack": 0.013,
+        "decay": 0.11,
+        "sustain": 0.893,
+        "release": 0.191
+      }
+    },
+    {
+      "id": "bright_square_lead_03_x044",
+      "name": "Bright Square Lead 03 X044",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "square",
+        "retro",
+        "chiptune",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bright Square Lead 03",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.735,
+        "filter_resonance": 0.249,
+        "attack": 0.0,
+        "decay": 0.194,
+        "sustain": 0.777,
+        "release": 0.156
+      }
+    },
+    {
+      "id": "festival_supersaw_04_x045",
+      "name": "Festival Supersaw 04 X045",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Festival Supersaw 04",
+      "parameters": {
+        "osc_type": 1.031,
+        "filter_cutoff": 0.955,
+        "filter_resonance": 0.258,
+        "attack": 0.084,
+        "decay": 0.133,
+        "sustain": 0.782,
+        "release": 0.323
+      }
+    },
+    {
+      "id": "festival_supersaw_05_x046",
+      "name": "Festival Supersaw 05 X046",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Festival Supersaw 05",
+      "parameters": {
+        "osc_type": 1.087,
+        "filter_cutoff": 0.886,
+        "filter_resonance": 0.321,
+        "attack": 0.0,
+        "decay": 0.195,
+        "sustain": 0.761,
+        "release": 0.299
+      }
+    },
+    {
+      "id": "festival_supersaw_x047",
+      "name": "Festival Supersaw X047",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Festival Supersaw",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.899,
+        "filter_resonance": 0.281,
+        "attack": 0.054,
+        "decay": 0.191,
+        "sustain": 0.797,
+        "release": 0.322
+      }
+    },
+    {
+      "id": "festival_supersaw_02_x048",
+      "name": "Festival Supersaw 02 X048",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Festival Supersaw 02",
+      "parameters": {
+        "osc_type": 0.978,
+        "filter_cutoff": 0.834,
+        "filter_resonance": 0.341,
+        "attack": 0.074,
+        "decay": 0.28,
+        "sustain": 0.852,
+        "release": 0.307
+      }
+    },
+    {
+      "id": "saw_stack_lead_02_x049",
+      "name": "Saw Stack Lead 02 X049",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "saw",
+        "thick",
+        "trance",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Saw Stack Lead 02",
+      "parameters": {
+        "osc_type": 1.119,
+        "filter_cutoff": 0.889,
+        "filter_resonance": 0.385,
+        "attack": 0.006,
+        "decay": 0.193,
+        "sustain": 0.837,
+        "release": 0.297
+      }
+    },
+    {
+      "id": "dirty_lead_01_x050",
+      "name": "Dirty Lead 01 X050",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "dirty",
+        "distorted",
+        "aggressive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Dirty Lead 01",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.692,
+        "filter_resonance": 0.693,
+        "attack": 0.0,
+        "decay": 0.137,
+        "sustain": 0.781,
+        "release": 0.224
+      }
+    },
+    {
+      "id": "festival_supersaw_01_x051",
+      "name": "Festival Supersaw 01 X051",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Festival Supersaw 01",
+      "parameters": {
+        "osc_type": 1.16,
+        "filter_cutoff": 0.95,
+        "filter_resonance": 0.372,
+        "attack": 0.082,
+        "decay": 0.252,
+        "sustain": 0.854,
+        "release": 0.259
+      }
+    },
+    {
+      "id": "festival_supersaw_03_x052",
+      "name": "Festival Supersaw 03 X052",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Festival Supersaw 03",
+      "parameters": {
+        "osc_type": 1.036,
+        "filter_cutoff": 0.925,
+        "filter_resonance": 0.343,
+        "attack": 0.076,
+        "decay": 0.249,
+        "sustain": 0.734,
+        "release": 0.304
+      }
+    },
+    {
+      "id": "soft_sine_lead_03_x053",
+      "name": "Soft Sine Lead 03 X053",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sine",
+        "soft",
+        "melodic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Soft Sine Lead 03",
+      "parameters": {
+        "osc_type": 0.029,
+        "filter_cutoff": 0.718,
+        "filter_resonance": 0.262,
+        "attack": 0.0,
+        "decay": 0.176,
+        "sustain": 0.761,
+        "release": 0.234
+      }
+    },
+    {
+      "id": "soft_sine_lead_03_x054",
+      "name": "Soft Sine Lead 03 X054",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sine",
+        "soft",
+        "melodic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Soft Sine Lead 03",
+      "parameters": {
+        "osc_type": 0.029,
+        "filter_cutoff": 0.668,
+        "filter_resonance": 0.167,
+        "attack": 0.0,
+        "decay": 0.189,
+        "sustain": 0.773,
+        "release": 0.25
+      }
+    },
+    {
+      "id": "classic_lead_01_x055",
+      "name": "Classic Lead 01 X055",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "classic",
+        "versatile",
+        "analog",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Classic Lead 01",
+      "parameters": {
+        "osc_type": 1.034,
+        "filter_cutoff": 0.705,
+        "filter_resonance": 0.444,
+        "attack": 0.0,
+        "decay": 0.199,
+        "sustain": 0.732,
+        "release": 0.27
+      }
+    },
+    {
+      "id": "bright_square_lead_03_x056",
+      "name": "Bright Square Lead 03 X056",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "square",
+        "retro",
+        "chiptune",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bright Square Lead 03",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.736,
+        "filter_resonance": 0.273,
+        "attack": 0.0,
+        "decay": 0.181,
+        "sustain": 0.762,
+        "release": 0.193
+      }
+    },
+    {
+      "id": "vocal_lead_01_x057",
+      "name": "Vocal Lead 01 X057",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "vocal",
+        "singing",
+        "expressive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vocal Lead 01",
+      "parameters": {
+        "osc_type": 0.877,
+        "filter_cutoff": 0.602,
+        "filter_resonance": 0.649,
+        "attack": 0.079,
+        "decay": 0.162,
+        "sustain": 0.783,
+        "release": 0.251
+      }
+    },
+    {
+      "id": "mono_screamer_02_x058",
+      "name": "Mono Screamer 02 X058",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "mono",
+        "aggressive",
+        "edm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mono Screamer 02",
+      "parameters": {
+        "osc_type": 1.034,
+        "filter_cutoff": 0.84,
+        "filter_resonance": 0.59,
+        "attack": 0.082,
+        "decay": 0.139,
+        "sustain": 0.87,
+        "release": 0.079
+      }
+    },
+    {
+      "id": "breathy_lead_03_x059",
+      "name": "Breathy Lead 03 X059",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "breathy",
+        "airy",
+        "soft",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Breathy Lead 03",
+      "parameters": {
+        "osc_type": 0.631,
+        "filter_cutoff": 0.736,
+        "filter_resonance": 0.338,
+        "attack": 0.093,
+        "decay": 0.3,
+        "sustain": 0.746,
+        "release": 0.416
+      }
+    },
+    {
+      "id": "vocal_lead_05_x060",
+      "name": "Vocal Lead 05 X060",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "vocal",
+        "singing",
+        "expressive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vocal Lead 05",
+      "parameters": {
+        "osc_type": 1.085,
+        "filter_cutoff": 0.608,
+        "filter_resonance": 0.678,
+        "attack": 0.09,
+        "decay": 0.141,
+        "sustain": 0.825,
+        "release": 0.184
+      }
+    },
+    {
+      "id": "sync_lead_01_x061",
+      "name": "Sync Lead 01 X061",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sync",
+        "sharp",
+        "cutting",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sync Lead 01",
+      "parameters": {
+        "osc_type": 0.9,
+        "filter_cutoff": 0.789,
+        "filter_resonance": 0.831,
+        "attack": 0.0,
+        "decay": 0.099,
+        "sustain": 0.814,
+        "release": 0.284
+      }
+    },
+    {
+      "id": "soft_sine_lead_05_x062",
+      "name": "Soft Sine Lead 05 X062",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sine",
+        "soft",
+        "melodic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Soft Sine Lead 05",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.732,
+        "filter_resonance": 0.117,
+        "attack": 0.068,
+        "decay": 0.197,
+        "sustain": 0.762,
+        "release": 0.259
+      }
+    },
+    {
+      "id": "saw_stack_lead_x063",
+      "name": "Saw Stack Lead X063",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "saw",
+        "thick",
+        "trance",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Saw Stack Lead",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.805,
+        "filter_resonance": 0.475,
+        "attack": 0.034,
+        "decay": 0.19,
+        "sustain": 0.874,
+        "release": 0.288
+      }
+    },
+    {
+      "id": "bright_square_lead_02_x064",
+      "name": "Bright Square Lead 02 X064",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "square",
+        "retro",
+        "chiptune",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bright Square Lead 02",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.887,
+        "filter_resonance": 0.347,
+        "attack": 0.095,
+        "decay": 0.127,
+        "sustain": 0.734,
+        "release": 0.205
+      }
+    },
+    {
+      "id": "mono_screamer_02_x065",
+      "name": "Mono Screamer 02 X065",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "mono",
+        "aggressive",
+        "edm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mono Screamer 02",
+      "parameters": {
+        "osc_type": 1.034,
+        "filter_cutoff": 0.834,
+        "filter_resonance": 0.474,
+        "attack": 0.098,
+        "decay": 0.124,
+        "sustain": 0.87,
+        "release": 0.115
+      }
+    },
+    {
+      "id": "saw_stack_lead_01_x066",
+      "name": "Saw Stack Lead 01 X066",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "saw",
+        "thick",
+        "trance",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Saw Stack Lead 01",
+      "parameters": {
+        "osc_type": 0.933,
+        "filter_cutoff": 0.872,
+        "filter_resonance": 0.501,
+        "attack": 0.127,
+        "decay": 0.142,
+        "sustain": 0.779,
+        "release": 0.296
+      }
+    },
+    {
+      "id": "breathy_lead_01_x067",
+      "name": "Breathy Lead 01 X067",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "breathy",
+        "airy",
+        "soft",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Breathy Lead 01",
+      "parameters": {
+        "osc_type": 0.561,
+        "filter_cutoff": 0.723,
+        "filter_resonance": 0.241,
+        "attack": 0.075,
+        "decay": 0.215,
+        "sustain": 0.721,
+        "release": 0.331
+      }
+    },
+    {
+      "id": "classic_lead_03_x068",
+      "name": "Classic Lead 03 X068",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "classic",
+        "versatile",
+        "analog",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Classic Lead 03",
+      "parameters": {
+        "osc_type": 0.864,
+        "filter_cutoff": 0.718,
+        "filter_resonance": 0.502,
+        "attack": 0.044,
+        "decay": 0.129,
+        "sustain": 0.772,
+        "release": 0.361
+      }
+    },
+    {
+      "id": "saw_stack_lead_x069",
+      "name": "Saw Stack Lead X069",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "saw",
+        "thick",
+        "trance",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Saw Stack Lead",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.803,
+        "filter_resonance": 0.329,
+        "attack": 0.034,
+        "decay": 0.167,
+        "sustain": 0.824,
+        "release": 0.274
+      }
+    },
+    {
+      "id": "soft_sine_lead_x070",
+      "name": "Soft Sine Lead X070",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sine",
+        "soft",
+        "melodic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Soft Sine Lead",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.706,
+        "filter_resonance": 0.171,
+        "attack": 0.025,
+        "decay": 0.195,
+        "sustain": 0.79,
+        "release": 0.281
+      }
+    },
+    {
+      "id": "classic_lead_04_x071",
+      "name": "Classic Lead 04 X071",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "classic",
+        "versatile",
+        "analog",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Classic Lead 04",
+      "parameters": {
+        "osc_type": 0.963,
+        "filter_cutoff": 0.699,
+        "filter_resonance": 0.464,
+        "attack": 0.0,
+        "decay": 0.23,
+        "sustain": 0.785,
+        "release": 0.258
+      }
+    },
+    {
+      "id": "glide_lead_03_x072",
+      "name": "Glide Lead 03 X072",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "glide",
+        "smooth",
+        "melodic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Glide Lead 03",
+      "parameters": {
+        "osc_type": 0.963,
+        "filter_cutoff": 0.723,
+        "filter_resonance": 0.303,
+        "attack": 0.0,
+        "decay": 0.25,
+        "sustain": 0.758,
+        "release": 0.209
+      }
+    },
+    {
+      "id": "vocal_lead_x073",
+      "name": "Vocal Lead X073",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "vocal",
+        "singing",
+        "expressive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vocal Lead",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.66,
+        "filter_resonance": 0.702,
+        "attack": 0.029,
+        "decay": 0.196,
+        "sustain": 0.833,
+        "release": 0.225
+      }
+    },
+    {
+      "id": "sync_lead_05_x074",
+      "name": "Sync Lead 05 X074",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sync",
+        "sharp",
+        "cutting",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sync Lead 05",
+      "parameters": {
+        "osc_type": 1.12,
+        "filter_cutoff": 0.814,
+        "filter_resonance": 0.721,
+        "attack": 0.011,
+        "decay": 0.109,
+        "sustain": 0.776,
+        "release": 0.298
+      }
+    },
+    {
+      "id": "breathy_lead_02_x075",
+      "name": "Breathy Lead 02 X075",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "breathy",
+        "airy",
+        "soft",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Breathy Lead 02",
+      "parameters": {
+        "osc_type": 0.585,
+        "filter_cutoff": 0.802,
+        "filter_resonance": 0.335,
+        "attack": 0.084,
+        "decay": 0.261,
+        "sustain": 0.789,
+        "release": 0.281
+      }
+    },
+    {
+      "id": "trance_lead_04_x076",
+      "name": "Trance Lead 04 X076",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "trance",
+        "uplifting",
+        "euphoric",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trance Lead 04",
+      "parameters": {
+        "osc_type": 1.027,
+        "filter_cutoff": 0.963,
+        "filter_resonance": 0.622,
+        "attack": 0.01,
+        "decay": 0.234,
+        "sustain": 0.785,
+        "release": 0.342
+      }
+    },
+    {
+      "id": "glide_lead_02_x077",
+      "name": "Glide Lead 02 X077",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "glide",
+        "smooth",
+        "melodic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Glide Lead 02",
+      "parameters": {
+        "osc_type": 1.061,
+        "filter_cutoff": 0.748,
+        "filter_resonance": 0.382,
+        "attack": 0.079,
+        "decay": 0.319,
+        "sustain": 0.815,
+        "release": 0.249
+      }
+    },
+    {
+      "id": "vocal_lead_03_x078",
+      "name": "Vocal Lead 03 X078",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "vocal",
+        "singing",
+        "expressive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vocal Lead 03",
+      "parameters": {
+        "osc_type": 0.98,
+        "filter_cutoff": 0.721,
+        "filter_resonance": 0.749,
+        "attack": 0.108,
+        "decay": 0.272,
+        "sustain": 0.771,
+        "release": 0.263
+      }
+    },
+    {
+      "id": "mono_screamer_x079",
+      "name": "Mono Screamer X079",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "mono",
+        "aggressive",
+        "edm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mono Screamer",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.826,
+        "filter_resonance": 0.46,
+        "attack": 0.021,
+        "decay": 0.133,
+        "sustain": 0.894,
+        "release": 0.166
+      }
+    },
+    {
+      "id": "breathy_lead_04_x080",
+      "name": "Breathy Lead 04 X080",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "breathy",
+        "airy",
+        "soft",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Breathy Lead 04",
+      "parameters": {
+        "osc_type": 0.468,
+        "filter_cutoff": 0.796,
+        "filter_resonance": 0.245,
+        "attack": 0.0,
+        "decay": 0.222,
+        "sustain": 0.754,
+        "release": 0.3
+      }
+    },
+    {
+      "id": "soft_sine_lead_02_x081",
+      "name": "Soft Sine Lead 02 X081",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sine",
+        "soft",
+        "melodic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Soft Sine Lead 02",
+      "parameters": {
+        "osc_type": 0.092,
+        "filter_cutoff": 0.737,
+        "filter_resonance": 0.14,
+        "attack": 0.082,
+        "decay": 0.116,
+        "sustain": 0.827,
+        "release": 0.249
+      }
+    },
+    {
+      "id": "glide_lead_05_x082",
+      "name": "Glide Lead 05 X082",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "glide",
+        "smooth",
+        "melodic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Glide Lead 05",
+      "parameters": {
+        "osc_type": 1.039,
+        "filter_cutoff": 0.702,
+        "filter_resonance": 0.333,
+        "attack": 0.008,
+        "decay": 0.23,
+        "sustain": 0.769,
+        "release": 0.127
+      }
+    },
+    {
+      "id": "breathy_lead_x083",
+      "name": "Breathy Lead X083",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "breathy",
+        "airy",
+        "soft",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Breathy Lead",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.787,
+        "filter_resonance": 0.287,
+        "attack": 0.056,
+        "decay": 0.243,
+        "sustain": 0.732,
+        "release": 0.312
+      }
+    },
+    {
+      "id": "vocal_lead_03_x084",
+      "name": "Vocal Lead 03 X084",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "vocal",
+        "singing",
+        "expressive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vocal Lead 03",
+      "parameters": {
+        "osc_type": 0.98,
+        "filter_cutoff": 0.707,
+        "filter_resonance": 0.699,
+        "attack": 0.096,
+        "decay": 0.273,
+        "sustain": 0.795,
+        "release": 0.218
+      }
+    },
+    {
+      "id": "classic_lead_04_x085",
+      "name": "Classic Lead 04 X085",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "classic",
+        "versatile",
+        "analog",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Classic Lead 04",
+      "parameters": {
+        "osc_type": 0.963,
+        "filter_cutoff": 0.762,
+        "filter_resonance": 0.426,
+        "attack": 0.0,
+        "decay": 0.245,
+        "sustain": 0.817,
+        "release": 0.232
+      }
+    },
+    {
+      "id": "soft_sine_lead_04_x086",
+      "name": "Soft Sine Lead 04 X086",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sine",
+        "soft",
+        "melodic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Soft Sine Lead 04",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.734,
+        "filter_resonance": 0.121,
+        "attack": 0.008,
+        "decay": 0.178,
+        "sustain": 0.756,
+        "release": 0.227
+      }
+    },
+    {
+      "id": "dirty_lead_05_x087",
+      "name": "Dirty Lead 05 X087",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "dirty",
+        "distorted",
+        "aggressive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Dirty Lead 05",
+      "parameters": {
+        "osc_type": 1.85,
+        "filter_cutoff": 0.701,
+        "filter_resonance": 0.639,
+        "attack": 0.004,
+        "decay": 0.241,
+        "sustain": 0.867,
+        "release": 0.147
+      }
+    },
+    {
+      "id": "festival_supersaw_02_x088",
+      "name": "Festival Supersaw 02 X088",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Festival Supersaw 02",
+      "parameters": {
+        "osc_type": 0.978,
+        "filter_cutoff": 0.871,
+        "filter_resonance": 0.27,
+        "attack": 0.083,
+        "decay": 0.258,
+        "sustain": 0.9,
+        "release": 0.282
+      }
+    },
+    {
+      "id": "sync_lead_03_x089",
+      "name": "Sync Lead 03 X089",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sync",
+        "sharp",
+        "cutting",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Sync Lead 03",
+      "parameters": {
+        "osc_type": 1.038,
+        "filter_cutoff": 0.712,
+        "filter_resonance": 0.75,
+        "attack": 0.063,
+        "decay": 0.18,
+        "sustain": 0.868,
+        "release": 0.306
+      }
+    },
+    {
+      "id": "saw_stack_lead_x090",
+      "name": "Saw Stack Lead X090",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "saw",
+        "thick",
+        "trance",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Saw Stack Lead",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.843,
+        "filter_resonance": 0.343,
+        "attack": 0.048,
+        "decay": 0.194,
+        "sustain": 0.866,
+        "release": 0.289
+      }
+    },
+    {
+      "id": "bright_square_lead_01_x091",
+      "name": "Bright Square Lead 01 X091",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "square",
+        "retro",
+        "chiptune",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bright Square Lead 01",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.84,
+        "filter_resonance": 0.214,
+        "attack": 0.097,
+        "decay": 0.165,
+        "sustain": 0.667,
+        "release": 0.13
+      }
+    },
+    {
+      "id": "bright_square_lead_03_x092",
+      "name": "Bright Square Lead 03 X092",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "square",
+        "retro",
+        "chiptune",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bright Square Lead 03",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.745,
+        "filter_resonance": 0.333,
+        "attack": 0.009,
+        "decay": 0.188,
+        "sustain": 0.733,
+        "release": 0.186
+      }
+    },
+    {
+      "id": "vocal_lead_03_x093",
+      "name": "Vocal Lead 03 X093",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "vocal",
+        "singing",
+        "expressive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vocal Lead 03",
+      "parameters": {
+        "osc_type": 0.98,
+        "filter_cutoff": 0.729,
+        "filter_resonance": 0.717,
+        "attack": 0.107,
+        "decay": 0.231,
+        "sustain": 0.771,
+        "release": 0.283
+      }
+    },
+    {
+      "id": "breathy_lead_05_x094",
+      "name": "Breathy Lead 05 X094",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "breathy",
+        "airy",
+        "soft",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Breathy Lead 05",
+      "parameters": {
+        "osc_type": 0.626,
+        "filter_cutoff": 0.764,
+        "filter_resonance": 0.321,
+        "attack": 0.058,
+        "decay": 0.234,
+        "sustain": 0.772,
+        "release": 0.29
+      }
+    },
+    {
+      "id": "classic_lead_02_x095",
+      "name": "Classic Lead 02 X095",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "classic",
+        "versatile",
+        "analog",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Classic Lead 02",
+      "parameters": {
+        "osc_type": 1.149,
+        "filter_cutoff": 0.784,
+        "filter_resonance": 0.415,
+        "attack": 0.052,
+        "decay": 0.165,
+        "sustain": 0.852,
+        "release": 0.211
+      }
+    },
+    {
+      "id": "festival_supersaw_04_x096",
+      "name": "Festival Supersaw 04 X096",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Festival Supersaw 04",
+      "parameters": {
+        "osc_type": 1.031,
+        "filter_cutoff": 0.915,
+        "filter_resonance": 0.226,
+        "attack": 0.072,
+        "decay": 0.17,
+        "sustain": 0.742,
+        "release": 0.309
+      }
+    },
+    {
+      "id": "festival_supersaw_02_x097",
+      "name": "Festival Supersaw 02 X097",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Festival Supersaw 02",
+      "parameters": {
+        "osc_type": 0.978,
+        "filter_cutoff": 0.836,
+        "filter_resonance": 0.33,
+        "attack": 0.078,
+        "decay": 0.247,
+        "sustain": 0.875,
+        "release": 0.246
+      }
+    },
+    {
+      "id": "saw_stack_lead_05_x098",
+      "name": "Saw Stack Lead 05 X098",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "saw",
+        "thick",
+        "trance",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Saw Stack Lead 05",
+      "parameters": {
+        "osc_type": 0.98,
+        "filter_cutoff": 0.724,
+        "filter_resonance": 0.338,
+        "attack": 0.001,
+        "decay": 0.176,
+        "sustain": 0.829,
+        "release": 0.278
+      }
+    },
+    {
+      "id": "festival_supersaw_x099",
+      "name": "Festival Supersaw X099",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Festival Supersaw",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.865,
+        "filter_resonance": 0.231,
+        "attack": 0.058,
+        "decay": 0.203,
+        "sustain": 0.782,
+        "release": 0.28
+      }
+    },
+    {
+      "id": "breathy_lead_03_x100",
+      "name": "Breathy Lead 03 X100",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "breathy",
+        "airy",
+        "soft",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Breathy Lead 03",
+      "parameters": {
+        "osc_type": 0.631,
+        "filter_cutoff": 0.755,
+        "filter_resonance": 0.235,
+        "attack": 0.093,
+        "decay": 0.31,
+        "sustain": 0.708,
+        "release": 0.417
+      }
+    },
+    {
+      "id": "glide_lead_05_x101",
+      "name": "Glide Lead 05 X101",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "glide",
+        "smooth",
+        "melodic",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Glide Lead 05",
+      "parameters": {
+        "osc_type": 1.039,
+        "filter_cutoff": 0.74,
+        "filter_resonance": 0.32,
+        "attack": 0.0,
+        "decay": 0.213,
+        "sustain": 0.818,
+        "release": 0.091
+      }
+    },
+    {
+      "id": "vocal_lead_01_x102",
+      "name": "Vocal Lead 01 X102",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "vocal",
+        "singing",
+        "expressive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Vocal Lead 01",
+      "parameters": {
+        "osc_type": 0.877,
+        "filter_cutoff": 0.624,
+        "filter_resonance": 0.655,
+        "attack": 0.09,
+        "decay": 0.187,
+        "sustain": 0.78,
+        "release": 0.236
       }
     }
   ]

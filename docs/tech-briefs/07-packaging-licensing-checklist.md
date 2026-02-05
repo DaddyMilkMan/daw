@@ -45,9 +45,11 @@ This document provides a comprehensive checklist for packaging and licensing Zen
 
 #### Checklist
 
-- [ ] **Decide on licensing model:**
-  - [ ] **Open Source (AGPLv3):** Publish Zenith DAW source code under AGPLv3
-  - [ ] **Commercial (Closed-Source):** Purchase JUCE commercial license
+- [x] **Licensing model decided:**
+  - [ ] ~~Open Source (AGPLv3):~~ Publish Zenith DAW source code under AGPLv3 (NOT selected)
+  - [x] **Commercial (Closed-Source):** Purchase JUCE commercial license (CURRENT CHOICE)
+
+**Note:** **Zenith DAW is 100% proprietary closed-source software.** No open-source components at this time.
 
 - [ ] **If Commercial License:**
   - [ ] Sign up for JUCE subscription at https://juce.com/get-juce/
@@ -59,7 +61,7 @@ This document provides a comprehensive checklist for packaging and licensing Zen
   - [ ] Include AGPLv3 license text in distribution
   - [ ] Provide source access to end-users
 
-**Recommendation:** Use **commercial JUCE license** for Zenith DAW (closed-source product).
+**Recommendation:** Use **commercial JUCE license** for Zenith DAW (closed-source product). **Zenith DAW is 100% proprietary - no open-source components at this time.**
 
 ---
 

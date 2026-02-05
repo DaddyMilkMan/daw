@@ -142,6 +142,73 @@ public:
   bool isRecording() const { return isRecording_.load(); }
 
   //==========================================================================
+  // Pre-roll / Count-in
+  //==========================================================================
+
+  /**
+   * @brief Set pre-roll duration in bars (0 = disabled)
+   */
+  void setPreRollBars(int bars) { preRollBars_ = juce::jlimit(0, 4, bars); }
+  int getPreRollBars() const { return preRollBars_.load(); }
+
+  /**
+   * @brief Check if currently in pre-roll (count-in) phase
+   * @note AUDIO THREAD SAFE
+   */
+  bool isInPreRoll() const { return isInPreRoll_.load(); }
+
+  /**
+   * @brief Get pre-roll countdown in beats remaining
+   * @note AUDIO THREAD SAFE
+   */
+  double getPreRollBeatsRemaining() const { return preRollBeatsRemaining_.load(); }
+
+  /**
+   * @brief Start recording with pre-roll
+   * @param recordStartPosition Final recording start position (after pre-roll)
+   * @param tracks Vector of tracks
+   * @param tempoMap Tempo map for calculating pre-roll timing
+   * @note MESSAGE THREAD ONLY
+   */
+  void startRecordingWithPreRoll(juce::int64 recordStartPosition,
+                                 const std::vector<std::shared_ptr<Track>> &tracks,
+                                 const TempoMap& tempoMap);
+
+  //==========================================================================
+  // Punch In/Out
+  //==========================================================================
+
+  /**
+   * @brief Enable punch in/out recording
+   */
+  void setPunchEnabled(bool enabled) { punchEnabled_.store(enabled); }
+  bool isPunchEnabled() const { return punchEnabled_.load(); }
+
+  /**
+   * @brief Set punch in position (samples)
+   */
+  void setPunchInPosition(juce::int64 position) { punchInPosition_ = position; }
+  juce::int64 getPunchInPosition() const { return punchInPosition_.load(); }
+
+  /**
+   * @brief Set punch out position (samples, -1 = no punch out)
+   */
+  void setPunchOutPosition(juce::int64 position) { punchOutPosition_ = position; }
+  juce::int64 getPunchOutPosition() const { return punchOutPosition_.load(); }
+
+  /**
+   * @brief Check if currently inside punch range
+   * @note AUDIO THREAD SAFE
+   */
+  bool isInsidePunchRange(juce::int64 playheadPosition) const;
+
+  /**
+   * @brief Check if punch recording is currently active (between in and out points)
+   * @note AUDIO THREAD SAFE
+   */
+  bool isPunchRecordingActive() const { return isPunchRecordingActive_.load(); }
+
+  //==========================================================================
   // Audio Capture (RT-Safe)
   //==========================================================================
 
@@ -247,6 +314,22 @@ private:
 
   // Bug 17: Track dropped MIDI messages
   std::atomic<uint64_t> droppedMidiMessages_{0};
+
+  //==========================================================================
+  // Pre-roll / Count-in State
+  //==========================================================================
+  std::atomic<int> preRollBars_{0};           // 0, 1, 2, or 4 bars
+  std::atomic<bool> isInPreRoll_{false};      // Currently counting in
+  std::atomic<double> preRollBeatsRemaining_{0.0};
+  juce::int64 preRollEndPosition_ = 0;        // Sample position where recording starts
+
+  //==========================================================================
+  // Punch In/Out State
+  //==========================================================================
+  std::atomic<bool> punchEnabled_{false};
+  std::atomic<juce::int64> punchInPosition_{0};
+  std::atomic<juce::int64> punchOutPosition_{-1};  // -1 = disabled
+  std::atomic<bool> isPunchRecordingActive_{false};  // Currently inside punch zone
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RecordingManager)
 };

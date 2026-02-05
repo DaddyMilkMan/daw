@@ -29,8 +29,8 @@ using namespace design;
 
 TrackGroupHeader::TrackGroupHeader() {
   // Register with AnimationCoordinator for centralized updates
-  zenith::animation::AnimationCoordinator::getInstance().registerListener(
-      this, zenith::animation::Priority::High);
+  ::zenith::animation::AnimationCoordinator::getInstance().registerListener(
+      this, ::zenith::animation::Priority::High);
 
   // Configure mute button
   muteButton_.setToggleable(true);
@@ -62,7 +62,7 @@ TrackGroupHeader::TrackGroupHeader() {
 }
 
 TrackGroupHeader::~TrackGroupHeader() {
-  zenith::animation::AnimationCoordinator::getInstance().unregisterListener(this);
+  ::zenith::animation::AnimationCoordinator::getInstance().unregisterListener(this);
 }
 
 //==============================================================================
@@ -349,12 +349,12 @@ void TrackGroupHeader::mouseExit(const juce::MouseEvent &e) {
 
 TrackGroupHeader::VUMeter::VUMeter() {
   // Register with AnimationCoordinator at High priority (real-time critical)
-  zenith::animation::AnimationCoordinator::getInstance().registerListener(
-      this, zenith::animation::Priority::High);
+  ::zenith::animation::AnimationCoordinator::getInstance().registerListener(
+      this, ::zenith::animation::Priority::High);
 }
 
 TrackGroupHeader::VUMeter::~VUMeter() {
-  zenith::animation::AnimationCoordinator::getInstance().unregisterListener(this);
+  ::zenith::animation::AnimationCoordinator::getInstance().unregisterListener(this);
 }
 
 void TrackGroupHeader::VUMeter::setLevel(float level) {

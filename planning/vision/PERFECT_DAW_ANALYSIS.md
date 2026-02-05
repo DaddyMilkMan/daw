@@ -744,24 +744,20 @@ Sample added!
 
 ## Business Model
 
-### Open Source + Premium
+### Proprietary DAW with AI Subscription
 
-**Free (Open Source):**
-- Basic plugin shell
-- OSC/MCU control surface code
-- Communication bridge
-- Simple command execution
+**Zenith DAW Application (One-Time Purchase):**
+- Full proprietary DAW application
+- Complete audio engine and UI
+- All built-in instruments
+- Price: $100
 
-**Premium ($19-49/month):**
-- Advanced AI models (mixing, arrangement)
-- Cloud LLM processing
-- Premium sound libraries
-- Priority DAW support
+**AI Wingman Subscription (Add-on):**
+- Zenith Light ($10/month): Basic AI assistance
+- Zenith Pro ($20/month): Advanced AI features
+- Zenith Heavy ($50/month): Professional AI tools, cloud processing
 
-**Enterprise (Custom):**
-- On-premise deployment
-- Custom models
-- White-label options
+**Important:** **Zenith DAW is 100% proprietary closed-source software.** No open-source components.
 
 ---
 

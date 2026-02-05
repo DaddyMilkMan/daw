@@ -70,15 +70,76 @@ void PianoRollComponent::humanizeTiming(float amount) {
 }
 
 void PianoRollComponent::applyVelocityCurve(VelocityCurve curve, float amount) {
-    // Basic curve implementations
-    projectState.getUndoManager().beginNewTransaction("Apply Velocity Curve");
-    for (const auto& note : noteRects) {
+    // Validate selected notes
+    std::vector<NoteRect*> selectedNotes;
+    for (auto& note : noteRects) {
         if (note.selected) {
-            // Logic would go here to calculate new velocity based on position or existing vel
-            // For now simple placeholders to maintain parity
-            int newVel = note.velocity;
-            projectState.setMidiNoteVelocity(currentClip.clipId, note.id, newVel, "");
+            selectedNotes.push_back(&note);
         }
+    }
+
+    if (selectedNotes.empty()) {
+        return;
+    }
+
+    projectState.getUndoManager().beginNewTransaction("Apply Velocity Curve");
+
+    // Calculate range for ramp operations
+    double minStart = 1e9;
+    double maxStart = -1e9;
+    for (const auto* note : selectedNotes) {
+        minStart = std::min(minStart, note->startBeats);
+        maxStart = std::max(maxStart, note->startBeats);
+    }
+    double range = maxStart - minStart;
+    if (range < 0.001) range = 1.0;
+
+    // Calculate average velocity for compress/expand
+    int sumVel = 0;
+    for (const auto* note : selectedNotes) {
+        sumVel += note->velocity;
+    }
+    float avgVel = static_cast<float>(sumVel) / static_cast<float>(selectedNotes.size());
+
+    // Apply curve to each selected note
+    for (const auto* note : selectedNotes) {
+        int newVel = note->velocity;
+
+        switch (curve) {
+            case VelocityCurve::RampUp: {
+                // Velocity increases from left to right
+                float t = static_cast<float>((note->startBeats - minStart) / range);
+                float delta = (127.0f - static_cast<float>(note->velocity)) * amount * t;
+                newVel = juce::jlimit(0, 127, static_cast<int>(note->velocity + delta));
+                break;
+            }
+            case VelocityCurve::RampDown: {
+                // Velocity decreases from left to right
+                float t = static_cast<float>((note->startBeats - minStart) / range);
+                float delta = static_cast<float>(note->velocity) * amount * t;
+                newVel = juce::jlimit(0, 127, static_cast<int>(note->velocity - delta));
+                break;
+            }
+            case VelocityCurve::Compress: {
+                // Pull velocities toward average
+                float delta = (avgVel - static_cast<float>(note->velocity)) * amount;
+                newVel = juce::jlimit(0, 127, static_cast<int>(note->velocity + delta));
+                break;
+            }
+            case VelocityCurve::Expand: {
+                // Push velocities away from average
+                float delta = (static_cast<float>(note->velocity) - avgVel) * amount;
+                newVel = juce::jlimit(0, 127, static_cast<int>(note->velocity + delta));
+                break;
+            }
+            case VelocityCurve::Invert: {
+                // Invert velocity (high -> low, low -> high)
+                newVel = juce::jlimit(0, 127, static_cast<int>(127 - note->velocity));
+                break;
+            }
+        }
+
+        projectState.setMidiNoteVelocity(currentClip.clipId, note->id, newVel, "");
     }
 }
 

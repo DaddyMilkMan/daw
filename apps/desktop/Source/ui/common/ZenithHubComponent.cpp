@@ -13,6 +13,7 @@
 #include "../../Settings.h"
 #include "../../engine/ZenithLogger.h"
 #include "../design-system/ZenithTypography.h"
+#include "../controls/SkiaAlertWindow.h"
 #include <array>
 #include <cmath>
 #include <map>
@@ -82,7 +83,7 @@ ZenithHubComponent::ZenithHubComponent(
   }
   
   // Prioritize persistent custom greeting
-  juce::String savedGreeting = zenith::Settings::getInstance().getCustomGreeting();
+  juce::String savedGreeting = ::zenith::Settings::getInstance().getCustomGreeting();
   if (savedGreeting.isNotEmpty()) {
       greetingText_ = savedGreeting;
   } else if (auto* auth = AuthenticationService::getInstance()) {
@@ -144,13 +145,13 @@ ZenithHubComponent::ZenithHubComponent(
   alpha_.set(1.0f);
 
   // Register with central AnimationCoordinator (replaces individual timer)
-  zenith::animation::AnimationCoordinator::getInstance().registerListener(
-      static_cast<SkiaComponent*>(this), zenith::animation::Priority::High);
+  ::zenith::animation::AnimationCoordinator::getInstance().registerListener(
+      static_cast<SkiaComponent*>(this), ::zenith::animation::Priority::High);
 }
 
 ZenithHubComponent::~ZenithHubComponent() {
   // Unregister from AnimationCoordinator
-  zenith::animation::AnimationCoordinator::getInstance().unregisterListener(static_cast<SkiaComponent*>(this));
+  ::zenith::animation::AnimationCoordinator::getInstance().unregisterListener(static_cast<SkiaComponent*>(this));
   recentProjectManager_.removeListener(this);
   if (auto* auth = AuthenticationService::getInstance()) {
       auth->removeListener(this);
@@ -173,7 +174,7 @@ void ZenithHubComponent::mouseExit(const juce::MouseEvent &e) {
 
 void ZenithHubComponent::authStateChanged(bool isLoggedIn, const AuthUser& user) {
     // Only auto-update if user hasn't set a custom greeting
-    if (zenith::Settings::getInstance().getCustomGreeting().isEmpty()) {
+    if (::zenith::Settings::getInstance().getCustomGreeting().isEmpty()) {
         if (isLoggedIn) {
              greetingText_ = "Welcome back, " + (user.displayName.isNotEmpty() ? user.displayName : user.email);
         } else {
@@ -1071,7 +1072,7 @@ void ZenithHubComponent::hideGreetingEditor(bool save) {
     
   if (save) {
     greetingText_ = greetingEditor_->getText();
-    zenith::Settings::getInstance().setCustomGreeting(greetingText_);
+    ::zenith::Settings::getInstance().setCustomGreeting(greetingText_);
   }
   greetingEditor_->setVisible(false);
   repaint();

@@ -91,6 +91,9 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
 
     // Render using AudioRenderer
     if (audioRenderer_) {
+      // Note: Empty MIDI buffer is correct for offline export
+      // Clip MIDI data is processed internally by MIDITrack/InstrumentTrack
+      // This buffer is only for live/incoming MIDI (e.g., from controllers)
       juce::MidiBuffer dummyMidi;
       
       // Build raw pointer vectors for AudioRenderer

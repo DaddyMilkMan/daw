@@ -16,6 +16,23 @@ namespace zenith {
 
 using namespace zenith::constants;
 
+namespace {
+bool getCanonicalPath(const juce::File &file, juce::String &filePath,
+                      juce::String &errorMessage) {
+  std::error_code ec;
+  auto canonicalPath = std::filesystem::weakly_canonical(
+      file.getFullPathName().toStdString(), ec);
+  if (ec) {
+    errorMessage = "Invalid file path: cannot canonicalize path (" +
+                   juce::String(ec.message()) + ")";
+    return false;
+  }
+
+  filePath = juce::String(canonicalPath.string());
+  return true;
+}
+} // namespace
+
 //==============================================================================
 AudioFilePool::AudioFilePool() {
   // Register basic audio formats (WAV, AIFF, OGG, FLAC, MP3)
@@ -31,15 +48,10 @@ AudioFilePool::HandlePtr AudioFilePool::loadFile(const juce::File &file,
 
   // Security: Validate and sanitize file path using std::filesystem
   // This properly resolves symlinks and parent directory references
-  std::error_code ec;
-  auto canonicalPath = std::filesystem::weakly_canonical(file.getFullPathName().toStdString(), ec);
-  
-  if (ec) {
-    errorMessage = "Invalid file path: cannot canonicalize path (" + juce::String(ec.message()) + ")";
+  juce::String filePath;
+  if (!getCanonicalPath(file, filePath, errorMessage)) {
     return nullptr;
   }
-  
-  juce::String filePath = juce::String(canonicalPath.string());
 
   // Check path length (prevent excessive paths)
   if (filePath.length() > kMaxPathLength)
@@ -133,19 +145,34 @@ void AudioFilePool::loadFileAsync(const juce::File& file, std::function<void(Han
 }
 
 AudioFilePool::HandlePtr AudioFilePool::getFile(const juce::File &file) const {
+  juce::String errorMessage;
+  juce::String filePath;
+  if (!getCanonicalPath(file, filePath, errorMessage)) {
+    return nullptr;
+  }
   const juce::ScopedLock sl(cacheLock_);
-  auto it = fileCache_.find(file.getFullPathName());
+  auto it = fileCache_.find(filePath);
   return (it != fileCache_.end()) ? it->second : nullptr;
 }
 
 bool AudioFilePool::isLoaded(const juce::File &file) const {
+  juce::String errorMessage;
+  juce::String filePath;
+  if (!getCanonicalPath(file, filePath, errorMessage)) {
+    return false;
+  }
   const juce::ScopedLock sl(cacheLock_);
-  return fileCache_.find(file.getFullPathName()) != fileCache_.end();
+  return fileCache_.find(filePath) != fileCache_.end();
 }
 
 void AudioFilePool::unloadFile(const juce::File &file) {
+  juce::String errorMessage;
+  juce::String filePath;
+  if (!getCanonicalPath(file, filePath, errorMessage)) {
+    return;
+  }
   const juce::ScopedLock sl(cacheLock_);
-  auto it = fileCache_.find(file.getFullPathName());
+  auto it = fileCache_.find(filePath);
   if (it != fileCache_.end()) {
     DBG("AudioFilePool: Unloading " + file.getFileName());
     fileCache_.erase(it);

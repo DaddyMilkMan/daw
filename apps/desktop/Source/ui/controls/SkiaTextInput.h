@@ -60,6 +60,10 @@ public:
   // Style options
   void setPillShape(bool usePill) { pillShape_ = usePill; markDirty(); }
   void setFontSize(float size) { fontSize_ = size; recalculateTextMetrics(); markDirty(); }
+  void setDrawBackground(bool draw) { drawBackground_ = draw; markDirty(); }
+  void setTextColor(SkColor color) { textColor_ = color; markDirty(); }
+  void setPlaceholderColor(SkColor color) { placeholderColor_ = color; markDirty(); }
+  void setCursorColor(SkColor color) { cursorColor_ = color; markDirty(); }
 
   // SkiaComponent
   void drawSkia(SkCanvas* canvas) override;
@@ -86,6 +90,10 @@ private:
   float fontSize_ = 14.0f;
   int maxLength_ = 1000;
   bool pillShape_ = true;
+  bool drawBackground_ = true;
+  SkColor textColor_ = design::colors::TEXT_PRIMARY;
+  SkColor placeholderColor_ = design::colors::TEXT_TERTIARY;
+  SkColor cursorColor_ = design::colors::ACCENT_PRIMARY;
 
   // Scrolling
   float scrollOffset_ = 0.0f;

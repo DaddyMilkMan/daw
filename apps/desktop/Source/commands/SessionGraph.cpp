@@ -78,7 +78,7 @@ juce::var SessionGraph::serializeTransport()
 juce::var SessionGraph::serializeTracks()
 {
     juce::var tracksArray;
-    auto* tracksArrayPtr = tracksArray.getArray();
+    // Removed tracksArray.getArray() call which returns nullptr
 
     const auto& tracks = engine.tracks();
 
@@ -87,7 +87,7 @@ juce::var SessionGraph::serializeTracks()
         const auto* track = tracks[i].get();
         if (track != nullptr)
         {
-            tracksArrayPtr->add(serializeTrack(track, (int)i));
+            tracksArray.append(serializeTrack(track, (int)i));
         }
     }
 
@@ -125,7 +125,7 @@ juce::var SessionGraph::serializeTrack(const Track* track, int trackIndex)
 juce::var SessionGraph::serializePlugins(const Track* track)
 {
     juce::var pluginsArray;
-    auto* pluginsArrayPtr = pluginsArray.getArray();
+    // Removed pluginsArray.getArray() call which returns nullptr
 
     for (int i = 0; i < track->getNumPlugins(); ++i)
     {
@@ -153,7 +153,7 @@ juce::var SessionGraph::serializePlugins(const Track* track)
         // Get parameter count
         pluginObj->setProperty("numParameters", plugin->getParameters().size());
 
-        pluginsArrayPtr->add(juce::var(pluginObj));
+        pluginsArray.append(juce::var(pluginObj));
     }
 
     return pluginsArray;
@@ -162,14 +162,14 @@ juce::var SessionGraph::serializePlugins(const Track* track)
 juce::var SessionGraph::serializeClips(const Track* track)
 {
     juce::var clipsArray;
-    auto* clipsArrayPtr = clipsArray.getArray();
+    // Removed clipsArray.getArray() call which returns nullptr
 
     for (int i = 0; i < track->getNumClips(); ++i)
     {
         Clip* clip = track->getClip(i);
         if (clip != nullptr)
         {
-            clipsArrayPtr->add(serializeClip(clip, i));
+            clipsArray.append(serializeClip(clip, i));
         }
     }
 

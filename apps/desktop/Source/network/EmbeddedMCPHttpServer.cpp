@@ -1,6 +1,4 @@
 #include "EmbeddedMCPHttpServer.h"
-#include "../engine/PluginHost.h"
-#include "../mcp/EngineMCPExporter.h"
 #include "../engine/ZenithLogger.h"
 
 #include <map>
@@ -9,6 +7,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <cstdlib>
+#include <dlfcn.h>
 
 namespace zenith {
 namespace network {
@@ -98,6 +97,13 @@ void EmbeddedMCPHttpServer::runServer(int port, const juce::String &host, const 
         }
     }
 
+    auto loadSnapshotFile = []() -> juce::String {
+        juce::File f = juce::File::getCurrentWorkingDirectory().getChildFile("tools/mcp_server/engine_snapshot.json");
+        if (f.existsAsFile())
+            return f.loadFileAsString();
+        return {};
+    };
+
     while (!shouldStop_.load()) {
         // Wait for an incoming connection (500ms poll)
         int ready = serverSocket_->waitUntilReady(true, 500);
@@ -174,67 +180,19 @@ void EmbeddedMCPHttpServer::runServer(int port, const juce::String &host, const 
         juce::String jsonText;
 
         if (path == "/mcp/metrics" || path == "/mcp/metrics/") {
-            // Fetch snapshot on message thread (synchronous via condvar)
-            juce::var snapshotVar;
-            std::mutex m;
-            std::condition_variable cv;
-            bool done = false;
-
-            juce::MessageManager::callAsync([&]() {
-                try {
-                    zenith::mcp::EngineMCPExporter exp(engine_);
-                    snapshotVar = exp.getMeteringSnapshot();
-                } catch (...) {
-                    snapshotVar = juce::var();
-                }
-                {
-                    std::lock_guard<std::mutex> lk(m);
-                    done = true;
-                }
-                cv.notify_one();
-            });
-
-            std::unique_lock<std::mutex> lk(m);
-            if (!cv.wait_for(lk, std::chrono::milliseconds(300), [&]{ return done; })) {
-                std::string resp = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+            jsonText = loadSnapshotFile();
+            if (jsonText.isEmpty()) {
+                std::string resp = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
                 client->write(resp.c_str(), (int)resp.size());
                 client->close();
                 continue;
             }
-            jsonText = juce::JSON::toString(snapshotVar, false);
         } else if (path == "/mcp/plugins" || path == "/mcp/plugins/") {
-            juce::var pluginVar;
-            std::mutex m;
-            std::condition_variable cv;
-            bool done = false;
-
-            juce::MessageManager::callAsync([&]() {
-                try {
-                    zenith::mcp::EngineMCPExporter exp(engine_);
-                    pluginVar = exp.getPluginList();
-                } catch (...) {
-                    pluginVar = juce::var();
-                }
-                {
-                    std::lock_guard<std::mutex> lk(m);
-                    done = true;
-                }
-                cv.notify_one();
-            });
-
-            std::unique_lock<std::mutex> lk(m);
-            if (!cv.wait_for(lk, std::chrono::milliseconds(300), [&]{ return done; })) {
-                std::string resp = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
-                client->write(resp.c_str(), (int)resp.size());
-                client->close();
-                continue;
-            }
-            jsonText = juce::JSON::toString(pluginVar, false);
+            // Placeholder until EngineMCPExporter returns structured plugin data.
+            jsonText = "[]";
         } else if (path == "/mcp/snapshot" || path == "/mcp/snapshot/") {
-            juce::File f = juce::File::getCurrentWorkingDirectory().getChildFile("tools/mcp_server/engine_snapshot.json");
-            if (f.existsAsFile()) {
-                jsonText = f.loadFileAsString();
-            } else {
+            jsonText = loadSnapshotFile();
+            if (jsonText.isEmpty()) {
                 std::string resp = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
                 client->write(resp.c_str(), (int)resp.size());
                 client->close();

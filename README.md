@@ -2,6 +2,16 @@
 
 A professional Digital Audio Workstation built with C++20 and JUCE, featuring AI-powered creative assistance, real-time collaboration, and modern GPU-accelerated rendering.
 
+**License Status:** **Zenith DAW is 100% proprietary closed-source software.**
+
+### Pricing
+
+- **Zenith DAW Application:** $100 (one-time purchase)
+- **AI Wingman Add-on:**
+  - Zenith Light: $10/month
+  - Zenith Pro: $20/month
+  - Zenith Heavy: $50/month
+
 ## Status
 
 **Version:** 0.1.0-alpha  
@@ -204,3 +214,17 @@ The `agents/` directory contains coordinator agents for build automation, testin
 ## License
 
 See [LICENSE](LICENSE) for details.
+
+### Licensing Overview
+
+**Zenith DAW Application:** Proprietary commercial software. Not open source.
+
+**Synth Engine (Coming Soon):** The built-in ZenithPolySynth and ZenithSampler engine will be open-sourced under a permissive license (MIT or BSD) in a future release.
+
+**Third-Party Components:**
+- **JUCE Framework:** Used under commercial license
+- **VST3 SDK:** MIT license (open source)
+- **Skia Graphics:** BSD 3-Clause (open source)
+- **vcpkg:** MIT license (open source)
+
+For commercial licensing inquiries, contact: [Insert Contact Information]

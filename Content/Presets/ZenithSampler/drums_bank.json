@@ -3,7 +3,7 @@
   "bank_name": "Drums Bank",
   "category": "Drums",
   "version": "1.0",
-  "preset_count": 45,
+  "preset_count": 250,
   "presets": [
     {
       "id": "trap_clap",
@@ -1038,6 +1038,5131 @@
         "tune": -0.484,
         "gain": 0.728,
         "character": 0.335
+      }
+    },
+    {
+      "id": "kick_08_x001",
+      "name": "Kick 08 X001",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 08",
+      "parameters": {
+        "attack": 0.013,
+        "decay": 0.0,
+        "sustain": 0.004,
+        "release": 0.484,
+        "filter_cutoff": 0.652,
+        "filter_resonance": 0.303,
+        "tune": -2.279,
+        "gain": 1.105,
+        "character": 0.39
+      }
+    },
+    {
+      "id": "kick_01_x002",
+      "name": "Kick 01 X002",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 01",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.459,
+        "sustain": 0.0,
+        "release": 0.545,
+        "filter_cutoff": 0.522,
+        "filter_resonance": 0.203,
+        "tune": 0.345,
+        "gain": 1.139,
+        "character": 0.491
+      }
+    },
+    {
+      "id": "trap_clap_06_x003",
+      "name": "Trap Clap 06 X003",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 06",
+      "parameters": {
+        "attack": 0.033,
+        "decay": 0.002,
+        "sustain": 0.088,
+        "release": 0.023,
+        "filter_cutoff": 0.809,
+        "filter_resonance": 0.148,
+        "tune": -0.613,
+        "gain": 0.904,
+        "character": 0.469
+      }
+    },
+    {
+      "id": "rim_shot_05_x004",
+      "name": "Rim Shot 05 X004",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 05",
+      "parameters": {
+        "attack": 0.435,
+        "decay": 0.286,
+        "sustain": 0.0,
+        "release": 1.133,
+        "filter_cutoff": 0.961,
+        "filter_resonance": 0.163,
+        "tune": 0.324,
+        "gain": 0.76,
+        "character": 0.369
+      }
+    },
+    {
+      "id": "trap_clap_03_x005",
+      "name": "Trap Clap 03 X005",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 03",
+      "parameters": {
+        "attack": 0.524,
+        "decay": 0.569,
+        "sustain": 0.078,
+        "release": 0.067,
+        "filter_cutoff": 0.765,
+        "filter_resonance": 0.005,
+        "tune": -0.033,
+        "gain": 1.026,
+        "character": 0.54
+      }
+    },
+    {
+      "id": "rim_shot_01_x006",
+      "name": "Rim Shot 01 X006",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 01",
+      "parameters": {
+        "attack": 0.057,
+        "decay": 0.085,
+        "sustain": 0.03,
+        "release": 0.0,
+        "filter_cutoff": 0.869,
+        "filter_resonance": 0.031,
+        "tune": -2.045,
+        "gain": 0.581,
+        "character": 0.449
+      }
+    },
+    {
+      "id": "trap_clap_x007",
+      "name": "Trap Clap X007",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap",
+      "parameters": {
+        "attack": 0.041,
+        "decay": 0.013,
+        "sustain": 0.002,
+        "release": 0.162,
+        "filter_cutoff": 0.92,
+        "filter_resonance": 0.073,
+        "tune": 0.038,
+        "gain": 0.901,
+        "character": 0.542
+      }
+    },
+    {
+      "id": "trap_clap_03_x008",
+      "name": "Trap Clap 03 X008",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 03",
+      "parameters": {
+        "attack": 0.428,
+        "decay": 0.495,
+        "sustain": 0.086,
+        "release": 0.11,
+        "filter_cutoff": 0.753,
+        "filter_resonance": 0.014,
+        "tune": -0.339,
+        "gain": 1.036,
+        "character": 0.541
+      }
+    },
+    {
+      "id": "kick_05_x009",
+      "name": "Kick 05 X009",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 05",
+      "parameters": {
+        "attack": 0.052,
+        "decay": 0.097,
+        "sustain": 0.0,
+        "release": 0.0,
+        "filter_cutoff": 0.552,
+        "filter_resonance": 0.142,
+        "tune": -0.899,
+        "gain": 0.824,
+        "character": 0.491
+      }
+    },
+    {
+      "id": "tight_snare_05_x010",
+      "name": "Tight Snare 05 X010",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 05",
+      "parameters": {
+        "attack": 0.013,
+        "decay": 0.16,
+        "sustain": 0.055,
+        "release": 0.0,
+        "filter_cutoff": 0.942,
+        "filter_resonance": 0.162,
+        "tune": -0.311,
+        "gain": 0.979,
+        "character": 0.416
+      }
+    },
+    {
+      "id": "rim_shot_04_x011",
+      "name": "Rim Shot 04 X011",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 04",
+      "parameters": {
+        "attack": 0.142,
+        "decay": 0.095,
+        "sustain": 0.02,
+        "release": 1.114,
+        "filter_cutoff": 0.842,
+        "filter_resonance": 0.138,
+        "tune": 1.216,
+        "gain": 0.695,
+        "character": 0.442
+      }
+    },
+    {
+      "id": "hi_hat_06_x012",
+      "name": "Hi-Hat 06 X012",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 06",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.0,
+        "sustain": 0.072,
+        "release": 0.093,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.009,
+        "tune": 2.276,
+        "gain": 0.697,
+        "character": 0.299
+      }
+    },
+    {
+      "id": "tight_snare_08_x013",
+      "name": "Tight Snare 08 X013",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.476,
+        "sustain": 0.049,
+        "release": 0.558,
+        "filter_cutoff": 0.938,
+        "filter_resonance": 0.039,
+        "tune": 1.293,
+        "gain": 0.812,
+        "character": 0.397
+      }
+    },
+    {
+      "id": "rim_shot_05_x014",
+      "name": "Rim Shot 05 X014",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 05",
+      "parameters": {
+        "attack": 0.345,
+        "decay": 0.333,
+        "sustain": 0.001,
+        "release": 0.999,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.157,
+        "tune": 0.302,
+        "gain": 0.803,
+        "character": 0.365
+      }
+    },
+    {
+      "id": "rim_shot_01_x015",
+      "name": "Rim Shot 01 X015",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 01",
+      "parameters": {
+        "attack": 0.011,
+        "decay": 0.054,
+        "sustain": 0.038,
+        "release": 0.0,
+        "filter_cutoff": 0.856,
+        "filter_resonance": 0.056,
+        "tune": -1.832,
+        "gain": 0.629,
+        "character": 0.506
+      }
+    },
+    {
+      "id": "rim_shot_05_x016",
+      "name": "Rim Shot 05 X016",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 05",
+      "parameters": {
+        "attack": 0.439,
+        "decay": 0.374,
+        "sustain": 0.009,
+        "release": 1.11,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.14,
+        "tune": 0.259,
+        "gain": 0.802,
+        "character": 0.421
+      }
+    },
+    {
+      "id": "tight_snare_02_x017",
+      "name": "Tight Snare 02 X017",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 02",
+      "parameters": {
+        "attack": 0.324,
+        "decay": 0.286,
+        "sustain": 0.081,
+        "release": 1.189,
+        "filter_cutoff": 0.825,
+        "filter_resonance": 0.263,
+        "tune": -1.268,
+        "gain": 0.749,
+        "character": 0.394
+      }
+    },
+    {
+      "id": "trap_clap_04_x018",
+      "name": "Trap Clap 04 X018",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 04",
+      "parameters": {
+        "attack": 0.115,
+        "decay": 0.0,
+        "sustain": 0.004,
+        "release": 0.633,
+        "filter_cutoff": 0.765,
+        "filter_resonance": 0.009,
+        "tune": -0.539,
+        "gain": 0.929,
+        "character": 0.584
+      }
+    },
+    {
+      "id": "trap_clap_04_x019",
+      "name": "Trap Clap 04 X019",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 04",
+      "parameters": {
+        "attack": 0.121,
+        "decay": 0.039,
+        "sustain": 0.004,
+        "release": 0.634,
+        "filter_cutoff": 0.793,
+        "filter_resonance": 0.015,
+        "tune": -0.789,
+        "gain": 0.953,
+        "character": 0.597
+      }
+    },
+    {
+      "id": "tight_snare_x020",
+      "name": "Tight Snare X020",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.079,
+        "sustain": 0.0,
+        "release": 0.105,
+        "filter_cutoff": 0.869,
+        "filter_resonance": 0.138,
+        "tune": 0.227,
+        "gain": 0.904,
+        "character": 0.446
+      }
+    },
+    {
+      "id": "rim_shot_05_x021",
+      "name": "Rim Shot 05 X021",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 05",
+      "parameters": {
+        "attack": 0.348,
+        "decay": 0.321,
+        "sustain": 0.001,
+        "release": 1.128,
+        "filter_cutoff": 0.946,
+        "filter_resonance": 0.118,
+        "tune": 0.727,
+        "gain": 0.793,
+        "character": 0.389
+      }
+    },
+    {
+      "id": "trap_clap_02_x022",
+      "name": "Trap Clap 02 X022",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 02",
+      "parameters": {
+        "attack": 0.402,
+        "decay": 0.58,
+        "sustain": 0.004,
+        "release": 1.027,
+        "filter_cutoff": 0.864,
+        "filter_resonance": 0.066,
+        "tune": 0.186,
+        "gain": 0.959,
+        "character": 0.468
+      }
+    },
+    {
+      "id": "hi_hat_06_x023",
+      "name": "Hi-Hat 06 X023",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 06",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.0,
+        "sustain": 0.089,
+        "release": 0.08,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.05,
+        "tune": 1.681,
+        "gain": 0.787,
+        "character": 0.334
+      }
+    },
+    {
+      "id": "rim_shot_01_x024",
+      "name": "Rim Shot 01 X024",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 01",
+      "parameters": {
+        "attack": 0.006,
+        "decay": 0.165,
+        "sustain": 0.035,
+        "release": 0.0,
+        "filter_cutoff": 0.835,
+        "filter_resonance": 0.034,
+        "tune": -2.003,
+        "gain": 0.695,
+        "character": 0.515
+      }
+    },
+    {
+      "id": "tight_snare_07_x025",
+      "name": "Tight Snare 07 X025",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 07",
+      "parameters": {
+        "attack": 0.024,
+        "decay": 0.552,
+        "sustain": 0.084,
+        "release": 0.041,
+        "filter_cutoff": 0.817,
+        "filter_resonance": 0.021,
+        "tune": -2.197,
+        "gain": 0.736,
+        "character": 0.359
+      }
+    },
+    {
+      "id": "tight_snare_07_x026",
+      "name": "Tight Snare 07 X026",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 07",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.525,
+        "sustain": 0.083,
+        "release": 0.034,
+        "filter_cutoff": 0.919,
+        "filter_resonance": 0.053,
+        "tune": -2.047,
+        "gain": 0.643,
+        "character": 0.372
+      }
+    },
+    {
+      "id": "tight_snare_x027",
+      "name": "Tight Snare X027",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.065,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.807,
+        "filter_resonance": 0.166,
+        "tune": -0.127,
+        "gain": 0.851,
+        "character": 0.417
+      }
+    },
+    {
+      "id": "tight_snare_01_x028",
+      "name": "Tight Snare 01 X028",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 01",
+      "parameters": {
+        "attack": 0.053,
+        "decay": 0.058,
+        "sustain": 0.007,
+        "release": 0.0,
+        "filter_cutoff": 0.724,
+        "filter_resonance": 0.108,
+        "tune": 0.845,
+        "gain": 0.849,
+        "character": 0.349
+      }
+    },
+    {
+      "id": "rim_shot_x029",
+      "name": "Rim Shot X029",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot",
+      "parameters": {
+        "attack": 0.008,
+        "decay": 0.006,
+        "sustain": 0.003,
+        "release": 0.082,
+        "filter_cutoff": 0.899,
+        "filter_resonance": 0.146,
+        "tune": -0.474,
+        "gain": 0.796,
+        "character": 0.393
+      }
+    },
+    {
+      "id": "hi_hat_x030",
+      "name": "Hi-Hat X030",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat",
+      "parameters": {
+        "attack": 0.012,
+        "decay": 0.088,
+        "sustain": 0.002,
+        "release": 0.04,
+        "filter_cutoff": 0.962,
+        "filter_resonance": 0.021,
+        "tune": -0.545,
+        "gain": 0.736,
+        "character": 0.282
+      }
+    },
+    {
+      "id": "rim_shot_08_x031",
+      "name": "Rim Shot 08 X031",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.147,
+        "sustain": 0.001,
+        "release": 0.304,
+        "filter_cutoff": 0.89,
+        "filter_resonance": 0.013,
+        "tune": -0.351,
+        "gain": 0.716,
+        "character": 0.374
+      }
+    },
+    {
+      "id": "trap_clap_07_x032",
+      "name": "Trap Clap 07 X032",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 07",
+      "parameters": {
+        "attack": 0.107,
+        "decay": 0.469,
+        "sustain": 0.032,
+        "release": 0.272,
+        "filter_cutoff": 0.841,
+        "filter_resonance": 0.023,
+        "tune": -0.106,
+        "gain": 0.92,
+        "character": 0.584
+      }
+    },
+    {
+      "id": "rim_shot_04_x033",
+      "name": "Rim Shot 04 X033",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 04",
+      "parameters": {
+        "attack": 0.072,
+        "decay": 0.01,
+        "sustain": 0.02,
+        "release": 1.02,
+        "filter_cutoff": 0.89,
+        "filter_resonance": 0.165,
+        "tune": 1.328,
+        "gain": 0.616,
+        "character": 0.44
+      }
+    },
+    {
+      "id": "tight_snare_07_x034",
+      "name": "Tight Snare 07 X034",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 07",
+      "parameters": {
+        "attack": 0.051,
+        "decay": 0.573,
+        "sustain": 0.087,
+        "release": 0.0,
+        "filter_cutoff": 0.923,
+        "filter_resonance": 0.03,
+        "tune": -1.779,
+        "gain": 0.668,
+        "character": 0.372
+      }
+    },
+    {
+      "id": "rim_shot_03_x035",
+      "name": "Rim Shot 03 X035",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 03",
+      "parameters": {
+        "attack": 0.226,
+        "decay": 0.0,
+        "sustain": 0.028,
+        "release": 0.067,
+        "filter_cutoff": 0.928,
+        "filter_resonance": 0.166,
+        "tune": 0.032,
+        "gain": 0.897,
+        "character": 0.458
+      }
+    },
+    {
+      "id": "kick_07_x036",
+      "name": "Kick 07 X036",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 07",
+      "parameters": {
+        "attack": 0.424,
+        "decay": 0.0,
+        "sustain": 0.01,
+        "release": 0.071,
+        "filter_cutoff": 0.679,
+        "filter_resonance": 0.153,
+        "tune": -0.403,
+        "gain": 0.751,
+        "character": 0.431
+      }
+    },
+    {
+      "id": "trap_clap_08_x037",
+      "name": "Trap Clap 08 X037",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 08",
+      "parameters": {
+        "attack": 0.055,
+        "decay": 0.418,
+        "sustain": 0.0,
+        "release": 0.112,
+        "filter_cutoff": 0.947,
+        "filter_resonance": 0.018,
+        "tune": 0.116,
+        "gain": 0.669,
+        "character": 0.465
+      }
+    },
+    {
+      "id": "rim_shot_06_x038",
+      "name": "Rim Shot 06 X038",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 06",
+      "parameters": {
+        "attack": 0.029,
+        "decay": 0.572,
+        "sustain": 0.0,
+        "release": 0.011,
+        "filter_cutoff": 0.981,
+        "filter_resonance": 0.017,
+        "tune": 0.076,
+        "gain": 0.657,
+        "character": 0.463
+      }
+    },
+    {
+      "id": "rim_shot_01_x039",
+      "name": "Rim Shot 01 X039",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 01",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.101,
+        "sustain": 0.03,
+        "release": 0.0,
+        "filter_cutoff": 0.831,
+        "filter_resonance": 0.043,
+        "tune": -1.454,
+        "gain": 0.611,
+        "character": 0.481
+      }
+    },
+    {
+      "id": "tight_snare_03_x040",
+      "name": "Tight Snare 03 X040",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 03",
+      "parameters": {
+        "attack": 0.075,
+        "decay": 0.039,
+        "sustain": 0.014,
+        "release": 0.095,
+        "filter_cutoff": 0.967,
+        "filter_resonance": 0.164,
+        "tune": 0.759,
+        "gain": 0.874,
+        "character": 0.575
+      }
+    },
+    {
+      "id": "hi_hat_04_x041",
+      "name": "Hi-Hat 04 X041",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 04",
+      "parameters": {
+        "attack": 0.34,
+        "decay": 0.244,
+        "sustain": 0.01,
+        "release": 0.049,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.148,
+        "tune": 0.247,
+        "gain": 0.907,
+        "character": 0.307
+      }
+    },
+    {
+      "id": "kick_08_x042",
+      "name": "Kick 08 X042",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.043,
+        "sustain": 0.012,
+        "release": 0.482,
+        "filter_cutoff": 0.631,
+        "filter_resonance": 0.256,
+        "tune": -2.024,
+        "gain": 1.109,
+        "character": 0.433
+      }
+    },
+    {
+      "id": "rim_shot_04_x043",
+      "name": "Rim Shot 04 X043",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 04",
+      "parameters": {
+        "attack": 0.117,
+        "decay": 0.045,
+        "sustain": 0.033,
+        "release": 0.885,
+        "filter_cutoff": 0.897,
+        "filter_resonance": 0.147,
+        "tune": 1.636,
+        "gain": 0.625,
+        "character": 0.41
+      }
+    },
+    {
+      "id": "rim_shot_01_x044",
+      "name": "Rim Shot 01 X044",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 01",
+      "parameters": {
+        "attack": 0.036,
+        "decay": 0.161,
+        "sustain": 0.038,
+        "release": 0.077,
+        "filter_cutoff": 0.854,
+        "filter_resonance": 0.082,
+        "tune": -2.108,
+        "gain": 0.621,
+        "character": 0.503
+      }
+    },
+    {
+      "id": "kick_02_x045",
+      "name": "Kick 02 X045",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 02",
+      "parameters": {
+        "attack": 0.427,
+        "decay": 0.021,
+        "sustain": 0.013,
+        "release": 0.978,
+        "filter_cutoff": 0.733,
+        "filter_resonance": 0.163,
+        "tune": 1.913,
+        "gain": 1.171,
+        "character": 0.447
+      }
+    },
+    {
+      "id": "kick_04_x046",
+      "name": "Kick 04 X046",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 04",
+      "parameters": {
+        "attack": 0.544,
+        "decay": 0.214,
+        "sustain": 0.109,
+        "release": 0.091,
+        "filter_cutoff": 0.672,
+        "filter_resonance": 0.221,
+        "tune": 0.103,
+        "gain": 1.024,
+        "character": 0.54
+      }
+    },
+    {
+      "id": "tight_snare_06_x047",
+      "name": "Tight Snare 06 X047",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 06",
+      "parameters": {
+        "attack": 0.057,
+        "decay": 0.259,
+        "sustain": 0.104,
+        "release": 0.096,
+        "filter_cutoff": 0.726,
+        "filter_resonance": 0.241,
+        "tune": -0.036,
+        "gain": 1.088,
+        "character": 0.464
+      }
+    },
+    {
+      "id": "tight_snare_01_x048",
+      "name": "Tight Snare 01 X048",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 01",
+      "parameters": {
+        "attack": 0.034,
+        "decay": 0.089,
+        "sustain": 0.008,
+        "release": 0.061,
+        "filter_cutoff": 0.746,
+        "filter_resonance": 0.081,
+        "tune": 0.398,
+        "gain": 0.852,
+        "character": 0.41
+      }
+    },
+    {
+      "id": "kick_01_x049",
+      "name": "Kick 01 X049",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 01",
+      "parameters": {
+        "attack": 0.018,
+        "decay": 0.489,
+        "sustain": 0.0,
+        "release": 0.693,
+        "filter_cutoff": 0.549,
+        "filter_resonance": 0.169,
+        "tune": 0.709,
+        "gain": 1.022,
+        "character": 0.539
+      }
+    },
+    {
+      "id": "kick_01_x050",
+      "name": "Kick 01 X050",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 01",
+      "parameters": {
+        "attack": 0.05,
+        "decay": 0.47,
+        "sustain": 0.003,
+        "release": 0.5,
+        "filter_cutoff": 0.553,
+        "filter_resonance": 0.179,
+        "tune": 0.873,
+        "gain": 1.095,
+        "character": 0.517
+      }
+    },
+    {
+      "id": "trap_clap_03_x051",
+      "name": "Trap Clap 03 X051",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 03",
+      "parameters": {
+        "attack": 0.457,
+        "decay": 0.466,
+        "sustain": 0.088,
+        "release": 0.0,
+        "filter_cutoff": 0.779,
+        "filter_resonance": 0.002,
+        "tune": -0.368,
+        "gain": 0.981,
+        "character": 0.5
+      }
+    },
+    {
+      "id": "rim_shot_01_x052",
+      "name": "Rim Shot 01 X052",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 01",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.049,
+        "sustain": 0.033,
+        "release": 0.07,
+        "filter_cutoff": 0.888,
+        "filter_resonance": 0.039,
+        "tune": -1.139,
+        "gain": 0.582,
+        "character": 0.518
+      }
+    },
+    {
+      "id": "kick_04_x053",
+      "name": "Kick 04 X053",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 04",
+      "parameters": {
+        "attack": 0.451,
+        "decay": 0.089,
+        "sustain": 0.099,
+        "release": 0.027,
+        "filter_cutoff": 0.627,
+        "filter_resonance": 0.252,
+        "tune": -0.374,
+        "gain": 1.027,
+        "character": 0.518
+      }
+    },
+    {
+      "id": "tight_snare_02_x054",
+      "name": "Tight Snare 02 X054",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 02",
+      "parameters": {
+        "attack": 0.259,
+        "decay": 0.338,
+        "sustain": 0.079,
+        "release": 1.199,
+        "filter_cutoff": 0.814,
+        "filter_resonance": 0.268,
+        "tune": -1.236,
+        "gain": 0.756,
+        "character": 0.46
+      }
+    },
+    {
+      "id": "trap_clap_03_x055",
+      "name": "Trap Clap 03 X055",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 03",
+      "parameters": {
+        "attack": 0.415,
+        "decay": 0.449,
+        "sustain": 0.085,
+        "release": 0.0,
+        "filter_cutoff": 0.809,
+        "filter_resonance": 0.0,
+        "tune": 0.113,
+        "gain": 1.041,
+        "character": 0.507
+      }
+    },
+    {
+      "id": "rim_shot_06_x056",
+      "name": "Rim Shot 06 X056",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 06",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.513,
+        "sustain": 0.005,
+        "release": 0.0,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.045,
+        "tune": -0.423,
+        "gain": 0.663,
+        "character": 0.45
+      }
+    },
+    {
+      "id": "kick_07_x057",
+      "name": "Kick 07 X057",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 07",
+      "parameters": {
+        "attack": 0.495,
+        "decay": 0.0,
+        "sustain": 0.029,
+        "release": 0.0,
+        "filter_cutoff": 0.678,
+        "filter_resonance": 0.169,
+        "tune": -0.071,
+        "gain": 0.853,
+        "character": 0.46
+      }
+    },
+    {
+      "id": "trap_clap_07_x058",
+      "name": "Trap Clap 07 X058",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 07",
+      "parameters": {
+        "attack": 0.139,
+        "decay": 0.426,
+        "sustain": 0.036,
+        "release": 0.314,
+        "filter_cutoff": 0.883,
+        "filter_resonance": 0.013,
+        "tune": -0.709,
+        "gain": 0.887,
+        "character": 0.586
+      }
+    },
+    {
+      "id": "hi_hat_01_x059",
+      "name": "Hi-Hat 01 X059",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 01",
+      "parameters": {
+        "attack": 0.245,
+        "decay": 0.0,
+        "sustain": 0.0,
+        "release": 0.0,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.0,
+        "tune": 2.264,
+        "gain": 0.703,
+        "character": 0.31
+      }
+    },
+    {
+      "id": "tight_snare_08_x060",
+      "name": "Tight Snare 08 X060",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.465,
+        "sustain": 0.047,
+        "release": 0.369,
+        "filter_cutoff": 0.934,
+        "filter_resonance": 0.043,
+        "tune": 1.974,
+        "gain": 0.773,
+        "character": 0.442
+      }
+    },
+    {
+      "id": "rim_shot_x061",
+      "name": "Rim Shot X061",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.009,
+        "sustain": 0.004,
+        "release": 0.007,
+        "filter_cutoff": 0.866,
+        "filter_resonance": 0.108,
+        "tune": 0.304,
+        "gain": 0.838,
+        "character": 0.374
+      }
+    },
+    {
+      "id": "tight_snare_03_x062",
+      "name": "Tight Snare 03 X062",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 03",
+      "parameters": {
+        "attack": 0.074,
+        "decay": 0.046,
+        "sustain": 0.014,
+        "release": 0.028,
+        "filter_cutoff": 0.969,
+        "filter_resonance": 0.138,
+        "tune": 0.83,
+        "gain": 0.963,
+        "character": 0.53
+      }
+    },
+    {
+      "id": "trap_clap_07_x063",
+      "name": "Trap Clap 07 X063",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 07",
+      "parameters": {
+        "attack": 0.195,
+        "decay": 0.424,
+        "sustain": 0.034,
+        "release": 0.319,
+        "filter_cutoff": 0.872,
+        "filter_resonance": 0.014,
+        "tune": -0.024,
+        "gain": 0.9,
+        "character": 0.593
+      }
+    },
+    {
+      "id": "tight_snare_02_x064",
+      "name": "Tight Snare 02 X064",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 02",
+      "parameters": {
+        "attack": 0.27,
+        "decay": 0.306,
+        "sustain": 0.08,
+        "release": 1.197,
+        "filter_cutoff": 0.863,
+        "filter_resonance": 0.214,
+        "tune": -0.403,
+        "gain": 0.727,
+        "character": 0.454
+      }
+    },
+    {
+      "id": "rim_shot_01_x065",
+      "name": "Rim Shot 01 X065",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 01",
+      "parameters": {
+        "attack": 0.057,
+        "decay": 0.112,
+        "sustain": 0.044,
+        "release": 0.0,
+        "filter_cutoff": 0.83,
+        "filter_resonance": 0.037,
+        "tune": -1.121,
+        "gain": 0.653,
+        "character": 0.514
+      }
+    },
+    {
+      "id": "hi_hat_x066",
+      "name": "Hi-Hat X066",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat",
+      "parameters": {
+        "attack": 0.054,
+        "decay": 0.024,
+        "sustain": 0.0,
+        "release": 0.0,
+        "filter_cutoff": 0.955,
+        "filter_resonance": 0.062,
+        "tune": 0.022,
+        "gain": 0.805,
+        "character": 0.294
+      }
+    },
+    {
+      "id": "rim_shot_02_x067",
+      "name": "Rim Shot 02 X067",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 02",
+      "parameters": {
+        "attack": 0.212,
+        "decay": 0.0,
+        "sustain": 0.0,
+        "release": 0.847,
+        "filter_cutoff": 0.872,
+        "filter_resonance": 0.015,
+        "tune": -0.077,
+        "gain": 0.583,
+        "character": 0.448
+      }
+    },
+    {
+      "id": "tight_snare_08_x068",
+      "name": "Tight Snare 08 X068",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.471,
+        "sustain": 0.064,
+        "release": 0.454,
+        "filter_cutoff": 0.849,
+        "filter_resonance": 0.054,
+        "tune": 1.715,
+        "gain": 0.884,
+        "character": 0.374
+      }
+    },
+    {
+      "id": "kick_x069",
+      "name": "Kick X069",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.256,
+        "sustain": 0.011,
+        "release": 0.122,
+        "filter_cutoff": 0.551,
+        "filter_resonance": 0.173,
+        "tune": -0.143,
+        "gain": 1.039,
+        "character": 0.513
+      }
+    },
+    {
+      "id": "tight_snare_03_x070",
+      "name": "Tight Snare 03 X070",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 03",
+      "parameters": {
+        "attack": 0.112,
+        "decay": 0.016,
+        "sustain": 0.005,
+        "release": 0.0,
+        "filter_cutoff": 0.905,
+        "filter_resonance": 0.136,
+        "tune": 0.667,
+        "gain": 0.944,
+        "character": 0.493
+      }
+    },
+    {
+      "id": "rim_shot_07_x071",
+      "name": "Rim Shot 07 X071",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 07",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.025,
+        "sustain": 0.003,
+        "release": 0.787,
+        "filter_cutoff": 0.843,
+        "filter_resonance": 0.175,
+        "tune": -0.499,
+        "gain": 0.69,
+        "character": 0.454
+      }
+    },
+    {
+      "id": "kick_03_x072",
+      "name": "Kick 03 X072",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 03",
+      "parameters": {
+        "attack": 0.115,
+        "decay": 0.0,
+        "sustain": 0.003,
+        "release": 0.085,
+        "filter_cutoff": 0.541,
+        "filter_resonance": 0.257,
+        "tune": -2.279,
+        "gain": 0.939,
+        "character": 0.552
+      }
+    },
+    {
+      "id": "kick_x073",
+      "name": "Kick X073",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.203,
+        "sustain": 0.0,
+        "release": 0.2,
+        "filter_cutoff": 0.607,
+        "filter_resonance": 0.195,
+        "tune": -0.232,
+        "gain": 1.014,
+        "character": 0.475
+      }
+    },
+    {
+      "id": "hi_hat_x074",
+      "name": "Hi-Hat X074",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat",
+      "parameters": {
+        "attack": 0.024,
+        "decay": 0.11,
+        "sustain": 0.012,
+        "release": 0.0,
+        "filter_cutoff": 0.935,
+        "filter_resonance": 0.056,
+        "tune": 0.143,
+        "gain": 0.691,
+        "character": 0.3
+      }
+    },
+    {
+      "id": "tight_snare_01_x075",
+      "name": "Tight Snare 01 X075",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 01",
+      "parameters": {
+        "attack": 0.059,
+        "decay": 0.125,
+        "sustain": 0.015,
+        "release": 0.104,
+        "filter_cutoff": 0.785,
+        "filter_resonance": 0.111,
+        "tune": -0.133,
+        "gain": 0.81,
+        "character": 0.428
+      }
+    },
+    {
+      "id": "rim_shot_07_x076",
+      "name": "Rim Shot 07 X076",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 07",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.0,
+        "sustain": 0.001,
+        "release": 0.803,
+        "filter_cutoff": 0.875,
+        "filter_resonance": 0.16,
+        "tune": 0.07,
+        "gain": 0.769,
+        "character": 0.458
+      }
+    },
+    {
+      "id": "rim_shot_06_x077",
+      "name": "Rim Shot 06 X077",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 06",
+      "parameters": {
+        "attack": 0.033,
+        "decay": 0.496,
+        "sustain": 0.0,
+        "release": 0.054,
+        "filter_cutoff": 0.937,
+        "filter_resonance": 0.007,
+        "tune": -0.523,
+        "gain": 0.656,
+        "character": 0.425
+      }
+    },
+    {
+      "id": "tight_snare_06_x078",
+      "name": "Tight Snare 06 X078",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 06",
+      "parameters": {
+        "attack": 0.021,
+        "decay": 0.258,
+        "sustain": 0.092,
+        "release": 0.0,
+        "filter_cutoff": 0.726,
+        "filter_resonance": 0.229,
+        "tune": 0.099,
+        "gain": 1.028,
+        "character": 0.431
+      }
+    },
+    {
+      "id": "hi_hat_04_x079",
+      "name": "Hi-Hat 04 X079",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 04",
+      "parameters": {
+        "attack": 0.339,
+        "decay": 0.286,
+        "sustain": 0.013,
+        "release": 0.075,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.122,
+        "tune": 0.342,
+        "gain": 0.951,
+        "character": 0.328
+      }
+    },
+    {
+      "id": "kick_x080",
+      "name": "Kick X080",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.183,
+        "sustain": 0.0,
+        "release": 0.068,
+        "filter_cutoff": 0.568,
+        "filter_resonance": 0.168,
+        "tune": 0.444,
+        "gain": 1.053,
+        "character": 0.473
+      }
+    },
+    {
+      "id": "hi_hat_02_x081",
+      "name": "Hi-Hat 02 X081",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 02",
+      "parameters": {
+        "attack": 0.203,
+        "decay": 0.0,
+        "sustain": 0.053,
+        "release": 0.308,
+        "filter_cutoff": 0.842,
+        "filter_resonance": 0.106,
+        "tune": 1.312,
+        "gain": 0.876,
+        "character": 0.308
+      }
+    },
+    {
+      "id": "kick_05_x082",
+      "name": "Kick 05 X082",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 05",
+      "parameters": {
+        "attack": 0.015,
+        "decay": 0.094,
+        "sustain": 0.0,
+        "release": 0.006,
+        "filter_cutoff": 0.559,
+        "filter_resonance": 0.12,
+        "tune": -1.168,
+        "gain": 0.845,
+        "character": 0.423
+      }
+    },
+    {
+      "id": "kick_06_x083",
+      "name": "Kick 06 X083",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 06",
+      "parameters": {
+        "attack": 0.042,
+        "decay": 0.002,
+        "sustain": 0.0,
+        "release": 0.0,
+        "filter_cutoff": 0.675,
+        "filter_resonance": 0.173,
+        "tune": -1.659,
+        "gain": 1.111,
+        "character": 0.478
+      }
+    },
+    {
+      "id": "tight_snare_05_x084",
+      "name": "Tight Snare 05 X084",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 05",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.052,
+        "sustain": 0.048,
+        "release": 0.042,
+        "filter_cutoff": 0.9,
+        "filter_resonance": 0.132,
+        "tune": -0.164,
+        "gain": 0.971,
+        "character": 0.385
+      }
+    },
+    {
+      "id": "rim_shot_06_x085",
+      "name": "Rim Shot 06 X085",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 06",
+      "parameters": {
+        "attack": 0.039,
+        "decay": 0.559,
+        "sustain": 0.006,
+        "release": 0.072,
+        "filter_cutoff": 0.99,
+        "filter_resonance": 0.017,
+        "tune": -0.271,
+        "gain": 0.679,
+        "character": 0.464
+      }
+    },
+    {
+      "id": "kick_04_x086",
+      "name": "Kick 04 X086",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 04",
+      "parameters": {
+        "attack": 0.445,
+        "decay": 0.117,
+        "sustain": 0.107,
+        "release": 0.0,
+        "filter_cutoff": 0.698,
+        "filter_resonance": 0.258,
+        "tune": 0.518,
+        "gain": 1.016,
+        "character": 0.505
+      }
+    },
+    {
+      "id": "rim_shot_06_x087",
+      "name": "Rim Shot 06 X087",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 06",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.541,
+        "sustain": 0.0,
+        "release": 0.059,
+        "filter_cutoff": 0.954,
+        "filter_resonance": 0.052,
+        "tune": 0.028,
+        "gain": 0.66,
+        "character": 0.467
+      }
+    },
+    {
+      "id": "hi_hat_01_x088",
+      "name": "Hi-Hat 01 X088",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 01",
+      "parameters": {
+        "attack": 0.299,
+        "decay": 0.06,
+        "sustain": 0.0,
+        "release": 0.079,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.0,
+        "tune": 1.808,
+        "gain": 0.65,
+        "character": 0.282
+      }
+    },
+    {
+      "id": "kick_08_x089",
+      "name": "Kick 08 X089",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.016,
+        "sustain": 0.009,
+        "release": 0.285,
+        "filter_cutoff": 0.666,
+        "filter_resonance": 0.277,
+        "tune": -1.95,
+        "gain": 1.024,
+        "character": 0.361
+      }
+    },
+    {
+      "id": "kick_05_x090",
+      "name": "Kick 05 X090",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 05",
+      "parameters": {
+        "attack": 0.067,
+        "decay": 0.112,
+        "sustain": 0.003,
+        "release": 0.112,
+        "filter_cutoff": 0.558,
+        "filter_resonance": 0.098,
+        "tune": -0.959,
+        "gain": 0.835,
+        "character": 0.473
+      }
+    },
+    {
+      "id": "kick_06_x091",
+      "name": "Kick 06 X091",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 06",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.008,
+        "sustain": 0.0,
+        "release": 0.0,
+        "filter_cutoff": 0.695,
+        "filter_resonance": 0.177,
+        "tune": -2.076,
+        "gain": 1.045,
+        "character": 0.479
+      }
+    },
+    {
+      "id": "rim_shot_06_x092",
+      "name": "Rim Shot 06 X092",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 06",
+      "parameters": {
+        "attack": 0.047,
+        "decay": 0.513,
+        "sustain": 0.003,
+        "release": 0.0,
+        "filter_cutoff": 0.961,
+        "filter_resonance": 0.046,
+        "tune": 0.306,
+        "gain": 0.725,
+        "character": 0.39
+      }
+    },
+    {
+      "id": "kick_02_x093",
+      "name": "Kick 02 X093",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 02",
+      "parameters": {
+        "attack": 0.451,
+        "decay": 0.0,
+        "sustain": 0.011,
+        "release": 1.102,
+        "filter_cutoff": 0.639,
+        "filter_resonance": 0.211,
+        "tune": 2.319,
+        "gain": 1.132,
+        "character": 0.47
+      }
+    },
+    {
+      "id": "rim_shot_01_x094",
+      "name": "Rim Shot 01 X094",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 01",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.087,
+        "sustain": 0.034,
+        "release": 0.11,
+        "filter_cutoff": 0.776,
+        "filter_resonance": 0.028,
+        "tune": -1.205,
+        "gain": 0.587,
+        "character": 0.49
+      }
+    },
+    {
+      "id": "rim_shot_01_x095",
+      "name": "Rim Shot 01 X095",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 01",
+      "parameters": {
+        "attack": 0.018,
+        "decay": 0.112,
+        "sustain": 0.035,
+        "release": 0.0,
+        "filter_cutoff": 0.831,
+        "filter_resonance": 0.076,
+        "tune": -1.056,
+        "gain": 0.603,
+        "character": 0.483
+      }
+    },
+    {
+      "id": "tight_snare_05_x096",
+      "name": "Tight Snare 05 X096",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 05",
+      "parameters": {
+        "attack": 0.039,
+        "decay": 0.117,
+        "sustain": 0.052,
+        "release": 0.004,
+        "filter_cutoff": 0.889,
+        "filter_resonance": 0.133,
+        "tune": 0.144,
+        "gain": 0.951,
+        "character": 0.337
+      }
+    },
+    {
+      "id": "kick_03_x097",
+      "name": "Kick 03 X097",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 03",
+      "parameters": {
+        "attack": 0.176,
+        "decay": 0.0,
+        "sustain": 0.0,
+        "release": 0.0,
+        "filter_cutoff": 0.559,
+        "filter_resonance": 0.298,
+        "tune": -2.113,
+        "gain": 0.942,
+        "character": 0.586
+      }
+    },
+    {
+      "id": "tight_snare_01_x098",
+      "name": "Tight Snare 01 X098",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 01",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.089,
+        "sustain": 0.01,
+        "release": 0.033,
+        "filter_cutoff": 0.788,
+        "filter_resonance": 0.107,
+        "tune": 0.635,
+        "gain": 0.815,
+        "character": 0.43
+      }
+    },
+    {
+      "id": "trap_clap_x099",
+      "name": "Trap Clap X099",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.119,
+        "sustain": 0.0,
+        "release": 0.034,
+        "filter_cutoff": 0.898,
+        "filter_resonance": 0.103,
+        "tune": -0.09,
+        "gain": 0.866,
+        "character": 0.537
+      }
+    },
+    {
+      "id": "tight_snare_07_x100",
+      "name": "Tight Snare 07 X100",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 07",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.5,
+        "sustain": 0.073,
+        "release": 0.023,
+        "filter_cutoff": 0.868,
+        "filter_resonance": 0.028,
+        "tune": -1.899,
+        "gain": 0.762,
+        "character": 0.335
+      }
+    },
+    {
+      "id": "trap_clap_03_x101",
+      "name": "Trap Clap 03 X101",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 03",
+      "parameters": {
+        "attack": 0.449,
+        "decay": 0.521,
+        "sustain": 0.077,
+        "release": 0.0,
+        "filter_cutoff": 0.75,
+        "filter_resonance": 0.023,
+        "tune": -0.679,
+        "gain": 1.027,
+        "character": 0.52
+      }
+    },
+    {
+      "id": "kick_07_x102",
+      "name": "Kick 07 X102",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 07",
+      "parameters": {
+        "attack": 0.461,
+        "decay": 0.053,
+        "sustain": 0.019,
+        "release": 0.0,
+        "filter_cutoff": 0.669,
+        "filter_resonance": 0.153,
+        "tune": -0.033,
+        "gain": 0.769,
+        "character": 0.399
+      }
+    },
+    {
+      "id": "tight_snare_02_x103",
+      "name": "Tight Snare 02 X103",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 02",
+      "parameters": {
+        "attack": 0.323,
+        "decay": 0.301,
+        "sustain": 0.071,
+        "release": 0.956,
+        "filter_cutoff": 0.863,
+        "filter_resonance": 0.252,
+        "tune": -0.881,
+        "gain": 0.756,
+        "character": 0.418
+      }
+    },
+    {
+      "id": "kick_07_x104",
+      "name": "Kick 07 X104",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 07",
+      "parameters": {
+        "attack": 0.5,
+        "decay": 0.0,
+        "sustain": 0.023,
+        "release": 0.082,
+        "filter_cutoff": 0.659,
+        "filter_resonance": 0.147,
+        "tune": 0.396,
+        "gain": 0.811,
+        "character": 0.414
+      }
+    },
+    {
+      "id": "rim_shot_01_x105",
+      "name": "Rim Shot 01 X105",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 01",
+      "parameters": {
+        "attack": 0.057,
+        "decay": 0.097,
+        "sustain": 0.05,
+        "release": 0.167,
+        "filter_cutoff": 0.812,
+        "filter_resonance": 0.036,
+        "tune": -1.892,
+        "gain": 0.594,
+        "character": 0.524
+      }
+    },
+    {
+      "id": "rim_shot_07_x106",
+      "name": "Rim Shot 07 X106",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 07",
+      "parameters": {
+        "attack": 0.046,
+        "decay": 0.0,
+        "sustain": 0.004,
+        "release": 0.671,
+        "filter_cutoff": 0.931,
+        "filter_resonance": 0.202,
+        "tune": -0.137,
+        "gain": 0.714,
+        "character": 0.45
+      }
+    },
+    {
+      "id": "hi_hat_08_x107",
+      "name": "Hi-Hat 08 X107",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 08",
+      "parameters": {
+        "attack": 0.028,
+        "decay": 0.0,
+        "sustain": 0.0,
+        "release": 0.029,
+        "filter_cutoff": 0.943,
+        "filter_resonance": 0.023,
+        "tune": 2.015,
+        "gain": 0.661,
+        "character": 0.325
+      }
+    },
+    {
+      "id": "rim_shot_01_x108",
+      "name": "Rim Shot 01 X108",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 01",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.127,
+        "sustain": 0.036,
+        "release": 0.0,
+        "filter_cutoff": 0.801,
+        "filter_resonance": 0.043,
+        "tune": -1.617,
+        "gain": 0.617,
+        "character": 0.51
+      }
+    },
+    {
+      "id": "hi_hat_06_x109",
+      "name": "Hi-Hat 06 X109",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 06",
+      "parameters": {
+        "attack": 0.059,
+        "decay": 0.0,
+        "sustain": 0.078,
+        "release": 0.0,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.033,
+        "tune": 1.765,
+        "gain": 0.673,
+        "character": 0.327
+      }
+    },
+    {
+      "id": "rim_shot_x110",
+      "name": "Rim Shot X110",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot",
+      "parameters": {
+        "attack": 0.055,
+        "decay": 0.0,
+        "sustain": 0.005,
+        "release": 0.16,
+        "filter_cutoff": 0.872,
+        "filter_resonance": 0.086,
+        "tune": 0.005,
+        "gain": 0.743,
+        "character": 0.441
+      }
+    },
+    {
+      "id": "kick_05_x111",
+      "name": "Kick 05 X111",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 05",
+      "parameters": {
+        "attack": 0.043,
+        "decay": 0.035,
+        "sustain": 0.0,
+        "release": 0.107,
+        "filter_cutoff": 0.575,
+        "filter_resonance": 0.104,
+        "tune": -1.299,
+        "gain": 0.835,
+        "character": 0.483
+      }
+    },
+    {
+      "id": "trap_clap_05_x112",
+      "name": "Trap Clap 05 X112",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 05",
+      "parameters": {
+        "attack": 0.005,
+        "decay": 0.039,
+        "sustain": 0.003,
+        "release": 0.469,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.086,
+        "tune": 0.372,
+        "gain": 0.688,
+        "character": 0.432
+      }
+    },
+    {
+      "id": "trap_clap_05_x113",
+      "name": "Trap Clap 05 X113",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 05",
+      "parameters": {
+        "attack": 0.012,
+        "decay": 0.038,
+        "sustain": 0.0,
+        "release": 0.435,
+        "filter_cutoff": 0.944,
+        "filter_resonance": 0.075,
+        "tune": 0.408,
+        "gain": 0.7,
+        "character": 0.397
+      }
+    },
+    {
+      "id": "kick_02_x114",
+      "name": "Kick 02 X114",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 02",
+      "parameters": {
+        "attack": 0.487,
+        "decay": 0.0,
+        "sustain": 0.029,
+        "release": 0.915,
+        "filter_cutoff": 0.685,
+        "filter_resonance": 0.203,
+        "tune": 2.319,
+        "gain": 1.147,
+        "character": 0.435
+      }
+    },
+    {
+      "id": "tight_snare_02_x115",
+      "name": "Tight Snare 02 X115",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 02",
+      "parameters": {
+        "attack": 0.28,
+        "decay": 0.256,
+        "sustain": 0.079,
+        "release": 1.18,
+        "filter_cutoff": 0.805,
+        "filter_resonance": 0.275,
+        "tune": -0.558,
+        "gain": 0.686,
+        "character": 0.458
+      }
+    },
+    {
+      "id": "trap_clap_02_x116",
+      "name": "Trap Clap 02 X116",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 02",
+      "parameters": {
+        "attack": 0.417,
+        "decay": 0.527,
+        "sustain": 0.002,
+        "release": 0.989,
+        "filter_cutoff": 0.922,
+        "filter_resonance": 0.072,
+        "tune": -0.185,
+        "gain": 0.953,
+        "character": 0.381
+      }
+    },
+    {
+      "id": "tight_snare_01_x117",
+      "name": "Tight Snare 01 X117",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 01",
+      "parameters": {
+        "attack": 0.053,
+        "decay": 0.077,
+        "sustain": 0.003,
+        "release": 0.132,
+        "filter_cutoff": 0.725,
+        "filter_resonance": 0.095,
+        "tune": 0.588,
+        "gain": 0.781,
+        "character": 0.375
+      }
+    },
+    {
+      "id": "hi_hat_07_x118",
+      "name": "Hi-Hat 07 X118",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 07",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.48,
+        "sustain": 0.007,
+        "release": 0.535,
+        "filter_cutoff": 0.98,
+        "filter_resonance": 0.0,
+        "tune": -0.799,
+        "gain": 0.827,
+        "character": 0.203
+      }
+    },
+    {
+      "id": "rim_shot_06_x119",
+      "name": "Rim Shot 06 X119",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 06",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.536,
+        "sustain": 0.008,
+        "release": 0.0,
+        "filter_cutoff": 0.968,
+        "filter_resonance": 0.012,
+        "tune": -0.224,
+        "gain": 0.692,
+        "character": 0.406
+      }
+    },
+    {
+      "id": "hi_hat_04_x120",
+      "name": "Hi-Hat 04 X120",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 04",
+      "parameters": {
+        "attack": 0.382,
+        "decay": 0.24,
+        "sustain": 0.0,
+        "release": 0.0,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.164,
+        "tune": 0.928,
+        "gain": 0.977,
+        "character": 0.295
+      }
+    },
+    {
+      "id": "rim_shot_05_x121",
+      "name": "Rim Shot 05 X121",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 05",
+      "parameters": {
+        "attack": 0.342,
+        "decay": 0.343,
+        "sustain": 0.0,
+        "release": 0.986,
+        "filter_cutoff": 0.928,
+        "filter_resonance": 0.119,
+        "tune": -0.001,
+        "gain": 0.805,
+        "character": 0.355
+      }
+    },
+    {
+      "id": "trap_clap_08_x122",
+      "name": "Trap Clap 08 X122",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 08",
+      "parameters": {
+        "attack": 0.004,
+        "decay": 0.398,
+        "sustain": 0.0,
+        "release": 0.032,
+        "filter_cutoff": 0.968,
+        "filter_resonance": 0.022,
+        "tune": -0.204,
+        "gain": 0.603,
+        "character": 0.473
+      }
+    },
+    {
+      "id": "tight_snare_05_x123",
+      "name": "Tight Snare 05 X123",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 05",
+      "parameters": {
+        "attack": 0.019,
+        "decay": 0.109,
+        "sustain": 0.053,
+        "release": 0.094,
+        "filter_cutoff": 0.952,
+        "filter_resonance": 0.127,
+        "tune": 0.231,
+        "gain": 0.978,
+        "character": 0.401
+      }
+    },
+    {
+      "id": "trap_clap_04_x124",
+      "name": "Trap Clap 04 X124",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 04",
+      "parameters": {
+        "attack": 0.067,
+        "decay": 0.027,
+        "sustain": 0.006,
+        "release": 0.685,
+        "filter_cutoff": 0.825,
+        "filter_resonance": 0.041,
+        "tune": -0.228,
+        "gain": 0.931,
+        "character": 0.574
+      }
+    },
+    {
+      "id": "hi_hat_06_x125",
+      "name": "Hi-Hat 06 X125",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 06",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.0,
+        "sustain": 0.084,
+        "release": 0.0,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.062,
+        "tune": 2.319,
+        "gain": 0.725,
+        "character": 0.262
+      }
+    },
+    {
+      "id": "tight_snare_x126",
+      "name": "Tight Snare X126",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare",
+      "parameters": {
+        "attack": 0.017,
+        "decay": 0.159,
+        "sustain": 0.003,
+        "release": 0.081,
+        "filter_cutoff": 0.832,
+        "filter_resonance": 0.156,
+        "tune": 0.43,
+        "gain": 0.864,
+        "character": 0.406
+      }
+    },
+    {
+      "id": "hi_hat_07_x127",
+      "name": "Hi-Hat 07 X127",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 07",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.477,
+        "sustain": 0.0,
+        "release": 0.403,
+        "filter_cutoff": 0.95,
+        "filter_resonance": 0.02,
+        "tune": -0.339,
+        "gain": 0.713,
+        "character": 0.207
+      }
+    },
+    {
+      "id": "kick_07_x128",
+      "name": "Kick 07 X128",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 07",
+      "parameters": {
+        "attack": 0.455,
+        "decay": 0.042,
+        "sustain": 0.019,
+        "release": 0.0,
+        "filter_cutoff": 0.6,
+        "filter_resonance": 0.15,
+        "tune": -0.396,
+        "gain": 0.798,
+        "character": 0.39
+      }
+    },
+    {
+      "id": "rim_shot_05_x129",
+      "name": "Rim Shot 05 X129",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 05",
+      "parameters": {
+        "attack": 0.419,
+        "decay": 0.338,
+        "sustain": 0.011,
+        "release": 0.905,
+        "filter_cutoff": 0.932,
+        "filter_resonance": 0.132,
+        "tune": 1.028,
+        "gain": 0.806,
+        "character": 0.374
+      }
+    },
+    {
+      "id": "tight_snare_08_x130",
+      "name": "Tight Snare 08 X130",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 08",
+      "parameters": {
+        "attack": 0.009,
+        "decay": 0.534,
+        "sustain": 0.059,
+        "release": 0.47,
+        "filter_cutoff": 0.91,
+        "filter_resonance": 0.031,
+        "tune": 1.198,
+        "gain": 0.813,
+        "character": 0.443
+      }
+    },
+    {
+      "id": "rim_shot_03_x131",
+      "name": "Rim Shot 03 X131",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 03",
+      "parameters": {
+        "attack": 0.26,
+        "decay": 0.0,
+        "sustain": 0.023,
+        "release": 0.063,
+        "filter_cutoff": 0.926,
+        "filter_resonance": 0.189,
+        "tune": 0.252,
+        "gain": 0.872,
+        "character": 0.407
+      }
+    },
+    {
+      "id": "trap_clap_08_x132",
+      "name": "Trap Clap 08 X132",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.418,
+        "sustain": 0.011,
+        "release": 0.0,
+        "filter_cutoff": 0.987,
+        "filter_resonance": 0.0,
+        "tune": -0.607,
+        "gain": 0.658,
+        "character": 0.464
+      }
+    },
+    {
+      "id": "trap_clap_04_x133",
+      "name": "Trap Clap 04 X133",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 04",
+      "parameters": {
+        "attack": 0.067,
+        "decay": 0.001,
+        "sustain": 0.0,
+        "release": 0.775,
+        "filter_cutoff": 0.773,
+        "filter_resonance": 0.039,
+        "tune": -0.824,
+        "gain": 0.915,
+        "character": 0.547
+      }
+    },
+    {
+      "id": "kick_04_x134",
+      "name": "Kick 04 X134",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 04",
+      "parameters": {
+        "attack": 0.545,
+        "decay": 0.211,
+        "sustain": 0.098,
+        "release": 0.0,
+        "filter_cutoff": 0.63,
+        "filter_resonance": 0.234,
+        "tune": -0.219,
+        "gain": 0.997,
+        "character": 0.583
+      }
+    },
+    {
+      "id": "hi_hat_x135",
+      "name": "Hi-Hat X135",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.089,
+        "sustain": 0.0,
+        "release": 0.011,
+        "filter_cutoff": 0.961,
+        "filter_resonance": 0.073,
+        "tune": 0.136,
+        "gain": 0.723,
+        "character": 0.269
+      }
+    },
+    {
+      "id": "trap_clap_06_x136",
+      "name": "Trap Clap 06 X136",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 06",
+      "parameters": {
+        "attack": 0.029,
+        "decay": 0.0,
+        "sustain": 0.095,
+        "release": 0.0,
+        "filter_cutoff": 0.869,
+        "filter_resonance": 0.164,
+        "tune": -1.65,
+        "gain": 0.923,
+        "character": 0.477
+      }
+    },
+    {
+      "id": "kick_x137",
+      "name": "Kick X137",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick",
+      "parameters": {
+        "attack": 0.041,
+        "decay": 0.241,
+        "sustain": 0.011,
+        "release": 0.006,
+        "filter_cutoff": 0.584,
+        "filter_resonance": 0.21,
+        "tune": 0.279,
+        "gain": 1.044,
+        "character": 0.503
+      }
+    },
+    {
+      "id": "tight_snare_07_x138",
+      "name": "Tight Snare 07 X138",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 07",
+      "parameters": {
+        "attack": 0.03,
+        "decay": 0.552,
+        "sustain": 0.073,
+        "release": 0.114,
+        "filter_cutoff": 0.835,
+        "filter_resonance": 0.023,
+        "tune": -1.643,
+        "gain": 0.649,
+        "character": 0.369
+      }
+    },
+    {
+      "id": "tight_snare_04_x139",
+      "name": "Tight Snare 04 X139",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 04",
+      "parameters": {
+        "attack": 0.421,
+        "decay": 0.48,
+        "sustain": 0.003,
+        "release": 0.0,
+        "filter_cutoff": 0.768,
+        "filter_resonance": 0.083,
+        "tune": 0.521,
+        "gain": 0.768,
+        "character": 0.447
+      }
+    },
+    {
+      "id": "tight_snare_03_x140",
+      "name": "Tight Snare 03 X140",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 03",
+      "parameters": {
+        "attack": 0.07,
+        "decay": 0.0,
+        "sustain": 0.014,
+        "release": 0.0,
+        "filter_cutoff": 0.908,
+        "filter_resonance": 0.14,
+        "tune": 0.435,
+        "gain": 0.897,
+        "character": 0.496
+      }
+    },
+    {
+      "id": "kick_02_x141",
+      "name": "Kick 02 X141",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 02",
+      "parameters": {
+        "attack": 0.477,
+        "decay": 0.0,
+        "sustain": 0.014,
+        "release": 1.03,
+        "filter_cutoff": 0.654,
+        "filter_resonance": 0.155,
+        "tune": 2.319,
+        "gain": 1.17,
+        "character": 0.392
+      }
+    },
+    {
+      "id": "trap_clap_01_x142",
+      "name": "Trap Clap 01 X142",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 01",
+      "parameters": {
+        "attack": 0.177,
+        "decay": 0.0,
+        "sustain": 0.0,
+        "release": 0.114,
+        "filter_cutoff": 0.823,
+        "filter_resonance": 0.1,
+        "tune": 0.539,
+        "gain": 0.912,
+        "character": 0.499
+      }
+    },
+    {
+      "id": "trap_clap_02_x143",
+      "name": "Trap Clap 02 X143",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 02",
+      "parameters": {
+        "attack": 0.437,
+        "decay": 0.574,
+        "sustain": 0.0,
+        "release": 1.01,
+        "filter_cutoff": 0.93,
+        "filter_resonance": 0.078,
+        "tune": 0.247,
+        "gain": 0.842,
+        "character": 0.467
+      }
+    },
+    {
+      "id": "trap_clap_02_x144",
+      "name": "Trap Clap 02 X144",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 02",
+      "parameters": {
+        "attack": 0.448,
+        "decay": 0.606,
+        "sustain": 0.007,
+        "release": 0.927,
+        "filter_cutoff": 0.862,
+        "filter_resonance": 0.064,
+        "tune": -0.249,
+        "gain": 0.942,
+        "character": 0.404
+      }
+    },
+    {
+      "id": "kick_08_x145",
+      "name": "Kick 08 X145",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.029,
+        "sustain": 0.0,
+        "release": 0.429,
+        "filter_cutoff": 0.674,
+        "filter_resonance": 0.265,
+        "tune": -2.179,
+        "gain": 1.136,
+        "character": 0.428
+      }
+    },
+    {
+      "id": "rim_shot_07_x146",
+      "name": "Rim Shot 07 X146",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 07",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.066,
+        "sustain": 0.0,
+        "release": 0.834,
+        "filter_cutoff": 0.924,
+        "filter_resonance": 0.161,
+        "tune": -0.559,
+        "gain": 0.715,
+        "character": 0.421
+      }
+    },
+    {
+      "id": "tight_snare_08_x147",
+      "name": "Tight Snare 08 X147",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.422,
+        "sustain": 0.064,
+        "release": 0.485,
+        "filter_cutoff": 0.941,
+        "filter_resonance": 0.043,
+        "tune": 2.018,
+        "gain": 0.838,
+        "character": 0.389
+      }
+    },
+    {
+      "id": "tight_snare_02_x148",
+      "name": "Tight Snare 02 X148",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 02",
+      "parameters": {
+        "attack": 0.322,
+        "decay": 0.347,
+        "sustain": 0.079,
+        "release": 1.091,
+        "filter_cutoff": 0.876,
+        "filter_resonance": 0.26,
+        "tune": -0.783,
+        "gain": 0.722,
+        "character": 0.438
+      }
+    },
+    {
+      "id": "rim_shot_01_x149",
+      "name": "Rim Shot 01 X149",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 01",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.152,
+        "sustain": 0.045,
+        "release": 0.079,
+        "filter_cutoff": 0.789,
+        "filter_resonance": 0.041,
+        "tune": -1.5,
+        "gain": 0.576,
+        "character": 0.512
+      }
+    },
+    {
+      "id": "rim_shot_05_x150",
+      "name": "Rim Shot 05 X150",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 05",
+      "parameters": {
+        "attack": 0.389,
+        "decay": 0.318,
+        "sustain": 0.001,
+        "release": 0.932,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.101,
+        "tune": 0.931,
+        "gain": 0.706,
+        "character": 0.384
+      }
+    },
+    {
+      "id": "hi_hat_08_x151",
+      "name": "Hi-Hat 08 X151",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 08",
+      "parameters": {
+        "attack": 0.016,
+        "decay": 0.029,
+        "sustain": 0.005,
+        "release": 0.05,
+        "filter_cutoff": 0.946,
+        "filter_resonance": 0.017,
+        "tune": 2.012,
+        "gain": 0.565,
+        "character": 0.401
+      }
+    },
+    {
+      "id": "kick_04_x152",
+      "name": "Kick 04 X152",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 04",
+      "parameters": {
+        "attack": 0.447,
+        "decay": 0.19,
+        "sustain": 0.089,
+        "release": 0.0,
+        "filter_cutoff": 0.684,
+        "filter_resonance": 0.226,
+        "tune": 0.257,
+        "gain": 1.028,
+        "character": 0.573
+      }
+    },
+    {
+      "id": "trap_clap_02_x153",
+      "name": "Trap Clap 02 X153",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 02",
+      "parameters": {
+        "attack": 0.513,
+        "decay": 0.626,
+        "sustain": 0.0,
+        "release": 1.006,
+        "filter_cutoff": 0.883,
+        "filter_resonance": 0.012,
+        "tune": 0.029,
+        "gain": 0.851,
+        "character": 0.416
+      }
+    },
+    {
+      "id": "hi_hat_03_x154",
+      "name": "Hi-Hat 03 X154",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 03",
+      "parameters": {
+        "attack": 0.011,
+        "decay": 0.515,
+        "sustain": 0.005,
+        "release": 0.0,
+        "filter_cutoff": 0.996,
+        "filter_resonance": 0.127,
+        "tune": 0.195,
+        "gain": 0.663,
+        "character": 0.231
+      }
+    },
+    {
+      "id": "hi_hat_06_x155",
+      "name": "Hi-Hat 06 X155",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 06",
+      "parameters": {
+        "attack": 0.042,
+        "decay": 0.0,
+        "sustain": 0.078,
+        "release": 0.0,
+        "filter_cutoff": 0.954,
+        "filter_resonance": 0.066,
+        "tune": 1.768,
+        "gain": 0.689,
+        "character": 0.326
+      }
+    },
+    {
+      "id": "tight_snare_08_x156",
+      "name": "Tight Snare 08 X156",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.478,
+        "sustain": 0.05,
+        "release": 0.516,
+        "filter_cutoff": 0.952,
+        "filter_resonance": 0.046,
+        "tune": 1.869,
+        "gain": 0.871,
+        "character": 0.398
+      }
+    },
+    {
+      "id": "rim_shot_06_x157",
+      "name": "Rim Shot 06 X157",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 06",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.446,
+        "sustain": 0.009,
+        "release": 0.0,
+        "filter_cutoff": 0.93,
+        "filter_resonance": 0.007,
+        "tune": -0.364,
+        "gain": 0.672,
+        "character": 0.435
+      }
+    },
+    {
+      "id": "hi_hat_08_x158",
+      "name": "Hi-Hat 08 X158",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 08",
+      "parameters": {
+        "attack": 0.003,
+        "decay": 0.022,
+        "sustain": 0.0,
+        "release": 0.105,
+        "filter_cutoff": 0.961,
+        "filter_resonance": 0.03,
+        "tune": 2.214,
+        "gain": 0.678,
+        "character": 0.357
+      }
+    },
+    {
+      "id": "kick_08_x159",
+      "name": "Kick 08 X159",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 08",
+      "parameters": {
+        "attack": 0.048,
+        "decay": 0.0,
+        "sustain": 0.003,
+        "release": 0.346,
+        "filter_cutoff": 0.605,
+        "filter_resonance": 0.27,
+        "tune": -1.89,
+        "gain": 1.095,
+        "character": 0.379
+      }
+    },
+    {
+      "id": "rim_shot_02_x160",
+      "name": "Rim Shot 02 X160",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 02",
+      "parameters": {
+        "attack": 0.16,
+        "decay": 0.043,
+        "sustain": 0.0,
+        "release": 0.709,
+        "filter_cutoff": 0.858,
+        "filter_resonance": 0.012,
+        "tune": 0.306,
+        "gain": 0.607,
+        "character": 0.38
+      }
+    },
+    {
+      "id": "kick_05_x161",
+      "name": "Kick 05 X161",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 05",
+      "parameters": {
+        "attack": 0.044,
+        "decay": 0.099,
+        "sustain": 0.0,
+        "release": 0.068,
+        "filter_cutoff": 0.53,
+        "filter_resonance": 0.144,
+        "tune": -1.57,
+        "gain": 0.786,
+        "character": 0.422
+      }
+    },
+    {
+      "id": "kick_05_x162",
+      "name": "Kick 05 X162",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 05",
+      "parameters": {
+        "attack": 0.055,
+        "decay": 0.015,
+        "sustain": 0.0,
+        "release": 0.103,
+        "filter_cutoff": 0.533,
+        "filter_resonance": 0.119,
+        "tune": -1.068,
+        "gain": 0.774,
+        "character": 0.455
+      }
+    },
+    {
+      "id": "kick_04_x163",
+      "name": "Kick 04 X163",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 04",
+      "parameters": {
+        "attack": 0.531,
+        "decay": 0.16,
+        "sustain": 0.109,
+        "release": 0.105,
+        "filter_cutoff": 0.682,
+        "filter_resonance": 0.269,
+        "tune": 0.365,
+        "gain": 1.09,
+        "character": 0.569
+      }
+    },
+    {
+      "id": "tight_snare_08_x164",
+      "name": "Tight Snare 08 X164",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 08",
+      "parameters": {
+        "attack": 0.028,
+        "decay": 0.429,
+        "sustain": 0.064,
+        "release": 0.46,
+        "filter_cutoff": 0.939,
+        "filter_resonance": 0.043,
+        "tune": 1.604,
+        "gain": 0.786,
+        "character": 0.408
+      }
+    },
+    {
+      "id": "tight_snare_04_x165",
+      "name": "Tight Snare 04 X165",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 04",
+      "parameters": {
+        "attack": 0.495,
+        "decay": 0.56,
+        "sustain": 0.0,
+        "release": 0.0,
+        "filter_cutoff": 0.758,
+        "filter_resonance": 0.07,
+        "tune": 0.125,
+        "gain": 0.754,
+        "character": 0.462
+      }
+    },
+    {
+      "id": "trap_clap_01_x166",
+      "name": "Trap Clap 01 X166",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 01",
+      "parameters": {
+        "attack": 0.162,
+        "decay": 0.0,
+        "sustain": 0.01,
+        "release": 0.0,
+        "filter_cutoff": 0.851,
+        "filter_resonance": 0.093,
+        "tune": 0.786,
+        "gain": 0.915,
+        "character": 0.498
+      }
+    },
+    {
+      "id": "hi_hat_03_x167",
+      "name": "Hi-Hat 03 X167",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 03",
+      "parameters": {
+        "attack": 0.044,
+        "decay": 0.48,
+        "sustain": 0.0,
+        "release": 0.0,
+        "filter_cutoff": 0.932,
+        "filter_resonance": 0.166,
+        "tune": 0.011,
+        "gain": 0.643,
+        "character": 0.22
+      }
+    },
+    {
+      "id": "trap_clap_x168",
+      "name": "Trap Clap X168",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap",
+      "parameters": {
+        "attack": 0.053,
+        "decay": 0.059,
+        "sustain": 0.0,
+        "release": 0.074,
+        "filter_cutoff": 0.956,
+        "filter_resonance": 0.077,
+        "tune": 0.206,
+        "gain": 0.838,
+        "character": 0.527
+      }
+    },
+    {
+      "id": "rim_shot_05_x169",
+      "name": "Rim Shot 05 X169",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 05",
+      "parameters": {
+        "attack": 0.419,
+        "decay": 0.262,
+        "sustain": 0.0,
+        "release": 1.047,
+        "filter_cutoff": 0.992,
+        "filter_resonance": 0.151,
+        "tune": 0.28,
+        "gain": 0.829,
+        "character": 0.375
+      }
+    },
+    {
+      "id": "tight_snare_08_x170",
+      "name": "Tight Snare 08 X170",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.535,
+        "sustain": 0.044,
+        "release": 0.42,
+        "filter_cutoff": 0.944,
+        "filter_resonance": 0.051,
+        "tune": 1.772,
+        "gain": 0.816,
+        "character": 0.367
+      }
+    },
+    {
+      "id": "kick_06_x171",
+      "name": "Kick 06 X171",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 06",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.057,
+        "sustain": 0.0,
+        "release": 0.0,
+        "filter_cutoff": 0.676,
+        "filter_resonance": 0.136,
+        "tune": -1.891,
+        "gain": 1.01,
+        "character": 0.483
+      }
+    },
+    {
+      "id": "kick_03_x172",
+      "name": "Kick 03 X172",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 03",
+      "parameters": {
+        "attack": 0.087,
+        "decay": 0.036,
+        "sustain": 0.0,
+        "release": 0.002,
+        "filter_cutoff": 0.559,
+        "filter_resonance": 0.292,
+        "tune": -2.256,
+        "gain": 0.985,
+        "character": 0.608
+      }
+    },
+    {
+      "id": "rim_shot_05_x173",
+      "name": "Rim Shot 05 X173",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 05",
+      "parameters": {
+        "attack": 0.415,
+        "decay": 0.381,
+        "sustain": 0.0,
+        "release": 1.147,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.112,
+        "tune": 0.714,
+        "gain": 0.74,
+        "character": 0.405
+      }
+    },
+    {
+      "id": "rim_shot_x174",
+      "name": "Rim Shot X174",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot",
+      "parameters": {
+        "attack": 0.036,
+        "decay": 0.112,
+        "sustain": 0.001,
+        "release": 0.048,
+        "filter_cutoff": 0.925,
+        "filter_resonance": 0.087,
+        "tune": 0.322,
+        "gain": 0.753,
+        "character": 0.374
+      }
+    },
+    {
+      "id": "hi_hat_07_x175",
+      "name": "Hi-Hat 07 X175",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 07",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.403,
+        "sustain": 0.018,
+        "release": 0.461,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.031,
+        "tune": -0.989,
+        "gain": 0.809,
+        "character": 0.247
+      }
+    },
+    {
+      "id": "hi_hat_04_x176",
+      "name": "Hi-Hat 04 X176",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 04",
+      "parameters": {
+        "attack": 0.384,
+        "decay": 0.222,
+        "sustain": 0.013,
+        "release": 0.079,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.105,
+        "tune": 1.025,
+        "gain": 0.917,
+        "character": 0.313
+      }
+    },
+    {
+      "id": "hi_hat_01_x177",
+      "name": "Hi-Hat 01 X177",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 01",
+      "parameters": {
+        "attack": 0.242,
+        "decay": 0.059,
+        "sustain": 0.001,
+        "release": 0.055,
+        "filter_cutoff": 0.981,
+        "filter_resonance": 0.028,
+        "tune": 1.459,
+        "gain": 0.691,
+        "character": 0.295
+      }
+    },
+    {
+      "id": "trap_clap_07_x178",
+      "name": "Trap Clap 07 X178",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 07",
+      "parameters": {
+        "attack": 0.088,
+        "decay": 0.395,
+        "sustain": 0.021,
+        "release": 0.19,
+        "filter_cutoff": 0.888,
+        "filter_resonance": 0.0,
+        "tune": -0.02,
+        "gain": 0.918,
+        "character": 0.525
+      }
+    },
+    {
+      "id": "trap_clap_08_x179",
+      "name": "Trap Clap 08 X179",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 08",
+      "parameters": {
+        "attack": 0.026,
+        "decay": 0.396,
+        "sustain": 0.0,
+        "release": 0.018,
+        "filter_cutoff": 0.945,
+        "filter_resonance": 0.0,
+        "tune": 0.374,
+        "gain": 0.596,
+        "character": 0.487
+      }
+    },
+    {
+      "id": "trap_clap_03_x180",
+      "name": "Trap Clap 03 X180",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 03",
+      "parameters": {
+        "attack": 0.49,
+        "decay": 0.508,
+        "sustain": 0.086,
+        "release": 0.03,
+        "filter_cutoff": 0.77,
+        "filter_resonance": 0.021,
+        "tune": -0.103,
+        "gain": 1.089,
+        "character": 0.493
+      }
+    },
+    {
+      "id": "rim_shot_05_x181",
+      "name": "Rim Shot 05 X181",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 05",
+      "parameters": {
+        "attack": 0.419,
+        "decay": 0.27,
+        "sustain": 0.0,
+        "release": 1.09,
+        "filter_cutoff": 0.979,
+        "filter_resonance": 0.137,
+        "tune": 0.962,
+        "gain": 0.794,
+        "character": 0.344
+      }
+    },
+    {
+      "id": "kick_03_x182",
+      "name": "Kick 03 X182",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 03",
+      "parameters": {
+        "attack": 0.179,
+        "decay": 0.0,
+        "sustain": 0.0,
+        "release": 0.0,
+        "filter_cutoff": 0.536,
+        "filter_resonance": 0.263,
+        "tune": -1.519,
+        "gain": 0.941,
+        "character": 0.551
+      }
+    },
+    {
+      "id": "tight_snare_x183",
+      "name": "Tight Snare X183",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.183,
+        "sustain": 0.0,
+        "release": 0.165,
+        "filter_cutoff": 0.804,
+        "filter_resonance": 0.136,
+        "tune": -0.474,
+        "gain": 0.848,
+        "character": 0.458
+      }
+    },
+    {
+      "id": "kick_03_x184",
+      "name": "Kick 03 X184",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 03",
+      "parameters": {
+        "attack": 0.123,
+        "decay": 0.053,
+        "sustain": 0.0,
+        "release": 0.0,
+        "filter_cutoff": 0.556,
+        "filter_resonance": 0.29,
+        "tune": -2.279,
+        "gain": 0.983,
+        "character": 0.581
+      }
+    },
+    {
+      "id": "tight_snare_03_x185",
+      "name": "Tight Snare 03 X185",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 03",
+      "parameters": {
+        "attack": 0.092,
+        "decay": 0.012,
+        "sustain": 0.001,
+        "release": 0.053,
+        "filter_cutoff": 0.917,
+        "filter_resonance": 0.15,
+        "tune": 0.795,
+        "gain": 0.948,
+        "character": 0.564
+      }
+    },
+    {
+      "id": "trap_clap_04_x186",
+      "name": "Trap Clap 04 X186",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 04",
+      "parameters": {
+        "attack": 0.133,
+        "decay": 0.0,
+        "sustain": 0.01,
+        "release": 0.669,
+        "filter_cutoff": 0.833,
+        "filter_resonance": 0.04,
+        "tune": -1.009,
+        "gain": 0.912,
+        "character": 0.516
+      }
+    },
+    {
+      "id": "hi_hat_01_x187",
+      "name": "Hi-Hat 01 X187",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 01",
+      "parameters": {
+        "attack": 0.319,
+        "decay": 0.001,
+        "sustain": 0.0,
+        "release": 0.027,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.0,
+        "tune": 1.803,
+        "gain": 0.689,
+        "character": 0.271
+      }
+    },
+    {
+      "id": "hi_hat_01_x188",
+      "name": "Hi-Hat 01 X188",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 01",
+      "parameters": {
+        "attack": 0.216,
+        "decay": 0.0,
+        "sustain": 0.0,
+        "release": 0.056,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.029,
+        "tune": 1.688,
+        "gain": 0.66,
+        "character": 0.296
+      }
+    },
+    {
+      "id": "rim_shot_03_x189",
+      "name": "Rim Shot 03 X189",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 03",
+      "parameters": {
+        "attack": 0.195,
+        "decay": 0.0,
+        "sustain": 0.019,
+        "release": 0.0,
+        "filter_cutoff": 0.877,
+        "filter_resonance": 0.156,
+        "tune": 0.495,
+        "gain": 0.859,
+        "character": 0.476
+      }
+    },
+    {
+      "id": "tight_snare_04_x190",
+      "name": "Tight Snare 04 X190",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 04",
+      "parameters": {
+        "attack": 0.473,
+        "decay": 0.538,
+        "sustain": 0.01,
+        "release": 0.0,
+        "filter_cutoff": 0.761,
+        "filter_resonance": 0.086,
+        "tune": -0.045,
+        "gain": 0.749,
+        "character": 0.404
+      }
+    },
+    {
+      "id": "trap_clap_07_x191",
+      "name": "Trap Clap 07 X191",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 07",
+      "parameters": {
+        "attack": 0.174,
+        "decay": 0.488,
+        "sustain": 0.037,
+        "release": 0.17,
+        "filter_cutoff": 0.931,
+        "filter_resonance": 0.032,
+        "tune": -0.641,
+        "gain": 0.808,
+        "character": 0.58
+      }
+    },
+    {
+      "id": "kick_01_x192",
+      "name": "Kick 01 X192",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 01",
+      "parameters": {
+        "attack": 0.035,
+        "decay": 0.494,
+        "sustain": 0.007,
+        "release": 0.578,
+        "filter_cutoff": 0.535,
+        "filter_resonance": 0.169,
+        "tune": 0.541,
+        "gain": 1.065,
+        "character": 0.555
+      }
+    },
+    {
+      "id": "tight_snare_x193",
+      "name": "Tight Snare X193",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare",
+      "parameters": {
+        "attack": 0.047,
+        "decay": 0.171,
+        "sustain": 0.0,
+        "release": 0.184,
+        "filter_cutoff": 0.868,
+        "filter_resonance": 0.176,
+        "tune": -0.55,
+        "gain": 0.939,
+        "character": 0.409
+      }
+    },
+    {
+      "id": "rim_shot_x194",
+      "name": "Rim Shot X194",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.111,
+        "sustain": 0.0,
+        "release": 0.024,
+        "filter_cutoff": 0.864,
+        "filter_resonance": 0.104,
+        "tune": 0.082,
+        "gain": 0.844,
+        "character": 0.398
+      }
+    },
+    {
+      "id": "tight_snare_05_x195",
+      "name": "Tight Snare 05 X195",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Tight Snare 05",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.105,
+        "sustain": 0.047,
+        "release": 0.0,
+        "filter_cutoff": 0.903,
+        "filter_resonance": 0.142,
+        "tune": 0.305,
+        "gain": 0.979,
+        "character": 0.352
+      }
+    },
+    {
+      "id": "trap_clap_x196",
+      "name": "Trap Clap X196",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.019,
+        "sustain": 0.003,
+        "release": 0.115,
+        "filter_cutoff": 0.866,
+        "filter_resonance": 0.109,
+        "tune": -0.019,
+        "gain": 0.893,
+        "character": 0.481
+      }
+    },
+    {
+      "id": "hi_hat_07_x197",
+      "name": "Hi-Hat 07 X197",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 07",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.426,
+        "sustain": 0.0,
+        "release": 0.34,
+        "filter_cutoff": 0.976,
+        "filter_resonance": 0.004,
+        "tune": -0.819,
+        "gain": 0.706,
+        "character": 0.209
+      }
+    },
+    {
+      "id": "rim_shot_05_x198",
+      "name": "Rim Shot 05 X198",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 05",
+      "parameters": {
+        "attack": 0.441,
+        "decay": 0.308,
+        "sustain": 0.0,
+        "release": 0.975,
+        "filter_cutoff": 0.983,
+        "filter_resonance": 0.131,
+        "tune": 0.864,
+        "gain": 0.828,
+        "character": 0.416
+      }
+    },
+    {
+      "id": "trap_clap_05_x199",
+      "name": "Trap Clap 05 X199",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 05",
+      "parameters": {
+        "attack": 0.05,
+        "decay": 0.0,
+        "sustain": 0.0,
+        "release": 0.584,
+        "filter_cutoff": 0.968,
+        "filter_resonance": 0.057,
+        "tune": 0.81,
+        "gain": 0.786,
+        "character": 0.442
+      }
+    },
+    {
+      "id": "trap_clap_02_x200",
+      "name": "Trap Clap 02 X200",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 02",
+      "parameters": {
+        "attack": 0.444,
+        "decay": 0.606,
+        "sustain": 0.0,
+        "release": 0.892,
+        "filter_cutoff": 0.948,
+        "filter_resonance": 0.039,
+        "tune": -0.437,
+        "gain": 0.914,
+        "character": 0.453
+      }
+    },
+    {
+      "id": "trap_clap_x201",
+      "name": "Trap Clap X201",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap",
+      "parameters": {
+        "attack": 0.026,
+        "decay": 0.016,
+        "sustain": 0.002,
+        "release": 0.159,
+        "filter_cutoff": 0.864,
+        "filter_resonance": 0.079,
+        "tune": -0.53,
+        "gain": 0.835,
+        "character": 0.507
+      }
+    },
+    {
+      "id": "hi_hat_02_x202",
+      "name": "Hi-Hat 02 X202",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Hi-Hat 02",
+      "parameters": {
+        "attack": 0.247,
+        "decay": 0.053,
+        "sustain": 0.035,
+        "release": 0.201,
+        "filter_cutoff": 0.88,
+        "filter_resonance": 0.056,
+        "tune": 1.671,
+        "gain": 0.961,
+        "character": 0.381
+      }
+    },
+    {
+      "id": "kick_02_x203",
+      "name": "Kick 02 X203",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Kick 02",
+      "parameters": {
+        "attack": 0.493,
+        "decay": 0.063,
+        "sustain": 0.016,
+        "release": 1.095,
+        "filter_cutoff": 0.695,
+        "filter_resonance": 0.194,
+        "tune": 2.319,
+        "gain": 1.165,
+        "character": 0.423
+      }
+    },
+    {
+      "id": "rim_shot_04_x204",
+      "name": "Rim Shot 04 X204",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Rim Shot 04",
+      "parameters": {
+        "attack": 0.075,
+        "decay": 0.054,
+        "sustain": 0.013,
+        "release": 1.077,
+        "filter_cutoff": 0.889,
+        "filter_resonance": 0.122,
+        "tune": 1.781,
+        "gain": 0.669,
+        "character": 0.381
+      }
+    },
+    {
+      "id": "trap_clap_03_x205",
+      "name": "Trap Clap 03 X205",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Trap Clap 03",
+      "parameters": {
+        "attack": 0.449,
+        "decay": 0.551,
+        "sustain": 0.067,
+        "release": 0.0,
+        "filter_cutoff": 0.805,
+        "filter_resonance": 0.0,
+        "tune": 0.096,
+        "gain": 1.045,
+        "character": 0.531
       }
     }
   ]

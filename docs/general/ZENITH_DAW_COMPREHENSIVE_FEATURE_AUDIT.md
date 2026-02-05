@@ -245,7 +245,7 @@ Track → [Sends to Busses] → Bus Mixer → Master
 - ❌ Scale helpers (0% - not planned)
 - ❌ Groove/humanize/swing (basic quantize only)
 - ❌ MIDI CC lanes (planned Phase 9, not implemented)
-- ❌ MPE (planned Phase 11, not implemented)
+- ⚠️ MPE (70% complete - implemented in ZenithPolySynth, needs UI integration)
 
 **Critical Code Locations:**
 - `zenith-core/include/PianoRollComponent.h` (297 lines)

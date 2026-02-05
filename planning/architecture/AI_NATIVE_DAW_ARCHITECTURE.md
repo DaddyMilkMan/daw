@@ -1213,8 +1213,10 @@ The mix should sound clearer now. A/B it!
 | **Plugin Support** | ❌ None (new platform) | ✅ VST3/AU support |
 | **AI Quality** | ⚠️ Generic generation | ✅ Context-aware, learns style |
 | **Maturity** | ⚠️ Very new (2025) | ✅ Built on proven tech (JUCE) |
-| **Open Source** | ❌ Closed | ✅ Can be open-source core |
+| **Open Source** | ❌ Closed | ❌ 100% Proprietary |
 | **Customization** | ❌ Limited | ✅ Fully customizable |
+
+**Note on Licensing:** **Zenith DAW is 100% proprietary closed-source software.**
 
 ---
 
@@ -1222,31 +1224,20 @@ The mix should sound clearer now. A/B it!
 
 ### Pricing Strategy
 
-**Option 1: Freemium**
-- Free tier: Basic DAW + limited AI calls (10/day)
-- Pro tier ($19/mo): Unlimited AI, advanced features
-- Studio tier ($49/mo): Cloud collaboration, team features
+**Zenith DAW Application: $100 (one-time purchase)**
 
-**Option 2: One-Time Purchase**
-- $99 perpetual license
-- AI credits sold separately (or subscription)
-- All updates free for 1 year
-
-**Option 3: Pay-What-You-Want**
-- Minimum $0 (truly free)
-- Suggested $49
-- All features included
-- Relies on generosity + premium support
-
-**Recommendation:** Start with Option 1 (freemium) to build user base.
+**AI Wingman Subscription (Add-on):**
+- Zenith Light: $10/month (Basic AI assistance)
+- Zenith Pro: $20/month (Advanced AI features)
+- Zenith Heavy: $50/month (Professional AI tools)
 
 ---
 
 ### Revenue Streams
 
-1. **Subscriptions** (recurring revenue)
-2. **AI API calls** (OpenAI costs passed to heavy users)
-3. **Sound packs** (genre-specific samples/presets)
+1. **DAW License Sales** (one-time $100)
+2. **AI Subscriptions** (recurring $10-50/month)
+3. **Future:** Premium sound packs (genre-specific samples/presets)
 4. **Premium plugins** (bundled AI-designed instruments)
 5. **Cloud storage** (project backups)
 6. **Enterprise licenses** (studios, schools)

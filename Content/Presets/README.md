@@ -4,13 +4,13 @@ Auto-generated comprehensive preset library for **ZenithPolySynth** and **Zenith
 
 ## Overview
 
-- **Total Presets:** 594
-- **ZenithPolySynth:** 414 presets
-- **ZenithSampler:** 180 presets
+- **Total Presets:** 2000
+- **ZenithPolySynth:** 1000 presets
+- **ZenithSampler:** 1000 presets
 
 All presets are professionally categorized and tagged for easy filtering through the CommandAPI and AI clients.
 
-## ZenithPolySynth Presets (414 Total)
+## ZenithPolySynth Presets (1000 Total)
 
 The ZenithPolySynth library covers all essential production categories:
 
@@ -18,13 +18,13 @@ The ZenithPolySynth library covers all essential production categories:
 
 | Category | Count | Description |
 |----------|-------|-------------|
-| **Bass** | 90 | 808s, subs, Reese basses, FM donks, acid basses |
-| **Lead** | 72 | Festival supersaws, mono screamers, vocal leads, glide leads |
-| **Pluck** | 60 | Future bass plucks, muted plucks, bell plucks, stabs |
-| **Pad** | 60 | Warm analog pads, airy digital pads, evolving drones, atmospheres |
-| **Arp** | 48 | Gate sequences, trance arps, trap triplet arps |
-| **FX** | 48 | Risers, downlifters, impacts, sweeps, zaps |
-| **Keys** | 36 | Electric pianos, bells, marimbas, vibes, music boxes |
+| **Bass** | 217 | 808s, subs, Reese basses, FM donks, acid basses |
+| **Lead** | 174 | Festival supersaws, mono screamers, vocal leads, glide leads |
+| **Pluck** | 145 | Future bass plucks, muted plucks, bell plucks, stabs |
+| **Pad** | 145 | Warm analog pads, airy digital pads, evolving drones, atmospheres |
+| **Arp** | 116 | Gate sequences, trance arps, trap triplet arps |
+| **FX** | 250 | Risers, downlifters, impacts, sweeps, zaps |
+| **Keys** | 250 | Electric pianos, bells, marimbas, vibes, music boxes |
 
 ### Example Presets
 
@@ -65,7 +65,7 @@ The ZenithPolySynth library covers all essential production categories:
 - Bell Keys (keys, bell, bright, melodic)
 - Marimba (keys, marimba, wood, percussive)
 
-## ZenithSampler Presets (180 Total)
+## ZenithSampler Presets (1000 Total)
 
 The ZenithSampler library provides versatile parameter presets for sample-based instruments.
 
@@ -73,10 +73,10 @@ The ZenithSampler library provides versatile parameter presets for sample-based 
 
 | Category | Count | Description |
 |----------|-------|-------------|
-| **808** | 45 | Classic 808 kits, sub 808s, punchy 808s, distorted 808s |
-| **Drums** | 45 | Trap claps, snares, hi-hats, kicks, rim shots |
-| **Keys** | 45 | LoFi pianos, electric keys, mallets, bells, toy pianos |
-| **FX** | 45 | Impact hits, risers, vox shots, whooshes, textures |
+| **808** | 250 | Classic 808 kits, sub 808s, punchy 808s, distorted 808s |
+| **Drums** | 250 | Trap claps, snares, hi-hats, kicks, rim shots |
+| **Keys** | 250 | LoFi pianos, electric keys, mallets, bells, toy pianos |
+| **FX** | 250 | Impact hits, risers, vox shots, whooshes, textures |
 
 ### Example Presets
 

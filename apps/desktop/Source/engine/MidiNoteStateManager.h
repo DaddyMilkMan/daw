@@ -37,6 +37,15 @@ public:
     bool deleteNote(const juce::String& clipId, const juce::String& noteId,
                     const juce::String& actionName = "Delete Note");
 
+    void setNoteExpression(const juce::String& clipId, const juce::String& noteId,
+                           NoteExpressionType type,
+                           const std::vector<NoteExpressionPoint>& points,
+                           const juce::String& actionName = "Set Note Expression");
+
+    std::vector<NoteExpressionPoint> getNoteExpression(
+        const juce::String& clipId, const juce::String& noteId,
+        NoteExpressionType type) const;
+
     // Batch Operations
     void quantizeNotes(const juce::String& clipId, double gridBeats, float strength,
                        const juce::String& actionName = "Quantize Notes");

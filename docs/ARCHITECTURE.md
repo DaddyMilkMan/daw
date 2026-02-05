@@ -3,6 +3,16 @@
 **Author**: Sophia "The Architect" Chen - Operation Polish  
 **Last Updated**: December 1, 2025
 
+**License Note:** **Zenith DAW is 100% proprietary closed-source software.** 
+
+### Pricing
+
+- **Zenith DAW Application:** $100 (one-time purchase)
+- **AI Wingman Add-on:**
+  - Zenith Light: $10/month
+  - Zenith Pro: $20/month
+  - Zenith Heavy: $50/month
+
 ---
 
 ## System Architecture

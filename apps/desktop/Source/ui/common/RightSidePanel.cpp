@@ -5,6 +5,9 @@
     Created: 2025-11-28
     Author:  David Chen + Isabella Moretti
 
+    Wingman/AI panel container. Positioned on LEFT side as copilot.
+    (Named "RightSidePanel" for legacy reasons - should be "SidePanel")
+
   ==============================================================================
 */
 
@@ -68,15 +71,22 @@ void RightSidePanel::drawSkia(SkCanvas *canvas) {
   GlassmorphicPanel::drawWithOptions(canvas, skBounds, opts);
 
   // Right accent border highlight (the "pop out" edge)
-  // FIX: Since panel is on Left, border should be on Right
+  // Panel is on the left side, so border is on the right
   SkPaint accentPaint;
   accentPaint.setAntiAlias(true);
   accentPaint.setStrokeWidth(0.8f);
   accentPaint.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.4f));
   canvas->drawLine(skBounds.width() - 0.4f, 0.0f, skBounds.width() - 0.4f, skBounds.height(), accentPaint);
   
-  // Draw children (WingmanPanel, etc.)
-  drawChildren(canvas);
+  // Manually draw Skia children (WingmanPanel, etc.)
+  // Note: drawChildren() doesn't work with Skia rendering, we need to call drawSkia directly
+  if (wingmanPanel_ && wingmanPanel_->isVisible()) {
+    canvas->save();
+    canvas->translate(wingmanPanel_->getX(), wingmanPanel_->getY());
+    canvas->clipRect(SkRect::MakeWH(wingmanPanel_->getWidth(), wingmanPanel_->getHeight()));
+    wingmanPanel_->drawSkia(canvas);
+    canvas->restore();
+  }
 }
 
 void RightSidePanel::resized() {

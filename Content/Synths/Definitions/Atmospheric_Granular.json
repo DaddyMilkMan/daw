@@ -1,0 +1,137 @@
+{
+  "name": "Atmospheric Granular",
+  "category": "Granular",
+  "description": "Evolving granular textures with cloud density and spatial positioning",
+  "tags": ["ambient", "textural", "cinematic", "soundscape", "evolving"],
+  "architecture": {
+    "granular_engines": [
+      {
+        "id": "granular1",
+        "sample": "Atmosphere_Pad.wav",
+        "max_grains": 16,
+        "grain_size": 0.15,
+        "grain_size_variance": 0.1,
+        "density": 15.0,
+        "density_variance": 5.0,
+        "position": 0.3,
+        "position_variance": 0.2,
+        "pitch": 0.0,
+        "pitch_variance": 5.0,
+        "pan": 0.5,
+        "pan_variance": 0.3,
+        "envelope_shape": "gaussian",
+        "window_overlap": 4
+      },
+      {
+        "id": "granular2",
+        "sample": "Metallic_Texture.wav",
+        "max_grains": 12,
+        "grain_size": 0.08,
+        "grain_size_variance": 0.05,
+        "density": 20.0,
+        "density_variance": 8.0,
+        "position": 0.6,
+        "position_variance": 0.3,
+        "pitch": 7.0,
+        "pitch_variance": 7.0,
+        "pan": 0.5,
+        "pan_variance": 0.5,
+        "envelope_shape": "hanning",
+        "window_overlap": 3
+      }
+    ],
+    "filter": {
+      "type": "Formant",
+      "vowel": "U",
+      "formants": [
+        {"freq": 350, "bandwidth": 50},
+        {"freq": 900, "bandwidth": 80},
+        {"freq": 2200, "bandwidth": 120},
+        {"freq": 2600, "bandwidth": 130}
+      ],
+      "morph_speed": 0.1
+    },
+    "envelopes": [
+      {
+        "id": "density_env",
+        "type": "MultiStage",
+        "stages": [
+          {"time": 0.0, "level": 5.0},
+          {"time": 2.0, "level": 20.0},
+          {"time": 4.0, "level": 15.0},
+          {"time": 6.0, "level": 25.0},
+          {"time": 8.0, "level": 10.0}
+        ],
+        "loop": true,
+        "target": "granular1_density"
+      },
+      {
+        "id": "position_env",
+        "type": "MultiStage",
+        "stages": [
+          {"time": 0.0, "level": 0.2},
+          {"time": 3.0, "level": 0.7},
+          {"time": 6.0, "level": 0.4},
+          {"time": 9.0, "level": 0.8}
+        ],
+        "loop": true,
+        "target": "granular1_position"
+      },
+      {
+        "id": "amp_env",
+        "type": "ADSR",
+        "attack": 0.5,
+        "decay": 1.0,
+        "sustain": 0.8,
+        "release": 2.0
+      }
+    ],
+    "lfo": {
+      "id": "lfo1",
+      "type": "PolyLFO",
+      "voices": 3,
+      "waveform": "random",
+      "rate": 0.5,
+      "destinations": [
+        {"target": "granular1_pitch", "amount": 3.0},
+        {"target": "granular2_pitch", "amount": 5.0},
+        {"target": "filter_morph", "amount": 0.5}
+      ]
+    },
+    "modulation": {
+      "matrix": [
+        {"source": "velocity", "destination": "granular1_grain_size", "amount": 0.3},
+        {"source": "modwheel", "destination": "granular1_density", "amount": 0.7},
+        {"source": "pressure", "destination": "filter_cutoff", "amount": 0.5}
+      ]
+    },
+    "effects": [
+      {
+        "type": "Reverb",
+        "algorithm": "cathedral",
+        "size": 0.9,
+        "decay": 5.0,
+        "predelay": 0.1,
+        "mix": 0.6
+      },
+      {
+        "type": "Delay",
+        "time": 0.5,
+        "feedback": 0.6,
+        "filter": 2000,
+        "mix": 0.4,
+        "ping_pong": true
+      },
+      {
+        "type": "EQ",
+        "bands": [
+          {"freq": 200, "gain": 3.0, "q": 1.0},
+          {"freq": 2000, "gain": -2.0, "q": 1.0},
+          {"freq": 8000, "gain": 4.0, "q": 2.0}
+        ]
+      }
+    ]
+  },
+  "polyphony": 4,
+  "voice_mode": "mono"
+}

@@ -34,15 +34,22 @@ namespace {
 
 // TimeoutTimer class removed - using std::thread watchdog instead
 
-// Simple output helper - key: value pairs
-void outputPluginAsKeyValues(const juce::PluginDescription* desc) {
-    std::cout << "STATUS=success" << std::endl;
-    std::cout << "NAME=" << desc->name << std::endl;
-    std::cout << "MANUFACTURER=" << desc->manufacturerName << std::endl;
-    std::cout << "VERSION=" << desc->version << std::endl;
-    std::cout << "UID=" << desc->uniqueId << std::endl;
-    std::cout << "IS_INSTRUMENT=" << (desc->isInstrument ? "true" : "false") << std::endl;
-    std::cout << "FORMAT=" << desc->pluginFormatName << std::endl;
+// Simple output helper - YAML-style key: value pairs (matches PluginHost parser)
+void outputPluginAsYAML(const juce::PluginDescription* desc) {
+    std::cout << "status: success" << std::endl;
+    std::cout << "name: " << desc->name.toStdString() << std::endl;
+    std::cout << "manufacturer: " << desc->manufacturerName.toStdString() << std::endl;
+    std::cout << "version: " << desc->version.toStdString() << std::endl;
+    std::cout << "uid: " << desc->uniqueId << std::endl;
+    std::cout << "is_instrument: " << (desc->isInstrument ? "true" : "false") << std::endl;
+    std::cout << "format: " << desc->pluginFormatName.toStdString() << std::endl;
+}
+
+// Output error in YAML format
+void outputError(const char* errorType, const char* message) {
+    std::cout << "status: error" << std::endl;
+    std::cout << "error_type: " << errorType << std::endl;
+    std::cout << "message: " << message << std::endl;
 }
 
 int main(int argc, char *argv[]) {
@@ -57,7 +64,7 @@ int main(int argc, char *argv[]) {
 #endif
 
   if (argc < 2) {
-    std::cerr << "Usage: PluginScanner <plugin_path>" << std::endl;
+    outputError("usage", "Usage: PluginScanner <plugin_path>");
     return 1;
   }
 
@@ -65,8 +72,7 @@ int main(int argc, char *argv[]) {
   juce::File file(path);
 
   if (!file.exists()) {
-    std::cerr << "Error: Plugin file does not exist: " << path.toStdString()
-              << std::endl;
+    outputError("file_not_found", ("Plugin file does not exist: " + path).toStdString().c_str());
     return 2;
   }
 
@@ -84,8 +90,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (formatToUse == nullptr) {
-    std::cerr << "Error: No suitable plugin format found for "
-              << path.toStdString() << std::endl;
+    outputError("format_not_supported", ("No suitable plugin format found for " + path).toStdString().c_str());
     return 3;
   }
 
@@ -107,10 +112,10 @@ int main(int argc, char *argv[]) {
   try {
     formatToUse->findAllTypesForFile(descriptions, file.getFullPathName());
   } catch (const std::exception& e) {
-    std::cerr << "Error: Exception during plugin scan: " << e.what() << std::endl;
+    outputError("exception", e.what());
     return 6;
   } catch (...) {
-    std::cerr << "Error: Unknown exception during plugin scan" << std::endl;
+    outputError("unknown_exception", "Unknown exception during plugin scan");
     return 7;
   }
 
@@ -118,14 +123,13 @@ int main(int argc, char *argv[]) {
   scanCancelled.store(true);
 
   if (descriptions.size() == 0) {
-    std::cerr << "Error: No plugin types found in " << path.toStdString()
-              << std::endl;
+    outputError("no_plugins_found", ("No plugin types found in " + path).toStdString().c_str());
     return 4;
   }
 
-  // Success! Output descriptions as key-value pairs
+  // Success! Output descriptions as YAML
   for (auto *desc : descriptions) {
-    outputPluginAsKeyValues(desc);
+    outputPluginAsYAML(desc);
   }
 
   return 0;

@@ -35,8 +35,12 @@
 #include <memory>
 #include <vector>
 #include <thread>
+#include <optional>
 
 namespace zenith {
+
+// Forward declaration
+class PluginBlacklist;
 
 //==============================================================================
 /**
@@ -177,14 +181,73 @@ public:
      */
     int scanAll(bool async = false);
 
+    //==============================================================================
+    // Blacklist Management
+    //==============================================================================
+    
+    /**
+     * @brief Get the plugin blacklist manager
+     */
+    PluginBlacklist& getBlacklist() { return *blacklist_; }
+    const PluginBlacklist& getBlacklist() const { return *blacklist_; }
+    
+    /**
+     * @brief Scan results for UI feedback
+     */
+    struct ScanResult {
+        juce::String filePath;
+        bool success = false;
+        juce::String errorType;  // "success", "crash", "timeout", "blacklisted", "parse_error"
+        juce::String errorMessage;
+        juce::PluginDescription description;  // Valid only if success=true
+        
+        bool wasBlacklisted() const { return errorType == "blacklisted"; }
+        bool hadError() const { return !success && errorType != "blacklisted"; }
+    };
+    
+    /**
+     * @brief Scan with detailed result reporting
+     * @return Vector of scan results for each plugin file attempted
+     */
+    std::vector<ScanResult> scanWithResults(const juce::File& path);
+    
+    /**
+     * @brief Get the last scan results
+     */
+    const std::vector<ScanResult>& getLastScanResults() const { return lastScanResults_; }
+    
+    /**
+     * @brief Clear the last scan results
+     */
+    void clearLastScanResults() { lastScanResults_.clear(); }
+    
+    //==============================================================================
+    // Scan Statistics
+    //==============================================================================
+    
+    struct ScanStatistics {
+        int totalScanned = 0;
+        int found = 0;
+        int crashed = 0;
+        int timedOut = 0;
+        int blacklisted = 0;
+        int parseErrors = 0;
+        
+        juce::String getSummary() const;
+    };
+    
+    ScanStatistics getLastScanStatistics() const;
+
 private:
-    // Internal scanning logic
     // Internal scanning logic
     int scanInternal(std::function<void(const juce::String&)> onProgress);
     
     // Out-of-process helper
     // Returns true if plugin was successfully scanned and added
     bool scanFileOutProcess(const juce::File& file, juce::PluginDescription& result);
+    
+    // Out-of-process with full result details
+    ScanResult scanFileWithDetails(const juce::File& file);
 
     //==============================================================================
     // Member Variables
@@ -207,6 +270,13 @@ private:
     
     // Custom search paths
     juce::StringArray customSearchPaths;
+    
+    // Blacklist manager
+    std::unique_ptr<PluginBlacklist> blacklist_;
+    
+    // Last scan results for UI feedback
+    std::vector<ScanResult> lastScanResults_;
+    mutable std::mutex scanResultsMutex_;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginHost)

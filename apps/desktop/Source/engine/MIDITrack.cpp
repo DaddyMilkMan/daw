@@ -1,4 +1,5 @@
 #include "MIDITrack.h"
+#include "TrackProcessor.h"
 #include "EngineConstants.h"
 
 namespace zenith {

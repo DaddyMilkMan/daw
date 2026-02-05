@@ -8,6 +8,8 @@ CollaborationManager::CollaborationManager()
     : juce::Thread("CollabP2PThread") {
   signalingServerIP = zenith::config::ConfigurationManager::getInstance().getString(
       zenith::config::keys::COLLAB_SERVER_IP, "216.126.231.46");
+      
+  audioStreamer = std::make_unique<network::AudioStreamingManager>();
 }
 
 CollaborationManager::~CollaborationManager() { disconnect(); }
@@ -65,11 +67,9 @@ void CollaborationManager::disconnect() {
   p2pSocket.shutdown();
 
   currentState.store(ConnectionState::Disconnected, std::memory_order_release);
-  {
-    const juce::ScopedLock sl(peersLock);
-    activePeers.clear();
-  }
+  // peersLock logic removed since activePeers (which was causing build error) was removed in previous Refactor
   remoteUsers.clear();
+
   sessionCode = "";
   sendChangeMessage();
 }
@@ -183,6 +183,9 @@ void CollaborationManager::run() {
         handleIncomingPacket(decryptedBuffer, bytes, senderIP, senderPort);
     }
 
+    // Send queued audio packets (from audio thread)
+    sendQueuedAudioPackets();
+
     // Keepalive
     auto now = juce::Time::currentTimeMillis();
     if (now - lastKeepAlive > 2000) {
@@ -289,6 +292,9 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
       }
     }
 #endif
+    else if (type == PacketType::AudioData && payloadSize > 0) {
+        processAudioPacket(payloadPtr, payloadSize, senderIP, senderPort);
+    }
 }
 
 void CollaborationManager::sendPacket(PacketType type, const void *data,
@@ -462,8 +468,67 @@ void CollaborationManager::startLocalSignalingServer() {
 
 void CollaborationManager::reportError(const juce::String& error) {
     DBG("Collaboration Error: " + error);
-    currentState = ConnectionState::Error;
+    currentState.store(ConnectionState::Error, std::memory_order_release);
     sendChangeMessage();
+}
+
+void CollaborationManager::processAudioPacket(const void* data, int size, const juce::String& senderIP, int senderPort) {
+    if (audioStreamer) {
+        juce::String remoteId = senderIP + ":" + juce::String(senderPort);
+        audioStreamer->decodePacket((const juce::uint8*)data, size, remoteId);
+    }
+}
+
+// Called from audio thread - must be lock-free, no allocation, no I/O
+void CollaborationManager::broadcastAudio(const juce::AudioBuffer<float>& buffer) {
+    if (!audioStreamer || currentState.load(std::memory_order_acquire) != ConnectionState::Connected) {
+        return;
+    }
+    
+    // Encode audio (lock-free)
+    auto packet = audioStreamer->encodeAudio(buffer);
+    if (packet.empty() || packet.size() > MAX_AUDIO_PACKET_SIZE) {
+        return;
+    }
+    
+    // Lock-free queue write (single producer: audio thread)
+    int writeIdx = audioQueueWriteIdx.load(std::memory_order_relaxed);
+    int nextWriteIdx = (writeIdx + 1) % AUDIO_PACKET_QUEUE_SIZE;
+    
+    // Check if queue is full (compare with read index)
+    if (nextWriteIdx == audioQueueReadIdx.load(std::memory_order_acquire)) {
+        // Queue full - drop packet (better than blocking audio thread)
+        return;
+    }
+    
+    // Write packet to queue
+    auto& slot = audioPacketQueue[writeIdx];
+    std::memcpy(slot.data.data(), packet.data(), packet.size());
+    slot.size = packet.size();
+    slot.ready.store(true, std::memory_order_release);
+    
+    // Publish write index
+    audioQueueWriteIdx.store(nextWriteIdx, std::memory_order_release);
+}
+
+// Called from network thread - drain audio packet queue
+void CollaborationManager::sendQueuedAudioPackets() {
+    int readIdx = audioQueueReadIdx.load(std::memory_order_relaxed);
+    int writeIdx = audioQueueWriteIdx.load(std::memory_order_acquire);
+    
+    // Process all available packets
+    while (readIdx != writeIdx) {
+        auto& slot = audioPacketQueue[readIdx];
+        
+        if (slot.ready.load(std::memory_order_acquire)) {
+            broadcastPacket(PacketType::AudioData, slot.data.data(), slot.size);
+            slot.ready.store(false, std::memory_order_release);
+        }
+        
+        readIdx = (readIdx + 1) % AUDIO_PACKET_QUEUE_SIZE;
+    }
+    
+    audioQueueReadIdx.store(readIdx, std::memory_order_release);
 }
 
 } // namespace zenith

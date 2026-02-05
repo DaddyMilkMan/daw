@@ -3,7 +3,7 @@
   "bank_name": "Keys Bank",
   "category": "Keys",
   "version": "1.0",
-  "preset_count": 45,
+  "preset_count": 250,
   "presets": [
     {
       "id": "lofi_piano",
@@ -1038,6 +1038,5131 @@
         "tune": 0.4,
         "gain": 0.709,
         "character": 0.464
+      }
+    },
+    {
+      "id": "bell_tone_08_x001",
+      "name": "Bell Tone 08 X001",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 08",
+      "parameters": {
+        "attack": 0.013,
+        "decay": 0.321,
+        "sustain": 0.263,
+        "release": 1.493,
+        "filter_cutoff": 0.975,
+        "filter_resonance": 0.486,
+        "tune": 0.269,
+        "gain": 0.617,
+        "character": 0.32
+      }
+    },
+    {
+      "id": "bell_tone_01_x002",
+      "name": "Bell Tone 01 X002",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 01",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.308,
+        "sustain": 0.058,
+        "release": 1.587,
+        "filter_cutoff": 0.973,
+        "filter_resonance": 0.338,
+        "tune": -1.588,
+        "gain": 0.718,
+        "character": 0.251
+      }
+    },
+    {
+      "id": "lofi_piano_06_x003",
+      "name": "LoFi Piano 06 X003",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 06",
+      "parameters": {
+        "attack": 0.033,
+        "decay": 0.301,
+        "sustain": 0.269,
+        "release": 0.97,
+        "filter_cutoff": 0.61,
+        "filter_resonance": 0.072,
+        "tune": 0.191,
+        "gain": 0.637,
+        "character": 0.553
+      }
+    },
+    {
+      "id": "toy_piano_05_x004",
+      "name": "Toy Piano 05 X004",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 05",
+      "parameters": {
+        "attack": 0.042,
+        "decay": 0.004,
+        "sustain": 0.007,
+        "release": 0.574,
+        "filter_cutoff": 0.806,
+        "filter_resonance": 0.162,
+        "tune": -0.871,
+        "gain": 0.678,
+        "character": 0.449
+      }
+    },
+    {
+      "id": "lofi_piano_03_x005",
+      "name": "LoFi Piano 03 X005",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 03",
+      "parameters": {
+        "attack": 0.054,
+        "decay": 0.128,
+        "sustain": 0.37,
+        "release": 1.257,
+        "filter_cutoff": 0.643,
+        "filter_resonance": 0.121,
+        "tune": -0.035,
+        "gain": 0.992,
+        "character": 0.515
+      }
+    },
+    {
+      "id": "toy_piano_01_x006",
+      "name": "Toy Piano 01 X006",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 01",
+      "parameters": {
+        "attack": 0.422,
+        "decay": 0.0,
+        "sustain": 0.092,
+        "release": 0.747,
+        "filter_cutoff": 0.957,
+        "filter_resonance": 0.141,
+        "tune": -0.324,
+        "gain": 0.828,
+        "character": 0.447
+      }
+    },
+    {
+      "id": "lofi_piano_x007",
+      "name": "LoFi Piano X007",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano",
+      "parameters": {
+        "attack": 0.046,
+        "decay": 0.389,
+        "sustain": 0.309,
+        "release": 0.994,
+        "filter_cutoff": 0.715,
+        "filter_resonance": 0.114,
+        "tune": 0.038,
+        "gain": 0.889,
+        "character": 0.645
+      }
+    },
+    {
+      "id": "lofi_piano_03_x008",
+      "name": "LoFi Piano 03 X008",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 03",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.004,
+        "sustain": 0.409,
+        "release": 1.33,
+        "filter_cutoff": 0.635,
+        "filter_resonance": 0.134,
+        "tune": -0.338,
+        "gain": 1.0,
+        "character": 0.516
+      }
+    },
+    {
+      "id": "bell_tone_05_x009",
+      "name": "Bell Tone 05 X009",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 05",
+      "parameters": {
+        "attack": 0.333,
+        "decay": 0.698,
+        "sustain": 0.214,
+        "release": 1.188,
+        "filter_cutoff": 0.965,
+        "filter_resonance": 0.418,
+        "tune": -1.893,
+        "gain": 0.699,
+        "character": 0.44
+      }
+    },
+    {
+      "id": "electric_keys_05_x010",
+      "name": "Electric Keys 05 X010",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 05",
+      "parameters": {
+        "attack": 0.418,
+        "decay": 0.636,
+        "sustain": 0.458,
+        "release": 1.134,
+        "filter_cutoff": 0.715,
+        "filter_resonance": 0.177,
+        "tune": 1.967,
+        "gain": 0.619,
+        "character": 0.63
+      }
+    },
+    {
+      "id": "toy_piano_04_x011",
+      "name": "Toy Piano 04 X011",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 04",
+      "parameters": {
+        "attack": 0.028,
+        "decay": 0.558,
+        "sustain": 0.083,
+        "release": 0.522,
+        "filter_cutoff": 0.905,
+        "filter_resonance": 0.205,
+        "tune": 1.296,
+        "gain": 0.925,
+        "character": 0.497
+      }
+    },
+    {
+      "id": "mallet_06_x012",
+      "name": "Mallet 06 X012",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 06",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.102,
+        "sustain": 0.236,
+        "release": 0.892,
+        "filter_cutoff": 0.733,
+        "filter_resonance": 0.193,
+        "tune": -1.166,
+        "gain": 0.752,
+        "character": 0.44
+      }
+    },
+    {
+      "id": "electric_keys_08_x013",
+      "name": "Electric Keys 08 X013",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 08",
+      "parameters": {
+        "attack": 0.018,
+        "decay": 0.138,
+        "sustain": 0.277,
+        "release": 1.049,
+        "filter_cutoff": 0.871,
+        "filter_resonance": 0.156,
+        "tune": 1.804,
+        "gain": 0.667,
+        "character": 0.422
+      }
+    },
+    {
+      "id": "toy_piano_05_x014",
+      "name": "Toy Piano 05 X014",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 05",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.083,
+        "sustain": 0.017,
+        "release": 0.342,
+        "filter_cutoff": 0.846,
+        "filter_resonance": 0.154,
+        "tune": -0.893,
+        "gain": 0.712,
+        "character": 0.445
+      }
+    },
+    {
+      "id": "toy_piano_01_x015",
+      "name": "Toy Piano 01 X015",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 01",
+      "parameters": {
+        "attack": 0.376,
+        "decay": 0.0,
+        "sustain": 0.128,
+        "release": 0.775,
+        "filter_cutoff": 0.947,
+        "filter_resonance": 0.175,
+        "tune": -0.114,
+        "gain": 0.865,
+        "character": 0.509
+      }
+    },
+    {
+      "id": "toy_piano_05_x016",
+      "name": "Toy Piano 05 X016",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 05",
+      "parameters": {
+        "attack": 0.046,
+        "decay": 0.151,
+        "sustain": 0.053,
+        "release": 0.535,
+        "filter_cutoff": 0.857,
+        "filter_resonance": 0.13,
+        "tune": -0.936,
+        "gain": 0.711,
+        "character": 0.506
+      }
+    },
+    {
+      "id": "electric_keys_02_x017",
+      "name": "Electric Keys 02 X017",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 02",
+      "parameters": {
+        "attack": 0.041,
+        "decay": 0.538,
+        "sustain": 0.329,
+        "release": 1.749,
+        "filter_cutoff": 0.71,
+        "filter_resonance": 0.265,
+        "tune": -2.187,
+        "gain": 0.674,
+        "character": 0.506
+      }
+    },
+    {
+      "id": "lofi_piano_04_x018",
+      "name": "LoFi Piano 04 X018",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 04",
+      "parameters": {
+        "attack": 0.272,
+        "decay": 0.0,
+        "sustain": 0.244,
+        "release": 1.104,
+        "filter_cutoff": 0.593,
+        "filter_resonance": 0.195,
+        "tune": 2.288,
+        "gain": 0.862,
+        "character": 0.653
+      }
+    },
+    {
+      "id": "lofi_piano_04_x019",
+      "name": "LoFi Piano 04 X019",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 04",
+      "parameters": {
+        "attack": 0.278,
+        "decay": 0.09,
+        "sustain": 0.243,
+        "release": 1.106,
+        "filter_cutoff": 0.614,
+        "filter_resonance": 0.203,
+        "tune": 2.041,
+        "gain": 0.881,
+        "character": 0.667
+      }
+    },
+    {
+      "id": "electric_keys_x020",
+      "name": "Electric Keys X020",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.332,
+        "sustain": 0.372,
+        "release": 0.644,
+        "filter_cutoff": 0.764,
+        "filter_resonance": 0.184,
+        "tune": 0.224,
+        "gain": 0.803,
+        "character": 0.496
+      }
+    },
+    {
+      "id": "toy_piano_05_x021",
+      "name": "Toy Piano 05 X021",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 05",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.063,
+        "sustain": 0.014,
+        "release": 0.566,
+        "filter_cutoff": 0.794,
+        "filter_resonance": 0.102,
+        "tune": -0.474,
+        "gain": 0.704,
+        "character": 0.471
+      }
+    },
+    {
+      "id": "lofi_piano_02_x022",
+      "name": "LoFi Piano 02 X022",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 02",
+      "parameters": {
+        "attack": 0.065,
+        "decay": 0.96,
+        "sustain": 0.316,
+        "release": 0.286,
+        "filter_cutoff": 0.614,
+        "filter_resonance": 0.244,
+        "tune": -0.124,
+        "gain": 0.764,
+        "character": 0.585
+      }
+    },
+    {
+      "id": "mallet_06_x023",
+      "name": "Mallet 06 X023",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 06",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.099,
+        "sustain": 0.316,
+        "release": 0.87,
+        "filter_cutoff": 0.73,
+        "filter_resonance": 0.248,
+        "tune": -1.754,
+        "gain": 0.822,
+        "character": 0.478
+      }
+    },
+    {
+      "id": "toy_piano_01_x024",
+      "name": "Toy Piano 01 X024",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 01",
+      "parameters": {
+        "attack": 0.371,
+        "decay": 0.102,
+        "sustain": 0.113,
+        "release": 0.725,
+        "filter_cutoff": 0.931,
+        "filter_resonance": 0.145,
+        "tune": -0.283,
+        "gain": 0.917,
+        "character": 0.518
+      }
+    },
+    {
+      "id": "electric_keys_07_x025",
+      "name": "Electric Keys 07 X025",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 07",
+      "parameters": {
+        "attack": 0.025,
+        "decay": 0.522,
+        "sustain": 0.379,
+        "release": 1.072,
+        "filter_cutoff": 0.75,
+        "filter_resonance": 0.18,
+        "tune": -1.177,
+        "gain": 0.981,
+        "character": 0.571
+      }
+    },
+    {
+      "id": "electric_keys_07_x026",
+      "name": "Electric Keys 07 X026",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 07",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.478,
+        "sustain": 0.371,
+        "release": 1.059,
+        "filter_cutoff": 0.827,
+        "filter_resonance": 0.224,
+        "tune": -1.029,
+        "gain": 0.908,
+        "character": 0.585
+      }
+    },
+    {
+      "id": "electric_keys_x027",
+      "name": "Electric Keys X027",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.309,
+        "sustain": 0.367,
+        "release": 0.464,
+        "filter_cutoff": 0.718,
+        "filter_resonance": 0.222,
+        "tune": -0.125,
+        "gain": 0.762,
+        "character": 0.464
+      }
+    },
+    {
+      "id": "electric_keys_01_x028",
+      "name": "Electric Keys 01 X028",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 01",
+      "parameters": {
+        "attack": 0.039,
+        "decay": 0.16,
+        "sustain": 0.437,
+        "release": 1.354,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.29,
+        "tune": 0.461,
+        "gain": 0.884,
+        "character": 0.383
+      }
+    },
+    {
+      "id": "toy_piano_x029",
+      "name": "Toy Piano X029",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano",
+      "parameters": {
+        "attack": 0.009,
+        "decay": 0.161,
+        "sustain": 0.116,
+        "release": 0.423,
+        "filter_cutoff": 0.864,
+        "filter_resonance": 0.235,
+        "tune": -0.468,
+        "gain": 0.777,
+        "character": 0.442
+      }
+    },
+    {
+      "id": "mallet_x030",
+      "name": "Mallet X030",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet",
+      "parameters": {
+        "attack": 0.012,
+        "decay": 0.363,
+        "sustain": 0.211,
+        "release": 0.417,
+        "filter_cutoff": 0.809,
+        "filter_resonance": 0.21,
+        "tune": -0.538,
+        "gain": 0.809,
+        "character": 0.38
+      }
+    },
+    {
+      "id": "toy_piano_08_x031",
+      "name": "Toy Piano 08 X031",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.0,
+        "sustain": 0.141,
+        "release": 1.245,
+        "filter_cutoff": 0.798,
+        "filter_resonance": 0.136,
+        "tune": 0.532,
+        "gain": 0.699,
+        "character": 0.507
+      }
+    },
+    {
+      "id": "lofi_piano_07_x032",
+      "name": "LoFi Piano 07 X032",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 07",
+      "parameters": {
+        "attack": 0.029,
+        "decay": 0.157,
+        "sustain": 0.357,
+        "release": 0.029,
+        "filter_cutoff": 0.596,
+        "filter_resonance": 0.18,
+        "tune": 0.973,
+        "gain": 1.065,
+        "character": 0.72
+      }
+    },
+    {
+      "id": "toy_piano_04_x033",
+      "name": "Toy Piano 04 X033",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 04",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.417,
+        "sustain": 0.085,
+        "release": 0.359,
+        "filter_cutoff": 0.941,
+        "filter_resonance": 0.24,
+        "tune": 1.407,
+        "gain": 0.863,
+        "character": 0.494
+      }
+    },
+    {
+      "id": "electric_keys_07_x034",
+      "name": "Electric Keys 07 X034",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 07",
+      "parameters": {
+        "attack": 0.051,
+        "decay": 0.557,
+        "sustain": 0.391,
+        "release": 0.975,
+        "filter_cutoff": 0.83,
+        "filter_resonance": 0.192,
+        "tune": -0.764,
+        "gain": 0.928,
+        "character": 0.585
+      }
+    },
+    {
+      "id": "toy_piano_03_x035",
+      "name": "Toy Piano 03 X035",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 03",
+      "parameters": {
+        "attack": 0.011,
+        "decay": 0.361,
+        "sustain": 0.119,
+        "release": 0.116,
+        "filter_cutoff": 0.846,
+        "filter_resonance": 0.174,
+        "tune": -2.165,
+        "gain": 0.843,
+        "character": 0.525
+      }
+    },
+    {
+      "id": "bell_tone_07_x036",
+      "name": "Bell Tone 07 X036",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 07",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.486,
+        "sustain": 0.201,
+        "release": 1.988,
+        "filter_cutoff": 0.976,
+        "filter_resonance": 0.284,
+        "tune": 1.131,
+        "gain": 0.571,
+        "character": 0.377
+      }
+    },
+    {
+      "id": "lofi_piano_08_x037",
+      "name": "LoFi Piano 08 X037",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 08",
+      "parameters": {
+        "attack": 0.544,
+        "decay": 0.188,
+        "sustain": 0.214,
+        "release": 0.353,
+        "filter_cutoff": 0.778,
+        "filter_resonance": 0.084,
+        "tune": 2.341,
+        "gain": 0.693,
+        "character": 0.7
+      }
+    },
+    {
+      "id": "toy_piano_06_x038",
+      "name": "Toy Piano 06 X038",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 06",
+      "parameters": {
+        "attack": 0.123,
+        "decay": 0.589,
+        "sustain": 0.0,
+        "release": 1.178,
+        "filter_cutoff": 0.755,
+        "filter_resonance": 0.146,
+        "tune": 0.882,
+        "gain": 0.609,
+        "character": 0.582
+      }
+    },
+    {
+      "id": "toy_piano_01_x039",
+      "name": "Toy Piano 01 X039",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 01",
+      "parameters": {
+        "attack": 0.361,
+        "decay": 0.0,
+        "sustain": 0.091,
+        "release": 0.75,
+        "filter_cutoff": 0.928,
+        "filter_resonance": 0.157,
+        "tune": 0.259,
+        "gain": 0.851,
+        "character": 0.482
+      }
+    },
+    {
+      "id": "electric_keys_03_x040",
+      "name": "Electric Keys 03 X040",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 03",
+      "parameters": {
+        "attack": 0.163,
+        "decay": 0.202,
+        "sustain": 0.348,
+        "release": 1.011,
+        "filter_cutoff": 0.854,
+        "filter_resonance": 0.204,
+        "tune": 0.3,
+        "gain": 0.582,
+        "character": 0.59
+      }
+    },
+    {
+      "id": "mallet_04_x041",
+      "name": "Mallet 04 X041",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 04",
+      "parameters": {
+        "attack": 0.371,
+        "decay": 0.532,
+        "sustain": 0.216,
+        "release": 0.085,
+        "filter_cutoff": 0.808,
+        "filter_resonance": 0.254,
+        "tune": -2.187,
+        "gain": 0.733,
+        "character": 0.375
+      }
+    },
+    {
+      "id": "bell_tone_08_x042",
+      "name": "Bell Tone 08 X042",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.501,
+        "sustain": 0.301,
+        "release": 1.489,
+        "filter_cutoff": 0.96,
+        "filter_resonance": 0.422,
+        "tune": 0.907,
+        "gain": 0.621,
+        "character": 0.368
+      }
+    },
+    {
+      "id": "toy_piano_04_x043",
+      "name": "Toy Piano 04 X043",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 04",
+      "parameters": {
+        "attack": 0.003,
+        "decay": 0.474,
+        "sustain": 0.144,
+        "release": 0.125,
+        "filter_cutoff": 0.947,
+        "filter_resonance": 0.217,
+        "tune": 1.711,
+        "gain": 0.871,
+        "character": 0.462
+      }
+    },
+    {
+      "id": "toy_piano_01_x044",
+      "name": "Toy Piano 01 X044",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 01",
+      "parameters": {
+        "attack": 0.401,
+        "decay": 0.095,
+        "sustain": 0.128,
+        "release": 0.924,
+        "filter_cutoff": 0.945,
+        "filter_resonance": 0.21,
+        "tune": -0.386,
+        "gain": 0.86,
+        "character": 0.506
+      }
+    },
+    {
+      "id": "bell_tone_02_x045",
+      "name": "Bell Tone 02 X045",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 02",
+      "parameters": {
+        "attack": 0.302,
+        "decay": 0.885,
+        "sustain": 0.029,
+        "release": 0.233,
+        "filter_cutoff": 0.95,
+        "filter_resonance": 0.417,
+        "tune": 0.117,
+        "gain": 0.732,
+        "character": 0.38
+      }
+    },
+    {
+      "id": "bell_tone_04_x046",
+      "name": "Bell Tone 04 X046",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 04",
+      "parameters": {
+        "attack": 0.058,
+        "decay": 0.591,
+        "sustain": 0.246,
+        "release": 1.339,
+        "filter_cutoff": 0.946,
+        "filter_resonance": 0.409,
+        "tune": 2.356,
+        "gain": 0.821,
+        "character": 0.374
+      }
+    },
+    {
+      "id": "electric_keys_06_x047",
+      "name": "Electric Keys 06 X047",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 06",
+      "parameters": {
+        "attack": 0.238,
+        "decay": 0.0,
+        "sustain": 0.535,
+        "release": 0.317,
+        "filter_cutoff": 0.646,
+        "filter_resonance": 0.249,
+        "tune": -1.09,
+        "gain": 0.899,
+        "character": 0.575
+      }
+    },
+    {
+      "id": "electric_keys_01_x048",
+      "name": "Electric Keys 01 X048",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 01",
+      "parameters": {
+        "attack": 0.02,
+        "decay": 0.212,
+        "sustain": 0.445,
+        "release": 1.536,
+        "filter_cutoff": 0.716,
+        "filter_resonance": 0.253,
+        "tune": 0.02,
+        "gain": 0.886,
+        "character": 0.45
+      }
+    },
+    {
+      "id": "bell_tone_01_x049",
+      "name": "Bell Tone 01 X049",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 01",
+      "parameters": {
+        "attack": 0.019,
+        "decay": 0.358,
+        "sustain": 0.093,
+        "release": 1.845,
+        "filter_cutoff": 0.994,
+        "filter_resonance": 0.292,
+        "tune": -1.229,
+        "gain": 0.627,
+        "character": 0.303
+      }
+    },
+    {
+      "id": "bell_tone_01_x050",
+      "name": "Bell Tone 01 X050",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 01",
+      "parameters": {
+        "attack": 0.05,
+        "decay": 0.327,
+        "sustain": 0.12,
+        "release": 1.511,
+        "filter_cutoff": 0.997,
+        "filter_resonance": 0.305,
+        "tune": -1.067,
+        "gain": 0.683,
+        "character": 0.28
+      }
+    },
+    {
+      "id": "lofi_piano_03_x051",
+      "name": "LoFi Piano 03 X051",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 03",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.0,
+        "sustain": 0.418,
+        "release": 0.949,
+        "filter_cutoff": 0.654,
+        "filter_resonance": 0.117,
+        "tune": -0.366,
+        "gain": 0.957,
+        "character": 0.471
+      }
+    },
+    {
+      "id": "toy_piano_01_x052",
+      "name": "Toy Piano 01 X052",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 01",
+      "parameters": {
+        "attack": 0.32,
+        "decay": 0.0,
+        "sustain": 0.106,
+        "release": 0.911,
+        "filter_cutoff": 0.971,
+        "filter_resonance": 0.152,
+        "tune": 0.571,
+        "gain": 0.829,
+        "character": 0.523
+      }
+    },
+    {
+      "id": "bell_tone_04_x053",
+      "name": "Bell Tone 04 X053",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 04",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.384,
+        "sustain": 0.201,
+        "release": 1.23,
+        "filter_cutoff": 0.912,
+        "filter_resonance": 0.451,
+        "tune": 1.908,
+        "gain": 0.824,
+        "character": 0.35
+      }
+    },
+    {
+      "id": "electric_keys_02_x054",
+      "name": "Electric Keys 02 X054",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 02",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.625,
+        "sustain": 0.32,
+        "release": 1.767,
+        "filter_cutoff": 0.702,
+        "filter_resonance": 0.273,
+        "tune": -2.187,
+        "gain": 0.68,
+        "character": 0.578
+      }
+    },
+    {
+      "id": "lofi_piano_03_x055",
+      "name": "LoFi Piano 03 X055",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 03",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.0,
+        "sustain": 0.403,
+        "release": 1.003,
+        "filter_cutoff": 0.676,
+        "filter_resonance": 0.103,
+        "tune": 0.109,
+        "gain": 1.004,
+        "character": 0.479
+      }
+    },
+    {
+      "id": "toy_piano_06_x056",
+      "name": "Toy Piano 06 X056",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 06",
+      "parameters": {
+        "attack": 0.055,
+        "decay": 0.491,
+        "sustain": 0.04,
+        "release": 0.974,
+        "filter_cutoff": 0.786,
+        "filter_resonance": 0.184,
+        "tune": 0.39,
+        "gain": 0.614,
+        "character": 0.568
+      }
+    },
+    {
+      "id": "bell_tone_07_x057",
+      "name": "Bell Tone 07 X057",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 07",
+      "parameters": {
+        "attack": 0.051,
+        "decay": 0.501,
+        "sustain": 0.29,
+        "release": 1.859,
+        "filter_cutoff": 0.976,
+        "filter_resonance": 0.305,
+        "tune": 1.459,
+        "gain": 0.651,
+        "character": 0.41
+      }
+    },
+    {
+      "id": "lofi_piano_07_x058",
+      "name": "LoFi Piano 07 X058",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 07",
+      "parameters": {
+        "attack": 0.061,
+        "decay": 0.087,
+        "sustain": 0.374,
+        "release": 0.102,
+        "filter_cutoff": 0.628,
+        "filter_resonance": 0.167,
+        "tune": 0.378,
+        "gain": 1.04,
+        "character": 0.721
+      }
+    },
+    {
+      "id": "mallet_01_x059",
+      "name": "Mallet 01 X059",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 01",
+      "parameters": {
+        "attack": 0.036,
+        "decay": 0.709,
+        "sustain": 0.164,
+        "release": 0.433,
+        "filter_cutoff": 0.753,
+        "filter_resonance": 0.241,
+        "tune": 1.638,
+        "gain": 0.919,
+        "character": 0.484
+      }
+    },
+    {
+      "id": "electric_keys_08_x060",
+      "name": "Electric Keys 08 X060",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 08",
+      "parameters": {
+        "attack": 0.013,
+        "decay": 0.119,
+        "sustain": 0.272,
+        "release": 0.722,
+        "filter_cutoff": 0.867,
+        "filter_resonance": 0.162,
+        "tune": 2.356,
+        "gain": 0.636,
+        "character": 0.471
+      }
+    },
+    {
+      "id": "toy_piano_x061",
+      "name": "Toy Piano X061",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.166,
+        "sustain": 0.121,
+        "release": 0.292,
+        "filter_cutoff": 0.84,
+        "filter_resonance": 0.184,
+        "tune": 0.301,
+        "gain": 0.81,
+        "character": 0.422
+      }
+    },
+    {
+      "id": "electric_keys_03_x062",
+      "name": "Electric Keys 03 X062",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 03",
+      "parameters": {
+        "attack": 0.162,
+        "decay": 0.214,
+        "sustain": 0.346,
+        "release": 0.894,
+        "filter_cutoff": 0.856,
+        "filter_resonance": 0.17,
+        "tune": 0.371,
+        "gain": 0.651,
+        "character": 0.541
+      }
+    },
+    {
+      "id": "lofi_piano_07_x063",
+      "name": "LoFi Piano 07 X063",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 07",
+      "parameters": {
+        "attack": 0.118,
+        "decay": 0.083,
+        "sustain": 0.367,
+        "release": 0.11,
+        "filter_cutoff": 0.62,
+        "filter_resonance": 0.168,
+        "tune": 1.054,
+        "gain": 1.05,
+        "character": 0.73
+      }
+    },
+    {
+      "id": "electric_keys_02_x064",
+      "name": "Electric Keys 02 X064",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 02",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.571,
+        "sustain": 0.327,
+        "release": 1.764,
+        "filter_cutoff": 0.739,
+        "filter_resonance": 0.199,
+        "tune": -1.457,
+        "gain": 0.658,
+        "character": 0.572
+      }
+    },
+    {
+      "id": "toy_piano_01_x065",
+      "name": "Toy Piano 01 X065",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 01",
+      "parameters": {
+        "attack": 0.422,
+        "decay": 0.014,
+        "sustain": 0.156,
+        "release": 0.758,
+        "filter_cutoff": 0.927,
+        "filter_resonance": 0.149,
+        "tune": 0.589,
+        "gain": 0.884,
+        "character": 0.518
+      }
+    },
+    {
+      "id": "mallet_x066",
+      "name": "Mallet X066",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet",
+      "parameters": {
+        "attack": 0.055,
+        "decay": 0.258,
+        "sustain": 0.174,
+        "release": 0.298,
+        "filter_cutoff": 0.804,
+        "filter_resonance": 0.266,
+        "tune": 0.022,
+        "gain": 0.863,
+        "character": 0.394
+      }
+    },
+    {
+      "id": "toy_piano_02_x067",
+      "name": "Toy Piano 02 X067",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 02",
+      "parameters": {
+        "attack": 0.059,
+        "decay": 0.0,
+        "sustain": 0.0,
+        "release": 1.215,
+        "filter_cutoff": 0.868,
+        "filter_resonance": 0.247,
+        "tune": -0.885,
+        "gain": 0.827,
+        "character": 0.398
+      }
+    },
+    {
+      "id": "electric_keys_08_x068",
+      "name": "Electric Keys 08 X068",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.13,
+        "sustain": 0.351,
+        "release": 0.869,
+        "filter_cutoff": 0.803,
+        "filter_resonance": 0.176,
+        "tune": 2.221,
+        "gain": 0.723,
+        "character": 0.397
+      }
+    },
+    {
+      "id": "bell_tone_x069",
+      "name": "Bell Tone X069",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.692,
+        "sustain": 0.201,
+        "release": 0.938,
+        "filter_cutoff": 0.863,
+        "filter_resonance": 0.314,
+        "tune": -0.141,
+        "gain": 0.781,
+        "character": 0.364
+      }
+    },
+    {
+      "id": "electric_keys_03_x070",
+      "name": "Electric Keys 03 X070",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 03",
+      "parameters": {
+        "attack": 0.2,
+        "decay": 0.165,
+        "sustain": 0.304,
+        "release": 0.675,
+        "filter_cutoff": 0.807,
+        "filter_resonance": 0.167,
+        "tune": 0.209,
+        "gain": 0.636,
+        "character": 0.501
+      }
+    },
+    {
+      "id": "toy_piano_07_x071",
+      "name": "Toy Piano 07 X071",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 07",
+      "parameters": {
+        "attack": 0.345,
+        "decay": 0.041,
+        "sustain": 0.2,
+        "release": 0.1,
+        "filter_cutoff": 0.858,
+        "filter_resonance": 0.194,
+        "tune": -0.359,
+        "gain": 0.891,
+        "character": 0.471
+      }
+    },
+    {
+      "id": "bell_tone_03_x072",
+      "name": "Bell Tone 03 X072",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 03",
+      "parameters": {
+        "attack": 0.316,
+        "decay": 0.159,
+        "sustain": 0.1,
+        "release": 1.113,
+        "filter_cutoff": 0.921,
+        "filter_resonance": 0.386,
+        "tune": 1.728,
+        "gain": 0.835,
+        "character": 0.38
+      }
+    },
+    {
+      "id": "bell_tone_x073",
+      "name": "Bell Tone X073",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.605,
+        "sustain": 0.132,
+        "release": 1.072,
+        "filter_cutoff": 0.905,
+        "filter_resonance": 0.344,
+        "tune": -0.23,
+        "gain": 0.761,
+        "character": 0.323
+      }
+    },
+    {
+      "id": "mallet_x074",
+      "name": "Mallet X074",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet",
+      "parameters": {
+        "attack": 0.024,
+        "decay": 0.399,
+        "sustain": 0.256,
+        "release": 0.299,
+        "filter_cutoff": 0.789,
+        "filter_resonance": 0.259,
+        "tune": 0.142,
+        "gain": 0.774,
+        "character": 0.4
+      }
+    },
+    {
+      "id": "electric_keys_01_x075",
+      "name": "Electric Keys 01 X075",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 01",
+      "parameters": {
+        "attack": 0.045,
+        "decay": 0.272,
+        "sustain": 0.477,
+        "release": 1.611,
+        "filter_cutoff": 0.745,
+        "filter_resonance": 0.294,
+        "tune": -0.505,
+        "gain": 0.853,
+        "character": 0.47
+      }
+    },
+    {
+      "id": "toy_piano_07_x076",
+      "name": "Toy Piano 07 X076",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 07",
+      "parameters": {
+        "attack": 0.341,
+        "decay": 0.0,
+        "sustain": 0.191,
+        "release": 0.127,
+        "filter_cutoff": 0.882,
+        "filter_resonance": 0.173,
+        "tune": 0.203,
+        "gain": 0.953,
+        "character": 0.476
+      }
+    },
+    {
+      "id": "toy_piano_06_x077",
+      "name": "Toy Piano 06 X077",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 06",
+      "parameters": {
+        "attack": 0.128,
+        "decay": 0.464,
+        "sustain": 0.02,
+        "release": 1.253,
+        "filter_cutoff": 0.721,
+        "filter_resonance": 0.132,
+        "tune": 0.291,
+        "gain": 0.608,
+        "character": 0.541
+      }
+    },
+    {
+      "id": "electric_keys_06_x078",
+      "name": "Electric Keys 06 X078",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 06",
+      "parameters": {
+        "attack": 0.202,
+        "decay": 0.0,
+        "sustain": 0.478,
+        "release": 0.131,
+        "filter_cutoff": 0.647,
+        "filter_resonance": 0.233,
+        "tune": -0.957,
+        "gain": 0.852,
+        "character": 0.539
+      }
+    },
+    {
+      "id": "mallet_04_x079",
+      "name": "Mallet 04 X079",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 04",
+      "parameters": {
+        "attack": 0.37,
+        "decay": 0.601,
+        "sustain": 0.231,
+        "release": 0.13,
+        "filter_cutoff": 0.83,
+        "filter_resonance": 0.219,
+        "tune": -2.187,
+        "gain": 0.767,
+        "character": 0.397
+      }
+    },
+    {
+      "id": "bell_tone_x080",
+      "name": "Bell Tone X080",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.573,
+        "sustain": 0.119,
+        "release": 0.844,
+        "filter_cutoff": 0.876,
+        "filter_resonance": 0.307,
+        "tune": 0.438,
+        "gain": 0.792,
+        "character": 0.32
+      }
+    },
+    {
+      "id": "mallet_02_x081",
+      "name": "Mallet 02 X081",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 02",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.094,
+        "sustain": 0.312,
+        "release": 1.417,
+        "filter_cutoff": 0.852,
+        "filter_resonance": 0.253,
+        "tune": -1.137,
+        "gain": 0.77,
+        "character": 0.446
+      }
+    },
+    {
+      "id": "bell_tone_05_x082",
+      "name": "Bell Tone 05 X082",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 05",
+      "parameters": {
+        "attack": 0.296,
+        "decay": 0.694,
+        "sustain": 0.168,
+        "release": 1.33,
+        "filter_cutoff": 0.97,
+        "filter_resonance": 0.389,
+        "tune": -2.16,
+        "gain": 0.715,
+        "character": 0.365
+      }
+    },
+    {
+      "id": "bell_tone_06_x083",
+      "name": "Bell Tone 06 X083",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 06",
+      "parameters": {
+        "attack": 0.042,
+        "decay": 0.353,
+        "sustain": 0.198,
+        "release": 0.838,
+        "filter_cutoff": 0.876,
+        "filter_resonance": 0.348,
+        "tune": -0.329,
+        "gain": 0.869,
+        "character": 0.311
+      }
+    },
+    {
+      "id": "electric_keys_05_x084",
+      "name": "Electric Keys 05 X084",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 05",
+      "parameters": {
+        "attack": 0.401,
+        "decay": 0.458,
+        "sustain": 0.424,
+        "release": 1.263,
+        "filter_cutoff": 0.684,
+        "filter_resonance": 0.137,
+        "tune": 2.112,
+        "gain": 0.613,
+        "character": 0.596
+      }
+    },
+    {
+      "id": "toy_piano_06_x085",
+      "name": "Toy Piano 06 X085",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 06",
+      "parameters": {
+        "attack": 0.133,
+        "decay": 0.568,
+        "sustain": 0.045,
+        "release": 1.284,
+        "filter_cutoff": 0.762,
+        "filter_resonance": 0.146,
+        "tune": 0.54,
+        "gain": 0.626,
+        "character": 0.583
+      }
+    },
+    {
+      "id": "bell_tone_04_x086",
+      "name": "Bell Tone 04 X086",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 04",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.431,
+        "sustain": 0.236,
+        "release": 1.155,
+        "filter_cutoff": 0.965,
+        "filter_resonance": 0.46,
+        "tune": 2.356,
+        "gain": 0.815,
+        "character": 0.337
+      }
+    },
+    {
+      "id": "toy_piano_06_x087",
+      "name": "Toy Piano 06 X087",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 06",
+      "parameters": {
+        "attack": 0.053,
+        "decay": 0.538,
+        "sustain": 0.0,
+        "release": 1.261,
+        "filter_cutoff": 0.734,
+        "filter_resonance": 0.193,
+        "tune": 0.835,
+        "gain": 0.611,
+        "character": 0.586
+      }
+    },
+    {
+      "id": "mallet_01_x088",
+      "name": "Mallet 01 X088",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 01",
+      "parameters": {
+        "attack": 0.09,
+        "decay": 0.813,
+        "sustain": 0.155,
+        "release": 0.737,
+        "filter_cutoff": 0.756,
+        "filter_resonance": 0.259,
+        "tune": 1.188,
+        "gain": 0.878,
+        "character": 0.453
+      }
+    },
+    {
+      "id": "bell_tone_08_x089",
+      "name": "Bell Tone 08 X089",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.456,
+        "sustain": 0.288,
+        "release": 1.147,
+        "filter_cutoff": 0.986,
+        "filter_resonance": 0.45,
+        "tune": 0.98,
+        "gain": 0.554,
+        "character": 0.289
+      }
+    },
+    {
+      "id": "bell_tone_05_x090",
+      "name": "Bell Tone 05 X090",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 05",
+      "parameters": {
+        "attack": 0.348,
+        "decay": 0.723,
+        "sustain": 0.239,
+        "release": 1.514,
+        "filter_cutoff": 0.97,
+        "filter_resonance": 0.358,
+        "tune": -1.953,
+        "gain": 0.707,
+        "character": 0.421
+      }
+    },
+    {
+      "id": "bell_tone_06_x091",
+      "name": "Bell Tone 06 X091",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 06",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.363,
+        "sustain": 0.193,
+        "release": 0.901,
+        "filter_cutoff": 0.891,
+        "filter_resonance": 0.353,
+        "tune": -0.742,
+        "gain": 0.817,
+        "character": 0.311
+      }
+    },
+    {
+      "id": "toy_piano_06_x092",
+      "name": "Toy Piano 06 X092",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 06",
+      "parameters": {
+        "attack": 0.141,
+        "decay": 0.491,
+        "sustain": 0.032,
+        "release": 1.116,
+        "filter_cutoff": 0.739,
+        "filter_resonance": 0.185,
+        "tune": 1.11,
+        "gain": 0.662,
+        "character": 0.502
+      }
+    },
+    {
+      "id": "bell_tone_02_x093",
+      "name": "Bell Tone 02 X093",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 02",
+      "parameters": {
+        "attack": 0.326,
+        "decay": 0.814,
+        "sustain": 0.023,
+        "release": 0.447,
+        "filter_cutoff": 0.88,
+        "filter_resonance": 0.481,
+        "tune": 0.788,
+        "gain": 0.701,
+        "character": 0.405
+      }
+    },
+    {
+      "id": "toy_piano_01_x094",
+      "name": "Toy Piano 01 X094",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 01",
+      "parameters": {
+        "attack": 0.342,
+        "decay": 0.0,
+        "sustain": 0.111,
+        "release": 0.982,
+        "filter_cutoff": 0.886,
+        "filter_resonance": 0.137,
+        "tune": 0.506,
+        "gain": 0.833,
+        "character": 0.491
+      }
+    },
+    {
+      "id": "toy_piano_01_x095",
+      "name": "Toy Piano 01 X095",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 01",
+      "parameters": {
+        "attack": 0.383,
+        "decay": 0.015,
+        "sustain": 0.114,
+        "release": 0.719,
+        "filter_cutoff": 0.928,
+        "filter_resonance": 0.202,
+        "tune": 0.653,
+        "gain": 0.845,
+        "character": 0.484
+      }
+    },
+    {
+      "id": "electric_keys_05_x096",
+      "name": "Electric Keys 05 X096",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 05",
+      "parameters": {
+        "attack": 0.443,
+        "decay": 0.565,
+        "sustain": 0.44,
+        "release": 1.197,
+        "filter_cutoff": 0.675,
+        "filter_resonance": 0.138,
+        "tune": 2.356,
+        "gain": 0.598,
+        "character": 0.544
+      }
+    },
+    {
+      "id": "bell_tone_03_x097",
+      "name": "Bell Tone 03 X097",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 03",
+      "parameters": {
+        "attack": 0.377,
+        "decay": 0.232,
+        "sustain": 0.048,
+        "release": 0.802,
+        "filter_cutoff": 0.935,
+        "filter_resonance": 0.441,
+        "tune": 2.03,
+        "gain": 0.838,
+        "character": 0.416
+      }
+    },
+    {
+      "id": "electric_keys_01_x098",
+      "name": "Electric Keys 01 X098",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 01",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.213,
+        "sustain": 0.452,
+        "release": 1.487,
+        "filter_cutoff": 0.748,
+        "filter_resonance": 0.288,
+        "tune": 0.254,
+        "gain": 0.857,
+        "character": 0.471
+      }
+    },
+    {
+      "id": "lofi_piano_x099",
+      "name": "LoFi Piano X099",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.565,
+        "sustain": 0.246,
+        "release": 0.773,
+        "filter_cutoff": 0.698,
+        "filter_resonance": 0.154,
+        "tune": -0.089,
+        "gain": 0.862,
+        "character": 0.641
+      }
+    },
+    {
+      "id": "electric_keys_07_x100",
+      "name": "Electric Keys 07 X100",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 07",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.437,
+        "sustain": 0.326,
+        "release": 1.041,
+        "filter_cutoff": 0.788,
+        "filter_resonance": 0.19,
+        "tune": -0.883,
+        "gain": 1.001,
+        "character": 0.545
+      }
+    },
+    {
+      "id": "lofi_piano_03_x101",
+      "name": "LoFi Piano 03 X101",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 03",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.048,
+        "sustain": 0.367,
+        "release": 0.968,
+        "filter_cutoff": 0.632,
+        "filter_resonance": 0.146,
+        "tune": -0.674,
+        "gain": 0.993,
+        "character": 0.494
+      }
+    },
+    {
+      "id": "bell_tone_07_x102",
+      "name": "Bell Tone 07 X102",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 07",
+      "parameters": {
+        "attack": 0.017,
+        "decay": 0.633,
+        "sustain": 0.24,
+        "release": 1.843,
+        "filter_cutoff": 0.969,
+        "filter_resonance": 0.284,
+        "tune": 1.496,
+        "gain": 0.585,
+        "character": 0.342
+      }
+    },
+    {
+      "id": "electric_keys_02_x103",
+      "name": "Electric Keys 02 X103",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 02",
+      "parameters": {
+        "attack": 0.04,
+        "decay": 0.564,
+        "sustain": 0.284,
+        "release": 1.345,
+        "filter_cutoff": 0.739,
+        "filter_resonance": 0.251,
+        "tune": -1.929,
+        "gain": 0.68,
+        "character": 0.532
+      }
+    },
+    {
+      "id": "bell_tone_07_x104",
+      "name": "Bell Tone 07 X104",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 07",
+      "parameters": {
+        "attack": 0.056,
+        "decay": 0.509,
+        "sustain": 0.263,
+        "release": 2.007,
+        "filter_cutoff": 0.961,
+        "filter_resonance": 0.275,
+        "tune": 1.92,
+        "gain": 0.618,
+        "character": 0.359
+      }
+    },
+    {
+      "id": "toy_piano_01_x105",
+      "name": "Toy Piano 01 X105",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 01",
+      "parameters": {
+        "attack": 0.422,
+        "decay": 0.0,
+        "sustain": 0.183,
+        "release": 1.081,
+        "filter_cutoff": 0.913,
+        "filter_resonance": 0.148,
+        "tune": -0.173,
+        "gain": 0.838,
+        "character": 0.529
+      }
+    },
+    {
+      "id": "toy_piano_07_x106",
+      "name": "Toy Piano 07 X106",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 07",
+      "parameters": {
+        "attack": 0.41,
+        "decay": 0.0,
+        "sustain": 0.207,
+        "release": 0.0,
+        "filter_cutoff": 0.924,
+        "filter_resonance": 0.23,
+        "tune": -0.001,
+        "gain": 0.909,
+        "character": 0.467
+      }
+    },
+    {
+      "id": "mallet_08_x107",
+      "name": "Mallet 08 X107",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 08",
+      "parameters": {
+        "attack": 0.175,
+        "decay": 0.5,
+        "sustain": 0.104,
+        "release": 0.05,
+        "filter_cutoff": 0.794,
+        "filter_resonance": 0.248,
+        "tune": -1.742,
+        "gain": 1.031,
+        "character": 0.386
+      }
+    },
+    {
+      "id": "toy_piano_01_x108",
+      "name": "Toy Piano 01 X108",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 01",
+      "parameters": {
+        "attack": 0.343,
+        "decay": 0.04,
+        "sustain": 0.116,
+        "release": 0.744,
+        "filter_cutoff": 0.905,
+        "filter_resonance": 0.157,
+        "tune": 0.099,
+        "gain": 0.856,
+        "character": 0.514
+      }
+    },
+    {
+      "id": "mallet_06_x109",
+      "name": "Mallet 06 X109",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 06",
+      "parameters": {
+        "attack": 0.059,
+        "decay": 0.025,
+        "sustain": 0.263,
+        "release": 0.703,
+        "filter_cutoff": 0.716,
+        "filter_resonance": 0.226,
+        "tune": -1.67,
+        "gain": 0.733,
+        "character": 0.471
+      }
+    },
+    {
+      "id": "toy_piano_x110",
+      "name": "Toy Piano X110",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano",
+      "parameters": {
+        "attack": 0.057,
+        "decay": 0.149,
+        "sustain": 0.124,
+        "release": 0.558,
+        "filter_cutoff": 0.844,
+        "filter_resonance": 0.154,
+        "tune": 0.005,
+        "gain": 0.736,
+        "character": 0.494
+      }
+    },
+    {
+      "id": "bell_tone_05_x111",
+      "name": "Bell Tone 05 X111",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 05",
+      "parameters": {
+        "attack": 0.324,
+        "decay": 0.596,
+        "sustain": 0.216,
+        "release": 1.505,
+        "filter_cutoff": 0.982,
+        "filter_resonance": 0.366,
+        "tune": -2.187,
+        "gain": 0.707,
+        "character": 0.431
+      }
+    },
+    {
+      "id": "lofi_piano_05_x112",
+      "name": "LoFi Piano 05 X112",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 05",
+      "parameters": {
+        "attack": 0.4,
+        "decay": 0.622,
+        "sustain": 0.401,
+        "release": 1.561,
+        "filter_cutoff": 0.823,
+        "filter_resonance": 0.135,
+        "tune": 1.213,
+        "gain": 0.695,
+        "character": 0.67
+      }
+    },
+    {
+      "id": "lofi_piano_05_x113",
+      "name": "LoFi Piano 05 X113",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 05",
+      "parameters": {
+        "attack": 0.407,
+        "decay": 0.62,
+        "sustain": 0.377,
+        "release": 1.503,
+        "filter_cutoff": 0.775,
+        "filter_resonance": 0.12,
+        "tune": 1.249,
+        "gain": 0.705,
+        "character": 0.632
+      }
+    },
+    {
+      "id": "bell_tone_02_x114",
+      "name": "Bell Tone 02 X114",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 02",
+      "parameters": {
+        "attack": 0.362,
+        "decay": 0.787,
+        "sustain": 0.106,
+        "release": 0.123,
+        "filter_cutoff": 0.915,
+        "filter_resonance": 0.471,
+        "tune": 0.81,
+        "gain": 0.713,
+        "character": 0.367
+      }
+    },
+    {
+      "id": "electric_keys_02_x115",
+      "name": "Electric Keys 02 X115",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 02",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.488,
+        "sustain": 0.319,
+        "release": 1.733,
+        "filter_cutoff": 0.696,
+        "filter_resonance": 0.282,
+        "tune": -1.61,
+        "gain": 0.625,
+        "character": 0.576
+      }
+    },
+    {
+      "id": "lofi_piano_02_x116",
+      "name": "LoFi Piano 02 X116",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 02",
+      "parameters": {
+        "attack": 0.08,
+        "decay": 0.871,
+        "sustain": 0.309,
+        "release": 0.22,
+        "filter_cutoff": 0.658,
+        "filter_resonance": 0.251,
+        "tune": -0.491,
+        "gain": 0.759,
+        "character": 0.491
+      }
+    },
+    {
+      "id": "electric_keys_01_x117",
+      "name": "Electric Keys 01 X117",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 01",
+      "parameters": {
+        "attack": 0.04,
+        "decay": 0.193,
+        "sustain": 0.419,
+        "release": 1.66,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.272,
+        "tune": 0.208,
+        "gain": 0.831,
+        "character": 0.411
+      }
+    },
+    {
+      "id": "mallet_07_x118",
+      "name": "Mallet 07 X118",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 07",
+      "parameters": {
+        "attack": 0.217,
+        "decay": 0.552,
+        "sustain": 0.19,
+        "release": 0.888,
+        "filter_cutoff": 0.765,
+        "filter_resonance": 0.146,
+        "tune": -1.05,
+        "gain": 0.867,
+        "character": 0.464
+      }
+    },
+    {
+      "id": "toy_piano_06_x119",
+      "name": "Toy Piano 06 X119",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 06",
+      "parameters": {
+        "attack": 0.077,
+        "decay": 0.53,
+        "sustain": 0.055,
+        "release": 1.077,
+        "filter_cutoff": 0.745,
+        "filter_resonance": 0.139,
+        "tune": 0.586,
+        "gain": 0.637,
+        "character": 0.52
+      }
+    },
+    {
+      "id": "mallet_04_x120",
+      "name": "Mallet 04 X120",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 04",
+      "parameters": {
+        "attack": 0.413,
+        "decay": 0.525,
+        "sustain": 0.159,
+        "release": 0.0,
+        "filter_cutoff": 0.824,
+        "filter_resonance": 0.275,
+        "tune": -1.651,
+        "gain": 0.788,
+        "character": 0.361
+      }
+    },
+    {
+      "id": "toy_piano_05_x121",
+      "name": "Toy Piano 05 X121",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 05",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.098,
+        "sustain": 0.0,
+        "release": 0.32,
+        "filter_cutoff": 0.781,
+        "filter_resonance": 0.102,
+        "tune": -1.193,
+        "gain": 0.713,
+        "character": 0.434
+      }
+    },
+    {
+      "id": "lofi_piano_08_x122",
+      "name": "LoFi Piano 08 X122",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 08",
+      "parameters": {
+        "attack": 0.492,
+        "decay": 0.154,
+        "sustain": 0.158,
+        "release": 0.214,
+        "filter_cutoff": 0.794,
+        "filter_resonance": 0.089,
+        "tune": 2.026,
+        "gain": 0.641,
+        "character": 0.709
+      }
+    },
+    {
+      "id": "electric_keys_05_x123",
+      "name": "Electric Keys 05 X123",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 05",
+      "parameters": {
+        "attack": 0.423,
+        "decay": 0.553,
+        "sustain": 0.444,
+        "release": 1.353,
+        "filter_cutoff": 0.723,
+        "filter_resonance": 0.13,
+        "tune": 2.356,
+        "gain": 0.619,
+        "character": 0.614
+      }
+    },
+    {
+      "id": "lofi_piano_04_x124",
+      "name": "LoFi Piano 04 X124",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 04",
+      "parameters": {
+        "attack": 0.224,
+        "decay": 0.07,
+        "sustain": 0.251,
+        "release": 1.195,
+        "filter_cutoff": 0.639,
+        "filter_resonance": 0.238,
+        "tune": 2.356,
+        "gain": 0.864,
+        "character": 0.642
+      }
+    },
+    {
+      "id": "mallet_06_x125",
+      "name": "Mallet 06 X125",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 06",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.098,
+        "sustain": 0.291,
+        "release": 0.579,
+        "filter_cutoff": 0.724,
+        "filter_resonance": 0.264,
+        "tune": -0.89,
+        "gain": 0.774,
+        "character": 0.401
+      }
+    },
+    {
+      "id": "electric_keys_x126",
+      "name": "Electric Keys X126",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys",
+      "parameters": {
+        "attack": 0.019,
+        "decay": 0.465,
+        "sustain": 0.414,
+        "release": 0.603,
+        "filter_cutoff": 0.737,
+        "filter_resonance": 0.209,
+        "tune": 0.425,
+        "gain": 0.772,
+        "character": 0.452
+      }
+    },
+    {
+      "id": "mallet_07_x127",
+      "name": "Mallet 07 X127",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 07",
+      "parameters": {
+        "attack": 0.223,
+        "decay": 0.547,
+        "sustain": 0.148,
+        "release": 0.659,
+        "filter_cutoff": 0.742,
+        "filter_resonance": 0.19,
+        "tune": -0.596,
+        "gain": 0.778,
+        "character": 0.469
+      }
+    },
+    {
+      "id": "bell_tone_07_x128",
+      "name": "Bell Tone 07 X128",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 07",
+      "parameters": {
+        "attack": 0.011,
+        "decay": 0.615,
+        "sustain": 0.24,
+        "release": 1.793,
+        "filter_cutoff": 0.917,
+        "filter_resonance": 0.28,
+        "tune": 1.138,
+        "gain": 0.608,
+        "character": 0.333
+      }
+    },
+    {
+      "id": "toy_piano_05_x129",
+      "name": "Toy Piano 05 X129",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 05",
+      "parameters": {
+        "attack": 0.026,
+        "decay": 0.091,
+        "sustain": 0.064,
+        "release": 0.178,
+        "filter_cutoff": 0.784,
+        "filter_resonance": 0.121,
+        "tune": -0.176,
+        "gain": 0.714,
+        "character": 0.454
+      }
+    },
+    {
+      "id": "electric_keys_08_x130",
+      "name": "Electric Keys 08 X130",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 08",
+      "parameters": {
+        "attack": 0.035,
+        "decay": 0.233,
+        "sustain": 0.325,
+        "release": 0.897,
+        "filter_cutoff": 0.849,
+        "filter_resonance": 0.146,
+        "tune": 1.71,
+        "gain": 0.667,
+        "character": 0.473
+      }
+    },
+    {
+      "id": "toy_piano_03_x131",
+      "name": "Toy Piano 03 X131",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 03",
+      "parameters": {
+        "attack": 0.045,
+        "decay": 0.435,
+        "sustain": 0.096,
+        "release": 0.109,
+        "filter_cutoff": 0.845,
+        "filter_resonance": 0.204,
+        "tune": -1.947,
+        "gain": 0.823,
+        "character": 0.469
+      }
+    },
+    {
+      "id": "lofi_piano_08_x132",
+      "name": "LoFi Piano 08 X132",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 08",
+      "parameters": {
+        "attack": 0.47,
+        "decay": 0.187,
+        "sustain": 0.265,
+        "release": 0.156,
+        "filter_cutoff": 0.808,
+        "filter_resonance": 0.05,
+        "tune": 1.627,
+        "gain": 0.684,
+        "character": 0.699
+      }
+    },
+    {
+      "id": "lofi_piano_04_x133",
+      "name": "LoFi Piano 04 X133",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 04",
+      "parameters": {
+        "attack": 0.223,
+        "decay": 0.025,
+        "sustain": 0.185,
+        "release": 1.351,
+        "filter_cutoff": 0.599,
+        "filter_resonance": 0.236,
+        "tune": 2.007,
+        "gain": 0.851,
+        "character": 0.613
+      }
+    },
+    {
+      "id": "bell_tone_04_x134",
+      "name": "Bell Tone 04 X134",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 04",
+      "parameters": {
+        "attack": 0.06,
+        "decay": 0.586,
+        "sustain": 0.196,
+        "release": 1.152,
+        "filter_cutoff": 0.914,
+        "filter_resonance": 0.428,
+        "tune": 2.06,
+        "gain": 0.8,
+        "character": 0.421
+      }
+    },
+    {
+      "id": "mallet_x135",
+      "name": "Mallet X135",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.365,
+        "sustain": 0.172,
+        "release": 0.368,
+        "filter_cutoff": 0.808,
+        "filter_resonance": 0.282,
+        "tune": 0.134,
+        "gain": 0.799,
+        "character": 0.366
+      }
+    },
+    {
+      "id": "lofi_piano_06_x136",
+      "name": "LoFi Piano 06 X136",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 06",
+      "parameters": {
+        "attack": 0.029,
+        "decay": 0.297,
+        "sustain": 0.303,
+        "release": 0.9,
+        "filter_cutoff": 0.655,
+        "filter_resonance": 0.094,
+        "tune": -0.835,
+        "gain": 0.651,
+        "character": 0.561
+      }
+    },
+    {
+      "id": "bell_tone_x137",
+      "name": "Bell Tone X137",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone",
+      "parameters": {
+        "attack": 0.041,
+        "decay": 0.668,
+        "sustain": 0.203,
+        "release": 0.737,
+        "filter_cutoff": 0.888,
+        "filter_resonance": 0.364,
+        "tune": 0.276,
+        "gain": 0.784,
+        "character": 0.353
+      }
+    },
+    {
+      "id": "electric_keys_07_x138",
+      "name": "Electric Keys 07 X138",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 07",
+      "parameters": {
+        "attack": 0.03,
+        "decay": 0.522,
+        "sustain": 0.325,
+        "release": 1.197,
+        "filter_cutoff": 0.763,
+        "filter_resonance": 0.184,
+        "tune": -0.629,
+        "gain": 0.913,
+        "character": 0.582
+      }
+    },
+    {
+      "id": "electric_keys_04_x139",
+      "name": "Electric Keys 04 X139",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 04",
+      "parameters": {
+        "attack": 0.191,
+        "decay": 0.0,
+        "sustain": 0.417,
+        "release": 0.0,
+        "filter_cutoff": 0.735,
+        "filter_resonance": 0.109,
+        "tune": 0.305,
+        "gain": 0.966,
+        "character": 0.551
+      }
+    },
+    {
+      "id": "electric_keys_03_x140",
+      "name": "Electric Keys 03 X140",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 03",
+      "parameters": {
+        "attack": 0.158,
+        "decay": 0.039,
+        "sustain": 0.348,
+        "release": 0.737,
+        "filter_cutoff": 0.809,
+        "filter_resonance": 0.172,
+        "tune": -0.02,
+        "gain": 0.6,
+        "character": 0.505
+      }
+    },
+    {
+      "id": "bell_tone_02_x141",
+      "name": "Bell Tone 02 X141",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 02",
+      "parameters": {
+        "attack": 0.352,
+        "decay": 0.803,
+        "sustain": 0.035,
+        "release": 0.323,
+        "filter_cutoff": 0.891,
+        "filter_resonance": 0.406,
+        "tune": 0.686,
+        "gain": 0.731,
+        "character": 0.32
+      }
+    },
+    {
+      "id": "lofi_piano_01_x142",
+      "name": "LoFi Piano 01 X142",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 01",
+      "parameters": {
+        "attack": 0.282,
+        "decay": 0.604,
+        "sustain": 0.28,
+        "release": 1.129,
+        "filter_cutoff": 0.703,
+        "filter_resonance": 0.219,
+        "tune": 0.494,
+        "gain": 1.026,
+        "character": 0.63
+      }
+    },
+    {
+      "id": "lofi_piano_02_x143",
+      "name": "LoFi Piano 02 X143",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 02",
+      "parameters": {
+        "attack": 0.1,
+        "decay": 0.949,
+        "sustain": 0.267,
+        "release": 0.256,
+        "filter_cutoff": 0.664,
+        "filter_resonance": 0.26,
+        "tune": -0.064,
+        "gain": 0.673,
+        "character": 0.584
+      }
+    },
+    {
+      "id": "lofi_piano_02_x144",
+      "name": "LoFi Piano 02 X144",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 02",
+      "parameters": {
+        "attack": 0.111,
+        "decay": 1.003,
+        "sustain": 0.331,
+        "release": 0.113,
+        "filter_cutoff": 0.613,
+        "filter_resonance": 0.241,
+        "tune": -0.555,
+        "gain": 0.751,
+        "character": 0.515
+      }
+    },
+    {
+      "id": "bell_tone_08_x145",
+      "name": "Bell Tone 08 X145",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.478,
+        "sustain": 0.213,
+        "release": 1.396,
+        "filter_cutoff": 0.992,
+        "filter_resonance": 0.435,
+        "tune": 0.754,
+        "gain": 0.642,
+        "character": 0.362
+      }
+    },
+    {
+      "id": "toy_piano_07_x146",
+      "name": "Toy Piano 07 X146",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 07",
+      "parameters": {
+        "attack": 0.307,
+        "decay": 0.108,
+        "sustain": 0.16,
+        "release": 0.181,
+        "filter_cutoff": 0.919,
+        "filter_resonance": 0.174,
+        "tune": -0.418,
+        "gain": 0.91,
+        "character": 0.435
+      }
+    },
+    {
+      "id": "electric_keys_08_x147",
+      "name": "Electric Keys 08 X147",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.048,
+        "sustain": 0.351,
+        "release": 0.923,
+        "filter_cutoff": 0.873,
+        "filter_resonance": 0.161,
+        "tune": 2.356,
+        "gain": 0.687,
+        "character": 0.413
+      }
+    },
+    {
+      "id": "electric_keys_02_x148",
+      "name": "Electric Keys 02 X148",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 02",
+      "parameters": {
+        "attack": 0.039,
+        "decay": 0.639,
+        "sustain": 0.321,
+        "release": 1.579,
+        "filter_cutoff": 0.749,
+        "filter_resonance": 0.261,
+        "tune": -1.832,
+        "gain": 0.653,
+        "character": 0.554
+      }
+    },
+    {
+      "id": "toy_piano_01_x149",
+      "name": "Toy Piano 01 X149",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 01",
+      "parameters": {
+        "attack": 0.336,
+        "decay": 0.081,
+        "sustain": 0.158,
+        "release": 0.926,
+        "filter_cutoff": 0.896,
+        "filter_resonance": 0.154,
+        "tune": 0.214,
+        "gain": 0.824,
+        "character": 0.515
+      }
+    },
+    {
+      "id": "toy_piano_05_x150",
+      "name": "Toy Piano 05 X150",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 05",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.058,
+        "sustain": 0.016,
+        "release": 0.226,
+        "filter_cutoff": 0.842,
+        "filter_resonance": 0.078,
+        "tune": -0.272,
+        "gain": 0.636,
+        "character": 0.465
+      }
+    },
+    {
+      "id": "mallet_08_x151",
+      "name": "Mallet 08 X151",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 08",
+      "parameters": {
+        "attack": 0.162,
+        "decay": 0.563,
+        "sustain": 0.172,
+        "release": 0.086,
+        "filter_cutoff": 0.796,
+        "filter_resonance": 0.239,
+        "tune": -1.746,
+        "gain": 0.956,
+        "character": 0.468
+      }
+    },
+    {
+      "id": "bell_tone_04_x152",
+      "name": "Bell Tone 04 X152",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 04",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.55,
+        "sustain": 0.152,
+        "release": 1.177,
+        "filter_cutoff": 0.955,
+        "filter_resonance": 0.416,
+        "tune": 2.356,
+        "gain": 0.824,
+        "character": 0.41
+      }
+    },
+    {
+      "id": "lofi_piano_02_x153",
+      "name": "LoFi Piano 02 X153",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 02",
+      "parameters": {
+        "attack": 0.176,
+        "decay": 1.035,
+        "sustain": 0.281,
+        "release": 0.251,
+        "filter_cutoff": 0.628,
+        "filter_resonance": 0.171,
+        "tune": -0.279,
+        "gain": 0.68,
+        "character": 0.529
+      }
+    },
+    {
+      "id": "mallet_03_x154",
+      "name": "Mallet 03 X154",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 03",
+      "parameters": {
+        "attack": 0.011,
+        "decay": 0.601,
+        "sustain": 0.246,
+        "release": 1.109,
+        "filter_cutoff": 0.898,
+        "filter_resonance": 0.252,
+        "tune": -1.499,
+        "gain": 0.955,
+        "character": 0.482
+      }
+    },
+    {
+      "id": "mallet_06_x155",
+      "name": "Mallet 06 X155",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 06",
+      "parameters": {
+        "attack": 0.042,
+        "decay": 0.076,
+        "sustain": 0.265,
+        "release": 0.701,
+        "filter_cutoff": 0.67,
+        "filter_resonance": 0.269,
+        "tune": -1.667,
+        "gain": 0.746,
+        "character": 0.47
+      }
+    },
+    {
+      "id": "electric_keys_08_x156",
+      "name": "Electric Keys 08 X156",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 08",
+      "parameters": {
+        "attack": 0.022,
+        "decay": 0.14,
+        "sustain": 0.283,
+        "release": 0.976,
+        "filter_cutoff": 0.881,
+        "filter_resonance": 0.165,
+        "tune": 2.356,
+        "gain": 0.713,
+        "character": 0.423
+      }
+    },
+    {
+      "id": "toy_piano_06_x157",
+      "name": "Toy Piano 06 X157",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 06",
+      "parameters": {
+        "attack": 0.084,
+        "decay": 0.38,
+        "sustain": 0.061,
+        "release": 1.002,
+        "filter_cutoff": 0.716,
+        "filter_resonance": 0.132,
+        "tune": 0.447,
+        "gain": 0.621,
+        "character": 0.551
+      }
+    },
+    {
+      "id": "mallet_08_x158",
+      "name": "Mallet 08 X158",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 08",
+      "parameters": {
+        "attack": 0.149,
+        "decay": 0.552,
+        "sustain": 0.118,
+        "release": 0.181,
+        "filter_cutoff": 0.808,
+        "filter_resonance": 0.257,
+        "tune": -1.545,
+        "gain": 1.044,
+        "character": 0.42
+      }
+    },
+    {
+      "id": "bell_tone_08_x159",
+      "name": "Bell Tone 08 X159",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 08",
+      "parameters": {
+        "attack": 0.048,
+        "decay": 0.329,
+        "sustain": 0.257,
+        "release": 1.253,
+        "filter_cutoff": 0.94,
+        "filter_resonance": 0.441,
+        "tune": 1.04,
+        "gain": 0.609,
+        "character": 0.309
+      }
+    },
+    {
+      "id": "toy_piano_02_x160",
+      "name": "Toy Piano 02 X160",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 02",
+      "parameters": {
+        "attack": 0.007,
+        "decay": 0.092,
+        "sustain": 0.013,
+        "release": 0.976,
+        "filter_cutoff": 0.857,
+        "filter_resonance": 0.243,
+        "tune": -0.507,
+        "gain": 0.845,
+        "character": 0.324
+      }
+    },
+    {
+      "id": "bell_tone_05_x161",
+      "name": "Bell Tone 05 X161",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 05",
+      "parameters": {
+        "attack": 0.325,
+        "decay": 0.702,
+        "sustain": 0.191,
+        "release": 1.437,
+        "filter_cutoff": 0.949,
+        "filter_resonance": 0.421,
+        "tune": -2.187,
+        "gain": 0.669,
+        "character": 0.364
+      }
+    },
+    {
+      "id": "bell_tone_05_x162",
+      "name": "Bell Tone 05 X162",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 05",
+      "parameters": {
+        "attack": 0.336,
+        "decay": 0.562,
+        "sustain": 0.219,
+        "release": 1.499,
+        "filter_cutoff": 0.951,
+        "filter_resonance": 0.387,
+        "tune": -2.06,
+        "gain": 0.66,
+        "character": 0.401
+      }
+    },
+    {
+      "id": "bell_tone_04_x163",
+      "name": "Bell Tone 04 X163",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 04",
+      "parameters": {
+        "attack": 0.045,
+        "decay": 0.502,
+        "sustain": 0.245,
+        "release": 1.364,
+        "filter_cutoff": 0.954,
+        "filter_resonance": 0.474,
+        "tune": 2.356,
+        "gain": 0.873,
+        "character": 0.406
+      }
+    },
+    {
+      "id": "electric_keys_08_x164",
+      "name": "Electric Keys 08 X164",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 08",
+      "parameters": {
+        "attack": 0.054,
+        "decay": 0.059,
+        "sustain": 0.35,
+        "release": 0.879,
+        "filter_cutoff": 0.871,
+        "filter_resonance": 0.161,
+        "tune": 2.111,
+        "gain": 0.646,
+        "character": 0.435
+      }
+    },
+    {
+      "id": "electric_keys_04_x165",
+      "name": "Electric Keys 04 X165",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 04",
+      "parameters": {
+        "attack": 0.265,
+        "decay": 0.081,
+        "sustain": 0.371,
+        "release": 0.0,
+        "filter_cutoff": 0.728,
+        "filter_resonance": 0.092,
+        "tune": -0.087,
+        "gain": 0.955,
+        "character": 0.568
+      }
+    },
+    {
+      "id": "lofi_piano_01_x166",
+      "name": "LoFi Piano 01 X166",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 01",
+      "parameters": {
+        "attack": 0.267,
+        "decay": 0.595,
+        "sustain": 0.363,
+        "release": 0.92,
+        "filter_cutoff": 0.724,
+        "filter_resonance": 0.209,
+        "tune": 0.738,
+        "gain": 1.029,
+        "character": 0.629
+      }
+    },
+    {
+      "id": "mallet_03_x167",
+      "name": "Mallet 03 X167",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 03",
+      "parameters": {
+        "attack": 0.044,
+        "decay": 0.543,
+        "sustain": 0.216,
+        "release": 1.019,
+        "filter_cutoff": 0.85,
+        "filter_resonance": 0.304,
+        "tune": -1.68,
+        "gain": 0.939,
+        "character": 0.471
+      }
+    },
+    {
+      "id": "lofi_piano_x168",
+      "name": "LoFi Piano X168",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano",
+      "parameters": {
+        "attack": 0.057,
+        "decay": 0.465,
+        "sustain": 0.253,
+        "release": 0.841,
+        "filter_cutoff": 0.742,
+        "filter_resonance": 0.119,
+        "tune": 0.203,
+        "gain": 0.84,
+        "character": 0.629
+      }
+    },
+    {
+      "id": "toy_piano_05_x169",
+      "name": "Toy Piano 05 X169",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 05",
+      "parameters": {
+        "attack": 0.026,
+        "decay": 0.0,
+        "sustain": 0.0,
+        "release": 0.425,
+        "filter_cutoff": 0.829,
+        "filter_resonance": 0.146,
+        "tune": -0.915,
+        "gain": 0.732,
+        "character": 0.456
+      }
+    },
+    {
+      "id": "electric_keys_08_x170",
+      "name": "Electric Keys 08 X170",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 08",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.236,
+        "sustain": 0.256,
+        "release": 0.811,
+        "filter_cutoff": 0.875,
+        "filter_resonance": 0.173,
+        "tune": 2.278,
+        "gain": 0.669,
+        "character": 0.389
+      }
+    },
+    {
+      "id": "bell_tone_06_x171",
+      "name": "Bell Tone 06 X171",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 06",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.443,
+        "sustain": 0.197,
+        "release": 0.8,
+        "filter_cutoff": 0.877,
+        "filter_resonance": 0.297,
+        "tune": -0.559,
+        "gain": 0.79,
+        "character": 0.317
+      }
+    },
+    {
+      "id": "bell_tone_03_x172",
+      "name": "Bell Tone 03 X172",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 03",
+      "parameters": {
+        "attack": 0.288,
+        "decay": 0.303,
+        "sustain": 0.038,
+        "release": 0.97,
+        "filter_cutoff": 0.935,
+        "filter_resonance": 0.434,
+        "tune": 1.888,
+        "gain": 0.871,
+        "character": 0.441
+      }
+    },
+    {
+      "id": "toy_piano_05_x173",
+      "name": "Toy Piano 05 X173",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 05",
+      "parameters": {
+        "attack": 0.022,
+        "decay": 0.162,
+        "sustain": 0.012,
+        "release": 0.598,
+        "filter_cutoff": 0.84,
+        "filter_resonance": 0.093,
+        "tune": -0.487,
+        "gain": 0.662,
+        "character": 0.488
+      }
+    },
+    {
+      "id": "toy_piano_x174",
+      "name": "Toy Piano X174",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano",
+      "parameters": {
+        "attack": 0.037,
+        "decay": 0.335,
+        "sustain": 0.106,
+        "release": 0.364,
+        "filter_cutoff": 0.884,
+        "filter_resonance": 0.155,
+        "tune": 0.318,
+        "gain": 0.743,
+        "character": 0.421
+      }
+    },
+    {
+      "id": "mallet_07_x175",
+      "name": "Mallet 07 X175",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 07",
+      "parameters": {
+        "attack": 0.209,
+        "decay": 0.425,
+        "sustain": 0.244,
+        "release": 0.758,
+        "filter_cutoff": 0.814,
+        "filter_resonance": 0.205,
+        "tune": -1.237,
+        "gain": 0.853,
+        "character": 0.513
+      }
+    },
+    {
+      "id": "mallet_04_x176",
+      "name": "Mallet 04 X176",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 04",
+      "parameters": {
+        "attack": 0.416,
+        "decay": 0.495,
+        "sustain": 0.232,
+        "release": 0.136,
+        "filter_cutoff": 0.825,
+        "filter_resonance": 0.195,
+        "tune": -1.555,
+        "gain": 0.741,
+        "character": 0.381
+      }
+    },
+    {
+      "id": "mallet_01_x177",
+      "name": "Mallet 01 X177",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 01",
+      "parameters": {
+        "attack": 0.033,
+        "decay": 0.811,
+        "sustain": 0.211,
+        "release": 0.695,
+        "filter_cutoff": 0.727,
+        "filter_resonance": 0.315,
+        "tune": 0.843,
+        "gain": 0.91,
+        "character": 0.467
+      }
+    },
+    {
+      "id": "lofi_piano_07_x178",
+      "name": "LoFi Piano 07 X178",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 07",
+      "parameters": {
+        "attack": 0.01,
+        "decay": 0.035,
+        "sustain": 0.302,
+        "release": 0.0,
+        "filter_cutoff": 0.632,
+        "filter_resonance": 0.142,
+        "tune": 1.058,
+        "gain": 1.064,
+        "character": 0.656
+      }
+    },
+    {
+      "id": "lofi_piano_08_x179",
+      "name": "LoFi Piano 08 X179",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 08",
+      "parameters": {
+        "attack": 0.514,
+        "decay": 0.152,
+        "sustain": 0.18,
+        "release": 0.191,
+        "filter_cutoff": 0.777,
+        "filter_resonance": 0.034,
+        "tune": 2.356,
+        "gain": 0.635,
+        "character": 0.724
+      }
+    },
+    {
+      "id": "lofi_piano_03_x180",
+      "name": "LoFi Piano 03 X180",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 03",
+      "parameters": {
+        "attack": 0.02,
+        "decay": 0.027,
+        "sustain": 0.411,
+        "release": 1.192,
+        "filter_cutoff": 0.647,
+        "filter_resonance": 0.143,
+        "tune": -0.104,
+        "gain": 1.041,
+        "character": 0.464
+      }
+    },
+    {
+      "id": "toy_piano_05_x181",
+      "name": "Toy Piano 05 X181",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 05",
+      "parameters": {
+        "attack": 0.026,
+        "decay": 0.0,
+        "sustain": 0.0,
+        "release": 0.499,
+        "filter_cutoff": 0.819,
+        "filter_resonance": 0.127,
+        "tune": -0.242,
+        "gain": 0.705,
+        "character": 0.422
+      }
+    },
+    {
+      "id": "bell_tone_03_x182",
+      "name": "Bell Tone 03 X182",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 03",
+      "parameters": {
+        "attack": 0.381,
+        "decay": 0.172,
+        "sustain": 0.044,
+        "release": 0.893,
+        "filter_cutoff": 0.917,
+        "filter_resonance": 0.394,
+        "tune": 2.356,
+        "gain": 0.836,
+        "character": 0.379
+      }
+    },
+    {
+      "id": "electric_keys_x183",
+      "name": "Electric Keys X183",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.504,
+        "sustain": 0.395,
+        "release": 0.748,
+        "filter_cutoff": 0.715,
+        "filter_resonance": 0.181,
+        "tune": -0.469,
+        "gain": 0.76,
+        "character": 0.508
+      }
+    },
+    {
+      "id": "bell_tone_03_x184",
+      "name": "Bell Tone 03 X184",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 03",
+      "parameters": {
+        "attack": 0.324,
+        "decay": 0.331,
+        "sustain": 0.058,
+        "release": 0.844,
+        "filter_cutoff": 0.933,
+        "filter_resonance": 0.43,
+        "tune": 1.67,
+        "gain": 0.869,
+        "character": 0.411
+      }
+    },
+    {
+      "id": "electric_keys_03_x185",
+      "name": "Electric Keys 03 X185",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 03",
+      "parameters": {
+        "attack": 0.179,
+        "decay": 0.159,
+        "sustain": 0.286,
+        "release": 0.939,
+        "filter_cutoff": 0.816,
+        "filter_resonance": 0.186,
+        "tune": 0.336,
+        "gain": 0.639,
+        "character": 0.578
+      }
+    },
+    {
+      "id": "lofi_piano_04_x186",
+      "name": "LoFi Piano 04 X186",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 04",
+      "parameters": {
+        "attack": 0.29,
+        "decay": 0.0,
+        "sustain": 0.268,
+        "release": 1.167,
+        "filter_cutoff": 0.645,
+        "filter_resonance": 0.237,
+        "tune": 1.824,
+        "gain": 0.848,
+        "character": 0.578
+      }
+    },
+    {
+      "id": "mallet_01_x187",
+      "name": "Mallet 01 X187",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 01",
+      "parameters": {
+        "attack": 0.11,
+        "decay": 0.715,
+        "sustain": 0.153,
+        "release": 0.648,
+        "filter_cutoff": 0.756,
+        "filter_resonance": 0.258,
+        "tune": 1.183,
+        "gain": 0.908,
+        "character": 0.44
+      }
+    },
+    {
+      "id": "mallet_01_x188",
+      "name": "Mallet 01 X188",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 01",
+      "parameters": {
+        "attack": 0.006,
+        "decay": 0.633,
+        "sustain": 0.182,
+        "release": 0.696,
+        "filter_cutoff": 0.769,
+        "filter_resonance": 0.316,
+        "tune": 1.07,
+        "gain": 0.885,
+        "character": 0.468
+      }
+    },
+    {
+      "id": "toy_piano_03_x189",
+      "name": "Toy Piano 03 X189",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 03",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.406,
+        "sustain": 0.077,
+        "release": 0.0,
+        "filter_cutoff": 0.808,
+        "filter_resonance": 0.16,
+        "tune": -1.708,
+        "gain": 0.813,
+        "character": 0.544
+      }
+    },
+    {
+      "id": "electric_keys_04_x190",
+      "name": "Electric Keys 04 X190",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 04",
+      "parameters": {
+        "attack": 0.243,
+        "decay": 0.046,
+        "sustain": 0.45,
+        "release": 0.0,
+        "filter_cutoff": 0.73,
+        "filter_resonance": 0.114,
+        "tune": -0.254,
+        "gain": 0.951,
+        "character": 0.504
+      }
+    },
+    {
+      "id": "lofi_piano_07_x191",
+      "name": "LoFi Piano 07 X191",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 07",
+      "parameters": {
+        "attack": 0.096,
+        "decay": 0.19,
+        "sustain": 0.38,
+        "release": 0.0,
+        "filter_cutoff": 0.664,
+        "filter_resonance": 0.192,
+        "tune": 0.445,
+        "gain": 0.978,
+        "character": 0.716
+      }
+    },
+    {
+      "id": "bell_tone_01_x192",
+      "name": "Bell Tone 01 X192",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 01",
+      "parameters": {
+        "attack": 0.035,
+        "decay": 0.366,
+        "sustain": 0.141,
+        "release": 1.646,
+        "filter_cutoff": 0.984,
+        "filter_resonance": 0.292,
+        "tune": -1.395,
+        "gain": 0.66,
+        "character": 0.321
+      }
+    },
+    {
+      "id": "electric_keys_x193",
+      "name": "Electric Keys X193",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys",
+      "parameters": {
+        "attack": 0.049,
+        "decay": 0.485,
+        "sustain": 0.372,
+        "release": 0.78,
+        "filter_cutoff": 0.764,
+        "filter_resonance": 0.235,
+        "tune": -0.544,
+        "gain": 0.831,
+        "character": 0.456
+      }
+    },
+    {
+      "id": "toy_piano_x194",
+      "name": "Toy Piano X194",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.334,
+        "sustain": 0.079,
+        "release": 0.323,
+        "filter_cutoff": 0.838,
+        "filter_resonance": 0.179,
+        "tune": 0.081,
+        "gain": 0.815,
+        "character": 0.448
+      }
+    },
+    {
+      "id": "electric_keys_05_x195",
+      "name": "Electric Keys 05 X195",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Electric Keys 05",
+      "parameters": {
+        "attack": 0.367,
+        "decay": 0.546,
+        "sustain": 0.416,
+        "release": 1.047,
+        "filter_cutoff": 0.686,
+        "filter_resonance": 0.15,
+        "tune": 2.356,
+        "gain": 0.62,
+        "character": 0.561
+      }
+    },
+    {
+      "id": "lofi_piano_x196",
+      "name": "LoFi Piano X196",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.398,
+        "sustain": 0.315,
+        "release": 0.913,
+        "filter_cutoff": 0.674,
+        "filter_resonance": 0.163,
+        "tune": -0.019,
+        "gain": 0.884,
+        "character": 0.579
+      }
+    },
+    {
+      "id": "mallet_07_x197",
+      "name": "Mallet 07 X197",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 07",
+      "parameters": {
+        "attack": 0.249,
+        "decay": 0.462,
+        "sustain": 0.151,
+        "release": 0.549,
+        "filter_cutoff": 0.762,
+        "filter_resonance": 0.169,
+        "tune": -1.07,
+        "gain": 0.772,
+        "character": 0.471
+      }
+    },
+    {
+      "id": "toy_piano_05_x198",
+      "name": "Toy Piano 05 X198",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 05",
+      "parameters": {
+        "attack": 0.048,
+        "decay": 0.041,
+        "sustain": 0.008,
+        "release": 0.3,
+        "filter_cutoff": 0.822,
+        "filter_resonance": 0.118,
+        "tune": -0.338,
+        "gain": 0.731,
+        "character": 0.5
+      }
+    },
+    {
+      "id": "lofi_piano_05_x199",
+      "name": "LoFi Piano 05 X199",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 05",
+      "parameters": {
+        "attack": 0.445,
+        "decay": 0.472,
+        "sustain": 0.363,
+        "release": 1.76,
+        "filter_cutoff": 0.793,
+        "filter_resonance": 0.096,
+        "tune": 1.646,
+        "gain": 0.771,
+        "character": 0.681
+      }
+    },
+    {
+      "id": "lofi_piano_02_x200",
+      "name": "LoFi Piano 02 X200",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 02",
+      "parameters": {
+        "attack": 0.107,
+        "decay": 1.003,
+        "sustain": 0.267,
+        "release": 0.052,
+        "filter_cutoff": 0.678,
+        "filter_resonance": 0.207,
+        "tune": -0.74,
+        "gain": 0.729,
+        "character": 0.568
+      }
+    },
+    {
+      "id": "lofi_piano_x201",
+      "name": "LoFi Piano X201",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano",
+      "parameters": {
+        "attack": 0.03,
+        "decay": 0.394,
+        "sustain": 0.309,
+        "release": 0.989,
+        "filter_cutoff": 0.673,
+        "filter_resonance": 0.122,
+        "tune": -0.524,
+        "gain": 0.838,
+        "character": 0.608
+      }
+    },
+    {
+      "id": "mallet_02_x202",
+      "name": "Mallet 02 X202",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Mallet 02",
+      "parameters": {
+        "attack": 0.036,
+        "decay": 0.28,
+        "sustain": 0.228,
+        "release": 1.232,
+        "filter_cutoff": 0.88,
+        "filter_resonance": 0.186,
+        "tune": -0.781,
+        "gain": 0.837,
+        "character": 0.525
+      }
+    },
+    {
+      "id": "bell_tone_02_x203",
+      "name": "Bell Tone 02 X203",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Bell Tone 02",
+      "parameters": {
+        "attack": 0.368,
+        "decay": 0.955,
+        "sustain": 0.044,
+        "release": 0.436,
+        "filter_cutoff": 0.922,
+        "filter_resonance": 0.458,
+        "tune": 0.613,
+        "gain": 0.727,
+        "character": 0.353
+      }
+    },
+    {
+      "id": "toy_piano_04_x204",
+      "name": "Toy Piano 04 X204",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of Toy Piano 04",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.489,
+        "sustain": 0.052,
+        "release": 0.457,
+        "filter_cutoff": 0.941,
+        "filter_resonance": 0.183,
+        "tune": 1.854,
+        "gain": 0.904,
+        "character": 0.43
+      }
+    },
+    {
+      "id": "lofi_piano_03_x205",
+      "name": "LoFi Piano 03 X205",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty",
+        "generated",
+        "expanded"
+      ],
+      "description": "Generated variation of LoFi Piano 03",
+      "parameters": {
+        "attack": 0.0,
+        "decay": 0.098,
+        "sustain": 0.318,
+        "release": 0.958,
+        "filter_cutoff": 0.674,
+        "filter_resonance": 0.107,
+        "tune": 0.092,
+        "gain": 1.006,
+        "character": 0.505
       }
     }
   ]

@@ -26,6 +26,7 @@ public:
     enum class RecordingFileType { WAV, AIFF, FLAC };
     enum class MeterBallistics { VU, PPM, Peak };
     enum class UITheme { Neon, Dark, Light };
+    enum class WingmanChatStyle { Professional, Teacher, Creative };
 
     static Settings& getInstance() {
         static Settings instance;
@@ -91,6 +92,9 @@ public:
             meterPeakHoldSeconds_ = (float)userSettings->getDoubleValue("meterPeakHoldSeconds", 2.0);
             showVolumeInDB_ = userSettings->getBoolValue("showVolumeInDB", true);
 
+            // Wingman
+            chatStyle_ = (WingmanChatStyle)userSettings->getIntValue("wingmanChatStyle", (int)WingmanChatStyle::Professional);
+
             // Zenith Hub
             customGreeting_ = userSettings->getValue("customGreeting", "");
 
@@ -155,6 +159,9 @@ public:
             userSettings->setValue("meterPeakHoldSeconds", meterPeakHoldSeconds_);
             userSettings->setValue("meterPeakHoldSeconds", meterPeakHoldSeconds_);
             userSettings->setValue("showVolumeInDB", showVolumeInDB_);
+
+            // Wingman
+            userSettings->setValue("wingmanChatStyle", (int)chatStyle_);
 
             // Zenith Hub
             userSettings->setValue("customGreeting", customGreeting_);
@@ -282,6 +289,12 @@ public:
     bool getShowVolumeInDB() const { return showVolumeInDB_; }
 
     //==============================================================================
+    // Wingman Settings
+    //==============================================================================
+    void setWingmanChatStyle(WingmanChatStyle style) { if (chatStyle_ != style) { chatStyle_ = style; save(); sendChangeMessage(); } }
+    WingmanChatStyle getWingmanChatStyle() const { return chatStyle_; }
+
+    //==============================================================================
     // Zenith Hub Settings
     //==============================================================================
     void setCustomGreeting(const juce::String& greeting) { if (customGreeting_ != greeting) { customGreeting_ = greeting; save(); sendChangeMessage(); } }
@@ -346,6 +359,9 @@ private:
     MeterBallistics meterBallistics_ = MeterBallistics::Peak;
     float meterPeakHoldSeconds_ = 2.0f;
     bool showVolumeInDB_ = true;
+
+    // Wingman
+    WingmanChatStyle chatStyle_ = WingmanChatStyle::Professional;
 
     // Zenith Hub
     juce::String customGreeting_;

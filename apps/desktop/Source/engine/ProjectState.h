@@ -111,6 +111,8 @@ public:
   static const juce::Identifier ID_COMP_REGION;
   static const juce::Identifier ID_NOTES;       // MIDI notes container
   static const juce::Identifier ID_NOTE;        // Individual MIDI note
+  static const juce::Identifier ID_EXPRESSIONS; // Note expression container
+  static const juce::Identifier ID_EXPRESSION;  // Individual expression lane
   static const juce::Identifier ID_TEMPO_MAP;   // Container for tempo changes
   static const juce::Identifier ID_TEMPO_POINT; // Individual tempo change
   static const juce::Identifier ID_MARKERS;     // Container for markers
@@ -154,6 +156,8 @@ public:
   static const juce::Identifier PROP_CURVE_TYPE;
   static const juce::Identifier PROP_TENSION;
   static const juce::Identifier PROP_TAKE_INDEX; // Which take for a comp region
+  static const juce::Identifier PROP_EXPRESSION_TYPE;
+  static const juce::Identifier PROP_TIME_OFFSET;
   
   // Plugin Automation Properties
   static const juce::Identifier PROP_PLUGIN_INDEX;
@@ -511,6 +515,15 @@ public:
   void setMidiNoteTension(const juce::String &clipId,
                             const juce::String &noteId, float tension,
                             const juce::String &actionName);
+  void setMidiNoteExpression(const juce::String &clipId,
+                             const juce::String &noteId,
+                             NoteExpressionType type,
+                             const std::vector<NoteExpressionPoint> &points,
+                             const juce::String &actionName);
+  std::vector<NoteExpressionPoint>
+  getMidiNoteExpression(const juce::String &clipId,
+                        const juce::String &noteId,
+                        NoteExpressionType type) const;
 
   //==========================================================================
   // MIDI Processing (Humanize, Legato)

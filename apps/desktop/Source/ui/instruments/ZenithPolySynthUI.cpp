@@ -13,6 +13,7 @@
 
 #include "ZenithPolySynthUI.h"
 #include "../../instruments/ZenithFilter.h" // For FilterType
+#include "../../instruments/ZenithPolySynthDefs.h" // For FilterModelType
 #include "../../instruments/ZenithPolySynth.h"
 #include "../controls/ZenithUIComponents.h" // For ZenithVisualizer
 #include "ZenithDesignSystem.h"
@@ -22,6 +23,7 @@
 #include <algorithm> // For std::clamp
 #include <map>       // For std::map used in presets
 #include <vector>
+#include "../design-system/ThemeManager.h"
 
 namespace zenith {
 using namespace design;
@@ -32,9 +34,26 @@ ZenithPolySynthUI::ZenithPolySynthUI(ZenithPolySynthProcessor &p)
       renderer_(std::make_unique<SkiaRenderer>(
           *this, SkiaRenderer::Backend::Auto)), // Use proper Backend enum
       visualizer_(std::make_unique<ZenithVisualizer>(
-          processor)) // Pass processor to visualizer
+          processor)), // Pass processor to visualizer
+      filterResponseDisplay_(std::make_unique<FilterResponseDisplay>())
 {
   addAndMakeVisible(*visualizer_);
+  addAndMakeVisible(*filterResponseDisplay_);
+  addAndMakeVisible(*modulationVisualizer_);
+  addAndMakeVisible(*oscilloscope_);
+
+  // Configure filter response display
+  filterResponseDisplay_->setSampleRate(processor.getSampleRate());
+  filterResponseDisplay_->setFrequencyRange(20.0f, 20000.0f);
+  filterResponseDisplay_->setDbRange(-60.0f, 10.0f);
+
+  // Configure modulation visualizer
+  modulationVisualizer_->setDisplayMode(ModulationVisualizer::DisplayMode::Compact);
+
+  // Configure oscilloscope
+  oscilloscope_->setTimeScale(2048.0f);
+  oscilloscope_->setTriggerLevel(0.0f);
+  oscilloscope_->setTriggerMode(::zenith::TriggerMode::Auto);
 
   setOpaque(false);         // Enable transparency if needed for glassmorphism
   setBufferedToImage(true); // Double buffering for smoother rendering
@@ -52,7 +71,12 @@ ZenithPolySynthUI::ZenithPolySynthUI(ZenithPolySynthProcessor &p)
   syncProcessorToUI();
 
   // Listen for theme changes
-  ThemeManager::getInstance().addChangeListener(this);
+  design::ThemeManager::getInstance().addChangeListener(this);
+  
+  // Register as Wingman listener for real-time parameter animation
+  if (auto* bridge = processor.getWingmanBridge()) {
+    bridge->addListener(this);
+  }
 
   // Initialize Skia Renderer
   if (!renderer_->initialize()) {
@@ -63,9 +87,14 @@ ZenithPolySynthUI::ZenithPolySynthUI(ZenithPolySynthProcessor &p)
 }
 
 ZenithPolySynthUI::~ZenithPolySynthUI() {
+  // Unregister from Wingman
+  if (auto* bridge = processor.getWingmanBridge()) {
+    bridge->removeListener(this);
+  }
+  
   stopTimer();
   renderer_->shutdown();
-  ThemeManager::getInstance().removeChangeListener(this);
+  design::ThemeManager::getInstance().removeChangeListener(this);
   DBG("ZenithPolySynthUI: Destroyed");
 }
 
@@ -143,10 +172,41 @@ void ZenithPolySynthUI::buildUI() {
 void ZenithPolySynthUI::layoutWidgets() {
   auto area = getLocalBounds();
 
-  // Visualizer at the bottom
-  auto visualizerArea = area.removeFromBottom(100);
+  // Increase window size to accommodate visualizations
+  int newHeight = std::max(700, getHeight());
+  int newWidth = std::max(900, getWidth());
+  if (getWidth() < newWidth || getHeight() < newHeight) {
+    setSize(newWidth, newHeight);
+    area = getLocalBounds();
+  }
+
+  // Bottom visualization section (larger to accommodate all components)
+  auto vizArea = area.removeFromBottom(280);
+
+  // Split into 2x2 grid for the 4 visualization components:
+  // Top row: Filter Response | Oscilloscope
+  // Bottom row: Waveform Visualizer | Modulation Matrix
+  auto topRow = vizArea.removeFromTop(vizArea.getHeight() / 2);
+
+  // Top row
+  auto filterResponseArea = topRow.removeFromLeft(topRow.getWidth() / 2);
+  auto oscilloscopeArea = topRow; // Remaining space
+
+  // Bottom row
+  auto waveformArea = vizArea.removeFromLeft(vizArea.getWidth() / 2);
+  auto modulationArea = vizArea; // Remaining space
+
+  if (filterResponseDisplay_)
+    filterResponseDisplay_->setBounds(filterResponseArea.reduced(4));
+
+  if (oscilloscope_)
+    oscilloscope_->setBounds(oscilloscopeArea.reduced(4));
+
   if (visualizer_)
-    visualizer_->setBounds(visualizerArea);
+    visualizer_->setBounds(waveformArea.reduced(4));
+
+  if (modulationVisualizer_)
+    modulationVisualizer_->setBounds(modulationArea.reduced(4));
 
   // Simple Grid Layout for Controls
   int cols = 6;
@@ -172,9 +232,77 @@ void ZenithPolySynthUI::layoutWidgets() {
 //==============================================================================
 // Timer callback for UI updates
 void ZenithPolySynthUI::timerCallback() {
+  // Update Wingman parameter animations
+  if (!activeAnimations_.isEmpty()) {
+    double currentTime = juce::Time::getMillisecondCounterHiRes() / 1000.0;
+    
+    for (int i = activeAnimations_.size(); --i >= 0;) {
+      auto& anim = activeAnimations_.getReference(i);
+      
+      anim.progress += 0.016 * anim.speed; // ~60fps
+      
+      if (anim.progress >= 1.0f) {
+        anim.widget->setValue(anim.targetValue, false);
+        activeAnimations_.remove(i);
+      } else {
+        // Ease-out interpolation for smooth feel
+        float t = anim.progress;
+        t = 1.0f - std::pow(1.0f - t, 3.0f);
+        anim.widget->setValue(anim.startValue + (anim.targetValue - anim.startValue) * t, false);
+      }
+    }
+    
+    if (activeAnimations_.isEmpty()) {
+      stopTimer();
+    }
+    
+    repaint();
+  }
+  
   // Update visualizer data
   if (visualizer_) {
     visualizer_->updateAudioData();
+
+    // Also feed data to oscilloscope if visualizer has buffer access
+    // The visualizer should share its buffer with the oscilloscope
+  }
+
+  // Update filter response display with current parameters
+  if (filterResponseDisplay_) {
+    // Get current filter parameters from processor
+    auto* cutoffParam = processor.getParameters().getParameter(
+        ZenithPolySynthProcessor::FilterCutoff);
+    auto* resonanceParam = processor.getParameters().getParameter(
+        ZenithPolySynthProcessor::FilterResonance);
+    auto* typeParam = processor.getParameters().getParameter(
+        ZenithPolySynthProcessor::FilterType);
+    auto* modelParam = processor.getParameters().getParameter(
+        ZenithPolySynthProcessor::FilterModel);
+
+    if (cutoffParam && resonanceParam) {
+      float cutoff = cutoffParam->getValue();
+      float resonance = resonanceParam->getValue();
+      FilterType fType = FilterType::Lowpass;
+      FilterModelType fModel = FilterModelType::MoogLadder;
+
+      // Get filter type
+      if (typeParam) {
+        int typeIndex = static_cast<int>(typeParam->getValue());
+        fType = static_cast<FilterType>(juce::jlimit(0, static_cast<int>(FilterType::NumTypes) - 1, typeIndex));
+      }
+
+      // Get filter model
+      if (modelParam) {
+        int modelIndex = static_cast<int>(modelParam->getValue());
+        fModel = static_cast<FilterModelType>(juce::jlimit(0, static_cast<int>(FilterModelType::NumModels) - 1, modelIndex));
+      }
+
+      // Convert cutoff from normalized to Hz (assuming 20-20000 Hz range)
+      float cutoffHz = 20.0f + cutoff * (20000.0f - 20.0f);
+
+      // Update the display
+      filterResponseDisplay_->setFilterParameters(cutoffHz, resonance, fType, fModel);
+    }
   }
   
   // Trigger UI repaint - visualizer handles data internally via timerCallback
@@ -214,6 +342,33 @@ void ZenithPolySynthUI::drawSkiaContent(SkCanvas *canvas) {
     visualizer_->drawSkia(canvas);
     canvas->restore();
   }
+
+  // Draw filter response display with translation
+  if (filterResponseDisplay_ && filterResponseDisplay_->isVisible()) {
+    canvas->save();
+    canvas->translate((SkScalar)filterResponseDisplay_->getX(),
+                      (SkScalar)filterResponseDisplay_->getY());
+    filterResponseDisplay_->drawSkia(canvas);
+    canvas->restore();
+  }
+
+  // Draw modulation visualizer with translation
+  if (modulationVisualizer_ && modulationVisualizer_->isVisible()) {
+    canvas->save();
+    canvas->translate((SkScalar)modulationVisualizer_->getX(),
+                      (SkScalar)modulationVisualizer_->getY());
+    modulationVisualizer_->drawSkia(canvas);
+    canvas->restore();
+  }
+
+  // Draw oscilloscope with translation
+  if (oscilloscope_ && oscilloscope_->isVisible()) {
+    canvas->save();
+    canvas->translate((SkScalar)oscilloscope_->getX(),
+                      (SkScalar)oscilloscope_->getY());
+    oscilloscope_->drawSkia(canvas);
+    canvas->restore();
+  }
 }
 #endif
 
@@ -224,7 +379,7 @@ void ZenithPolySynthUI::syncProcessorToUI() {
 
 void ZenithPolySynthUI::changeListenerCallback(
     juce::ChangeBroadcaster *source) {
-  if (source == &ThemeManager::getInstance()) {
+  if (source == &design::ThemeManager::getInstance()) {
     repaint();
   }
 }
@@ -251,6 +406,56 @@ void ZenithPolySynthUI::mouseUp(const juce::MouseEvent &e) {
 void ZenithPolySynthUI::mouseMove(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
   // Handle mouse move events
+}
+
+//==============================================================================
+// WingmanSynthListener Implementation
+//==============================================================================
+
+void ZenithPolySynthUI::wingmanParameterChanged(const WingmanParameterChange& change) {
+  // Find widget by parameter ID and animate to new value
+  for (auto& widget : widgets_) {
+    auto* param = widget->getParameter();
+    if (param != nullptr && param->paramID == change.parameterId) {
+      animateWidgetToValue(widget.get(), change.newValue, change.animationSpeed);
+      repaint();
+      break;
+    }
+  }
+}
+
+void ZenithPolySynthUI::wingmanBatchStart() {
+  // Optimization: Disable individual repaints during batch operations
+  setBufferedToImage(true);
+}
+
+void ZenithPolySynthUI::wingmanBatchEnd() {
+  // Re-enable normal rendering and trigger final repaint
+  setBufferedToImage(false);
+  repaint();
+}
+
+void ZenithPolySynthUI::wingmanSoundGenerated(const juce::String& description) {
+  DBG("Wingman generated: " + description);
+  // TODO: Show notification in UI
+}
+
+void ZenithPolySynthUI::animateWidgetToValue(ZenithControl* widget, float targetValue, float speed) {
+  if (!widget) return;
+  
+  WidgetAnimation anim;
+  anim.widget = widget;
+  anim.startValue = widget->getValue();
+  anim.targetValue = targetValue;
+  anim.progress = 0.0f;
+  anim.speed = speed;
+  anim.startTime = juce::Time::getMillisecondCounterHiRes() / 1000.0;
+  
+  activeAnimations_.add(anim);
+  
+  if (!isTimerRunning()) {
+    startTimerHz(60); // 60 FPS for smooth animations
+  }
 }
 
 } // namespace zenith

@@ -30,6 +30,8 @@ struct EngineEvent {
     TransportStop,
     TransportRecord,
     TransportRewind,
+    LaunchClip,     // Launch a clip at quantized position
+    StopClip,       // Stop a playing clip
     None
   };
 
@@ -43,6 +45,10 @@ struct EngineEvent {
   // Data
   float value = 0.0f;
   bool boolValue = false;
+  
+  // For clip/scene launching
+  juce::String clipId;
+  int sceneIndex = -1;
 
   // For efficient copying
   EngineEvent() = default;

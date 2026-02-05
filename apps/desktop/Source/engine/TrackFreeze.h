@@ -43,6 +43,40 @@ class Engine;
 
 //==============================================================================
 /**
+    Per-track freeze state and buffer ownership.
+*/
+class TrackFreezeState {
+public:
+    TrackFreezeState() = default;
+    ~TrackFreezeState() = default;
+
+    void setFrozen(bool shouldBeFrozen) { frozen_.store(shouldBeFrozen); }
+    bool isFrozen() const { return frozen_.load(); }
+
+    void setBeingFrozen(bool shouldBeFrozen) { isBeingFrozen_.store(shouldBeFrozen); }
+    bool isBeingFrozen() const { return isBeingFrozen_.load(); }
+
+    void setFreezeFile(const juce::File& file);
+    const juce::File& getFreezeFile() const { return freezeFile_; }
+
+    juce::AudioBuffer<float>* getFreezeBuffer() const {
+        return activeFreezeBuffer_.load(std::memory_order_acquire);
+    }
+
+private:
+    std::atomic<bool> frozen_{false};
+    std::atomic<bool> isBeingFrozen_{false};
+    juce::File freezeFile_;
+
+    std::shared_ptr<juce::AudioBuffer<float>> freezeBufferOwner_;
+    std::atomic<juce::AudioBuffer<float>*> activeFreezeBuffer_{nullptr};
+    juce::AudioFormatManager freezeFormatManager_;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackFreezeState)
+};
+
+//==============================================================================
+/**
     Manages track freeze/unfreeze operations for CPU optimization.
     
     Freezing renders the track with all its processing to an audio file,

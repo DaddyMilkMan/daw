@@ -31,6 +31,7 @@
 
 #ifdef ZENITH_USE_SKIA
 #include "../design-system/ZenithIcons.h"
+#include "../design-system/SvgIcon.h"
 #include "../framework/GlassmorphicPanel.h"
 #include "../framework/NeonGlow.h"
 #include "../controls/SkiaPopupMenu.h"
@@ -293,7 +294,11 @@ void TransportBar::resized() {
   // Record
   recordButtonBounds_ = juce::Rectangle<int>(tx, area.getCentreY() - (buttonSize/2), buttonSize, buttonSize);
   tx -= (buttonSize + spacing);
-  
+
+  // Loop
+  loopButtonBounds_ = juce::Rectangle<int>(tx, area.getCentreY() - (buttonSize/2), buttonSize, buttonSize);
+  tx -= (buttonSize + spacing);
+
   // Play
   playButtonBounds_ = juce::Rectangle<int>(tx, area.getCentreY() - (buttonSize/2), buttonSize, buttonSize);
   tx -= (buttonSize + spacing);
@@ -502,15 +507,21 @@ void TransportBar::drawSkia(SkCanvas *canvas) {
                       isRecording_ || recordState_.isHovered,
                       design::colors::RED, recordState_);
 
+  // Loop - Loop icon (shows state when active)
+  drawTransportButton(canvas, loopButtonBounds_, icons::Loop(),
+                      isLooping_,
+                      isLooping_ ? design::colors::CYAN : design::colors::TEXT_SECONDARY,
+                      loopState_);
+
 
   drawTransportButton(canvas, settingsButtonBounds_, icons::Settings(), false,
                       design::colors::TEXT_SECONDARY, settingsState_);
 
 
-  // 5. Wingman AI - Partnership icon (human + digital handshake)
-  // This toggles the right-side AI panel for creative suggestions
-  drawTransportButton(canvas, wingmanButtonBounds_, icons::Partnership(),
-                      false, design::colors::NEON_PURPLE, wingmanState_);
+  // 5. Wingman AI - Wing SVG icon
+  drawTransportSvgButton(canvas, wingmanButtonBounds_, svgicons::IconId::Wing,
+                         false, design::colors::NEON_PURPLE, wingmanState_, false,
+                         1.2f);
 
   // 6. View Toggle (Left)
   drawTransportButton(canvas, viewToggleButtonBounds_, icons::ViewToggle(),
@@ -620,6 +631,68 @@ void TransportBar::drawTransportButton(SkCanvas *canvas,
   icons::drawIconCentered(canvas, iconPath, rect, iconSize, style);
   
   canvas->restore();  // Restore from scale transform
+}
+
+void TransportBar::drawTransportSvgButton(SkCanvas *canvas,
+                                          const juce::Rectangle<int> &bounds,
+                                          svgicons::IconId iconId,
+                                          bool isActive, uint32_t color,
+                                          const InteractionState &state,
+                                          bool isFilled, float iconScale) {
+  SkRect rect =
+      SkRect::MakeXYWH((float)bounds.getX(), (float)bounds.getY(),
+                       (float)bounds.getWidth(), (float)bounds.getHeight());
+
+  float pressScale = 1.0f - (0.10f * state.pressAmount);
+  canvas->save();
+  float cx = rect.centerX();
+  float cy = rect.centerY();
+  canvas->translate(cx, cy);
+  canvas->scale(pressScale, pressScale);
+  canvas->translate(-cx, -cy);
+
+  if (isActive) {
+      SkPaint activeBg;
+      activeBg.setAntiAlias(true);
+      activeBg.setColor(SkColorSetA(color, 40));
+      canvas->drawRoundRect(rect, 6.0f, 6.0f, activeBg);
+      
+      SkPaint border;
+      border.setStyle(SkPaint::kStroke_Style);
+      border.setStrokeWidth(1.0f);
+      border.setColor(SkColorSetA(color, 80));
+      canvas->drawRoundRect(rect, 6.0f, 6.0f, border);
+  } else if (state.hoverAmount > 0.01f) {
+      SkPaint hoverBg;
+      hoverBg.setAntiAlias(true);
+      hoverBg.setColor(SkColorSetA(SK_ColorWHITE, (uint8_t)(20 * state.hoverAmount)));
+      canvas->drawRoundRect(rect, 6.0f, 6.0f, hoverBg);
+  }
+  
+  svgicons::Style style;
+  style.filled = isFilled ? isActive : false;
+  if (!isFilled) {
+      style.filled = false;
+  }
+  
+  if (isActive) {
+      style.color = color;
+      style.glowColor = color;
+      style.glowRadius = (color == design::colors::NEON_GREEN) ? 0.0f : 15.0f;
+  } else {
+      float opacity = 0.7f + (0.3f * state.hoverAmount);
+      style.color = design::withAlpha(SK_ColorWHITE, opacity);
+      
+      if (state.hoverAmount > 0.1f) {
+          style.glowColor = SK_ColorWHITE;
+          style.glowRadius = 5.0f * state.hoverAmount;
+      }
+  }
+
+  float iconSize = rect.width() * iconScale;
+  iconSize = std::min(iconSize, rect.width() * 0.95f);
+  svgicons::drawIconCentered(canvas, iconId, rect, iconSize, style);
+  canvas->restore();
 }
 
 void TransportBar::drawMeter(SkCanvas *canvas,
@@ -742,6 +815,7 @@ void TransportBar::mouseDown(const juce::MouseEvent &e) {
   playState_.isPressed = playButtonBounds_.contains(e.getPosition()) && !isRightClick;
   stopState_.isPressed = stopButtonBounds_.contains(e.getPosition()) && !isRightClick;
   recordState_.isPressed = recordButtonBounds_.contains(e.getPosition()) && !isRightClick;
+  loopState_.isPressed = loopButtonBounds_.contains(e.getPosition()) && !isRightClick;
   viewToggleState_.isPressed = viewToggleButtonBounds_.contains(e.getPosition()) && !isRightClick;
   wingmanState_.isPressed = wingmanButtonBounds_.contains(e.getPosition()) && !isRightClick;
   settingsState_.isPressed = settingsButtonBounds_.contains(pos) && !isRightClick;
@@ -781,6 +855,8 @@ void TransportBar::mouseDown(const juce::MouseEvent &e) {
     
   } else if (recordButtonBounds_.contains(e.getPosition())) {
     if (!isRightClick && onRecordClicked) { onRecordClicked(); }
+  } else if (loopButtonBounds_.contains(e.getPosition())) {
+    if (!isRightClick && onLoopToggled) { onLoopToggled(); }
   } else if (viewToggleButtonBounds_.contains(e.getPosition()) && !isRightClick) {
     if (onViewToggleClicked) onViewToggleClicked();
     requestRepaint();
@@ -902,7 +978,7 @@ void TransportBar::mouseMove(const juce::MouseEvent &e) {
   update(playState_, playButtonBounds_);
   update(stopState_, stopButtonBounds_);
   update(recordState_, recordButtonBounds_);
-  update(recordState_, recordButtonBounds_);
+  update(loopState_, loopButtonBounds_);
   update(viewToggleState_, viewToggleButtonBounds_);
   update(wingmanState_, wingmanButtonBounds_);
   update(settingsState_, settingsButtonBounds_);
@@ -1011,14 +1087,15 @@ bool TransportBar::hitTest(int x, int y) {
     if (playButtonBounds_.contains(x, y)) return true;
     if (stopButtonBounds_.contains(x, y)) return true;
     if (recordButtonBounds_.contains(x, y)) return true;
+    if (loopButtonBounds_.contains(x, y)) return true;
     if (viewToggleButtonBounds_.contains(x, y)) return true;
     if (wingmanButtonBounds_.contains(x, y)) return true;
     if (settingsButtonBounds_.contains(x, y)) return true;
 
-    
+
     // NEW: Allow interaction with LCD
     if (lcdBounds_.contains(x, y)) return true;
-    
+
     return false;
 }
 

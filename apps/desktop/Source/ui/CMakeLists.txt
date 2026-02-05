@@ -24,6 +24,7 @@ target_sources(ZenithDAW PRIVATE
 # -----------------------------------------------------------------------------
 target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/design-system/ZenithDesignSystem.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/design-system/ThemeManager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/design-system/FontManager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/design-system/ZenithLayout.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/design-system/ZenithLookAndFeel.cpp
@@ -68,6 +69,8 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/piano-roll/PianoRollComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/piano-roll/ModulationMatrixView.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/piano-roll/QuantizeSettingsComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/piano-roll/ExpressionLaneEditor.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/piano-roll/MPERecorderImproved.cpp
 )
 
 # -----------------------------------------------------------------------------
@@ -138,6 +141,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/dialogs/AdaptiveUISettings.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/dialogs/ProjectRecoveryModal.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/settings/GlobalSettingsPanel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/settings/MPEConfigurationPanel.cpp
 )
 
 # -----------------------------------------------------------------------------
@@ -145,6 +149,16 @@ target_sources(ZenithDAW PRIVATE
 # -----------------------------------------------------------------------------
 target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/instruments/ZenithPolySynthUI.cpp
+)
+
+# -----------------------------------------------------------------------------
+# Visualizations
+# -----------------------------------------------------------------------------
+target_sources(ZenithDAW PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/visualizations/WaveformDisplay.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/visualizations/FilterResponseDisplay.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/visualizations/ModulationVisualizer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/visualizations/SynthOscilloscope.cpp
 )
 
 # -----------------------------------------------------------------------------
@@ -182,6 +196,30 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/controls/SkiaTextEditor.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/controls/CollabPanel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/controls/FreezeProgressOverlay.cpp
+)
+
+# -----------------------------------------------------------------------------
+# Views2 - New Skia UI System (2026 Rebuild)
+# Clean, modern UI with Tab/Shift+Tab navigation
+# -----------------------------------------------------------------------------
+target_sources(ZenithDAW PRIVATE
+    # Core navigation
+    ${CMAKE_CURRENT_SOURCE_DIR}/views2/core/ViewSwitcher.cpp
+    
+    # Main views
+    ${CMAKE_CURRENT_SOURCE_DIR}/views2/arranger/SkiaArrangementView.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/views2/session/SkiaSessionView.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/views2/ai-jam/SkiaAIJamView.cpp
+    
+    # Controllers (bridge between views and engine)
+    ${CMAKE_CURRENT_SOURCE_DIR}/views2/controllers/ArrangementController.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/views2/controllers/SessionController.cpp
+    
+    # Common components
+    ${CMAKE_CURRENT_SOURCE_DIR}/views2/common/SkiaTransportBar.cpp
+    
+    # Main layout container
+    ${CMAKE_CURRENT_SOURCE_DIR}/views2/ZenithMainLayout.cpp
 )
 
 # -----------------------------------------------------------------------------

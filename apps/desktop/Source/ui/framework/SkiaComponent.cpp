@@ -50,9 +50,8 @@ SkiaComponent::~SkiaComponent() { stopAllAnimations(); }
 // ============================================================================
 
 void SkiaComponent::paint(juce::Graphics &g) {
-  juce::ignoreUnused(g);
-  // Skia components are rendered via drawSkia() by the parent renderer.
-  // No JUCE painting or fallback.
+  // Base class paint handles native JUCE children (buttons, sliders, text editors)
+  Component::paint(g);
 }
 
 SkCanvas *SkiaComponent::getSkiaCanvas(juce::Graphics &g) {
@@ -158,6 +157,9 @@ void SkiaComponent::focusLost(juce::Component::FocusChangeType cause) {
 }
 
 void SkiaComponent::drawChildren(SkCanvas *canvas) {
+  // Note: This only handles SkiaComponent children. Native JUCE children
+  // (Buttons, TextEditors, etc.) must be painted through paint() method
+  // by calling the base class Component::paint()
   for (auto *child : getChildren()) {
     if (child->isVisible()) {
       if (child->getProperties().contains("zenith_is_skia")) {

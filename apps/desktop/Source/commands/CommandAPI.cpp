@@ -34,6 +34,17 @@
 
 namespace zenith {
 
+// Helper to clear all MIDI notes from a clip (workaround for missing ProjectState::clearMidiClip)
+static void clearMidiClipHelper(ProjectState& projectState, const juce::String& clipId, const juce::String& actionName) {
+    auto notes = projectState.getNotes(clipId);
+    for (int i = notes.getNumChildren() - 1; i >= 0; --i) {
+        auto noteId = notes.getChild(i).getProperty("noteId").toString();
+        if (noteId.isNotEmpty()) {
+            projectState.removeMidiNote(clipId, noteId, actionName);
+        }
+    }
+}
+
 //==============================================================================
 CommandAPI::CommandAPI(ProjectState &state, Engine &eng)
     : projectState(state), engine(eng) {
