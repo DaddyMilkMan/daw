@@ -274,7 +274,11 @@ private:
                         int numSamples);
   void updateSampleRate(); // Propagate currentSampleRate to sub-components
 
-  std::unique_ptr<juce::dsp::Oversampling<float>> oversampler_;
+  // Changed: Pre-allocated oversamplers
+  std::unique_ptr<juce::dsp::Oversampling<float>> oversampler2x_;
+  std::unique_ptr<juce::dsp::Oversampling<float>> oversampler4x_;
+  juce::dsp::Oversampling<float>* currentOversampler_ = nullptr; // Raw pointer to active oversampler
+
   juce::CriticalSection oversamplerLock_;
   juce::AudioBuffer<float>
       oversamplingBuffer_; // Pre-allocated upsampled buffer
