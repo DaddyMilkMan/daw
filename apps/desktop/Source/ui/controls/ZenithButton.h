@@ -115,19 +115,13 @@ public:
   juce::String getTooltip() override { return tooltip_; }
   void setTooltip(const juce::String &text);
 
-  // ----- Accessibility -----
-  std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
-
   // ----- Accessibility & Keyboard -----
   std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
   bool keyPressed(const juce::KeyPress& key) override;
+  bool keyPressed(const juce::KeyPress &key, juce::Component *origin) override;
 
   // ----- Rendering -----
   void drawSkia(SkCanvas *canvas) override;
-
-  // ----- Accessibility & Input -----
-  std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
-  bool keyPressed(const juce::KeyPress &key, juce::Component *origin) override;
 
 protected:
   void mouseEnter(const juce::MouseEvent &e) override;

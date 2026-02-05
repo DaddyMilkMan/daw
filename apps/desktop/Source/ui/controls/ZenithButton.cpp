@@ -31,21 +31,34 @@ namespace zenith {
 
 class ZenithButtonAccessibilityHandler : public juce::AccessibilityHandler {
 public:
-  explicit ZenithButtonAccessibilityHandler(ZenithButton &button)
+  ZenithButtonAccessibilityHandler(ZenithButton &button)
       : juce::AccessibilityHandler(
-            button,
-            button.isToggleable() ? juce::AccessibilityRole::toggleButton
-                                  : juce::AccessibilityRole::button,
-            createActions(button), juce::AccessibilityHandler::Interfaces{}),
-        button_(button) {}
+            button, button.isToggleable()
+                        ? juce::AccessibilityRole::toggleButton
+                        : juce::AccessibilityRole::button),
+        button_(button) {
 
-  juce::String getTitle() const override {
-    // Fallback to tooltip if text is empty (icon-only button)
-    return button_.getButtonText().isNotEmpty() ? button_.getButtonText()
-                                                : button_.getTooltip();
+    // Capture SafePointer to avoid use-after-free if action destroys button
+    juce::Component::SafePointer<ZenithButton> sp(&button);
+
+    addAction(juce::AccessibilityActionType::press, [sp] {
+        if (sp == nullptr) return;
+
+        if (sp->isToggleable()) {
+            sp->setToggleState(!sp->getToggleState(), true);
+        }
+
+        if (sp->onClick) sp->onClick();
+    });
+
+    if (button_.isToggleable()) {
+        addAction(juce::AccessibilityActionType::toggle, [sp] {
+            if (sp != nullptr) {
+                sp->setToggleState(!sp->getToggleState(), true);
+            }
+        });
+    }
   }
-
-  juce::String getHelp() const override { return button_.getTooltip(); }
 
   juce::AccessibleState getCurrentState() const override {
     auto state = juce::AccessibilityHandler::getCurrentState();
@@ -58,35 +71,25 @@ public:
     return state;
   }
 
+  juce::String getTitle() const override {
+    // 1. Prefer explicit text
+    if (button_.getButtonText().isNotEmpty())
+      return button_.getButtonText();
+
+    // 2. Fallback to tooltip (icon-only buttons)
+    if (button_.getTooltip().isNotEmpty())
+      return button_.getTooltip();
+
+    // 3. Fallback to Component ID/Name
+    return button_.getName();
+  }
+
+  juce::String getHelp() const override {
+      return button_.getTooltip();
+  }
+
 private:
   ZenithButton &button_;
-
-  static juce::AccessibilityActions createActions(ZenithButton &button) {
-    juce::AccessibilityActions actions;
-
-    // Press action
-    actions.addAction(juce::AccessibilityActionType::press, [&button] {
-      if (button.isEnabled()) {
-        if (button.isToggleable()) {
-          button.setToggleState(!button.getToggleState(), true);
-        }
-        if (button.onClick) {
-          button.onClick();
-        }
-      }
-    });
-
-    // Toggle action (if toggleable)
-    if (button.isToggleable()) {
-      actions.addAction(juce::AccessibilityActionType::toggle, [&button] {
-        if (button.isEnabled()) {
-          button.setToggleState(!button.getToggleState(), true);
-        }
-      });
-    }
-
-    return actions;
-  }
 };
 
 ZenithButton::ZenithButton() : text_(""), iconText_("") {
@@ -107,7 +110,7 @@ ZenithButton::~ZenithButton() = default;
 // ACCESSIBILITY & INPUT
 // ============================================================================
 
-bool ZenithButton::keyPressed(const juce::KeyPress &key, juce::Component *origin) {
+bool ZenithButton::keyPressed(const juce::KeyPress &key) {
   if (!isEnabled())
     return false;
 
@@ -146,59 +149,13 @@ bool ZenithButton::keyPressed(const juce::KeyPress &key, juce::Component *origin
     return true;
   }
 
-  return SkiaComponent::keyPressed(key, origin);
+  // Forward to SkiaComponent logic (for Context Menu etc)
+  return SkiaComponent::keyPressed(key, this);
 }
 
-class ZenithButtonAccessibilityHandler : public juce::AccessibilityHandler {
-public:
-  ZenithButtonAccessibilityHandler(ZenithButton &button)
-      : juce::AccessibilityHandler(
-            button, button.isToggleable()
-                        ? juce::AccessibilityRole::toggleButton
-                        : juce::AccessibilityRole::button),
-        button_(button) {
-
-    // Capture SafePointer to avoid use-after-free if action destroys button
-    juce::Component::SafePointer<ZenithButton> sp(&button);
-
-    addAction(juce::AccessibilityActionType::press, [sp] {
-        if (sp == nullptr) return;
-        if (sp->onClick) sp->onClick();
-
-        if (sp != nullptr && sp->isToggleable()) {
-            sp->setToggleState(!sp->getToggleState(), true);
-        }
-    });
-
-    if (button_.isToggleable()) {
-        addAction(juce::AccessibilityActionType::toggle, [sp] {
-            if (sp != nullptr) {
-                sp->setToggleState(!sp->getToggleState(), true);
-            }
-        });
-    }
-  }
-
-  juce::String getTitle() const override {
-    // 1. Prefer explicit text
-    if (button_.getButtonText().isNotEmpty())
-      return button_.getButtonText();
-
-    // 2. Fallback to tooltip (icon-only buttons)
-    if (button_.getTooltip().isNotEmpty())
-      return button_.getTooltip();
-
-    // 3. Fallback to Component ID/Name
-    return button_.getName();
-  }
-
-  juce::String getHelp() const override {
-      return button_.getTooltip();
-  }
-
-private:
-  ZenithButton &button_;
-};
+bool ZenithButton::keyPressed(const juce::KeyPress &key, juce::Component *origin) {
+  return SkiaComponent::keyPressed(key, origin);
+}
 
 std::unique_ptr<juce::AccessibilityHandler>
 ZenithButton::createAccessibilityHandler() {
@@ -731,24 +688,4 @@ void ZenithButton::calculateLayout() {
 
 #endif // ZENITH_USE_SKIA
 
-std::unique_ptr<juce::AccessibilityHandler>
-ZenithButton::createAccessibilityHandler() {
-  return std::make_unique<ZenithButtonAccessibilityHandler>(*this);
-}
-
-bool ZenithButton::keyPressed(const juce::KeyPress &key) {
-  if (key == juce::KeyPress::spaceKey || key == juce::KeyPress::returnKey) {
-    if (isEnabled()) {
-      if (isToggleable()) {
-        setToggleState(!getToggleState(), true);
-      }
-      if (onClick) {
-        onClick();
-      }
-      return true;
-    }
-  }
-  // Forward to SkiaComponent logic (for Context Menu etc)
-  return SkiaComponent::keyPressed(key, this);
-}
 } // namespace zenith
