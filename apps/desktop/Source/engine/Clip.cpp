@@ -24,7 +24,12 @@
 namespace zenith {
 
 //==============================================================================
-Clip::Clip() : midiSequence_(std::make_shared<juce::MidiMessageSequence>()), fadeInLength(0), fadeOutLength(0) {}
+Clip::Clip()
+    : midiSequence_(std::make_shared<juce::MidiMessageSequence>()),
+      fadeInLength(0),
+      fadeOutLength(0),
+      sincResampler_(std::make_unique<dsp::WindowedSincInterpolator>())
+{}
 
 Clip::~Clip() { releaseResources(); }
 
@@ -615,41 +620,43 @@ void Clip::processAudioClip(const juce::AudioSourceChannelInfo &bufferToFill,
     return;
   }
 
-  // Slow path: Linear Interpolation (SIMD candidate for alpha ramp)
-  // Also used for looping to handle wrap-around correctly
-  // For now, let's keep it simple but remove the fade calculations from the
-  // inner loop
+  // "Mastering-Grade" Path: Windowed Sinc Interpolation
   const int numSamples = numSamplesToRender;
-  // sourceLen already declared above
+  const int numDestChannels = bufferToFill.buffer->getNumChannels();
+  const int numSourceChannels = sourceBuffer->getNumChannels();
 
-  for (int ch = 0; ch < juce::jmin(bufferToFill.buffer->getNumChannels(),
-                                   sourceBuffer->getNumChannels());
-       ++ch) {
-    auto *outData =
-        bufferToFill.buffer->getWritePointer(ch, bufferToFill.startSample + destOffset);
-    const auto *inData = sourceBuffer->getReadPointer(ch);
-    double currentReadPos = (double)(sourceStartInClip + clipOff) * rate;
+  for (int ch = 0; ch < juce::jmin(numDestChannels, numSourceChannels); ++ch) {
+      // Calculate starting position for this block
+      double currentReadPos = (double)(sourceStartInClip + clipOff) * rate;
 
-    for (int i = 0; i < numSamples; ++i) {
-      int idx0 = static_cast<int>(currentReadPos);
-      int idx1 = idx0 + 1;
-      float alpha = static_cast<float>(currentReadPos - idx0);
-
-      // Bug 39 & 45: Guard modulo and boundary conditions
       if (looping.load() && sourceLen > 0) {
-        idx0 = (idx0 % sourceLen + sourceLen) % sourceLen;
-        idx1 = (idx1 % sourceLen + sourceLen) % sourceLen;
+          // Adjust initial read pos to be within bounds [0, sourceLen)
+          while (currentReadPos < 0) currentReadPos += sourceLen;
+          while (currentReadPos >= sourceLen) currentReadPos -= sourceLen;
+
+          sincResampler_->processLooping(
+              *sourceBuffer,
+              *bufferToFill.buffer,
+              ch, ch,
+              bufferToFill.startSample + destOffset,
+              currentReadPos, // Updated by reference
+              numSamples,
+              rate,
+              clipGain
+          );
       } else {
-        idx0 = juce::jlimit(0, sourceLen - 1, idx0);
-        idx1 = juce::jlimit(0, sourceLen - 1, idx1);
+          // Non-looping standard playback
+          sincResampler_->process(
+              *sourceBuffer,
+              *bufferToFill.buffer,
+              ch, ch,
+              bufferToFill.startSample + destOffset,
+              currentReadPos, // Updated by reference
+              numSamples,
+              rate,
+              clipGain
+          );
       }
-
-      outData[i] = (1.0f - alpha) * inData[idx0] + alpha * inData[idx1];
-      currentReadPos += rate;
-    }
-
-    if (clipGain != 1.0f)
-      juce::FloatVectorOperations::multiply(outData, clipGain, numSamples);
   }
 
   applyFadesSIMD(bufferToFill, destOffset, sourceStartInClip, numSamples);
