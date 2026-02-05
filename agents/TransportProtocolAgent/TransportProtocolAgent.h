@@ -90,12 +90,67 @@ public:
   /// Get output latency in samples
   int getOutputLatencySamples() const;
 
+  //==============================================================================
+  // Platform-Specific Backends
+
+  enum class BackendType {
+    ASIO,
+    WASAPI_Shared,
+    WASAPI_Exclusive,
+    ALSA,
+    CoreAudio,
+    JACK,
+    Unknown
+  };
+
+  /// Get list of available audio backends
+  std::vector<BackendType> getAvailableBackends() const;
+
+  /// Get current active backend
+  BackendType getCurrentBackend() const;
+
+  /// Switch the audio backend (driver type)
+  bool setBackend(BackendType backend, bool treatAsChosenDevice = true);
+
+  //==============================================================================
+  // Device Control Panel (ASIO/Generic)
+
+  /// Check if current device supports a control panel
+  bool currentDeviceHasControlPanel() const;
+
+  /// Open the device control panel
+  bool showCurrentDeviceControlPanel();
+
+  //==============================================================================
+  // WASAPI Specifics
+
+  enum class WasapiMode { Shared, Exclusive };
+
+  /// Set WASAPI mode (internally switches backend type)
+  bool setWasapiMode(WasapiMode mode);
+
+  /// Get current WASAPI mode
+  WasapiMode getWasapiMode() const;
+
+  //==============================================================================
+  // ALSA Specifics
+
+  /// Enumerate raw ALSA device names (e.g., "hw:0,0")
+  std::vector<juce::String> enumerateAlsaDeviceNames(bool inputs) const;
+
+  /// Open ALSA device by its raw name
+  bool openAlsaDeviceByName(const juce::String& deviceName,
+                            double sampleRate,
+                            int bufferSize);
+
 private:
   //==============================================================================
+  juce::String backendTypeToJuceName(BackendType b) const;
+  BackendType juceNameToBackendType(const juce::String& typeName) const;
+
   std::unique_ptr<juce::AudioDeviceManager> deviceManager_;
   DeviceState currentState_{DeviceState::Disconnected};
   
-  // TODO: Add platform-specific backend implementations
   // TODO: Add device hot-plug detection
   // TODO: Add buffer format conversion layer
   
