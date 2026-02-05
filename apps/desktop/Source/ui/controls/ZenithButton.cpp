@@ -25,6 +25,70 @@
 
 namespace zenith {
 
+// ============================================================================
+// Accessibility Handler
+// ============================================================================
+
+class ZenithButtonAccessibilityHandler : public juce::AccessibilityHandler {
+public:
+  explicit ZenithButtonAccessibilityHandler(ZenithButton &button)
+      : juce::AccessibilityHandler(
+            button,
+            button.isToggleable() ? juce::AccessibilityRole::toggleButton
+                                  : juce::AccessibilityRole::button,
+            createActions(button), juce::AccessibilityHandler::Interfaces{}),
+        button_(button) {}
+
+  juce::String getTitle() const override {
+    // Fallback to tooltip if text is empty (icon-only button)
+    return button_.getButtonText().isNotEmpty() ? button_.getButtonText()
+                                                : button_.getTooltip();
+  }
+
+  juce::String getHelp() const override { return button_.getTooltip(); }
+
+  juce::AccessibleState getCurrentState() const override {
+    auto state = juce::AccessibilityHandler::getCurrentState();
+    if (button_.isToggleable()) {
+      state = state.withCheckable();
+      if (button_.getToggleState()) {
+        state = state.withChecked();
+      }
+    }
+    return state;
+  }
+
+private:
+  ZenithButton &button_;
+
+  static juce::AccessibilityActions createActions(ZenithButton &button) {
+    juce::AccessibilityActions actions;
+
+    // Press action
+    actions.addAction(juce::AccessibilityActionType::press, [&button] {
+      if (button.isEnabled()) {
+        if (button.isToggleable()) {
+          button.setToggleState(!button.getToggleState(), true);
+        }
+        if (button.onClick) {
+          button.onClick();
+        }
+      }
+    });
+
+    // Toggle action (if toggleable)
+    if (button.isToggleable()) {
+      actions.addAction(juce::AccessibilityActionType::toggle, [&button] {
+        if (button.isEnabled()) {
+          button.setToggleState(!button.getToggleState(), true);
+        }
+      });
+    }
+
+    return actions;
+  }
+};
+
 ZenithButton::ZenithButton() : text_(""), iconText_("") {
   setWantsKeyboardFocus(true);
 }
@@ -542,5 +606,26 @@ void ZenithButton::calculateLayout() {
 }
 
 #endif // ZENITH_USE_SKIA
+
+std::unique_ptr<juce::AccessibilityHandler>
+ZenithButton::createAccessibilityHandler() {
+  return std::make_unique<ZenithButtonAccessibilityHandler>(*this);
+}
+
+bool ZenithButton::keyPressed(const juce::KeyPress &key) {
+  if (key == juce::KeyPress::spaceKey || key == juce::KeyPress::returnKey) {
+    if (isEnabled()) {
+      if (isToggleable()) {
+        setToggleState(!getToggleState(), true);
+      }
+      if (onClick) {
+        onClick();
+      }
+      return true;
+    }
+  }
+  // Forward to SkiaComponent logic (for Context Menu etc)
+  return SkiaComponent::keyPressed(key, this);
+}
 
 } // namespace zenith
