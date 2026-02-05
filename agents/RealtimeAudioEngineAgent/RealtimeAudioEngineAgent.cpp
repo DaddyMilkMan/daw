@@ -6,6 +6,8 @@
 */
 
 #include "RealtimeAudioEngineAgent.h"
+#include <thread>
+#include <chrono>
 
 namespace zenith {
 namespace agents {
@@ -25,6 +27,26 @@ RealtimeAudioEngineAgent::~RealtimeAudioEngineAgent() {
 //==============================================================================
 void RealtimeAudioEngineAgent::processBlock(juce::AudioBuffer<float>& buffer,
                                             juce::MidiBuffer& midi) noexcept {
+  // RAII helper to ensure flag is cleared even if we return early
+  struct ScopedProcessing {
+    std::atomic<bool>& flag;
+    ScopedProcessing(std::atomic<bool>& f) : flag(f) {
+      flag.store(true, std::memory_order_seq_cst);
+    }
+    ~ScopedProcessing() {
+      flag.store(false, std::memory_order_release);
+    }
+  };
+
+  ScopedProcessing scoped(insideAudioCallback_);
+
+  // Check if we should be running (must be seq_cst to pair with store in stop())
+  if (!isRunning_.load(std::memory_order_seq_cst)) {
+    buffer.clear();
+    midi.clear();
+    return;
+  }
+
   // RT-safe processing - no allocations, no locks
   
   // 1. Process pending commands from UI/Management threads
@@ -95,8 +117,13 @@ void RealtimeAudioEngineAgent::start() {
 }
 
 void RealtimeAudioEngineAgent::stop() {
-  isRunning_.store(false, std::memory_order_release);
-  // TODO: Wait for audio thread to acknowledge stop
+  isRunning_.store(false, std::memory_order_seq_cst);
+
+  // Wait for audio thread to finish current block
+  while (insideAudioCallback_.load(std::memory_order_seq_cst)) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+
   // TODO: Cleanup any pending commands
 }
 

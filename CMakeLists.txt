@@ -693,6 +693,41 @@ if(BUILD_TESTS)
     target_compile_features(ObservabilityTest PRIVATE cxx_std_20)
 
     # =========================================================================
+    # RealtimeAudioEngineTest - Lightweight test for RealtimeAudioEngineAgent
+    # =========================================================================
+    add_executable(RealtimeAudioEngineTest)
+
+    target_sources(RealtimeAudioEngineTest PRIVATE
+        "agents/RealtimeAudioEngineAgent/tests/RunTests.cpp"
+        "agents/RealtimeAudioEngineAgent/tests/RealtimeAudioEngineAgentTest.cpp"
+        "agents/RealtimeAudioEngineAgent/RealtimeAudioEngineAgent.cpp"
+    )
+
+    target_include_directories(RealtimeAudioEngineTest PRIVATE
+        ${CMAKE_BINARY_DIR}/RealtimeAudioEngineTest_artefacts/JuceLibraryCode
+        ${CMAKE_BINARY_DIR}/JuceLibraryCode
+        "agents/RealtimeAudioEngineAgent"
+    )
+
+    target_link_libraries(RealtimeAudioEngineTest PRIVATE
+        juce::juce_core
+        juce::juce_audio_basics
+    )
+
+    target_compile_definitions(RealtimeAudioEngineTest PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+        JUCE_STANDALONE_APPLICATION=1
+    )
+
+    if (UNIX AND NOT APPLE)
+        target_link_libraries(RealtimeAudioEngineTest PRIVATE pthread dl)
+    endif()
+
+    target_compile_features(RealtimeAudioEngineTest PRIVATE cxx_std_20)
+
+    # =========================================================================
     # SampleGeneratorBenchmark - Performance benchmark for SampleGenerator
     # =========================================================================
     add_executable(SampleGeneratorBenchmarkApp
