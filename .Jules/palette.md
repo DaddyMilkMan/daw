@@ -6,6 +6,10 @@
 **Learning:** Single-component UIs drawing multiple "virtual" controls (like TransportBar) prevent standard tooltip attachment. Tooltips must be handled by overriding `getTooltip()` and manually hit-testing against the mouse position.
 **Action:** Implement `getTooltip()` using `getMouseXYRelative()` and bounds checking for all custom-drawn interactive zones.
 
+## 2025-10-27 - Transport Bar Focus Visibility
+**Learning:** JUCE Components painted via custom Skia renderers often lose their native focus ring visualization. Inherited `juce::Button` behavior for focus is invisible if `paintButton` is empty.
+**Action:** Always check `hasKeyboardFocus` in the Skia drawing loop and use `InteractionHelper::drawFocusRing` to restore accessibility.
+
 ## 2025-12-14 - [JUCE Accessibility Handlers & Skia Components]
 **Learning:** Custom components (especially those inheriting from `SkiaComponent`) require manual implementation of `createAccessibilityHandler`. The API has evolved: `AccessibilityHandler` constructor now requires passing Role and Actions upfront. `AccessibleState` (not `AccessibilityState`) uses a builder pattern (`withChecked()`, `withFocusable()`).
 **Action:** Always implement `createAccessibilityHandler()` for interactive `SkiaComponent` subclasses. Define a helper `AccessibilityHandler` subclass that calculates Role and Actions in its constructor and use `AccessibleState` correctly.

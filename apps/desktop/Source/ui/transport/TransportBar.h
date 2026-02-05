@@ -116,6 +116,34 @@ public:
   std::function<void(int, int)> onTimeSignatureChanged;
 
 private:
+  // Internal "Ghost" Button for Accessibility & Standard Input
+  class GhostButton : public juce::Button {
+  public:
+      GhostButton(const juce::String& name) : juce::Button(name) {
+          setWantsKeyboardFocus(true);
+      }
+      void paintButton(juce::Graphics&, bool, bool) override {} // Invisible
+
+      void focusGained(juce::Component::FocusChangeType) override {
+          if (auto* p = getParentComponent()) p->repaint();
+      }
+      void focusLost(juce::Component::FocusChangeType) override {
+          if (auto* p = getParentComponent()) p->repaint();
+      }
+  };
+
+  void createButtons();
+  void setupButton(GhostButton& btn, const juce::String& tooltip);
+
+  std::unique_ptr<GhostButton> playBtn_;
+  std::unique_ptr<GhostButton> stopBtn_;
+  std::unique_ptr<GhostButton> recordBtn_;
+  std::unique_ptr<GhostButton> viewToggleBtn_;
+  std::unique_ptr<GhostButton> wingmanBtn_;
+  std::unique_ptr<GhostButton> settingsBtn_;
+  std::unique_ptr<GhostButton> loopBtn_;
+  std::unique_ptr<GhostButton> rewindBtn_;
+
   bool isPlaying_ = false;
   bool isRecording_ = false;
   double tempo_ = 120.0;
@@ -174,9 +202,9 @@ private:
 
 
 
-  void drawTransportButton(SkCanvas *canvas, const juce::Rectangle<int> &bounds,
+  void drawTransportButton(SkCanvas *canvas, GhostButton& btn,
                            const SkPath &iconPath, bool isActive,
-                           uint32_t color, const InteractionState &state,
+                           uint32_t color, InteractionState &state,
                            bool isFilled = true);
   void drawMeter(SkCanvas *canvas, const juce::Rectangle<int> &bounds,
                  float value, const char *label);

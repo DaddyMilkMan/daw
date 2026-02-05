@@ -205,6 +205,8 @@ TransportBar::TransportBar() {
   
   // Initialize smoothed CPU to 0
   smoothedCpu_ = 0.0f;
+  
+  createButtons();
 }
 
 void TransportBar::onAnimationTick(float deltaMs) {
@@ -292,14 +294,17 @@ void TransportBar::resized() {
   
   // Record
   recordButtonBounds_ = juce::Rectangle<int>(tx, area.getCentreY() - (buttonSize/2), buttonSize, buttonSize);
+  if (recordBtn_) recordBtn_->setBounds(recordButtonBounds_);
   tx -= (buttonSize + spacing);
   
   // Play
   playButtonBounds_ = juce::Rectangle<int>(tx, area.getCentreY() - (buttonSize/2), buttonSize, buttonSize);
+  if (playBtn_) playBtn_->setBounds(playButtonBounds_);
   tx -= (buttonSize + spacing);
   
   // Stop
   stopButtonBounds_ = juce::Rectangle<int>(tx, area.getCentreY() - (buttonSize/2), buttonSize, buttonSize);
+  if (stopBtn_) stopBtn_->setBounds(stopButtonBounds_);
 
 
   // 3. Right Section: Tools (Pushed further out)
@@ -308,6 +313,7 @@ void TransportBar::resized() {
   
   // Settings (rightmost)
   settingsButtonBounds_ = rightSection.removeFromRight(32).withSizeKeepingCentre(32, 32);
+  if (settingsBtn_) settingsBtn_->setBounds(settingsButtonBounds_);
   rightSection.removeFromRight(16); // Spacing
   
   // CPU Meter - Fixed width, properly centered vertically
@@ -319,8 +325,10 @@ void TransportBar::resized() {
   // 4. Left Section: View Toggles + Wingman AI
   auto leftSection = area.removeFromLeft(200).reduced(16, 8);
   viewToggleButtonBounds_ = leftSection.removeFromLeft(32).withSizeKeepingCentre(32, 32);
+  if (viewToggleBtn_) viewToggleBtn_->setBounds(viewToggleButtonBounds_);
   leftSection.removeFromLeft(16);  // Spacing
   wingmanButtonBounds_ = leftSection.removeFromLeft(32).withSizeKeepingCentre(32, 32);
+  if (wingmanBtn_) wingmanBtn_->setBounds(wingmanButtonBounds_);
 
   // Update cached resources
   SkRect skBounds = SkRect::MakeWH((float)getWidth(), (float)getHeight());
@@ -488,33 +496,39 @@ void TransportBar::drawSkia(SkCanvas *canvas) {
 
   // 3. Transport Buttons
   // Play - Triangle
-  drawTransportButton(canvas, playButtonBounds_, icons::Play(), isPlaying_,
-                      design::colors::NEON_GREEN, playState_);
-                      
+  if (playBtn_)
+    drawTransportButton(canvas, *playBtn_, icons::Play(), isPlaying_,
+                        design::colors::NEON_GREEN, playState_);
+                       
   // Stop - PERFECT SQUARE (hover-only glow, no permanent active state)
   // NOTE: Pass 'false' for isActive - stop should never have a permanent glow,
   // only glow on hover. The old code used !isPlaying_ which was wrong.
-  drawTransportButton(canvas, stopButtonBounds_, icons::Stop(), false,
-                      design::colors::TEXT_SECONDARY, stopState_);
-                      
+  if (stopBtn_)
+    drawTransportButton(canvas, *stopBtn_, icons::Stop(), false,
+                        design::colors::TEXT_SECONDARY, stopState_);
+                       
   // Record - Circle
-  drawTransportButton(canvas, recordButtonBounds_, icons::Record(),
-                      isRecording_ || recordState_.isHovered,
-                      design::colors::RED, recordState_);
+  if (recordBtn_)
+    drawTransportButton(canvas, *recordBtn_, icons::Record(),
+                        isRecording_ || recordState_.isHovered,
+                        design::colors::RED, recordState_);
 
 
-  drawTransportButton(canvas, settingsButtonBounds_, icons::Settings(), false,
-                      design::colors::TEXT_SECONDARY, settingsState_);
+  if (settingsBtn_)
+    drawTransportButton(canvas, *settingsBtn_, icons::Settings(), false,
+                        design::colors::TEXT_SECONDARY, settingsState_);
 
 
   // 5. Wingman AI - Partnership icon (human + digital handshake)
   // This toggles the right-side AI panel for creative suggestions
-  drawTransportButton(canvas, wingmanButtonBounds_, icons::Partnership(),
-                      false, design::colors::NEON_PURPLE, wingmanState_);
+  if (wingmanBtn_)
+    drawTransportButton(canvas, *wingmanBtn_, icons::Partnership(),
+                        false, design::colors::NEON_PURPLE, wingmanState_);
 
   // 6. View Toggle (Left)
-  drawTransportButton(canvas, viewToggleButtonBounds_, icons::ViewToggle(),
-                      false, design::colors::TEXT_SECONDARY, viewToggleState_);
+  if (viewToggleBtn_)
+    drawTransportButton(canvas, *viewToggleBtn_, icons::ViewToggle(),
+                        false, design::colors::TEXT_SECONDARY, viewToggleState_);
 
   // 6. CPU Meter (Updated visual - use smoothed value)
   drawMeter(canvas, cpuMeterBounds_, juce::jlimit(0.0f, 1.0f, smoothedCpu_ / 100.0f), "CPU");
@@ -544,15 +558,24 @@ void TransportBar::updateCachedPaints(const SkRect &bounds) {
   smallFont_ = design::getSkFont(14.0f, design::FontWeight::Regular);
 }
 
-void TransportBar::drawTransportButton(SkCanvas *canvas,
-                                       const juce::Rectangle<int> &bounds,
+void TransportBar::drawTransportButton(SkCanvas *canvas, GhostButton& btn,
                                        const SkPath &iconPath, bool isActive,
                                        uint32_t color,
-                                       const InteractionState &state,
-                                       bool isFilled) { // Added isFilled param
-  SkRect rect =
-      SkRect::MakeXYWH((float)bounds.getX(), (float)bounds.getY(),
-                       (float)bounds.getWidth(), (float)bounds.getHeight());
+                                       InteractionState &state,
+                                       bool isFilled) {
+  // Sync Interaction State from JUCE Component
+  bool isHovered = btn.isMouseOver();
+  bool isDown = btn.isDown();
+  bool isFocused = btn.hasKeyboardFocus(true);
+  
+  // Update our animation state helper
+  state.isHovered = isHovered;
+  state.isPressed = isDown;
+  state.isFocused = isFocused;
+  
+  // Get bounds from the component
+  auto b = btn.getBounds();
+  SkRect rect = SkRect::MakeXYWH((float)b.getX(), (float)b.getY(), (float)b.getWidth(), (float)b.getHeight());
 
   // Ableton-style shrink animation when pressed
   // Scale down to 90% when pressed, with smooth interpolation
@@ -588,6 +611,9 @@ void TransportBar::drawTransportButton(SkCanvas *canvas,
       hoverBg.setColor(SkColorSetA(SK_ColorWHITE, (uint8_t)(20 * state.hoverAmount)));
       canvas->drawRoundRect(rect, 6.0f, 6.0f, hoverBg);
   }
+
+  // Draw focus ring
+  InteractionHelper::drawFocusRing(canvas, rect, state.focusAmount, 6.0f);
   
   // 2. Icon Rendering
   icons::IconStyle style;
@@ -762,9 +788,6 @@ void TransportBar::mouseDown(const juce::MouseEvent &e) {
       });
       ContextMenuManager::getInstance().showMenuAt(std::move(menu), this, e.x, e.y);
     } 
-    // Regular click handled on mouseUp usually, but let's conform to existing pattern:
-    // Existing code triggered on mouseDown. I'll keep it but ensure pressed state is visualized.
-    else if (onPlayClicked) { onPlayClicked(); }
     
   } else if (stopButtonBounds_.contains(e.getPosition())) {
     if (isRightClick) {
@@ -777,18 +800,16 @@ void TransportBar::mouseDown(const juce::MouseEvent &e) {
           if (onClearAllSolos) onClearAllSolos();
       });
       ContextMenuManager::getInstance().showMenuAt(std::move(menu), this, e.x, e.y);
-    } else if (onStopClicked) { onStopClicked(); }
+    }
     
   } else if (recordButtonBounds_.contains(e.getPosition())) {
-    if (!isRightClick && onRecordClicked) { onRecordClicked(); }
+    // Record right click?
   } else if (viewToggleButtonBounds_.contains(e.getPosition()) && !isRightClick) {
-    if (onViewToggleClicked) onViewToggleClicked();
-    requestRepaint();
+    // Handled by onClick
   } else if (wingmanButtonBounds_.contains(e.getPosition()) && !isRightClick) {
-    if (onWingmanClicked) onWingmanClicked();
-    requestRepaint();
+    // Handled by onClick
   } else if (settingsButtonBounds_.contains(e.getPosition()) && !isRightClick) {
-    if (onSettingsClicked) onSettingsClicked();
+    // Handled by onClick
   }
 }
 
@@ -1041,3 +1062,38 @@ juce::String TransportBar::getTooltip() {
 } // namespace zenith
 
 #endif // ZENITH_USE_SKIA
+
+void TransportBar::createButtons() {
+    auto createBtn = [this](const juce::String& name, const juce::String& tooltip) {
+        auto btn = std::make_unique<GhostButton>(name);
+        setupButton(*btn, tooltip);
+        return btn;
+    };
+    
+    // Create Buttons
+    rewindBtn_ = createBtn("Rewind", "Rewind");
+    stopBtn_ = createBtn("Stop", "Stop Playback (Space)");
+    playBtn_ = createBtn("Play", "Start Playback (Space)");
+    recordBtn_ = createBtn("Record", "Record (R)");
+    loopBtn_ = createBtn("Loop", "Toggle Loop (L)");
+    
+    viewToggleBtn_ = createBtn("ViewToggle", "Switch View (Tab)");
+    wingmanBtn_ = createBtn("Wingman", "Wingman AI (Cmd+W)");
+    settingsBtn_ = createBtn("Settings", "Audio Settings");
+    
+    // Assign Callbacks
+    rewindBtn_->onClick = [this] { if (onRewind) onRewind(); };
+    stopBtn_->onClick = [this] { if (onStopClicked) onStopClicked(); };
+    playBtn_->onClick = [this] { if (onPlayClicked) onPlayClicked(); };
+    recordBtn_->onClick = [this] { if (onRecordClicked) onRecordClicked(); };
+    loopBtn_->onClick = [this] { if (onLoopToggled) onLoopToggled(); };
+    
+    viewToggleBtn_->onClick = [this] { if (onViewToggleClicked) onViewToggleClicked(); };
+    wingmanBtn_->onClick = [this] { if (onWingmanClicked) onWingmanClicked(); };
+    settingsBtn_->onClick = [this] { if (onSettingsClicked) onSettingsClicked(); };
+}
+
+void TransportBar::setupButton(GhostButton& btn, const juce::String& tooltip) {
+    btn.setTooltip(tooltip);
+    addAndMakeVisible(btn);
+}
