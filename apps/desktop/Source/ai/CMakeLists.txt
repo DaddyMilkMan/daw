@@ -15,6 +15,12 @@ target_sources(ZenithDAW PRIVATE
     NeuralPresetGenerator.h
     NeuralPresetGenerator.cpp
 
+    # Music Theory & Chord Generation (Competitive Feature)
+    MusicTheory.h
+    MusicTheory.cpp
+    ChordProgressionGenerator.h
+    ChordProgressionGenerator.cpp
+
     # Style & UI
     ZenithStyleApplicator.h
     ZenithStyleApplicator.cpp
