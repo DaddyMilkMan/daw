@@ -14,15 +14,17 @@
 
 namespace zenith {
 namespace agents {
+namespace tests {
 
 class RealtimeAudioEngineAgentTest : public juce::UnitTest {
 public:
-  RealtimeAudioEngineAgentTest() : juce::UnitTest("RealtimeAudioEngineAgent Tests", "RealtimeAudioEngineAgent") {}
+  RealtimeAudioEngineAgentTest() : juce::UnitTest("RealtimeAudioEngineAgent", "Agents") {}
 
   void runTest() override {
     testInitialization();
     testStartStop();
     testProcessBlock();
+    testAudioPassThrough();
     testStopSynchronization();
   }
 
@@ -66,22 +68,45 @@ private:
 
     agent.processBlock(buffer, midi);
 
-    // Currently processBlock clears the buffer (placeholder behavior)
-    // Verify silence
-    expectEquals(buffer.getMagnitude(0, 512), 0.0f, "Buffer should be cleared by processBlock");
-
     // Verify metrics updated
     const auto& metrics = agent.getMetrics();
     expectEquals((int64_t)metrics.samplesProcessed, (int64_t)512, "Samples processed should be updated");
   }
 
+  void testAudioPassThrough() {
+    beginTest("Audio Pass-through");
+    RealtimeAudioEngineAgent engine;
+    double sampleRate = 44100.0;
+    int bufferSize = 512;
+    engine.initialize(sampleRate, bufferSize);
+    engine.start();
+
+    juce::AudioBuffer<float> buffer(2, bufferSize);
+    juce::MidiBuffer midi;
+
+    // Create a test signal in the input
+    for (int ch = 0; ch < 2; ++ch) {
+      auto* data = buffer.getWritePointer(ch);
+      for (int i = 0; i < bufferSize; ++i) {
+        data[i] = 1.0f; // DC offset for simplicity
+      }
+    }
+
+    // Process
+    engine.processBlock(buffer, midi);
+
+    // Verify output matches input (pass-through)
+    float magnitude = buffer.getMagnitude(0, bufferSize);
+    expect(magnitude > 0.0f, "Output should not be silent");
+
+    for (int ch = 0; ch < 2; ++ch) {
+        float chMag = buffer.getMagnitude(ch, 0, bufferSize);
+        expectEquals(chMag, 1.0f);
+    }
+  }
+
   void testStopSynchronization() {
     beginTest("Stop Synchronization");
-
-    // This test attempts to verify that stop() waits for processBlock to finish.
-    // However, without modifying the agent to artificially delay processBlock,
-    // we can only verify that stop() eventually returns and the state is consistent.
-    // We will simulate a high-load scenario.
 
     RealtimeAudioEngineAgent agent;
     agent.initialize(44100.0, 512);
@@ -123,5 +148,6 @@ private:
 
 static RealtimeAudioEngineAgentTest realtimeAudioEngineAgentTest;
 
+} // namespace tests
 } // namespace agents
 } // namespace zenith

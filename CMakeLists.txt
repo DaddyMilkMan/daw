@@ -126,6 +126,7 @@ set(ZENITH_TEST_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/SampleGeneratorTests.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/ZenithControlTest.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/tests/OversamplingBenchmark.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/agents/RealtimeAudioEngineAgent/tests/RealtimeAudioEngineAgentTest.cpp"
 )
 
 # =============================================================================
@@ -795,6 +796,40 @@ if(BUILD_TESTS)
     if(UNIX AND NOT APPLE)
         target_link_libraries(SampleGeneratorTestsApp PRIVATE pthread dl)
     endif()
+
+    # =========================================================================
+    # RealtimeAudioEngineAgentTest - Standalone for headless env
+    # =========================================================================
+    add_executable(RealtimeAudioEngineAgentTest)
+
+    target_sources(RealtimeAudioEngineAgentTest PRIVATE
+        "agents/RealtimeAudioEngineAgent/tests/RealtimeAudioEngineAgentTest.cpp"
+        "agents/RealtimeAudioEngineAgent/RealtimeAudioEngineAgent.cpp"
+    )
+
+    target_include_directories(RealtimeAudioEngineAgentTest PRIVATE
+        ${CMAKE_BINARY_DIR}/JuceLibraryCode
+        "agents/RealtimeAudioEngineAgent"
+    )
+
+    target_link_libraries(RealtimeAudioEngineAgentTest PRIVATE
+        juce::juce_core
+        juce::juce_audio_basics
+        juce::juce_audio_processors
+    )
+
+    target_compile_definitions(RealtimeAudioEngineAgentTest PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+        JUCE_STANDALONE_APPLICATION=1
+    )
+
+    if (UNIX AND NOT APPLE)
+        target_link_libraries(RealtimeAudioEngineAgentTest PRIVATE pthread dl)
+    endif()
+
+    target_compile_features(RealtimeAudioEngineAgentTest PRIVATE cxx_std_20)
 
 endif()
 

@@ -296,6 +296,7 @@ set(ZENITH_UTILS_SOURCES
 # Agents sources
 set(ZENITH_AGENTS_SOURCES
     agents/TransportProtocolAgent/TransportProtocolAgent.cpp
+    agents/RealtimeAudioEngineAgent/RealtimeAudioEngineAgent.cpp
 )
 
 # Combine all sources
