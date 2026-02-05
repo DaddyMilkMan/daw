@@ -2,11 +2,13 @@
   ==============================================================================
 
     ZenithEffects.cpp
-    Refactored: 2025-12-09
+    Refactored: 2025-12-21 (Pro Audio Upgrade)
     Author:  Zenith DAW
 
-    Implementation of ZenithEffects with Stereo Ping-Pong Delay.
-    Fixes: Audio Thread Allocation Optimization.
+    Implementation of ZenithEffects with High-Fidelity DSP.
+    - Interpolated Chorus (Lush)
+    - Interpolated Ping-Pong Delay (Smooth)
+    - True Stereo Reverb (Wide)
 
   ==============================================================================
 */
@@ -82,75 +84,108 @@ void ZenithEffects::initDelay() {
 void ZenithEffects::initReverb() {
   if (reverbInit_)
     return;
+
   float scale = static_cast<float>(sampleRate_) / 44100.0f;
+
+  // Standard Schroeder/Freeverb tunings
   int tunings[] = {1116, 1188, 1277, 1356};
-  for (int i = 0; i < 4; ++i)
-    combs_[i].resize(static_cast<int>(tunings[i] * scale));
+
+  // Initialize Left Channel
+  for (int i = 0; i < 4; ++i) {
+    combsL_[i].resize(static_cast<int>(tunings[i] * scale));
+    // Stereo Spread: Right channel has offset (+23 samples is standard trick)
+    combsR_[i].resize(static_cast<int>((tunings[i] + 23) * scale));
+  }
+
   int allpassTunings[] = {225, 556};
-  for (int i = 0; i < 2; ++i)
-    allpasses_[i].resize(static_cast<int>(allpassTunings[i] * scale));
+  for (int i = 0; i < 2; ++i) {
+    allpassesL_[i].resize(static_cast<int>(allpassTunings[i] * scale));
+    allpassesR_[i].resize(static_cast<int>((allpassTunings[i] + 23) * scale));
+  }
+
   reverbInit_ = true;
 }
 
 void ZenithEffects::process(float &left, float &right) {
-  // Distortion
+  // 1. Distortion (Waveshaping)
+  // ---------------------------------------------------------
   if (distortionAmount_ > 0.0f) {
     float drive = 1.0f + distortionAmount_ * 9.0f;
+    // Simple tanh soft clipping (could be upgraded to oversampled folding later)
     left = std::tanh(left * drive) / drive;
     right = std::tanh(right * drive) / drive;
   }
 
-  // Chorus
+  // 2. Chorus (Interpolated Delay Line)
+  // ---------------------------------------------------------
   if (chorusAmount_ > 0.0f) {
+    // Calculate LFO
     float lfoValue = std::sin(chorusPhase_ * juce::MathConstants<float>::twoPi);
-    int delayTime = static_cast<int>(5.0f + lfoValue * 3.0f);
 
-    int readPos =
-        (delayPos_ - delayTime + delayBufferL_.size()) % delayBufferL_.size();
-    float chorusL = delayBufferL_[readPos];
-    float chorusR = delayBufferR_[readPos];
+    // Modulate delay time (5ms base +/- 3ms depth)
+    // Using fractional delay for smooth modulation (no zipper noise)
+    float delaySamples = (5.0f + lfoValue * 3.0f) * (static_cast<float>(sampleRate_) / 1000.0f);
+
+    // Read Position (Floating Point)
+    float readPos = static_cast<float>(delayPos_) - delaySamples;
+
+    // Stereo Spread: Right channel uses inverted LFO for width
+    // Or just offset phase. Here we use the same delay buffer but same read pos logic?
+    // Wait, original code read L/R from same pos.
+    // To make it wider, let's invert the LFO for Right channel slightly if we had 2 LFOs.
+    // But sticking to original logic + interpolation for fidelity:
+
+    float chorusL = getInterpolatedSample(delayBufferL_, readPos);
+    float chorusR = getInterpolatedSample(delayBufferR_, readPos);
 
     left = left * (1.0f - chorusAmount_) + chorusL * chorusAmount_;
     right = right * (1.0f - chorusAmount_) + chorusR * chorusAmount_;
 
+    // Write input to delay line
     delayBufferL_[delayPos_] = left;
     delayBufferR_[delayPos_] = right;
+
+    // Advance write head
     delayPos_ = (delayPos_ + 1) % delayBufferL_.size();
 
+    // Advance LFO
+    chorusPhase_ += 1.0f / static_cast<float>(sampleRate_); // 1Hz approx for now?
+    // Original was: chorusPhase_ += 2.0f / ... (2Hz)
+    // Let's stick to 2Hz or make it parameterizable later.
     chorusPhase_ += 2.0f / static_cast<float>(sampleRate_);
     if (chorusPhase_ >= 1.0f)
       chorusPhase_ -= 1.0f;
   }
 
-  // Stereo Ping-Pong Delay
+  // 3. Stereo Ping-Pong Delay (Interpolated)
+  // ---------------------------------------------------------
   if (delayMix_ > 0.0f && !echoBufferL_.empty()) {
     float time = delaySync_ ? getDelaySecondsForSyncRate(delaySyncRate_, bpm_)
                             : delayTime_;
     float delaySamples = time * sampleRate_;
-    // Use static_cast directly or floor, but clamping is safe
-    delaySamples =
-        std::max(1.0f, std::min(delaySamples,
-                                static_cast<float>(echoBufferL_.size() - 1)));
 
-    int rPos =
-        (echoPos_ - static_cast<int>(delaySamples) + echoBufferL_.size()) %
-        echoBufferL_.size();
+    // Clamp to buffer size
+    delaySamples = std::max(1.0f, std::min(delaySamples, static_cast<float>(echoBufferL_.size() - 1)));
 
-    float dL = echoBufferL_[rPos];
-    float dR = echoBufferR_[rPos];
+    // Fractional Read Position
+    float rPos = static_cast<float>(echoPos_) - delaySamples;
+
+    // High-Quality Interpolation
+    float dL = getInterpolatedSample(echoBufferL_, rPos);
+    float dR = getInterpolatedSample(echoBufferR_, rPos);
 
     // Denormal protection
-    if (std::abs(dL) < 1.0e-15f)
-      dL = 0.0f;
-    if (std::abs(dR) < 1.0e-15f)
-      dR = 0.0f;
+    if (std::abs(dL) < 1.0e-15f) dL = 0.0f;
+    if (std::abs(dR) < 1.0e-15f) dR = 0.0f;
 
+    // Ping-Pong Feedback (Cross-channel)
     float feedL = dR * delayFeedback_;
     float feedR = dL * delayFeedback_;
 
     float inL = left + feedL;
     float inR = right + feedR;
 
+    // Saturation in feedback loop
     if (delayFeedback_ > 0.8f) {
       inL = std::tanh(inL);
       inR = std::tanh(inR);
@@ -159,25 +194,37 @@ void ZenithEffects::process(float &left, float &right) {
     echoBufferL_[echoPos_] = inL;
     echoBufferR_[echoPos_] = inR;
 
+    // Mix Output
     left = left * (1.0f - delayMix_) + dL * delayMix_;
     right = right * (1.0f - delayMix_) + dR * delayMix_;
 
     echoPos_ = (echoPos_ + 1) % echoBufferL_.size();
   }
 
-  // Reverb
+  // 4. True Stereo Reverb
+  // ---------------------------------------------------------
   if (reverbAmount_ > 0.0f) {
-    // initReverb(); // REMOVED: Must be called in setSampleRate, not process()
-    float input = (left + right) * 0.5f * reverbAmount_;
-    float combOut = 0.0f;
-    for (auto &comb : combs_)
-      combOut += comb.process(input);
-    float allpassOut = combOut;
-    for (auto &allpass : allpasses_)
-      allpassOut = allpass.process(allpassOut);
+    // Process Left
+    float inputL = left * reverbAmount_ * 0.5f; // Attenuate into reverb
+    float combOutL = 0.0f;
+    for (auto &comb : combsL_)
+      combOutL += comb.process(inputL);
+    float allpassOutL = combOutL;
+    for (auto &allpass : allpassesL_)
+      allpassOutL = allpass.process(allpassOutL);
 
-    left += allpassOut * 0.2f;
-    right += allpassOut * 0.2f;
+    // Process Right (Independent tank with spread)
+    float inputR = right * reverbAmount_ * 0.5f;
+    float combOutR = 0.0f;
+    for (auto &comb : combsR_)
+      combOutR += comb.process(inputR);
+    float allpassOutR = combOutR;
+    for (auto &allpass : allpassesR_)
+      allpassOutR = allpass.process(allpassOutR);
+
+    // Mix Wet Signal
+    left += allpassOutL;
+    right += allpassOutR;
   }
 }
 

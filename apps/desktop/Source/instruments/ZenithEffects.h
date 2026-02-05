@@ -3,9 +3,14 @@
 
     ZenithEffects.h
     Created: 2025-12-06
+    Refactored: 2025-12-21 (Pro Audio Upgrade)
     Author:  Zenith DAW
 
     Global Effects Processor for ZenithPolySynth.
+    Features:
+    - Stereo interpolated Chorus (Lush/Analog)
+    - Stereo Ping-Pong Delay with fractional reads (Smooth)
+    - True Stereo Reverb (Wide)
 
   ==============================================================================
 */
@@ -15,6 +20,7 @@
 #include <juce_core/juce_core.h>
 #include <array>
 #include <vector>
+#include <cmath>
 #include "ZenithPolySynthDefs.h"
 
 namespace zenith {
@@ -45,13 +51,15 @@ public:
   void setBpm(double bpm) { bpm_ = bpm; }
   void setDelaySync(bool sync, SyncRate rate) { delaySync_ = sync; delaySyncRate_ = rate; }
   
-  // Roast Fix #5: Buffer size change notification
   void setBlockSize(int blockSize) { 
-    juce::ignoreUnused(blockSize);  // Effects use sample rate for delay sizing, not block size
-    // Future: If we add block-based processing, use this here
+    juce::ignoreUnused(blockSize);
   }
 
   void process(float &left, float &right);
+
+  bool hasTail() const {
+      return (reverbAmount_ > 0.0f || chorusAmount_ > 0.0f || delayMix_ > 0.0f);
+  }
 
 private:
   double sampleRate_ = 44100.0;
@@ -78,7 +86,7 @@ private:
   int delayPos_ = 0;
   
   // Reverb (Comb filters + Allpass)
-  // Simple implementation: 4 combs, 2 allpass
+  // Simple implementation: 4 combs, 2 allpass per channel (True Stereo)
   struct Comb {
       std::vector<float> buffer;
       int pos = 0;
@@ -86,7 +94,11 @@ private:
       float damp = 0.2f;
       float val = 0.0f;
       
-      void resize(int size) { buffer.resize(size, 0.0f); }
+      void resize(int size) {
+          buffer.resize(size, 0.0f);
+          pos = 0;
+          val = 0.0f;
+      }
       float process(float input) {
           if (buffer.empty()) return input;
           float output = buffer[pos];
@@ -102,7 +114,10 @@ private:
       int pos = 0;
       float feedback = 0.5f;
       
-      void resize(int size) { buffer.resize(size, 0.0f); }
+      void resize(int size) {
+          buffer.resize(size, 0.0f);
+          pos = 0;
+      }
       float process(float input) {
           if (buffer.empty()) return input;
           float bufOut = buffer[pos];
@@ -113,17 +128,33 @@ private:
       }
   };
   
-  std::array<Comb, 4> combs_;
-  std::array<Allpass, 2> allpasses_;
+  // True Stereo Reverb Tank
+  std::array<Comb, 4> combsL_;
+  std::array<Comb, 4> combsR_;
+  std::array<Allpass, 2> allpassesL_;
+  std::array<Allpass, 2> allpassesR_;
   bool reverbInit_ = false;
   
   void initReverb();
-  
-public:
-    bool hasTail() const {
-        // Simple check
-        return (reverbAmount_ > 0.0f || chorusAmount_ > 0.0f);
-    }
+
+  // Helper for Linear Interpolation
+  // Reads from a circular buffer using a floating point position
+  template <typename Container>
+  inline float getInterpolatedSample(const Container& buffer, float readPos) const {
+      if (buffer.empty()) return 0.0f;
+
+      int size = static_cast<int>(buffer.size());
+
+      // Wrap readPos to [0, size)
+      while (readPos < 0.0f) readPos += size;
+      while (readPos >= size) readPos -= size;
+
+      int index0 = static_cast<int>(readPos);
+      int index1 = (index0 + 1) % size;
+      float frac = readPos - index0;
+
+      return buffer[index0] * (1.0f - frac) + buffer[index1] * frac;
+  }
 };
 
 } // namespace zenith
