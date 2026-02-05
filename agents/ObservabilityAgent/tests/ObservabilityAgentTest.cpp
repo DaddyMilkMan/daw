@@ -1,12 +1,13 @@
 /*
   ==============================================================================
     agents/ObservabilityAgent/tests/ObservabilityAgentTest.cpp
-    Unit tests for ObservabilityAgent.
+    Unit tests for ObservabilityAgent and PrometheusExporter.
   ==============================================================================
 */
 
 #include <juce_core/juce_core.h>
 #include "../ObservabilityAgent.h"
+#include "../PrometheusExporter.h"
 #include <thread>
 #include <chrono>
 
@@ -208,7 +209,176 @@ private:
   }
 };
 
+class PrometheusExporterTests : public juce::UnitTest {
+public:
+    PrometheusExporterTests() : juce::UnitTest("PrometheusExporterTests", "Observability") {}
+
+    void runTest() override {
+        beginTest("Sanitization");
+        {
+            // We can't access private static helpers directly, so we test via formatMetric logic or public API if available.
+            // Since helpers are private, we test the public formatMetric.
+            ObservabilityAgent::Metric m;
+            m.name = "my.metric-name with spaces";
+            m.type = ObservabilityAgent::MetricType::Counter;
+            m.value = 123.45;
+            m.timestamp = std::chrono::steady_clock::now();
+            m.labels = {{"label.one", "value\"with\"quotes"}, {"label-two", "value\\with\\backslashes"}};
+
+            auto output = PrometheusExporter::formatMetric(m);
+
+            // Expected name: my_metric_name_with_spaces
+            expect(output.contains("my_metric_name_with_spaces"), "Name sanitization failed");
+
+            // Expected label 1: label_one="value\"with\"quotes"
+            expect(output.contains("label_one=\"value\\\"with\\\"quotes\""), "Label 1 sanitization failed");
+
+            // Expected label 2: label_two="value\\with\\backslashes"
+            expect(output.contains("label_two=\"value\\\\with\\\\backslashes\""), "Label 2 sanitization failed");
+
+            // Expected value
+            expect(output.contains("123.45"), "Value missing");
+
+            // Expected metadata
+            expect(output.contains("# TYPE my_metric_name_with_spaces counter"), "Type metadata missing");
+            expect(output.contains("# HELP my_metric_name_with_spaces"), "Help metadata missing");
+        }
+
+        beginTest("Atomic File Write");
+        {
+            PrometheusExporter exporter;
+            auto tempFile = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                            .getChildFile("zenith_test_metrics.prom");
+
+            if (tempFile.exists()) tempFile.deleteFile();
+
+            std::vector<ObservabilityAgent::Metric> metrics;
+            ObservabilityAgent::Metric m;
+            m.name = "test_metric";
+            m.type = ObservabilityAgent::MetricType::Gauge;
+            m.value = 42.0;
+            metrics.push_back(m);
+
+            auto result = exporter.exportMetrics(metrics, tempFile);
+
+            expect(result.wasOk(), "Export failed: " + result.getErrorMessage());
+            expect(tempFile.exists(), "Destination file not created");
+
+            auto content = tempFile.loadFileAsString();
+            expect(content.contains("test_metric 42"), "Content missing in file");
+
+            // Cleanup
+            tempFile.deleteFile();
+        }
+    }
+};
+
+class ObservabilityAggregationTests : public juce::UnitTest {
+public:
+    ObservabilityAggregationTests() : juce::UnitTest("ObservabilityAggregationTests", "Observability") {}
+
+    void runTest() override {
+        beginTest("Integration Test");
+        {
+            ObservabilityAgent agent;
+            auto tempFile = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                            .getChildFile("zenith_agent_integration.prom");
+
+            if (tempFile.exists()) tempFile.deleteFile();
+
+            agent.setMetricsFile(tempFile);
+            agent.setEnabled(true);
+
+            // Record some metrics (internal counter)
+            agent.recordCounter("ignored_for_now");
+
+            // Start export thread with short interval
+            agent.setExportInterval(std::chrono::milliseconds(100));
+
+            // Wait for a bit
+            juce::Thread::sleep(300);
+
+            // Stop export
+            agent.setExportInterval(std::chrono::milliseconds(0));
+
+            // Verify file exists
+            expect(tempFile.exists(), "Metrics file not created by agent");
+
+            if (tempFile.exists()) {
+                auto content = tempFile.loadFileAsString();
+                expect(content.contains("zenith_metrics_collected_total"), "Internal metric missing");
+                // We recorded one counter above, so total should be at least 1 (plus potential others)
+            }
+
+            // Cleanup
+            tempFile.deleteFile();
+        }
+
+        beginTest("Timer Aggregation Test");
+        {
+            ObservabilityAgent agent;
+            agent.setEnabled(true);
+
+            // Record a timer
+            auto t0 = agent.startTimer();
+            juce::Thread::sleep(10); // Sleep 10ms
+            agent.endTimer("test_timer", t0);
+
+            // Record another timer
+            auto t1 = agent.startTimer();
+            juce::Thread::sleep(20); // Sleep 20ms
+            agent.endTimer("test_timer", t1);
+
+            // Get metrics (this should drain the buffer and aggregate)
+            auto metrics = agent.getMetrics();
+
+            bool foundSum = false;
+            bool foundCount = false;
+            double sumValue = 0.0;
+            double countValue = 0.0;
+
+            for (const auto& m : metrics) {
+                if (m.name == "test_timer_sum") {
+                    foundSum = true;
+                    sumValue = m.value;
+                }
+                if (m.name == "test_timer_count") {
+                    foundCount = true;
+                    countValue = m.value;
+                }
+            }
+
+            expect(foundSum, "Timer sum metric not found");
+            expect(foundCount, "Timer count metric not found");
+            expectEquals(countValue, 2.0, "Timer count incorrect");
+            expect(sumValue > 0.0, "Timer sum value invalid");
+        }
+
+        beginTest("Counter Aggregation Test");
+        {
+            ObservabilityAgent agent;
+            agent.setEnabled(true);
+
+            agent.recordCounter("test_counter", 1.0);
+            agent.recordCounter("test_counter", 2.5);
+
+            auto metrics = agent.getMetrics();
+
+            bool found = false;
+            for (const auto& m : metrics) {
+                if (m.name == "test_counter") {
+                    found = true;
+                    expectEquals(m.value, 3.5, "Counter aggregation incorrect");
+                }
+            }
+            expect(found, "Counter metric not found");
+        }
+    }
+};
+
 static ObservabilityAgentTest observabilityAgentTest;
+static PrometheusExporterTests prometheusExporterTests;
+static ObservabilityAggregationTests observabilityAggregationTests;
 
 } // namespace agents
 } // namespace zenith

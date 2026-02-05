@@ -17,6 +17,7 @@
 #include <condition_variable>
 #include <memory>
 #include <array>
+#include <map>
 
 namespace zenith {
 namespace agents {
@@ -130,6 +131,7 @@ private:
   void run() override;
   void exportLoop();
   void stopExportThread();
+  void processRingBuffer();
 
   struct LogEntry {
       LogLevel level;
@@ -177,6 +179,11 @@ private:
   static constexpr int kRingBufferSize = 4096;
   juce::AbstractFifo ringBufferFifo_{kRingBufferSize};
   std::vector<RawMetricEvent> ringBufferData_;
+  juce::SpinLock ringBufferLock_; // Protects write access to ringBufferFifo_
+
+  // Aggregated metrics storage
+  std::mutex metricsMutex_; // Protects metricsMap_ and read access to ringBufferFifo_
+  std::map<std::string, Metric> metricsMap_;
 
   friend class ObservabilityAgentTest; // Allow tests to access ring buffer
 

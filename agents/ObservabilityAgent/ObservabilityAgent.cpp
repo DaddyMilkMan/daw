@@ -47,6 +47,8 @@ void ObservabilityAgent::recordCounter(const char* name, double value) noexcept 
     return;
   }
   
+  const juce::SpinLock::ScopedLockType lock(ringBufferLock_);
+
   auto s1 = 0, s2 = 0, num1 = 0, num2 = 0;
   ringBufferFifo_.prepareToWrite(1, s1, num1, s2, num2);
   
@@ -66,6 +68,8 @@ void ObservabilityAgent::recordGauge(const char* name, double value) noexcept {
     return;
   }
   
+  const juce::SpinLock::ScopedLockType lock(ringBufferLock_);
+
   auto s1 = 0, s2 = 0, num1 = 0, num2 = 0;
   ringBufferFifo_.prepareToWrite(1, s1, num1, s2, num2);
   
@@ -95,6 +99,8 @@ void ObservabilityAgent::endTimer(const char* name, uint64_t startTime) noexcept
   auto endTime = static_cast<uint64_t>(now.time_since_epoch().count());
   auto duration = endTime - startTime;
   
+  const juce::SpinLock::ScopedLockType lock(ringBufferLock_);
+
   auto s1 = 0, s2 = 0, num1 = 0, num2 = 0;
   ringBufferFifo_.prepareToWrite(1, s1, num1, s2, num2);
   
@@ -226,7 +232,7 @@ void ObservabilityAgent::exportMetrics() {
     return;
   }
 
-  // Fetch metrics
+  // Fetch metrics (this calls processRingBuffer internally)
   auto metrics = getMetrics();
 
   juce::File dest;
@@ -247,28 +253,111 @@ uint64_t ObservabilityAgent::getExportCount() const {
   return exportCount_.load(std::memory_order_relaxed);
 }
 
+void ObservabilityAgent::timerCallback() {
+  exportMetrics();
+}
+
+void ObservabilityAgent::processRingBuffer() {
+    std::lock_guard<std::mutex> lock(metricsMutex_);
+
+    int start1, size1, start2, size2;
+    // Drain everything available
+    ringBufferFifo_.prepareToRead(kRingBufferSize, start1, size1, start2, size2);
+
+    if (size1 + size2 == 0) return;
+
+    auto processEvent = [this](int index) {
+        const auto& event = ringBufferData_[static_cast<size_t>(index)];
+
+        switch (event.type) {
+            case MetricType::Counter: {
+                auto& m = metricsMap_[event.name];
+                if (m.name.empty()) {
+                    m.name = event.name;
+                    m.type = MetricType::Counter;
+                }
+                m.value += event.value;
+                m.timestamp = std::chrono::steady_clock::time_point(std::chrono::nanoseconds(event.timestamp));
+                break;
+            }
+            case MetricType::Gauge: {
+                auto& m = metricsMap_[event.name];
+                m.name = event.name;
+                m.type = MetricType::Gauge;
+                m.value = event.value; // Gauges are overwritten
+                m.timestamp = std::chrono::steady_clock::time_point(std::chrono::nanoseconds(event.timestamp));
+                break;
+            }
+            case MetricType::Timer: {
+                // Aggregate Timer into sum and count
+                std::string baseName = event.name;
+
+                // Sum
+                {
+                    std::string sumName = baseName + "_sum";
+                    auto& m = metricsMap_[sumName];
+                    if (m.name.empty()) {
+                        m.name = sumName;
+                        m.type = MetricType::Counter; // Treat as counter for export
+                    }
+                    m.value += event.value;
+                    m.timestamp = std::chrono::steady_clock::time_point(std::chrono::nanoseconds(event.timestamp));
+                }
+
+                // Count
+                {
+                    std::string countName = baseName + "_count";
+                    auto& m = metricsMap_[countName];
+                    if (m.name.empty()) {
+                        m.name = countName;
+                        m.type = MetricType::Counter; // Treat as counter for export
+                    }
+                    m.value += 1.0;
+                    m.timestamp = std::chrono::steady_clock::time_point(std::chrono::nanoseconds(event.timestamp));
+                }
+                break;
+            }
+            default:
+                break;
+        }
+    };
+
+    for (int i = 0; i < size1; ++i) processEvent(start1 + i);
+    for (int i = 0; i < size2; ++i) processEvent(start2 + i);
+
+    ringBufferFifo_.finishedRead(size1 + size2);
+}
 std::vector<ObservabilityAgent::Metric> ObservabilityAgent::getMetrics() {
+  processRingBuffer(); // Drain and aggregate new events
+
+  std::lock_guard<std::mutex> lock(metricsMutex_);
   std::vector<Metric> metrics;
+  metrics.reserve(metricsMap_.size() + 1);
   
-  // Create a sample metric from the internal counter for testing/demonstration
-  // until the ring buffer is implemented.
+  // Internal diagnostic metric
   Metric m;
   m.name = "zenith_metrics_collected_total";
   m.type = MetricType::Counter;
   m.value = static_cast<double>(metricsCollected_.load(std::memory_order_relaxed));
   m.timestamp = std::chrono::steady_clock::now();
-
   metrics.push_back(m);
 
-  // TODO: Read from lock-free ring buffer
-  // TODO: Aggregate metrics by name
-  // TODO: Apply time-based windowing
+  for (const auto& kv : metricsMap_) {
+      metrics.push_back(kv.second);
+  }
   
   return metrics;
 }
 
 void ObservabilityAgent::clearMetrics() {
-  // TODO: Clear lock-free ring buffer
+  std::lock_guard<std::mutex> lock(metricsMutex_);
+  metricsMap_.clear();
+
+  // Also drain the ring buffer to ensure fresh start
+  int s1, sz1, s2, sz2;
+  ringBufferFifo_.prepareToRead(kRingBufferSize, s1, sz1, s2, sz2);
+  ringBufferFifo_.finishedRead(sz1 + sz2);
+
   metricsCollected_.store(0, std::memory_order_release);
 }
 
