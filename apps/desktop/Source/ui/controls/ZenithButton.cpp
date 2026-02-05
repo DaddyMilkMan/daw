@@ -107,6 +107,22 @@ void ZenithButton::setButtonText(const juce::String &text) {
     textDirty_ = true;
     layoutDirty_ = true;
     repaint();
+
+    if (auto *handler = getAccessibilityHandler()) {
+      handler->notifyAccessibilityEvent(juce::AccessibilityEvent::titleChanged);
+    }
+  }
+}
+
+void ZenithButton::setTooltip(const juce::String &text) {
+  if (tooltip_ != text) {
+    tooltip_ = text;
+    // Update title if falling back to tooltip (icon-only mode)
+    if (text_.isEmpty()) {
+      if (auto *handler = getAccessibilityHandler()) {
+        handler->notifyAccessibilityEvent(juce::AccessibilityEvent::titleChanged);
+      }
+    }
   }
 }
 
@@ -160,6 +176,10 @@ void ZenithButton::setToggleState(bool state, bool sendNotification) {
   if (toggleState_ != state) {
     toggleState_ = state;
     repaint();
+
+    if (auto *handler = getAccessibilityHandler()) {
+      handler->notifyAccessibilityEvent(juce::AccessibilityEvent::stateChanged);
+    }
 
     if (sendNotification && onToggle) {
       onToggle(toggleState_);
@@ -627,5 +647,4 @@ bool ZenithButton::keyPressed(const juce::KeyPress &key) {
   // Forward to SkiaComponent logic (for Context Menu etc)
   return SkiaComponent::keyPressed(key, this);
 }
-
 } // namespace zenith
