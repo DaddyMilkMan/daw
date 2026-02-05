@@ -1,0 +1,67 @@
+/*
+    This file is part of Zenith DAW - A Digital Audio Workstation for Linux
+
+    Copyright (C) 2025 Micah Cooley <micahcooley@protonmail.com>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+/*
+    ==============================================================================
+    Original file header:
+*/
+
+  ==============================================================================
+
+    UnsavedChangesModal.h
+    Created: 2025-12-30
+    Author:  Zenith DAW
+
+    "Neon Noir" replacement for the native unsaved changes dialog.
+    Ensures reliable shutdown handling and visual consistency.
+
+
+  ==============================================================================
+*/
+
+#pragma once
+
+#include "../controls/SkiaButton.h"
+#include "../framework/SkiaComponent.h"
+#include <functional>
+
+namespace zenith {
+
+class UnsavedChangesModal : public SkiaComponent {
+public:
+  UnsavedChangesModal();
+  ~UnsavedChangesModal() override;
+
+  void drawSkia(SkCanvas* canvas) override;
+  void resized() override;
+
+  // Callbacks
+  std::function<void()> onSaveAndQuit;
+  std::function<void()> onDiscardAndQuit;
+  std::function<void()> onCancel;
+
+private:
+  std::unique_ptr<SkiaButton> btnSave_;
+  std::unique_ptr<SkiaButton> btnDiscard_;
+  std::unique_ptr<SkiaButton> btnCancel_;
+
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(UnsavedChangesModal)
+};
+
+} // namespace zenith

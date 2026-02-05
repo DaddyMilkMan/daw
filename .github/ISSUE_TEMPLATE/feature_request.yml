@@ -1,0 +1,160 @@
+name: ✨ Feature Request
+description: Suggest a new feature for the Zenith DAW
+title: "[FEATURE] "
+labels: ["enhancement", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature for Zenith DAW! Please provide detailed information to help us understand your proposal.
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      description: Which category does your feature request belong to?
+      options:
+        - User Interface/UX
+        - Audio Processing
+        - MIDI Features
+        - Plugin System
+        - Project Management
+        - Integration/External
+        - Workflow
+        - Performance
+        - Accessibility
+        - AI/ML Features
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Brief summary of the feature request
+      placeholder: A clear and concise description of what you want
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem-statement
+    attributes:
+      label: Problem Statement
+      description: What problem are you trying to solve?
+      placeholder: Describe the problem you're facing or the workflow limitation
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: How would you like this feature to work?
+      placeholder: Describe the solution in detail, including how it would work
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-cases
+    attributes:
+      label: Use Cases
+      description: Describe how this feature would be used
+      placeholder: |
+        **Primary Use Case:**
+        - Describe the main scenario where this feature would be used
+
+        **Secondary Use Cases:**
+        - Describe other scenarios where this feature would be helpful
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - 🟢 Must Have - Critical for my workflow
+        - 🟡 Should Have - Would significantly improve my workflow
+        - 🔵 Could Have - Would be nice to have
+        - ⚪ Won't Have - Not important to me
+    validations:
+      required: true
+
+  - type: textarea
+    id: mockups-wireframes
+    attributes:
+      label: Mockups/Wireframes
+      description: If you have mockups, wireframes, or concept art
+      placeholder: |
+        **Concept Images:**
+        [ Attach images showing your concept ]
+
+        **UI Mockup:**
+        [ Describe how the UI should look and behave ]
+
+        **User Flow:**
+        [ Describe the step-by-step user experience ]
+    validations:
+      required: false
+
+  - type: dropdown
+    id: user-experience
+    attributes:
+      label: User Experience
+      description: What level of technical expertise would be required to use this feature?
+      options:
+        - Beginner - Easy for all users
+        - Intermediate - Basic knowledge required
+        - Advanced - Advanced knowledge required
+        - Developer - Technical implementation required
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternative-solutions
+    attributes:
+      label: Alternative Solutions
+      description: Have you considered any alternative solutions?
+      placeholder: |
+        I have considered these alternatives:
+        - [Alternative 1]
+        - [Alternative 2]
+        - [Alternative 3]
+    validations:
+      required: false
+
+  - type: textarea
+    id: related-features
+    attributes:
+      label: Related Features
+      description: Are there any related features or existing functionality?
+      placeholder: |
+        **Similar features in other DAWs:**
+        - [DAW A has something similar...]
+        - [DAW B has a different approach...]
+
+        **Existing Zenith features:**
+        - [Feature 1]
+        - [Feature 2]
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched existing feature requests to avoid duplicates
+          required: true
+        - label: I have provided a clear and detailed description of the feature
+          required: true
+        - label: I have described the problem this feature would solve
+          required: true
+        - label: I have included mockups or wireframes if applicable
+          required: false
+        - label: I have described the use cases for this feature
+          required: true

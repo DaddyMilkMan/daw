@@ -12,7 +12,7 @@ This document lists all known bugs, limitations, and unfinished features in Zeni
 ## 🔴 Critical Issues (Blocking Release)
 
 ### 1. Debug Build Compilation Failure
-**Location**: `apps/desktop/Source/engine/Track.h:426`  
+**Location**: `modules/zenith_core/engine/Track.h:426`  
 **Severity**: Critical  
 **Status**: Fixed (Resolved by refactoring/cleanup)  
 
@@ -91,7 +91,7 @@ This document lists all known bugs, limitations, and unfinished features in Zeni
 ## 🟠 High Priority Issues
 
 ### 5. VST3 Scanner Crashes on Some Plugins
-**Location**: `apps/desktop/Source/engine/PluginHost.cpp`  
+**Location**: `modules/zenith_core/engine/PluginHost.cpp`  
 **Severity**: High  
 **Status**: Partially Mitigated  
 
@@ -122,7 +122,7 @@ This document lists all known bugs, limitations, and unfinished features in Zeni
 ---
 
 ### 6. Track Class is Too Large (God Class)
-**Location**: `apps/desktop/Source/engine/Track.h`  
+**Location**: `modules/zenith_core/engine/Track.h`  
 **Severity**: Medium  
 **Status**: Not Fixed  
 
@@ -193,7 +193,7 @@ This document lists all known bugs, limitations, and unfinished features in Zeni
 ---
 
 ### 9. Offline Audio Export is Limited
-**Location**: `apps/desktop/Source/engine/EngineExport.cpp`  
+**Location**: `modules/zenith_core/engine/EngineExport.cpp`  
 **Severity**: Medium  
 **Status**: Partially Implemented  
 
@@ -209,7 +209,7 @@ This document lists all known bugs, limitations, and unfinished features in Zeni
 ---
 
 ### 10. Session View Unclear Status
-**Location**: `apps/desktop/Source/ui/skia/views/SessionViewComponent.h`  
+**Location**: `modules/zenith_ui/ui/skia/views/SessionViewComponent.h`  
 **Severity**: Medium  
 **Status**: Unknown  
 

@@ -1,0 +1,140 @@
+/*
+    This file is part of Zenith DAW - A Digital Audio Workstation for Linux
+
+    Copyright (C) 2025 Micah Cooley <micahcooley@protonmail.com>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+/*
+    ==============================================================================
+    Original file header:
+*/
+
+  ==============================================================================
+
+    AudioFifo.h
+    Created: 2025-12-08
+    Author:  Zenith DAW
+
+    Lock-free Multi-Producer Single-Consumer (MPSC) FIFO for audio samples.
+    Safe for multiple threads pushing data (e.g. tracks) to a single consumer (e.g. UI/Disk).
+
+
+  ==============================================================================
+*/
+
+#pragma once
+
+#include <juce_core/juce_core.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <atomic>
+
+namespace zenith {
+
+class AudioFifo {
+public:
+    explicit AudioFifo(int size = 4096) 
+        : abstractFifo_(size) 
+    {
+        buffer_.setSize(1, size); // Mono buffer
+    }
+
+    // Push stereo samples (mixes to mono) - Thread-Safe for Multiple Producers
+    void pushStereoAsMono(const juce::AudioBuffer<float>& source, int numSamples) {
+        // Range check
+        if (numSamples <= 0) return;
+
+        // SpinLock for MPSC safety
+        // We use a simple atomic flag as a lightweight spinlock.
+        // This ensures that only one producer writes to the FIFO at a time,
+        // maintaining the integrity of the write index and buffer contents.
+        while (writeLock_.test_and_set(std::memory_order_acquire)) {
+            // RT-SAFE busy wait with CPU pause hint for hyper-threading efficiency
+            // NOTE: juce::Thread::yield() was removed - it's a syscall that breaks RT safety
+            #if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
+                #ifdef _MSC_VER
+                    _mm_pause();  // MSVC intrinsic
+                #else
+                    __builtin_ia32_pause();  // GCC/Clang intrinsic
+                #endif
+            #elif defined(__arm__) || defined(__aarch64__)
+                __asm__ __volatile__("yield" ::: "memory");  // ARM yield instruction
+            #endif
+        }
+        
+        // Critical Section
+        
+        // Prepare temporary storage for pointers
+        int start1, size1, start2, size2;
+        abstractFifo_.prepareToWrite(numSamples, start1, size1, start2, size2);
+        
+        if (size1 > 0) {
+            mixToMono(source, start1, size1, 0); // 0 offset in source for now, assuming block processing
+        }
+        if (size2 > 0) {
+            mixToMono(source, start2, size2, size1);
+        }
+        
+        abstractFifo_.finishedWrite(size1 + size2);
+        
+        // Release Lock
+        writeLock_.clear(std::memory_order_release);
+    }
+    
+    // Pop samples into destination buffer - Single Consumer Only
+    void pop(std::vector<float>& destination) {
+        int numWanted = (int)destination.size();
+        int start1, size1, start2, size2;
+        abstractFifo_.prepareToRead(numWanted, start1, size1, start2, size2);
+        
+        if (size1 > 0) {
+            // Copy from ring buffer to destination
+            const float* src = buffer_.getReadPointer(0, start1);
+            memcpy(destination.data(), src, size1 * sizeof(float));
+        }
+        if (size2 > 0) {
+            const float* src = buffer_.getReadPointer(0, start2);
+            memcpy(destination.data() + size1, src, size2 * sizeof(float));
+        }
+        
+        abstractFifo_.finishedRead(size1 + size2);
+    }
+    
+    int getNumReady() const { return abstractFifo_.getNumReady(); }
+
+private:
+    void mixToMono(const juce::AudioBuffer<float>& source, int destStart, int numSamples, int sourceOffset) {
+        float* dest = buffer_.getWritePointer(0, destStart);
+        
+        if (source.getNumChannels() == 1) {
+            // Mono copy
+            memcpy(dest, source.getReadPointer(0, sourceOffset), numSamples * sizeof(float));
+        } else {
+            // Stereo mix
+            const float* l = source.getReadPointer(0, sourceOffset);
+            const float* r = source.getReadPointer(1, sourceOffset);
+            
+            for (int i = 0; i < numSamples; ++i) {
+                dest[i] = (l[i] + r[i]) * 0.5f;
+            }
+        }
+    }
+
+    juce::AbstractFifo abstractFifo_;
+    juce::AudioBuffer<float> buffer_;
+    std::atomic_flag writeLock_ = ATOMIC_FLAG_INIT;
+};
+
+} // namespace zenith

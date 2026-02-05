@@ -38,7 +38,7 @@ This integration enables Wingman AI to control **every knob** on ZenithPolySynth
 
 ### Step 1: Create WingmanSynthBridge (Real-Time Controller)
 
-**File:** `apps/desktop/Source/ai/WingmanSynthBridge.h`
+**File:** `apps/desktop/Source/ai_client/WingmanSynthBridge.h`
 
 ```cpp
 class WingmanSynthBridge {
@@ -152,7 +152,7 @@ private:
 
 ### Step 4: Wingman Prompts → Synth Commands
 
-**File:** `apps/desktop/Source/ai/WingmanPrompts.cpp`
+**File:** `apps/desktop/Source/ai_client/WingmanPrompts.cpp`
 
 ```cpp
 // User: "Make a dark bass"

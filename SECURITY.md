@@ -1,8 +1,52 @@
-# Security Policy
+# Security Policy for Zenith DAW
 
-## Overview
+## Reporting a Vulnerability
 
-The Zenith DAW project takes security seriously. We have implemented automated security scanning and follow industry best practices to ensure the safety and integrity of our software.
+Zenith DAW is committed to providing a secure and reliable digital audio workstation. We take security vulnerabilities seriously and appreciate your efforts in disclosing them responsibly.
+
+## Supported Versions
+
+We currently support the following versions with security updates:
+
+| Version | Support Status | Security Updates |
+|---------|---------------|------------------|
+| Latest Release (v2.x) | ✅ Supported | Yes |
+| Previous Release (v1.x) | ⚠️ Limited | Critical security patches only |
+
+## Reporting a Vulnerability
+
+If you discover a security vulnerability in Zenith DAW, we encourage you to report it as soon as possible. We will respond to all reported vulnerabilities within 5 business days.
+
+### How to Report
+
+Please report security vulnerabilities through our private vulnerability reporting system:
+
+1. **Email Security Team**: security@zenithdaw.com
+2. **GitHub Security Advisories**: [Report via GitHub Security Advisory](https://github.com/your-repo/zenith-daw/security/advisories/new)
+
+### What to Include in Your Report
+
+When reporting a vulnerability, please include the following information:
+
+- **Description**: Clear description of the vulnerability
+- **Steps to Reproduce**: Detailed steps to reproduce the issue
+- **Expected vs Actual Behavior**: What should happen vs what actually happens
+- **Impact**: Potential impact of the vulnerability
+- **Environment**: Operating system, version of Zenith DAW, and any relevant system information
+- **Proof of Concept**: Any code or screenshots that demonstrate the vulnerability
+
+### Security Vulnerability Categories
+
+We are particularly interested in vulnerabilities that fall into the following categories:
+
+- Remote Code Execution (RCE)
+- Privilege Escalation
+- Information Disclosure
+- Data Corruption
+- Denial of Service (DoS)
+- Cross-Site Scripting (XSS) in any web components
+- SQL Injection (if applicable)
+- Authentication/Authorization bypass
 
 ## SecurityAgent
 
@@ -70,23 +114,38 @@ To add new security checks:
 3. Update `VulnerabilityType` enum with new categories
 4. Add tests to validate detection accuracy
 
-## Reporting Security Issues
+## Response Timeframes
 
-If you discover a security vulnerability in Zenith DAW, please report it responsibly:
+| Severity | Response Time | Resolution Target |
+|----------|---------------|-------------------|
+| Critical (High Impact) | 24 hours | 14 days |
+| High | 3 days | 30 days |
+| Medium | 7 days | 90 days |
+| Low | 14 days | 120 days |
 
-1. **Do not** open a public GitHub issue
-2. Email the security team at: [security contact to be added]
-3. Include:
-   - Description of the vulnerability
-   - Steps to reproduce
-   - Potential impact
-   - Suggested fix (if any)
+## Disclosure Policy
 
-We will acknowledge receipt within 48 hours and provide updates on the fix timeline.
+We follow responsible disclosure practices:
+
+- **Private Disclosure**: All reported vulnerabilities are handled privately initially
+- **Public Disclosure**: Once a patch is available and users have had time to update
+- **Recognition**: We will publicly acknowledge researchers who discover significant vulnerabilities (with permission)
 
 ## Security Best Practices
 
-When contributing to Zenith DAW:
+### For Users:
+- Keep your Zenith DAW installation updated to the latest version
+- Use official sources for downloading Zenith DAW
+- Be cautious with third-party plugins and scripts
+- Report any suspicious activity immediately
+
+### For Developers:
+- Follow secure coding practices outlined in our documentation
+- Review code for security issues before submitting
+- Use static analysis tools to identify potential vulnerabilities
+- Test security features thoroughly
+
+### When Contributing to Zenith DAW:
 
 1. **Never commit secrets**: Use environment variables or secure vaults
 2. **Validate all inputs**: Especially for audio files, MIDI data, and project files
@@ -104,8 +163,6 @@ The SecurityAgent is part of our comprehensive CI/CD pipeline:
 - **TriageBot**: Automatically categorizes and prioritizes issues
 - **SecurityAgent**: Scans for vulnerabilities and security issues
 - **CI/CD Pipeline**: Automated builds, tests, and deployments
-
-All agents work together to maintain code quality, security, and reliability.
 
 ## Security Updates
 
@@ -131,3 +188,13 @@ For security questions or concerns, please:
 - Review this document and agent documentation in `agents/SecurityAgent/`
 - Check our contributing guidelines in `CONTRIBUTING.md`
 - Contact the maintainers via GitHub issues (for non-sensitive questions)
+
+## Thank You
+
+We sincerely appreciate your efforts to help keep Zenith DAW secure. Your contributions make our software better and more secure for everyone.
+
+## Additional Resources
+
+- [OWASP Top 10](https://owasp.org/Top10/) - Web Application Security Risks
+- [MITRE Common Vulnerabilities and Exposures (CVE)](https://cve.mitre.org/)
+- [GitHub Security Advisories](https://docs.github.com/en/code-security/security-advisories/about-github-security-advisories)

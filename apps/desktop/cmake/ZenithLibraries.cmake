@@ -19,43 +19,43 @@
 
 add_library(ZenithCore STATIC
     # Core Engine Files
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/Engine.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/Track.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/Clip.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/ProjectState.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/RoutingGraph.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/MixerChannel.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/AudioFilePool.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/PluginHost.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/AuxBus.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/TempoMap.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/AudioRecorder.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/AudioRenderer.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/RecordingManager.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/TrackFreeze.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/ZenithLogger.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/Engine.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/Track.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/Clip.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/ProjectState.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/RoutingGraph.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/MixerChannel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/AudioFilePool.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/PluginHost.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/AuxBus.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/TempoMap.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/AudioRecorder.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/AudioRenderer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/RecordingManager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/TrackFreeze.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/ZenithLogger.cpp
     
     # Additional Engine Components
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/TrackPluginState.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/TransportController.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/ProjectEngineBridge.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/TrackStateManager.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/ClipStateManager.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/AutomationStateManager.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/ProjectFileIO.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/RecentProjectManager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/TrackPluginState.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/TransportController.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/ProjectEngineBridge.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/TrackStateManager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/ClipStateManager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/AutomationStateManager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/ProjectFileIO.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/RecentProjectManager.cpp
     
     # Synchronizers (legacy, pending removal)
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/ClipSynchronizer.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/TrackStateSynchronizer.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/TrackAutomationSynchronizer.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine/TempoMapSynchronizer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/ClipSynchronizer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/TrackStateSynchronizer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/TrackAutomationSynchronizer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine/TempoMapSynchronizer.cpp
 )
 
 # Include directories for ZenithCore
 target_include_directories(ZenithCore PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine
     ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/include
     ${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules
 )
@@ -94,7 +94,7 @@ if(MSVC)
     target_compile_options(ZenithCore PRIVATE /FS /bigobj)
 endif()
 
-message(STATUS "ZenithCore static library configured with ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine sources")
+message(STATUS "ZenithCore static library configured with ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine sources")
 
 # ==============================================================================
 # Future Libraries (placeholders for documentation)

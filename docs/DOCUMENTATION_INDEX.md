@@ -55,7 +55,3 @@ Deep dives into specific technical decisions:
 ## Reference
 
 - [Known Issues](KNOWN_ISSUES.md) - Bugs and limitations
-
-## Archive
-
-Historical documentation is preserved in `archive/` for reference.

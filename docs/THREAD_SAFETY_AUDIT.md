@@ -8,7 +8,7 @@ This document provides a comprehensive audit of thread safety and real-time safe
 
 ### 1. AudioThreadSafeProcessor RT-Safety Violations
 
-**Location:** `apps/desktop/Source/ai/AudioThreadSafeProcessor.cpp`
+**Location:** `apps/desktop/Source/ai_client/AudioThreadSafeProcessor.cpp`
 
 **Issues Found:**
 1. Memory allocation in RT context (line 27)
@@ -54,8 +54,8 @@ struct Suggestion {
 ### 2. Lock-Free Data Structure Memory Ordering
 
 **Location:** 
-- `apps/desktop/Source/ai/AudioThreadSafeProcessor.h`
-- `apps/desktop/Source/engine/ThreadSafeAudioProcessor.h`
+- `apps/desktop/Source/ai_client/AudioThreadSafeProcessor.h`
+- `modules/zenith_core/engine/ThreadSafeAudioProcessor.h`
 
 **Issues Found:**
 1. Missing memory ordering specifications on atomic operations

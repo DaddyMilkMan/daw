@@ -1,0 +1,96 @@
+name: 💬 Discussion
+description: Start a community discussion
+title: "[Discussion] "
+labels: ["discussion"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Welcome to the Zenith DAW community! This is the place to share ideas, ask questions, and connect with other users.
+
+        💡 **Quick Tips:**
+        - Be respectful and inclusive
+        - Search existing discussions first
+        - Choose the right category for your topic
+        - Provide enough detail for helpful responses
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: What type of discussion is this?
+      options:
+        - 🎵 Music Production
+        - 💡 Feature Ideas
+        - 🤔 Technical Questions
+        - 📚 Tutorial Request
+        - 🎨 Showcase & Share
+        - 👥 Community Events
+        - 💼 Business & Partnerships
+        - 🐛 Bug Discussion
+    validations:
+      required: true
+
+  - type: textarea
+    id: title
+    attributes:
+      label: Discussion Title
+      description: A clear and concise title for your discussion
+      placeholder: "What would you like to discuss?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: content
+    attributes:
+      label: Content
+      description: Share your thoughts, questions, or ideas
+      placeholder: |
+        Hello community!
+
+        I'd like to discuss...
+        - Point 1
+        - Point 2
+        - Question for the community
+
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any additional information that would be helpful
+      placeholder: |
+        **What I've tried so far:**
+        - [ ] I searched existing discussions
+        - [ ] I checked the documentation
+        - [ ] I tried troubleshooting steps
+
+        **My setup:**
+        - OS: [Your OS]
+        - Zenith DAW Version: [Your version]
+        - Hardware: [Brief description]
+
+  - type: checkboxes
+    id: guidelines
+    attributes:
+      label: Community Guidelines
+      description: Please follow our community guidelines
+      options:
+        - label: I have read and agree to the [Community Guidelines](https://github.com/your-repo/zenith-daw/blob/main/CODE_OF_CONDUCT.md)
+          required: true
+        - label: I will be respectful and inclusive in my discussion
+          required: true
+        - label: I understand this is a public discussion and may be archived
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        🎉 **Thank you for contributing to the Zenith DAW community!**
+
+        Your discussion will be visible to all community members. Please be patient while waiting for responses - the community is made up of volunteers who help in their spare time.
+
+        **Need immediate help?** Try our [support channels](https://github.com/your-repo/zenith-daw/blob/main/SUPPORT.md)

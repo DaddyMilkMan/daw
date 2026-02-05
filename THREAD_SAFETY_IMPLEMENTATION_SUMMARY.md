@@ -83,8 +83,8 @@ Updated `.agent/rules/audiothreadsafety.md`:
 ## Code Changes Summary
 
 ### Files Modified (3)
-1. `apps/desktop/Source/ai/AudioThreadSafeProcessor.cpp` - Fixed RT-safety violations
-2. `apps/desktop/Source/ai/AudioThreadSafeProcessor.h` - Changed Suggestion struct, added <cstring>
+1. `apps/desktop/Source/ai_client/AudioThreadSafeProcessor.cpp` - Fixed RT-safety violations
+2. `apps/desktop/Source/ai_client/AudioThreadSafeProcessor.h` - Changed Suggestion struct, added <cstring>
 3. `apps/desktop/Source/engine/ThreadSafeAudioProcessor.h` - Fixed memory ordering
 
 ### Files Created (3)

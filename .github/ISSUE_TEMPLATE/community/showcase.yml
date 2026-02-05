@@ -1,0 +1,141 @@
+name: 🎨 Showcase
+description: Share your Zenith DAW projects and creations
+title: "[Showcase] "
+labels: ["showcase", "community"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        🎉 Welcome to the Zenith DAW Showcase!
+
+        Share your projects, tutorials, and creative work with the community. Your submissions help inspire others and demonstrate what's possible with Zenith DAW.
+
+        🌟 **Showcase Guidelines:**
+        - Be respectful and encouraging
+        - Provide enough detail for others to learn from your work
+        - Include screenshots or audio samples if possible
+        - Keep content appropriate for all ages
+
+  - type: dropdown
+    id: project_type
+    attributes:
+      label: Project Type
+      description: What type of project are you showcasing?
+      options:
+        - 🎵 Original Music
+        - 🎸 Cover/Remix
+        - 🎬 Sound Design
+        - 🎮 Game Audio
+        - 🎙️ Podcast Production
+        - 📹 Tutorial Guide
+        - 🏗️ Project Workflow
+        - 🎨 Visual Art + Audio
+        - 💡 Plugin Demo
+        - 🔧 Technical Achievement
+    validations:
+      required: true
+
+  - type: textarea
+    id: project_title
+    attributes:
+      label: Project Title
+      description: The title of your project or work
+      placeholder: "My Amazing Zenith DAW Project"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Tell us about your project - inspiration, process, and techniques used
+      placeholder: |
+        **Project Overview:**
+        [Brief description of your project]
+
+        **Techniques Used:**
+        [Describe techniques and tools used in Zenith DAW]
+
+        **Challenges Overcome:**
+        [Any challenges you faced and how you solved them]
+    validations:
+      required: true
+
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Production Workflow
+      description: Describe your workflow in Zenith DAW (optional)
+      placeholder: |
+        **My Workflow:**
+        1. [First step in Zenith DAW]
+        2. [Second step]
+        3. [Tips or tricks used]
+
+        **Plugins Used:**
+        - [Plugin 1]
+        - [Plugin 2]
+
+        **External Tools:**
+        - [Tool 1]
+        - [Tool 2]
+
+  - type: markdown
+    attributes:
+      value: |
+        📸 **Media Attachments (Optional but Recommended)**
+
+        You can drag and drop or paste:
+        - Screenshots of your project
+        - Audio files (samples, demos)
+        - Project files (if you're comfortable sharing)
+        - Screenshots of your setup
+
+        🎵 **Audio/Video Links (Optional)**
+
+        Share links to SoundCloud, YouTube, or other platforms:
+        - [SoundCloud Link]
+        - [YouTube Link]
+        - [Other Platform Link]
+
+  - type: textarea
+    id: credits
+    attributes:
+      label: Credits & Resources
+      description: Credits for collaborators and resources used
+      placeholder: |
+        **Credits:**
+        - [Collaborator 1]
+        - [Collaborator 2]
+
+        **Resources Used:**
+        - [Sample pack name]
+        - [VST plugin name]
+        - [Other resources]
+
+  - type: checkboxes
+    id: guidelines
+    attributes:
+      label: Showcase Guidelines
+      description: Please follow our showcase guidelines
+      options:
+        - label: I have read and agree to the [Community Guidelines](https://github.com/your-repo/zenith-daw/blob/main/CODE_OF_CONDUCT.md)
+          required: true
+        - label: I am the creator of this work or have permission to share it
+          required: true
+        - label: I understand this showcase will be public and may be featured
+          required: true
+        - label: I will be respectful and encouraging in any discussions about my work
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        🌟 **Thank you for sharing your creativity with the Zenith DAW community!**
+
+        Your showcase helps inspire other producers and demonstrates the amazing things that can be created with Zenith DAW.
+
+        **Want feedback?** Join our [Discord server](https://discord.gg/zenith-daw) for real-time discussions and collaboration.
+
+        **Looking for collaborators?** Check out our [collaboration channel](https://discord.gg/zenith-daw/collaboration) on Discord.

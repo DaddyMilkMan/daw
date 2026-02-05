@@ -1,0 +1,80 @@
+Zenith DAW
+==========
+
+Copyright (C) 2025 Micah Cooley <micahcooley@protonmail.com>
+
+Zenith DAW is a Digital Audio Workstation designed for Linux operating systems.
+It provides professional audio recording, editing, mixing, and mastering
+capabilities with an emphasis on user experience and performance.
+
+Core Development Team
+---------------------
+
+- Micah Cooley (Project Lead, Lead Developer)
+  <micahcooley@protonmail.com>
+
+Special Thanks
+-------------
+
+We would like to thank the following individuals and organizations for their
+contributions, support, and inspiration:
+
+- The JUCE team for providing an excellent framework for audio applications
+- The Skia team for their powerful graphics rendering engine
+- The Steinberg team for the VST3 standard and SDK
+- The VST3 plugin developers who create tools that work with DAWs
+- The Linux audio community for their continued innovation and support
+- All beta testers and early adopters who provided valuable feedback
+
+Acknowledgments
+---------------
+
+This project was inspired by:
+- The open-source audio software community
+- Professional DAWs that have pushed the boundaries of digital audio
+- The creative musicians and producers who use these tools daily
+
+Technology Stack
+----------------
+
+- Programming Language: C++17
+- Build System: CMake 3.28+
+- UI Framework: JUCE with Skia rendering
+- Audio Engine: Custom cross-platform audio engine
+- Plugin Format: VST3
+- Version Control: Git
+- Operating System: Linux (primary focus)
+
+Community
+---------
+
+For community support, feature requests, and bug reports:
+- GitHub Issues: https://github.com/[repository]/issues
+- Documentation: [Link to documentation]
+- Discussions: [Link to community forum]
+
+License
+-------
+
+Zenith DAW is licensed under the GNU Affero General Public License v3.0.
+See the LICENSE file for the full license text.
+
+Additional Information
+---------------------
+
+For more information about Zenith DAW, please visit:
+- Official Website: [To be determined]
+- Documentation: [Link to documentation]
+- Release Notes: See CHANGELOG.md
+
+Contact
+-------
+
+For business inquiries, commercial partnerships, or licensing questions:
+- Email: micahcooley@protonmail.com
+- GitHub: [Your GitHub username]
+
+---
+
+This NOTICE file was generated as part of the AGPL v3 license compliance
+for Zenith DAW.

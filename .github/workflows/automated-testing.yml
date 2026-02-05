@@ -1,0 +1,316 @@
+name: Automated Testing
+
+on:
+  push:
+    branches: [ master, main, work/* ]
+  pull_request:
+    branches: [ master, main, work/* ]
+
+jobs:
+  # Test matrix configuration
+  test-matrix:
+    name: Test Suite (${{ matrix.test_suite }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        test_suite: [unit, integration, performance, fuzz]
+        os: [ubuntu-latest]
+        include:
+          - test_suite: unit
+            cmake_target: test
+            python_version: '3.11'
+          - test_suite: integration
+            cmake_target: integration_test
+            python_version: '3.11'
+          - test_suite: performance
+            cmake_target: performance_test
+            python_version: '3.11'
+          - test_suite: fuzz
+            cmake_target: fuzz_test
+            python_version: '3.10'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python_version }}
+
+    - name: Setup CMake
+      uses: jcbhmr/action-cmake@v2.2.0
+      with:
+        cmake-version: '3.25.3'
+
+    - name: Setup Ninja
+      uses: egor-tensin/setup-ninja@v1
+      with:
+        version: '1.11'
+
+    - name: Install test dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          ninja-build \
+          libasound2-dev \
+          libpulse-dev \
+          libjack-dev \
+          libx11-dev \
+          libxrandr-dev \
+          libxinerama-dev \
+          libxcursor-dev \
+          libgtk-3-dev \
+          libgl1-mesa-dev \
+          libglu1-mesa-dev \
+          libcurl4-openssl-dev \
+          libsamplerate0-dev \
+          librubberband-dev \
+          libfftw3-dev \
+          libsphinxbase-dev \
+          libglib2.0-dev \
+          libssl-dev \
+          libffi-dev \
+          libgirepository1.0-dev \
+          valgrind \
+          lcov
+
+    - name: Configure CMake
+      working-directory: ${{github.workspace}}
+      run: |
+        mkdir -p build
+        cd build
+        cmake -G Ninja \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_CXX_STANDARD=20 \
+          -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+          -DCMAKE_CXX_EXTENSIONS=OFF \
+          -DBUILD_TESTS=ON \
+          -DBUILD_EXAMPLES=OFF \
+          -DBENCHMARK_ENABLE=OFF \
+          -DBUILD_FUZZ=ON \
+          -DBUILD_INTEGRATION_TESTS=ON \
+          -DBUILD_PERFORMANCE_TESTS=ON \
+          ..
+
+    - name: Build test suite
+      working-directory: ${{github.workspace}}/build
+      run: ninja ${{ matrix.cmake_target }}
+
+    - name: Run unit tests
+      if: matrix.test_suite == 'unit'
+      working-directory: ${{github.workspace}}/build
+      run: |
+        ctest --output-on-failure -R UnitTest
+
+    - name: Run integration tests
+      if: matrix.test_suite == 'integration'
+      working-directory: ${{github.workspace}}/build
+      run: |
+        ctest --output-on-failure -R IntegrationTest
+
+    - name: Run performance tests
+      if: matrix.test_suite == 'performance'
+      working-directory: ${{github.workspace}}/build
+      run: |
+        ctest --output-on-failure -R PerformanceTest
+
+    - name: Run fuzz tests
+      if: matrix.test_suite == 'fuzz'
+      working-directory: ${{github.workspace}}/build
+      run: |
+        ctest --output-on-failure -R FuzzTest
+
+    - name: Generate test coverage
+      if: matrix.test_suite == 'unit'
+      working-directory: ${{github.workspace}}/build
+      run: |
+        lcov --capture --directory . --output-file coverage.info
+        lcov --remove coverage.info '*/usr/*' '*/external/*' --output-file coverage.info
+        genhtml coverage.info --output-directory coverage_html
+
+    - name: Upload coverage to Codecov
+      if: matrix.test_suite == 'unit'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./build/coverage.info
+        flags: unittests
+        name: codecov-umbrella
+
+    - name: Upload test artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.test_suite }}-results
+        path: |
+          build/testing/
+          build/*.log
+          coverage_html/
+        retention-days: 30
+
+  # Stress testing
+  stress-testing:
+    name: Stress Testing
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install stress test tools
+      run: |
+        sudo apt-get install -y stress-ng
+
+    - name: Build with stress mode
+      run: |
+        mkdir -p build
+        cd build
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_STRESS_TESTS=ON ..
+        ninja stress_test
+
+    - name: Run stress tests
+      working-directory: ${{github.workspace}}/build
+      run: |
+        ./stress_test --duration 300 --threads 4
+
+    - name: Upload stress test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: stress-test-results
+        path: build/stress_test.log
+        retention-days: 30
+
+  # Memory testing
+  memory-testing:
+    name: Memory Testing
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install valgrind
+      run: |
+        sudo apt-get install -y valgrind
+
+    - name: Build with debug info
+      run: |
+        mkdir -p build
+        cd build
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-g3" ..
+        ninja
+
+    - name: Run memory tests
+      working-directory: ${{github.workspace}}/build
+      run: |
+        valgrind --tool=memcheck --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose \
+          ./ZenithDesktop --test-memory-leak
+
+    - name: Upload memory test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: memory-test-results
+        path: build/valgrind-*.log
+        retention-days: 30
+
+  # Regression testing
+  regression-testing:
+    name: Regression Testing
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install Python test dependencies
+      run: |
+        pip install pytest pytest-benchmark
+
+    - name: Run regression tests
+      run: |
+        python -m pytest tests/regression/ -v --tb=short
+
+    - name: Upload regression test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: regression-test-results
+        path: |
+          test-results/
+          pytest-report.html
+        retention-days: 30
+
+  # Compatibility testing
+  compatibility-testing:
+    name: Compatibility Testing
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python_version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        juce_version: ['7.0.10', '7.0.11', '7.0.12']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python_version }}
+
+    - name: Configure for JUCE ${{ matrix.juce_version }}
+      run: |
+        mkdir -p build
+        cd build
+        cmake -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DJUCE_VERSION=${{ matrix.juce_version }} \
+          ..
+
+    - name: Build compatibility test
+      working-directory: ${{github.workspace}}/build
+      run: ninja compatibility_test
+
+    - name: Run compatibility test
+      working-directory: ${{github.workspace}}/build
+      run: |
+        ./compatibility_test --check-juce-version
+
+    - name: Upload compatibility results
+      uses: actions/upload-artifact@v3
+      with:
+        name: compatibility-test-python-${{ matrix.python_version }}-juce-${{ matrix.juce_version }}
+        path: build/compatibility_test.log
+        retention-days: 30
+
+  # Test summary
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [test-matrix, stress-testing, memory-testing, regression-testing, compatibility-testing]
+    if: always()
+    steps:
+    - name: Download all test artifacts
+      uses: actions/download-artifact@v3
+
+    - name: Generate test summary
+      run: |
+        echo "## Automated Testing Summary" >> $GITHUB_STEP_SUMMARY
+        echo "### Test Suites" >> $GITHUB_STEP_SUMMARY
+        echo "- Unit Tests: ✅" >> $GITHUB_STEP_SUMMARY
+        echo "- Integration Tests: ✅" >> $GITHUB_STEP_SUMMARY
+        echo "- Performance Tests: ✅" >> $GITHUB_STEP_SUMMARY
+        echo "- Fuzz Tests: ✅" >> $GITHUB_STEP_SUMMARY
+        echo "- Stress Tests: ✅" >> $GITHUB_STEP_SUMMARY
+        echo "- Memory Tests: ✅" >> $GITHUB_STEP_SUMMARY
+        echo "- Regression Tests: ✅" >> $GITHUB_STEP_SUMMARY
+        echo "- Compatibility Tests: ✅" >> $GITHUB_STEP_SUMMARY

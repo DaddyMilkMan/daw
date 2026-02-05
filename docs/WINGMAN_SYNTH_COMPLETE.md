@@ -16,8 +16,8 @@
 
 ### ✅ Task 2: Implemented WingmanSynthBridge
 **Files created:**
-- `apps/desktop/Source/ai/WingmanSynthBridge.h` - Bridge header
-- `apps/desktop/Source/ai/WingmanSynthBridge.cpp` - Full implementation
+- `apps/desktop/Source/ai_client/WingmanSynthBridge.h` - Bridge header
+- `apps/desktop/Source/ai_client/WingmanSynthBridge.cpp` - Full implementation
 
 **Capabilities:**
 - `setParameter()` - Set single parameter with animation
@@ -226,8 +226,8 @@ Users can **watch** the synth being programmed by AI in real-time. No competitor
 ## Files Created/Modified
 
 ### Created:
-- `apps/desktop/Source/ai/WingmanSynthBridge.h`
-- `apps/desktop/Source/ai/WingmanSynthBridge.cpp`
+- `apps/desktop/Source/ai_client/WingmanSynthBridge.h`
+- `apps/desktop/Source/ai_client/WingmanSynthBridge.cpp`
 - `apps/desktop/Source/commands/CommandAPI_SynthHandlers.cpp`
 - `apps/desktop/Source/ui/instruments/ZenithPolySynthUI_WingmanIntegration.cpp`
 - `docs/WINGMAN_SYNTH_INTEGRATION.md`

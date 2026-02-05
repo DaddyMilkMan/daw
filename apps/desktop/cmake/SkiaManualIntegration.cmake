@@ -177,12 +177,12 @@ foreach(LIB_FILE ${SKIA_SHARED_LIBS})
     endif()
 endforeach()
 
-# Skia UI source files are now included from apps/desktop/Source/ui/CMakeLists.txt
+# Skia UI source files are now included from modules/zenith_ui/ui/CMakeLists.txt
 # via the domain-based organization (framework/, widgets/, etc.)
 message(STATUS "  Skia UI Components: Managed by ui/CMakeLists.txt")
 
 target_include_directories(ZenithDAW PRIVATE
-    apps/desktop/Source/ui/framework
+    modules/zenith_ui/ui/framework
 )
 
 target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_SKIA=1)

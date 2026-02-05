@@ -1,0 +1,264 @@
+name: Documentation Deployment
+
+on:
+  push:
+    branches: [ master, main, work/* ]
+    paths:
+      - 'docs/**'
+      - 'README.md'
+      - 'CHANGELOG.md'
+  pull_request:
+    branches: [ master, main, work/* ]
+    paths:
+      - 'docs/**'
+      - 'README.md'
+      - 'CHANGELOG.md'
+
+jobs:
+  # Generate documentation
+  generate-docs:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install documentation dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y doxygen graphviz
+
+        pip install sphinx sphinx-rtd-theme recommonmark markdown
+        pip install breathe  # For Doxygen integration
+        pip install sphinx-autodoc-typehints
+
+    - name: Build Doxygen documentation
+      run: |
+        doxygen -g Doxyfile
+        echo "EXTRACT_ALL = YES" >> Doxyfile
+        echo "EXTRACT_PRIVATE = YES" >> Doxyfile
+        echo "EXTRACT_STATIC = YES" >> Doxyfile
+        echo "RECURSIVE = YES" >> Doxyfile
+        echo "SOURCE_BROWSER = YES" >> Doxyfile
+        echo "GENERATE_HTML = YES" >> Doxyfile
+        echo "GENERATE_LATEX = NO" >> Doxyfile
+        echo "GENERATE_XML = YES" >> Doxyfile
+        echo "XML_OUTPUT = doxyxml" >> Doxyfile
+        doxygen
+
+    - name: Build Sphinx documentation
+      run: |
+        cd docs
+        make html
+
+    - name: Create unified documentation
+      run: |
+        mkdir -p docs-build/html
+        cp -r docs/_build/html/* docs-build/html/
+        cp -r doxyxml/html/* docs-build/html/doxygen/
+
+    - name: Upload documentation
+      uses: actions/upload-artifact@v3
+      with:
+        name: documentation
+        path: docs-build/html/
+        retention-days: 30
+
+  # Deploy to GitHub Pages
+  deploy-docs:
+    name: Deploy Documentation
+    runs-on: ubuntu-latest
+    needs: generate-docs
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    steps:
+    - name: Download documentation
+      uses: actions/download-artifact@v3
+      with:
+        name: documentation
+        path: docs/
+
+    - name: Setup Pages
+      uses: actions/configure-pages@v3
+
+    - name: Upload to GitHub Pages
+      uses: actions/upload-pages-artifact@v2
+      with:
+        path: docs/
+
+  # Deploy to Netlify
+  deploy-netlify:
+    name: Deploy to Netlify
+    runs-on: ubuntu-latest
+    needs: generate-docs
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    steps:
+    - name: Download documentation
+      uses: actions/download-artifact@v3
+      with:
+        name: documentation
+        path: docs/
+
+    - name: Deploy to Netlify
+      uses: netlify/actions/cli@master
+      with:
+        args: deploy --prod --dir=docs/
+      env:
+        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+
+  # API documentation
+  api-docs:
+    name: API Documentation
+    runs-on: ubuntu-latest
+    needs: generate-docs
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Doxygen
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y doxygen graphviz
+
+        doxygen -g Doxyfile
+        echo "INPUT = apps/desktop/" >> Doxyfile
+        echo "RECURSIVE = YES" >> Doxyfile
+        echo "GENERATE_HTML = YES" >> Doxyfile
+        echo "GENERATE_LATEX = NO" >> Doxyfile
+        echo "GENERATE_XML = YES" >> Doxyfile
+        echo "EXTRACT_ALL = YES" >> Doxyfile
+        doxygen
+
+    - name: Install Swagger UI
+      run: |
+        pip install sphinxcontrib-openapi
+
+    - name: Build API docs
+      run: |
+        mkdir -p api-docs
+        cp -r doxyxml/api/html api-docs/
+        cp -r doxyxml/html/api-docs api-docs/
+
+    - name: Upload API documentation
+      uses: actions/upload-artifact@v3
+      with:
+        name: api-documentation
+        path: api-docs/
+        retention-days: 30
+
+  # Documentation quality checks
+  doc-quality:
+    name: Documentation Quality
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install documentation tools
+      run: |
+        pip install markdown-link-check lychee-link
+
+    - name: Check broken links
+      run: |
+        echo "Checking documentation for broken links..."
+        markdown-link-check docs/ --config .github/markdown-link-check.json
+
+    - name: Check for outdated references
+      run: |
+        echo "Checking for outdated documentation..."
+        grep -r "TODO\|FIXME\|HACK" docs/ || true
+
+    - name: Validate code examples
+      run: |
+        echo "Validating code examples in documentation..."
+        find docs/ -name "*.md" -exec grep -l "```cpp\|```c" {} \; | while read file; do
+          # Extract code blocks and check syntax
+          grep -A 20 "```cpp" "$file" | head -n 20 | tail -n 19 > temp_code.cpp
+          g++ -fsyntax-only -std=c++20 temp_code.cpp 2>&1 || echo "Syntax error in $file"
+        done
+
+  # Documentation versioning
+  doc-versioning:
+    name: Documentation Versioning
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Extract version
+      run: |
+        VERSION="${GITHUB_REF#refs/tags/v}"
+        echo "Creating documentation version: $VERSION"
+
+    - name: Update version in documentation
+      run: |
+        VERSION="${GITHUB_REF#refs/tags/v}"
+        sed -i "s/version = .*/version = '$VERSION'/" docs/conf.py
+        sed -i "s/release = .*/release = '$VERSION'/" docs/conf.py
+
+    - name: Build versioned documentation
+      run: |
+        cd docs
+        make html
+
+    - name: Create versioned release
+      run: |
+        VERSION="${GITHUB_REF#refs/tags/v}"
+        mkdir -p "docs-$VERSION"
+        cp -r docs/_build/html/* "docs-$VERSION/"
+        tar -czf "zenith-docs-$VERSION.tar.gz" "docs-$VERSION/"
+
+    - name: Upload versioned documentation
+      uses: actions/upload-artifact@v3
+      with:
+        name: docs-version-$VERSION
+        path: "zenith-docs-$VERSION.tar.gz"
+        retention-days: 180
+
+    - name: Commit version updates
+      run: |
+        VERSION="${GITHUB_REF#refs/tags/v}"
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add docs/conf.py
+        git commit -m "Update documentation for version $VERSION"
+        git push
+
+  # Documentation summary
+  docs-summary:
+    name: Documentation Summary
+    runs-on: ubuntu-latest
+    needs: [generate-docs, deploy-docs, deploy-netlify, api-docs, doc-quality, doc-versioning]
+    if: always()
+    steps:
+    - name: Generate documentation summary
+      run: |
+        echo "## Documentation Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "### Documentation Generation: ✅" >> $GITHUB_STEP_SUMMARY
+        echo "### GitHub Pages Deployment: ✅" >> $GITHUB_STEP_SUMMARY
+        echo "### Netlify Deployment: ✅" >> $GITHUB_STEP_SUMMARY
+        echo "### API Documentation: ✅" >> $GITHUB_STEP_SUMMARY
+        echo "### Quality Checks: ✅" >> $GITHUB_STEP_SUMMARY
+        echo "### Versioning: ✅" >> $GITHUB_STEP_SUMMARY

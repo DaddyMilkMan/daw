@@ -1,0 +1,153 @@
+name: 🐛 Bug Report
+description: Report a bug that needs to be fixed
+title: "[BUG] "
+labels: ["bug", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! Please provide as much detail as possible to help us understand and reproduce the issue.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component is affected by this bug?
+      options:
+        - Audio Engine
+        - UI/UX
+        - MIDI
+        - Plugin System
+        - Project Management
+        - Audio Processing
+        - AI Integration
+        - Synthesis
+        - Recording
+        - Playback/Transport
+        - File Management
+        - Settings/Configuration
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Brief summary of the bug
+      placeholder: A short, clear description of the issue
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed steps to reproduce the bug
+      placeholder: |
+        1. Open Zenith DAW
+        2. [Describe what you did]
+        3. [Describe what happened]
+        4. [Describe what you expected to happen]
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected Behavior
+      description: What should have happened instead?
+      placeholder: Describe the expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual-behavior
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+      placeholder: Describe what actually occurred
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How severe is this bug?
+      options:
+        - 🔴 Critical - System crash, data loss, or completely unusable
+        - 🟠 High - Major functionality broken, severe workaround required
+        - 🟡 Medium - Minor functionality broken, workaround available
+        - 🟢 Low - Minor inconvenience, cosmetic issue
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproducibility
+    attributes:
+      label: Reproducibility
+      description: How often does this bug occur?
+      placeholder: "Always | Sometimes | Once | Cannot reproduce"
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Your system information
+      placeholder: |
+        **Operating System:** (e.g., Ubuntu 22.04, macOS 13.0, Windows 11)
+        **Zenith DAW Version:** (e.g., 0.1.0, commit hash)
+        **CPU:** (e.g., Intel i7-10700K, AMD Ryzen 9 5900X)
+        **RAM:** (e.g., 16GB, 32GB)
+        **Audio Interface:** (e.g., Focusrite Scarlett 2i2, built-in)
+        **Additional Info:** (plugins, special configurations, etc.)
+    validations:
+      required: true
+
+  - type: textarea
+    id: crash-information
+    attributes:
+      label: Crash Information
+      description: If applicable, provide crash details
+      placeholder: |
+        **Stack Trace:**
+        ```
+        [ Paste stack trace here ]
+        ```
+
+        **Error Messages:**
+        ```
+        [ Paste error messages here ]
+        ```
+        **Log Files:**
+        [ Attach relevant log files or provide paths ]
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Any other relevant information
+      placeholder: Screenshots, console output, related issues, etc.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched existing issues to avoid duplicates
+          required: true
+        - label: I have provided a detailed description of the issue
+          required: true
+        - label: I have provided steps to reproduce the bug
+          required: true
+        - label: I have attached screenshots or screen recordings if applicable
+          required: false
+        - label: I have included my environment details
+          required: true

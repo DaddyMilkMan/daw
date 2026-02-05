@@ -1,0 +1,14 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 🐛 Bug Report
+    url: https://github.com/zenith-daw/zenith/issues/new?assignees=&labels=bug&template=bug_report.yml
+    about: Report a bug in the Zenith DAW
+  - name: ✨ Feature Request
+    url: https://github.com/zenith-daw/zenith/issues/new?assignees=&labels=enhancement&template=feature_request.yml
+    about: Suggest a new feature for the Zenith DAW
+  - name: 🔧 Improvement
+    url: https://github.com/zenith-daw/zenith/issues/new?assignees=&labels=improvement&template=improvement.yml
+    about: Suggest an improvement to existing functionality
+  - name: 📚 Documentation
+    url: https://github.com/zenith-daw/zenith/issues/new?assignees=&labels=documentation&template=documentation.yml
+    about: Report documentation issues or suggest improvements

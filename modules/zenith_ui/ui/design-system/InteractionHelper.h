@@ -1,0 +1,208 @@
+/*
+    This file is part of Zenith DAW - A Digital Audio Workstation for Linux
+
+    Copyright (C) 2025 Micah Cooley <micahcooley@protonmail.com>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+/*
+    ==============================================================================
+    Original file header:
+*/
+
+  ==============================================================================
+
+    InteractionHelper.h
+    Created: 2025-12-15
+    Author:  Zenith DAW
+
+    Utility class for consistent hover/pressed state tracking and animations.
+    Provides smooth visual feedback for interactive UI elements.
+
+
+  ==============================================================================
+*/
+
+#pragma once
+
+#include "ZenithDesignSystem.h"
+#include <cmath>
+#include "ZenithSkia.h"
+
+namespace zenith {
+
+// ============================================================================
+// Animation Constants
+// ============================================================================
+/// Epsilon threshold for animation comparisons (consistent across all checks)
+constexpr float kAnimationEpsilon = 0.001f;
+
+/// Maximum alpha value for pressed overlay (0-255 range)
+constexpr int kPressedOverlayMaxAlpha = 30;
+
+/// Alpha multiplier for hover/focus overlays (0.0-1.0 range)
+constexpr float kOverlayAlphaMultiplier = 0.8f;
+
+/**
+ * @brief Tracks interaction state (hover, pressed) with smooth animations
+ *
+ * Use this to add consistent hover/pressed visual feedback to any component.
+ * Call update() each frame or on a timer, use getXxxAmount() for animation.
+ */
+struct InteractionState {
+  bool isHovered = false;
+  bool isPressed = false;
+  bool isFocused = false;
+
+  // Animated values (0.0 to 1.0)
+  float hoverAmount = 0.0f;
+  float pressAmount = 0.0f;
+  float focusAmount = 0.0f;
+
+  // Animation speed (higher = faster)
+  float animationSpeed = 8.0f;
+
+  /**
+   * Update animated values based on current state.
+   * @param deltaTime Time since last update in seconds (e.g., 1/60 for 60fps)
+   */
+  void update(float deltaTime) {
+    float speed = animationSpeed * deltaTime;
+    hoverAmount = lerp(hoverAmount, isHovered ? 1.0f : 0.0f, speed);
+    pressAmount = lerp(pressAmount, isPressed ? 1.0f : 0.0f, speed * 1.5f);
+    focusAmount = lerp(focusAmount, isFocused ? 1.0f : 0.0f, speed);
+  }
+
+  /**
+   * Blend a base color with hover/pressed variants based on current state.
+   */
+  SkColor blendWithState(SkColor base, SkColor hover, SkColor pressed) const {
+    SkColor result = base;
+
+    if (hoverAmount > kAnimationEpsilon) {
+      result = design::interpolateColor(result, hover, hoverAmount);
+    }
+    if (pressAmount > kAnimationEpsilon) {
+      result = design::interpolateColor(result, pressed, pressAmount);
+    }
+
+    return result;
+  }
+
+  /**
+   * Get an alpha multiplier based on hover state (1.0 at rest, brighter on
+   * hover)
+   */
+  float getHoverBrightness() const { return 1.0f + hoverAmount * 0.2f; }
+
+  /**
+   * Get glow intensity based on interaction (increases on hover, max on press)
+   */
+  float getGlowIntensity() const {
+    return hoverAmount * 0.5f + pressAmount * 0.5f;
+  }
+
+  /**
+   * Check if any animation is currently active (for optimization)
+   */
+  bool isAnimating() const {
+    return std::abs(hoverAmount - (isHovered ? 1.0f : 0.0f)) >
+               kAnimationEpsilon ||
+           std::abs(pressAmount - (isPressed ? 1.0f : 0.0f)) >
+               kAnimationEpsilon ||
+           std::abs(focusAmount - (isFocused ? 1.0f : 0.0f)) >
+               kAnimationEpsilon;
+  }
+
+private:
+  static float lerp(float a, float b, float t) {
+    t = std::min(1.0f, std::max(0.0f, t));
+    return a + (b - a) * t;
+  }
+};
+
+/**
+ * @brief Helper to apply consistent hover overlay to a bounds rectangle
+ */
+class InteractionHelper {
+public:
+  /**
+   * Draw a standard hover overlay on the given bounds.
+   */
+  static void drawHoverOverlay(SkCanvas *canvas, const SkRect &bounds,
+                               float hoverAmount, float cornerRadius = 4.0f) {
+    if (hoverAmount < kAnimationEpsilon)
+      return;
+
+    SkPaint paint;
+    paint.setAntiAlias(true);
+    paint.setColor(design::withAlpha(design::colors::GLASS_HOVER,
+                                     hoverAmount * kOverlayAlphaMultiplier));
+
+    if (cornerRadius > 0) {
+      canvas->drawRoundRect(bounds, cornerRadius, cornerRadius, paint);
+    } else {
+      canvas->drawRect(bounds, paint);
+    }
+  }
+
+  /**
+   * Draw a pressed state visual (slightly darker).
+   */
+  static void drawPressedOverlay(SkCanvas *canvas, const SkRect &bounds,
+                                 float pressAmount, float cornerRadius = 4.0f) {
+    if (pressAmount < kAnimationEpsilon)
+      return;
+
+    SkPaint paint;
+    paint.setAntiAlias(true);
+    paint.setColor(SkColorSetARGB(
+        static_cast<int>(pressAmount * kPressedOverlayMaxAlpha), 0, 0, 0));
+
+    if (cornerRadius > 0) {
+      canvas->drawRoundRect(bounds, cornerRadius, cornerRadius, paint);
+    } else {
+      canvas->drawRect(bounds, paint);
+    }
+  }
+
+  /**
+   * Draw focus ring around element.
+   */
+  static void drawFocusRing(SkCanvas *canvas, const SkRect &bounds,
+                            float focusAmount, float cornerRadius = 4.0f) {
+    if (focusAmount < kAnimationEpsilon)
+      return;
+
+    SkPaint paint;
+    paint.setAntiAlias(true);
+    paint.setStyle(SkPaint::kStroke_Style);
+    paint.setStrokeWidth(2.0f);
+    paint.setColor(design::withAlpha(design::colors::BORDER_FOCUS,
+                                     focusAmount * kOverlayAlphaMultiplier));
+
+    SkRect focusBounds = bounds;
+    focusBounds.outset(2.0f, 2.0f);
+
+    if (cornerRadius > 0) {
+      canvas->drawRoundRect(focusBounds, cornerRadius + 2, cornerRadius + 2,
+                            paint);
+    } else {
+      canvas->drawRect(focusBounds, paint);
+    }
+  }
+};
+
+} // namespace zenith

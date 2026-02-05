@@ -1,0 +1,273 @@
+name: Nightly Build and Integration
+
+on:
+  schedule:
+    # Run nightly at 2:00 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  # Nightly build
+  nightly-build:
+    name: Nightly Build
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Generate nightly version
+      id: version
+      run: |
+        DATE=$(date +%Y%m%d)
+        COMMIT=$(git rev-parse --short HEAD)
+        echo "version=nightly-${DATE}-${COMMIT}" >> $GITHUB_OUTPUT
+
+    - name: Setup CMake
+      uses: jcbhmr/action-cmake@v2.2.0
+      with:
+        cmake-version: '3.25.3'
+
+    - name: Configure CMake
+      working-directory: ${{github.workspace}}
+      run: |
+        mkdir -p build
+        cd build
+        cmake -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_CXX_STANDARD=20 \
+          -DBUILD_TESTS=ON \
+          -DBUILD_EXAMPLES=ON \
+          -DBENCHMARK_ENABLE=ON \
+          -DBUILD_FUZZ=ON \
+          -DCMAKE_CXX_FLAGS="-DNIGHTLY_BUILD" \
+          ..
+
+    - name: Build nightly
+      working-directory: ${{github.workspace}}/build
+      run: ninja -j$(nproc)
+
+    - name: Test nightly
+      working-directory: ${{github.workspace}}/build
+      run: ninja test
+
+    - name: Package nightly
+      working-directory: ${{github.workspace}}/build
+      run: |
+        cpack -G TGZ
+        cd ..
+        tar -czf ZenithDAW-${{ steps.version.outputs.version }}-Source.tar.gz \
+          --exclude=.git \
+          --exclude=build \
+          --exclude=nightly-build.log \
+          .
+
+    - name: Upload nightly build
+      uses: actions/upload-artifact@v3
+      with:
+        name: nightly-build-${{ steps.version.outputs.version }}
+        path: |
+          build/*.tar.gz
+          ZenithDAW-${{ steps.version.outputs.version }}-Source.tar.gz
+          nightly-build.log
+        retention-days: 7
+
+  # Integration testing
+  integration-testing:
+    name: Integration Testing
+    runs-on: ubuntu-latest
+    needs: nightly-build
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Download nightly build
+      uses: actions/download-artifact@v3
+      with:
+        name: nightly-build-${{ needs.nightly-build.outputs.version }}
+
+    - name: Install integration test dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          ninja-build \
+          libasound2-dev \
+          libpulse-dev \
+          libjack-dev \
+          x11-apps \
+          xvfb
+
+    - name: Run integration tests
+      run: |
+        xvfb-run -a ./build/zenith-desktop --test-integration
+
+    - name: Upload integration results
+      uses: actions/upload-artifact@v3
+      with:
+        name: integration-test-results
+        path: integration_test_results.log
+        retention-days: 7
+
+  # Compatibility testing
+  compatibility-testing:
+    name: Compatibility Testing
+    runs-on: ubuntu-latest
+    needs: nightly-build
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Download nightly build
+      uses: actions/download-artifact@v3
+      with:
+        name: nightly-build-${{ needs.nightly-build.outputs.version }}
+
+    - name: Test with different audio backends
+      run: |
+        # Test PulseAudio
+        LD_LIBRARY_PATH=./build ./zenith-desktop --test-audio-backend=pulseaudio
+
+        # Test JACK
+        LD_LIBRARY_PATH=./build ./zenith-desktop --test-audio-backend=jack
+
+        # Test ALSA
+        LD_LIBRARY_PATH=./build ./zenith-desktop --test-audio-backend=alsa
+
+    - name: Test with different plugin formats
+      run: |
+        # Test VST2
+        LD_LIBRARY_PATH=./build ./zenith-desktop --test-plugin-format=vst2
+
+        # Test VST3
+        LD_LIBRARY_PATH=./build ./zenith-desktop --test-plugin-format=vst3
+
+        # Test AU
+        LD_LIBRARY_PATH=./build ./zenith-desktop --test-plugin-format=au
+
+    - name: Upload compatibility results
+      uses: actions/upload-artifact@v3
+      with:
+        name: compatibility-test-results
+        path: compatibility_test_results.log
+        retention-days: 7
+
+  # Performance regression testing
+  nightly-performance:
+    name: Performance Regression Testing
+    runs-on: ubuntu-latest
+    needs: nightly-build
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download nightly build
+      uses: actions/download-artifact@v3
+      with:
+        name: nightly-build-${{ needs.nightly-build.outputs.version }}
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install performance tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y perf
+
+    - name: Run performance benchmark
+      run: |
+        perf record -g ./build/zenith-desktop --test-performance > perf.log 2>&1
+
+    - name: Compare with baseline
+      run: |
+        python scripts/compare_performance.py \
+          --current ./perf.log \
+          --baseline ./performance_baseline.log \
+          --threshold 10
+
+    - name: Upload performance results
+      uses: actions/upload-artifact@v3
+      with:
+        name: nightly-performance-results
+        path: |
+          perf.log
+          performance_comparison.html
+        retention-days: 7
+
+  # Create nightly release
+  nightly-release:
+    name: Create Nightly Release
+    runs-on: ubuntu-latest
+    needs: [nightly-build, integration-testing, compatibility-testing, nightly-performance]
+    if: success()
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+
+    - name: Create release notes
+      run: |
+        VERSION=${{ needs.nightly-build.outputs.version }}
+        echo "## Nightly Release $VERSION" > release_notes.md
+        echo "" >> release_notes.md
+        echo "Date: $(date)" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "### Changes" >> release_notes.md
+        echo "- Nightly build from commit $(git rev-parse HEAD)" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "### Test Results" >> release_notes.md
+        echo "- Integration: ✅" >> release_notes.md
+        echo "- Compatibility: ✅" >> release_notes.md
+        echo "- Performance: ✅" >> release_notes.md
+
+    - name: Create nightly release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: nightly-${{ needs.nightly-build.outputs.version }}
+        name: Zenith DAW Nightly ${{ needs.nightly-build.outputs.version }}
+        body_path: release_notes.md
+        draft: false
+        prerelease: true
+        files: |
+          ZenithDAW-${{ needs.nightly-build.outputs.version }}-Source.tar.gz
+        generate_release_notes: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Notification
+  notify:
+    name: Notify
+    runs-on: ubuntu-latest
+    needs: [nightly-build, integration-testing, compatibility-testing, nightly-performance, nightly-release]
+    if: always()
+    steps:
+    - name: Notify on success
+      if: success()
+      run: |
+        echo "🎉 Nightly build successful!"
+        echo "📦 Nightly release: https://github.com/${{ github.repository }}/releases/tag/nightly-${{ needs.nightly-build.outputs.version }}"
+
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo "❌ Nightly build failed!"

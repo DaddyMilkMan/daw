@@ -22,20 +22,29 @@
 add_library(zenith_core_includes INTERFACE)
 target_include_directories(zenith_core_includes INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/engine
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/commands
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/instruments
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/network
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/dsp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ai
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/utils
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/rendering
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ai_client
     ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/browser
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/effects
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/plugins
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/mcp
-    ${CMAKE_CURRENT_SOURCE_DIR}/agents/ObservabilityAgent
-    ${CMAKE_CURRENT_SOURCE_DIR}/agents/TransportProtocolAgent
+    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/platform
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/engine
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/instruments
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/dsp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/utils
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/audio
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/effects
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/plugins
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/synth_engine
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_core/analysis
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_network
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_network/network
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_network/collaboration
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_network/cloud
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_network/mcp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_commands
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_commands/commands
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_ui/rendering
+    ${CMAKE_CURRENT_SOURCE_DIR}/tools/agents/cpp/ObservabilityAgent
+    ${CMAKE_CURRENT_SOURCE_DIR}/tools/agents/cpp/TransportProtocolAgent
 )
 
 # -----------------------------------------------------------------------------
@@ -46,25 +55,25 @@ target_include_directories(zenith_core_includes INTERFACE
 # -----------------------------------------------------------------------------
 add_library(zenith_ui_includes INTERFACE)
 target_include_directories(zenith_ui_includes INTERFACE
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/framework
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/design-system
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/arranger
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/mixer
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/piano-roll
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/transport
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/common
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/controls
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/panels
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/widgets
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/session
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/instruments
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/dialogs
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/sample-editor
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/skia
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/views
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/dashboards
-    ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/settings
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_ui/ui
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_ui/ui/framework
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_ui/ui/design-system
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_ui/ui/arranger
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_ui/ui/mixer
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_ui/ui/piano-roll
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_ui/ui/transport
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_ui/ui/common
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_ui/ui/controls
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_ui/ui/panels
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_ui/ui/widgets
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_ui/ui/session
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_ui/ui/instruments
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_ui/ui/dialogs
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_ui/ui/sample-editor
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_ui/ui/skia
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_ui/ui/views
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_ui/ui/dashboards
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/zenith_ui/ui/settings
 )
 # UI targets implicitly need core includes
 target_link_libraries(zenith_ui_includes INTERFACE zenith_core_includes)

@@ -20,7 +20,7 @@ target_link_libraries(GrokAITests PRIVATE
 target_include_directories(GrokAITests PRIVATE
     ${CMAKE_BINARY_DIR}/ZenithDAW_artefacts/JuceLibraryCode
     apps/desktop/Source
-    apps/desktop/Source/ai
+    apps/desktop/Source/ai_client
 )
 
 # Test-specific definitions
@@ -60,7 +60,7 @@ add_custom_target(ai_performance_tests
 add_executable(MetricsChartTests
     TestRunner.cpp
     UITests.cpp
-    ../ui/dashboards/MetricsChart.cpp
+    ../../../modules/zenith_ui/ui/dashboards/MetricsChart.cpp
 )
 
 target_link_libraries(MetricsChartTests PRIVATE
@@ -74,6 +74,7 @@ target_link_libraries(MetricsChartTests PRIVATE
 target_include_directories(MetricsChartTests PRIVATE
     ${CMAKE_BINARY_DIR}/ZenithDAW_artefacts/JuceLibraryCode
     ../../Source
+    ../../../modules/zenith_ui/ui
 )
 
 target_compile_definitions(MetricsChartTests PRIVATE
@@ -81,4 +82,3 @@ target_compile_definitions(MetricsChartTests PRIVATE
     JUCE_USE_CURL=0
     ZENITH_TEST_MODE=1
 )
-

@@ -1,0 +1,168 @@
+name: 🔧 Improvement
+description: Suggest an improvement to existing functionality
+title: "[IMPROVEMENT] "
+labels: ["improvement", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement to Zenith DAW! This template is for refining existing functionality, not reporting bugs or requesting new features.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component needs improvement?
+      options:
+        - User Interface
+        - Performance
+        - Workflow
+        - Code Quality
+        - Build System
+        - Testing
+        - Documentation
+        - Error Handling
+        - Accessibility
+        - Localization
+        - Security
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-situation
+    attributes:
+      label: Current Situation
+      description: Describe the current state that needs improvement
+      placeholder: Explain how the current functionality works and what's lacking
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-improvement
+    attributes:
+      label: Proposed Improvement
+      description: How would you like to see this improved?
+      placeholder: Describe the specific changes you suggest
+    validations:
+      required: true
+
+  - type: textarea
+    id: benefits
+    attributes:
+      label: Benefits
+      description: What benefits would this improvement provide?
+      placeholder: |
+        **Benefits:**
+        - Improved user experience
+        - Better performance
+        - Cleaner code
+        - Easier maintenance
+        - Reduced bugs
+        - Better accessibility
+        - etc.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: improvement-type
+    attributes:
+      label: Improvement Type
+      description: What type of improvement is this?
+      options:
+        - Code Quality/Refactoring
+        - Performance Optimization
+        - User Experience
+        - Documentation
+        - Code Style/Standards
+        - Architecture
+        - Testing
+        - Configuration
+        - Build Process
+        - Error Handling
+    validations:
+      required: true
+
+  - type: textarea
+    id: implementation-ideas
+    attributes:
+      label: Implementation Ideas
+      description: Do you have ideas about how to implement this improvement?
+      placeholder: |
+        **Approach:**
+        - [Describe your implementation approach]
+
+        **Considerations:**
+        - [Any specific considerations]
+        - [Potential challenges]
+
+        **Code Changes:**
+        - [Any specific files or areas that might need changes]
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this improvement?
+      options:
+        - 🟢 High - Significantly impacts code quality or user experience
+        - 🟡 Medium - Noticeable improvement but not critical
+        - 🔵 Low - Minor refinement or nice-to-have
+        - ⚪ Optional - Cosmetic or very minor change
+    validations:
+      required: true
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples
+      description: Provide examples if applicable
+      placeholder: |
+        **Before:**
+        [Show code or screenshots of current implementation]
+
+        **After:**
+        [Show code or screenshots of improved implementation]
+
+        **Comparison:**
+        [Explain the differences and why the improvement is better]
+    validations:
+      required: false
+
+  - type: textarea
+    id: related-code
+    attributes:
+      label: Related Code
+      description: If applicable, provide file paths or code snippets
+      placeholder: |
+        **Files:**
+        - /path/to/file1.cpp
+        - /path/to/file2.h
+
+        **Code Snippets:**
+        ```cpp
+        // Example code that needs improvement
+        function_that_needs_improvement();
+        ```
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      description: Please confirm the following
+      options:
+        - label: This is an improvement to existing functionality, not a bug report or feature request
+          required: true
+        - label: I have clearly described the current situation that needs improvement
+          required: true
+        - label: I have provided specific suggestions for improvement
+          required: true
+        - label: I have explained the benefits of this improvement
+          required: true
+        - label: I have provided examples or code if applicable
+          required: false

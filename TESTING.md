@@ -192,7 +192,7 @@ The CI pipeline includes:
 ```bash
 # Python security
 pip3 install bandit
-bandit -r backend/
+bandit -r services/ai/runtime/
 
 # C++ security (requires CodeQL CLI)
 codeql database create cpp-database --language=cpp

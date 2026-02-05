@@ -1,0 +1,209 @@
+name: 🤝 Collaboration
+description: Find collaborators for your Zenith DAW projects
+title: "[Collaboration] "
+labels: ["collaboration", "community"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        🤝 **Find collaborators for your Zenith DAW projects!**
+
+        This is the place to connect with other producers, composers, sound designers, and developers who want to collaborate on creative or technical projects.
+
+        🌟 **Collaboration Guidelines:**
+        - Be respectful and clear about your expectations
+        - Discuss and agree on terms before starting
+        - Communicate openly throughout the project
+        - Give credit where credit is due
+
+  - type: dropdown
+    id: collaboration_type
+    attributes:
+      label: Collaboration Type
+      description: What type of collaboration are you looking for?
+      options:
+        - 🎵 Music Composition
+        - 🎬 Sound Design
+        - 🎮 Game Audio
+        - 🎙️ Voice Acting
+        - 📹 Video Production
+        - 🎧 Mixing/Mastering
+        - 🎹 Performance/Session Work
+        - 📚 Tutorial Creation
+        - 🔧 Plugin Development
+        - 🎨 Art/Graphics
+        - 📝 Writing/Documentation
+        - 🎪 Event Organization
+    validations:
+      required: true
+
+  - type: textarea
+    id: project_description
+    attributes:
+      label: Project Description
+      description: Tell us about your project and what you're looking to create
+      placeholder: |
+        **Project Overview:**
+        [Brief description of your project]
+
+        **Vision/Goals:**
+        [What do you want to achieve with this collaboration?]
+
+        **Timeline:**
+        [Expected duration or deadline]
+    validations:
+      required: true
+
+  - type: textarea
+    id: skills_offered
+    attributes:
+      label: Skills I Can Offer
+      description: What skills, tools, or resources can you contribute?
+      placeholder: |
+        **My Skills:**
+        - [Skill 1]
+        - [Skill 2]
+        - [Skill 3]
+
+        **Tools/Resources:**
+        - [Software/tools I have]
+        - [Equipment I can access]
+        - [Time I can commit]
+
+        **Experience Level:**
+        [Beginner/Intermediate/Expert in your field]
+    validations:
+      required: true
+
+  - type: textarea
+    id: skills_needed
+    attributes:
+      label: Skills I'm Looking For
+      description: What specific skills or roles do you need collaborators for?
+      placeholder: |
+        **Roles Needed:**
+        - [Role 1]
+        - [Role 2]
+        - [Role 3]
+
+        **Specific Skills:**
+        - [Skill 1]
+        - [Skill 2]
+
+        **Experience Level Needed:**
+        [Any specific experience requirements]
+    validations:
+      required: true
+
+  - type: textarea
+    id: commitment
+    attributes:
+      label: Time Commitment
+      description: How much time can you realistically commit to this project?
+      placeholder: |
+        **Availability:**
+        - Days per week: [Number]
+        - Hours per day: [Number]
+        - Total project time: [Estimate]
+
+        **Schedule:**
+        [Any specific times/days you're available]
+
+        **Time Zone:**
+        [Your time zone]
+    validations:
+      required: true
+
+  - type: dropdown
+    id: compensation
+    attributes:
+      label: Compensation
+      description: How will collaborators be compensated?
+      options:
+        - 🤝 Equity/Profit Share
+        - 💰 Paid Work
+        - 🎵 Royalties
+        - 🎓 For Experience/Portfolio
+        - 🤝 Non-monetary Exchange
+        - 🆓 Free/Pro Bono
+        - 🤝 Unclosed (Open to discussion)
+    validations:
+      required: true
+
+  - type: textarea
+    id deliverables
+    attributes:
+      label: Expected Deliverables
+      description: What outputs do you expect from this collaboration?
+      placeholder: |
+        **Project Deliverables:**
+        - [Deliverable 1]
+        - [Deliverable 2]
+        - [Deliverable 3]
+
+        **Timeline/Milestones:**
+        - [Milestone 1]
+        - [Milestone 2]
+    validations:
+      required: true
+
+  - type: textarea
+    id: samples_portfolio
+    attributes:
+      label: Samples/Portfolio
+      description: Link to samples of your work (if applicable)
+      placeholder: |
+        **Portfolio Links:**
+        - [SoundCloud Link]
+        - [YouTube Link]
+        - [Website/Portfolio]
+        - [Sample Pack Links]
+
+        **Previous Work:**
+        [Links to related projects]
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: guidelines
+    attributes:
+      label: Collaboration Guidelines
+      description: Please follow our collaboration guidelines
+      options:
+        - label: I have read and agree to the [Community Guidelines](https://github.com/your-repo/zenith-daw/blob/main/CODE_OF_CONDUCT.md)
+          required: true
+        - label: I understand the importance of clear communication in collaboration
+          required: true
+        - label: I will discuss and agree on terms before starting any collaboration
+          required: true
+        - label: I will respect the time and effort of all collaborators
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        🎯 **Next Steps**
+
+        Interested collaborators will contact you through GitHub or Discord. Here are some tips for successful collaboration:
+
+        **Communication:**
+        - Set up a communication channel (Discord, Slack, etc.)
+        - Schedule regular check-ins
+        - Share progress updates
+
+        **Project Management:**
+        - Use a version control system
+        - Keep track of changes and contributions
+        - Set clear deadlines and milestones
+
+        **Legal Considerations:**
+        - Discuss ownership and usage rights
+        - Put agreements in writing
+        - Consider contracts for paid work
+
+        🌟 **Thank you for seeking collaboration!**
+
+        Good luck with your project! Remember that successful collaboration is built on trust, communication, and mutual respect.
+
+        **Need help with collaboration?** Join our [Discord server](https://discord.gg/zenith-daw) and check out our collaboration channels.

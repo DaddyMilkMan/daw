@@ -1,0 +1,50 @@
+# CODEOWNERS file for Zenith DAW
+# This file defines code review responsibilities for the Zenith DAW project
+
+# Core maintainers have full repository access
+* @micahcooley
+
+# Audio Engine - Core audio processing and engine components
+/apps/desktop/Source/engine/** @micahcooley
+/modules/zenith_core/engine/** @micahcooley
+
+# Audio DSP and Effects
+/apps/desktop/Source/dsp/** @micahcooley
+/modules/zenith_core/dsp/** @micahcooley
+/apps/desktop/Source/effects/** @micahcooley
+/modules/zenith_core/effects/** @micahcooley
+
+# AI Integration
+/apps/desktop/Source/ai/** @micahcooley
+/apps/desktop/Source/ai_client/** @micahcooley
+
+# Instruments and Synthesis
+/apps/desktop/Source/instruments/** @micahcooley
+/modules/zenith_core/instruments/** @micahcooley
+
+# Commands and API
+/modules/zenith_commands/** @micahcooley
+
+# Tests and Quality Assurance
+/apps/desktop/Source/tests/** @micahcooley
+
+# Documentation and Configuration
+/docs/** @micahcooley
+/CMakeLists.txt @micahcooley
+/cmake/** @micahcooley
+
+# GitHub Workflows and CI/CD
+/.github/workflows/** @micahcooley
+
+# Build and Configuration Files
+*.cmake @micahcooley
+Makefile @micahcooley
+
+# Root Level Configuration Files
+*.yml @micahcooley
+*.yaml @micahcooley
+*.json @micahcooley
+
+# License and README
+/LICENSE @micahcooley
+/README.md @micahcooley

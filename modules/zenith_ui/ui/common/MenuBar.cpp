@@ -1,0 +1,501 @@
+/*
+    This file is part of Zenith DAW - A Digital Audio Workstation for Linux
+
+    Copyright (C) 2025 Micah Cooley <micahcooley@protonmail.com>
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+/*
+    ==============================================================================
+    Original file header:
+*/
+
+ * @file MenuBar.cpp
+ * @brief Custom Skia-based Menu Bar implementation - Neon Noir Edition
+ * 
+ * Premium glassmorphic menu bar with animated hover states, vector icons,
+ * and neon glow effects.
+ */
+
+
+#include "../design-system/ZenithTheme.h"
+
+namespace zenith {
+
+ZenithMenuBar::ZenithMenuBar() {
+  setOpaque(false); // Allow glassmorphism transparency
+
+  // Initialize menu items with icons (store icon functions to avoid copy issues)
+  items_.push_back({"File", {}, {}, icons::File()});
+  items_.push_back({"Edit", {}, {}, icons::Edit()});
+  items_.push_back({"View", {}, {}, icons::ViewToggle()});
+  items_.push_back({"Help", {}, {}, icons::Info()});
+
+  // Initialize cached fonts
+  updateCachedPaints();
+  
+  // Start timer for animations - REQUIRED for hover/press animations
+  startTimerHz(60);
+}
+
+void ZenithMenuBar::updateCachedPaints() {
+  // Menu item font - medium weight for readability
+  menuFont_ = design::typography::getSkFont(14.0f, design::FontWeight::Medium);
+  
+  // Small font for secondary elements
+  smallFont_ = design::typography::getSkFont(12.0f, design::FontWeight::Regular);
+}
+
+void ZenithMenuBar::visibilityChanged() {
+  if (isVisible() && getPeer() != nullptr && !isTimerRunning()) {
+    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60); // 60fps for smooth animations
+  } else if (!isVisible() && isTimerRunning()) {
+    stopTimer();
+  }
+}
+
+void ZenithMenuBar::timerCallback() {
+  SkiaComponent::timerCallback();
+
+  float dt = 1.0f / 60.0f;
+  bool needsRepaint = false;
+
+  // Update all item animations
+  for (auto &item : items_) {
+    item.state.update(dt);
+    if (item.state.isAnimating()) {
+      needsRepaint = true;
+    }
+  }
+
+  // Update collab button animation
+  collabState_.update(dt);
+  if (collabState_.isAnimating()) {
+    needsRepaint = true;
+  }
+
+  if (needsRepaint) {
+    repaint();
+  }
+}
+
+void ZenithMenuBar::drawSkia(SkCanvas *canvas) {
+  auto bounds = getLocalBounds().toFloat();
+  SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
+
+  // 1. Solid Dark Background (Sharp edges, no rounding)
+  // FIX: Removed to prevent double-drawing/flickering. TitleBarComponent already draws the background.
+  /*
+  SkPaint bgPaint;
+  bgPaint.setAntiAlias(true);
+  bgPaint.setColor(design::colors::BG_DARK); // Solid dark background for visibility
+  canvas->drawRect(skBounds, bgPaint);
+  */
+  
+  // 2. Subtle bottom border
+  // FIX: Removed redundant border
+  /*
+  SkPaint borderPaint;
+  borderPaint.setAntiAlias(true);
+  borderPaint.setColor(SkColorSetA(design::colors::CYAN, 80));
+  canvas->drawLine(0, skBounds.height() - 1, skBounds.width(), skBounds.height() - 1, borderPaint);
+  */
+
+  // 3. Draw Menu Items
+  for (size_t i = 0; i < items_.size(); ++i) {
+    drawMenuItem(canvas, items_[i], static_cast<int>(i) == hoveredItemIndex_);
+    
+    // Draw green update indicator next to Help (last item)
+    // FIX: Removed as per user feedback ("random green dot")
+    /*
+    if (updateAvailable_ && i == items_.size() - 1) {
+        float dotX = items_[i].bounds.getRight() + design::spacing::SM;
+        float dotY = skBounds.centerY();
+        float dotRadius = 4.0f;
+        
+        SkPaint dotPaint;
+        dotPaint.setAntiAlias(true);
+        dotPaint.setColor(design::colors::NEON_GREEN);
+        canvas->drawCircle(dotX, dotY, dotRadius, dotPaint);
+    }
+    */
+  }
+  
+  // Collab button removed - cleaner interface
+}
+
+void ZenithMenuBar::drawMenuItem(SkCanvas *canvas, const MenuItem &item,
+                                  bool isHovered) {
+  SkRect rect = SkRect::MakeXYWH(
+      static_cast<float>(item.bounds.getX()),
+      static_cast<float>(item.bounds.getY()),
+      static_cast<float>(item.bounds.getWidth()),
+      static_cast<float>(item.bounds.getHeight()));
+
+  float hoverAmount = item.state.hoverAmount;
+  float pressAmount = item.state.pressAmount;
+
+  // Draw hover overlay with animation
+  if (hoverAmount > 0.01f) {
+    InteractionHelper::drawHoverOverlay(canvas, rect, hoverAmount,
+                                        design::dimensions::RADIUS_SM);
+  }
+
+  // Draw pressed overlay
+  if (pressAmount > 0.01f) {
+    InteractionHelper::drawPressedOverlay(canvas, rect, pressAmount,
+                                          design::dimensions::RADIUS_SM);
+  }
+
+  // Icon positioning - left side of item
+  float iconSize = 16.0f;
+  float iconX = rect.left() + design::spacing::SM;
+  float iconY = rect.centerY();
+
+  // Icon color: tertiary at rest, cyan on hover
+  SkColor iconColor = design::interpolateColor(
+      design::colors::TEXT_TERTIARY,
+      design::colors::CYAN,
+      hoverAmount);
+
+  icons::IconStyle iconStyle;
+  iconStyle.color = iconColor;
+  iconStyle.strokeWidth = icons::STROKE_LIGHT;
+  
+  // Add subtle glow on hover
+  if (hoverAmount > 0.1f) {
+    iconStyle.glowRadius = design::effects::GLOW_SUBTLE * hoverAmount;
+    iconStyle.glowColor = design::colors::CYAN;
+  }
+
+  // Draw icon centered vertically - use explicit bounds
+  SkRect iconBounds = SkRect::MakeXYWH(iconX, iconY - iconSize / 2.0f, 
+                                        iconSize, iconSize);
+  
+  // Draw the icon path directly to ensure it's visible
+  SkPath iconPath = item.icon;
+  icons::drawIconCentered(canvas, iconPath, iconBounds, iconSize, iconStyle);
+
+  // Text positioning - after icon with proper spacing
+  float textX = iconX + iconSize + design::spacing::XS;
+  float textY = rect.centerY() + 5.0f; // Approximate vertical center for text baseline
+
+  // Text color: secondary at rest, primary on hover
+  SkColor textColor = design::interpolateColor(
+      design::colors::TEXT_SECONDARY,
+      design::colors::TEXT_PRIMARY,
+      hoverAmount);
+
+  // Draw text with optional glow on hover
+  if (hoverAmount > 0.3f) {
+    NeonGlow::drawTextGlow(canvas, item.name.toStdString().c_str(),
+                           textX, textY, menuFont_, design::colors::CYAN,
+                           NeonGlow::Intensity::Subtle);
+  }
+
+  SkPaint textPaint;
+  textPaint.setColor(textColor);
+  textPaint.setAntiAlias(true);
+  canvas->drawString(item.name.toStdString().c_str(), textX, textY,
+                     menuFont_, textPaint);
+}
+
+void ZenithMenuBar::drawCollabButton(SkCanvas *canvas) {
+  SkRect rect = SkRect::MakeXYWH(
+      static_cast<float>(collabButtonBounds_.getX()),
+      static_cast<float>(collabButtonBounds_.getY()),
+      static_cast<float>(collabButtonBounds_.getWidth()),
+      static_cast<float>(collabButtonBounds_.getHeight()));
+
+  float hoverAmount = collabState_.hoverAmount;
+
+  // Glassmorphic button with accent
+  if (hoverAmount > 0.01f) {
+    GlassmorphicPanel::Options opts;
+    opts.style = GlassmorphicPanel::Style::Elevated;
+    opts.cornerRadius = design::dimensions::RADIUS_SM;
+    opts.accentColor = design::withAlpha(design::colors::MAGENTA, 
+                                          0.3f * hoverAmount);
+    opts.glowIntensity = hoverAmount;
+    GlassmorphicPanel::drawWithOptions(canvas, rect, opts);
+  } else {
+    GlassmorphicPanel::draw(canvas, rect, GlassmorphicPanel::Style::Subtle);
+  }
+
+  // Icon
+  float iconSize = 16.0f;
+  SkColor iconColor = design::interpolateColor(
+      design::colors::TEXT_SECONDARY,
+      design::colors::MAGENTA,
+      hoverAmount);
+
+  icons::IconStyle iconStyle;
+  iconStyle.color = iconColor;
+  iconStyle.strokeWidth = icons::STROKE_REGULAR;
+  if (hoverAmount > 0.1f) {
+    iconStyle.glowRadius = design::effects::GLOW_SUBTLE * hoverAmount;
+    iconStyle.glowColor = design::colors::MAGENTA;
+  }
+
+  SkRect iconBounds = SkRect::MakeXYWH(
+      rect.left() + design::spacing::SM,
+      rect.centerY() - iconSize / 2.0f,
+      iconSize, iconSize);
+  icons::drawIconCentered(canvas, icons::Users(), iconBounds, iconSize, iconStyle);
+
+  // Text
+  float textX = iconBounds.right() + design::spacing::XS;
+  float textY = rect.centerY() + 5.0f;
+
+  SkColor textColor = design::interpolateColor(
+      design::colors::TEXT_SECONDARY,
+      design::colors::TEXT_PRIMARY,
+      hoverAmount);
+
+  SkPaint textPaint;
+  textPaint.setColor(textColor);
+  textPaint.setAntiAlias(true);
+  canvas->drawString("Collab", textX, textY, smallFont_, textPaint);
+}
+
+void ZenithMenuBar::resized() { 
+  updateLayout(); 
+}
+
+void ZenithMenuBar::updateLayout() {
+  if (getWidth() <= 0 || getHeight() <= 0) return;
+  
+  int x = static_cast<int>(design::spacing::MD);
+  int itemHeight = getHeight() - 8; // 4px padding top and bottom
+  int itemY = 4;
+
+  // Calculate item widths based on content
+  for (auto &item : items_) {
+    // Icon (16) + spacing (8) + text (~40-60) + padding (16)
+    int itemWidth = 16 + 8 + 50 + 16; // ~90px per item
+    item.bounds = juce::Rectangle<int>(x, itemY, itemWidth, itemHeight);
+    x += itemWidth + static_cast<int>(design::spacing::XS);
+  }
+
+  // Collab button on right side (optional - can be hidden if no space)
+  int collabWidth = 90;
+  int collabHeight = itemHeight;
+  int collabX = getWidth() - collabWidth - static_cast<int>(design::spacing::MD);
+  
+  // Only show collab button if there's space
+  if (collabX > x + 100) {
+    collabButtonBounds_ = juce::Rectangle<int>(collabX, itemY, collabWidth, collabHeight);
+  } else {
+    collabButtonBounds_ = juce::Rectangle<int>(); // Empty = hidden
+  }
+}
+
+void ZenithMenuBar::mouseMove(const juce::MouseEvent &e) {
+  int prevHover = hoveredItemIndex_;
+  hoveredItemIndex_ = -1;
+
+  // Check menu items
+  for (size_t i = 0; i < items_.size(); ++i) {
+    bool isHovered = items_[i].bounds.contains(e.getPosition());
+    items_[i].state.isHovered = isHovered;
+    if (isHovered) {
+      hoveredItemIndex_ = static_cast<int>(i);
+    }
+  }
+
+  // Check collab button
+  collabState_.isHovered = collabButtonBounds_.contains(e.getPosition());
+
+  if (prevHover != hoveredItemIndex_) {
+    repaint();
+  }
+}
+
+void ZenithMenuBar::mouseExit(const juce::MouseEvent &e) {
+  juce::ignoreUnused(e);
+  hoveredItemIndex_ = -1;
+  
+  for (auto &item : items_) {
+    item.state.isHovered = false;
+  }
+  collabState_.isHovered = false;
+  
+  repaint();
+}
+
+void ZenithMenuBar::mouseDown(const juce::MouseEvent &e) {
+  // Set pressed states
+  for (size_t i = 0; i < items_.size(); ++i) {
+    items_[i].state.isPressed = items_[i].bounds.contains(e.getPosition());
+  }
+  collabState_.isPressed = collabButtonBounds_.contains(e.getPosition());
+
+  // Handle menu item clicks
+  if (hoveredItemIndex_ >= 0 && hoveredItemIndex_ < static_cast<int>(items_.size())) {
+    const auto &item = items_[hoveredItemIndex_];
+    if (item.name == "File")
+      showFileMenu();
+    else if (item.name == "Edit")
+      showEditMenu();
+    else if (item.name == "View")
+      showViewMenu();
+    else if (item.name == "Help")
+      showHelpMenu();
+  }
+
+  // Handle collab button click
+  if (collabButtonBounds_.contains(e.getPosition())) {
+    auto *content = new CollabPanel();
+    collabCallout_.reset(new juce::CallOutBox(
+        *content, collabButtonBounds_.translated(getScreenX(), getScreenY()), 
+        nullptr));
+    collabCallout_->setVisible(true);
+  }
+}
+
+void ZenithMenuBar::mouseUp(const juce::MouseEvent &e) {
+  juce::ignoreUnused(e);
+  
+  for (auto &item : items_) {
+    item.state.isPressed = false;
+  }
+  collabState_.isPressed = false;
+}
+
+void ZenithMenuBar::showFileMenu() {
+  juce::PopupMenu menu;
+  menu.addItem(1, "New Project", true, false);
+  menu.addItem(2, "Open Project...", true, false);
+  menu.addSeparator();
+  menu.addItem(3, "Save Project", true, false);
+  menu.addItem(4, "Save Project As...", true, false);
+  menu.addSeparator();
+  menu.addItem(5, "Import Audio...", true, false);
+  menu.addItem(6, "Export Audio...", true, false);
+  menu.addSeparator();
+  menu.addItem(7, "Quit", true, false);
+
+  // Position dropdown directly below the menu item, no gap
+  auto itemScreenBounds = juce::Rectangle<int>(
+      getScreenX() + items_[0].bounds.getX(),
+      getScreenY() + items_[0].bounds.getBottom(),
+      items_[0].bounds.getWidth(),
+      1  // Height doesn't matter, it's just the anchor point
+  );
+  menu.showMenuAsync(
+      juce::PopupMenu::Options()
+          .withTargetComponent(this)
+          .withMinimumWidth(150)
+          .withTargetScreenArea(itemScreenBounds),
+      [this](int result) {
+        switch (result) {
+          case 1: if (onNewProject) onNewProject(); break;
+          case 2: if (onOpenProject) onOpenProject(); break;
+          case 3: if (onSaveProject) onSaveProject(); break;
+          case 4: if (onSaveProjectAs) onSaveProjectAs(); break;
+          case 5: if (onImportAudio) onImportAudio(); break;
+          case 6: if (onExportAudio) onExportAudio(); break;
+          case 7: juce::JUCEApplication::getInstance()->systemRequestedQuit(); break;
+        }
+      });
+}
+
+void ZenithMenuBar::showEditMenu() {
+  juce::PopupMenu menu;
+  menu.addItem(1, "Undo", true, false);
+  menu.addItem(2, "Redo", true, false);
+  menu.addSeparator();
+  menu.addItem(3, "Cut", true, false);
+  menu.addItem(4, "Copy", true, false);
+  menu.addItem(5, "Paste", true, false);
+  menu.addItem(6, "Delete", true, false);
+  menu.addSeparator();
+  menu.addItem(7, "Select All", true, false);
+
+  // Position dropdown directly below the menu item, no gap
+  auto itemScreenBounds = juce::Rectangle<int>(
+      getScreenX() + items_[1].bounds.getX(),
+      getScreenY() + items_[1].bounds.getBottom(),
+      items_[1].bounds.getWidth(),
+      1
+  );
+  menu.showMenuAsync(
+      juce::PopupMenu::Options()
+          .withTargetComponent(this)
+          .withMinimumWidth(120)
+          .withTargetScreenArea(itemScreenBounds),
+      [this](int result) {
+        if (result == 1 && onUndo) onUndo();
+        else if (result == 2 && onRedo) onRedo();
+      });
+}
+
+void ZenithMenuBar::showViewMenu() {
+  juce::PopupMenu menu;
+  menu.addItem(1, "Toggle Session/Arranger (Tab)", true, false);
+  menu.addItem(2, "Toggle Wingman", true, false);
+  menu.addItem(3, "Toggle Settings", true, false);
+  menu.addSeparator();
+  menu.addItem(4, "Zoom In", true, false);
+  menu.addItem(5, "Zoom Out", true, false);
+  menu.addItem(6, "Fit to Window", true, false);
+
+  // Position dropdown directly below the menu item, no gap
+  auto itemScreenBounds = juce::Rectangle<int>(
+      getScreenX() + items_[2].bounds.getX(),
+      getScreenY() + items_[2].bounds.getBottom(),
+      items_[2].bounds.getWidth(),
+      1
+  );
+  menu.showMenuAsync(
+      juce::PopupMenu::Options()
+          .withTargetComponent(this)
+          .withMinimumWidth(180)
+          .withTargetScreenArea(itemScreenBounds),
+      [this](int result) {
+        if (result == 1 && onToggleView) onToggleView();
+        else if (result == 2 && onToggleWingman) onToggleWingman();
+        else if (result == 3 && onToggleSettings) onToggleSettings();
+        else if (result == 4 && onZoomIn) onZoomIn();
+        else if (result == 5 && onZoomOut) onZoomOut();
+        else if (result == 6 && onZoomToFit) onZoomToFit();
+      });
+}
+
+void ZenithMenuBar::showHelpMenu() {
+  juce::PopupMenu menu;
+  menu.addItem(1, "Getting Started", true, false);
+  menu.addItem(2, "Keyboard Shortcuts", true, false);
+  menu.addSeparator();
+  menu.addItem(3, "Documentation", true, false);
+  menu.addItem(4, "Report a Bug", true, false);
+  menu.addSeparator();
+  menu.addItem(5, "About Zenith DAW...", true, false);
+
+  // Position dropdown directly below the menu item, no gap
+  auto itemScreenBounds = juce::Rectangle<int>(
+      getScreenX() + items_[3].bounds.getX(),
+      getScreenY() + items_[3].bounds.getBottom(),
+      items_[3].bounds.getWidth(),
+      1
+  );
+  menu.showMenuAsync(
+      juce::PopupMenu::Options()
+          .withTargetComponent(this)
+          .withMinimumWidth(160)
+          .withTargetScreenArea(itemScreenBounds));
+}
+
+} // namespace zenith

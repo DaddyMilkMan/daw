@@ -22,18 +22,14 @@ The codebase follows the **Citadel** directory structure pattern to ensure separ
 
 ## Directory Structure (Citadel)
 
-The `apps/desktop/Source` directory is organized into distinct domains:
+The repository is now split into app shell + reusable modules:
 
-*   **`ui/`**: All user interface components (Views, Editors, Panels).
-*   **`engine/`**: Core audio logic (Engine, ProjectState, Track, Clip).
-*   **`instruments/`**: Built-in synthesizers and samplers.
-*   **`commands/`**: Command pattern implementation and API.
-*   **`network/`**: AI bridge and network services.
-*   **`rendering/`**: Skia context management.
-
-Headers in `apps/desktop/include` mirror this structure:
-*   **`include/ui/`**: Public UI headers.
-*   **`include/`**: Core engine headers.
+*   **`apps/desktop/Source/`**: Desktop entry point, platform glue, and thin app wiring.
+*   **`modules/zenith_core/`**: Engine, DSP, instruments, plugins, and core utilities.
+*   **`modules/zenith_ui/`**: Skia UI framework, views, and renderer integration.
+*   **`modules/zenith_network/`**: Collaboration and API clients.
+*   **`modules/zenith_commands/`**: Command API for AI integration.
+*   **`services/ai/`**: Python backend + agents.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐

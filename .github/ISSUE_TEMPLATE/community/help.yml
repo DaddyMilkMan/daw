@@ -1,0 +1,168 @@
+name: 🤔 Help Needed
+description: Ask the community for help with your project
+title: "[Help] "
+labels: ["help", "community"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        🤔 **Need help with your Zenith DAW project?**
+
+        The community is here to help! Please provide as much detail as possible so we can assist you effectively.
+
+        💡 **Quick Tips:**
+        - Search existing issues first to avoid duplicates
+        - Provide clear information about your problem
+        - Include screenshots and error messages
+        - Be patient while waiting for responses
+
+  - type: dropdown
+    id: help_category
+    attributes:
+      label: Help Category
+      description: What type of help do you need?
+      options:
+        - 🎵 Music Production
+        - 🔧 Technical Issue
+        - 💡 Feature Request
+        - 🎨 Creative Feedback
+        - 📚 Tutorial Help
+        - 🔄 Workflow Question
+        - 🧰 Plugin Integration
+        - 🎧 Audio/MIDI Setup
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem_description
+    attributes:
+      label: Problem Description
+      description: Describe what you're trying to achieve and the problem you're facing
+      placeholder: |
+        **What I'm trying to do:**
+        [Describe your goal or desired outcome]
+
+        **What's happening instead:**
+        [Describe the actual behavior or error you're encountering]
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps_taken
+    attributes:
+      label: Steps I've Taken
+      description: What troubleshooting steps have you already tried?
+      placeholder: |
+        **Steps I've tried:**
+        1. [First step]
+        2. [Second step]
+        3. [Third step]
+
+        **Research done:**
+        - [Documentation checked]
+        - [Forum posts read]
+        - [YouTube videos watched]
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        🔍 **System Information**
+
+        Please provide details about your setup:
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      description: Your operating system and version
+      placeholder: "Windows 11 Pro / macOS Sonoma / Ubuntu 22.04"
+    validations:
+      required: true
+
+  - type: input
+    id: zenith_version
+    attributes:
+      label: Zenith DAW Version
+      description: The version of Zenith DAW you're using
+      placeholder: "2.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: hardware
+    attributes:
+      label: Hardware/Setup
+      description: Your computer specs and audio interface
+      placeholder: "i7-12700K, 32GB RAM, Focusrite Scarlett 2i2"
+    validations:
+      required: true
+
+  - type: textarea
+    id: error_messages
+    attributes:
+      label: Error Messages
+      description: Any error messages or logs (please copy paste)
+      placeholder: |
+        **Error Message:**
+        ```
+        [Copy and paste error messages here]
+        ```
+
+        **Log Files:**
+        [Attach or paste relevant log entries]
+    validations:
+      required: false
+
+  - type: textarea
+    id: project_info
+    attributes:
+      label: Project Information
+      description: Details about your project (if applicable)
+      placeholder: |
+        **Project Type:**
+        [e.g., Electronic music, podcast, game audio]
+
+        **Project Details:**
+        - Number of tracks
+        - Instruments used
+        - Plugins involved
+        - File size
+
+  - type: checkboxes
+    id: guidelines
+    attributes:
+      label: Community Guidelines
+      description: Please follow our community guidelines
+      options:
+        - label: I have searched existing issues and discussions first
+          required: true
+        - label: I have read and agree to the [Community Guidelines](https://github.com/your-repo/zenith-daw/blob/main/CODE_OF_CONDUCT.md)
+          required: true
+        - label: I will be respectful and patient while waiting for help
+          required: true
+        - label: I understand that this is a community forum and not guaranteed support
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        🎯 **Help Resources**
+
+        Here are some additional resources that might help:
+        - [Documentation](https://github.com/your-repo/zenith-daw/docs)
+        - [Troubleshooting Guide](https://github.com/your-repo/zenith-daw/blob/main/docs/TROUBLESHOOTING.md)
+        - [Video Tutorials](https://youtube.com/zenithdaw)
+        - [Discord Server](https://discord.gg/zenith-daw) for real-time help
+
+        💬 **Getting the Most Help:**
+        - Respond to follow-up questions promptly
+        - Try suggestions and report back
+        - Mark helpful responses as solutions
+        - Share your final results with the community
+
+        🌟 **Thank you for reaching out to the community!**
+
+        Your fellow Zenith DAW users will do their best to help you solve your problem. Remember that everyone here is a volunteer helping in their spare time.
