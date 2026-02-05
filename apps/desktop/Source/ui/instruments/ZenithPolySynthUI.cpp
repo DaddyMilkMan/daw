@@ -18,6 +18,7 @@
 #include "ZenithDesignSystem.h"
 #include "ZenithLayout.h"
 #include "ZenithUtils.h"
+#include "../framework/GlassmorphicPanel.h" // For GlassmorphicPanel
 
 #include <algorithm> // For std::clamp
 #include <map>       // For std::map used in presets
@@ -40,7 +41,7 @@ ZenithPolySynthUI::ZenithPolySynthUI(ZenithPolySynthProcessor &p)
   setBufferedToImage(true); // Double buffering for smoother rendering
 
   // Set initial size
-  setSize(600, 400);
+  setSize(800, 500); // Expanded size for panels
 
   // Layout components
   buildUI();
@@ -102,71 +103,111 @@ void ZenithPolySynthUI::buildUI() {
   widgets_.clear();
 
   // Oscillators
-  auto* osc1Wave = addWidget<ZenithKnob>("Osc 1 Wave", ZenithPolySynthProcessor::Osc1Wave);
-  osc1Wave->setHelpText("Oscillator 1 Waveform", "Selects the primary waveform. Pro Tip: Use the 'Wavetable' setting for complex timbres that cut through the mix.");
+  osc1Wave_ = addWidget<ZenithKnob>("Osc 1 Wave", ZenithPolySynthProcessor::Osc1Wave);
+  osc1Wave_->setAccentColor(design::colors::ACCENT_PRIMARY);
+  osc1Wave_->setHelpText("Oscillator 1 Waveform", "Selects the primary waveform. Pro Tip: Use the 'Wavetable' setting for complex timbres that cut through the mix.");
   
-  auto* osc1Mix = addWidget<ZenithKnob>("Osc 1 Mix", ZenithPolySynthProcessor::Osc1Mix);
-  osc1Mix->setHelpText("Oscillator 1 Mix", "Adjusts the level of Osc 1. Tip: Reducing this while increasing Resonance can prevent harsh digital clipping.");
+  osc1Mix_ = addWidget<ZenithKnob>("Osc 1 Mix", ZenithPolySynthProcessor::Osc1Mix);
+  osc1Mix_->setAccentColor(design::colors::ACCENT_PRIMARY);
+  osc1Mix_->setHelpText("Oscillator 1 Mix", "Adjusts the level of Osc 1. Tip: Reducing this while increasing Resonance can prevent harsh digital clipping.");
   
-  auto* osc2Wave = addWidget<ZenithKnob>("Osc 2 Wave", ZenithPolySynthProcessor::Osc2Wave);
-  osc2Wave->setHelpText("Oscillator 2 Waveform", "Second oscillator waveform. Detune this slightly against Osc 1 for a thicker, 'unison' VA sound.");
+  osc2Wave_ = addWidget<ZenithKnob>("Osc 2 Wave", ZenithPolySynthProcessor::Osc2Wave);
+  osc2Wave_->setAccentColor(design::colors::ACCENT_PRIMARY);
+  osc2Wave_->setHelpText("Oscillator 2 Waveform", "Second oscillator waveform. Detune this slightly against Osc 1 for a thicker, 'unison' VA sound.");
   
-  auto* osc2Mix = addWidget<ZenithKnob>("Osc 2 Mix", ZenithPolySynthProcessor::Osc2Mix);
-  osc2Mix->setHelpText("Oscillator 2 Mix", "Level of Osc 2. Use this to blend in a different harmonic structure compared to Osc 1.");
+  osc2Mix_ = addWidget<ZenithKnob>("Osc 2 Mix", ZenithPolySynthProcessor::Osc2Mix);
+  osc2Mix_->setAccentColor(design::colors::ACCENT_PRIMARY);
+  osc2Mix_->setHelpText("Oscillator 2 Mix", "Level of Osc 2. Use this to blend in a different harmonic structure compared to Osc 1.");
 
   // Filter
-  auto* cutoff = addWidget<ZenithKnob>("Cutoff", ZenithPolySynthProcessor::FilterCutoff);
-  cutoff->setHelpText("Filter Cutoff", "Controls the brightness. Pro Tip: Automation of this parameter is the key to creating movement in your basslines.");
+  cutoff_ = addWidget<ZenithKnob>("Cutoff", ZenithPolySynthProcessor::FilterCutoff);
+  cutoff_->setAccentColor(design::colors::ACCENT_SECONDARY);
+  cutoff_->setHelpText("Filter Cutoff", "Controls the brightness. Pro Tip: Automation of this parameter is the key to creating movement in your basslines.");
   
-  auto* resonance = addWidget<ZenithKnob>("Resonance", ZenithPolySynthProcessor::FilterResonance);
-  resonance->setHelpText("Filter Resonance", "Adds a peak at the cutoff frequency. High values create the classic 'squelch' found in acid house.");
+  resonance_ = addWidget<ZenithKnob>("Resonance", ZenithPolySynthProcessor::FilterResonance);
+  resonance_->setAccentColor(design::colors::ACCENT_SECONDARY);
+  resonance_->setHelpText("Filter Resonance", "Adds a peak at the cutoff frequency. High values create the classic 'squelch' found in acid house.");
   
-  auto* envAmt = addWidget<ZenithKnob>("Env Amt", ZenithPolySynthProcessor::FilterEnvAmount);
-  envAmt->setHelpText("Envelope Amount", "Determines how much the Mod Envelope (Env 2) affects the Cutoff. Perfect for creating 'plucky' or 'snappy' sounds.");
+  envAmt_ = addWidget<ZenithKnob>("Env Amt", ZenithPolySynthProcessor::FilterEnvAmount);
+  envAmt_->setAccentColor(design::colors::ACCENT_SECONDARY);
+  envAmt_->setHelpText("Envelope Amount", "Determines how much the Mod Envelope (Env 2) affects the Cutoff. Perfect for creating 'plucky' or 'snappy' sounds.");
 
   // Amp Envelope
-  auto* attack = addWidget<ZenithKnob>("Attack", ZenithPolySynthProcessor::AmpAttack);
-  attack->setHelpText("Amp Attack", "Sets the time for the sound to reach full volume. Long attack is great for cinematic pads.");
+  attack_ = addWidget<ZenithKnob>("Attack", ZenithPolySynthProcessor::AmpAttack);
+  attack_->setAccentColor(design::colors::ORANGE);
+  attack_->setHelpText("Amp Attack", "Sets the time for the sound to reach full volume. Long attack is great for cinematic pads.");
   
-  auto* decay = addWidget<ZenithKnob>("Decay", ZenithPolySynthProcessor::AmpDecay);
-  decay->setHelpText("Amp Decay", "The time taken to drop to the sustain level. Short decay creates percussive 'hits'.");
+  decay_ = addWidget<ZenithKnob>("Decay", ZenithPolySynthProcessor::AmpDecay);
+  decay_->setAccentColor(design::colors::ORANGE);
+  decay_->setHelpText("Amp Decay", "The time taken to drop to the sustain level. Short decay creates percussive 'hits'.");
   
-  auto* sustain = addWidget<ZenithKnob>("Sustain", ZenithPolySynthProcessor::AmpSustain);
-  sustain->setHelpText("Amp Sustain", "The volume level held while a key is depressed. Set to 0 for short stabs.");
+  sustain_ = addWidget<ZenithKnob>("Sustain", ZenithPolySynthProcessor::AmpSustain);
+  sustain_->setAccentColor(design::colors::ORANGE);
+  sustain_->setHelpText("Amp Sustain", "The volume level held while a key is depressed. Set to 0 for short stabs.");
   
-  auto* release = addWidget<ZenithKnob>("Release", ZenithPolySynthProcessor::AmpRelease);
-  release->setHelpText("Amp Release", "How long the sound lingers after releasing the key. Add release for a more natural, acoustic feel.");
+  release_ = addWidget<ZenithKnob>("Release", ZenithPolySynthProcessor::AmpRelease);
+  release_->setAccentColor(design::colors::ORANGE);
+  release_->setHelpText("Amp Release", "How long the sound lingers after releasing the key. Add release for a more natural, acoustic feel.");
 
   layoutWidgets();
 }
 
 void ZenithPolySynthUI::layoutWidgets() {
-  auto area = getLocalBounds();
+  auto bounds = getLocalBounds().toFloat();
+  SkRect area = SkRect::MakeXYWH(bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight());
+
+  // Margins
+  float outerMargin = 20.0f;
+  float panelSpacing = 20.0f;
+  float titleHeight = 30.0f;
 
   // Visualizer at the bottom
-  auto visualizerArea = area.removeFromBottom(100);
-  if (visualizer_)
-    visualizer_->setBounds(visualizerArea);
+  float visualizerHeight = 120.0f;
+  SkRect visualizerRect = SkRect::MakeLTRB(area.left(), area.bottom() - visualizerHeight,
+                                           area.right(), area.bottom());
 
-  // Simple Grid Layout for Controls
-  int cols = 6;
-  int rows = 2; // Approx
-  int margin = 10;
-  int w = (area.getWidth() - (cols + 1) * margin) / cols;
-  int h = 100;
-
-  int x = 0;
-  int y = 0;
-
-  for (const auto &widget : widgets_) {
-    widget->setBounds(margin + x * (w + margin), margin + y * (h + margin), w,
-                      h);
-    x++;
-    if (x >= cols) {
-      x = 0;
-      y++;
-    }
+  if (visualizer_) {
+    visualizer_->setBounds(static_cast<int>(visualizerRect.x()),
+                           static_cast<int>(visualizerRect.y()),
+                           static_cast<int>(visualizerRect.width()),
+                           static_cast<int>(visualizerRect.height()));
   }
+
+  // Main Controls Area
+  SkRect mainArea = SkRect::MakeLTRB(area.left() + outerMargin, area.top() + outerMargin,
+                                     area.right() - outerMargin, visualizerRect.top() - outerMargin);
+
+  // Split into 3 Panels
+  float panelWidth = (mainArea.width() - (panelSpacing * 2)) / 3.0f;
+
+  // 1. Oscillators Panel
+  oscPanelBounds_ = SkRect::MakeXYWH(mainArea.left(), mainArea.top(), panelWidth, mainArea.height());
+
+  // 2. Filter Panel
+  filterPanelBounds_ = SkRect::MakeXYWH(oscPanelBounds_.right() + panelSpacing, mainArea.top(), panelWidth, mainArea.height());
+
+  // 3. Envelope Panel
+  envPanelBounds_ = SkRect::MakeXYWH(filterPanelBounds_.right() + panelSpacing, mainArea.top(), panelWidth, mainArea.height());
+
+  // Helper to layout grid of knobs in a panel
+  auto layoutKnobsInPanel = [](SkRect panel, std::vector<ZenithKnob*> knobs, float headerH) {
+      // Inner content area
+      juce::Rectangle<int> content = juce::Rectangle<int>(
+          static_cast<int>(panel.x()), static_cast<int>(panel.y()),
+          static_cast<int>(panel.width()), static_cast<int>(panel.height())).reduced(10);
+      content.removeFromTop(static_cast<int>(headerH));
+
+      // Use ZenithLayout grid
+      // Convert vector<ZenithKnob*> to vector<Component*>
+      std::vector<juce::Component*> comps;
+      for (auto* k : knobs) if (k) comps.push_back(k);
+
+      ZenithLayout::grid(content, comps, 2, 20); // 2 columns
+  };
+
+  layoutKnobsInPanel(oscPanelBounds_, {osc1Wave_, osc1Mix_, osc2Wave_, osc2Mix_}, titleHeight);
+  layoutKnobsInPanel(filterPanelBounds_, {cutoff_, resonance_, envAmt_}, titleHeight);
+  layoutKnobsInPanel(envPanelBounds_, {attack_, decay_, sustain_, release_}, titleHeight);
 }
 
 //==============================================================================
@@ -186,17 +227,56 @@ void ZenithPolySynthUI::timerCallback() {
 #ifdef ZENITH_USE_SKIA
 void ZenithPolySynthUI::drawSkiaContent(SkCanvas *canvas) {
   auto bounds = getLocalBounds();
-  int width = bounds.getWidth();
-  int height = bounds.getHeight();
 
-  // Draw background
+  // 1. Draw Global Background
   canvas->clear(design::colors::BG_DARKEST);
-  SkRect drawBounds = SkRect::MakeXYWH(0, 0, (float)width, (float)height);
-  SkPaint bgPaint;
-  bgPaint.setColor(design::colors::BG_DARKER);
-  canvas->drawRect(drawBounds, bgPaint);
 
-  // Draw widgets with translation
+  // 2. Draw Panels (Backgrounds)
+  auto drawPanel = [&](SkRect rect, const char* title) {
+      // Glassmorphic Panel
+      GlassmorphicPanel::Options opts;
+      opts.style = GlassmorphicPanel::Style::Elevated;
+      opts.cornerRadius = design::dimensions::RADIUS_MD;
+      GlassmorphicPanel::drawWithOptions(canvas, rect, opts);
+
+      // Title
+      SkPaint titlePaint;
+      titlePaint.setColor(design::colors::TEXT_SECONDARY);
+      titlePaint.setAntiAlias(true);
+      SkFont titleFont = design::typography::getSkFont(12.0f, design::FontWeight::Bold);
+
+      float textW = titleFont.measureText(title, strlen(title), SkTextEncoding::kUTF8);
+      float textX = rect.centerX() - (textW / 2.0f);
+      float textY = rect.top() + 24.0f;
+
+      canvas->drawString(title, textX, textY, titleFont, titlePaint);
+
+      // Divider
+      SkPaint linePaint;
+      linePaint.setColor(design::colors::BORDER_SUBTLE);
+      linePaint.setStrokeWidth(1.0f);
+      float lineY = textY + 12.0f;
+      canvas->drawLine(rect.left() + 10, lineY, rect.right() - 10, lineY, linePaint);
+  };
+
+  drawPanel(oscPanelBounds_, "OSCILLATORS");
+  drawPanel(filterPanelBounds_, "FILTER");
+  drawPanel(envPanelBounds_, "ENVELOPE");
+
+  // 3. Draw widgets with translation
+  // Since widgets are components, JUCE usually handles their painting if they are peers.
+  // However, Zenith PolySynth uses a mixed mode or custom rendering if this method is active.
+  // Assuming SkiaRenderer handles the top-level canvas.
+  // If SkiaWidget::drawSkia is virtual and widgets are not JUCE components, we call them.
+  // BUT: ZenithKnob is a JUCE Component.
+
+  // IMPORTANT: If widgets are JUCE components and are visible, JUCE's paint() mechanism
+  // might interfere or they might need to be drawn manually if we are suppressing standard paint.
+  // In `ZenithKnob`, `paint()` is likely overridden to call `drawSkia`.
+
+  // The `SkiaRenderer` implementation typically wraps `paint` calls.
+  // If we are here, we are drawing to the SkCanvas.
+
   for (const auto &widget : widgets_) {
     if (widget->isVisible()) {
       canvas->save();
