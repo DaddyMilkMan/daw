@@ -177,10 +177,14 @@ void ObservabilityAgent::log(const char* rawMessage) noexcept {
 void ObservabilityAgent::logStructured(LogLevel level,
                                        const juce::String& message,
                                        const juce::var& data) {
-  // TODO: Serialize structured data to JSON
-  // TODO: Queue for async processing
+  // Serialize structured data to JSON (compact format)
+  juce::String jsonString = juce::JSON::toString(data, true);
   
-  log(level, message);
+  // Combine message and JSON
+  juce::String combined = message + " " + jsonString;
+
+  // Delegate to standard logging
+  log(level, combined);
 }
 
 //==============================================================================
