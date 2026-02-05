@@ -586,6 +586,41 @@ if(BUILD_TESTS)
     target_compile_features(ClockSyncAgentTests PRIVATE cxx_std_20)
 
     # =========================================================================
+    # ScheduledTransportAgentTests - Lightweight test for ScheduledTransportAgent
+    # =========================================================================
+    add_executable(ScheduledTransportAgentTests)
+
+    target_sources(ScheduledTransportAgentTests PRIVATE
+        "agents/ScheduledTransportAgent/tests/RunTests.cpp"
+        "agents/ScheduledTransportAgent/tests/ScheduledTransportAgentTest.cpp"
+        "agents/ScheduledTransportAgent/ScheduledTransportAgent.cpp"
+    )
+
+    target_include_directories(ScheduledTransportAgentTests PRIVATE
+        ${CMAKE_BINARY_DIR}/ScheduledTransportAgentTests_artefacts/JuceLibraryCode
+        ${CMAKE_BINARY_DIR}/JuceLibraryCode
+        "agents/ScheduledTransportAgent"
+    )
+
+    target_link_libraries(ScheduledTransportAgentTests PRIVATE
+        juce::juce_core
+        juce::juce_audio_basics
+    )
+
+    target_compile_definitions(ScheduledTransportAgentTests PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+        JUCE_STANDALONE_APPLICATION=1
+    )
+
+    if (UNIX AND NOT APPLE)
+        target_link_libraries(ScheduledTransportAgentTests PRIVATE pthread dl)
+    endif()
+
+    target_compile_features(ScheduledTransportAgentTests PRIVATE cxx_std_20)
+
+    # =========================================================================
     # TransportProtocolAgentTests - Tests for TransportProtocolAgent
     # =========================================================================
     add_executable(TransportProtocolAgentTests)

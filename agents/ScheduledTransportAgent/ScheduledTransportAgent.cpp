@@ -23,23 +23,34 @@ ScheduledTransportAgent::~ScheduledTransportAgent() {
 //==============================================================================
 // Transport Control
 
+void ScheduledTransportAgent::addListener(Listener* listener) {
+  listeners_.add(listener);
+}
+
+void ScheduledTransportAgent::removeListener(Listener* listener) {
+  listeners_.remove(listener);
+}
+
 void ScheduledTransportAgent::play() {
   state_.store(TransportState::Playing, std::memory_order_release);
-  // TODO: Signal transport state change
+  listeners_.call(&Listener::transportStateChanged, TransportState::Playing);
 }
 
 void ScheduledTransportAgent::stop() {
   state_.store(TransportState::Stopped, std::memory_order_release);
+  listeners_.call(&Listener::transportStateChanged, TransportState::Stopped);
   // TODO: Clear pending scheduled events
 }
 
 void ScheduledTransportAgent::record() {
   state_.store(TransportState::Recording, std::memory_order_release);
+  listeners_.call(&Listener::transportStateChanged, TransportState::Recording);
   // TODO: Enable recording mode
 }
 
 void ScheduledTransportAgent::pause() {
   state_.store(TransportState::Paused, std::memory_order_release);
+  listeners_.call(&Listener::transportStateChanged, TransportState::Paused);
 }
 
 void ScheduledTransportAgent::rewind() {
