@@ -115,6 +115,9 @@ public:
   juce::String getTooltip() override { return tooltip_; }
   void setTooltip(const juce::String &text) { tooltip_ = text; }
 
+  // ----- Keyboard -----
+  bool keyPressed(const juce::KeyPress &key) override;
+
   // ----- Rendering -----
   void drawSkia(SkCanvas *canvas) override;
 

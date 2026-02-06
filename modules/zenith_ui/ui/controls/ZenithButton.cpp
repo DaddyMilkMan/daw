@@ -183,6 +183,25 @@ void ZenithButton::focusLost(juce::Component::FocusChangeType cause) {
 
 void ZenithButton::resized() { layoutDirty_ = true; }
 
+bool ZenithButton::keyPressed(const juce::KeyPress &key) {
+  if (key == juce::KeyPress::returnKey || key == juce::KeyPress::spaceKey) {
+    if (isEnabled()) {
+      if (toggleable_) {
+        setToggleState(!toggleState_, true);
+      }
+
+      if (onClick) {
+        onClick();
+      }
+
+      return true;
+    }
+  }
+
+  // Delegate to SkiaComponent's KeyListener implementation to handle shared shortcuts (e.g. F10 context menu)
+  return SkiaComponent::keyPressed(key, this);
+}
+
 float ZenithButton::getButtonHeight() const {
   switch (size_) {
   case Size::Small:
