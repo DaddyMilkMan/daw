@@ -248,8 +248,12 @@ jobs:
 
     - name: Install Windows dependencies
       run: |
-        choco install -y ninja cmake vcpkg
-        vcpkg install --triplet=x64-windows \
+        choco install -y ninja cmake
+        # Bootstrap vcpkg
+        if (Test-Path "vcpkg") { Remove-Item -Recurse -Force "vcpkg" }
+        git clone https://github.com/microsoft/vcpkg.git
+        .\vcpkg\bootstrap-vcpkg.bat
+        .\vcpkg\vcpkg install --triplet=x64-windows \
           asio \
           boost \
           fftw3 \
@@ -269,6 +273,7 @@ jobs:
         cd build
         cmake -G "Visual Studio 17 2022" -A x64 ^
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ^
+          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake ^
           -DBUILD_SHARED_LIBS=OFF ^
           -DBUILD_TESTS=ON ^
           -DBUILD_EXAMPLES=OFF ^

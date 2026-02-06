@@ -41,7 +41,7 @@ jobs:
 
     - name: Configure CMake
       run: |
-        cmake -B build -S apps/desktop -G "${{ matrix.config.generator }}" -A ${{ matrix.config.arch }}
+        cmake -B build -S . -G "${{ matrix.config.generator }}" -A ${{ matrix.config.arch }}
         -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type || env.CMAKE_BUILD_TYPE }}
         -DCMAKE_TOOLCHAIN_FILE=${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake
         -DBUILD_TESTS=ON
@@ -98,11 +98,11 @@ jobs:
     - name: Configure CMake
       run: |
         if ${{ matrix.config.universal }}; then
-          cmake -B build -S apps/desktop \
+          cmake -B build -S . \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
             -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
         else
-          cmake -B build -S apps/desktop
+          cmake -B build -S .
         fi
         -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }}
         -DCMAKE_TOOLCHAIN_FILE=${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake
@@ -170,7 +170,7 @@ jobs:
 
     - name: Configure CMake
       run: |
-        cmake -B build -S apps/desktop \
+        cmake -B build -S . \
           -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} \
           -DCMAKE_TOOLCHAIN_FILE=${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake \
           -DBUILD_TESTS=ON
