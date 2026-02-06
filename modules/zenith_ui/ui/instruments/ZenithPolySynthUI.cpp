@@ -20,7 +20,7 @@
 #include "ZenithPolySynthUI.h"
 #include "../../instruments/ZenithFilter.h" // For FilterType
 #include "../../instruments/ZenithPolySynthDefs.h" // For FilterModelType
-#include "../../instruments/ZenithPolySynth.h"
+#include "zenith_core/instruments/ZenithPolySynth.h"
 #include "../controls/ZenithUIComponents.h" // For ZenithVisualizer
 #include "ZenithDesignSystem.h"
 #include "ZenithLayout.h"

@@ -70,6 +70,34 @@ set(ZENITH_CORE_SOURCES
     modules/zenith_core/engine/TransportController.cpp
     modules/zenith_core/engine/WCETMonitor.cpp
     modules/zenith_core/engine/ZenithLogger.cpp
+
+    # Instruments (required by Engine::initialize() registerBuiltInInstruments)
+    modules/zenith_core/instruments/Instrument.cpp
+    modules/zenith_core/instruments/InstrumentRegistry.cpp
+    modules/zenith_core/instruments/NeuralSynthEngine.cpp
+    modules/zenith_core/instruments/PresetGenerator.cpp
+    modules/zenith_core/instruments/RegisterBuiltInInstruments.cpp
+    modules/zenith_core/instruments/SoundDesignAssistant.cpp
+    modules/zenith_core/instruments/TimbreTransfer.cpp
+    modules/zenith_core/instruments/WavetableLoader.cpp
+    modules/zenith_core/instruments/ZenithEffects.cpp
+    modules/zenith_core/instruments/ZenithFilter.cpp
+    modules/zenith_core/instruments/ZenithOscillator.cpp
+    modules/zenith_core/instruments/ZenithPolySynth.cpp
+    modules/zenith_core/instruments/ZenithPolySynthEditor.cpp
+    modules/zenith_core/instruments/ZenithPolySynthParameterManager.cpp
+    modules/zenith_core/instruments/ZenithPolySynthVoice.cpp
+    modules/zenith_core/instruments/ZenithPresetManager.cpp
+    modules/zenith_core/instruments/ZenithSampler.cpp
+    modules/zenith_core/instruments/ZenithSamplerEditor.cpp
+    modules/zenith_core/instruments/ZenithUltraSynth.cpp
+    modules/zenith_core/instruments/ZenithUltraSynth_Example.cpp
+
+    # Plugin formats / wrappers used by PluginHost.
+    modules/zenith_core/plugins/InternalPluginFormat.cpp
+    modules/zenith_core/plugins/GrokAIPlugin.cpp
+    modules/zenith_core/plugins/ZenithPlugin.cpp
+    modules/zenith_core/plugins/ZenithPluginEditor.cpp
 )
 
 # Optional (experimental): Lua scripting processor.

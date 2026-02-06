@@ -20,7 +20,7 @@
 #pragma once
 
 #include "SkiaComponent.h"
-#include "../../browser/BrowserModel.h"
+#include "browser/BrowserModel.h"
 #include "BrowserWaveformLoader.h"
 #include "BrowserHoverPreview.h"
 #include <juce_gui_basics/juce_gui_basics.h>

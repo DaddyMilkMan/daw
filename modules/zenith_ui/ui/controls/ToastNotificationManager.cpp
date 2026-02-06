@@ -1,592 +1,489 @@
 /*
   ToastNotificationManager.cpp
 
-  Implementation of the toast notification system
+  Minimal, buildable toast notification implementation.
+
+  The previous implementation mixed non-existent JUCE APIs and had a header
+  include-cycle with UIErrorHandler. This version keeps the public surface
+  area from ToastNotificationManager.h but implements a simpler, correct JUCE
+  component-based toast system.
 */
 
 #include "ToastNotificationManager.h"
-#include <zenith_core/utils/PlatformLogUtils.h>
+#include "../framework/UIErrorHandler.h" // UIError + ErrorSeverity
 #include <algorithm>
 
 namespace zenith::UI {
 
-ToastNotification::ToastNotification(const juce::String& message, ToastType type,
-                                   const Callback& onAction,
-                                   const juce::String& actionText,
-                                   int duration)
-    : message_(message)
-    , type_(type)
-    , onAction_(onAction)
-    , actionText_(actionText)
-    , durationMs_(duration)
-    , isActive_(false)
-    , position_(ToastPosition::BottomRight)
-    , margin_(10)
-    , isHovered_(false)
-    , animationProgress_(0.0f) {
-
-    setWantsKeyboardFocus(true);
-    setInterceptsMouseClicks(true, true);
-
-    // Set up dismiss timer
-    if (durationMs_ > 0) {
-        dismissTimer_.startTimer(durationMs_);
-    }
+//==============================================================================
+ToastNotification::ToastNotification(const juce::String& message,
+                                     ToastType type,
+                                     const Callback& onAction,
+                                     const juce::String& actionText,
+                                     int duration)
+    : message_(message),
+      type_(type),
+      onAction_(onAction),
+      actionText_(actionText),
+      durationMs_(duration),
+      isActive_(false),
+      position_(ToastPosition::BottomRight),
+      margin_(10),
+      isHovered_(false),
+      animationProgress_(0.0f) {
+  setWantsKeyboardFocus(true);
+  setInterceptsMouseClicks(true, true);
 }
 
 void ToastNotification::paint(juce::Graphics& g) {
-    auto bounds = getLocalBounds().toFloat();
-    auto config = getConfig();
+  const auto cfg = getConfig();
+  const auto bounds = getLocalBounds().toFloat();
 
-    // Draw shadow
-    if (config.shadowBlur > 0) {
-        g.setColour(config.shadowColour.withAlpha(0.3f));
-        g.drawRoundedRectangle(bounds.reduced(2.0f),
-                              6.0f,
-                              config.shadowBlur + 2);
-    }
+  g.setColour(cfg.background);
+  g.fillRoundedRectangle(bounds, 8.0f);
 
-    // Draw background
-    g.setColour(config.background);
-    g.fillRoundedRectangle(bounds, 6.0f);
+  g.setColour(cfg.border);
+  g.drawRoundedRectangle(bounds, 8.0f, 1.0f);
 
-    // Draw border
-    g.setColour(config.border);
-    g.drawRoundedRectangle(bounds, 6.0f, 1.0f);
+  auto content = getLocalBounds().reduced(12);
+  g.setColour(cfg.text);
+  g.setFont(g.getCurrentFont().withHeight(14.0f));
+  g.drawFittedText(message_, content, juce::Justification::topLeft, 3);
 
-    // Draw text
-    g.setColour(config.text);
-    auto font = g.getCurrentFont().withHeight(14.0f);
-    g.setFont(font);
+  if (onAction_ && actionText_.isNotEmpty()) {
+    auto btn = content.removeFromBottom(26);
+    btn = btn.removeFromRight(90).reduced(0, 2);
 
-    // Word wrap the message
-    auto textBounds = bounds.reduced(12.0f, 8.0f);
-    auto wrappedText = font.getHorizontalLayout().computeWrappedText(message_, textBounds.getWidth());
-    g.drawMultiLineText(wrappedText, textBounds.getX(), textBounds.getY(), textBounds.getWidth());
+    g.setColour(isHovered_ ? cfg.text : cfg.border);
+    g.fillRoundedRectangle(btn.toFloat(), 6.0f);
 
-    // Draw action button if present
-    if (onAction_ && actionText_.isNotEmpty()) {
-        auto buttonBounds = textBounds.withTrimmedTop(textBounds.getHeight() - 30);
-        buttonBounds = buttonBounds.withWidth(80).withTrimmedRight(20);
-
-        // Button background
-        auto buttonColour = isHovered_ ? config.text : config.background;
-        g.setColour(buttonColour);
-        g.fillRoundedRectangle(buttonBounds.toFloat(), 4.0f);
-
-        // Button text
-        g.setColour(isHovered_ ? config.background : config.text);
-        g.setFont(font.withHeight(12.0f));
-        g.drawText(actionText_, buttonBounds, juce::Justification::centred);
-    }
-
-    // Draw icon if present
-    if (config.icon.isNotEmpty()) {
-        auto iconBounds = bounds.reduced(12.0f).withTrimmedRight(bounds.getWidth() - 30);
-        g.setColour(config.text);
-        // Placeholder for icon - would need actual icon drawing
-        g.drawEllipse(iconBounds, 1.0f);
-    }
+    g.setColour(isHovered_ ? cfg.background : cfg.text);
+    g.setFont(g.getCurrentFont().withHeight(12.0f));
+    g.drawFittedText(actionText_, btn, juce::Justification::centred, 1);
+  }
 }
 
 void ToastNotification::resized() {
-    auto config = getConfig();
-    auto contentHeight = 40; // Approximate height based on content
+  // Layout is calculated in paint using the current bounds.
+}
 
-    if (onAction_) {
-        contentHeight += 20; // Add space for action button
+void ToastNotification::mouseEnter(const juce::MouseEvent&) {
+  isHovered_ = true;
+  repaint();
+}
+
+void ToastNotification::mouseExit(const juce::MouseEvent&) {
+  isHovered_ = false;
+  repaint();
+}
+
+void ToastNotification::mouseDown(const juce::MouseEvent& e) {
+  if (onAction_ && actionText_.isNotEmpty()) {
+    auto content = getLocalBounds().reduced(12);
+    auto btn = content.removeFromBottom(26);
+    btn = btn.removeFromRight(90).reduced(0, 2);
+    if (btn.contains(e.getPosition())) {
+      onAction_();
+      dismiss();
+      return;
     }
+  }
 
-    setBounds(calculateTargetPosition().withHeight(contentHeight));
-}
-
-void ToastNotification::mouseEnter(const juce::MouseEvent& event) {
-    isHovered_ = true;
-    repaint();
-}
-
-void ToastNotification::mouseExit(const juce::MouseEvent& event) {
-    isHovered_ = false;
-    repaint();
-}
-
-void ToastNotification::mouseDown(const juce::MouseEvent& event) {
-    // Check if action button was clicked
-    if (onAction_) {
-        auto textBounds = getLocalBounds().reduced(12.0f, 8.0f);
-        auto buttonBounds = textBounds.withTrimmedTop(textBounds.getHeight() - 30);
-        buttonBounds = buttonBounds.withWidth(80).withTrimmedRight(20);
-
-        if (buttonBounds.contains(event.position)) {
-            // Action button clicked
-            if (onAction_) {
-                onAction_();
-            }
-            dismiss();
-            return;
-        }
-    }
-
-    // Dismiss on click if no action or outside action button
-    dismiss();
+  dismiss();
 }
 
 bool ToastNotification::keyPressed(const juce::KeyPress& key) {
-    if (key.isKeyCode(juce::KeyPress::escapeKey)) {
-        dismiss();
-        return true;
-    }
-    else if (key.isKeyCode(juce::KeyPress::returnKey) && onAction_) {
-        if (onAction_) {
-            onAction_();
-        }
-        dismiss();
-        return true;
-    }
-    return false;
+  if (key == juce::KeyPress::escapeKey) {
+    dismiss();
+    return true;
+  }
+  return false;
 }
 
-void ToastNotification::drawSkia(SkCanvas* canvas) {
-    // Basic Skia rendering for toast
-    // In a real implementation, we would use Skia primitives here
-    // for better performance and glassmorphism.
-    // For now, we'll let juce::Graphics handled it via paint(),
-    // but we need this implementation to make the class non-abstract.
+void ToastNotification::drawSkia(SkCanvas*) {
+  // Intentionally empty: this component uses JUCE paint(). Skia integration
+  // can be added later without breaking the build.
 }
 
 void ToastNotification::show() {
-    isActive_.store(true);
-    animateIn();
+  isActive_.store(true);
+  setVisible(true);
+
+  if (durationMs_ > 0) {
+    startTimer(durationMs_);
+  }
 }
 
 void ToastNotification::dismiss() {
-    if (isActive_.exchange(false)) {
-        animateOut();
-    }
+  stopTimer();
+  isActive_.store(false);
+  setVisible(false);
 }
 
-bool ToastNotification::isActive() const {
-    return isActive_.load();
-}
+bool ToastNotification::isActive() const { return isActive_.load(); }
 
-void ToastNotification::animateIn() {
-    animationProgress_ = 0.0f;
-    animateToTarget();
-}
-
-void ToastNotification::animateOut() {
-    animationProgress_ = 1.0f;
-    animateToTarget();
-}
+void ToastNotification::animateIn() { show(); }
+void ToastNotification::animateOut() { dismiss(); }
 
 void ToastNotification::updateAnimation(float progress) {
-    animationProgress_ = progress;
-    currentBounds = currentBounds.withTrimmedTop(10 * (1.0f - progress));
-    repaint();
+  animationProgress_ = progress;
+  repaint();
 }
 
-void ToastNotification::setPosition(ToastPosition position) {
-    position_ = position;
-    resized(); // Recalculate position
-}
-
-void ToastNotification::setMargin(int margin) {
-    margin_ = margin;
-    resized(); // Recalculate position
-}
+void ToastNotification::setPosition(ToastPosition position) { position_ = position; }
+void ToastNotification::setMargin(int margin) { margin_ = margin; }
 
 void ToastNotification::setDuration(int durationMs) {
-    durationMs_ = durationMs;
-    if (isActive_ && durationMs_ > 0) {
-        dismissTimer_.startTimer(durationMs_);
-    }
+  durationMs_ = durationMs;
+  if (isActive() && durationMs_ > 0) {
+    startTimer(durationMs_);
+  }
 }
 
 void ToastNotification::setAction(const Callback& callback, const juce::String& text) {
-    onAction_ = callback;
-    actionText_ = text;
-    resized(); // Update layout
-    repaint();
+  onAction_ = callback;
+  actionText_ = text;
+  repaint();
 }
 
-void ToastNotification::setDismissible(bool dismissible) {
-    if (!dismissible && isActive_) {
-        dismissTimer_.stopTimer();
-    }
+void ToastNotification::setDismissible(bool) {
+  // Current implementation always allows dismissal.
 }
+
+ToastType ToastNotification::getType() const { return type_; }
+juce::String ToastNotification::getMessage() const { return message_; }
+int ToastNotification::getDuration() const { return durationMs_; }
 
 ToastNotification::ToastConfig ToastNotification::getConfig() const {
-    ToastConfig config;
+  ToastConfig cfg{};
 
-    switch (type_) {
-        case ToastType::Info:
-            config.background = ZenithDesignSystem::getColor(ZenithDesignSystem::Colors::Primary).withAlpha(0.9f);
-            config.border = ZenithDesignSystem::getColor(ZenithDesignSystem::Colors::Primary);
-            config.text = juce::Colours::white;
-            config.actionText = juce::Colours::white;
-            config.icon = "ℹ";
-            config.shadowBlur = 10;
-            config.shadowColour = ZenithDesignSystem::getColor(ZenithDesignSystem::Colors::Primary);
-            break;
+  // If the design system is available, prefer it; otherwise use JUCE defaults.
+  auto primary = juce::Colours::dodgerblue;
+  auto warning = juce::Colours::yellow;
+  auto error = juce::Colours::red;
+  auto success = juce::Colours::green;
 
-        case ToastType::Warning:
-            config.background = ZenithDesignSystem::getColor(ZenithDesignSystem::Colors::Warning).withAlpha(0.9f);
-            config.border = ZenithDesignSystem::getColor(ZenithDesignSystem::Colors::Warning);
-            config.text = juce::Colours::black;
-            config.actionText = juce::Colours::black;
-            config.icon = "⚠";
-            config.shadowBlur = 10;
-            config.shadowColour = ZenithDesignSystem::getColor(ZenithDesignSystem::Colors::Warning);
-            break;
+  switch (type_) {
+  case ToastType::Info:
+    cfg.background = primary.withAlpha(0.92f);
+    cfg.border = primary;
+    cfg.text = juce::Colours::white;
+    break;
+  case ToastType::Warning:
+    cfg.background = warning.withAlpha(0.92f);
+    cfg.border = warning.darker(0.2f);
+    cfg.text = juce::Colours::black;
+    break;
+  case ToastType::Error:
+    cfg.background = error.withAlpha(0.92f);
+    cfg.border = error.darker(0.2f);
+    cfg.text = juce::Colours::white;
+    break;
+  case ToastType::Success:
+    cfg.background = success.withAlpha(0.92f);
+    cfg.border = success.darker(0.2f);
+    cfg.text = juce::Colours::white;
+    break;
+  case ToastType::Critical:
+    cfg.background = error.darker(0.2f).withAlpha(0.95f);
+    cfg.border = error;
+    cfg.text = juce::Colours::white;
+    break;
+  }
 
-        case ToastType::Error:
-            config.background = ZenithDesignSystem::getColor(ZenithDesignSystem::Colors::Error).withAlpha(0.9f);
-            config.border = ZenithDesignSystem::getColor(ZenithDesignSystem::Colors::Error);
-            config.text = juce::Colours::white;
-            config.actionText = juce::Colours::white;
-            config.icon = "✕";
-            config.shadowBlur = 15;
-            config.shadowColour = ZenithDesignSystem::getColor(ZenithDesignSystem::Colors::Error);
-            break;
-
-        case ToastType::Success:
-            config.background = ZenithDesignSystem::getColor(ZenithDesignSystem::Colors::Success).withAlpha(0.9f);
-            config.border = ZenithDesignSystem::getColor(ZenithDesignSystem::Colors::Success);
-            config.text = juce::Colours::white;
-            config.actionText = juce::Colours::white;
-            config.icon = "✓";
-            config.shadowBlur = 10;
-            config.shadowColour = ZenithDesignSystem::getColor(ZenithDesignSystem::Colors::Success);
-            break;
-
-        case ToastType::Critical:
-            config.background = juce::Colours::darkred.withAlpha(0.95f);
-            config.border = juce::Colours::red;
-            config.text = juce::Colours::white;
-            config.actionText = juce::Colours::white;
-            config.icon = "⚡";
-            config.shadowBlur = 20;
-            config.shadowColour = juce::Colours::red;
-            break;
-    }
-
-    return config;
+  cfg.actionText = cfg.text;
+  cfg.shadowBlur = 0;
+  cfg.shadowColour = juce::Colours::black;
+  return cfg;
 }
 
 juce::Rectangle<int> ToastNotification::calculateTargetPosition() const {
-    return getDefaultBounds(position_);
+  // The manager sets bounds; keep any previous target if present.
+  return targetBounds_.isEmpty() ? getBounds() : targetBounds_;
 }
 
 void ToastNotification::timerCallback() {
-    dismiss();
+  // Auto-dismiss after duration.
+  dismiss();
+
+  if (auto* m = dynamic_cast<ToastNotificationManager*>(getParentComponent())) {
+    m->dismissToast(this);
+  }
 }
 
 void ToastNotification::animateToTarget() {
-    // Simple slide animation - in a real implementation, you'd use
-    // the animation system or a custom animator
-    updateAnimation(animationProgress_);
+  // No-op in this minimal implementation.
 }
 
+//==============================================================================
 ToastNotificationManager& ToastNotificationManager::getInstance() {
-    static ToastNotificationManager instance;
-    return instance;
+  static ToastNotificationManager instance;
+  return instance;
 }
 
 ToastNotificationManager::ToastNotificationManager()
-    : maxVisibleToasts_(3)
-    , defaultPosition_(ToastPosition::BottomRight)
-    , animationDurationMs_(300)
-    , toastMargin_(10) {
-
-    setName("ToastNotificationManager");
-    createParentIfNeeded();
-
-    // Start timer for processing queue
-    startTimer(100); // Check queue every 100ms
+    : maxVisibleToasts_(3),
+      defaultPosition_(ToastPosition::BottomRight),
+      animationDurationMs_(180),
+      toastMargin_(10) {
+  setName("ToastNotificationManager");
+  setInterceptsMouseClicks(false, false);
+  startTimerHz(30);
 }
 
-ToastNotificationManager::~ToastNotificationManager() {
-    clearAll();
+ToastNotificationManager::~ToastNotificationManager() { clearAll(); }
+
+void ToastNotificationManager::createParentIfNeeded() {
+  // If the manager isn't attached anywhere, put it on the desktop so toasts can
+  // actually appear. This is "best effort"; callers can embed it themselves.
+  if (getParentComponent() != nullptr || isOnDesktop()) {
+    return;
+  }
+
+  addToDesktop(juce::ComponentPeer::windowIsTemporary);
+  setAlwaysOnTop(true);
+
+  if (auto* display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()) {
+    setBounds(display->userArea);
+  } else {
+    setBounds(0, 0, 800, 600);
+  }
+
+  setVisible(true);
 }
 
 void ToastNotificationManager::showToast(const juce::String& message,
-                                       const Callback& onAction,
-                                       ToastType type,
-                                       const juce::String& actionText,
-                                       int duration) {
-    std::lock_guard<std::mutex> lock(mutex_);
+                                        const Callback& onAction,
+                                        ToastType type,
+                                        const juce::String& actionText,
+                                        int duration) {
+  std::lock_guard<std::mutex> lock(mutex_);
 
-    auto toast = std::make_unique<ToastNotification>(message, type, onAction, actionText, duration);
-    toast->setPosition(defaultPosition_);
+  createParentIfNeeded();
 
-    ToastQueueItem item;
-    item.toast = std::move(toast);
-    item.timestamp = juce::Time::getCurrentTime();
-    item.isProcessing = false;
+  // If we're at capacity, drop the oldest.
+  while (static_cast<int>(activeToasts_.size()) >= maxVisibleToasts_) {
+    dismissToast(activeToasts_.front());
+  }
 
-    toastQueue_.push_back(std::move(item));
+  auto toast = std::make_unique<ToastNotification>(message, type, onAction, actionText, duration);
+  toast->setPosition(defaultPosition_);
+  toast->setMargin(toastMargin_);
 
-    ZENITH_LOG_INFO("Toast queued: " + message.toStdString());
+  addAndMakeVisible(toast.get());
+  toast->show();
+
+  ToastQueueItem item;
+  item.toast = std::move(toast);
+  item.timestamp = juce::Time::getCurrentTime();
+  item.isProcessing = true;
+
+  auto* raw = item.toast.get();
+  toastQueue_.push_back(std::move(item));
+  activeToasts_.push_back(raw);
+
+  positionActiveToasts();
 }
 
 void ToastNotificationManager::showToast(const UIError& error, const Callback& onAction) {
-    juce::String message = error.message;
+  ToastType type = ToastType::Info;
+  switch (error.severity) {
+  case ErrorSeverity::Fatal:
+  case ErrorSeverity::Critical:
+    type = ToastType::Critical;
+    break;
+  case ErrorSeverity::Error:
+    type = ToastType::Error;
+    break;
+  case ErrorSeverity::Warning:
+    type = ToastType::Warning;
+    break;
+  case ErrorSeverity::Info:
+  case ErrorSeverity::Debug:
+    type = ToastType::Info;
+    break;
+  }
 
-    if (error.details.isNotEmpty()) {
-        message += ": " + error.details;
-    }
-
-    showToast(message, onAction,
-              convertSeverityToToastType(error.severity),
-              error.actionText.isNotEmpty() ? error.actionText : "OK",
-              error.severity == ErrorSeverity::Fatal ? 0 : 5000); // No auto-dismiss for fatal
+  showToast(juce::String(error.message), onAction, type, "OK", error.severity == ErrorSeverity::Fatal ? 0 : 5000);
 }
 
 void ToastNotificationManager::clearAll() {
-    std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
 
-    for (auto* toast : activeToasts_) {
-        if (toast->isActive()) {
-            toast->dismiss();
-        }
+  for (auto* toast : activeToasts_) {
+    if (toast) {
+      removeChildComponent(toast);
     }
+  }
 
-    toastQueue_.clear();
-    activeToasts_.clear();
+  activeToasts_.clear();
+  toastQueue_.clear();
 
-    positionStacks_.clear();
+  repaint();
 }
 
 void ToastNotificationManager::dismissToast(ToastNotification* toast) {
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    auto it = std::find(activeToasts_.begin(), activeToasts_.end(), toast);
-    if (it != activeToasts_.end()) {
-        removeToast(toast);
-    }
+  if (!toast) return;
+  removeToast(toast);
 }
 
 void ToastNotificationManager::setMaxVisibleToasts(int max) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    maxVisibleToasts_ = juce::jmax(1, max);
-
-    // Trim active toasts if needed
-    while (activeToasts_.size() > maxVisibleToasts_) {
-        auto* toast = activeToasts_.back();
-        if (toast->isActive()) {
-            toast->dismiss();
-        }
-    }
+  std::lock_guard<std::mutex> lock(mutex_);
+  maxVisibleToasts_ = std::max(1, max);
 }
 
 void ToastNotificationManager::setDefaultPosition(ToastPosition position) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    defaultPosition_ = position;
+  std::lock_guard<std::mutex> lock(mutex_);
+  defaultPosition_ = position;
+  positionActiveToasts();
 }
 
 void ToastNotificationManager::setAnimationDuration(int durationMs) {
-    animationDurationMs_ = juce::jmax(0, durationMs);
+  std::lock_guard<std::mutex> lock(mutex_);
+  animationDurationMs_ = std::max(0, durationMs);
 }
 
 void ToastNotificationManager::setToastMargin(int margin) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    toastMargin_ = juce::jmax(0, margin);
+  std::lock_guard<std::mutex> lock(mutex_);
+  toastMargin_ = std::max(0, margin);
+  positionActiveToasts();
 }
 
 bool ToastNotificationManager::hasActiveToasts() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return !activeToasts_.empty();
+  std::lock_guard<std::mutex> lock(mutex_);
+  return !activeToasts_.empty();
 }
 
 int ToastNotificationManager::getActiveToastCount() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return activeToasts_.size();
+  std::lock_guard<std::mutex> lock(mutex_);
+  return static_cast<int>(activeToasts_.size());
 }
 
-void ToastNotificationManager::paint(juce::Graphics& g) {
-    // Background overlay when toasts are active
-    if (hasActiveToasts()) {
-        g.setColour(juce::Colours::black.withAlpha(0.1f));
-        g.fillAll();
-    }
+void ToastNotificationManager::paint(juce::Graphics&) {
+  // Manager itself is transparent; toasts paint themselves.
 }
 
-void ToastNotificationManager::resized() {
-    positionActiveToasts();
-}
+void ToastNotificationManager::resized() { positionActiveToasts(); }
 
 void ToastNotificationManager::timerCallback() {
-    std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
 
-    // Process queue if we have space
-    if (activeToasts_.size() < maxVisibleToasts_) {
-        processNextToast();
+  // Reap inactive toasts.
+  for (auto it = activeToasts_.begin(); it != activeToasts_.end();) {
+    auto* toast = *it;
+    if (!toast || !toast->isActive()) {
+      if (toast) removeChildComponent(toast);
+      it = activeToasts_.erase(it);
+    } else {
+      ++it;
     }
+  }
 
-    // Clean up inactive toasts
-    activeToasts_.erase(
-        std::remove_if(activeToasts_.begin(), activeToasts_.end(),
-            [](ToastNotification* toast) {
-                return !toast->isActive();
-            }),
-        activeToasts_.end());
+  // Remove any queue items that no longer have an active toast.
+  toastQueue_.erase(
+      std::remove_if(toastQueue_.begin(), toastQueue_.end(),
+                     [](const ToastQueueItem& item) { return item.toast == nullptr || !item.toast->isActive(); }),
+      toastQueue_.end());
 
-    // Reposition active toasts
-    positionActiveToasts();
+  positionActiveToasts();
+}
+
+//------------------------------------------------------------------------------
+// Internals (kept for API compatibility; simplified behavior)
+//------------------------------------------------------------------------------
+void ToastNotificationManager::showToastInternal(const ToastNotification::Callback& onAction,
+                                                ToastType type,
+                                                const juce::String& actionText,
+                                                int duration) {
+  showToast("Toast", onAction, type, actionText, duration);
 }
 
 void ToastNotificationManager::processNextToast() {
-    if (toastQueue_.empty()) {
-        return;
-    }
-
-    // Find next unprocessed toast
-    for (auto& item : toastQueue_) {
-        if (!item.isProcessing) {
-            item.isProcessing = true;
-            auto* toast = item.toast.get();
-
-            // Add to active list
-            activeToasts_.push_back(toast);
-
-            // Show toast
-            toast->show();
-
-            ZENITH_LOG_INFO("Toast shown: " + toast->getMessage().toStdString());
-            break;
-        }
-    }
+  // Queueing is not implemented in the minimal version.
 }
 
 void ToastNotificationManager::positionActiveToasts() {
-    for (size_t i = 0; i < activeToasts_.size(); i++) {
-        auto* toast = activeToasts_[i];
-        auto bounds = calculateStackedPosition(defaultPosition_, (int)i);
-        toast->setBounds(bounds);
-    }
+  if (activeToasts_.empty()) return;
+
+  const auto* display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay();
+  const auto area = display ? display->userArea : getLocalBounds();
+
+  const int width = 360;
+  const int baseHeight = 80;
+
+  for (int i = 0; i < static_cast<int>(activeToasts_.size()); ++i) {
+    auto* toast = activeToasts_[i];
+    if (!toast) continue;
+
+    const int height = baseHeight;
+    auto b = calculateStackedPosition(defaultPosition_, i).withSizeKeepingCentre(width, height);
+    toast->setBounds(b);
+  }
 }
 
 void ToastNotificationManager::removeToast(ToastNotification* toast) {
-    auto it = std::find(activeToasts_.begin(), activeToasts_.end(), toast);
-    if (it != activeToasts_.end()) {
-        activeToasts_.erase(it);
+  if (!toast) return;
 
-        // Clean up position stacks
-        for (auto& stackPair : positionStacks_) {
-            auto& stack = stackPair.second;
-            stack.positions.erase(
-                std::remove(stack.positions.begin(), stack.positions.end(), toast->getBounds()),
-                stack.positions.end());
-        }
-    }
-}
+  toast->dismiss();
+  removeChildComponent(toast);
 
-void ToastNotificationManager::createParentIfNeeded() {
-    if (!parent_.getComponent()) {
-        // Find or create a parent component to host the manager
-        // This is a simplified version - in practice you'd want to attach to the main window
-        auto* mainComp = juce::TopLevelWindow::getActiveTopLevelWindow();
-        if (mainComp) {
-            parent_ = mainComp;
-        } else {
-            // Create a dummy parent if needed
-            parent_ = new juce::Component();
-            parent_->addToDesktop(juce::ComponentPeer::windowIsTemporary);
-        }
-    }
+  activeToasts_.erase(std::remove(activeToasts_.begin(), activeToasts_.end(), toast), activeToasts_.end());
+  toastQueue_.erase(
+      std::remove_if(toastQueue_.begin(), toastQueue_.end(),
+                     [toast](const ToastQueueItem& item) { return item.toast.get() == toast; }),
+      toastQueue_.end());
+
+  positionActiveToasts();
 }
 
 juce::Rectangle<int> ToastNotificationManager::getDefaultBounds(ToastPosition position) const {
-    auto* parent = parent_.getComponent();
-    if (!parent) {
-        return juce::Rectangle<int>(100, 100, 300, 50);
-    }
+  const auto* display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay();
+  const auto area = display ? display->userArea : getLocalBounds();
 
-    auto screenBounds = parent->getScreenBounds();
-    auto toastWidth = 300;
-    auto toastHeight = 60;
-    int margin = toastMargin_;
+  constexpr int width = 360;
+  constexpr int height = 80;
+  constexpr int pad = 16;
 
-    switch (position) {
-        case ToastPosition::TopLeft:
-            return juce::Rectangle<int>(screenBounds.getX() + margin,
-                                      screenBounds.getY() + margin,
-                                      toastWidth, toastHeight);
+  switch (position) {
+  case ToastPosition::TopLeft:
+    return {area.getX() + pad, area.getY() + pad, width, height};
+  case ToastPosition::TopRight:
+    return {area.getRight() - pad - width, area.getY() + pad, width, height};
+  case ToastPosition::BottomLeft:
+    return {area.getX() + pad, area.getBottom() - pad - height, width, height};
+  case ToastPosition::BottomRight:
+    return {area.getRight() - pad - width, area.getBottom() - pad - height, width, height};
+  case ToastPosition::TopCenter:
+    return {area.getCentreX() - width / 2, area.getY() + pad, width, height};
+  case ToastPosition::BottomCenter:
+    return {area.getCentreX() - width / 2, area.getBottom() - pad - height, width, height};
+  case ToastPosition::Center:
+    return {area.getCentreX() - width / 2, area.getCentreY() - height / 2, width, height};
+  }
 
-        case ToastPosition::TopRight:
-            return juce::Rectangle<int>(screenBounds.getRight() - toastWidth - margin,
-                                      screenBounds.getY() + margin,
-                                      toastWidth, toastHeight);
-
-        case ToastPosition::BottomLeft:
-            return juce::Rectangle<int>(screenBounds.getX() + margin,
-                                      screenBounds.getBottom() - toastHeight - margin,
-                                      toastWidth, toastHeight);
-
-        case ToastPosition::BottomRight:
-            return juce::Rectangle<int>(screenBounds.getRight() - toastWidth - margin,
-                                      screenBounds.getBottom() - toastHeight - margin,
-                                      toastWidth, toastHeight);
-
-        case ToastPosition::TopCenter:
-            return juce::Rectangle<int>(screenBounds.getCentreX() - toastWidth / 2,
-                                      screenBounds.getY() + margin,
-                                      toastWidth, toastHeight);
-
-        case ToastPosition::BottomCenter:
-            return juce::Rectangle<int>(screenBounds.getCentreX() - toastWidth / 2,
-                                      screenBounds.getBottom() - toastHeight - margin,
-                                      toastWidth, toastHeight);
-
-        case ToastPosition::Center:
-            return juce::Rectangle<int>(screenBounds.getCentreX() - toastWidth / 2,
-                                      screenBounds.getCentreY() - toastHeight / 2,
-                                      toastWidth, toastHeight);
-    }
-
-    return juce::Rectangle<int>(0, 0, toastWidth, toastHeight);
+  return {area.getRight() - pad - width, area.getBottom() - pad - height, width, height};
 }
 
 juce::Rectangle<int> ToastNotificationManager::calculateStackedPosition(ToastPosition position, int index) const {
-    auto baseBounds = getDefaultBounds(position);
-    int offset = (index * (60 + toastMargin_)); // 60px height + margin
+  auto base = getDefaultBounds(position);
 
-    switch (position) {
-        case ToastPosition::TopLeft:
-        case ToastPosition::TopCenter:
-        case ToastPosition::TopRight:
-            return baseBounds.withY(baseBounds.getY() + offset);
-
-        case ToastPosition::BottomLeft:
-        case ToastPosition::BottomCenter:
-        case ToastPosition::BottomRight:
-            return baseBounds.withY(baseBounds.getY() - offset);
-
-        case ToastPosition::Center:
-            // Center toasts stack vertically in the middle
-            return baseBounds.withY(baseBounds.getY() + (index - activeToasts_.size() / 2) * 70);
-    }
-
-    return baseBounds;
+  // Stack upward for bottom positions, downward for top positions.
+  const int dy = (base.getHeight() + toastMargin_) * index;
+  switch (position) {
+  case ToastPosition::BottomLeft:
+  case ToastPosition::BottomRight:
+  case ToastPosition::BottomCenter:
+    return base.translated(0, -dy);
+  default:
+    return base.translated(0, dy);
+  }
 }
 
-ToastType ToastNotificationManager::convertSeverityToToastType(ErrorSeverity severity) {
-    switch (severity) {
-        case ErrorSeverity::Fatal:
-            return ToastType::Critical;
-        case ErrorSeverity::Critical:
-            return ToastType::Error;
-        case ErrorSeverity::Error:
-            return ToastType::Error;
-        case ErrorSeverity::Warning:
-            return ToastType::Warning;
-        case ErrorSeverity::Info:
-            return ToastType::Info;
-        case ErrorSeverity::Debug:
-            return ToastType::Info;
-        default:
-            return ToastType::Info;
-    }
-}
+//------------------------------------------------------------------------------
+// PositionStack methods (not used in minimal version; provided for linkage)
+//------------------------------------------------------------------------------
+int ToastNotificationManager::PositionStack::getAvailablePosition() { return static_cast<int>(positions.size()); }
+void ToastNotificationManager::PositionStack::pushPosition(const juce::Rectangle<int>& pos) { positions.push_back(pos); }
+void ToastNotificationManager::PositionStack::clear() { positions.clear(); }
 
 } // namespace zenith::UI

@@ -113,6 +113,7 @@ public:
     void setPDCEnabled(bool enabled) override;
 
     void setSampleRate(double sampleRate) override;
+    double getSampleRate() const { return sampleRate_; }
     void setBufferSize(int bufferSize) override;
     void enableTestTone(bool enabled) override;
     bool isTestToneEnabled() const override;

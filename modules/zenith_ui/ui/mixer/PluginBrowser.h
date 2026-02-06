@@ -21,7 +21,7 @@
 
 #include <JuceHeader.h>
 #include "../framework/SkiaComponent.h"
-#include "../../engine/PluginHost.h"
+#include "zenith_core/engine/PluginHost.h"
 
 namespace zenith {
 

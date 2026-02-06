@@ -17,7 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "../../Settings.h"
+#include "zenith_core/engine/Settings.h"
 #include <algorithm>
 #include <random>
 

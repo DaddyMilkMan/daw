@@ -21,9 +21,9 @@
 #include "../design-system/ZenithDesignSystem.h"
 #include "../design-system/ZenithIcons.h"
 #include "../design-system/SvgIcon.h"
-#include "../../engine/ZenithLogger.h"
+#include "zenith_core/engine/ZenithLogger.h"
 #include "../../network/SecureKeyStore.h"
-#include "../../Settings.h"
+#include "zenith_core/engine/Settings.h"
 #include "../dialogs/SettingsComponent.h"
 #include <juce_core/juce_core.h>
 #include <core/SkRRect.h>

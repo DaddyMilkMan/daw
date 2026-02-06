@@ -35,7 +35,7 @@
 
 #endif
 
-#include "../../dsp/StereoAudioFifo.h"
+#include "zenith_core/dsp/StereoAudioFifo.h"
 #include "../controls/ZenithButton.h"
 #include "../framework/SkiaComponent.h"
 

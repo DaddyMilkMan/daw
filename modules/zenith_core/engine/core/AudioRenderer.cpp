@@ -148,7 +148,10 @@ void AudioRenderer::processTracks(
         for (size_t i = 0; i < tracks.size(); ++i) {
             auto* track = tracks[i];
             if (track) {
-                int numChannels = track->getChannelCount();
+                // Tracks don't currently expose a channel-count API. Use the
+                // renderer output channel count (stereo minimum) so buffers
+                // match the master mixdown shape.
+                int numChannels = std::max(2, numOutputChannels_);
                 renderContext_->trackBuffers[i] = juce::AudioBuffer<float>(numChannels, numSamples);
                 renderContext_->trackBuffers[i].clear();
             } else {
@@ -501,25 +504,11 @@ void AudioRenderer::updateTrackLatencies() {
         return;
     }
 
-    // Update track latencies based on plugins
-    for (size_t i = 0; i < tracks.size() && i < renderContext_->trackLatencies.size(); ++i) {
-        auto* track = tracks[i];
-        if (track && track->getProcessor()) {
-            // Calculate total latency for this track
-            int totalLatency = 0;
-
-            // Add plugin chain latency
-            auto& pluginChain = track->getProcessor()->getPluginChain();
-            totalLatency += pluginChain.getTotalLatencySamples();
-
-            // Add mixer channel latency
-            totalLatency += track->getProcessor()->getMixerChannel().getLatencySamples();
-
-            renderContext_->trackLatencies[i] = totalLatency;
-        } else {
-            renderContext_->trackLatencies[i] = 0;
-        }
-    }
+    // TODO: This renderer currently doesn't have access to the Track list when
+    // recalculatePDC() is called (no stored snapshot). Until that wiring exists,
+    // keep PDC latencies at 0 so the engine compiles and runs without relying
+    // on undefined state.
+    std::fill(renderContext_->trackLatencies.begin(), renderContext_->trackLatencies.end(), 0);
 
     // Calculate maximum latency
     int maxLatency = 0;

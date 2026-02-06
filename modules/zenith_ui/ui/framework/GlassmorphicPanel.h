@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include "../../Settings.h"
+#include "zenith_core/engine/Settings.h"
 #include "BackdropBlur.h"
 #include "ZenithDesignSystem.h"
 #include <core/SkBitmap.h>

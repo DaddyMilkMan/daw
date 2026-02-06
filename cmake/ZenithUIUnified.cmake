@@ -41,13 +41,11 @@ set(ZENITH_UI_UNIFIED_SOURCES
     modules/zenith_ui/ui/controls/FreezeProgressOverlay.cpp
     modules/zenith_ui/ui/controls/MarkdownComponent.cpp
     modules/zenith_ui/ui/controls/SkiaAlertWindow.cpp
-    modules/zenith_ui/ui/controls/SkiaButton.cpp
     modules/zenith_ui/ui/controls/SkiaComboBox.cpp
     modules/zenith_ui/ui/controls/SkiaFileChooser.cpp
     modules/zenith_ui/ui/controls/SkiaLabel.cpp
     modules/zenith_ui/ui/controls/SkiaListBox.cpp
     modules/zenith_ui/ui/controls/SkiaPopupMenu.cpp
-    modules/zenith_ui/ui/controls/SkiaSlider.cpp
     modules/zenith_ui/ui/controls/SkiaTextEditor.cpp
     modules/zenith_ui/ui/controls/SkiaTextInput.cpp
     modules/zenith_ui/ui/controls/SpectraAnalyzerComponent.cpp
@@ -148,6 +146,7 @@ target_include_directories(zenith_ui_unified
         $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/modules/zenith_ui/ui/unified>
         $<INSTALL_INTERFACE:include>
     PRIVATE
+        ${CMAKE_SOURCE_DIR}/modules/zenith_ui/ui
         ${CMAKE_SOURCE_DIR}/modules/zenith_ui/ui/framework
         ${CMAKE_SOURCE_DIR}/modules/zenith_ui/ui/design-system
         ${CMAKE_SOURCE_DIR}/external/vcpkg/installed/x64-linux/include/skia

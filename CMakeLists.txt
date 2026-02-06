@@ -58,6 +58,11 @@ install(FILES LICENSE NOTICE
 # User-friendly option descriptions with help text
 option(ZENITH_BUILD_APP "Build the main application (ZenithDAW executable)" ON)
 
+option(ZENITH_BUILD_UI_UNIFIED
+    "Build the experimental unified UI library (zenith_ui_unified)"
+    OFF
+)
+
 option(ZENITH_BUILD_TESTS
     "Build test suite (ZenithTests executable)"
     OFF
@@ -84,6 +89,11 @@ option(ZENITH_ENABLE_WCET
 
 option(ZENITH_FETCH_DEPS
     "Fetch dependencies automatically if not found locally"
+    ON
+)
+
+option(ENABLE_TESTS
+    "Enable unit testing"
     ON
 )
 # "When enabled, the build system will automatically download missing dependencies"
@@ -320,7 +330,9 @@ include(ZenithEngineCore)
 include(ZenithAI)
 include(ZenithCommands)
 include(ZenithEffects)
-include(ZenithUIUnified)
+if(ZENITH_BUILD_UI_UNIFIED)
+    include(ZenithUIUnified)
+endif()
 include(ZenithNetwork)
 
 # Removed conflicting ZenithTesting include
@@ -387,16 +399,21 @@ if(ZENITH_BUILD_APP)
 
     # Link libraries
     target_link_libraries(ZenithDAW
-        zenith_engine_core
-        zenith_core
-        zenith_network
-        zenith_ui_unified
-        zenith_audio_utils
-        zenith_ai
         zenith_commands
         zenith_effects
+        zenith_ai
+        zenith_network
+        zenith_engine_core
+        zenith_core
+        zenith_audio_utils
         ${ZENITH_JUCE_MODULES}
     )
+
+    if(ZENITH_BUILD_UI_UNIFIED)
+        target_link_libraries(ZenithDAW
+            zenith_ui_unified
+        )
+    endif()
 
     # Platform-specific linking
     if(APPLE)
@@ -440,7 +457,6 @@ if(ZENITH_BUILD_TESTS)
     )
 
     target_link_libraries(ZenithTests
-        zenith_ui_unified
         zenith_network
         zenith_core
         zenith_audio_utils
@@ -448,6 +464,12 @@ if(ZENITH_BUILD_TESTS)
         GTest::gtest
         GTest::gtest_main
     )
+
+    if(ZENITH_BUILD_UI_UNIFIED)
+        target_link_libraries(ZenithTests
+            zenith_ui_unified
+        )
+    endif()
 
     # Add tests
     add_test(NAME ZenithCoreTests COMMAND ZenithTests)

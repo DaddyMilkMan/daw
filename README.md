@@ -6,9 +6,9 @@ A digital audio workstation built with C++20 and JUCE. It's fast, straightforwar
 
 ## What's This About?
 
-Zenith DAW is a digital audio workstation for musicians, producers, and audio engineers. We're building it from scratch with modern C++ to be performant and reliable. The goal is to create something that works well without getting in your creative process.
+Zenith DAW is a digital audio workstation for musicians, producers, and audio engineers. I'm building it from scratch with modern C++ to be performant and reliable. The goal is to create something that works well without getting in your creative process.
 
-### Why We Started This
+### Why I Started This
 
 I kept running into DAWs that felt bloated, locked me in, or just didn't work the way I wanted. So I decided to build my own. Something that respects your time, doesn't force you into a specific workflow, and actually performs well on modern hardware.
 
@@ -49,15 +49,15 @@ Note: Currently Linux-focused but designed for cross platform use. Windows and m
 
 ## What Actually Works
 
-What we have working so far:
+What I have working so far:
 
 * Basic audio I/O on Linux
 * Some MIDI functionality
 * Built in synthesizer components (structure exists)
 * Project file save/load (basic functionality)
-* Plugin hosting infrastructure (VST3 support is built into JUCE, we're building the host code)
+* Plugin hosting infrastructure (VST3 support is built into JUCE, I'm building the host code)
 
-Note: VST3 plugin hosting works through JUCE's built in support, but we're still building the complete plugin management system.
+Note: VST3 plugin hosting works through JUCE's built in support, but I'm still building the complete plugin management system.
 
 What's mostly structure right now:
 
@@ -90,7 +90,7 @@ I'd appreciate help from all kinds of people:
 * Test builds and report issues
 * Suggest features that would help your workflow
 * Create presets and share them
-* Help us make the software more intuitive
+* Help make the software more intuitive
 
 ### If You're Just Interested
 
@@ -116,15 +116,11 @@ I'd appreciate help from all kinds of people:
 └── Content/            # Presets and samples
 ```
 
-## Community
+## Contact
 
-### Community
-
-This is a very early project. You can find me at:
+This is a very early project. You can reach me via:
 
 * **GitHub Issues:** Report bugs or ask questions
-* **GitHub Discussions:** General discussion
-* **Discord:** I'll set this up when there's more to show
 
 ## License
 

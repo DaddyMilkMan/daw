@@ -19,7 +19,7 @@
 
 #include "SkiaTextEditor.h"
 #include "ZenithDesignSystem.h"
-#include <skia/include/core/SkMaskFilter.h>
+#include <core/SkMaskFilter.h>
 
 namespace zenith {
 

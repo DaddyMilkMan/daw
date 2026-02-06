@@ -18,10 +18,9 @@
 */
 
 #include "ZenithTextInput.h"
-#include "ZenithTextInput.h"
 #include "../design-system/ColorBridge.h"
 #include "../design-system/ZenithDesignSystem.h"
-#include "../validation/ValidatorFactory.h"
+#include "../validation/Validator.h"
 #include "../validation/ValidationDecorator.h"
 #include "../validation/ValidationError.h"
 #include <zenith_core/utils/PlatformLogUtils.h>

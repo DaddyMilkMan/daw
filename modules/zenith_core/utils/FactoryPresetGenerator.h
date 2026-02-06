@@ -17,10 +17,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#pragma once
+
 #include <juce_data_structures/juce_data_structures.h>
 #include "../instruments/InstrumentPreset.h"
 #include "../instruments/ZenithPolySynth.h"
-#include "../../Source/instruments/ZenithPresetManager.h"
+#include "../instruments/ZenithPresetManager.h"
 
 namespace zenith {
 

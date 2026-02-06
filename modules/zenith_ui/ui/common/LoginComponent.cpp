@@ -21,7 +21,7 @@
 #include "GlassmorphicPanel.h"
 #include "ZenithIcons.h"
 #include "../design-system/ZenithDesignSystem.h"
-#include "../../engine/ZenithLogger.h"
+#include "zenith_core/engine/ZenithLogger.h"
 
 namespace zenith {
 

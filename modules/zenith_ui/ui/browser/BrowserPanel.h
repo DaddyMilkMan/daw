@@ -20,8 +20,8 @@
 #pragma once
 
 #include "../panels/BrowserRecentSidebar.h"
-#include "../../browser/BrowserPreviewEngine.h"
-#include "../../browser/BrowserScanner.h"
+#include "browser/BrowserPreviewEngine.h"
+#include "browser/BrowserScanner.h"
 #include "../panels/BrowserWaveformLoader.h"
 #include "../panels/BrowserSearchBar.h"
 #include "../panels/BrowserFilterBar.h"

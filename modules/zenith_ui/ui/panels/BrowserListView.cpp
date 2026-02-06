@@ -22,7 +22,7 @@
 #include "../design-system/ColorBridge.h"
 #include "../framework/GlassmorphicPanel.h"
 #include "../framework/NeonGlow.h"
-#include "../../browser/BrowserDragSource.h"
+#include "browser/BrowserDragSource.h"
 #include <algorithm>
 #include <effects/SkGradientShader.h>
 

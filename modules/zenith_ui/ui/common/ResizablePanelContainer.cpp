@@ -18,7 +18,7 @@
 */
 
 #include "ResizablePanelContainer.h"
-#include "../../engine/ZenithLogger.h"
+#include "zenith_core/engine/ZenithLogger.h"
 #include "GlassmorphicPanel.h"
 #include <effects/SkGradientShader.h>
 

@@ -21,13 +21,13 @@
 
 #include "MixerChannelComponent.h"
 #include "MixerComponent.h"
-#include "../../effects/ConsoleEmulation.h"
-#include "../../engine/EngineConstants.h"
+#include "zenith_core/effects/ConsoleEmulation.h"
+#include "zenith_core/engine/EngineConstants.h"
 #include "../common/PluginEditorWindow.h"
-#include "../../engine/Track.h"
-#include "../../engine/Engine.h"
-#include "../../engine/ProjectState.h"
-#include "../../engine/AuxBus.h"
+#include "zenith_core/engine/Track.h"
+#include "zenith_core/engine/Engine.h"
+#include "zenith_core/engine/ProjectState.h"
+#include "zenith_core/engine/AuxBus.h"
 #include "GlassmorphicPanel.h"
 #include "NeonGlow.h"
 #include "ZenithDesignSystem.h"
@@ -197,13 +197,6 @@ private:
  * A full implementation would override createAccessibilityHandler() in ZenithSlider
  * to provide AccessibilityValueInterface with current volume in dB.
  */
-
-//==============================================================================
-// MixerChannelComponent Implementation
-//==============================================================================
-
-#include "../../engine/Engine.h"
-#include "../../engine/ProjectState.h"
 
 //==============================================================================
 // MixerChannelComponent Implementation

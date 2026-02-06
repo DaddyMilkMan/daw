@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include "../../instruments/ZenithPolySynth.h"
+#include "zenith_core/instruments/ZenithPolySynth.h"
 #include "SkiaComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 

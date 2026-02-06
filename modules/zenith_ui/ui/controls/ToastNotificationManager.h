@@ -17,15 +17,18 @@
 
 #include "../framework/SkiaComponent.h"
 #include "../design-system/ZenithDesignSystem.h"
-#include "../framework/UIErrorHandler.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_core/juce_core.h>
 #include <functional>
 #include <queue>
 #include <memory>
 #include <atomic>
+#include <map>
+#include <mutex>
+#include <vector>
 
 namespace zenith::UI {
+struct UIError;
 
 /**
  * Toast notification types for styling and behavior
@@ -112,7 +115,6 @@ private:
     Callback onAction_;
     juce::String actionText_;
     int durationMs_;
-    juce::Timer dismissTimer_;
     std::atomic<bool> isActive_;
     ToastPosition position_;
     int margin_;
@@ -147,6 +149,7 @@ private:
  */
 class ToastNotificationManager : public juce::Component, public juce::Timer {
 public:
+    using Callback = ToastNotification::Callback;
     /**
      * Get the singleton instance
      */
@@ -245,14 +248,10 @@ private:
     ToastNotificationManager();
     ~ToastNotificationManager() override;
 
-    // Prevent copying
-    ToastNotificationManager(const ToastNotificationManager&) = delete;
-    ToastNotificationManager& operator=(const ToastNotificationManager&) = delete;
-
     // Private implementation
     struct ToastQueueItem {
         std::unique_ptr<ToastNotification> toast;
-        juce::Timestamp timestamp;
+        juce::Time timestamp;
         bool isProcessing;
     };
 

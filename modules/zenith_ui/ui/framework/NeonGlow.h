@@ -19,8 +19,7 @@
 
 #pragma once
 
-#include "../../Settings.h"
-#include "../../Settings.h"
+#include "zenith_core/engine/Settings.h"
 #include "ZenithDesignSystem.h"
 #include "../design-system/ColorBridge.h"
 // #include "../design-system/ZenithTheme.h" // Deprecated

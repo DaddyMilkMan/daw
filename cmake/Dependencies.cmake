@@ -146,7 +146,34 @@ endif()
 
 
 # =============================================================================
-# 5. Opus Audio Codec (Real-time Collaboration)
+# 5. GoogleTest (Unit Testing)
+# =============================================================================
+option(ENABLE_TESTS "Enable unit testing" ON)
+
+if(ENABLE_TESTS)
+    # Find or fetch GoogleTest
+    find_package(GTest QUIET)
+
+    if(NOT GTest_FOUND)
+        message(STATUS "Zenith DAW: GoogleTest not found, fetching...")
+
+        FetchContent_Declare(
+            GoogleTest
+            GIT_REPOSITORY https://github.com/google/googletest.git
+            GIT_TAG v1.14.0  # Stable version
+            GIT_SHALLOW TRUE
+        )
+        FetchContent_MakeAvailable(GoogleTest)
+    else()
+        message(STATUS "Zenith DAW: Using system GoogleTest")
+    endif()
+
+    # Find GoogleTest main
+    find_package(GTestTest QUIET)
+endif()
+
+# =============================================================================
+# 6. Opus Audio Codec (Real-time Collaboration)
 # =============================================================================
 if(ZENITH_ENABLE_COLLAB)
     find_package(Opus QUIET)

@@ -19,11 +19,10 @@
 
 #include "PluginBrowserComponent.h"
 
-
+/**
  * @file PluginBrowserComponent.cpp
  * @brief Plugin browser implementation
-
-
+ */
 
 using namespace zenith;
 
@@ -391,6 +390,5 @@ void PluginBrowserWindow::closeButtonPressed()
 {
     setVisible(false);
 }
-
 
 

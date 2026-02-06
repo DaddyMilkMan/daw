@@ -18,10 +18,10 @@
 */
 
 #include "MainLayoutComponent.h"
-#include "../../browser/BrowserModel.h"
+#include "browser/BrowserModel.h"
 #include "../../engine/Engine.h"
 #include "../../engine/PluginHost.h"
-#include "../../engine/ZenithLogger.h"
+#include "zenith_core/engine/ZenithLogger.h"
 #include "../../instruments/InstrumentRegistry.h"
 #include "../arranger/ArrangerComponent.h"
 #include "../arranger/ArrangerClipManager.h"

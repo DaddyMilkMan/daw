@@ -19,8 +19,6 @@
 
 #include "DebugConsoleComponent.h"
 
-#define ZENITH_USE_SKIA 1 // Force for debugging
-
 #ifdef ZENITH_USE_SKIA
 #include "../design-system/ZenithDesignSystem.h"
 #include "../design-system/ColorBridge.h"

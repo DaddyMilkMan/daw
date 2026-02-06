@@ -20,7 +20,7 @@
 #pragma once
 
 #include "SkiaComponent.h"
-#include "../../browser/BrowserModel.h"
+#include "browser/BrowserModel.h"
 
 #ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>

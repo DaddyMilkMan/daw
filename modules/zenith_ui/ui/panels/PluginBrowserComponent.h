@@ -17,14 +17,17 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#pragma once
 
+/**
  * @file PluginBrowserComponent.h
- * @brief Plugin browser UI for selecting and loading VST3 plugins
+ * @brief Plugin browser UI for selecting and loading plugins
  *
- * Displays available plugins from KnownPluginList and allows
- * loading them onto tracks.
+ * Displays available plugins from KnownPluginList and allows loading them onto
+ * tracks.
+ */
 
-
+#include <memory>
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_graphics/juce_graphics.h>
@@ -165,4 +168,3 @@ private:
 };
 
 } // namespace zenith
-

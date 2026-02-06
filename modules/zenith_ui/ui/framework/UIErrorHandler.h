@@ -11,7 +11,7 @@
 
 #include "../framework/SkiaComponent.h"
 #include "../design-system/ZenithDesignSystem.h"
-#include <ZenithLogger.h>
+#include "zenith_core/engine/ZenithLogger.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <functional>
 #include <vector>
@@ -19,6 +19,8 @@
 #include <atomic>
 
 namespace zenith::UI {
+// Forward declaration to avoid a hard include-cycle with ToastNotificationManager.
+enum class ToastType;
 
 /**
  * Error severity levels for categorization and handling
@@ -209,15 +211,11 @@ private:
     UIErrorHandler();
     ~UIErrorHandler() override;
 
-    // Prevent copying
-    UIErrorHandler(const UIErrorHandler&) = delete;
-    UIErrorHandler& operator=(const UIErrorHandler&) = delete;
-
     // Private implementation
     struct ErrorRecord {
         UIError error;
         bool displayed;
-        juce::UniqueId id;
+        juce::Uuid id;
     };
 
     std::vector<ErrorRecord> errorHistory_;

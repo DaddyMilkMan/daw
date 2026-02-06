@@ -21,9 +21,9 @@
 
 #include "../framework/SkiaComponent.h"
 #include "../design-system/ZenithTheme.h"
-#include "../../instruments/ZenithPresetManager.h"
-#include "../../instruments/Instrument.h"
-#include "../../engine/Engine.h"
+#include "zenith_core/instruments/ZenithPresetManager.h"
+#include "zenith_core/instruments/Instrument.h"
+#include "zenith_core/engine/Engine.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <vector>
 #include <functional>

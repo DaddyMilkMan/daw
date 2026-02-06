@@ -27,7 +27,15 @@
  */
 
 
-#if ZENITH_ENABLE_SKIA
+// ZenithSkia.h is used throughout the UI codebase as the single include point
+// for Skia types. Using "mock" types when Skia is disabled breaks the build
+// because other headers (e.g. SkiaComponent) include real Skia headers
+// unconditionally.
+//
+// Keep this header as a thin wrapper around the real Skia headers. When Skia
+// rendering is disabled, the project should disable *usage* of Skia contexts
+// and peers via compile-time flags, not by redefining core Skia types.
+#include <core/SkBlurTypes.h>
 #include <core/SkColor.h>
 #include <core/SkFont.h>
 #include <core/SkMaskFilter.h>
@@ -37,38 +45,3 @@
 #include <core/SkRect.h>
 #include <core/SkShader.h>
 #include <core/SkSurface.h>
-#include <core/SkBlurTypes.h>
-#else
-#include "design-system/ZenithDesignSystem.h"
-// Additional mocks if needed
-class SkPath {
-public:
-  void reset() {}
-};
-class SkShader;
-enum SkBlurStyle {
-  kNormal_SkBlurStyle,
-  kSolid_SkBlurStyle,
-  kOuter_SkBlurStyle,
-  kInner_SkBlurStyle
-};
-
-class SkMaskFilter {
-public:
-  static sk_sp<SkMaskFilter> MakeBlur(SkBlurStyle, float) { return nullptr; }
-};
-
-struct SkPoint {
-  float fX, fY;
-};
-struct SkSamplingOptions {};
-enum class SkTileMode { kClamp };
-
-class SkGradientShader {
-public:
-  static sk_sp<SkShader> MakeLinear(const SkPoint *, const SkColor *,
-                                    const float *, int, SkTileMode) {
-    return nullptr;
-  }
-};
-#endif

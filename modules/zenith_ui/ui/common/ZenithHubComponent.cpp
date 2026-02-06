@@ -19,8 +19,8 @@
 
 #include "../design-system/ZenithLayout.h"
 #include "ZenithIcons.h"
-#include "../../Settings.h"
-#include "../../engine/ZenithLogger.h"
+#include "zenith_core/engine/Settings.h"
+#include "zenith_core/engine/ZenithLogger.h"
 #include "../design-system/ZenithTypography.h"
 #include "../controls/SkiaAlertWindow.h"
 #include <array>

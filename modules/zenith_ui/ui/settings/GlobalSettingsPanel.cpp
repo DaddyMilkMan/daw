@@ -20,7 +20,7 @@
 #include "GlobalSettingsPanel.h"
 #include "../design-system/ColorBridge.h"
 #include "../design-system/ZenithDesignSystem.h"
-#include "../../Settings.h"
+#include "zenith_core/engine/Settings.h"
 
 namespace zenith {
 

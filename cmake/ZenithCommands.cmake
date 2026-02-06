@@ -7,6 +7,13 @@ include_guard(GLOBAL)
 # Command API sources
 set(ZENITH_COMMANDS_SOURCES
     modules/zenith_commands/commands/CommandAPI.cpp
+    modules/zenith_commands/commands/CommandAPI_SynthExtensions.cpp
+    modules/zenith_commands/commands/CommandAPI_SynthHandlers.cpp
+    modules/zenith_commands/commands/CommandAPI_SynthIntegration.cpp
+    modules/zenith_commands/commands/SessionGraph.cpp
+    modules/zenith_commands/commands/TrackCommands.cpp
+    modules/zenith_commands/commands/ClipCommands.cpp
+    modules/zenith_commands/commands/TransportCommands.cpp
 )
 
 # Create commands library
@@ -30,7 +37,10 @@ target_compile_features(zenith_commands
 target_link_libraries(zenith_commands
     PUBLIC
         zenith_core
+        zenith_ai
         juce_core
+        juce_events
+        juce_data_structures
 )
 
 # Installation

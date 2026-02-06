@@ -22,7 +22,7 @@
 #include "../framework/SkiaComponent.h"
 #include "../controls/ZenithButton.h"
 #include "../controls/SkiaTextInput.h"
-#include "../../Settings.h"
+#include "zenith_core/engine/Settings.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
 #include <vector>

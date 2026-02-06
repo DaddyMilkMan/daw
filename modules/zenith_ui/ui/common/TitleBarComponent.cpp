@@ -20,7 +20,7 @@
 #include "TitleBarComponent.h"
 #include "../design-system/ZenithTypography.h"
 #include "../framework/GlassmorphicPanel.h"
-#include "../../engine/ZenithLogger.h" // Added for logging
+#include "zenith_core/engine/ZenithLogger.h" // Added for logging
 
 namespace zenith {
 

@@ -7,6 +7,7 @@ include_guard(GLOBAL)
 # Network system modules
 set(ZENITH_NETWORK_SOURCES
     modules/zenith_network/mcp/MCPServer.cpp
+    modules/zenith_network/network/SecureKeyStore.cpp
 )
 
 # Create network library

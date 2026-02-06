@@ -191,14 +191,40 @@ void MainWindow::checkUnsavedAndQuit() {
     if (result == 1) { // Yes
         juce::File target = projectState_->getProjectFile();
         if (!target.existsAsFile()) {
-            juce::FileChooser chooser("Save Project",
-                                      juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
-                                      "*.zenith");
-            if (!chooser.browseForFileToSave(true)) {
-                return; // user canceled save
-            }
-            target = chooser.getResult();
-            projectState_->setProjectFile(target);
+            // JUCE disables synchronous modal file choosers when
+            // JUCE_MODAL_LOOPS_PERMITTED=0, so use async mode.
+            auto chooser = std::make_shared<juce::FileChooser>(
+                "Save Project",
+                juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
+                "*.zenith");
+
+            auto flags = juce::FileBrowserComponent::saveMode
+                       | juce::FileBrowserComponent::canSelectFiles;
+
+            juce::Component::SafePointer<MainWindow> safeThis(this);
+            chooser->launchAsync(flags, [safeThis, chooser](const juce::FileChooser& fc) {
+                if (!safeThis) return;
+                if (!safeThis->projectState_) return;
+
+                auto targetFile = fc.getResult();
+                if (targetFile == juce::File()) {
+                    return; // user canceled
+                }
+
+                safeThis->projectState_->setProjectFile(targetFile);
+                if (!safeThis->projectState_->saveToFile(targetFile)) {
+                    juce::NativeMessageBox::showMessageBoxAsync(
+                        juce::AlertWindow::WarningIcon,
+                        "Save Failed",
+                        "Could not save the project.",
+                        safeThis.getComponent());
+                    return;
+                }
+
+                juce::JUCEApplication::getInstance()->quit();
+            });
+
+            return; // quit happens in async callback on successful save
         }
 
         if (!projectState_->saveToFile(target)) {

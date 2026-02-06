@@ -33,10 +33,7 @@ void UIErrorHandler::reportError(const UIError& error) {
     std::lock_guard<std::mutex> lock(mutex_);
 
     // Create error record
-    ErrorRecord record;
-    record.error = error;
-    record.displayed = false;
-    record.id = juce::UniqueId();
+    ErrorRecord record{ error, false, juce::Uuid() };
 
     // Add to history
     errorHistory_.push_back(record);
@@ -62,9 +59,8 @@ void UIErrorHandler::reportError(const UIError& error) {
     repaint();
 
     // Show toast notification
-    ToastNotificationManager::getInstance().showToast(error.message,
+    ToastNotificationManager::getInstance().showToast(juce::String(error.message),
         [this, error]() {
-            auto toastManager = ToastNotificationManager::getInstance();
             auto* latest = getLatestError();
             if (latest && latest->errorCode == error.errorCode) {
                 std::lock_guard<std::mutex> lock(mutex_);
@@ -77,6 +73,7 @@ void UIErrorHandler::reportError(const UIError& error) {
             }
         },
         convertSeverityToToastType(error.severity),
+        "OK",
         error.dismissible ? 5000 : 0); // Auto-dismiss after 5s if dismissible
 }
 
@@ -241,8 +238,11 @@ void UIErrorHandler::paint(juce::Graphics& g) {
 
     // Draw subtle background for error indicator
     auto bounds = getLocalBounds();
-    g.setColour(ZenithDesignSystem::getColor(ZenithDesignSystem::Colors::Error));
-    g.fillRectangle(bounds.toFloat().withTrimmedTop(bounds.getHeight() - 2, 2));
+    g.setColour(juce::Colours::red.withAlpha(0.6f));
+    auto b = bounds.toFloat();
+    // 2px indicator bar at the bottom of the handler bounds.
+    auto indicator = b.removeFromBottom(2.0f);
+    g.fillRect(indicator);
 }
 
 void UIErrorHandler::resized() {
@@ -366,17 +366,17 @@ ToastType UIErrorHandler::convertSeverityToToastType(ErrorSeverity severity) {
     switch (severity) {
         case ErrorSeverity::Fatal:
         case ErrorSeverity::Critical:
-            return ToastNotificationManager::ToastType::Critical;
+            return ToastType::Critical;
         case ErrorSeverity::Error:
-            return ToastNotificationManager::ToastType::Error;
+            return ToastType::Error;
         case ErrorSeverity::Warning:
-            return ToastNotificationManager::ToastType::Warning;
+            return ToastType::Warning;
         case ErrorSeverity::Info:
-            return ToastNotificationManager::ToastType::Info;
+            return ToastType::Info;
         case ErrorSeverity::Debug:
-            return ToastNotificationManager::ToastType::Info;
+            return ToastType::Info;
         default:
-            return ToastNotificationManager::ToastType::Error;
+            return ToastType::Error;
     }
 }
 

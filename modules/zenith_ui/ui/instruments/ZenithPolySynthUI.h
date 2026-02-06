@@ -19,9 +19,9 @@
 
 #pragma once
 
-#include "../../Settings.h"
-#include "../../instruments/ZenithPolySynth.h"
-#include "../../instruments/ZenithPresetManager.h"
+#include "zenith_core/engine/Settings.h"
+#include "zenith_core/instruments/ZenithPolySynth.h"
+#include "zenith_core/instruments/ZenithPresetManager.h"
 #include "ai_client/WingmanSynthBridge.h"
 #include "../../rendering/SkiaRenderer.h"
 #include "../controls/ZenithUIComponents.h"

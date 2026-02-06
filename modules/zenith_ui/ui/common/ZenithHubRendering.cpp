@@ -17,7 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "../../engine/ZenithLogger.h"
+#include "zenith_core/engine/ZenithLogger.h"
 #include "../design-system/ZenithTypography.h"
 #include <map>
 
