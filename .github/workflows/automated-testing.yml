@@ -41,16 +41,6 @@ jobs:
       with:
         python-version: ${{ matrix.python_version }}
 
-    - name: Setup CMake
-      uses: jcbhmr/action-cmake@v2.2.0
-      with:
-        cmake-version: '3.25.3'
-
-    - name: Setup Ninja
-      uses: egor-tensin/setup-ninja@v1
-      with:
-        version: '1.11'
-
     - name: Install test dependencies
       run: |
         sudo apt-get update
@@ -142,7 +132,7 @@ jobs:
         name: codecov-umbrella
 
     - name: Upload test artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.test_suite }}-results
         path: |
@@ -181,7 +171,7 @@ jobs:
         ./stress_test --duration 300 --threads 4
 
     - name: Upload stress test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: stress-test-results
         path: build/stress_test.log
@@ -213,7 +203,7 @@ jobs:
           ./ZenithDesktop --test-memory-leak
 
     - name: Upload memory test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: memory-test-results
         path: build/valgrind-*.log
@@ -241,7 +231,7 @@ jobs:
         python -m pytest tests/regression/ -v --tb=short
 
     - name: Upload regression test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: regression-test-results
         path: |
@@ -286,7 +276,7 @@ jobs:
         ./compatibility_test --check-juce-version
 
     - name: Upload compatibility results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: compatibility-test-python-${{ matrix.python_version }}-juce-${{ matrix.juce_version }}
         path: build/compatibility_test.log
@@ -300,7 +290,7 @@ jobs:
     if: always()
     steps:
     - name: Download all test artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
 
     - name: Generate test summary
       run: |

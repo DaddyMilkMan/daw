@@ -28,13 +28,8 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Setup MSVC
-      uses: egor-tensin/setup-msvc@v1
-      with:
-        arch: ${{ matrix.config.arch }}
-
     - name: Setup vcpkg
-      uses: lukka/setup-vcpkg@v1
+      uses: lukka/run-vcpkg@v11
       with:
         vcpkgJson: apps/desktop/vcpkg.json
         vcpkgTriplet: ${{ matrix.config.arch }}
@@ -95,7 +90,7 @@ jobs:
         # Install macOS-specific dependencies
 
     - name: Setup vcpkg
-      uses: lukka/setup-vcpkg@v1
+      uses: lukka/run-vcpkg@v11
       with:
         vcpkgJson: apps/desktop/vcpkg.json
         vcpkgTriplet: x64-osx
@@ -168,7 +163,7 @@ jobs:
         sudo sh cmake-${{ env.CMAKE_VERSION }}-Linux-x86_64.sh --skip-license --prefix=/usr/local
 
     - name: Setup vcpkg
-      uses: lukka/setup-vcpkg@v1
+      uses: lukka/run-vcpkg@v11
       with:
         vcpkgJson: apps/desktop/vcpkg.json
         vcpkgTriplet: x64-linux

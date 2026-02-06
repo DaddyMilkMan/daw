@@ -23,11 +23,6 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
-    - name: Setup CMake
-      uses: jcbhmr/action-cmake@v2.2.0
-      with:
-        cmake-version: '3.25.3'
-
     - name: Install benchmark dependencies
       run: |
         sudo apt-get update
@@ -83,7 +78,7 @@ jobs:
         ./disk_benchmark --benchmark_time_unit=ms --benchmark_out=disk_benchmark_results.json
 
     - name: Upload benchmark results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.benchmark_type }}-benchmarks-${{ matrix.build_type }}
         path: |
@@ -152,7 +147,7 @@ jobs:
         FlameGraph/flamegraph.pl perf.txt > flamegraph.svg
 
     - name: Upload profiling results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: profiling-results
         path: |
@@ -213,7 +208,7 @@ jobs:
         heaptrack ./ZenithDesktop --test-memory > heaptrack.log 2>&1
 
     - name: Upload memory analysis results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: memory-analysis-results
         path: |
@@ -275,7 +270,7 @@ jobs:
         fi
 
     - name: Upload leak detection results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: leak-detection-results
         path: build/leak_detection.log
@@ -331,7 +326,7 @@ jobs:
         perf report > cpu_hotspots.txt
 
     - name: Upload CPU analysis results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: cpu-performance-results
         path: |
@@ -368,7 +363,7 @@ jobs:
         python scripts/performance_regression_test.py
 
     - name: Upload regression test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: regression-test-results
         path: |
@@ -385,7 +380,7 @@ jobs:
     if: always()
     steps:
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
 
     - name: Generate performance summary
       run: |

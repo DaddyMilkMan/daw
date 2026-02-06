@@ -48,16 +48,6 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
-    - name: Setup CMake
-      uses: jcbhmr/action-cmake@v2.2.0
-      with:
-        cmake-version: '3.25.3'
-
-    - name: Setup Ninja
-      uses: egor-tensin/setup-ninja@v1
-      with:
-        version: '1.11'
-
     - name: Install dependencies
       if: runner.os == 'Linux'
       run: |
@@ -177,7 +167,7 @@ jobs:
           .
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: release-assets
         path: release/dist/
@@ -190,7 +180,7 @@ jobs:
     needs: [validate-tag, create-assets]
     steps:
     - name: Download artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: release-assets
 

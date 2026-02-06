@@ -36,18 +36,8 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Setup CMake
-      uses: jcbhmr/action-cmake@v2.2.0
-      with:
-        cmake-version: '3.25.3'
-
-    - name: Setup Ninja
-      uses: egor-tensin/setup-ninja@v1
-      with:
-        version: '1.11'
-
     - name: Cache dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cache/CMake
@@ -126,7 +116,7 @@ jobs:
         cpack -G TGZ
 
     - name: Upload Linux artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: linux-${{ matrix.build_type }}
         path: |
@@ -154,13 +144,8 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
-    - name: Setup CMake
-      uses: jcbhmr/action-cmake@v2.2.0
-      with:
-        cmake-version: '3.25.3'
-
     - name: Cache dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cache/CMake
@@ -225,7 +210,7 @@ jobs:
         cpack -G ZIP
 
     - name: Upload macOS artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: macos-${{ matrix.build_type }}
         path: |
@@ -248,13 +233,8 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
-    - name: Setup CMake
-      uses: jcbhmr/action-cmake@v2.2.0
-      with:
-        cmake-version: '3.25.3'
-
     - name: Cache dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           C:\Users\runneradmin\AppData\Local\CMake
@@ -308,7 +288,7 @@ jobs:
       run: cpack -G NSIS
 
     - name: Upload Windows artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: windows-${{ matrix.build_type }}-${{ matrix.architecture }}
         path: |
@@ -323,7 +303,7 @@ jobs:
     needs: [build-linux, build-macos, build-windows]
     steps:
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
 
     - name: List artifacts
       run: |
@@ -341,7 +321,7 @@ jobs:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     steps:
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
 
     - name: Create release package
       run: |
@@ -351,7 +331,7 @@ jobs:
         tar -czf zenith-daw-all-platforms-$(date +%Y%m%d).tar.gz *
 
     - name: Upload release package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: release-package
         path: release-packages/

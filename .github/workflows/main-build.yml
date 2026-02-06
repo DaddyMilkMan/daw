@@ -27,18 +27,8 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Setup CMake
-      uses: jcbhmr/action-cmake@v2.2.0
-      with:
-        cmake-version: '3.25.3'
-
-    - name: Setup Ninja
-      uses: egor-tensin/setup-ninja@v1
-      with:
-        version: '1.11'
-
     - name: Cache dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cache/CMake
@@ -121,7 +111,7 @@ jobs:
       run: ninja test
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: build-artifacts
         path: build/
@@ -158,17 +148,16 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Run CodeQL Analysis
-      uses: github/codeql-action/init@v2
+      uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
         # Autobuild is disabled, as we build the code separately
         autobuild: false
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/perform-analysis@v2
+      uses: github/codeql-action/analyze@v3
       with:
-        languages: ${{ matrix.language }}
-        queries: ${{ matrix.queries }}
+        category: "/language:${{matrix.language}}"
 
   # Documentation build
   docs:
@@ -189,7 +178,7 @@ jobs:
         doxygen Doxyfile
 
     - name: Upload documentation
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: documentation
         path: docs/html/
@@ -203,7 +192,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     steps:
     - name: Download build artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: build-artifacts
         path: build/

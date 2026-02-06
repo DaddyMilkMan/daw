@@ -32,11 +32,6 @@ jobs:
         COMMIT=$(git rev-parse --short HEAD)
         echo "version=nightly-${DATE}-${COMMIT}" >> $GITHUB_OUTPUT
 
-    - name: Setup CMake
-      uses: jcbhmr/action-cmake@v2.2.0
-      with:
-        cmake-version: '3.25.3'
-
     - name: Configure CMake
       working-directory: ${{github.workspace}}
       run: |
@@ -72,7 +67,7 @@ jobs:
           .
 
     - name: Upload nightly build
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: nightly-build-${{ steps.version.outputs.version }}
         path: |
@@ -96,7 +91,7 @@ jobs:
         python-version: '3.11'
 
     - name: Download nightly build
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: nightly-build-${{ needs.nightly-build.outputs.version }}
 
@@ -117,7 +112,7 @@ jobs:
         xvfb-run -a ./build/zenith-desktop --test-integration
 
     - name: Upload integration results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: integration-test-results
         path: integration_test_results.log
@@ -138,7 +133,7 @@ jobs:
         python-version: '3.11'
 
     - name: Download nightly build
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: nightly-build-${{ needs.nightly-build.outputs.version }}
 
@@ -165,7 +160,7 @@ jobs:
         LD_LIBRARY_PATH=./build ./zenith-desktop --test-plugin-format=au
 
     - name: Upload compatibility results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: compatibility-test-results
         path: compatibility_test_results.log
@@ -181,7 +176,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Download nightly build
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: nightly-build-${{ needs.nightly-build.outputs.version }}
 
@@ -207,7 +202,7 @@ jobs:
           --threshold 10
 
     - name: Upload performance results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: nightly-performance-results
         path: |
@@ -223,7 +218,7 @@ jobs:
     if: success()
     steps:
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
 
     - name: Create release notes
       run: |

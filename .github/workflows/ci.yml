@@ -95,7 +95,7 @@ jobs:
       timeout-minutes: 10
     
     - name: Upload Test Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results-linux-${{ matrix.compiler }}-${{ matrix.build_type }}
@@ -111,7 +111,7 @@ jobs:
       timeout-minutes: 5
     
     - name: Upload WCET Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: matrix.build_type == 'Release'
       with:
         name: wcet-results-linux-${{ matrix.compiler }}
@@ -175,7 +175,7 @@ jobs:
       timeout-minutes: 10
     
     - name: Upload Test Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results-macos-${{ matrix.build_type }}
@@ -241,7 +241,7 @@ jobs:
       timeout-minutes: 10
     
     - name: Upload Test Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results-windows-${{ matrix.build_type }}
@@ -305,7 +305,7 @@ jobs:
       timeout-minutes: 5
     
     - name: Upload Benchmark Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: performance-benchmarks
         path: |
@@ -387,7 +387,7 @@ jobs:
         genhtml coverage.info --output-directory coverage_report
     
     - name: Upload Coverage Report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: coverage-report
         path: build/coverage_report
@@ -435,7 +435,7 @@ jobs:
         bandit -r backend/ || true
     
     - name: Upload Security Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-scan-results
@@ -451,7 +451,7 @@ jobs:
     
     steps:
     - name: Download All Test Artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         path: artifacts
     
@@ -510,7 +510,7 @@ jobs:
         EOF
     
     - name: Upload Test Summary
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-summary
         path: test_summary.json
@@ -623,7 +623,7 @@ jobs:
         cpack -G NSIS
     
     - name: Upload Release Assets
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}
         path: build/_packages/*
