@@ -17,26 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    WavetableLoader.h
-    Created: 2025-12-20
-    Author:  Zenith DAW
-
-    Wavetable file loader supporting:
-    - WAV files (split into frames of N samples)
-    - WT files (Serum-compatible format)
-
-    - Bundled wavetables from Content directory
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "WavetableData.h"

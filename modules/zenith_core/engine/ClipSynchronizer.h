@@ -17,20 +17,21 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#pragma once
 
- // File: ClipSynchronizer.h
- // Brief: Synchronizes clips between Engine and ProjectState
- */
-
+// File: ClipSynchronizer.h
+// Brief: Synchronizes clips between Engine and ProjectState
 
 #include <juce_core/juce_core.h>
+#include <juce_data_structures/juce_data_structures.h>
+#include <juce_events/juce_events.h>
 #include <map>
 
 namespace zenith {
+
+// Forward declarations
+class ProjectState;
+class Engine;
 
 class ClipSynchronizer : public juce::Timer, public juce::ValueTree::Listener {
 public:

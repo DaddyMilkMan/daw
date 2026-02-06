@@ -17,25 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithOscillator.cpp
-    Created: 2025-12-06
-    Refactored: 2025-12-09
-    Author:  Zenith DAW
-
-    Implementation of ZenithOscillator.
-    Includes Flagship Wavetable support.
-
-
-  ==============================================================================
-*/
-
 #include "ZenithOscillator.h"
 #include <cmath>
 

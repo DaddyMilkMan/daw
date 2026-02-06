@@ -1,0 +1,155 @@
+# =============================================================================
+# ZENITH DAW - Structure Validation
+# =============================================================================
+# Ensures directory structure follows guidelines
+# =============================================================================
+
+name: Structure Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  check-directory-depth:
+    name: Check Directory Depth
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check for deep nesting
+      run: |
+        echo "Checking directory depth..."
+        echo ""
+        
+        max_depth=8
+        deep_dirs=$(find modules -type d | awk -F'/' '{print NF-1 " " $0}' | sort -rn | head -20)
+        
+        too_deep=false
+        
+        while read -r depth dir; do
+          if [ "$depth" -gt "$max_depth" ]; then
+            if [ "$too_deep" = false ]; then
+              echo "❌ Directories exceeding max depth ($max_depth):"
+              too_deep=true
+            fi
+            echo "  Depth $depth: $dir"
+          fi
+        done <<< "$deep_dirs"
+        
+        if [ "$too_deep" = true ]; then
+          echo ""
+          echo "Run scripts/flatten-structure.sh to consolidate"
+          exit 1
+        fi
+        
+        echo "✅ Directory depth within limits (max: $max_depth)"
+
+  check-directory-documentation:
+    name: Check Directory Documentation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check for READMEs in key directories
+      run: |
+        echo "Checking directory documentation..."
+        echo ""
+        
+        missing=0
+        
+        # Check key directories for README.md
+        for dir in modules/zenith_core modules/zenith_ui modules/zenith_dsp; do
+          if [ -f "$dir/README.md" ]; then
+            echo "✅ $dir/README.md"
+          else
+            echo "⚠️  $dir/README.md (missing)"
+            ((missing++))
+          fi
+        done
+        
+        # Check UI subdirectories
+        for dir in modules/zenith_ui/components modules/zenith_ui/views modules/zenith_ui/theme; do
+          if [ -f "$dir/README.md" ]; then
+            echo "✅ $dir/README.md"
+          else
+            echo "⚠️  $dir/README.md (missing)"
+            ((missing++))
+          fi
+        done
+        
+        if [ $missing -gt 0 ]; then
+          echo ""
+          echo "$missing README files missing"
+        fi
+
+  check-deprecated-code:
+    name: Check Deprecated Code
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Monitor deprecated directory
+      run: |
+        echo "Checking deprecated code..."
+        echo ""
+        
+        if [ -d "modules/zenith_ui/deprecated" ]; then
+          count=$(find modules/zenith_ui/deprecated -type f | wc -l)
+          echo "⚠️  Deprecated files: $count"
+          echo "    Goal: Reduce to 0 before v1.0"
+          
+          # List the deprecated files
+          echo ""
+          echo "Deprecated files:"
+          find modules/zenith_ui/deprecated -type f | sed 's/^/    /'
+        else
+          echo "✅ No deprecated directory found"
+        fi
+
+  check-module-boundaries:
+    name: Check Module Boundaries
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check for cross-module violations
+      run: |
+        echo "Checking module boundary violations..."
+        echo ""
+        
+        # Each module should only include from itself or its dependencies
+        # zenith_ui can include zenith_core
+        # zenith_dsp is standalone
+        # zenith_network can include zenith_core
+        # zenith_commands can include zenith_core
+        
+        violations=0
+        
+        # Check zenith_dsp doesn't include zenith_ui
+        if grep -r "zenith_ui" modules/zenith_dsp --include="*.h" --include="*.cpp" 2>/dev/null; then
+          echo "❌ zenith_dsp should not depend on zenith_ui"
+          ((violations++))
+        fi
+        
+        # Check zenith_core doesn't include zenith_ui
+        if grep -r "zenith_ui" modules/zenith_core --include="*.h" --include="*.cpp" 2>/dev/null; then
+          echo "❌ zenith_core should not depend on zenith_ui"
+          ((violations++))
+        fi
+        
+        if [ $violations -eq 0 ]; then
+          echo "✅ Module boundaries respected"
+        else
+          exit 1
+        fi

@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    MPERecorderImproved.h
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Improved MPE recorder with proper note tracking and thread safety.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>

@@ -17,28 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file ClipComponent.h
- * @brief Flat clip component with theme colors and clean typography
- *
- * Features clean DAW aesthetics:
- * - Track-colored fills (muted)
- * - Typography.body for clip names
- * - Simple 1-2px selection border
- * - Rounded corners (4px)
- * - 60 Hz smooth animations
-
- */
-
-// POLISH: spacing normalized to 8px grid (rounded corners 4px)
-// POLISH: typography now uses ZenithDesignSystem
-// POLISH: flattened visuals (track colors, no gradients)
-
 #pragma once
+
+// ClipComponent.h
+
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>

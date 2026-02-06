@@ -17,24 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaComponent.h
-    Created: 2025-11-30
-    Authors: Sarah Chen (lead), with input from ENTIRE TEAM
-
-    Base class for all Skia-rendered components in Zenith DAW.
-  ==============================================================================
-*/
-
-
-
 #pragma once
+
+// SkiaComponent.h
+
 
 extern "C++" {
 #pragma clang diagnostic push
@@ -57,6 +43,9 @@ extern "C++" {
 #include "ZenithDesignSystem.h"
 #include "DirtyRectManager.h"
 #include "../design-system/ZenithTheme.h"
+#include "TabOrderManager.h"
+#include "KeyboardShortcutManager.h"
+#include "../validation/Validator.h"
 #include <functional>
 #include <map>
 #include <memory>
@@ -119,7 +108,8 @@ namespace zenith {
   class SkiaComponent : public juce::Component,
                         public virtual juce::Timer,
                         public juce::KeyListener,
-                        public zenith::animation::AnimationListener {
+                        public zenith::animation::AnimationListener,
+                        public std::enable_shared_from_this<SkiaComponent> {
   public:
     struct AIElementInfo {
       SkRect bounds;
@@ -281,6 +271,25 @@ namespace zenith {
     virtual void onEnterPressed() {}
     virtual void onEscapePressed() {}
 
+    // Keyboard navigation support
+    virtual void setTabGroup(zenith::UI::TabGroup group);
+    virtual zenith::UI::TabGroup getTabGroup() const;
+    virtual void setTabOrder(int order);
+    virtual int getTabOrder() const;
+    virtual void setFocusable(bool focusable);
+    virtual bool isFocusable() const;
+    virtual bool isInTabOrder() const;
+
+    // Shortcut integration
+    virtual void registerShortcut(const zenith::UI::KeyboardShortcut& shortcut);
+    virtual void unregisterShortcut(const juce::KeyPress& key);
+    virtual bool handleKeyPress(const juce::KeyPress& key);
+
+    // Focus management
+    virtual void grabFocusWithReason(juce::Component::FocusChangeType reason);
+    virtual bool requestFocusNext();
+    virtual bool requestFocusPrevious();
+
     virtual void showContextMenu();
     virtual void handleContextMenuResult(int result);
 
@@ -318,6 +327,14 @@ namespace zenith {
     float glowRadius_ = 0.0f;
     bool glowEnabled_ = false;
     bool isMIDILearning_ = false;
+
+    // Keyboard navigation state
+    zenith::UI::TabGroup tabGroup_ = zenith::UI::TabGroup::None;
+    int tabOrder_ = 0;
+    bool isFocusable_ = true;
+    bool isInTabOrder_ = true;
+    std::map<juce::KeyPress, zenith::UI::KeyboardShortcut> registeredShortcuts_;
+    std::shared_ptr<zenith::UI::ShortcutContext> shortcutContext_;
 
     static int systemRefreshRate_;
     static int targetFPS_;

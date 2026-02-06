@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PlatformAudioUtils.cpp
-    Created: 2025-12-28
-    Author:  Zenith DAW
-
-    Implementation of platform-specific audio device initialization.
-
-  ==============================================================================
-
-*/
-
 #include "PlatformAudioUtils.h"
 
 namespace zenith {

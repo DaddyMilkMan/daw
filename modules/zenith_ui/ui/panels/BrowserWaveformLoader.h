@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    BrowserWaveformLoader.h
-    Created: 2025-12-26
-    Author:  Zenith DAW
-
-    Standalone utility for background audio waveform loading and caching.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include <juce_audio_formats/juce_audio_formats.h>

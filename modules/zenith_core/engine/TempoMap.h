@@ -17,29 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- // File: TempoMap.h
- // Brief: RT-safe tempo map for beat/time conversions
- *
- * Phase 15: Tempo Map & Global Markers MVP
- *
- * Provides beat↔time/sample conversions using a variable tempo map.
- * Uses a snapshot pattern for RT-safety:
- * - Message thread builds TempoMapSnapshot from ProjectState
- * - Audio thread reads snapshot via atomic shared_ptr (lock-free)
-
- *
- * Thread Safety:
- * - updateFromValueTree() runs on MESSAGE THREAD
- * - All conversion methods (beatsToSeconds, etc.) are RT-SAFE
- * - Uses atomic shared_ptr swap for lock-free read access
- */
-
 #pragma once
+
+// TempoMap.h - RT-safe tempo map for beat/time conversions
 
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>

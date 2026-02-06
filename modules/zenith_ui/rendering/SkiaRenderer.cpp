@@ -17,18 +17,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+// SkiaRenderer.cpp
 
- * @file SkiaRenderer.cpp
- * @brief Implementation of SkiaRenderer
- */
-
-
-
-// Skia Headers
 #include <core/SkCanvas.h>
 #include <core/SkColorSpace.h>
 #include <core/SkSurface.h>

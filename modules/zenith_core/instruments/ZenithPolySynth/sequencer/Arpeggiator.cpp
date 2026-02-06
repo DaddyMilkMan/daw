@@ -17,25 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    Arpeggiator.cpp
-    Created: 2025-01-28
-    Updated: 2025-02-02 - S-tier implementation
-    Author:  Zenith DAW
-
-    Professional arpeggiator with sample-accurate timing and BPM sync.
-    Patterned after JUCE's official ArpeggiatorPluginDemo example.
-
-
-  ==============================================================================
-*/
-
 #include "Arpeggiator.h"
 #include <cmath>
 

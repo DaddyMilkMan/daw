@@ -17,27 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaSpectrumComponent.h
-    Created: 2025-12-08
-    Author:  Zenith DAW
-
-    Real-time spectrum analyzer using Skia.
-    - Runs FFT on UI thread (optimized)
-    - 60 FPS rendering
-
-    - Gradient fills
-    - Peak hold
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "SkiaComponent.h"

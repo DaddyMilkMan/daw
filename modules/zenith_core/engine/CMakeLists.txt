@@ -1,4 +1,4 @@
-target_sources(ZenithDAW PRIVATE
+target_sources(zenith_core PRIVATE
     Engine.cpp
     # Modular Engine split files
     EngineTransport.cpp

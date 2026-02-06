@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaTransportBar.cpp
-    Created: 2026-02-03
-    Author:  Zenith DAW Team
-
-    Transport bar implementation.
-
-  ==============================================================================
-
-*/
-
 #include "SkiaTransportBar.h"
 #include "../../design-system/ZenithTheme.h"
 #include <effects/SkGradientShader.h>

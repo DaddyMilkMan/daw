@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    InstrumentMetadata.h
-    Created: 2025-11-18
-    Author:  Zenith DAW
-
-    Metadata structures for instruments, parameters, and macros.
-    Used by InstrumentRegistry and CommandAPI to expose instrument capabilities.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_audio_basics/juce_audio_basics.h>

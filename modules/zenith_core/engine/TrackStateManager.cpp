@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    TrackStateManager.cpp
-    Created: 2025-12-11
-    Author:  Zenith DAW
-
-    Track management implementation for ProjectState.
-
-  ==============================================================================
-
-*/
-
 #include "TrackStateManager.h"
 #include "ProjectState.h"
 

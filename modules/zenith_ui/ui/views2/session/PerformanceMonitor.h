@@ -17,27 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    PerformanceMonitor.h
-    Created: 2026-02-05
-    Author:  Zenith DAW Team
-
-    Real-time performance monitoring system for SkiaSessionView.
-
-    Features:
-    - Frame rate tracking with rolling average
-    - Memory usage monitoring
-    - GPU performance tracking (Skia-specific)
-    - Adaptive quality adjustment
-    - Visual performance indicators
-    - Performance analytics dashboard
-
-    Designed to maintain smooth 60fps performance under all conditions!
-    ==============================================================================
-*/
-
 #pragma once
+
+// PerformanceMonitor.h
+
 
 #include "../../design-system/ZenithTheme.h"
 #include <atomic>

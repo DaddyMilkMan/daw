@@ -17,15 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file ArrangerInputHandler.cpp
- * @brief Implementation of mouse and keyboard input handling for ArrangerComponent
- */
-
+// ArrangerInputHandler.cpp
 
 #include "../../utils/StemSeparationJob.h"
 #include "../controls/SkiaPopupMenu.h"

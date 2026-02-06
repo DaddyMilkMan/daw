@@ -17,27 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithHubComponent.h
-    Created: 2025-12-13
-    Author:  Zenith DAW Team
-
-    The premium "Welcome Screen" / Dashboard for Zenith.
-    Displays recent projects, templates, and user profile.
-
-
-    Pinocchio Protocol: Removed mock data, now uses RecentProjectManager
-    for real persistent project data.
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <JuceHeader.h>

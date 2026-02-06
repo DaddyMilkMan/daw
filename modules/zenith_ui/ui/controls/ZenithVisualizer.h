@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithVisualizer.h
-    Created: 2025-12-12
-    Author:  Zenith DAW
-
-    Visualizer widget for ZenithPolySynth.
-    Consumes audio data from the processor and renders it using Skia.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../../instruments/ZenithPolySynth.h"

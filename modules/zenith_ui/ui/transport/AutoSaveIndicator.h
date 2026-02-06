@@ -17,24 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AutoSaveIndicator.h
-    Created: 2025-12-20
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #pragma once
 
-#include "../../engine/ProjectState.h"
+#include "zenith_core/engine/ProjectState.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../framework/SkiaComponent.h"
 #include <JuceHeader.h>

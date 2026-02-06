@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PluginBlacklist.cpp
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Implementation of persistent plugin blacklist management.
-
-  ==============================================================================
-
-*/
-
 #include "PluginBlacklist.h"
 
 #if JUCE_MODULE_AVAILABLE_juce_xml

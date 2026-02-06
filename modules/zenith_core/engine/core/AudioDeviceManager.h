@@ -17,18 +17,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#pragma once
 
- * @file AudioDeviceManager.h
- * @brief Concrete audio device management implementation
- *
- * Handles audio device I/O with proper RT-safety considerations.
- */
+//==============================================================================
 
-
+#include "IAudioDeviceManager.h"
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <atomic>
 #include <memory>

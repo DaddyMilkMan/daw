@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SettingsComponent.cpp
-    Created: 2025-12-25
-    Author:  Zenith DAW Team
-
-    Implementation of the flagship Settings Panel.
-    Extracted from SettingsComponent.h for faster compilation.
-
-
-  ==============================================================================
-*/
-
 #include "SettingsComponent.h"
 #include "../design-system/ThemeManager.h"
 #include "../design-system/ColorBridge.h"

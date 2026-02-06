@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    StereoAudioFifo.h
-    Created: 2025-12-13
-    Author:  Zenith DAW
-
-    Lock-free single-producer single-consumer FIFO for STEREO audio samples.
-    Safe for transferring data from Audio Thread to UI Thread.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_audio_basics/juce_audio_basics.h>

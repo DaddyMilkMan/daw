@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaD3D12Context.cpp
-    Created: 2026-01-03
-    Author:  Zenith DAW Team
-
-  ==============================================================================
-*/
-
-
 #include "SkiaD3D12Context.h"
 
 #if JUCE_WINDOWS

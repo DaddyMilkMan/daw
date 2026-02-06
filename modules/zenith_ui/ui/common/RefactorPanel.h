@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    RefactorPanel.h
-    Created: 2025-12-07
-    Author:  Zenith DAW
-
-    UI Component for the Project Refactorer feature.
-    Shows a "Refactor" button that analyzes and cleans up the project.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "Engine.h"
@@ -143,7 +125,7 @@ public:
         for (size_t i = 0; i < std::min((size_t)5, plan_.trackRenames.size());
              ++i) {
           const auto &rename = plan_.trackRenames[i];
-          juce::String line = juce::String::fromUTF8("  • ") + rename.oldName + juce::String::fromUTF8(" → ") + rename.newName;
+          juce::String line = juce::String::fromUTF8("  • ") + rename.oldName + juce::String::fromUTF8(" -> ") + rename.newName;
           canvas->drawSimpleText(line.toRawUTF8(), line.length(),
                                  SkTextEncoding::kUTF8, 25.0f, y, bodyFont,
                                  textPaint);
@@ -215,7 +197,7 @@ private:
     Main Refactor Button component
 
     This is a toolbar button that triggers project analysis and cleanup.
-    Click → Analyze → Review Plan → Execute
+    Click -> Analyze -> Review Plan -> Execute
 */
 class RefactorButton : public SkiaComponent {
 public:

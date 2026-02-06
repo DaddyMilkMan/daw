@@ -16,16 +16,13 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#include "TrackManager.h"
+#include "Track.h"
+#include <algorithm>
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+namespace zenith {
 
- * @file TrackManager.cpp
- * @brief Concrete track management implementation
- */
-
+// Concrete track management implementation
 
 
 TrackManager::TrackManager() {
@@ -54,7 +51,7 @@ juce::String TrackManager::createTrack(const juce::String& name, const juce::Str
     }
 
     if (track) {
-        track->setId(trackId);
+        track->setTrackId(trackId);
         track->setName(name);
         addTrack(track);
     }
@@ -223,29 +220,29 @@ float TrackManager::getTrackLevel(int trackIndex) const {
     if (trackIndex < 0 || trackIndex >= trackStates_.size()) {
         return 0.0f;
     }
-    return trackStates_[trackIndex].level.load();
+    return trackStates_[trackIndex].level;
 }
 
 float TrackManager::getTrackPeakLevel(int trackIndex) const {
     if (trackIndex < 0 || trackIndex >= trackStates_.size()) {
         return 0.0f;
     }
-    return trackStates_[trackIndex].peakLevel.load();
+    return trackStates_[trackIndex].peakLevel;
 }
 
 bool TrackManager::isTrackFrozen(int trackIndex) const {
     if (trackIndex < 0 || trackIndex >= trackStates_.size()) {
         return false;
     }
-    return trackStates_[trackIndex].frozen.load();
+    return trackStates_[trackIndex].frozen;
 }
 
 void TrackManager::addTrackChangeListener(juce::ChangeListener* listener) {
-    trackChangeListeners_.addListener(listener);
+    trackChangeListeners_.add(listener);
 }
 
 void TrackManager::removeTrackChangeListener(juce::ChangeListener* listener) {
-    trackChangeListeners_.removeListener(listener);
+    trackChangeListeners_.remove(listener);
 }
 
 void TrackManager::clearAllTracks() {
@@ -273,18 +270,16 @@ void TrackManager::updateTrackState(int index) {
     if (index >= 0 && index < trackStates_.size()) {
         // TODO: Get actual track state from track
         // For now, just reset
-        trackStates_[index].level.store(0.0f);
-        trackStates_[index].peakLevel.store(0.0f);
+        trackStates_[index].level = 0.0f;
+        trackStates_[index].peakLevel = 0.0f;
     }
 }
 
 void TrackManager::notifyTrackChanged(int index) {
-    juce::ChangeBroadcaster::sendChangeMessage();
     trackChangeListeners_.call(&juce::ChangeListener::changeListenerCallback, nullptr);
 }
 
 void TrackManager::notifyTracksChanged() {
-    juce::ChangeBroadcaster::sendChangeMessage();
     trackChangeListeners_.call(&juce::ChangeListener::changeListenerCallback, nullptr);
 }
 

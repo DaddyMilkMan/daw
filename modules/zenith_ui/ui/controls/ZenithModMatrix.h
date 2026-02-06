@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithModMatrix.h
-    Created: 2025-12-12
-    Author:  Zenith DAW
-
-    Modulation matrix grid widget for ZenithPolySynth.
-    Displays modulation routings as an interactive grid.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../../instruments/ZenithPolySynth.h"

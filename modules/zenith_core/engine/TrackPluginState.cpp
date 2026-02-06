@@ -17,16 +17,13 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+// TrackPluginState.cpp - Plugin state persistence implementation
 
-//     File: TrackPluginState.cpp
-//     Brief: Plugin state persistence implementation
-//*
+#include "Track.h"
+#include "PluginHost.h"
+#include "ZenithLogger.h"
 
-
+#include <limits>
 
 namespace zenith {
 

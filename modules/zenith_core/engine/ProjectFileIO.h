@@ -17,25 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- // File: ProjectFileIO.h
- // Brief: Production-grade project file I/O with error handling and recovery
- *
- * Features:
- * - Atomic writes (save to temp, rename on success)
- * - Crash recovery with auto-saves
- * - File validation and version checking
- * - Detailed error reporting
- * - Async save/load capability
-
- * - Backup management
- */
-
 #pragma once
+
+// ProjectFileIO.h
 
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>

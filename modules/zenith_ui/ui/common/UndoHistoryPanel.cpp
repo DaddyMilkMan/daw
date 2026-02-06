@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    UndoHistoryPanel.cpp
-    Created: 2025-12-25
-    Author:  Zenith DAW Team
-
-    Implementation of the visual undo/redo history panel.
-
-  ==============================================================================
-
-*/
-
 #include "UndoHistoryPanel.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../framework/GlassmorphicPanel.h"

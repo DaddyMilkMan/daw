@@ -10,16 +10,15 @@
 
 // Include all JUCE modules using manual JuceHeader.h
 #include "JuceHeader.h"
-#include "engine/ProjectState.h"
-#include "engine/Engine.h"
-#include "commands/CommandAPI.h"
-#include "utils/SampleGenerator.h"
-#include "utils/PlatformSystemUtils.h"
-#include "ui/design-system/FontManager.h"
-#include "engine/ZenithLogger.h"
-#include "Settings.h"
+#include "zenith_core/engine/ProjectState.h"
+#include "zenith_core/engine/Engine.h"
+#include "zenith_commands/commands/CommandAPI.h"
+#include "zenith_core/utils/SampleGenerator.h"
+#include "zenith_core/utils/PlatformSystemUtils.h"
+#include "zenith_core/engine/ZenithLogger.h"
+#include "zenith_core/engine/Settings.h"
 #include "ui/common/MainWindow.h"
-#include "network/MCPServer.h"
+#include "zenith_network/mcp/MCPServer.h"
 #include <cstdlib>
 
 
@@ -84,9 +83,12 @@ public:
       mcpEngine_->initialize();
 
       mcpServer_ = std::make_unique<::zenith::mcp::MCPServer>(
-          *mcpCommandAPI_, *mcpProjectState_, *mcpEngine_, nullptr);
-      mcpServer_->onStop = [this]() { quit(); };
-      mcpServer_->start();
+          *mcpCommandAPI_, *mcpProjectState_, *mcpEngine_);
+      mcpServer_->onStop = []() {
+        // stdin closed or server stopped: shut down cleanly.
+        juce::JUCEApplication::getInstance()->quit();
+      };
+      mcpServer_->startBackground();
 
       ZENITH_LOG_INFO("[MCP STDIO] Headless MCP server running (--mcp-server)");
       return;
@@ -95,11 +97,6 @@ public:
     // Ensure content validity (Generate missing samples if needed)
     // Run asynchronously to unblock startup
     ::zenith::SampleGenerator::generateMissingSamples(&threadPool);
-
-    // Pre-initialize FontManager to avoid hangs when UI is created
-    DBG("Initializing FontManager...");
-    ::zenith::design::FontManager::getInstance();
-    DBG("FontManager initialized.");
 
     // Create main window
     mainWindow = std::make_unique<::zenith::MainWindow>(getApplicationName());

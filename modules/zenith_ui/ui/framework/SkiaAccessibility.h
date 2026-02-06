@@ -17,26 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaAccessibility.h
-    Created: 2025-11-30
-    Authors: Patricia (Accessibility Karen - consultant), Isabella, Dr. Elena
-
-    Accessibility system for Skia components.
-    Addresses ALL of Accessibility Karen's complaints!
-    
-
-    WCAG 2.1 Level AA Compliant
-    
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>

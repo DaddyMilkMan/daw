@@ -7,7 +7,8 @@
   ==============================================================================
 */
 
-#include "utils/PlatformSystemUtils.h"
+#include "PlatformSystemUtils.h"
+#include "ZenithLogger.h"
 
 #ifdef __linux__
 namespace zenith {

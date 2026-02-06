@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    DSPVoiceChanger.h
-    Created: 2025-11-29
-    Author:  Zenith DAW - Efficient C++ Team
-    
-    Real-time voice changing using WSOLA (Waveform Similarity Overlap-Add)
-    pitch shifting with optional formant preservation.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>

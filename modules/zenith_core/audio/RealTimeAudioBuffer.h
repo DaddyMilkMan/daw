@@ -17,23 +17,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    RealTimeAudioBuffer.h
-    Production real-time audio buffer management - no shortcuts
-    Phase 2: Audio I/O & Processing
-  ==============================================================================
-*/
-
-
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <atomic>
 #include <chrono>
+#include <array>
 #include <concepts>
 #include <functional>
 #include <memory>
@@ -132,14 +120,11 @@ private:
     // Lock-free buffers for each channel
     std::vector<std::unique_ptr<LockFreeRingBuffer<float, 65536>>> channelBuffers;
     
-    // Level monitoring - direct atomics, no unnecessary indirection
     // Level monitoring - atomics wrapped in unique_ptr to allow vector resizing
     std::vector<std::unique_ptr<std::atomic<float>>> channelLevels;
     std::vector<std::unique_ptr<std::atomic<bool>>> channelClipping;
     
     // RT-SAFE Latency estimation (calculated from buffer fill level, not timing)
-    // NOTE: Removed std::mutex timingMutex and std::queue writeTimes/readTimes
-    // because they were RT-unsafe (mutex locks in writeAudio/readAudio)
     std::atomic<float> averageLatency{0.0f};
     
     void updateLevels(const juce::AudioBuffer<float>& buffer);
@@ -186,8 +171,6 @@ public:
 private:
     std::unique_ptr<juce::AudioDeviceManager> deviceManager;
     // OWNERSHIP: NON-OWNING pointer to device managed by juce::AudioDeviceManager
-    // Valid only while device is open. Always check isDeviceActive() before use.
-    // Becomes invalid after shutdown() or device change.
     juce::AudioIODevice* currentDevice = nullptr;
     juce::String lastError;
     
@@ -269,11 +252,8 @@ public:
     void processAudio(juce::AudioBuffer<float>& buffer);
     
     // RT-SAFE: Template version eliminates std::function heap allocation
-    // C++20 constraint prevents accidentally passing std::function which allocates
+    // C++20 constraint REMOVED for C++17 compatibility
     template<typename ProcessorFunc>
-        requires std::invocable<ProcessorFunc, juce::AudioBuffer<float>&> &&
-                 (!std::is_same_v<std::decay_t<ProcessorFunc>, 
-                                  std::function<void(juce::AudioBuffer<float>&)>>)
     void processAudioWithCallback(juce::AudioBuffer<float>& buffer, ProcessorFunc&& processor) {
         // Check real-time safety
         if (!checkRealTimeSafety()) {
@@ -284,7 +264,6 @@ public:
         std::forward<ProcessorFunc>(processor)(buffer);
         
         // Update CPU usage metrics with atomic operations only
-        // Note: For precise timing, consider using a separate metrics thread
         updatePerformanceMetrics();
     }
     

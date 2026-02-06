@@ -17,30 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SIMDHelpers.h
-    Created: 2025-12-09
-    Author:  Zenith DAW
-
-    SIMD-optimized DSP utilities for high-performance audio processing.
-    
-    Uses JUCE's FloatVectorOperations for cross-platform SIMD acceleration.
-
-    Provides optimized versions of common DSP operations.
-
-    Thread Safety:
-    - All functions are RT-safe (no allocations, no locks)
-    - Safe to call from audio thread
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_audio_basics/juce_audio_basics.h>

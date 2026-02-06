@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithPolySynthParameterManager.cpp
-    Created: 2025-12-11
-    Author:  Zenith DAW
-
-    Implementation of parameter management for ZenithPolySynth.
-
-  ==============================================================================
-
-*/
-
 #include "ZenithPolySynthParameterManager.h"
 #include "ZenithEffects.h"
 #include "ZenithPolySynthVoice.h"

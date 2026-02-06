@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PluginHost.cpp
-    Created: 2025-11-14
-    Author:  Zenith DAW - Phase 3: VST3 Plugin Hosting MVP
-
-    Plugin hosting manager implementation
-
-  ==============================================================================
-
-*/
-
 #include "PluginHost.h"
 #include "PluginBlacklist.h"
 #include "../plugins/InternalPluginFormat.h"

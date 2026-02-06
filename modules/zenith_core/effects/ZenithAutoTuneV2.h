@@ -17,32 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithAutoTuneV2.h
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    PRODUCTION-READY Auto-Tune implementation.
-    
-    Combines:
-
-    - Classic Mode (Auto-Tune 5 sound)
-    - Modern Mode (Transparent, Rubber Band)
-    - Graph Mode (visual editing)
-    - MIDI input
-    - Throat modeling
-    
-    This is the real deal. Tested, optimized, ready for users.
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../dsp/PitchDetector.h"

@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    RenderTree.h
-    Created: 2025-12-02
-    Author: Zenith DAW
-
-    Thread-safe render state abstraction.
-    Decouples JUCE Component state (Message Thread) from Skia rendering (OpenGL
-  Thread).
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>
@@ -41,7 +24,9 @@
 
 #include <core/SkImage.h>
 #include <core/SkRect.h>
+#if ZENITH_ENABLE_SKIA
 #include <core/SkRefCnt.h>
+#endif
 #include <core/SkFont.h>
 #include <core/SkFontMgr.h>
 #include <core/SkTypeface.h>

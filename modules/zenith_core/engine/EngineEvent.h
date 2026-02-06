@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    EngineEvent.h
-    Created: 2025-12-02
-    Author:  Zenith DAW
-
-    Lock-free event structure for Engine communication.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 #include <juce_audio_basics/juce_audio_basics.h> // For MidiMessage, MidiBuffer, AbstractFifo
 #include <juce_core/juce_core.h>

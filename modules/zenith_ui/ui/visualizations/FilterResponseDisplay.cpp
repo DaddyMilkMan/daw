@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    FilterResponseDisplay.cpp
-    Created: 2026-02-01
-    Author:  Zenith DAW
-
-    Implementation of filter frequency response visualizer.
-
-  ==============================================================================
-
-*/
-
 #include "FilterResponseDisplay.h"
 #include <cmath>
 #include <algorithm>

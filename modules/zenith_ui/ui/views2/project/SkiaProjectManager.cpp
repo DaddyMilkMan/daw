@@ -17,18 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    SkiaProjectManager.cpp
-    Skia-based project management implementation
-  ==============================================================================
-*/
-
-
 #include <juce_core/juce_core.h>
 #include <algorithm>
 

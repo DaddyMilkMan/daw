@@ -17,14 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
 
  * @file PianoRollInput.cpp
  * @brief Piano Roll Input Handling - Part of PianoRollComponent
- */
 
 
 

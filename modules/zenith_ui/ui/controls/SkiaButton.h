@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaButton.h
-    Deprecated: Replaced by ZenithButton
-    
-    Legacy header for backward compatibility.
-
-  ==============================================================================
-*/
-
-
-
 #pragma once
 
 #include "ZenithButton.h"

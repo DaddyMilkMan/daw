@@ -17,24 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- // File: TrackManager.h
- // Brief: Track and clip management system
- * 
- * This component handles:
- * - Track creation and management
- * - Clip management within tracks
- * - Track state synchronization
- * - Audio/MIDI/Instrument track types
- */
-
-
-
 #pragma once
+
+// TrackManager.h
 
 #include <atomic>
 #include <memory>

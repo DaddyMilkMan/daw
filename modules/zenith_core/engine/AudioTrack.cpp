@@ -17,10 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#include "AudioTrack.h"
+
+namespace zenith {
+
 
 void AudioTrack::getNextAudioBlock(
     const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,

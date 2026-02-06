@@ -17,35 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    WingmanPanel.h
-    Created: 2025-11-29
-    Redesigned: 2026-01-17
-    Refactored: 2026-02-02
-    Author:  Zenith Team
-
-    FLUID INTELLIGENCE INTERFACE
-
-    ----------------------------
-    A completely custom, high-fidelity AI chat interface implemented in pure Skia.
-    No legacy components. No placeholders.
-
-    Features:
-    - Cinematic dark theme (Void/Obsidian)
-    - Floating input island with gradient borders
-    - Kinetic scroll physics (simulated)
-    - Markdown-style distinct message rendering
-    - Acrylic sidebar integration
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../framework/SkiaComponent.h"

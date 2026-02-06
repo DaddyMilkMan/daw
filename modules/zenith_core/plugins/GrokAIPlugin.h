@@ -17,19 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    GrokAIPlugin.h
-    VST3/AU plugin wrapper for Grok AI mastering - production ready
-    Phase 2: Audio I/O & Processing
-  ==============================================================================
-*/
-
-
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "../ai/GrokAPIClient.h"
 #include "../audio/RealTimeAudioBuffer.h"

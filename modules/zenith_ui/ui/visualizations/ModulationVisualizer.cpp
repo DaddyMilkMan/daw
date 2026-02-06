@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ModulationVisualizer.cpp
-    Created: 2026-02-01
-    Author:  Zenith DAW
-
-    Implementation of modulation visualization component.
-
-  ==============================================================================
-
-*/
-
 #include "ModulationVisualizer.h"
 #include <cmath>
 #include <algorithm>

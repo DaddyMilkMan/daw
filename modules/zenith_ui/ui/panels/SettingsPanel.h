@@ -17,23 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    SettingsPanel.h
-    Settings panel with live preview - production ready
-    Phase 4: User Interface
-  ==============================================================================
-*/
-
-
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "../visualizations/WaveformDisplay.h"
-#include "../../ai/GrokAPIClient.h"
+#include "ai_client/GrokAPIClient.h"
 #include <memory>
 #include <vector>
 

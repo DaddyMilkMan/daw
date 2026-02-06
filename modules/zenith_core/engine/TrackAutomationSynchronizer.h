@@ -17,33 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- // File: TrackAutomationSynchronizer.h
- // Brief: RT-safe automation synchronization between ProjectState and Engine
- *
- * Phase 13: Track Automation MVP
- *
- * This class bridges the message-thread ProjectState (ValueTree) with the
- * audio-thread Track objects (atomics). It:
- * - Runs on a Timer (60Hz on message thread)
- * - Listens to ProjectState automation changes
-
- * - Reads ValueTree automation data (message thread only)
- * - Samples automation curves at the current playback position
- * - Updates Track volume/pan/mute atomics in an RT-safe manner
- *
- * Thread Safety:
- * - Listens to ValueTree on MESSAGE THREAD
- * - Writes to atomics from MESSAGE THREAD (via timer)
- * - Audio thread reads atomics (lock-free, safe)
- * - Audio thread only reads atomics - no locks, no allocations
- */
-
 #pragma once
+
+// TrackAutomationSynchronizer.h
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>

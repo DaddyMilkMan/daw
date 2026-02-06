@@ -17,28 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaSessionView.h
-    Created: 2026-02-03
-    Author:  Zenith DAW Team
-
-    Clip launcher grid view (Ableton Live style).
-    Features:
-    - Scene/clip grid with launch buttons
-
-    - Track headers with mixer strip
-    - Scene launcher column
-    - Real-time clip state visualization
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../../framework/SkiaComponent.h"

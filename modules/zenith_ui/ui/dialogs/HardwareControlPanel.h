@@ -17,14 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
 
  * @file HardwareControlPanel.h
  * @brief Dynamic UI for MIDI 2.0 Hardware Control
- */
 
 
 #include "../Source/ui/controls/SkiaSlider.h"

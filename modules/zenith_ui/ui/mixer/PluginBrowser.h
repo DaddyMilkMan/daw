@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PluginBrowser.h
-    Created: 2025
-    Author:  Zenith DAW
-
-    Skia-based Plugin Browser Component.
-    Displays a list of available plugins with search and filtering.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <JuceHeader.h>

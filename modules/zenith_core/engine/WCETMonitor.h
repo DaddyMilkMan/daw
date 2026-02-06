@@ -17,25 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- // File: WCETMonitor.h
- // Brief: Worst-Case Execution Time monitoring for real-time audio
- * 
- * Tracks audio callback execution times to detect potential xruns before they happen.
- * Part of the Zenith DAW observability infrastructure.
- * 
- * Thread Safety:
- * - recordExecution() is AUDIO THREAD ONLY (lock-free)
- * - getStatistics() is MESSAGE THREAD ONLY
-
- * - All data uses std::atomic for lock-free access
- */
-
 #pragma once
+
+// WCETMonitor.h - Worst-Case Execution Time monitoring for real-time audio
 
 #include <atomic>
 #include <chrono>

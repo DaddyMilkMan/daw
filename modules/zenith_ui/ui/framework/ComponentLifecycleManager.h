@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ComponentLifecycleManager.h
-    Created: 2025-12-07
-    Author:  AI Assistant
-
-    Unified component lifecycle management system
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include "SkiaComponent.h"

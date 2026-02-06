@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithDesignSystem.cpp
-    Created: 2025-12-01
-    Author:  Zenith DAW
-
-    Implementation of global design settings.
-    NOTE: ThemeManager implementations are in ThemeManager.cpp
-
-
-  ==============================================================================
-*/
-
 #include "ZenithDesignSystem.h"
 
 // Skia Headers for Effects

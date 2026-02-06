@@ -7,12 +7,44 @@
 
 #pragma once
 #include <functional>
-#include <juce_core/juce_core.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_graphics/juce_graphics.h>
 #include <juce_events/juce_events.h>
+#include <juce_core/juce_core.h>
 #include <memory>
+#include <queue>
+#include <mutex>
+#include <thread>
+#include <condition_variable>
+#include <vector>
+#include <map>
+#include <atomic>
+
+// Include existing AI data structures
+#include "GrokJourney.h"
+#include "ProjectContext.h"
+#include "CreativePartner.h"
+#include "GenreDetector.h"
+#include "VisualAnalyzer.h"
 
 namespace zenith {
 namespace ai {
+
+//==============================================================================
+struct AnalysisRequest {
+    std::shared_ptr<juce::AudioBuffer<float>> audio;
+    double sampleRate;
+    juce::String trackName;
+    bool forceReanalysis = false;
+};
+
+struct AnalysisResult {
+    VisualAnalysisResult visualAnalysis;
+    GenrePrediction genrePrediction;
+    CreativeInsight creativeInsight;
+    juce::String contextualDescription;
+    bool isComplete = false;
+};
 
 //==============================================================================
 /**
@@ -21,240 +53,141 @@ namespace ai {
 */
 class GrokAPIClient {
 public:
-  GrokAPIClient() {
-    // Security: Load API key from environment variable, not hardcoded
-    apiKey_ = juce::SystemStats::getEnvironmentVariable("GROK_API_KEY", "");
-
-    if (apiKey_.isEmpty()) {
-      DBG("WARNING: GROK_API_KEY environment variable is not set. "
-          "GrokAPIClient will not function until a valid API key is provided.");
-    } else {
-      DBG("GrokAPIClient initialized with API key from environment");
-    }
-  }
-
-  /**
-   * Check if API key is configured
-   */
-  bool hasAPIKey() const { return apiKey_.isNotEmpty(); }
-
-  /**
-   * Set API key programmatically (for secure key store integration)
-   */
-  void setAPIKey(const juce::String &apiKey) { apiKey_ = apiKey; }
-
-  struct GrokFunction {
-    juce::String name;
-    juce::String description;
-    juce::var parameters;
-
-    GrokFunction() = default;
-    GrokFunction(const juce::String& n, const juce::String& d, const juce::var& p)
-        : name(n), description(d), parameters(p) {}
-  };
-
   enum class ModelType {
     Reasoning,     // grok-4.1 (High intelligence, "thinking")
     Fast,          // grok-4.1-fast (Low latency, tool use, non-reasoning)
     FastReasoning  // grok-4.1-fast-reasoning (Fast but with thinking)
   };
 
+  enum class LogLevel {
+      Info,
+      Warning,
+      Error
+  };
+
+  GrokAPIClient();
+
+  /**
+   * Check if API key is configured
+   */
+  bool hasAPIKey() const { return apiKey.isNotEmpty(); }
+
+  /**
+   * Set API key programmatically
+   */
+  bool setAPIKey(const juce::String &key);
+
   /**
    * Call Grok 4.1 model synchronously
    */
   juce::String callGrok(const juce::String &prompt,
                         const juce::String &systemMessage,
-                        ModelType modelType = ModelType::Reasoning) {
-    if (!hasAPIKey()) {
-      DBG("ERROR: No API key configured. Set GROK_API_KEY environment "
-          "variable.");
-      return "{}";
-    }
+                        ModelType modelType = ModelType::Reasoning);
 
-    DBG("======================================");
-    DBG("Calling Grok 4.1 API (" + getModelId(modelType) + ")...");
-    DBG("======================================");
-
-    // Build request JSON
-    juce::String requestBody = buildRequestJSON(prompt, systemMessage, modelType);
-
-    DBG("Request size: " + juce::String(requestBody.length()) + " bytes");
-
-    // Make HTTP request
-    juce::String response = makeHttpRequest(requestBody);
-
-    if (response.isEmpty()) {
-      DBG("ERROR: Empty response from Grok API");
-      return "{}";
-    }
-
-    // Extract content from response
-    juce::String content = extractContent(response);
-
-    DBG("Grok response received: " + juce::String(content.length()) + " bytes");
-    DBG("======================================");
-
-    return content;
-  }
-
-  /**
-   * Async version - calls Grok on background thread and invokes callback
-   */
   void callGrokAsync(const juce::String &prompt,
                      const juce::String &systemMessage,
                      std::function<void(juce::String)> callback,
-                     ModelType modelType = ModelType::Reasoning) {
-    // Launch on background thread
-    juce::Thread::launch([this, prompt, systemMessage, callback, modelType]() {
-      auto response = callGrok(prompt, systemMessage, modelType);
+                     ModelType modelType = ModelType::Reasoning);
 
-      // Invoke callback on message thread
-      juce::MessageManager::callAsync(
-          [callback, response]() { callback(response); });
-    });
-  }
+  /**
+   * Simple query interface used by some agents
+   */
+  void sendQuery(const juce::String& prompt, 
+                 std::function<void(const juce::String&)> onComplete);
+
+  //==============================================================================
+  // Integrated Analysis Features
+  //==============================================================================
+
+  void analyzeAudioAsync(const AnalysisRequest& request,
+                        std::function<void(AnalysisResult)> onComplete,
+                        std::function<void(juce::String)> onError);
+
+  AnalysisResult getAnalysis(const juce::String& trackName, 
+                             const juce::AudioBuffer<float>& audio,
+                             double sampleRate);
+
+  juce::String callGrokWithContext(const juce::String& prompt,
+                                  const juce::String& trackName,
+                                  const juce::AudioBuffer<float>& audio,
+                                  double sampleRate,
+                                  const juce::var& projectState = juce::var(),
+                                  ModelType modelType = ModelType::Reasoning);
+
+  std::vector<CreativeSuggestion> getCreativeSuggestions(const juce::String& trackName);
+  juce::String askCreativePartner(const juce::String& question);
+  
+  void provideCreativeFeedback(const CreativeSuggestion& suggestion, 
+                               bool wasHelpful, 
+                               const juce::String& comment);
+
+  void updateProjectContext(const juce::var& dawState);
+  ContextualInsights getProjectInsights() const;
+
+  // API Key Management
+  void loadAPIKeyFromSecureStorage();
+  void clearAPIKey();
 
 private:
-  juce::String apiKey_;
+  juce::String apiKey;
   const juce::String apiEndpoint_ = "https://api.x.ai/v1/chat/completions";
 
-  juce::String getModelId(ModelType type) const {
-      switch (type) {
-          case ModelType::Fast:          return "grok-4.1-fast";
-          case ModelType::FastReasoning: return "grok-4.1-fast-reasoning";
-          case ModelType::Reasoning: default: return "grok-4.1";
-      }
-  }
+  // Background analysis
+  std::unique_ptr<std::thread> analysisThread;
+  std::condition_variable analysisCondition;
+  std::mutex analysisQueueMutex;
+  std::queue<AnalysisRequest> analysisQueue;
+  std::atomic<bool> shouldStopAnalysis{false};
 
-  juce::String buildRequestJSON(const juce::String &prompt,
-                                const juce::String &systemMessage,
-                                ModelType modelType) {
-    juce::DynamicObject::Ptr request = new juce::DynamicObject();
+  void analysisWorker();
+  void startBackgroundAnalysis();
+  void stopBackgroundAnalysis();
 
-    // Use selected Grok 4.1 model
-    request->setProperty("model", getModelId(modelType));
-    request->setProperty("temperature", 0.7);
-    request->setProperty("max_tokens", 2000); // 4.1 has huge context, but we limit output 
+  AnalysisResult performAnalysis(const AnalysisRequest& request);
+  
+  // Caching
+  std::map<juce::String, AnalysisResult> analysisCache;
+  std::mutex cacheMutex;
+  static constexpr size_t MAX_CACHE_SIZE = 100;
 
-    // Build messages array
-    juce::Array<juce::var> messages;
+  void cacheAnalysis(const juce::String& key, const AnalysisResult& result);
+  bool getCachedAnalysis(const juce::String& key, AnalysisResult& result);
+  void cleanupCache();
+  
+  juce::String generateCacheKey(const juce::String& trackName, 
+                               const juce::AudioBuffer<float>& audio,
+                               double sampleRate);
 
-    // System message
-    juce::DynamicObject::Ptr sysMsg = new juce::DynamicObject();
-    sysMsg->setProperty("role", "system");
-    sysMsg->setProperty("content", juce::var(systemMessage));
-    messages.add(juce::var(sysMsg));
+  // Secure storage
+  bool storeAPIKey(const juce::String& key);
+  juce::String retrieveAPIKey();
+  bool deleteAPIKey();
+  juce::String encryptKey(const juce::String& key);
+  juce::String decryptKey(const juce::String& encrypted);
 
-    // User message
-    juce::DynamicObject::Ptr userMsg = new juce::DynamicObject();
-    userMsg->setProperty("role", "user");
-    userMsg->setProperty("content", juce::var(prompt));
-    messages.add(juce::var(userMsg));
+  // Logging
+  void logMessage(const juce::String& message, LogLevel level);
 
-    request->setProperty("messages", juce::var(messages));
+  // Prompt building
+  juce::String buildContextualPrompt(const juce::String& prompt, 
+                                    const AnalysisResult& analysis,
+                                    const ContextualInsights& insights);
+  juce::String buildSystemPrompt();
 
-    // Enable streaming for better responsiveness (optional)
-    request->setProperty("stream", false);
+  // Network helpers
+  juce::String getModelId(ModelType type) const;
+  juce::String buildRequestJSON(const juce::String& prompt,
+                                const juce::String& systemMessage,
+                                ModelType modelType);
+  juce::String makeHttpRequest(const juce::String& requestBody);
+  juce::String extractContent(const juce::String& responseJson);
 
-    return juce::JSON::toString(juce::var(request));
-  }
-
-  juce::String makeHttpRequest(const juce::String &requestBody) {
-    // Create URL with POST data
-    juce::URL url(apiEndpoint_);
-    url = url.withPOSTData(requestBody);
-
-    // Set up headers for the request
-    // Set up headers
-    juce::String headerString = "Content-Type: application/json\r\n"
-                                "Authorization: Bearer " +
-                                apiKey_;
-
-    auto options =
-        juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
-            .withExtraHeaders(headerString)
-            .withConnectionTimeoutMs(30000);
-
-    // Make the HTTP POST request
-    std::unique_ptr<juce::InputStream> stream = url.createInputStream(options);
-
-    if (stream == nullptr) {
-      DBG("ERROR: Failed to create HTTP connection to Grok API");
-      return "{}";
-    }
-
-    // Read the response
-    juce::String response = stream->readEntireStreamAsString();
-
-    if (response.isEmpty()) {
-      DBG("ERROR: Empty response from Grok API stream");
-      return "{}";
-    }
-
-    return response;
-  }
-
-  juce::String extractContent(const juce::String &responseJson) {
-    // Parse JSON response
-    auto json = juce::JSON::parse(responseJson);
-
-    if (json.isVoid()) {
-      DBG("ERROR: Failed to parse response JSON");
-      DBG("Raw response: " + responseJson.substring(0, 500));
-      return "{}";
-    }
-
-    auto *obj = json.getDynamicObject();
-    if (!obj) {
-      DBG("ERROR: Response is not a JSON object");
-      return "{}";
-    }
-
-    // Check for API errors
-    if (obj->hasProperty("error")) {
-      auto *errorObj = obj->getProperty("error").getDynamicObject();
-      if (errorObj) {
-        juce::String errorMsg = errorObj->getProperty("message").toString();
-        juce::String errorType = errorObj->getProperty("type").toString();
-        DBG("API ERROR: " + errorType + " - " + errorMsg);
-      }
-      return "{}";
-    }
-
-    // Extract: response.choices[0].message.content
-    auto choices = obj->getProperty("choices");
-    if (!choices.isArray()) {
-      DBG("ERROR: No choices array in response");
-      return "{}";
-    }
-
-    auto *choicesArray = choices.getArray();
-    if (choicesArray->isEmpty()) {
-      DBG("ERROR: Choices array is empty");
-      return "{}";
-    }
-
-    auto *firstChoice = (*choicesArray)[0].getDynamicObject();
-    if (!firstChoice) {
-      DBG("ERROR: First choice is not an object");
-      return "{}";
-    }
-
-    auto *message = firstChoice->getProperty("message").getDynamicObject();
-    if (!message) {
-      DBG("ERROR: No message in first choice");
-      return "{}";
-    }
-
-    juce::String content = message->getProperty("content").toString();
-
-    if (content.isEmpty()) {
-      DBG("WARNING: Content is empty");
-      return "{}";
-    }
-
-    return content;
-  }
+  // Feature analysis helper components
+  std::unique_ptr<VisualAnalyzer> visualAnalyzer = std::make_unique<VisualAnalyzer>();
+  std::unique_ptr<GenreDetector> genreDetector = std::make_unique<GenreDetector>();
+  std::unique_ptr<CreativePartner> creativePartner = std::make_unique<CreativePartner>();
+  std::unique_ptr<ProjectContext> projectContext = std::make_unique<ProjectContext>();
+  std::unique_ptr<GrokJourney> journey = std::make_unique<GrokJourney>();
 };
 
 } // namespace ai

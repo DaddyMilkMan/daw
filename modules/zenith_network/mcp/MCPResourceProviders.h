@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "../commands/CommandAPI.h"
+#include "zenith_commands/commands/CommandAPI.h"
 #include "../engine/Engine.h"
 #include "../engine/ProjectState.h"
 #include "../engine/TempoMap.h"

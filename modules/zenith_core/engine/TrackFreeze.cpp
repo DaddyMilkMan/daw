@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    TrackFreeze.cpp
-    Created: 2025-12-09
-    Author:  Zenith DAW
-
-    Track freeze implementation for CPU optimization.
-
-  ==============================================================================
-
-*/
-
 #include "TrackFreeze.h"
 #include "../instruments/Instrument.h"
 #include "Clip.h"

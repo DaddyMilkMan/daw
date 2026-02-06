@@ -17,11 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
 #pragma once
 #include "../instruments/Instrument.h"
 #include "ClipTrack.h"

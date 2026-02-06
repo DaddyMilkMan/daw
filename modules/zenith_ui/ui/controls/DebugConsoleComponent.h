@@ -17,29 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    DebugConsoleComponent.h
-    Created: 2025-12-07
-    Author:  Zenith DAW AI Team
-
-    Debug Console UI Component
-
-    A sleek, minimal debug console that displays session health information
-
-    in the bottom bar. Shows a summary of issues fixed rather than verbose logs.
-
-  ==============================================================================
-*/
-
 #pragma once
 
-#include "../../ai/SessionDebuggerAgent.h"
+#include "ai_client/SessionDebuggerAgent.h"
 #include "SkiaComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_graphics/juce_graphics.h>

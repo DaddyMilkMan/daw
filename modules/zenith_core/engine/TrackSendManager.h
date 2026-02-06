@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    TrackSendManager.h
-    Created: 2026-01-31
-    Author:  Zenith DAW
-
-    Send routing management for Track.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include "MixerChannel.h"

@@ -2,6 +2,8 @@
 # ZENITH ENGINE CORE MODULE
 # =============================================================================
 
+include_guard(GLOBAL)
+
 # Engine core sources - modular architecture
 set(ZENITH_ENGINE_CORE_SOURCES
     modules/zenith_core/engine/core/EngineCore.cpp
@@ -46,7 +48,7 @@ target_include_directories(zenith_engine_core
 
 target_compile_features(zenith_engine_core
     PUBLIC
-        cxx_std_17
+        cxx_std_20
 )
 
 target_link_libraries(zenith_engine_core
@@ -54,7 +56,6 @@ target_link_libraries(zenith_engine_core
         zenith_core
         zenith_audio_utils
         zenith_dsp
-        zenith_audio_formats
     PRIVATE
         juce_audio_basics
         juce_audio_devices

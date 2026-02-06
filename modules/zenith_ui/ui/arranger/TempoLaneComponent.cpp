@@ -17,17 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file TempoLaneComponent.cpp
- * @brief Tempo lane implementation - FULLY IMPLEMENTED
- * 
- * Allows visual editing of tempo automation.
- */
-
+// TempoLaneComponent.cpp
 
 #include <core/SkPath.h>
 #include <core/SkFont.h>

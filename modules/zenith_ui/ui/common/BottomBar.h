@@ -17,29 +17,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    BottomBar.h
-    Created: 2025-11-28
-    Author:  David Chen + Leo Rossi
-
-    Bottom bar container with Piano Keyboard, Mixer Strip, and Debug Console.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include <memory>
 #include <vector>
 
-#include "../../engine/EngineConstants.h"
+#include "zenith_core/engine/EngineConstants.h"
 #include "../mixer/MixerComponent.h"
 #include "PianoKeyboardViewSkia.h"
 #include "SkiaComponent.h"

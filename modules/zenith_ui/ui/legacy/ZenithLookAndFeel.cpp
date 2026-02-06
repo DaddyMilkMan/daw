@@ -17,15 +17,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#include "ZenithLookAndFeel.h"
+
 
  * @file ZenithLookAndFeel.cpp
  * @brief Modern LookAndFeel implementation with micro-interactions
  * @author Fixed by Claude - December 2025
- */
 
 
 

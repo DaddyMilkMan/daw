@@ -17,14 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
 
  * @file SampleEditorInput.cpp
  * @brief Interaction handlers for SampleEditorComponent (Mouse/Keyboard/Navigation)
- */
 
 
 void SampleEditorComponent::mouseDown(const juce::MouseEvent& e) {

@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    AlgorithmicToolsPanel.h
-    Created: 2026-01-03
-    Author:  Antigravity
-
-    Left-side panel for Piano Roll power features (probability, harmony, etc.)
-  ==============================================================================
-*/
-
-
 #pragma once
 
 #include "../framework/SkiaComponent.h"

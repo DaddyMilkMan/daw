@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    WavetableData.h
-    Created: 2025-12-20
-    Author:  Zenith DAW
-
-    Core data structures for wavetable synthesis.
-    Supports multi-frame wavetables with MIP-mapping for anti-aliased playback.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <array>

@@ -17,10 +17,17 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#include "MidiNoteStateManager.h"
+#include "ProjectState.h"
+#include "EngineConstants.h"
+#include <random>
+
+namespace zenith {
+
+using namespace zenith::constants;
+
+namespace {
+juce::ValueTree findClipNode(const juce::String& clipId); // Forward decl
 
 juce::ValueTree getOrCreateExpressionsNode(juce::ValueTree noteTree,
                                            juce::UndoManager& undoManager) {

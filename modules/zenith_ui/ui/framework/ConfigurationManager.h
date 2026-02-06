@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ConfigurationManager.h
-    Created: 2025-12-07
-    Author:  AI Assistant
-
-    UI State Management and Configuration System
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include "SkiaComponent.h"

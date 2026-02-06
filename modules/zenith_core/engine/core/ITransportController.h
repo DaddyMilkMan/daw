@@ -17,19 +17,13 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#pragma once
 
- * @file ITransportController.h
- * @brief Transport control interface
- *
- * Manages playback state, position, and looping functionality.
- */
-
+//==============================================================================
 
 #include <juce_core/juce_core.h>
+#include <juce_data_structures/juce_data_structures.h>
+#include <juce_events/juce_events.h>
 
 namespace zenith {
 

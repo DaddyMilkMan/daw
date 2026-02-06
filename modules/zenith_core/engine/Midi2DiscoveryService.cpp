@@ -17,15 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+// Midi2DiscoveryService.cpp - Implementation of MIDI-CI Discovery Service
 
-//     File: Midi2DiscoveryService.cpp
-//     Brief: Implementation of MIDI-CI Discovery Service
-//*
-
+#include "Midi2DiscoveryService.h"
+#include "PropertyExchangeManager.h"
 
 namespace zenith {
 

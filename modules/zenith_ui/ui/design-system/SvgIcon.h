@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SvgIcon.h
-    Created: 2026-02-01
-    Author:  Zenith DAW
-
-    Skia SVG icon loader + renderer (SkSVGDOM).
-    Used to render transport + menu icons from SVG assets.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <core/SkCanvas.h>

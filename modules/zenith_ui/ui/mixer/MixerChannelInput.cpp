@@ -17,22 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    MixerChannelInput.cpp
-    MixerChannelComponent input handling implementation
-  ==============================================================================
-*/
-
-
-#include "../../engine/Engine.h"
+#include "zenith_core/engine/Engine.h"
 #include "../controls/ContextMenuManager.h"
-#include "../../engine/Track.h"
-#include "../../engine/AuxBus.h"
+#include "zenith_core/engine/Track.h"
+#include "zenith_core/engine/AuxBus.h"
 #include "PluginBrowser.h"
 #include "../framework/ConfigurationManager.h"
 

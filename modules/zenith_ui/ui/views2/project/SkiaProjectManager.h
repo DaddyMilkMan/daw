@@ -17,18 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    SkiaProjectManager.h
-    Skia-based project management UI with comprehensive features
-  ==============================================================================
-*/
-
-
 #include "../../design-system/ZenithTheme.h"
 #include "engine/Engine.h"
 #include "engine/ProjectState.h"

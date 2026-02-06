@@ -17,25 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-/*
-    ==============================================================================
-    ZenithTheme.h
-    Created: 2025-12-XX
-    Author:  Zenith DAW Team
-
-    Modern design token system with proper hierarchy, spacing, and modern
-    aesthetics.
-    ==============================================================================
-*/
-
-
-
-#include <juce_gui_basics/juce_gui_basics.h>
+#pragma once
+#include "ZenithDesignSystem.h"
+#include "ColorBridge.h"
+#include <juce_graphics/juce_graphics.h>
 #include "ZenithDesignSystem.h"
 
 namespace zenith {

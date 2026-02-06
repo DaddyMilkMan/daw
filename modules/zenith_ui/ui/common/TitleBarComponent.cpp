@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    TitleBarComponent.cpp
-    Created: 2025-12-30
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "TitleBarComponent.h"
 #include "../design-system/ZenithTypography.h"
 #include "../framework/GlassmorphicPanel.h"

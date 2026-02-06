@@ -17,36 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    MasterLimiter.h
-    Created: 2025-12-09
-    Author:  Zenith DAW
-
-    Professional-grade brickwall limiter for the master bus.
-
-    Features:
-
-    - True peak limiting with lookahead
-    - Ultra-fast attack for transparent limiting
-    - Soft-knee transition for musical response
-    - Oversampling support for inter-sample peak detection
-    - Lock-free parameter updates
-    - Gain reduction metering
-
-    Thread Safety:
-    - Parameter setters are lock-free (atomic updates)
-    - process() is RT-safe (no allocations, no locks)
-    - prepare() must be called from message thread before use
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <array>

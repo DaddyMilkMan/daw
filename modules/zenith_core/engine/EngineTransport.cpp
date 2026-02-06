@@ -17,20 +17,13 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-//     File: EngineTransport.cpp
-//     Brief: Transport controls, playhead, and looping
-//     Note: This is a modular component of Engine - declarations remain in Engine.h
-
-
-#include "../engine/RecordingManager.h"
-#include "../engine/TrackAutomationSynchronizer.h"
-#include "../engine/AudioRenderer.h"
-#include "../engine/Track.h"
+#include "Engine.h"
+#include "TransportController.h"
+#include "TrackAutomationSynchronizer.h"
+#include "AudioRenderer.h"
+#include "Track.h"
+#include "Metronome.h"
+#include "RecordingManager.h"
 
 namespace zenith {
 

@@ -17,24 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file TrackGroupHeader.h
- * @brief Track group header component with VU meter for mixer view
- *
- * Features:
- * - Collapsible track group with expand/collapse
- * - Integrated VU meter with non-blocking setLevel() API
- * - Mute/Solo controls for entire group
- * - Glassmorphic styling with Neon Noir design system
- * - AnimationCoordinator integration for smooth 60Hz updates
-
- */
-
 #pragma once
+
+// TrackGroupHeader.h
+
 
 #include <atomic>
 #include <functional>

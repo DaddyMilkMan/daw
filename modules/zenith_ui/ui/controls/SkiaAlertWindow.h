@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaAlertWindow.h
-    Created: 2025-12-07
-    Author:  AI Assistant
-
-    Pure Skia-based alert window component to replace juce::AlertWindow
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include "SkiaButton.h"

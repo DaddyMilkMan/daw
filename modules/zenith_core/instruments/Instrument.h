@@ -17,26 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    Instrument.h
-    Created: 2025-11-18
-    Author:  Zenith DAW
-
-    Base class for all built-in instruments.
-    Wraps a JUCE AudioProcessor and provides metadata, presets, and parameter
-  access.
-
-
-  ==============================================================================
-*/
-
 #pragma once
+
+// Instrument.h - Base class for all built-in instruments
 
 #include "InstrumentMetadata.h"
 #include "InstrumentPreset.h"

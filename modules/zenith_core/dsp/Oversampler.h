@@ -17,41 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    Oversampler.h
-    Created: 2025-12-09
-    Author:  Zenith DAW
-
-    Polyphase oversampler for high-quality nonlinear processing.
-    
-    Features:
-
-    - 2x or 4x oversampling
-    - High-quality polyphase FIR filters
-    - Linear phase response
-    - Pre-allocated buffers for RT-safety
-    - Asymmetric filtering for reduced latency
-
-    Thread Safety:
-    - prepare() must be called from message thread
-    - process() is RT-safe (no allocations)
-    - Supports 2x and 4x oversampling
-
-    Usage:
-    1. Call prepare() with sample rate and max block size
-    2. Call upsample() to oversample input
-    3. Process with nonlinear algorithm at higher rate
-    4. Call downsample() to return to original rate
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_audio_basics/juce_audio_basics.h>

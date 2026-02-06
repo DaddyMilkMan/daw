@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SessionController.cpp
-    Created: 2026-02-03
-    Author:  Zenith DAW Team
-
-    Implementation of SessionController.
-
-  ==============================================================================
-
-*/
-
 #include "SessionController.h"
 #include "../../../engine/Track.h"
 #include "../../../engine/EngineEvent.h"

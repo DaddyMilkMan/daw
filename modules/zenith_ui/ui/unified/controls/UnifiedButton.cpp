@@ -16,17 +16,10 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#include "UnifiedButton.h"
+#include "../Theme.h"
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file UnifiedButton.cpp
- * @brief Unified button component implementation
- */
-
-
+namespace zenith {
 
 UnifiedButton::Builder& UnifiedButton::Builder::withText(const juce::String& text) {
     text_ = text;
@@ -99,7 +92,10 @@ UnifiedButton::UnifiedButton() {
     initialize();
 }
 
-UnifiedButton::UnifiedButton(const Builder& builder) : UnifiedComponent(builder) {
+UnifiedButton::UnifiedButton(const Builder& builder) : UnifiedComponent() {
+    setBounds(builder.bounds_);
+    setEnabled(builder.enabled_);
+    setVisible(builder.visible_);
     text_ = builder.text_;
     toggleMode_ = builder.toggleMode_;
     toggleState_ = builder.toggleState_;
@@ -185,7 +181,7 @@ void UnifiedButton::render(juce::Graphics& graphics) {
 
         // Calculate text position
         auto textBounds = buttonPath.getBounds().toNearestInt();
-        auto font = juce::Font(getLookAndFeel().getDefaultSansSerifFont().getHeight() * 0.8f);
+        auto font = juce::Font(16.0f * 0.8f);
 
         // Centre the text
         auto textArea = textBounds.reduced(10, 5);
@@ -198,8 +194,13 @@ void UnifiedButton::render(juce::Graphics& graphics) {
 
 bool UnifiedButton::keyPressed(const juce::KeyPress& key) {
     // Handle space and return keys
+    // Handle space and return keys
     if (key.isKeyCode(juce::KeyPress::spaceKey) || key.isKeyCode(juce::KeyPress::returnKey)) {
-        mouseDown(juce::MouseEvent(this, juce::MouseEvent::mouseDown, juce::ModifierKeys::currentModifiers, juce::MouseInputSource::defaultMouseSource, {}, 1.0f, getLocalBounds().getCentre().toFloat()));
+        if (toggleMode_) {
+            toggleState_ = !toggleState_;
+        }
+        if (clickHandler_) clickHandler_();
+        repaint();
         return true;
     }
 
@@ -208,9 +209,9 @@ bool UnifiedButton::keyPressed(const juce::KeyPress& key) {
 
 juce::Rectangle<int> UnifiedButton::getPreferredSize() const {
     if (!text_.isEmpty()) {
-        auto font = juce::Font(getLookAndFeel().getDefaultSansSerifFont().getHeight() * 0.8f);
-        auto textWidth = font.getStringWidth(text_) + 20; // Add padding
-        auto textHeight = font.getHeight() + 10; // Add padding
+        auto font = juce::Font(16.0f * 0.8f);
+        auto textWidth = (int)font.getStringWidth(text_) + 20; // Add padding
+        auto textHeight = (int)font.getHeight() + 10; // Add padding
         return juce::Rectangle<int>(0, 0, juce::jmax(bounds_.getWidth(), textWidth), juce::jmax(bounds_.getHeight(), textHeight));
     }
     return bounds_;
@@ -313,7 +314,7 @@ void UnifiedButton::onChange() {
     }
 
     // Notify listeners
-    listeners_.call(&juce::ComponentListener::componentMovedOrResized, this, false, false);
+    listeners_.call(&juce::ComponentListener::componentMovedOrResized, *this, false, false);
 }
 
 void UnifiedButton::updateButtonState() {
@@ -368,7 +369,7 @@ void UnifiedButton::mouseUp(const juce::MouseEvent& event) {
 
 void UnifiedButton::mouseDrag(const juce::MouseEvent& event) {
     UnifiedComponent::mouseDrag(event);
-    pressed_ = getLocalBounds().contains(event.position);
+    pressed_ = getLocalBounds().toFloat().contains(event.position);
 }
 
 void UnifiedButton::focusGained(FocusChangeType cause) {

@@ -17,26 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file ClipComponent.cpp
- * @brief Flat clip component with theme colors and clean typography
- *
- * Clean DAW design:
- * - Track-colored fills (muted, from theme)
- * - Typography.body for clip names
- * - Simple 1-2px selection border
- * - Rounded corners (4px, 8px grid)
- */
-
-
-
-// POLISH: spacing normalized to 8px grid (rounded corners 4px)
-// POLISH: typography now uses ZenithDesignSystem
-// POLISH: flattened visuals (track colors, no gradients)
+// ClipComponent.cpp
 
 #include "ClipComponent.h"
 #include "../../engine/ProjectState.h"

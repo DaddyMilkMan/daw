@@ -17,25 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithFilter.h
-    Created: 2025-12-06
-    Updated: 2025-02-01 (Professional Filter Overhaul)
-    Author:  Zenith DAW
-
-    Professional multimode filter with circuit-modeled implementations
-    and 4x oversampling for premium sound quality.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "ZenithPolySynthDefs.h"

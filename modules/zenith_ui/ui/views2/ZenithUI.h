@@ -17,31 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithUI.h
-    Created: 2026-02-03
-    Author:  Zenith DAW Team
-
-    Master include for the new Zenith UI system.
-    
-    Usage:
-
-        #include "ui/views2/ZenithUI.h"
-        
-        // In your MainComponent:
-        zenith::ui::ZenithMainLayout mainLayout;
-        addAndMakeVisible(mainLayout);
-
-  ==============================================================================
-*/
-
 #pragma once
+
+// ZenithUI.h
+
 
 // Core navigation
 #include "core/ViewSwitcher.h"

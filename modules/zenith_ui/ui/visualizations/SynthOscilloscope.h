@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SynthOscilloscope.h
-    Created: 2026-02-01
-    Author:  Zenith DAW
-
-    Real-time oscilloscope for ZenithPolySynth output.
-    Shows waveform with trigger, time scale, and X-Y mode.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../framework/SkiaComponent.h"

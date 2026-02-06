@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PitchGraphEditor.cpp
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Graph Mode pitch editor implementation.
-
-  ==============================================================================
-
-*/
-
 #include "PitchGraphEditor.h"
 #include "../../design-system/ZenithTheme.h"
 #include <algorithm>

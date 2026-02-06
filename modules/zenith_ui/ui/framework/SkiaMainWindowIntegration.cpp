@@ -17,27 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaMainWindowIntegration.cpp
-    Created: 2025-11-28
-    Author:  Zenith DAW Team
-
-    Implementation of Skia-rendered main window base class.
-
-  ==============================================================================
-
-*/
-
 #include "SkiaMainWindowIntegration.h"
 
 #ifdef ZENITH_USE_SKIA
-#include "../../engine/ZenithLogger.h"
+#include "ZenithLogger.h"
 #include "PlatformWindowUtils.h"
 #include <cstring>
 #include <gpu/ganesh/gl/GrGLDirectContext.h>

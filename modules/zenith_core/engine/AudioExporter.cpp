@@ -17,26 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AudioExporter.cpp
-    Created: 2025-12-20
-    Author:  Zenith DAW
-
-    Professional audio export with:
-    - Two-pass normalization
-    - TPDF dithering with noise shaping
-
-    - Asynchronous multi-file stem export
-
-  ==============================================================================
-*/
-
 #include "AudioExporter.h"
 #include "../dsp/Dither.h"
 #include "AudioRenderer.h"

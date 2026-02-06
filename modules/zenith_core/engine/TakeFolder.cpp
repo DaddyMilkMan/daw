@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    TakeFolder.cpp
-    Created: 2025-12-24
-    Author:  Zenith DAW
-
-    Implementation of TakeFolder for multi-take recording and comping.
-
-  ==============================================================================
-
-*/
-
 #include "TakeFolder.h"
 #include <algorithm>
 #include "RealTimeGarbageCollector.h"

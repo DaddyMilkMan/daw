@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithVoiceChanger.cpp
-    Created: 2025-12-20
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "ZenithVoiceChanger.h"
 
 namespace zenith {

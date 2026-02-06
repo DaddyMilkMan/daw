@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    RightSidePanel.h
-    Created: 2025-11-28
-    Author:  David Chen + Isabella Moretti
-
-    Layout container for Wingman console and scratch pads.
-    Positioned on LEFT side as copilot (named "RightSidePanel" for legacy).
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "WingmanPanel.h" // Include full header to use unique_ptr

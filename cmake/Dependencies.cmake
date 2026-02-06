@@ -7,6 +7,8 @@
 # - Archive downloads verified with SHA256 hashes
 # =============================================================================
 
+include_guard(GLOBAL)
+
 include(FetchContent)
 
 # Load pinned version manifest
@@ -14,7 +16,7 @@ include(${CMAKE_CURRENT_LIST_DIR}/FetchContentVersions.cmake)
 
 # Verify manifest loaded
 if(NOT ZENITH_JUCE_GIT_HASH)
-    message(FATAL_ERROR "Dependency manifest properly not loaded!")
+    message(FATAL_ERROR "Dependency manifest not properly loaded!")
 endif()
 
 # =============================================================================
@@ -58,7 +60,7 @@ message(STATUS "Zenith DAW: JUCE configured (hash: ${ZENITH_JUCE_GIT_HASH})")
 # =============================================================================
 # 2. ONNX Runtime (AI Features)
 # =============================================================================
-option(ENABLE_ONNX "Enable ONNX Runtime for AI features" ON)
+option(ENABLE_ONNX "Enable ONNX Runtime for AI features" OFF)
 
 if(ENABLE_ONNX)
     if(ZENITH_PLATFORM_LINUX)
@@ -154,8 +156,9 @@ if(ZENITH_ENABLE_COLLAB)
         
         FetchContent_Declare(
             Opus
-            GIT_REPOSITORY https://github.com/xiph/opus.git
-            GIT_TAG v1.3.1
+            GIT_REPOSITORY ${ZENITH_OPUS_GIT_URL}
+            GIT_TAG ${ZENITH_OPUS_GIT_HASH}
+            GIT_SHALLOW FALSE  # Required for specific commit hash
         )
         FetchContent_MakeAvailable(Opus)
         

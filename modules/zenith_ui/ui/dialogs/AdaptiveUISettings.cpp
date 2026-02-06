@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AdaptiveUISettings.cpp
-    Created: 2025-12-07
-    Author:  AI Assistant
-
-    Settings implementation for AI-Powered Adaptive Interface
-
-  ==============================================================================
-
-*/
-
 #include "AdaptiveUISettings.h"
 #include "../design-system/ZenithLayout.h"
 #include "../framework/ConfigurationManager.h"

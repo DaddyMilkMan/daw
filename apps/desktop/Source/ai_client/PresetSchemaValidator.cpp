@@ -524,7 +524,10 @@ PresetValidationResult PresetSchemaValidator::validate(const Preset& preset) con
     std::set<juce::String> seenParameters;
     
     // Validate each parameter in the preset
-    for (const auto& [paramId, value] : params) {
+    for (const auto& pair : params) {
+        juce::String paramId(pair.first); // Convert std::string key to juce::String
+        float value = pair.second;
+        
         seenParameters.insert(paramId);
         
         auto paramResult = validateParameter(paramId, value);
@@ -638,8 +641,10 @@ Preset PresetSchemaValidator::clampToSchema(const Preset& preset) const
 {
     Preset result = preset;
     
-    for (auto& [paramId, value] : result.parameters) {
-        value = clampParameter(paramId, value);
+    for (auto& pair : result.parameters) {
+        juce::String paramId(pair.first); // Convert std::string key to juce::String
+        float value = pair.second;
+        pair.second = clampParameter(paramId, value); // Assign back to the map
     }
     
     return result;
@@ -774,7 +779,7 @@ Preset PresetSchemaValidator::createDefaultPreset() const
     preset.category = "init";
     
     for (const auto& def : parameters_) {
-        preset.parameters[def.id] = def.defaultValue;
+        preset.parameters[def.id.toStdString()] = def.defaultValue;
     }
     
     return preset;
@@ -784,7 +789,7 @@ Preset PresetSchemaValidator::createPresetFromNormalized(const std::vector<float
                                                           const juce::String& name) const
 {
     Preset preset;
-    preset.name = name;
+    preset.name = name.toStdString();
     
     size_t numParams = std::min(normalizedValues.size(), parameters_.size());
     
@@ -792,13 +797,13 @@ Preset PresetSchemaValidator::createPresetFromNormalized(const std::vector<float
         const auto& def = parameters_[i];
         float normalized = juce::jlimit(0.0f, 1.0f, normalizedValues[i]);
         float value = denormalizeValue(def, normalized);
-        preset.parameters[def.id] = value;
+        preset.parameters[def.id.toStdString()] = value;
     }
     
     // Fill remaining parameters with defaults
     for (size_t i = numParams; i < parameters_.size(); ++i) {
         const auto& def = parameters_[i];
-        preset.parameters[def.id] = def.defaultValue;
+        preset.parameters[def.id.toStdString()] = def.defaultValue;
     }
     
     return preset;
@@ -810,7 +815,7 @@ std::vector<float> PresetSchemaValidator::presetToNormalized(const Preset& prese
     normalized.reserve(parameters_.size());
     
     for (const auto& def : parameters_) {
-        auto it = preset.parameters.find(def.id);
+        auto it = preset.parameters.find(def.id.toStdString());
         float value = (it != preset.parameters.end()) ? it->second : def.defaultValue;
         normalized.push_back(normalizeValue(def, value));
     }

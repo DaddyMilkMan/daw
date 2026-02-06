@@ -17,16 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file ArrangerGridUtils.cpp
- * @brief Implementation of coordinate conversion, grid snapping, and waveform cache utilities
- */
-
-
+// ArrangerGridUtils.cpp
 
 #include <cmath>
 

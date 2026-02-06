@@ -17,15 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file TimelineRuler.cpp
- * @brief Timeline ruler implementation with flat Skia design
- */
-
+// TimelineRuler.cpp
 
 #include "../design-system/ZenithDesignSystem.h"
 #include "../design-system/ColorBridge.h"

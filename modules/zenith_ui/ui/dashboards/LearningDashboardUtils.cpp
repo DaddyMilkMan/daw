@@ -17,18 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    LearningDashboardUtils.cpp
-    Refactored implementations for Learning Dashboard helpers to reduce monolithic coupling.
-  ==============================================================================
-*/
-
-
 namespace zenith {
 namespace ui {
 

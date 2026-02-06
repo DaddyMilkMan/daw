@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    Metronome.h
-    Created: 2025-12-18
-    Author:  Zenith DAW
-
-    Synthesized metronome for click track generation.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include <atomic>

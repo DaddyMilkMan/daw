@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaSpectrumComponent.cpp
-    Created: 2025-12-08
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "SkiaSpectrumComponent.h"
 #include <effects/SkGradientShader.h>
 

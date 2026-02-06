@@ -17,11 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
+#include "ONNXStemSeparator.h"
+#include "DSPStemSeparator.h"
+#include "PlatformModelUtils.h"
+#include <juce_dsp/juce_dsp.h>
 // ONNX Runtime headers (conditional compilation)
 // When ONNX Runtime is linked, define ZENITH_USE_ONNX_RUNTIME in CMake
 
@@ -461,7 +460,7 @@ juce::String ONNXStemSeparator::getModelInfo() const {
 }
 
 juce::File ONNXStemSeparator::findDefaultModel() {
-    return PlatformModelUtils::findDefaultModel();
+    return zenith::PlatformModelUtils::findDefaultModel();
 }
 
 void ONNXStemSeparator::shutdown() {

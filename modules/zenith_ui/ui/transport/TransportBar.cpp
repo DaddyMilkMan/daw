@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    TransportBar.cpp
-    Created: 2025-11-28
-    Author:  Leo "Lil Bit" Rossi
-
-    Implementation of transport controls with Neon Noir styling.
-
-  ==============================================================================
-
-*/
-
 #include "TransportBar.h"
 
 

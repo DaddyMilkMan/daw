@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaSessionView.cpp
-    Created: 2026-02-03
-    Author:  Zenith DAW Team
-
-    Implementation of clip launcher grid view.
-
-  ==============================================================================
-
-*/
-
 #include "SkiaSessionView.h"
 #include "../../design-system/ZenithTheme.h"
 #include "../ViewTheme.h"

@@ -26,7 +26,7 @@
 
 #include "Engine.h"
 #include "ProjectState.h"
-#include "../network/AudioAnalysisService.h"
+#include <network/AudioAnalysisService.h>
 #include <functional>
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>

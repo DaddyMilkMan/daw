@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    RightSidePanel.cpp
-    Created: 2025-11-28
-    Author:  David Chen + Isabella Moretti
-
-    Wingman/AI panel container. Positioned on LEFT side as copilot.
-    (Named "RightSidePanel" for legacy reasons - should be "SidePanel")
-
-
-  ==============================================================================
-*/
-
 #include "RightSidePanel.h"
 #include "UndoHistoryPanel.h"
 #include "../engine/ZenithLogger.h"

@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaTextEditor.h
-    Created: 2025-12-07
-    Author:  AI Assistant
-
-    Pure Skia-based text editor component to replace juce::TextEditor
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include "SkiaComponent.h"

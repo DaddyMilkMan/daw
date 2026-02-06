@@ -17,19 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    QuantizeSettingsComponent.h
-    Created: 7 Dec 2025
-    Description: Pure Skia-rendered UI for configuring quantization settings.
-  ==============================================================================
-*/
-
-
 #include "../design-system/ZenithDesignSystem.h"
 #include "PianoRollComponent.h"
 #include <JuceHeader.h>

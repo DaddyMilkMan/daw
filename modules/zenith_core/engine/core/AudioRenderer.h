@@ -17,25 +17,45 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#pragma once
 
- * @file AudioRenderer.h
- * @brief Simplified audio rendering implementation
- *
- * Handles the audio processing chain with clean separation of concerns.
- */
+//==============================================================================
 
-
+#include "IAudioRenderer.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <memory>
 #include <vector>
 
 namespace zenith {
+class TempoMap;
+}
+
+namespace zenith {
 
 class MasterLimiter;
+
+/**
+ * @struct AudioRenderContext
+ * @brief Holds all mutable buffers and state required for a single render pass.
+ *
+ * This allows AudioRenderer to be stateless and re-entrant (different contexts
+ * for Live Engine vs Offline Export).
+ */
+struct AudioRenderContext {
+    // Buffers
+    std::vector<juce::AudioBuffer<float>> trackBuffers;
+    std::vector<juce::AudioBuffer<float>> auxBusBuffers;
+
+    // PDC State
+    std::vector<juce::AudioBuffer<float>> pdcDelayBuffers;
+    std::vector<int> pdcDelayWritePos;
+    std::vector<int> trackLatencies;
+    int maxTrackLatency = 0;
+
+    // Optimizations
+    // Pre-allocated array for aux buffers to avoid RT allocations
+    static constexpr int kMaxTrackBuses = 128;
+};
 
 class AudioRenderer : public IAudioRenderer {
 public:
@@ -136,7 +156,7 @@ private:
     double sampleRate_{44100.0};
     int bufferSize_{512};
 
-    AudioRenderContext renderContext_;
+    std::unique_ptr<AudioRenderContext> renderContext_;
     std::vector<std::shared_ptr<juce::AudioPluginInstance>> masterPlugins_;
     std::unique_ptr<MasterLimiter> masterLimiter_;
 
@@ -159,6 +179,13 @@ private:
 
     void resetMasterMeters();
     void updateTrackLatencies();
+
+    // Private helper functions
+    void updateMasterMetersInternal(const juce::AudioBuffer<float>& buffer, int numSamples);
+    void applyPDC(juce::AudioBuffer<float>& trackBuffer,
+                 juce::AudioBuffer<float>& delayBuffer,
+                 int& delayWritePos,
+                 int trackLatency);
 };
 
 } // namespace zenith

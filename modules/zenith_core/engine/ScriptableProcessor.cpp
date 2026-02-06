@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ScriptableProcessor.cpp
-    Created: 2025-12-27
-    Author:  Zenith DAW
-
-    REPAIRED: Block-based processing and Thread-safe Script Updates
-    PRO FIX: Zero-Allocation Buffer Access
-  ==============================================================================
-
-*/
-
 #include "ScriptableProcessor.h"
 
 namespace zenith {

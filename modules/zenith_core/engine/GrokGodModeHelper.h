@@ -17,31 +17,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    GrokGodModeHelper.h
-    Created: 2025-12-27
-    Author:  Zenith DAW
-
-    Central registry for God Mode services.
-    Uses WeakReferences to ensure AI background threads never access deleted
-    DAW components.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>
-#include "../engine/Engine.h"
-#include "../browser/BrowserModel.h"
-#include "../network/AudioAnalysisService.h"
+#include "Engine.h"
+#include "browser/BrowserModel.h"
+#include "zenith_network/network/AudioAnalysisService.h"
 
 namespace zenith {
 

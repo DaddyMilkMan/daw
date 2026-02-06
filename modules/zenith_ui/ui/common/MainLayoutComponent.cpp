@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    MainLayoutComponent.cpp
-    Created: 2025-11-28
-    Author:  Dr. Aris Vokos + Leo Rossi + Isabella Moretti
-
-  ==============================================================================
-*/
-
-
 #include "MainLayoutComponent.h"
 #include "../../browser/BrowserModel.h"
 #include "../../engine/Engine.h"

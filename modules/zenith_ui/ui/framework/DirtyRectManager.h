@@ -17,60 +17,37 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    DirtyRectManager.h
-    Created: 2025-12-31
-    Author: Skia-Master Agent
-
-    Dirty Rectangle Tracking System for Efficient Partial Repaints
-    
-    Instead of repainting the entire window on every state change,
-
-    this system accumulates dirty regions and merges overlapping
-    rectangles to minimize GPU draw calls.
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <vector>
 #include <mutex>
 #include <algorithm>
 
-#ifdef ZENITH_USE_SKIA
-#include <core/SkRect.h>
-#else
+#if !defined(ZENITH_USE_SKIA) && !defined(SkRect_DEFINED)
 // Fallback when Skia is disabled
-struct SkRect {
+struct ZenithRect {
     float fLeft = 0, fTop = 0, fRight = 0, fBottom = 0;
-    static SkRect MakeXYWH(float x, float y, float w, float h) {
+    static ZenithRect MakeXYWH(float x, float y, float w, float h) {
         return {x, y, x + w, y + h};
     }
-    static SkRect MakeWH(float w, float h) {
+    static ZenithRect MakeWH(float w, float h) {
         return {0, 0, w, h};
     }
-    static SkRect MakeEmpty() { return {0, 0, 0, 0}; }
+    static ZenithRect MakeEmpty() { return {0, 0, 0, 0}; }
     float width() const { return fRight - fLeft; }
     float height() const { return fBottom - fTop; }
     bool isEmpty() const { return fLeft >= fRight || fTop >= fBottom; }
-    bool intersects(const SkRect& other) const {
+    bool intersects(const ZenithRect& other) const {
         return fLeft < other.fRight && fRight > other.fLeft &&
                fTop < other.fBottom && fBottom > other.fTop;
     }
-    SkRect makeInset(float dx, float dy) const {
+    ZenithRect makeInset(float dx, float dy) const {
         return {fLeft + dx, fTop + dy, fRight - dx, fBottom - dy};
     }
-    SkRect makeOffset(float dx, float dy) const {
+    ZenithRect makeOffset(float dx, float dy) const {
         return {fLeft + dx, fTop + dy, fRight + dx, fBottom + dy};
     }
-    void join(const SkRect& other) {
+    void join(const ZenithRect& other) {
         if (other.isEmpty()) return;
         if (isEmpty()) { *this = other; return; }
         fLeft = std::min(fLeft, other.fLeft);
@@ -79,6 +56,7 @@ struct SkRect {
         fBottom = std::max(fBottom, other.fBottom);
     }
 };
+typedef ZenithRect SkRect;
 #endif
 
 #include <juce_graphics/juce_graphics.h>
@@ -100,7 +78,7 @@ namespace zenith {
  * 4. Clears after each frame
  *
  * Performance Impact:
- * - Before: Every markDirty() → full window repaint
+ * - Before: Every markDirty() -> full window repaint
  * - After: Only changed regions are redrawn
  * - Expected improvement: 50-80% reduction in non-animated frame render time
  */

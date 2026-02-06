@@ -17,15 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file ZenithPolySynthEditor.cpp
- * @brief Implementation of comprehensive ZenithPolySynthEditor
- */
-
+// ZenithPolySynthEditor.cpp
 
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>

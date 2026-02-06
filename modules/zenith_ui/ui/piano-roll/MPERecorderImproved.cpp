@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    MPERecorderImproved.cpp
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Improved MPE recorder implementation with proper note tracking.
-
-  ==============================================================================
-
-*/
-
 #include "MPERecorderImproved.h"
 #include "PianoRollComponent.h"
 #include <cmath>

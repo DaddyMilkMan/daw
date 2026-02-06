@@ -17,25 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    MPERecorder.h
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Records MPE (MIDI Polyphonic Expression) messages as automation
-    in expression lanes. Captures pressure, timbre, and pitchbend in real-time
-    during recording.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>

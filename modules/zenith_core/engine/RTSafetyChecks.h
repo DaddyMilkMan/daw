@@ -17,18 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#pragma once
 
- // File: RTSafetyChecks.h
- // Brief: Debug utilities for detecting RT-safety violations
- * 
- * Zero-Latency Agent: Part of the RT-safety audit infrastructure.
- * Provides compile-time and runtime checks to catch mutex usage,
- * allocations, and other RT-unsafe operations in the audio thread.
- */
+// RTSafetyChecks.h
+
 
 
 

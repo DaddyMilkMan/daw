@@ -17,32 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PluginAutomationBinding.h
-    Created: 2025-12-25
-    Author:  Zenith DAW
-
-    Plugin parameter automation binding system.
-    
-    This module provides:
-
-    - PluginParameterTarget: Unique identifier for plugin parameters
-    - PluginAutomationBinding: RT-safe parameter automation with smoothing
-    
-    Thread Safety:
-    - Target value written from MESSAGE THREAD
-    - Current value read from AUDIO THREAD (lock-free)
-    - Uses SmoothedValue for glitch-free automation
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <atomic>

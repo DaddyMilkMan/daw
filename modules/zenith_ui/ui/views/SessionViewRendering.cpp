@@ -17,14 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
 
  * @file SessionViewRendering.cpp
  * @brief Rendering modules for SessionViewComponent (Skia)
- */
 
 
 

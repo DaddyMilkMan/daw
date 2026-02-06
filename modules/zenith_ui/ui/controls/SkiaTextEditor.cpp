@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaTextEditor.cpp
-    Created: 2025-12-07
-    Author:  AI Assistant
-
-    Pure Skia-based text editor implementation
-
-  ==============================================================================
-
-*/
-
 #include "SkiaTextEditor.h"
 #include "ZenithDesignSystem.h"
 #include <skia/include/core/SkMaskFilter.h>

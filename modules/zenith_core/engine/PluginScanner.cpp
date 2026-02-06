@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PluginScanner.cpp
-    Created: 2025-12-23
-    Author:  Zenith DAW
-
-    Standalone utility for out-of-process plugin scanning.
-    Takes a plugin path and outputs PluginDescription as simple key-value pairs.
-
-
-  ==============================================================================
-*/
-
 #include <iostream>
 #include <csignal>
 #include <atomic>
@@ -101,7 +83,18 @@ int main(int argc, char *argv[]) {
   }
 
   juce::AudioPluginFormatManager formatManager;
+#if JUCE_PLUGINHOST_VST3
   formatManager.addFormat(new juce::VST3PluginFormat());
+#endif
+#if JUCE_PLUGINHOST_VST
+  formatManager.addFormat(new juce::VSTPluginFormat());
+#endif
+#if JUCE_PLUGINHOST_LV2
+  formatManager.addFormat(new juce::LV2PluginFormat());
+#endif
+#if JUCE_PLUGINHOST_LADSPA
+  formatManager.addFormat(new juce::LADSPAPluginFormat());
+#endif
 
   // Attempt to identify plugin format
   juce::AudioPluginFormat *formatToUse = nullptr;
@@ -120,7 +113,7 @@ int main(int argc, char *argv[]) {
 
   // Create watchdog thread (independent of message loop)
   // This ensures we can kill the process even if the main thread hangs in a plugin
-  std::thread watchdog([&scanCancelled]() {
+  std::thread watchdog([]() {
       std::this_thread::sleep_for(std::chrono::milliseconds(5000));
       if (!scanCancelled.load()) {
           std::cerr << "Error: Plugin scan timed out (Watchdog)" << std::endl;

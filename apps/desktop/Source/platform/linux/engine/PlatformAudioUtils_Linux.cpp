@@ -7,8 +7,8 @@
   ==============================================================================
 */
 
-#include "../../../engine/PlatformAudioUtils.h"
-#include "../../../Settings.h"
+#include "PlatformAudioUtils.h"
+#include "zenith_core/engine/Settings.h"
 #include <juce_gui_basics/juce_gui_basics.h> // For AlertWindow
 #include <fstream>
 #include <filesystem>

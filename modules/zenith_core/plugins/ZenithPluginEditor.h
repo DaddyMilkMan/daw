@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithPluginEditor.h
-    Created: 2025-12-19
-    Author:  Zenith DAW
-
-    Standard UI container for Zenith Plugins.
-    Provides a header with Title, Bypass, and generic styling.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "ZenithPlugin.h"

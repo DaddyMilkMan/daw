@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ContextMenuManager.cpp
-    Created: 2025-12-25
-    Author:  Zenith DAW Team
-
-    Implementation of centralized context menu management
-
-  ==============================================================================
-
-*/
-
 #include "ContextMenuManager.h"
 
 namespace zenith {

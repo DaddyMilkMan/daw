@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithAdvancedFilters.h
-    Created: 2025-02-01
-    Author:  Zenith DAW
-
-    Professional-grade circuit-modeled filters with proper nonlinearities.
-    Implements Moog Ladder, MS-20, Prophet-5, and other classic models.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "ZenithPolySynthDefs.h"

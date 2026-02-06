@@ -17,23 +17,20 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-    EnginePlugins.cpp - Master plugin management and RCU snapshot logic
-    Note: This is a modular component of Engine - declarations remain in Engine.h
-*/
+// EnginePlugins.cpp
 
-
+#include "Engine.h"
 #include <memory>
 #include <juce_core/juce_core.h>
 #include <juce_events/juce_events.h>
+#include "RealTimeGarbageCollector.h"
+#include "RecordingManager.h"
 
 namespace zenith {
 
 void Engine::updateMasterPluginSnapshot() {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-  auto newSnapshot = std::make_shared<MasterPluginSnapshot>();
+  auto newSnapshot = std::make_shared<Engine::MasterPluginSnapshot>();
 
   {
     const juce::ScopedLock sl(masterPluginLock_);

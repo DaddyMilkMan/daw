@@ -17,15 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file PianoRollRendering.cpp
- * @brief Professional-grade MIDI Piano Roll Editor - Rendering Modules
- */
-
+// PianoRollRendering.cpp
 
 #include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>

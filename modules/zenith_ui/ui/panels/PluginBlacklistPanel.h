@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PluginBlacklistPanel.h
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    UI panel for managing the plugin blacklist and viewing scan results.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>

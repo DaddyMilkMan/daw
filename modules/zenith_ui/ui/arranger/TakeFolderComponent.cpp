@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    TakeFolderComponent.cpp
-    Created: 2025-12-24
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "TakeFolderComponent.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../design-system/ZenithTheme.h"

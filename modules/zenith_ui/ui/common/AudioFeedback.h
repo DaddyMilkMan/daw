@@ -17,20 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    AudioFeedback.h
-    Audio feedback system for UI interactions
-    
-    Provides audio cues for button clicks, errors, and notifications.
-  ==============================================================================
-*/
-
-
 #include <juce_core/juce_core.h>
 
 namespace zenith {

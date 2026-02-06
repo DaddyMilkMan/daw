@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    MPEExpressionHelpers.h
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Helper functions for MPE expression lane rendering.
-    Eliminates code duplication and ensures consistency.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <core/SkColor.h>

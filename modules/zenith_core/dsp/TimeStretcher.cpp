@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    TimeStretcher.cpp
-    Created: 2025-12-25
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "TimeStretcher.h"
 #include <cmath>
 #include <algorithm>

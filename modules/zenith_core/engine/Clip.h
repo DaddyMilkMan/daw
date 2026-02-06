@@ -17,36 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    Clip.h
-    Ported from: ZenithDAW-Native/Source/Audio/Clip.h (2025-11-11)
-    Author:  Zenith DAW → Zenith DAW
-
-    Audio/MIDI clip with transport synchronization and playback control
-
-    CANONICAL IMPLEMENTATION: This supersedes
-
-  VexelDAW-Native/Source/Audio/Clip.* Phase 1.4 implementation (2025-11-13)
-
-    Key Design: Playhead-driven timing (parameter-based) instead of internal
-    transportPosition member. Integrates with AudioFilePool for RT-safe buffer
-  access.
-
-    JUCE 8 / C++20 adaptations:
-    - Wrapped in namespace zenith
-    - Kept as Track::Clip (nested class)
-    - No container changes needed (uses std::unique_ptr internally)
-
-  ==============================================================================
-*/
-
 #pragma once
+
+// Clip.h - Audio/MIDI clip on the timeline
 
 #include "Track.h"
 #include <atomic>

@@ -17,22 +17,16 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-//     File: EngineMixing.cpp
-//     Brief: Mixer control, metering, aux bus routines, and master effects
-//     Note: This is a modular component of Engine - declarations remain in Engine.h
-
-
-#include "../engine/RecordingManager.h"
-#include "../engine/Track.h"
-#include "../engine/TrackFreeze.h"
-#include "../engine/TransportController.h"
 #include "Engine.h"
+#include "AuxBus.h"
+#include "Metronome.h"
+#include "MixerController.h"
 #include "ProjectState.h"
+#include "TempoMap.h"
+#include "Track.h"
+#include "RecordingManager.h"
+#include "TrackFreeze.h"
+#include "TransportController.h"
 
 namespace zenith {
 

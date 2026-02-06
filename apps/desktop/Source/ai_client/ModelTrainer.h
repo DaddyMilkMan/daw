@@ -17,10 +17,11 @@
 #include <vector>
 #include <functional>
 
+#include "AICommon.h"
+#include "ProductionModelManager.h"
+
 namespace zenith {
 namespace ai {
-
-#include "AICommon.h"
 
 // Dataset loader
 class DatasetLoader {
@@ -110,7 +111,7 @@ public:
                                  TrainingProgressCallback progressCallback = nullptr);
     
     // Model evaluation
-    ValidationMetrics evaluateModel(const NeuralNetwork& model,
+    ValidationMetrics evaluateModel(NeuralNetwork& model,
                                   const std::vector<TrainingSample>& testDataset);
     
     // Hyperparameter optimization
@@ -147,9 +148,9 @@ private:
     bool shouldStopEarly(const std::vector<float>& validationLossHistory, int patience, float minDelta);
     
     // Metrics calculation
-    ValidationMetrics calculateMetrics(const NeuralNetwork& network, const std::vector<TrainingSample>& dataset);
-    float calculateAccuracy(const NeuralNetwork& network, const std::vector<TrainingSample>& dataset);
-    float calculateLoss(const NeuralNetwork& network, const std::vector<TrainingSample>& dataset);
+    ValidationMetrics calculateMetrics(NeuralNetwork& network, const std::vector<TrainingSample>& dataset);
+    float calculateAccuracy(NeuralNetwork& network, const std::vector<TrainingSample>& dataset);
+    float calculateLoss(NeuralNetwork& network, const std::vector<TrainingSample>& dataset);
     
     // Data augmentation
     std::vector<TrainingSample> augmentDataset(const std::vector<TrainingSample>& dataset, float factor);
@@ -158,8 +159,7 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ModelTrainer)
 };
 
-// Production model manager
-#include "ProductionModelManager.h"
+
 
 // Training pipeline orchestrator
 class TrainingPipeline {

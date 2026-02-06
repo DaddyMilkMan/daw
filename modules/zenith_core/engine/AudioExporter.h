@@ -17,28 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AudioExporter.h
-    Created: 2025-12-20
-    Author:  Zenith DAW
-
-    Handles offline bouncing/rendering of the project.
-    Features:
-    - 2-Pass Normalization (Analyze peaks → Apply gain)
-
-    - Professional TPDF Dithering with optional noise shaping
-    - Multi-format support (WAV, FLAC, OGG, AIFF)
-    - Asynchronous multi-file stem export
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_audio_formats/juce_audio_formats.h>

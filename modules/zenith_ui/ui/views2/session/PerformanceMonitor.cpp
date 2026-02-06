@@ -17,15 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    PerformanceMonitor.cpp
-    Created: 2026-02-05
-    Author:  Zenith DAW Team
-
-    Implementation of real-time performance monitoring system.
-    ==============================================================================
-*/
+// PerformanceMonitor.cpp
 
 #include "PerformanceMonitor.h"
 #include "../../design-system/ZenithTheme.h"

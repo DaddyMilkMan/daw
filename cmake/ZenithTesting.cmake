@@ -2,6 +2,8 @@
 # ZENITH TESTING FRAMEWORK
 # =============================================================================
 
+include_guard(GLOBAL)
+
 # Enable testing if requested
 option(ZENITH_ENABLE_TESTING "Enable testing framework" ON)
 

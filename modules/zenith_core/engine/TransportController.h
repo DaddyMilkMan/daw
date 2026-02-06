@@ -17,29 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    TransportController.h
-    Created: 2025-12-09
-    Author:  Zenith DAW
-
-    Handles transport control (play, stop, seek, loop).
-    
-    Extracted from Engine.cpp for better modularity.
-
-    
-    Thread Safety:
-    - Control methods (play, stop, etc.) are MESSAGE THREAD recommended
-    - Position/state reads are thread-safe (atomics)
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>

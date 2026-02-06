@@ -17,18 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    MetricsChart.h
-    Chart component for metrics visualization - Neon Noir Edition
-  ==============================================================================
-*/
-
-
 #include <vector>
 #include <map>
 #include <string>

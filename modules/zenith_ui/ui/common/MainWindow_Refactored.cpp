@@ -17,26 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    MainWindow.cpp - REFACTORED VERSION
-    Created: 2026-02-04
-    Author:  Zenith DAW
-
-    PRODUCTION REFACTORING - Single Transport Bar
-    Removes legacy TransportBar duplication, uses only SkiaTransportBar
-
-
-    STATUS: Production Ready (10/10)
-
-  ==============================================================================
-*/
-
 // NOTE: This file shows the CHANGES needed to MainWindow.cpp
 // The actual implementation should replace the corresponding sections
 

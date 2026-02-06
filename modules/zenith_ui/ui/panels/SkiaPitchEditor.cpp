@@ -17,25 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaPitchEditor.cpp
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    PROFESSIONAL Skia GPU pitch editor implementation.
-    
-    60fps, GPU-accelerated, beautiful.
-
-
-  ==============================================================================
-*/
-
 #include "SkiaPitchEditor.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include <core/SkColor.h>

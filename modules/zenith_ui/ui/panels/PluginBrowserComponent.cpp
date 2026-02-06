@@ -17,14 +17,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#include "PluginBrowserComponent.h"
+
 
  * @file PluginBrowserComponent.cpp
  * @brief Plugin browser implementation
- */
 
 
 

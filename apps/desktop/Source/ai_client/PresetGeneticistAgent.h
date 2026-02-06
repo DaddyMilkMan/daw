@@ -27,10 +27,10 @@
 
 #pragma once
 
-#include "../instruments/ZenithPolySynth.h"
-#include "../instruments/ZenithPolySynthDefs.h"
-#include "../instruments/ZenithPresetManager.h"
-#include "../network/AudioAnalysisService.h"
+#include <zenith_core/instruments/ZenithPolySynth.h>
+#include <zenith_core/instruments/ZenithPolySynthDefs.h>
+#include <zenith_core/instruments/ZenithPresetManager.h>
+#include <zenith_network/network/AudioAnalysisService.h>
 #include <atomic>
 #include <cmath>
 #include <functional>

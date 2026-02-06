@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SpectralProcessor.h
-    Created: 2025-12-26
-    Author:  Zenith DAW
-
-    FFT-based spectral analysis and editing utilities for the Sample Editor.
-    Provides noise reduction, frequency band editing, and spectral gating.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_audio_basics/juce_audio_basics.h>

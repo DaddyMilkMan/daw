@@ -17,13 +17,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+// MacroToolbar.cpp
 
-// Skia Includes
-#ifdef ZENITH_USE_SKIA
 #include "ZenithDesignSystem.h"
 #include "ZenithSkia.h"
 

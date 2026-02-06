@@ -17,20 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    PluginEditorWindow.cpp
-    Plugin editor window management
-    
-    Manages floating windows for VST3/AU plugin editors.
-  ==============================================================================
-*/
-
-
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 

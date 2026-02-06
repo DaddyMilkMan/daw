@@ -17,22 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file MixerChannelComponent.cpp
- * @brief Full-featured mixer channel strip implementation
- *
- * Implements a professional-grade channel strip with:
- * - GPU-accelerated Skia rendering
- * - Glassmorphic panel design
- * - Peak-hold metering with gradient
- * - Insert slot and send indicators
-
- * - Smooth animations via spring physics
- */
+// MixerChannelComponent.cpp
 
 #include "MixerChannelComponent.h"
 #include "MixerComponent.h"

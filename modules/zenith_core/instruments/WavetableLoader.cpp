@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    WavetableLoader.cpp
-    Created: 2025-12-20
-    Author:  Zenith DAW
-
-    Implementation of wavetable file loading.
-
-  ==============================================================================
-
-*/
-
 #include "WavetableLoader.h"
 #include <cmath>
 #include <vector>
@@ -279,7 +262,7 @@ WavetableLoader::generateBasicWavetable(int type, int numFrames) {
         } else if (type == 2) { // Square: Σ sin(h*θ) / h for ODD h only (1,3,5,...)
           sample += currentSin; // h=1
 
-          // Step-2 recurrence: compute sin(h*θ) → sin((h+2)*θ) using θ' = 2θ
+          // Step-2 recurrence: compute sin(h*θ) -> sin((h+2)*θ) using θ' = 2θ
           // This skips even harmonics entirely, doubling efficiency
           float angle2 = 2.0f * angle;
           float s2 = std::sin(angle2); // sin(2θ)

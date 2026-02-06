@@ -1,0 +1,211 @@
+name: Deploy Documentation
+
+on:
+  push:
+    branches: [ master, develop ]
+    paths:
+      - 'docs/**'
+      - 'CMakeLists.txt'
+  pull_request:
+    branches: [ master, develop ]
+    paths:
+      - 'docs/**'
+      - 'CMakeLists.txt'
+  release:
+    types: [published]
+
+jobs:
+  # Build documentation
+  build-docs:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install documentation tools
+      run: |
+        # Install Doxygen
+        sudo apt-get update
+        sudo apt-get install -y doxygen graphviz
+
+        # Install MkDocs
+        pip install mkdocs mkdocs-material mkdocs-mermaid2 mkdocstrings[python]
+
+        # Install additional tools
+        pip install markdown linkcheck
+
+    - name: Generate Doxygen documentation
+      run: |
+        doxygen -g Doxyfile
+        # Configure Doxygen for the project
+        sed -i 's/OUTPUT_DIRECTORY = .*/OUTPUT_DIRECTORY = docs-build\/doxygen/' Doxyfile
+        sed -i 's/INPUT = .*/INPUT = apps desktop modules/' Doxyfile
+        sed -i 's/FILE_PATTERNS = .*/FILE_PATTERNS = *.cpp *.h *.hpp/' Doxyfile
+        sed -i 's/RECURSIVE = .*/RECURSIVE = YES/' Doxyfile
+        doxygen Doxyfile
+
+    - name: Generate MkDocs documentation
+      run: |
+        # Build MkDocs site
+        mkdocs build --site-dir docs-build/mkdocs
+
+    - name: Combine documentation
+      run: |
+        # Combine Doxygen and MkDocs
+        mkdir -p docs-build/site
+        cp -r docs-build/mkdocs/* docs-build/site/
+        cp -r docs-build/doxygen/html/* docs-build/site/api/
+
+        # Create index
+        cat > docs-build/site/index.md << EOF
+        # Zenith DAW Documentation
+
+        Welcome to the Zenith DAW documentation!
+
+        ## Quick Links
+        - [Getting Started](getting-started.md)
+        - [User Guide](user-guide.md)
+        - [Developer Guide](developer-guide.md)
+        - [API Documentation](api/)
+        - [Changelog](CHANGELOG.md)
+
+        ## Documentation Structure
+
+        - **User Documentation**: Guides for users and producers
+        - **Developer Documentation**: For contributors and developers
+        - **API Documentation**: Generated from source code
+        - **Examples**: Code examples and tutorials
+
+        ## Support
+
+        - [GitHub Discussions](https://github.com/${{ github.repository }}/discussions)
+        - [Issues](https://github.com/${{ github.repository }}/issues)
+        - [Discord Community](https://discord.gg/zenith-daw)
+        EOF
+
+    - name: Check documentation links
+      run: |
+        # Check broken links
+        pip install markdown-link-check
+        find docs-build/site -name "*.md" -exec markdown-link-check {} \;
+
+    - name: Upload documentation artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: documentation
+        path: docs-build/site/
+        retention-days: 30
+
+  # Deploy to GitHub Pages
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build-docs
+    if: github.ref == 'refs/heads/master' || github.event_name == 'published'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+    - name: Download documentation
+      uses: actions/download-artifact@v4
+      with:
+        name: documentation
+        path: docs/
+
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+
+    - name: Upload to GitHub Pages
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: docs/
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+
+  # Deploy to external documentation site
+  deploy-external:
+    name: Deploy to External Site
+    runs-on: ubuntu-latest
+    needs: build-docs
+    if: github.ref == 'refs/heads/master'
+    steps:
+    - name: Download documentation
+      uses: actions/download-artifact@v4
+      with:
+        name: documentation
+        path: docs/
+
+    - name: Deploy to documentation server
+      if: github.ref == 'refs/heads/master'
+      run: |
+        # Example deployment to external documentation server
+        # This would use SSH or API to deploy to your documentation site
+        echo "Deploying to documentation server..."
+        # Replace with actual deployment command
+        # scp -r docs/ user@docs-server:/var/www/zenith-daw/
+
+  # Create documentation PR
+  create-docs-pr:
+    name: Create Documentation Update PR
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        submodules: recursive
+
+    - name: Download documentation
+      uses: actions/download-artifact@v4
+      with:
+        name: documentation
+        path: docs/
+
+    - name: Create branch for documentation
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git checkout -b docs-update-${{ github.sha }}
+        git add docs/
+        git commit -m "Update documentation from develop branch"
+        git push origin docs-update-${{ github.sha }}
+
+    - name: Create pull request
+      uses: peter-evans/create-pull-request@v6
+      with:
+        title: "Documentation Update from Develop"
+        body: |
+          This PR updates the documentation from the develop branch.
+
+          ## Changes
+          - Updated API documentation
+          - Added new guides
+          - Fixed broken links
+
+          ## Review
+          Please review the documentation changes before merging.
+        branch: docs-update-${{ github.sha }}
+        base: master
+        labels: documentation, automated

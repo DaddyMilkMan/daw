@@ -17,29 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ClipStateManager.h
-    Created: 2025-12-11
-    Author:  Zenith DAW
-
-    Focused module for clip management within ProjectState.
-    
-    Extracted from ProjectState.cpp for better modularity.
-
-
-    Thread Safety:
-    - All methods are MESSAGE THREAD ONLY
-    - Uses ValueTree for persistent state
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>

@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ThemeManager.cpp
-    Created: 2026-02-02
-    Author:  Zenith DAW
-
-    Implementation of theme management for Zenith DAW.
-
-  ==============================================================================
-
-*/
-
 #include "ThemeManager.h"
 #include "ZenithDesignSystem.h"
 #include <juce_data_structures/juce_data_structures.h>

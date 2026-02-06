@@ -17,17 +17,16 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
 //     File: PropertyExchangeManager.cpp
 //     Brief: Implementation of Property Exchange Manager
 //*
 
 
 #include "ZenithLogger.h"
+#include "PropertyExchangeManager.h"
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
+
 
 namespace zenith {
 

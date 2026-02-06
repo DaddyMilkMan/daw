@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithSampler.h
-    Created: 2025-11-18
-    Author:  Zenith DAW
-
-    Comprehensive sampler instrument with multi-sample playback,
-    velocity layers, envelope, filter, and async patch loading.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../engine/AudioFilePool.h"

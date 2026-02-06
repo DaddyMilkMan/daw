@@ -17,15 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
 #pragma once
+
+// SkiaMainWindowIntegration.h
+
 
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
@@ -37,7 +32,9 @@
 #ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
 #include <core/SkColorSpace.h>
+#if ZENITH_ENABLE_SKIA
 #include <core/SkRefCnt.h>
+#endif
 #include <core/SkSurface.h>
 #include <gpu/ganesh/GrBackendSurface.h>
 #include <gpu/ganesh/GrDirectContext.h>

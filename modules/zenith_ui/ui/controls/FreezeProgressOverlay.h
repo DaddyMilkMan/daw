@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    FreezeProgressOverlay.h
-    Created: 2025-12-19
-    Author:  Zenith DAW
-
-    Visual overlay for track freeze progress.
-    Renders a neon-style circular progress indicator.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../../ui/framework/SkiaComponent.h"

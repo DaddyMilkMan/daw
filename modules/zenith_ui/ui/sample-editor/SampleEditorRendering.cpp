@@ -17,15 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file SampleEditorRendering.cpp
- * @brief Rendering modules for SampleEditorComponent (Skia)
- */
-
+// SampleEditorRendering.cpp
 
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>

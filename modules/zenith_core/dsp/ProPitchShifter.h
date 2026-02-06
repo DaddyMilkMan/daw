@@ -17,34 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ProPitchShifter.h
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Professional pitch shifting using Rubber Band library.
-    
-    Features:
-
-    - Studio-quality pitch shifting
-    - Formant preservation
-    - Time stretching capability
-    - Low-latency mode
-    - Phase-locked processing
-
-    Uses: Rubber Band Library (GPL v2 or later)
-    https://breakfastquay.com/rubberband/
-
-  ==============================================================================
-*/
-
 #pragma once
+
+// ProPitchShifter.h
+
 
 #include <juce_audio_basics/juce_audio_basics.h>
 
@@ -183,7 +159,13 @@ public:
     /**
      * @brief Check if the shifter is ready
      */
-    bool isReady() const { return stretcher_ != nullptr; }
+    bool isReady() const { 
+#if ZENITH_HAS_RUBBERBAND
+        return stretcher_ != nullptr; 
+#else
+        return false;
+#endif
+    }
 
 private:
     //==============================================================================
@@ -191,7 +173,9 @@ private:
     void createStretcher();
     
     //==============================================================================
+#if ZENITH_HAS_RUBBERBAND
     std::unique_ptr<RubberBand::RubberBandStretcher> stretcher_;
+#endif
     
     // Parameters
     double sampleRate_ = 44100.0;

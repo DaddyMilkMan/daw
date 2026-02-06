@@ -10,7 +10,7 @@
   ==============================================================================
 */
 
-#include "../../../ui/framework/PlatformDisplayUtils.h"
+#include "PlatformDisplayUtils.h"
 #include <juce_core/juce_core.h>
 
 namespace zenith {

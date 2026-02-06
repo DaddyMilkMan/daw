@@ -17,15 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    ClipTransitionState.cpp
-    Created: 2026-02-05
-    Author:  Zenith DAW Team
-
-    Implementation of advanced clip state transitions.
-    ==============================================================================
-*/
+// ClipTransitionState.cpp
 
 #include "ClipTransitionState.h"
 #include <algorithm>

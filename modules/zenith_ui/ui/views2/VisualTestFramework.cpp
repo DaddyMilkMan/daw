@@ -17,15 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    VisualTestFramework.cpp
-    Created: 2026-02-05
-    Author:  Zenith DAW Team
-
-    Implementation of visual regression test framework for SkiaSessionView.
-    ==============================================================================
-*/
+// VisualTestFramework.cpp
 
 #include "VisualTestFramework.h"
 #include "../session/SkiaSessionView.h"

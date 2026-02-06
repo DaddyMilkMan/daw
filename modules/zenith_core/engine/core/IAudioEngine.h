@@ -17,11 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#pragma once
 
+/**
  * @file IAudioEngine.h
  * @brief Core audio engine interface for clean architecture
  *

@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaComboBox.h
-    Created: 2025-12-07
-    Author:  AI Assistant
-
-    Pure Skia-based combo box component to replace juce::ComboBox
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include "SkiaButton.h"

@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PresetGenerator.cpp
-    Created: 2025-11-29
-
-
-    AI Preset Generation Implementation
-
-  ==============================================================================
-
-*/
-
 #include "PresetGenerator.h"
 
 namespace zenith {

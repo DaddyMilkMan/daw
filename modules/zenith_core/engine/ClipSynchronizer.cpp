@@ -17,16 +17,15 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+// ClipSynchronizer.cpp - Bidirectional sync between ProjectState and Engine clips
 
-//     File: ClipSynchronizer.cpp
-//     Brief: ClipSynchronizer implementation - bidirectional sync between ProjectState and Engine clips
-//*
-
-
+#include "ClipSynchronizer.h"
+#include "Engine.h"
+#include "ProjectState.h"
+#include "Track.h"
+#include "Clip.h"
+#include "ClipTrack.h"
+#include "ZenithLogger.h"
 
 namespace zenith {
 
@@ -136,7 +135,7 @@ void ClipSynchronizer::syncEngineToProjectState() {
 
   isModifyingState = true;
 
-  // This method implements Engine→ProjectState sync for recorded clips.
+  // This method implements Engine->ProjectState sync for recorded clips.
   // Called from timer (Message Thread), so safe to modify ProjectState.
 
   // Get all Engine tracks (read-only access, should be lock-free)

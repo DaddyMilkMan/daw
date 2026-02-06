@@ -17,31 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    GlobalSettingsPanel.h
-    Created: 2026-02-04
-    Author:  Zenith DAW Team
-
-    Global application settings panel with comprehensive configuration options.
-    
-    Features:
-
-    - Project defaults and templates
-    - Auto-save configuration
-    - Backup and recovery settings
-    - Privacy and data collection options
-    - Network and proxy settings
-    - Account and licensing
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../framework/SkiaComponent.h"

@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PlatformSystemUtils.h
-    Created: 2025-12-22
-
-    Interface for platform-specific system utility functions.
-
-  ==============================================================================
-*/
-
-
-
 #pragma once
 
 #include <juce_core/juce_core.h>

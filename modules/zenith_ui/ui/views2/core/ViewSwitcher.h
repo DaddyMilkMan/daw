@@ -17,26 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ViewSwitcher.h
-    Created: 2026-02-03
-    Author:  Zenith DAW Team
-
-    Navigation controller for Tab/Shift+Tab view switching.
-    Manages Arrangement and Session views.
-
-
-    Now wired to Engine and ProjectState for real data.
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../../framework/SkiaComponent.h"

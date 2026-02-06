@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ArrangementController.cpp
-    Created: 2026-02-03
-    Author:  Zenith DAW Team
-
-    Implementation of ArrangementController.
-
-  ==============================================================================
-
-*/
-
 #include "ArrangementController.h"
 #include "../../../engine/TempoMap.h"
 #include <limits>

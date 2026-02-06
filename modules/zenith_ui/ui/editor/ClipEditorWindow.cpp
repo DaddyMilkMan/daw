@@ -17,30 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ClipEditorWindow.cpp
-    Created: 2026-02-04
-    Author:  Zenith DAW Team
-
-    Production-ready clip editor with real audio waveform loading.
-    
-    Features:
-
-    - Real audio waveform visualization
-    - MIDI piano roll editing
-    - Waveform caching for performance
-    - Zoom and scroll support
-    - Clip manipulation tools
-
-  ==============================================================================
-*/
-
 #include "ClipEditorWindow.h"
 #include "../../engine/AudioEngine.h"
 #include "../../design-system/ColorBridge.h"

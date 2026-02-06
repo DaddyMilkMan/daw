@@ -17,27 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ModulationMatrixView.cpp
-    Created: 2025-12-09
-    Enhanced: 2025-12-12
-    Author:  Zenith DAW
-
-    Animated Modulation Routing Visualization Implementation.
-
-
-    Features bezier curves, particle animations, neon glows, and
-    real-time modulation value visualization.
-
-  ==============================================================================
-*/
-
 #include "ModulationMatrixView.h"
 #include "../../engine/Track.h"
 #include "Engine.h"

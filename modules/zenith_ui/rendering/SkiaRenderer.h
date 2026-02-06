@@ -17,27 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file SkiaRenderer.h
- * @brief Main Skia rendering engine for Zenith DAW
- *
- * This class manages the Skia graphics context and provides GPU-accelerated
- * rendering capabilities. It replaces JUCE's standard rendering with Skia's
- * high-performance graphics engine.
- *
- * Architecture:
- * - JUCE Component → Provides window handle and events
-
- * - SkiaRenderer → Manages Skia context and surfaces
- * - SkiaCanvas → High-level drawing API
- * - Skia → GPU-accelerated graphics (Metal/D3D/Vulkan)
- */
-
 #pragma once
+
+// SkiaRenderer.h
+
 
 #include <functional>
 #include <juce_audio_basics/juce_audio_basics.h>
@@ -52,7 +35,9 @@
 #include <memory>
 
 #ifdef ZENITH_USE_SKIA
+#if ZENITH_ENABLE_SKIA
 #include <core/SkRefCnt.h> // For sk_sp
+#endif
 #endif
 
 // Forward declare Skia types to avoid including headers here

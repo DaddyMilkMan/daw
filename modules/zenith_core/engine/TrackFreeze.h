@@ -17,35 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    TrackFreeze.h
-    Created: 2025-12-09
-    Author:  Zenith DAW
-
-    Track freeze functionality for CPU optimization.
-    
-    Features:
-
-    - Renders track with all plugins to audio file
-    - Disables plugins to save CPU
-    - Stores original plugin state for unfreeze
-    - Supports partial freeze (selected plugins only)
-    - Async rendering with progress callback
-
-    Thread Safety:
-    - freeze() and unfreeze() are MESSAGE THREAD ONLY
-    - isFrozen() is thread-safe (atomic read)
-    - Freeze rendering happens on background thread
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_audio_basics/juce_audio_basics.h>

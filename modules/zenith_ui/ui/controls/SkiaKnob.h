@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaKnob.h
-    Deprecated: Replaced by ZenithKnob
-    
-    Legacy header for backward compatibility.
-
-  ==============================================================================
-*/
-
-
-
 #pragma once
 
 #include "ZenithKnob.h"

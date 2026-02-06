@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithPlugin.cpp
-    Created: 2025-12-19
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "ZenithPlugin.h"
 #include "ZenithPluginEditor.h" // We'll create this next
 

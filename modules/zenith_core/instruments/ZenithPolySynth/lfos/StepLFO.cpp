@@ -17,25 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    StepLFO.cpp
-    Created: 2025-01-28
-    Updated: 2025-02-02 - S-tier implementation
-    Author:  Zenith DAW
-
-    Professional step sequencer LFO with sample-accurate phase accumulation.
-    Properly integrates with modulation matrix providing block-level outputs.
-
-
-  ==============================================================================
-*/
-
 #include "StepLFO.h"
 #include <cmath>
 

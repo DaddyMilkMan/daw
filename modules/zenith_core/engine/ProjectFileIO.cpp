@@ -17,16 +17,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+// ProjectFileIO.cpp - Production-grade project file I/O implementation
 
-//     File: ProjectFileIO.cpp
-//     Brief: Production-grade project file I/O implementation
-//*
-
-
+#include "ProjectFileIO.h"
+#include "ProjectState.h"
+#include "TempoMap.h"
+#include "EngineConstants.h"
 
 #include <algorithm>
 #include <cstddef>

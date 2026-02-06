@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithPolySynthDefs.h
-    Created: 2025-12-06
-    Author:  Zenith DAW
-
-    Shared definitions, enums, and structures for ZenithPolySynth.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>

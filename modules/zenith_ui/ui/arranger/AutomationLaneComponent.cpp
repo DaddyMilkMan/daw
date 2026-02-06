@@ -17,20 +17,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+// AutomationLaneComponent.cpp
 
- * @file AutomationLaneComponent.cpp
- * @brief Implementation of AutomationLaneComponent
- *
- * Phase U5: Automation Lanes UI
- * POLISH: Skia rendering with smooth curves, themed colors, and hover tooltips
- */
-
-
-#ifdef ZENITH_USE_SKIA
 #include "ZenithDesignSystem.h"
 #include <core/SkFont.h>
 #include <core/SkImageInfo.h>

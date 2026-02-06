@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PitchDetector.cpp
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    YIN pitch detection algorithm implementation.
-    Optimized for real-time vocal processing.
-
-
-  ==============================================================================
-*/
-
 #include "PitchDetector.h"
 #include <algorithm>
 #include <cmath>

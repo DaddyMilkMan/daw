@@ -17,28 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    BrowserPanel.h
-    Created: 2025-11-28
-    Refactored: 2025-12-05 for Universal Browser Model + Drag/Preview/Async
-
-    Universal Media Browser View.
-    Features:
-    - Tree navigation with icons
-
-    - Async background scanning
-    - Audio preview with waveform
-    - Drag-and-drop to tracks
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../panels/BrowserRecentSidebar.h"

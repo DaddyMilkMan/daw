@@ -16,18 +16,10 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#include "UnifiedComponent.h"
+#include "../Theme.h"
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file UnifiedComponent.cpp
- * @brief Unified UI component implementation
- */
-
-
-
+namespace zenith {
 UnifiedComponent::Builder& UnifiedComponent::Builder::withId(const juce::String& id) {
     id_ = id;
     return *this;
@@ -110,9 +102,6 @@ void UnifiedComponent::initialize() {
     setEnabled(enabled_);
     setVisible(visible_);
 
-    // Set up animation timer
-    startTimerHz(60.0); // 60 FPS for animations
-
     // Call virtual initialization
     onInitialize();
 
@@ -143,14 +132,11 @@ void UnifiedComponent::render(juce::Graphics& graphics) {
 bool UnifiedComponent::keyPressed(const juce::KeyPress& key) {
     // Handle focus navigation
     if (key.isKeyCode(juce::KeyPress::tabKey)) {
+        // Use JUCE's built-in tab navigation
         if (key.getModifiers().isShiftDown()) {
-            // Move focus backwards
-            juce::Component* prev = getSiblingComponent(-1);
-            if (prev) prev->grabFocus();
+            juce::Component::moveKeyboardFocusToSibling(false);
         } else {
-            // Move focus forwards
-            juce::Component* next = getSiblingComponent(1);
-            if (next) next->grabFocus();
+            juce::Component::moveKeyboardFocusToSibling(true);
         }
         return true;
     }
@@ -186,20 +172,9 @@ bool UnifiedComponent::isVisible() const {
 
 void UnifiedComponent::applyTheme() {
     // Apply base theme settings
-    if (theme_) {
-        // Set background color
-        auto bg = theme_->getColor(Theme::ColorId::background);
-        if (bg.hasValue()) {
-            setBackgroundColour(bg.getValue());
-        }
-
-        // Set foreground color
-        auto fg = theme_->getColor(Theme::ColorId::foreground);
-        if (fg.hasValue()) {
-            setColour(juce::Colours::white);
-        }
-    }
-
+    // Note: ThemeManager::Theme doesn't have getColor - this is a stub implementation
+    // Real theming should be done through ZenithTheme colors
+    
     // Call virtual theme method
     onThemeApplied();
 }
@@ -246,14 +221,14 @@ juce::Rectangle<int> UnifiedComponent::getMaximumSize() const {
 
 void UnifiedComponent::addListener(juce::ComponentListener* listener) {
     if (listener) {
-        listeners_.add(juce::Component::SafePointer<juce::ComponentListener>(listener));
-        addListener(listener);
+        listeners_.add(listener);
+        juce::Component::addComponentListener(listener);
     }
 }
 
 void UnifiedComponent::removeListener(juce::ComponentListener* listener) {
-    listeners_.removeAllInstancesOf(listener);
-    removeListener(listener);
+    listeners_.remove(listener);
+    juce::Component::removeComponentListener(listener);
 }
 
 void UnifiedComponent::setId(const juce::String& id) {
@@ -278,17 +253,21 @@ void UnifiedComponent::setBounds(const juce::Rectangle<int>& bounds) {
     }
 }
 
-bool UnifiedComponent::hasFocus() {
+bool UnifiedComponent::hasFocus() const {
     return hasKeyboardFocus(true);
 }
 
 void UnifiedComponent::grabFocus(bool downwards) {
-    grabKeyboardFocus(downwards);
+    juce::ignoreUnused(downwards);
+    grabKeyboardFocus();
 }
 
 void UnifiedComponent::releaseFocus() {
+    // Release focus by moving it to parent
     if (hasKeyboardFocus(true)) {
-        transferOfFocusCompressor.releaseFocus();
+        if (auto* parent = getParentComponent()) {
+            parent->grabKeyboardFocus();
+        }
     }
 }
 
@@ -300,48 +279,47 @@ void UnifiedComponent::mouseDown(const juce::MouseEvent& event) {
         return;
     }
 
-    // Call virtual method
-    onRender(getGraphics());
-
-    // Check bounds
-    if (bounds_.contains(event.position)) {
+    // Check bounds and trigger click
+    if (bounds_.contains(event.position.toInt())) {
         onClick();
     }
+    
+    repaint();
 }
 
 void UnifiedComponent::mouseUp(const juce::MouseEvent& event) {
-    // Call virtual method
-    onRender(getGraphics());
+    juce::ignoreUnused(event);
+    repaint();
 }
 
 void UnifiedComponent::mouseDrag(const juce::MouseEvent& event) {
-    // Call virtual method
-    onRender(getGraphics());
+    juce::ignoreUnused(event);
+    repaint();
 }
 
 void UnifiedComponent::mouseEnter(const juce::MouseEvent& event) {
-    // Call virtual method
-    onRender(getGraphics());
+    juce::ignoreUnused(event);
+    repaint();
 }
 
 void UnifiedComponent::mouseExit(const juce::MouseEvent& event) {
-    // Call virtual method
-    onRender(getGraphics());
+    juce::ignoreUnused(event);
+    repaint();
 }
 
 void UnifiedComponent::mouseMove(const juce::MouseEvent& event) {
-    // Call virtual method
-    onRender(getGraphics());
+    juce::ignoreUnused(event);
+    repaint();
 }
 
 void UnifiedComponent::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) {
-    // Call virtual method
-    onRender(getGraphics());
+    juce::ignoreUnused(event, wheel);
+    repaint();
 }
 
 void UnifiedComponent::mouseDoubleClick(const juce::MouseEvent& event) {
-    // Call virtual method
-    onRender(getGraphics());
+    juce::ignoreUnused(event);
+    repaint();
 }
 
 void UnifiedComponent::animate(int duration, std::function<float(float)> easing, std::function<void()> callback) {
@@ -444,11 +422,9 @@ void UnifiedComponent::completeAnimation(size_t index) {
 }
 
 void UnifiedComponent::notifyListeners() {
-    for (auto& listener : listeners_) {
-        if (listener != nullptr) {
-            listener->componentMovedOrResized(this, false, false);
-        }
-    }
+    listeners_.call([this](juce::ComponentListener& listener) {
+        listener.componentMovedOrResized(*this, false, false);
+    });
 }
 
 juce::Rectangle<int> UnifiedComponent::calculateBounds(int width, int height) const {

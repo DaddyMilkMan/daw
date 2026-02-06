@@ -17,18 +17,15 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-//     File: TempoMapSynchronizer.cpp
-//     Brief: Tempo map synchronizer implementation
-//*
 
 
 
-//==============================================================================
+#include "TempoMapSynchronizer.h"
+#include "ProjectState.h"
+#include "TempoMap.h"
+
+namespace zenith {
+
 TempoMapSynchronizer::TempoMapSynchronizer(ProjectState &state, TempoMap &map)
     : projectState(state), tempoMap(map) {
   DBG("TempoMapSynchronizer: Constructor");
@@ -159,3 +156,5 @@ bool TempoMapSynchronizer::isTempoMapNode(const juce::ValueTree &tree) const {
 
   return false;
 }
+
+} // namespace zenith

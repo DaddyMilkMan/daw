@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithTooltipOverlay.h
-    Created: 2025-12-12
-    Author:  Zenith DAW
-
-    Glass overlay for Learning Mode / tooltip display.
-    Highlights a target control with glow and shows tooltip card.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "SkiaComponent.h"

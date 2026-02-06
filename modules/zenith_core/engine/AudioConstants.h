@@ -17,29 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AudioConstants.h
-    Created: 2025-12-14
-    Author:  Zenith DAW
-
-    Centralized audio engine constants for use across the audio processing
-    subsystem. This header includes EngineConstants.h for the full set of
-    engine constants and provides additional aliases for convenience.
-
-
-    Thread Safety:
-    - All values are constexpr and compile-time constant
-    - Safe to use from any thread without synchronization
-
-  ==============================================================================
-*/
-
 #pragma once
 
 // Include the main engine constants header - this provides the canonical

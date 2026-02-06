@@ -16,15 +16,14 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#include "TrackStateSynchronizer.h"
+#include "ProjectState.h"
+#include "Engine.h"
+#include "Track.h"
+#include "ZenithLogger.h"
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+namespace zenith {
 
-//     File: TrackStateSynchronizer.cpp
-//     Brief: Implementation of TrackStateSynchronizer
-//*
 
 
 //==============================================================================

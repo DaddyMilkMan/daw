@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithMainLayout.cpp - UPDATED VERSION
-    Created: 2026-02-04
-    Author:  Zenith DAW
-
-    PRODUCTION UPDATE - Complete callback wiring for transport integration
-
-  ==============================================================================
-
-*/
-
 #include "ZenithMainLayout.h"
 #include "../design-system/ZenithTheme.h"
 #include "../../engine/Engine.h"

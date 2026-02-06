@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PlatformLogUtils.h
-    Created: 2025-12-23
-
-    Platform-agnostic logging utilities interface
-
-  ==============================================================================
-*/
-
-
-
 #pragma once
 
 namespace zenith {

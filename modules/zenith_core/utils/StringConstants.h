@@ -17,19 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    StringConstants.h
-    Centralized string constants to avoid hardcoded literals.
-  ==============================================================================
-*/
-
-
-
 namespace zenith {
 namespace constants {
 namespace strings {

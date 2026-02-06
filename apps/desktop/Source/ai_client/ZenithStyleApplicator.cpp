@@ -11,8 +11,8 @@
 */
 
 #include "ZenithStyleApplicator.h"
-#include "../ui/legacy/ZenithLookAndFeel.h"
-#include "../ui/framework/SkiaComponent.h"
+#include <zenith_ui/ui/legacy/ZenithLookAndFeel.h>
+#include <zenith_ui/ui/framework/SkiaComponent.h>
 #include <typeinfo>
 
 

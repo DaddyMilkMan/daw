@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaKnobComponent.h
-    Created: 2025-11-28
-    Author:  Zenith DAW Team
-
-    Skia-rendered knob component.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>

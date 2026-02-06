@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AuroraBackground.cpp
-    Created: 2025-12-13
-    Author:  Zenith DAW Team
-
-  ==============================================================================
-*/
-
-
 #include "AuroraBackground.h"
 
 #ifdef ZENITH_USE_SKIA

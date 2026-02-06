@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PlatformDisplayUtils.h
-    Created: 2025-12-22
-
-    Platform-specific display utilities (refresh rate, DPI scaling, etc).
-
-  ==============================================================================
-*/
-
-
-
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>

@@ -17,19 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    RemoteCursorOverlay.h
-    AnyDesk-style Remote Cursor Overlay with Name Bubbles
-    Uses Skia for smooth interpolation and vector rendering.
-  ==============================================================================
-*/
-
-
 #include "ZenithDesignSystem.h"
 #include <JuceHeader.h>
 #include "ZenithSkia.h"

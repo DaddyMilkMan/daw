@@ -17,34 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZENITH UI INTEGRATION GUIDE
-    ===========================
-    
-    This file documents how to integrate the new Skia-based UI system into
-    Zenith DAW. The new UI is in ui/views2/ and provides a complete replacement
-    for the old UI with:
-    
-
-    - Tab/Shift+Tab view switching
-    - Modern glassmorphism aesthetics
-    - 60fps Skia rendering
-    - AI Jam view for real-time AI collaboration
-    
-  ==============================================================================
-    
-    QUICK START
-    -----------
-    
-    1. Include the master header:
-    
-        #include "ui/views2/ZenithUI.h"
+#include "ui/views2/ZenithUI.h"
     
     2. Create the main layout in your MainComponent:
     
@@ -286,6 +259,5 @@
         └── SkiaTransportBar.h/cpp     - Transport controls
     
   ==============================================================================
-*/
 
 // This is a documentation file - no code to compile

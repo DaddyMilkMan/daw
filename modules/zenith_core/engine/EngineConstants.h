@@ -17,28 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    EngineConstants.h
-    Created: 2025-12-09
-    Author:  Zenith DAW
-
-    Centralized constants for the audio engine to eliminate magic numbers
-    and improve code readability and maintainability.
-
-
-    Thread Safety:
-    - All values are constexpr and compile-time constant
-    - Safe to use from any thread
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <cstdint>

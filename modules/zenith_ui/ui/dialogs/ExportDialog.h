@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ExportDialog.h
-    Created: 2025-12-03
-    Author:  Zenith DAW
-
-    Beautiful Skia-based Export Dialog.
-    "Neon Noir" style with advanced export options.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../../commands/CommandAPI.h"

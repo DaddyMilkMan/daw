@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ExportProgressBar.cpp
-    Created: 2025-12-25
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "ExportProgressBar.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include <cmath>

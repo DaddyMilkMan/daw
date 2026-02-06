@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ExpressionLaneEditor.cpp
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Implementation of expression lane mouse interactions for MPE editing.
-    Supports clicking to add points, dragging to edit, deleting, and multi-select.
-
-
-  ==============================================================================
-*/
-
 #include "ExpressionLaneEditor.h"
 #include "PianoRollComponent.h"
 #include "../design-system/ZenithDesignSystem.h"
@@ -421,7 +403,7 @@ float ExpressionLaneEditor::screenYToValue(float y, const SkRect& laneRect) cons
 }
 
 float ExpressionLaneEditor::valueToScreenY(float value, const SkRect& laneRect) const {
-  // Invert the mapping: 0.0 → bottom, 1.0 → top
+  // Invert the mapping: 0.0 -> bottom, 1.0 -> top
   const float laneHeight = laneRect.height();
   return laneRect.bottom() - (value * laneHeight);
 }

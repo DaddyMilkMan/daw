@@ -17,28 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ScaleAutoDetector.h
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Automatic musical scale detection from audio.
-    
-    Analyzes pitch content to determine:
-
-    - Key/Root note
-    - Scale type (major, minor, etc.)
-    - Confidence score
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_audio_basics/juce_audio_basics.h>

@@ -17,35 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ClassicAutoTune.h
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Recreation of the Auto-Tune 5 "Classic" algorithm.
-    
-    This is the iconic sound used on:
-
-    - T-Pain
-    - Cher "Believe"
-    - Daft Punk
-    - Countless hip-hop tracks
-    
-    The "Classic" mode is characterized by:
-    - Hard pitch quantization
-    - Fast retune speed (robotic effect)
-    - Slight artifacts that define the sound
-    - Less transparent than modern algorithms
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_audio_basics/juce_audio_basics.h>

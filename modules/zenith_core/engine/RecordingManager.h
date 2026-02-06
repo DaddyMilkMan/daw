@@ -17,34 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    RecordingManager.h
-    Created: 2025-12-09
-    Author:  Zenith DAW
-
-    Manages audio and MIDI recording operations with RT-safe architecture.
-
-    Thread Safety:
-
-    - startRecording()/stopRecording() are MESSAGE THREAD ONLY
-    - captureAudio() is AUDIO THREAD SAFE (RT-safe via AudioRecorder)
-    - captureMidi() is AUDIO THREAD SAFE (RT-safe via lock-free fifo)
-    - Uses lock-free fifos for RT-safe recording
-
-    Architecture:
-    - Delegates audio recording to AudioRecorder (ring buffer based)
-    - Manages MIDI recording via lock-free fifo
-    - Creates clips in ProjectState upon stopRecording()
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_audio_basics/juce_audio_basics.h>

@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    RegisterBuiltInInstruments.h
-    Created: 2025-11-18
-    Author:  Zenith DAW
-
-    Registers all built-in instruments with the InstrumentRegistry.
-    Called during application initialization.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 namespace zenith {

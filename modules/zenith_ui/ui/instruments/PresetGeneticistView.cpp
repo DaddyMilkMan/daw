@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PresetGeneticistView.cpp
-    Created: 2025-12-09
-    Author:  Zenith DAW AI Team
-
-  ==============================================================================
-*/
-
-
 #include "PresetGeneticistView.h"
 #include "../design-system/ZenithTheme.h"
 

@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ExportDialog.cpp
-    Created: 2025-12-03
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "ExportDialog.h"
 #include "../controls/ExportProgressBar.h"
 #include "../design-system/ZenithDesignSystem.h"

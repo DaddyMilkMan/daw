@@ -17,18 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    SkiaSettingsPanel.h
-    Skia-based settings panel with live preview - production ready
-  ==============================================================================
-*/
-
-
 #include "../../design-system/ZenithTheme.h"
 #include "../../engine/Engine.h"
 #include "ai/GrokAPIClient.h"

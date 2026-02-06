@@ -17,25 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ContextMenuManager.h
-    Created: 2025-12-25
-    Author:  Zenith DAW Team
-
-    Singleton manager for centralized context menu handling.
-    Ensures only one context menu is visible at a time and handles
-    global dismissal on click-outside.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "SkiaPopupMenu.h"

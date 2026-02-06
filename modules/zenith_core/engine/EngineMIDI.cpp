@@ -17,17 +17,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-//     File: EngineMIDI.cpp
-//     Brief: MIDI input handling and panic routine
-//     Note: This is a modular component of Engine - declarations remain in Engine.h
-
-
-#include "../engine/Midi2DiscoveryService.h"
+#include "Engine.h"
+#include "Midi2DiscoveryService.h"
+#include "Track.h"
+#include "RecordingManager.h"
+#include "TransportController.h"
 
 namespace zenith {
 

@@ -17,28 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithChannelStrip.h
-    Created: 2025-12-20
-    Author:  Zenith DAW
-
-    Professional Channel Strip Plugin.
-    Features:
-    - Noise Gate
-
-    - 4-Band Parametric EQ (HPF, Low Shelf, Mid Peak, High Shelf)
-    - VCA-style Compressor
-    - Analog Saturation (Console Emulation)
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../plugins/ZenithPlugin.h"

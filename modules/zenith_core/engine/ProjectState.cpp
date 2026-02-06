@@ -17,17 +17,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+// ProjectState.cpp - Project state implementation
 
-//     File: ProjectState.cpp
-//     Brief: Project state implementation
-//*
-
-
+#include "ProjectState.h"
 #include "MidiNoteStateManager.h"
+#include "TrackStateManager.h"
+#include "ClipStateManager.h"
+#include "AutomationStateManager.h"
+#include "ProjectFileIO.h"
 #include "IDService.h"
 #include "TempoMap.h"
 
@@ -54,6 +51,7 @@ int extractNumericSuffix(const juce::String &identifier) {
   return numericPart.getIntValue();
 }
 } // namespace
+
 
 namespace zenith {
 

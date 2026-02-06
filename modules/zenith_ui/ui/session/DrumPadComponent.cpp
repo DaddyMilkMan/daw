@@ -17,10 +17,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#include "DrumPadComponent.h"
+
 
 //==============================================================================
 DrumPadComponent::DrumPadComponent(zenith::Engine &eng,

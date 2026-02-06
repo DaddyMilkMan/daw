@@ -16,16 +16,12 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#include "TransportController.h"
+#include <juce_core/juce_core.h>
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+namespace zenith {
 
- * @file TransportController.cpp
- * @brief Concrete transport control implementation
- */
-
+// Concrete transport control implementation
 
 
 TransportController::TransportController() {
@@ -242,11 +238,11 @@ bool TransportController::isOverdubMode() const {
 }
 
 void TransportController::addTransportChangeListener(juce::ChangeListener* listener) {
-    changeListeners_.addListener(listener);
+    changeListeners_.add(listener);
 }
 
 void TransportController::removeTransportChangeListener(juce::ChangeListener* listener) {
-    changeListeners_.removeListener(listener);
+    changeListeners_.remove(listener);
 }
 
 juce::ValueTree TransportController::getState() const {
@@ -347,7 +343,6 @@ void TransportController::updatePlayhead(int numSamples) {
 }
 
 void TransportController::notifyTransportStateChanged() {
-    juce::ChangeBroadcaster::sendChangeMessage();
     changeListeners_.call(&juce::ChangeListener::changeListenerCallback, nullptr);
 }
 

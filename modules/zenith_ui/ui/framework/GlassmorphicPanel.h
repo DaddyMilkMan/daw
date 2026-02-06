@@ -17,31 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    GlassmorphicPanel.h
-    Created: 2025-12-11
-    Author:  Zenith DAW Team
-
-    REAL Glassmorphism rendering utilities for Zenith DAW's "Neon Noir" design.
-
-    This is NOT fake transparency - it uses BackdropBlur to actually blur
-
-    the content BEHIND panels for authentic glass effects.
-
-    Usage:
-      GlassmorphicPanel::draw(canvas, bounds,
-  GlassmorphicPanel::Style::Elevated); GlassmorphicPanel::drawWithAccent(canvas,
-  bounds, design::colors::CYAN);
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../../Settings.h"

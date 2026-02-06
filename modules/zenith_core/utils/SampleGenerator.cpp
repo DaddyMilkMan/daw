@@ -17,10 +17,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#include "SampleGenerator.h"
+#include "instruments/ContentPaths.h"
+#include <juce_audio_formats/juce_audio_formats.h>
+
+namespace zenith {
 
 // Internal Job Class
 class SampleGenerationJob : public juce::ThreadPoolJob {

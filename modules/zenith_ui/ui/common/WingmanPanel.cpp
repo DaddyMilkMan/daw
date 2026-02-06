@@ -17,27 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    WingmanPanel.cpp
-    Created: 2025-11-29 (Redesigned: 2026-01-17)
-    Author:  Zenith Team
-
-    FLUID INTELLIGENCE INTERFACE - Iteration 2
-    Refined based on "Modern Clean" feedback.
-    - Removed "engineer" buttons (replaced with frameless icons).
-
-    - Decluttered layout.
-    - Softer, more cohesive aesthetic.
-
-  ==============================================================================
-*/
-
 #include "WingmanPanel.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../design-system/ZenithIcons.h"

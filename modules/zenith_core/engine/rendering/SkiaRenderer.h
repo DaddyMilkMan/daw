@@ -10,7 +10,7 @@
  * ARCHITECTURE OVERVIEW
  * ═══════════════════════════════════════════════════════════════════════════
  * 
- *   JUCE OpenGLContext → MainComponent → SkiaRenderer → SkCanvas → GPU
+ *   JUCE OpenGLContext -> MainComponent -> SkiaRenderer -> SkCanvas -> GPU
  *        (owns GL)         (callbacks)    (wraps FBO)    (drawing)
  * 
  * ═══════════════════════════════════════════════════════════════════════════
@@ -96,7 +96,11 @@
 
 #pragma once
 
-#include <JuceHeader.h>
+#include <juce_core/juce_core.h>
+#include <juce_events/juce_events.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_opengl/juce_opengl.h>
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Skia forward declarations
@@ -110,14 +114,16 @@ class GrDirectContext;
 
 // Smart pointer template for Skia objects
 #ifdef ZENITH_USE_SKIA
+#if ZENITH_ENABLE_SKIA
 #include <core/SkRefCnt.h>
+#endif
 #else
 // Dummy sk_sp when Skia is disabled (for syntax checking without Skia)
 template <typename T>
 using sk_sp = std::shared_ptr<T>;
 #endif
 
-namespace Zenith {
+namespace zenith {
 
 /**
  * @class SkiaRenderer
@@ -146,6 +152,17 @@ namespace Zenith {
 class SkiaRenderer
 {
 public:
+    /**
+     * @brief Rendering backend types
+     */
+    enum class Backend
+    {
+        Auto,
+        OpenGL,
+        Vulkan,
+        Software
+    };
+
     // ═══════════════════════════════════════════════════════════════════════
     // Types
     // ═══════════════════════════════════════════════════════════════════════
@@ -197,12 +214,6 @@ public:
      * Will call abandonContext() on the GrDirectContext if it exists.
      */
     ~SkiaRenderer();
-    
-    // Non-copyable, non-movable (owns GPU resources)
-    SkiaRenderer(const SkiaRenderer&) = delete;
-    SkiaRenderer& operator=(const SkiaRenderer&) = delete;
-    SkiaRenderer(SkiaRenderer&&) = delete;
-    SkiaRenderer& operator=(SkiaRenderer&&) = delete;
 
     // ═══════════════════════════════════════════════════════════════════════
     // Initialization
@@ -473,4 +484,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SkiaRenderer)
 };
 
-} // namespace Zenith
+} // namespace zenith

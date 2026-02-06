@@ -17,11 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
 #pragma once
 
 #include "MixerChannel.h"
@@ -44,9 +39,9 @@ namespace zenith {
  * through an effect chain, and returns it to the master mix.
  *
  * Typical uses:
- * - Reverb send (multiple tracks → reverb → master)
- * - Delay send (drum tracks → delay → master)
- * - Parallel compression (all tracks → compressor → master)
+ * - Reverb send (multiple tracks -> reverb -> master)
+ * - Delay send (drum tracks -> delay -> master)
+ * - Parallel compression (all tracks -> compressor -> master)
  */
 class AuxBus : public juce::AudioSource {
 public:

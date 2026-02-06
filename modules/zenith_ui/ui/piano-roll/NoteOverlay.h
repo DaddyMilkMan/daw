@@ -17,25 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    NoteOverlay.h
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Real-time visual feedback overlay for MPE performance.
-    Draws glowing notes, pressure circles, timbre color shifts, and pitchbend
-    visualization on notes during MPE playback.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <core/SkCanvas.h>

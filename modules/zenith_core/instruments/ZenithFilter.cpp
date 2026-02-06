@@ -17,25 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithFilter.cpp
-    Created: 2025-12-06
-    Updated: 2025-02-01 (Professional Filter Overhaul)
-    Author:  Zenith DAW
-
-    Implementation of ZenithFilter with circuit-modeled filters
-    and 4x oversampling for premium quality.
-
-
-  ==============================================================================
-*/
-
 #include "ZenithFilter.h"
 #include <cmath>
 

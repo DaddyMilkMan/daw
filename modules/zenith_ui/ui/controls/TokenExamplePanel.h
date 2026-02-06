@@ -17,29 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    TokenExamplePanel.h
-    Created: 2025-12-31
-    Author:  Zenith DAW
-
-    Demonstration panel showing tokenized Button, Slider, and Panel components.
-    This file serves as a reference for proper design token usage in Zenith DAW.
-
-
-    Token Architecture (Material Design pattern):
-    - Primitive tokens: Raw values (colors::CYAN = 0xFF00F0FF)
-    - Semantic tokens: Purpose-based (colors::ACCENT_PRIMARY)
-    - Component tokens: Component-specific (button::getBgPrimary())
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../framework/SkiaComponent.h"
@@ -205,25 +182,25 @@ TokenExamplePanel Token Usage:
 =============================
 
 PANEL TOKENS (design::panel::*)
-- getBg2()           → Main panel background
-- getBorderDefault() → Panel border color
-- getGlassHighlight()→ Top edge highlight
-- getHeaderBg()      → Header background
-- getPadding()       → Content padding (16px)
-- getRadius()        → Corner radius (16px)
-- getRadiusSm()      → Header corner radius (8px)
-- getHeaderHeight()  → Header height (32px)
+- getBg2()           -> Main panel background
+- getBorderDefault() -> Panel border color
+- getGlassHighlight()-> Top edge highlight
+- getHeaderBg()      -> Header background
+- getPadding()       -> Content padding (16px)
+- getRadius()        -> Corner radius (16px)
+- getRadiusSm()      -> Header corner radius (8px)
+- getHeaderHeight()  -> Header height (32px)
 
 BUTTON TOKENS (design::button::*)
-- Primary style uses getBgPrimary() → CYAN
-- Secondary style uses getBgSecondary() → BG_02
-- Danger style uses getBgDanger() → RED
-- Height from getHeightMd() → 32px
+- Primary style uses getBgPrimary() -> CYAN
+- Secondary style uses getBgSecondary() -> BG_02
+- Danger style uses getBgDanger() -> RED
+- Height from getHeightMd() -> 32px
 
 SLIDER TOKENS (design::slider::*)
-- Track uses getTrackBg() → BG_01
-- Fill uses getTrackFillDefault() → CYAN
-- Handle uses getHandleDefault() → TEXT_PRIMARY
+- Track uses getTrackBg() -> BG_01
+- Fill uses getTrackFillDefault() -> CYAN
+- Handle uses getHandleDefault() -> TEXT_PRIMARY
 
 TYPOGRAPHY TOKENS (design::typography::*)
 - FONT_MD (14px) for header text

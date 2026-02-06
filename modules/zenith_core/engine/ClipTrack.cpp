@@ -17,10 +17,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#include "ClipTrack.h"
+#include "RealTimeGarbageCollector.h"
+
+namespace zenith {
+
 
 void ClipTrack::addClip(std::unique_ptr<Clip> clip) {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());

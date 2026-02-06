@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaPresetBrowser.h
-    Created: 2026-02-04
-    Author:  Zenith DAW
-
-    Full Skia-based Preset Browser - Production Implementation
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include "../../framework/SkiaComponent.h"

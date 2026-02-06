@@ -11,9 +11,9 @@
 */
 
 #include "UXDirectorAgent.h"
-#include "../ui/arranger/ClipComponent.h"
-#include "../ui/mixer/MixerChannelComponent.h"
-#include "../ui/framework/SkiaComponent.h"
+#include <zenith_ui/ui/arranger/ClipComponent.h>
+#include <zenith_ui/ui/mixer/MixerChannelComponent.h>
+#include <zenith_ui/ui/framework/SkiaComponent.h>
 #include "ZenithStyleApplicator.h"
 #include <algorithm>
 #include <typeinfo>

@@ -17,40 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AnimationCoordinator.h
-    Created: 2025-12-31
-    Author:  Zenith DAW
-
-    Central animation coordinator singleton that eliminates the "timer holocaust"
-    pattern where every component runs its own independent timer.
-
-
-    Instead of 50+ individual timers, ONE master clock distributes ticks to
-    registered listeners based on priority levels.
-
-    Usage:
-        // In constructor:
-        AnimationCoordinator::getInstance().registerListener(this, Priority::High);
-        
-        // Implement AnimationListener:
-        void onAnimationTick(float deltaMs) override {
-            // Update animations
-        }
-        
-        // In destructor:
-        AnimationCoordinator::getInstance().unregisterListener(this);
-
-  ==============================================================================
-*/
-
 #pragma once
+
+// AnimationCoordinator.h
+
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <vector>

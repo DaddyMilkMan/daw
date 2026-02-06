@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    CommandAPI_SynthExtensions.cpp
-    Created: 2025-01-29
-    Author:  Zenith DAW
-
-    Command handlers for Wingman → Synth communication.
-    Add this to CommandAPI.cpp to enable AI synth control.
-
-
-  ==============================================================================
-*/
-
 // Add these includes to CommandAPI.cpp:
 // #include "../ai/WingmanSynthBridge.h"
 // #include "../instruments/ZenithPolySynth.h"
@@ -415,7 +397,7 @@ Wingman: [Executing: analyzeSynthPatch {}]
         - Type: Bright pluck synth
         - Character: Filtered saw wave with quick envelope
         - Effects: Chorus (30%), Delay (40%)
-        - Modulation: LFO 1 → Filter Cutoff
+        - Modulation: LFO 1 -> Filter Cutoff
         - Suggested use: Melodic trance leads, pluck bass
 
 */

@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PitchCorrector.cpp
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Professional pitch correction implementation with Rubber Band.
-
-  ==============================================================================
-
-*/
-
 #include "PitchCorrector.h"
 #include <cmath>
 
@@ -213,7 +196,7 @@ void PitchCorrector::detectVibrato(float currentPitch)
     // Add to history
     pitchHistory_.push_back(currentPitch);
     if (pitchHistory_.size() > kVibratoHistorySize)
-        pitchHistory_.pop_front();
+        pitchHistory_.erase(pitchHistory_.begin());
     
     if (pitchHistory_.size() < kVibratoHistorySize / 2)
         return;

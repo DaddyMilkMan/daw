@@ -17,18 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    UndoRedoSystem.cpp
-    Comprehensive undo/redo system implementation
-  ==============================================================================
-*/
-
-
 #include "../../Settings.h"
 #include <algorithm>
 #include <random>

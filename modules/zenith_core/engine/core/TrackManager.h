@@ -17,18 +17,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#pragma once
 
- * @file TrackManager.h
- * @brief Concrete track management implementation
- *
- * Manages audio and MIDI tracks with thread-safe access and snapshots.
- */
+//==============================================================================
 
-
+#include "ITrackManager.h"
 #include <juce_core/juce_core.h>
 #include <memory>
 #include <vector>
@@ -94,6 +87,22 @@ private:
         std::atomic<float> level{0.0f};
         std::atomic<float> peakLevel{0.0f};
         std::atomic<bool> frozen{false};
+
+        TrackState() = default;
+        
+        // Atomics are not copyable, so we need manual copy semantics
+        TrackState(const TrackState& other) {
+            level.store(other.level.load());
+            peakLevel.store(other.peakLevel.load());
+            frozen.store(other.frozen.load());
+        }
+        
+        TrackState& operator=(const TrackState& other) {
+            level.store(other.level.load());
+            peakLevel.store(other.peakLevel.load());
+            frozen.store(other.frozen.load());
+            return *this;
+        }
     };
 
     std::vector<TrackState> trackStates_;

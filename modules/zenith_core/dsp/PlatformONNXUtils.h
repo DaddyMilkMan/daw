@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PlatformONNXUtils.h
-    Created: 2025-12-23
-
-    Platform-agnostic ONNX Runtime utilities interface
-
-  ==============================================================================
-*/
-
-
-
 #pragma once
 
 #ifdef ZENITH_USE_ONNX_RUNTIME

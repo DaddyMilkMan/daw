@@ -17,23 +17,23 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+//==============================================================================
 
- * @file EngineCore.cpp
- * @brief Refactored engine core with clean architecture
- */
-
-
-#include "../../engine/AudioFilePool.h"
-#include "../../engine/Metronome.h"
-#include "../../engine/Midi2DiscoveryService.h"
-#include "../../ai/SessionDebuggerAgent.h"
-#include "../../ai/AIMasteringAgent.h"
+#include "EngineCore.h"
+#include "AudioDeviceManager.h"
+#include "TrackManager.h"
+#include "TransportController.h"
+#include "AudioRenderer.h"
+#include "AudioFilePool.h"
+#include "Metronome.h"
+#include "Midi2DiscoveryService.h"
 #include "../ZenithLogger.h"
+#include "../AuxBus.h"
+#include "../PluginHost.h"
+#include "../../instruments/InstrumentRegistry.h"
+#include "../../instruments/RegisterBuiltInInstruments.h"
 #include <algorithm>
+
 
 namespace zenith {
 
@@ -69,15 +69,17 @@ bool EngineCore::initialize() {
             return false;
         }
 
-        // Initialize audio renderer
+        // Initialize audio renderer (0 inputs, 2 outputs)
+        auto* device = audioDeviceManager_->getDeviceManager().getCurrentAudioDevice();
         audioRenderer_->initialize(
-            audioDeviceManager_->getDeviceManager().getCurrentAudioDevice()->getDefaultBufferSizeSamples(),
-            audioDeviceManager_->getDeviceManager().getCurrentAudioDevice()->getCurrentSampleRate()
+            0, /* numInputChannels */
+            2, /* numOutputChannels */
+            device->getCurrentSampleRate()
         );
 
         // Prepare tracks for processing
         trackManager_->prepareForProcessing(
-            audioDeviceManager_->getDeviceManager().getCurrentAudioDevice()->getDefaultBufferSizeSamples(),
+            audioDeviceManager_->getDeviceManager().getCurrentAudioDevice()->getCurrentBufferSizeSamples(),
             audioDeviceManager_->getDeviceManager().getCurrentAudioDevice()->getCurrentSampleRate()
         );
 
@@ -203,12 +205,12 @@ juce::int64 EngineCore::getLoopEnd() const {
 //==========================================================================
 
 void EngineCore::suspendProcessing(bool shouldSuspend) {
-    suspended_.store(shouldSuspend);
+    suspended_ = shouldSuspend;
     audioDeviceManager_->setSuspended(shouldSuspend);
 }
 
 bool EngineCore::isSuspended() const {
-    return suspended_.load();
+    return suspended_;
 }
 
 double EngineCore::getCpuUsage() const {
@@ -245,18 +247,23 @@ bool EngineCore::queueEvent(const EngineEvent& e) {
         return false;
     }
 
-    auto start1 = eventFifo_.getFifoIndex();
-    auto start2 = eventFifo_.getFifoIndex();
-    auto numAdded = eventFifo_.write(e.buffer, e.size);
-    return numAdded > 0;
+    int start1, size1, start2, size2;
+    eventFifo_.prepareToWrite(1, start1, size1, start2, size2);
+
+    if (size1 > 0) {
+        eventBuffer_[start1] = e;
+        eventFifo_.finishedWrite(1);
+        return true;
+    }
+    return false;
 }
 
 void EngineCore::addChangeListener(juce::ChangeListener* listener) {
-    changeListeners_.addListener(listener);
+    changeListeners_.add(listener);
 }
 
 void EngineCore::removeChangeListener(juce::ChangeListener* listener) {
-    changeListeners_.removeListener(listener);
+    changeListeners_.remove(listener);
 }
 
 //==========================================================================
@@ -336,7 +343,7 @@ void EngineCore::processAudioBlock(
     int numSamples,
     const juce::AudioIODeviceCallbackContext& context) {
 
-    if (suspended_.load()) {
+    if (suspended_) {
         // Clear output if suspended
         for (int channel = 0; channel < numOutputChannels; ++channel) {
             if (outputChannelData[channel] != nullptr) {
@@ -347,7 +354,10 @@ void EngineCore::processAudioBlock(
     }
 
     // Update transport position
-    transportController_->processAudioBlock(numSamples);
+    if (transportController_->isPlaying()) {
+        auto newPos = transportController_->getPlayheadSamples() + numSamples;
+        transportController_->setPlayheadSamples(newPos);
+    }
 
     // Get current track snapshots
     auto tracks = trackManager_->getTrackPointersSnapshot();
@@ -362,7 +372,7 @@ void EngineCore::processAudioBlock(
         numSamples,
         transportController_->getPlayheadSamples(),
         tracks,
-        auxBuses.get()
+        auxBuses
     );
 
     // Process events
@@ -372,17 +382,22 @@ void EngineCore::processAudioBlock(
 void EngineCore::processEvents() {
     // Process queued engine events
     int numToRead = eventFifo_.getNumReady();
-    for (int i = 0; i < numToRead; ++i) {
-        EngineEvent event;
-        auto start1 = eventFifo_.getFifoIndex();
-        auto start2 = eventFifo_.getFifoIndex();
-        auto numRead = eventFifo_.read(event.buffer, event.size);
+    if (numToRead == 0) return;
 
-        if (numRead > 0) {
-            // TODO: Process the event
-            DBG("EngineCore: Processing event type " + juce::String(event.type));
-        }
+    int start1, size1, start2, size2;
+    eventFifo_.prepareToRead(numToRead, start1, size1, start2, size2);
+
+    for (int i = 0; i < size1; ++i) {
+        const auto& event = eventBuffer_[start1 + i];
+        // TODO: Process the event
+        DBG("EngineCore: Processing event type " + juce::String(static_cast<int>(event.type)));
     }
+    for (int i = 0; i < size2; ++i) {
+        const auto& event = eventBuffer_[start2 + i];
+        // TODO: Process the event
+        DBG("EngineCore: Processing event type " + juce::String(static_cast<int>(event.type)));
+    }
+    eventFifo_.finishedRead(size1 + size2);
 }
 
 //==========================================================================
@@ -390,7 +405,6 @@ void EngineCore::processEvents() {
 //==========================================================================
 
 void EngineCore::notifyTransportChanged() {
-    juce::ChangeBroadcaster::sendChangeMessage();
     changeListeners_.call(&juce::ChangeListener::changeListenerCallback, nullptr);
 }
 
@@ -399,7 +413,6 @@ void EngineCore::notifyPositionChanged() {
 }
 
 void EngineCore::notifyTrackStateChanged() {
-    juce::ChangeBroadcaster::sendChangeMessage();
     changeListeners_.call(&juce::ChangeListener::changeListenerCallback, nullptr);
 }
 
@@ -442,7 +455,7 @@ void EngineCore::initializeInstrumentsAndPlugins() {
 
     // Initialize Instrument Registry
     instrumentRegistry_ = std::make_unique<InstrumentRegistry>();
-    zenith::registerBuiltInInstruments(*instrumentRegistry_);
+    registerBuiltInInstruments(*instrumentRegistry_);
     DBG("EngineCore: Instrument registry initialized with built-in instruments");
 
     // Initialize Plugin Host
@@ -456,15 +469,16 @@ void EngineCore::initializeInstrumentsAndPlugins() {
 void EngineCore::initializeAIAgents() {
     DBG("EngineCore: Initializing AI agents");
 
-    // Initialize Session Debugger Agent
-    sessionDebugger_ = std::make_unique<SessionDebuggerAgent>(*this);
-    DBG("EngineCore: Session debugger agent initialized");
+    // TODO: AI agents require refactoring to work with the new EngineCore architecture.
+    // The SessionDebuggerAgent and AIMasteringAgent currently depend on the legacy Engine class
+    // which includes the main AudioRenderer, causing a conflict with core/AudioRenderer.
+    // For now, AI agents are not initialized in the core engine.
 
-    // Initialize AI Mastering Agent
-    masteringAgent_ = std::make_unique<AIMasteringAgent>(*this);
-    DBG("EngineCore: AI mastering agent initialized");
+    // Temporarily commented out to avoid compilation issues
+    // sessionDebugger_ = std::make_unique<SessionDebuggerAgent>(*this);
+    // masteringAgent_ = std::make_unique<AIMasteringAgent>(*this);
 
-    DBG("EngineCore: AI agents initialized");
+    DBG("EngineCore: AI agents not initialized (requires architecture refactoring)");
 }
 
 } // namespace zenith

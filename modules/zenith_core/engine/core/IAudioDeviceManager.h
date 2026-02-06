@@ -17,19 +17,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#pragma once
 
- * @file IAudioDeviceManager.h
- * @brief Audio device management interface
- *
- * Handles audio device I/O and provides the audio processing callback.
- */
-
+//==============================================================================
 
 #include <functional>
+#include <juce_audio_devices/juce_audio_devices.h>
 
 namespace zenith {
 

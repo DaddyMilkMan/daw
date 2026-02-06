@@ -17,15 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file PianoRollComponent.cpp
- * @brief Professional-grade MIDI Piano Roll Editor Implementation (Core)
- */
-
+// PianoRollComponent.cpp
 
 #include "../framework/GlassmorphicPanel.h"
 #include "../../engine/Engine.h"

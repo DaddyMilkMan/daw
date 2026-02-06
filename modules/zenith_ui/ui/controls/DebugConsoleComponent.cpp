@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    DebugConsoleComponent.cpp
-    Created: 2025-12-07
-    Author:  Zenith DAW AI Team
-
-    Implementation of the Debug Console UI Component.
-
-  ==============================================================================
-
-*/
-
 #include "DebugConsoleComponent.h"
 
 #define ZENITH_USE_SKIA 1 // Force for debugging

@@ -17,28 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PitchCorrector.h
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Professional pitch correction engine with:
-    - Scale-aware correction
-    - Adjustable retune speed
-
-    - Humanize/naturalize
-    - Formant preservation
-    - Vibrato detection and preservation
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "ProPitchShifter.h"
@@ -47,7 +25,6 @@
 #include <vector>
 #include <atomic>
 #include <array>
-#include <deque>
 
 namespace zenith {
 namespace dsp {
@@ -300,7 +277,7 @@ private:
     juce::AudioBuffer<float> tempBuffer_;
     
     // Vibrato detection
-    std::deque<float> pitchHistory_;
+    std::vector<float> pitchHistory_;
     static constexpr int kVibratoHistorySize = 512;  // ~10ms at 48kHz
     std::atomic<float> vibratoDepth_{0.0f};
     std::atomic<float> vibratoRate_{0.0f};

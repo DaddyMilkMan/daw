@@ -1,0 +1,256 @@
+name: Dependency Security
+
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master, develop ]
+  schedule:
+    # Run dependency checks weekly on Monday at 3 AM UTC
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+jobs:
+  # Dependency version checks
+  dependency-versions:
+    name: Dependency Versions
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependency checking tools
+      run: |
+        pip install safety pip-licenses depcheck
+        npm install -g npm-check-updates
+
+    - name: Check npm dependencies
+      run: |
+        ncu --update-dependencies --packageFile package.json
+        npm audit --audit-level moderate
+
+    - name: Check Python dependencies
+      run: |
+        safety check --json --output safety_report.json || true
+
+    - name: Generate licenses report
+      run: |
+        pip-licenses --format=markdown --output=THIRD-PARTY-PYTHON.md --ignore-packages="setuptools,wheel"
+
+    - name: Check CMake dependencies
+      run: |
+        # Check CMake dependencies in CMakeLists.txt
+        grep -E "find_package\|ExternalProject\|FetchContent" CMakeLists.txt | head -20
+
+  # Vulnerability scanning
+  vulnerability-scan:
+    name: Vulnerability Scan
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        scanner: [trivy, snyk, osv-scanner]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install security tools
+      run: |
+        # Install Trivy
+        wget https://github.com/aquasecurity/trivy/releases/download/v0.47.0/trivy_0.47.0_Linux-64bit.tar.gz
+        tar xvf trivy_0.47.0_Linux-64bit.tar.gz
+        sudo mv trivy /usr/local/bin/
+
+        # Install OSV Scanner
+        curl -sSL https://github.com/google/osv-scanner/releases/download/v1.4.0/osv-scanner_Linux_x86_64 -o osv-scanner
+        sudo chmod +x osv-scanner
+        sudo mv osv-scanner /usr/local/bin/
+
+    - name: Run Trivy scan
+      if: matrix.scanner == 'trivy'
+      run: |
+        trivy config --format json --output trivy-config.json .trivy.yaml || true
+        trivy fs --scanners vuln,config -f json -o trivy-report.json .
+        trivy repo --format json -o trivy-repo.json .
+
+    - name: Run OSV Scanner
+      if: matrix.scanner == 'osv-scanner'
+      run: |
+        osv-scanner --json -o osv-report.json .
+
+    - name: Run Snyk scan
+      if: matrix.scanner == 'snyk'
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      run: |
+        npm install -g snyk
+        snyk auth ${{ secrets.SNYK_TOKEN }}
+        snyk test --json --all-projects > snyk-report.json || true
+        snyk container --json > snyk-container.json || true
+
+    - name: Upload vulnerability scan results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: vulnerability-scan-${{ matrix.scanner }}
+        path: |
+          trivy-report.json
+          trivy-repo.json
+          osv-report.json
+          snyk-report.json
+          snyk-container.json
+        retention-days: 30
+
+  # License compliance
+  license-compliance:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install license checking tools
+      run: |
+        pip install licensecheck reuse
+
+    - name: Generate SPDX report
+      run: |
+        reuse spdx --output-file spdx.json --format json
+
+    - name: Run license check
+      run: |
+        licensecheck --recursive --csv --ignore "GPL-2.0,LGPL-2.1,MIT" > license-report.csv
+
+    - name: Check for license conflicts
+      run: |
+        python scripts/check-license-compliance.py
+
+    - name: Upload license reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: license-compliance-report
+        path: |
+          spdx.json
+          license-report.csv
+        retention-days: 30
+
+  # Dependency graph
+  dependency-graph:
+    name: Dependency Graph
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Generate dependency graph
+      run: |
+        # Generate dependency graph
+        mkdir -p dependency-graph
+
+        # Python dependencies
+        pip install pipdeptree
+        pipdeptree --json --output-file dependency-graph/python-deps.json || true
+
+        # Node.js dependencies
+        npm install -g madge
+        madge --image dependency-graph/javascript-deps.png apps/desktop/ || true
+
+        # CMake dependencies
+        cmake -B build -S apps/desktop
+        cd build
+        cmake --graphviz=../dependency-graph/cmake-deps.dot
+        dot -Tpng ../dependency-graph/cmake-deps.dot -o ../dependency-graph/cmake-deps.png
+        cd ..
+
+    - name: Upload dependency graph
+      uses: actions/upload-artifact@v4
+      with:
+        name: dependency-graph
+        path: dependency-graph/
+        retention-days: 30
+
+  # Outdated dependencies report
+  outdated-report:
+    name: Outdated Dependencies Report
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install update tools
+      run: |
+        pip install pip-outdated
+        npm install -g npm-check-updates
+
+    - name: Generate outdated report
+      run: |
+        echo "# Outdated Dependencies Report" > outdated-report.md
+        echo "Generated on: $(date)" >> outdated-report.md
+        echo "" >> outdated-report.md
+
+        echo "## Python Dependencies" >> outdated-report.md
+        pip-outdated --format markdown >> outdated-report.md
+
+        echo "" >> outdated-report.md
+        echo "## Node.js Dependencies" >> outdated-report.md
+        ncu --markdown outdated >> outdated-report.md
+
+        echo "" >> outdated-report.md
+        echo "## CMake Dependencies" >> outdated-report.md
+        echo "Check CMakeLists.txt and vcpkg.json for outdated dependencies" >> outdated-report.md
+
+    - name: Create issue for outdated dependencies
+      uses: actions/github-script@v7
+      if: github.event_name == 'schedule'
+      with:
+        script: |
+          const fs = require('fs');
+          const report = fs.readFileSync('outdated-report.md', 'utf8');
+
+          // Create issue
+          await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: 'Dependencies Update Required - ' + new Date().toISOString().split('T')[0],
+            body: report,
+            labels: ['dependencies', 'outdated', 'automation'],
+            assignees: ['maintainers']
+          });
+
+    - name: Upload outdated report
+      uses: actions/upload-artifact@v4
+      with:
+        name: outdated-dependencies-report
+        path: outdated-report.md
+        retention-days: 7

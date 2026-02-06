@@ -17,25 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    ClipTransitionState.h
-    Created: 2026-02-05
-    Author:  Zenith DAW Team
-
-    Advanced state transition system for clip animations with smooth interpolation.
-
-    Features:
-    - State machine with visual transitions
-    - Configurable animation curves
-    - Physics-based interpolation
-    - Performance-optimized animation system
-
-    Designed to push SkiaSessionView from 9.5/10 to legendary status!
-    ==============================================================================
-*/
-
 #pragma once
+
+// ClipTransitionState.h
+
 
 #include "../../framework/Animation.h"
 #include "../../design-system/ZenithTheme.h"

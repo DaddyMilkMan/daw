@@ -17,29 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AudioRenderer.h
-    Created: 2025-12-09
-    Author:  Zenith DAW
-
-    Handles audio graph rendering and mixing for the engine.
-
-    Extracted from Engine.cpp for better modularity.
-
-
-    Thread Safety:
-    - renderAudioGraph() is AUDIO THREAD ONLY
-    - All methods are RT-safe (no allocations, no locks)
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <array>

@@ -17,25 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithParameterAttachment.h
-    Created: 2025-12-23
-    Author:  Zenith DAW
-
-    A bridge between ZenithControl and JUCE's AudioProcessorValueTreeState
-  parameters. Allows ZenithControl (which doesn't inherit from juce::Slider) to
-  be easily attached to parameters with full undo/redo support.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../controls/ZenithControl.h"

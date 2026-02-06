@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    DeviceChainComponent.cpp
-    Created: 2025-12-13
-    Author:  Zenith AI
-
-  ==============================================================================
-*/
-
-
 #include "DeviceChainComponent.h"
 #include "Engine.h"
 #include "ZenithDesignSystem.h"

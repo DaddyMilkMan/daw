@@ -17,28 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    WingmanChatBubble.h
-    Created: 2025-12-30 (Refined for Glassmorphism)
-
-    Modern Skia-based chat bubble for Wingman AI.
-    Features:
-    - Highly rounded corners (pill-like)
-    - Hairline borders (0.5px)
-
-    - Subtle glassmorphism gradients
-    - User bubbles: cyan tint
-    - Assistant bubbles: neutral tint
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../framework/SkiaComponent.h"

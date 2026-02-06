@@ -17,33 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SampleEditorComponent.h
-    Created: 2025-12-05
-    Author:  Zenith DAW
-
-    ZENITH EDISON - Professional Sample Editor
-    Designed to compete with FL Studio Edison
-    
-
-    Features:
-    - Full waveform editing (cut, copy, paste, trim)
-    - Audio processing (normalize, reverse, fade, gain)
-    - Playhead with transport integration
-    - Markers and regions
-    - Spectrogram view option
-    - Overview minimap
-    - Undo/redo support
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "Engine.h"

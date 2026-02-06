@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    TrackProcessor.h
-    Created: 2025
-    Author:  Zenith DAW
-
-    Audio processing logic extracted from Track class.
-    Handles PluginChain, MixerChannel, and audio buffer processing.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "MixerChannel.h"

@@ -17,26 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    Clip.cpp
-    Ported from: ZenithDAW-Native/Source/Audio/Clip.cpp (2025-11-11)
-    Author:  Zenith DAW → Zenith DAW
-
-    Audio/MIDI clip implementation
-
-    JUCE 8 / C++20 adaptations:
-
-    - Wrapped in namespace zenith
-    - No container changes needed
-
-  ==============================================================================
-*/
+// Clip.cpp - Audio/MIDI clip implementation
 
 #include "Clip.h"
 #include "AudioFilePool.h"

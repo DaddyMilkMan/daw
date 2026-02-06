@@ -17,13 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
 
- * @file UnifiedButton.h
- * @brief Unified button component
+/**
+ * File: UnifiedButton.h
+ * Brief: Unified button component
  *
  * This is the new button component that replaces both SkiaButton and JUCE Button,
  * providing a consistent interface across the application.
@@ -38,7 +35,7 @@ namespace zenith {
 
 /**
  * @class UnifiedButton
- * @brief Unified button component
+ // Brief: Unified button component
  *
  * This button component provides a consistent interface across the application,
  * with customizable appearance, behavior, and theming.
@@ -47,10 +44,11 @@ class UnifiedButton : public UnifiedComponent {
 public:
     /**
      * @class Builder
-     * @brief Builder pattern for creating buttons
+     // Brief: Builder pattern for creating buttons
      */
     class Builder {
     public:
+        friend class UnifiedButton;
         Builder& withText(const juce::String& text);
         Builder& withSize(int width, int height);
         Builder& withPosition(int x, int y);
@@ -101,91 +99,91 @@ public:
     //==========================================================================
 
     /**
-     * @brief Set the button text
+     // Brief: Set the button text
      * @param text The button text
      */
     void setText(const juce::String& text);
 
     /**
-     * @brief Get the button text
+     // Brief: Get the button text
      * @return The button text
      */
     const juce::String& getText() const { return text_; }
 
     /**
-     * @brief Set the button as toggle mode
+     // Brief: Set the button as toggle mode
      * @param toggle Whether the button is in toggle mode
      */
     void setToggleMode(bool toggle);
 
     /**
-     * @brief Check if the button is in toggle mode
+     // Brief: Check if the button is in toggle mode
      * @return True if the button is in toggle mode
      */
     bool isToggleMode() const { return toggleMode_; }
 
     /**
-     * @brief Set the toggle state
+     // Brief: Set the toggle state
      * @param state The toggle state
      */
     void setToggleState(bool state);
 
     /**
-     * @brief Get the toggle state
+     // Brief: Get the toggle state
      * @return The toggle state
      */
     bool getToggleState() const { return toggleState_; }
 
     /**
-     * @brief Check if the button is pressed
+     // Brief: Check if the button is pressed
      * @return True if the button is pressed
      */
     bool isPressed() const { return pressed_; }
 
     /**
-     * @brief Set the button's text color
+     // Brief: Set the button's text color
      * @param colour The text color
      */
     void setButtonTextColour(juce::Colour colour);
 
     /**
-     * @brief Get the button's text color
+     // Brief: Get the button's text color
      * @return The text color
      */
     juce::Colour getButtonTextColour() const { return buttonTextColour_; }
 
     /**
-     * @brief Set the button's background color
+     // Brief: Set the button's background color
      * @param colour The background color
      */
     void setButtonBackgroundColour(juce::Colour colour);
 
     /**
-     * @brief Get the button's background color
+     // Brief: Get the button's background color
      * @return The background color
      */
     juce::Colour getButtonBackgroundColour() const { return buttonBackgroundColour_; }
 
     /**
-     * @brief Set the button's border color
+     // Brief: Set the button's border color
      * @param colour The border color
      */
     void setButtonBorderColour(juce::Colour colour);
 
     /**
-     * @brief Get the button's border color
+     // Brief: Get the button's border color
      * @return The border color
      */
     juce::Colour getButtonBorderColour() const { return buttonBorderColour_; }
 
     /**
-     * @brief Set the button's corner radius
+     // Brief: Set the button's corner radius
      * @param radius The corner radius
      */
     void setButtonCornerRadius(float radius);
 
     /**
-     * @brief Get the button's corner radius
+     // Brief: Get the button's corner radius
      * @return The corner radius
      */
     float getButtonCornerRadius() const { return buttonCornerRadius_; }
@@ -195,13 +193,13 @@ public:
     //==========================================================================
 
     /**
-     * @brief Set the click handler
+     // Brief: Set the click handler
      * @param handler Function to call when clicked
      */
     void setClickHandler(std::function<void()> handler) override;
 
     /**
-     * @brief Set the change handler (for toggle buttons)
+     // Brief: Set the change handler (for toggle buttons)
      * @param handler Function to call when state changes
      */
     void setChangeHandler(std::function<void()> handler);
@@ -211,13 +209,13 @@ public:
     //==========================================================================
 
     /**
-     * @brief Check if the button is hovered
+     // Brief: Check if the button is hovered
      * @return True if the button is hovered
      */
     bool isHovered() const { return hovered_; }
 
     /**
-     * @brief Check if the button is focused
+     // Brief: Check if the button is focused
      * @return True if the button is focused
      */
     bool isFocused() const { return hasFocus(); }

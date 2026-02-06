@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    apps/desktop/Source/dsp/Dither.h
-    High-quality TPDF Dithering for bit-depth reduction.
-    
-    Supports:
-    - Flat TPDF (standard triangular probability density function)
-    - Noise-shaped TPDF (first-order error feedback pushing noise to less 
-      audible frequencies)
-  ==============================================================================
-
-*/
-
 #pragma once
 #include <juce_core/juce_core.h>
 #include <juce_audio_basics/juce_audio_basics.h>
@@ -204,7 +187,7 @@ private:
                 float dithered = input + tpdfNoise;
 
                 // Simulate quantization to calculate error
-                // Quantize → round to nearest quantization level
+                // Quantize -> round to nearest quantization level
                 float scaled = dithered * quantLevels;
                 float quantized = std::round(scaled) / quantLevels;
 

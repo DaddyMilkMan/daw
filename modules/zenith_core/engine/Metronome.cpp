@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    Metronome.cpp
-    Created: 2025-12-18
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "Metronome.h"
 #include "TempoMap.h"
 #include <cmath>

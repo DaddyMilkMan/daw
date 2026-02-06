@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AudioRenderer.cpp
-    Created: 2025-12-09
-    Author:  Zenith DAW
-
-    Audio graph rendering implementation.
-
-
-  ==============================================================================
-*/
-
 #include "AudioRenderer.h"
 #include "../dsp/MasterLimiter.h"
 #include "../dsp/SIMDHelpers.h"

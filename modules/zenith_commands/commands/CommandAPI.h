@@ -17,20 +17,22 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
+
+#pragma once
+
+ /*
+// File: CommandAPI.h
+// Brief: JSON command API for Wingman/AI integration
 */
 
- * @file CommandAPI.h
- * @brief JSON command API for Wingman/AI integration
- */
 
-
+#include <cstddef>
+#include <vector>
 #include <map>
 #include <memory>
 #include <string>
 #include <juce_core/juce_core.h>
+#include <juce_data_structures/juce_data_structures.h>
 
 // Forward declarations for helper classes
 namespace zenith {
@@ -38,6 +40,8 @@ namespace zenith {
     class ClipCommands;
     class TransportCommands;
     class WingmanSynthBridge;
+    class ProjectState;
+    class Engine;
     namespace ai { class UXDirectorAgent; class PresetGeneticistAgent; }
 }
 
@@ -71,7 +75,7 @@ public:
       GetEvolutionStats,
       // Routing Graph Commands
       GetRoutingGraph, ConnectNodes, DisconnectNodes,
-      // Synth Control Commands (Wingman → ZenithPolySynth)
+      // Synth Control Commands (Wingman -> ZenithPolySynth)
       SetSynthParameter, SetSynthOscillatorWave, SetSynthOscillatorDetune, SetSynthOscillatorMix,
       SetSynthFilterType, SetSynthFilterCutoff, SetSynthFilterResonance, SetSynthFilterDrive,
       SetSynthAmpEnvelope, SetSynthFilterEnvelope, SetSynthLFORate, SetSynthLFOAmount,
@@ -94,24 +98,14 @@ public:
   //==========================================================================
   
   // The UI or AI calls this
-  void setTrackVolume(int trackIndex, float newVolume) {
-      auto tracks = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
-      auto track = tracks.getChild(trackIndex);
-      
-      if (track.isValid()) {
-          track.setProperty(ProjectState::PROP_VOLUME, newVolume, &projectState.getUndoManager());
-      }
-  }
+  void setTrackVolume(int trackIndex, float newVolume);
 
-  void undo() { projectState.getUndoManager().undo(); }
-  void redo() { projectState.getUndoManager().redo(); }
+  void undo();
+  void redo();
 
-  ProjectState& getProjectState() { return projectState; }
+  ProjectState& getProjectState();
 
-  bool performAction(std::unique_ptr<juce::UndoableAction> action) {
-      if (action == nullptr) return false;
-      return projectState.getUndoManager().perform(action.release());
-  }
+  bool performAction(std::unique_ptr<juce::UndoableAction> action);
 
   //==========================================================================
   CommandAPI(ProjectState &projectState, Engine &engine);
@@ -196,7 +190,7 @@ private:
   juce::var connectNodes(const juce::var& params);
   juce::var disconnectNodes(const juce::var& params);
 
-  // Synth Control Handlers (Wingman → ZenithPolySynth)
+  // Synth Control Handlers (Wingman -> ZenithPolySynth)
   juce::var setSynthParameter(const juce::var& params);
   juce::var setSynthOscillatorWave(const juce::var& params);
   juce::var setSynthOscillatorDetune(const juce::var& params);

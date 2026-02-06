@@ -17,30 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SettingsComponent.h
-    Created: 2025-12-07
-    Author:  Zenith DAW Team
-
-    Flagship Settings Panel with Skia rendering.
-    Features:
-    - Sidebar navigation with glassmorphism
-
-    - Clean, modern typography
-    - Hardware-accelerated controls
-    - Legacy audio integration wrapped in modern UI
-
-    Implementation in SettingsComponent.cpp
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../controls/SkiaButton.h"

@@ -10,7 +10,7 @@
 */
 
 #include "SampleHunterAgent.h"
-#include "../network/SecureKeyStore.h"
+#include <zenith_network/network/SecureKeyStore.h>
 #include <algorithm>
 #include <cmath>
 #include <juce_audio_formats/juce_audio_formats.h>

@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ArrangerTypes.h
-    Created: 2025-12-26
-    Author:  Zenith DAW
-
-    Common types and enums for the Arranger module.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 namespace zenith {

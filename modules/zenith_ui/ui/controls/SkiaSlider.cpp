@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaSlider.cpp
-    Created: 2025-11-30
-    Authors: Kenji Nakamura (lead), Leo Rossi, Diego Martinez, Isabella Moretti
-
-    Implementation of SkiaSlider.
-
-  ==============================================================================
-
-*/
-
 #include "SkiaSlider.h"
 #include "RenderTree.h"
 #include "ZenithSkia.h"

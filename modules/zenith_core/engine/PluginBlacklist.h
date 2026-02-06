@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PluginBlacklist.h
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Persistent blacklist for plugins that crash during scanning.
-    Prevents repeated crashes by skipping known-problematic plugins.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>

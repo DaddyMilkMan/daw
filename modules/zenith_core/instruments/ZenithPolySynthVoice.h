@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithPolySynthVoice.h
-    Created: 2025-12-06
-    Author:  Zenith DAW
-
-    Polyphonic voice for ZenithPolySynth.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include "ZenithFilter.h"

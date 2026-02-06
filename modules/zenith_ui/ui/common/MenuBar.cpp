@@ -17,18 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file MenuBar.cpp
- * @brief Custom Skia-based Menu Bar implementation - Neon Noir Edition
- * 
- * Premium glassmorphic menu bar with animated hover states, vector icons,
- * and neon glow effects.
- */
-
+// MenuBar.cpp
 
 #include "../design-system/ZenithTheme.h"
 

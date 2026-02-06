@@ -17,18 +17,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#pragma once
 
- * @file TransportController.h
- * @brief Concrete transport control implementation
- *
- * Manages playback state, position, and looping functionality.
- */
+//==============================================================================
 
-
+#include "ITransportController.h"
 #include <juce_core/juce_core.h>
 #include <atomic>
 #include <memory>

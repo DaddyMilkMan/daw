@@ -17,26 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file ZenithPolySynthEditor.h
- * @brief Comprehensive editor for ZenithPolySynth with all sections
- *
- * Layout:
- * - Top: Preset browser
- * - Oscillator section (waveform, detune, mix, unison)
- * - Filter section (type, cutoff, resonance, drive)
- * - Envelope section (2 ADSRs: amp + filter)
- * - LFO section (2 LFOs with routing)
-
- * - Global section (master gain, mono/poly, glide)
- * - Bottom: Macro knobs
- */
-
 #pragma once
+
+// ZenithPolySynthEditor.h
+
 
 #include "InstrumentPreset.h"
 #include "../ui/panels/PresetBrowserComponent.h"

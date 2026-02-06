@@ -17,30 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-﻿/*
-  ==============================================================================
-
-    MixerChannel.h
-    Ported from: ZenithDAW-Native/Source/Audio/MixerChannel.h (2025-11-11)
-    Author:  Zenith DAW
-
-    Mixer channel strip with EQ, dynamics, and send/return processing
-
-    JUCE 8 / C++20 adaptations:
-
-    - Wrapped in namespace zenith
-    - Professional-grade compressor with RMS detection & lookahead
-    - Pre-calculated filter coefficients (RT-safe ReferenceCountedObject)
-
-  ==============================================================================
-*/
-
 #pragma once
+
+// MixerChannel.h - Mixer channel strip with EQ, dynamics, and send/return processing
 
 #include <array>
 #include <span>

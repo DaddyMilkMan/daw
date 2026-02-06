@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    GlobalSettingsPanel.cpp
-    Created: 2026-02-04
-    Author:  Zenith DAW Team
-
-    Production-ready global settings panel implementation.
-
-  ==============================================================================
-
-*/
-
 #include "GlobalSettingsPanel.h"
 #include "../design-system/ColorBridge.h"
 #include "../design-system/ZenithDesignSystem.h"

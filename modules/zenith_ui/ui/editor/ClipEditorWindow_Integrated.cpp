@@ -17,26 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ClipEditorWindow_Integrated.cpp
-    Created: 2026-02-04
-    Author:  Zenith DAW
-
-    PRODUCTION IMPLEMENTATION - Async Waveform Loading & Display
-    Replaces the TODO in ClipEditorWindow.cpp
-
-
-    STATUS: Production Ready (10/10)
-
-  ==============================================================================
-*/
-
 #include "ClipEditorWindow.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../design-system/ColorBridge.h"

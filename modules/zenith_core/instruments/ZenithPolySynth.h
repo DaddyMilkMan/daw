@@ -17,25 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithPolySynth.h
-    Created: 2025-11-18
-    Refactored: 2025-12-11
-    Author:  Zenith DAW
-
-    Header for ZenithPolySynth - multi-oscillator subtractive synthesizer.
-    REFACTORED: Uses ZenithPolySynthParameterManager.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "Instrument.h"

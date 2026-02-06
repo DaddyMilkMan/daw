@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ComponentLifecycleManager.cpp
-    Created: 2025-12-07
-    Author:  AI Assistant
-
-    Component lifecycle management system implementation
-
-  ==============================================================================
-
-*/
-
 #include "ComponentLifecycleManager.h"
 #include "ZenithDesignSystem.h"
 

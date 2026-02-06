@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ClipStateManager.cpp
-    Created: 2025-12-11
-    Author:  Zenith DAW
-
-    Clip management implementation for ProjectState.
-
-  ==============================================================================
-
-*/
-
 #include "ClipStateManager.h"
 #include "ProjectState.h"
 #include "ZenithLogger.h"

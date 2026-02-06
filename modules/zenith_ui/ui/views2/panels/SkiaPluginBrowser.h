@@ -17,17 +17,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
 
  * @file SkiaPluginBrowser.h
  * @brief Skia-based plugin browser UI for selecting and loading VST3 plugins
  *
  * Displays available plugins from KnownPluginList and allows
  * loading them onto tracks with modern glassmorphic design.
- */
 
 
 #include "../../framework/SkiaComponent.h"

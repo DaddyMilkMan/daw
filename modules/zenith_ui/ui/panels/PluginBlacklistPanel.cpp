@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PluginBlacklistPanel.cpp
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Implementation of plugin blacklist management UI.
-
-  ==============================================================================
-
-*/
-
 #include "PluginBlacklistPanel.h"
 #include "../design-system/ZenithDesignSystem.h"
 

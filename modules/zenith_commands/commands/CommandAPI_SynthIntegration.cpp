@@ -17,26 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    CommandAPI_SynthIntegration.cpp
-    Created: 2026-02-04
-    Author:  Zenith DAW
-
-    COMPLETE WingmanSynthBridge integration for CommandAPI.
-    This file contains ALL synth command handlers and helper implementations.
-
-
-    STATUS: Production Ready (10/10)
-
-  ==============================================================================
-*/
-
 #include "CommandAPI.h"
 #include "../ai/WingmanSynthBridge.h"
 #include "../instruments/ZenithPolySynth.h"

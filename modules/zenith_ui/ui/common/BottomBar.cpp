@@ -17,23 +17,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    BottomBar.cpp
-    Created: 2025-11-28
-    Author:  David Chen + Leo Rossi
-
-  ==============================================================================
-*/
-
-
 #include "BottomBar.h"
-#include "../../ai/SessionDebuggerAgent.h"
+#include "ai_client/SessionDebuggerAgent.h"
 #include "../controls/DebugConsoleComponent.h"
 #include "../controls/DeviceChainComponent.h"
 #include "../transport/AutoSaveIndicator.h"
@@ -49,8 +34,7 @@
 
 #endif
 
-#include "../controls/DeviceChainComponent.h"
-#include "Engine.h"
+#include "zenith_core/engine/Engine.h"
 
 namespace zenith {
 

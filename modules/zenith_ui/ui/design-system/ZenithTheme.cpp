@@ -17,11 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#include "ZenithTheme.h"
 
+
+/**
  * @file ZenithTheme.cpp
  * @brief Implementation of modern theme system
  * @author Fixed by Claude - December 2025

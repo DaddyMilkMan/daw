@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithSlider.h
-    Created: 2025-12-12
-    Author:  Zenith DAW
-
-    Premium slider control using Skia rendering.
-    Inherits from ZenithControl for parameter binding and base behavior.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "ZenithControl.h"

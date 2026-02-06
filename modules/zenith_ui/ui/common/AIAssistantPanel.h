@@ -17,29 +17,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AIAssistantPanel.h
-    Created: 2025-12-19
-    Author:  Zenith DAW AI Team
-
-    UI panel showing all agent states and actions.
-    Provides visibility into AI operations and manual control.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
-#include "../ai/AIEventBus.h"
-#include "../ai/AIStatusManager.h"
-#include "../ui/framework/SkiaComponent.h"
+#include "ai_client/AIEventBus.h"
+#include "ai_client/AIStatusManager.h"
+#include "../framework/SkiaComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 

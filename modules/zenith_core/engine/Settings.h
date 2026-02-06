@@ -1,13 +1,5 @@
 /*
-  ==============================================================================
-
-    Settings.h
-    Created: 2025-12-03
-    Author:  Zenith DAW
-
-    Global application settings.
-    Acts as a persistent store and data model for preferences.
-  ==============================================================================
+    Settings.h - Global application settings
 */
 
 #pragma once
@@ -18,9 +10,10 @@
 
 namespace zenith {
 
+using SkiaRendererTest = SkiaRenderer;
+
 class Settings : public juce::ChangeBroadcaster {
 public:
-    // ===== ENUMS =====
     enum class LinuxAudioBackend { Auto, JACK, PipeWire, ALSA };
     enum class RecordingBitDepth { Bit16, Bit24, Bit32Float };
     enum class RecordingFileType { WAV, AIFF, FLAC };
@@ -33,371 +26,198 @@ public:
         return instance;
     }
 
-    //==============================================================================
-    // Persistence
-    //==============================================================================
-    void load() {
-        juce::PropertiesFile::Options options;
-        options.applicationName = "ZenithDAW";
-        options.filenameSuffix = ".settings";
-        options.folderName = "ZenithAudio";
-        options.osxLibrarySubFolder = "Application Support";
-        
-        juce::ApplicationProperties props;
-        props.setStorageParameters(options);
-        
-        if (auto* userSettings = props.getUserSettings()) {
-            // Display
-            renderBackend_ = (SkiaRenderer::Backend)userSettings->getIntValue("renderBackend", (int)SkiaRenderer::Backend::Auto);
-            targetFPS_ = userSettings->getIntValue("targetFPS", 60);
-            globalScale_ = (float)userSettings->getDoubleValue("globalScale", 1.0);
-            glowIntensity_ = (float)userSettings->getDoubleValue("glowIntensity", 1.0);
-            theme_ = (UITheme)userSettings->getIntValue("theme", (int)UITheme::Neon);
-            animationsEnabled_ = userSettings->getBoolValue("animationsEnabled", true);
-            highContrastMode_ = userSettings->getBoolValue("highContrastMode", false);
-            
-            // Audio
-            linuxAudioBackend_ = (LinuxAudioBackend)userSettings->getIntValue("linuxAudioBackend", (int)LinuxAudioBackend::Auto);
-            bufferSize_ = userSettings->getIntValue("bufferSize", 512);
-            pluginDelayCompensation_ = userSettings->getBoolValue("pluginDelayCompensation", true);
-            softwareMonitoring_ = userSettings->getBoolValue("softwareMonitoring", true);
-            monitoringVolume_ = (float)userSettings->getDoubleValue("monitoringVolume", 1.0);
-            
-            // Recording
-            countInBars_ = userSettings->getIntValue("countInBars", 1);
-            metronomeCountIn_ = userSettings->getBoolValue("metronomeCountIn", true);
-            recordingBitDepth_ = (RecordingBitDepth)userSettings->getIntValue("recordingBitDepth", (int)RecordingBitDepth::Bit24);
-            recordingFileType_ = (RecordingFileType)userSettings->getIntValue("recordingFileType", (int)RecordingFileType::WAV);
-            allowTempoChangeDuringRecord_ = userSettings->getBoolValue("allowTempoChangeDuringRecord", false);
-            
-            // MIDI
-            midiThrough_ = userSettings->getBoolValue("midiThrough", true);
-            sendMIDIClockOut_ = userSettings->getBoolValue("sendMIDIClockOut", false);
-            receiveMTCIn_ = userSettings->getBoolValue("receiveMTCIn", false);
-            midiLatencyCompensation_ = userSettings->getIntValue("midiLatencyCompensation", 0);
-            
-            // Editing
-            defaultCrossfadeMs_ = userSettings->getIntValue("defaultCrossfadeMs", 10);
-            snapToGrid_ = userSettings->getBoolValue("snapToGrid", true);
-            linkTrackAndEditSelection_ = userSettings->getBoolValue("linkTrackAndEditSelection", true);
-            
-            // Project
-            autoSaveEnabled_ = userSettings->getBoolValue("autoSaveEnabled", true);
-            autoSaveIntervalMinutes_ = userSettings->getIntValue("autoSaveIntervalMinutes", 5);
-            maxUndoHistory_ = userSettings->getIntValue("maxUndoHistory", 100);
-            defaultProjectFolder_ = userSettings->getValue("defaultProjectFolder", "");
-            
-            // Metering
-            meterBallistics_ = (MeterBallistics)userSettings->getIntValue("meterBallistics", (int)MeterBallistics::Peak);
-            meterPeakHoldSeconds_ = (float)userSettings->getDoubleValue("meterPeakHoldSeconds", 2.0);
-            showVolumeInDB_ = userSettings->getBoolValue("showVolumeInDB", true);
+    void load();
+    void save();
 
-            // Wingman AI Settings
-            aiModelMode_ = (AIModelMode)userSettings->getIntValue("wingmanModelMode", (int)AIModelMode::Obedient);
-            wingmanReasoningDisplay_ = userSettings->getBoolValue("wingmanReasoningDisplay", false);
-            wingmanWebSearch_ = userSettings->getBoolValue("wingmanWebSearch", false);
-            wingmanStreaming_ = userSettings->getBoolValue("wingmanStreaming", true);
-            wingmanDAWContext_ = userSettings->getBoolValue("wingmanDAWContext", true);
-            wingmanMaxHistory_ = userSettings->getIntValue("wingmanMaxHistory", 10);
+    // Display
+    void setRenderBackend(SkiaRenderer::Backend b) { if (renderBackend != b) { renderBackend = b; save(); sendChangeMessage(); } }
+    SkiaRenderer::Backend getRenderBackend() const { return renderBackend; }
 
-            // Zenith Hub
-            customGreeting_ = userSettings->getValue("customGreeting", "");
+    void setTargetFPS(int f) { if (targetFPS != f) { targetFPS = f; save(); sendChangeMessage(); } }
+    int getTargetFPS() const { return targetFPS; }
 
-            // Features
-            stayAwakeDuringProject_ = userSettings->getBoolValue("stayAwakeDuringProject", true);
-        }
-    }
+    void setGlobalScale(float s) { if (globalScale != s) { globalScale = s; save(); sendChangeMessage(); } }
+    float getGlobalScale() const { return globalScale; }
 
-    void save() {
-        juce::PropertiesFile::Options options;
-        options.applicationName = "ZenithDAW";
-        options.filenameSuffix = ".settings";
-        options.folderName = "ZenithAudio";
-        options.osxLibrarySubFolder = "Application Support";
-        
-        juce::ApplicationProperties props;
-        props.setStorageParameters(options);
-        
-        if (auto* userSettings = props.getUserSettings()) {
-            // Display
-            userSettings->setValue("renderBackend", (int)renderBackend_);
-            userSettings->setValue("targetFPS", targetFPS_);
-            userSettings->setValue("globalScale", globalScale_);
-            userSettings->setValue("glowIntensity", glowIntensity_);
-            userSettings->setValue("theme", (int)theme_);
-            userSettings->setValue("animationsEnabled", animationsEnabled_);
-            userSettings->setValue("highContrastMode", highContrastMode_);
-            
-            // Audio
-            userSettings->setValue("linuxAudioBackend", (int)linuxAudioBackend_);
-            userSettings->setValue("bufferSize", bufferSize_);
-            userSettings->setValue("pluginDelayCompensation", pluginDelayCompensation_);
-            userSettings->setValue("softwareMonitoring", softwareMonitoring_);
-            userSettings->setValue("monitoringVolume", monitoringVolume_);
-            
-            // Recording
-            userSettings->setValue("countInBars", countInBars_);
-            userSettings->setValue("metronomeCountIn", metronomeCountIn_);
-            userSettings->setValue("recordingBitDepth", (int)recordingBitDepth_);
-            userSettings->setValue("recordingFileType", (int)recordingFileType_);
-            userSettings->setValue("allowTempoChangeDuringRecord", allowTempoChangeDuringRecord_);
-            
-            // MIDI
-            userSettings->setValue("midiThrough", midiThrough_);
-            userSettings->setValue("sendMIDIClockOut", sendMIDIClockOut_);
-            userSettings->setValue("receiveMTCIn", receiveMTCIn_);
-            userSettings->setValue("midiLatencyCompensation", midiLatencyCompensation_);
-            
-            // Editing
-            userSettings->setValue("defaultCrossfadeMs", defaultCrossfadeMs_);
-            userSettings->setValue("snapToGrid", snapToGrid_);
-            userSettings->setValue("linkTrackAndEditSelection", linkTrackAndEditSelection_);
-            
-            // Project
-            userSettings->setValue("autoSaveEnabled", autoSaveEnabled_);
-            userSettings->setValue("autoSaveIntervalMinutes", autoSaveIntervalMinutes_);
-            userSettings->setValue("maxUndoHistory", maxUndoHistory_);
-            userSettings->setValue("defaultProjectFolder", defaultProjectFolder_);
-            
-            // Metering
-            userSettings->setValue("meterBallistics", (int)meterBallistics_);
-            userSettings->setValue("meterPeakHoldSeconds", meterPeakHoldSeconds_);
-            userSettings->setValue("meterPeakHoldSeconds", meterPeakHoldSeconds_);
-            userSettings->setValue("showVolumeInDB", showVolumeInDB_);
+    void setGlowIntensity(float i) { if (glowIntensity != i) { glowIntensity = i; save(); sendChangeMessage(); } }
+    float getGlowIntensity() const { return glowIntensity; }
 
-            // Wingman AI Settings
-            userSettings->setValue("wingmanModelMode", (int)aiModelMode_);
-            userSettings->setValue("wingmanReasoningDisplay", wingmanReasoningDisplay_);
-            userSettings->setValue("wingmanWebSearch", wingmanWebSearch_);
-            userSettings->setValue("wingmanStreaming", wingmanStreaming_);
-            userSettings->setValue("wingmanDAWContext", wingmanDAWContext_);
-            userSettings->setValue("wingmanMaxHistory", wingmanMaxHistory_);
+    void setTheme(UITheme t) { if (theme != t) { theme = t; save(); sendChangeMessage(); } }
+    UITheme getTheme() const { return theme; }
 
-            // Zenith Hub
-            userSettings->setValue("customGreeting", customGreeting_);
-            
-            // Features
-            userSettings->setValue("stayAwakeDuringProject", stayAwakeDuringProject_);
+    void setAnimationsEnabled(bool e) { if (animationsEnabled != e) { animationsEnabled = e; save(); sendChangeMessage(); } }
+    bool getAnimationsEnabled() const { return animationsEnabled; }
 
-            userSettings->saveIfNeeded();
-        }
-    }
+    void setHighContrastMode(bool e) { if (highContrastMode != e) { highContrastMode = e; save(); sendChangeMessage(); } }
+    bool getHighContrastMode() const { return highContrastMode; }
 
-    //==============================================================================
-    // Display Settings
-    //==============================================================================
-    void setRenderBackend(SkiaRenderer::Backend backend) { if (renderBackend_ != backend) { renderBackend_ = backend; save(); sendChangeMessage(); } }
-    SkiaRenderer::Backend getRenderBackend() const { return renderBackend_; }
+    // Audio
+    void setLinuxAudioBackend(LinuxAudioBackend b) { if (linuxAudioBackend != b) { linuxAudioBackend = b; save(); sendChangeMessage(); } }
+    LinuxAudioBackend getLinuxAudioBackend() const { return linuxAudioBackend; }
 
-    void setTargetFPS(int fps) { if (targetFPS_ != fps) { targetFPS_ = fps; save(); sendChangeMessage(); } }
-    int getTargetFPS() const { return targetFPS_; }
+    void setBufferSize(int s) { if (bufferSize != s) { bufferSize = s; save(); sendChangeMessage(); } }
+    int getBufferSize() const { return bufferSize; }
 
-    void setGlobalScale(float scale) { if (globalScale_ != scale) { globalScale_ = scale; save(); sendChangeMessage(); } }
-    float getGlobalScale() const { return globalScale_; }
+    void setPluginDelayCompensation(bool e) { if (pluginDelayCompensation != e) { pluginDelayCompensation = e; save(); sendChangeMessage(); } }
+    bool getPluginDelayCompensation() const { return pluginDelayCompensation; }
 
-    void setGlowIntensity(float intensity) { if (glowIntensity_ != intensity) { glowIntensity_ = intensity; save(); sendChangeMessage(); } }
-    float getGlowIntensity() const { return glowIntensity_; }
+    void setSoftwareMonitoring(bool e) { if (softwareMonitoring != e) { softwareMonitoring = e; save(); sendChangeMessage(); } }
+    bool getSoftwareMonitoring() const { return softwareMonitoring; }
 
-    void setTheme(UITheme theme) { if (theme_ != theme) { theme_ = theme; save(); sendChangeMessage(); } }
-    UITheme getTheme() const { return theme_; }
+    void setMonitoringVolume(float v) { if (monitoringVolume != v) { monitoringVolume = v; save(); sendChangeMessage(); } }
+    float getMonitoringVolume() const { return monitoringVolume; }
 
-    void setAnimationsEnabled(bool enabled) { if (animationsEnabled_ != enabled) { animationsEnabled_ = enabled; save(); sendChangeMessage(); } }
-    bool getAnimationsEnabled() const { return animationsEnabled_; }
+    // Recording
+    void setCountInBars(int b) { if (countInBars != b) { countInBars = b; save(); sendChangeMessage(); } }
+    int getCountInBars() const { return countInBars; }
 
-    void setHighContrastMode(bool enabled) { if (highContrastMode_ != enabled) { highContrastMode_ = enabled; save(); sendChangeMessage(); } }
-    bool getHighContrastMode() const { return highContrastMode_; }
+    void setMetronomeCountIn(bool e) { if (metronomeCountIn != e) { metronomeCountIn = e; save(); sendChangeMessage(); } }
+    bool getMetronomeCountIn() const { return metronomeCountIn; }
 
-    //==============================================================================
-    // Audio Settings
-    //==============================================================================
-    void setLinuxAudioBackend(LinuxAudioBackend backend) { if (linuxAudioBackend_ != backend) { linuxAudioBackend_ = backend; save(); sendChangeMessage(); } }
-    LinuxAudioBackend getLinuxAudioBackend() const { return linuxAudioBackend_; }
+    void setRecordingBitDepth(RecordingBitDepth d) { if (recordingBitDepth != d) { recordingBitDepth = d; save(); sendChangeMessage(); } }
+    RecordingBitDepth getRecordingBitDepth() const { return recordingBitDepth; }
 
-    void setBufferSize(int size) { if (bufferSize_ != size) { bufferSize_ = size; save(); sendChangeMessage(); } }
-    int getBufferSize() const { return bufferSize_; }
+    void setRecordingFileType(RecordingFileType t) { if (recordingFileType != t) { recordingFileType = t; save(); sendChangeMessage(); } }
+    RecordingFileType getRecordingFileType() const { return recordingFileType; }
 
-    void setPluginDelayCompensation(bool enabled) { if (pluginDelayCompensation_ != enabled) { pluginDelayCompensation_ = enabled; save(); sendChangeMessage(); } }
-    bool getPluginDelayCompensation() const { return pluginDelayCompensation_; }
+    void setAllowTempoChangeDuringRecord(bool a) { if (allowTempoChangeDuringRecord != a) { allowTempoChangeDuringRecord = a; save(); sendChangeMessage(); } }
+    bool getAllowTempoChangeDuringRecord() const { return allowTempoChangeDuringRecord; }
 
-    void setSoftwareMonitoring(bool enabled) { if (softwareMonitoring_ != enabled) { softwareMonitoring_ = enabled; save(); sendChangeMessage(); } }
-    bool getSoftwareMonitoring() const { return softwareMonitoring_; }
+    // Audio settings (missing from original Settings.h)
+    void setAudioSampleRate(int rate) { if (audioSampleRate != rate) { audioSampleRate = rate; save(); sendChangeMessage(); } }
+    int getAudioSampleRate() const { return audioSampleRate; }
+    void setAudioChannels(int channels) { if (audioChannels != channels) { audioChannels = channels; save(); sendChangeMessage(); } }
+    int getAudioChannels() const { return audioChannels; }
 
-    void setMonitoringVolume(float vol) { if (monitoringVolume_ != vol) { monitoringVolume_ = vol; save(); sendChangeMessage(); } }
-    float getMonitoringVolume() const { return monitoringVolume_; }
+    // MIDI
+    void setMIDIThrough(bool e) { if (midiThrough != e) { midiThrough = e; save(); sendChangeMessage(); } }
+    bool getMIDIThrough() const { return midiThrough; }
 
-    //==============================================================================
-    // Recording Settings
-    //==============================================================================
-    void setCountInBars(int bars) { if (countInBars_ != bars) { countInBars_ = bars; save(); sendChangeMessage(); } }
-    int getCountInBars() const { return countInBars_; }
+    void setSendMIDIClockOut(bool e) { if (sendMIDIClockOut != e) { sendMIDIClockOut = e; save(); sendChangeMessage(); } }
+    bool getSendMIDIClockOut() const { return sendMIDIClockOut; }
 
-    void setMetronomeCountIn(bool enabled) { if (metronomeCountIn_ != enabled) { metronomeCountIn_ = enabled; save(); sendChangeMessage(); } }
-    bool getMetronomeCountIn() const { return metronomeCountIn_; }
+    void setReceiveMTCIn(bool e) { if (receiveMTCIn != e) { receiveMTCIn = e; save(); sendChangeMessage(); } }
+    bool getReceiveMTCIn() const { return receiveMTCIn; }
 
-    void setRecordingBitDepth(RecordingBitDepth depth) { if (recordingBitDepth_ != depth) { recordingBitDepth_ = depth; save(); sendChangeMessage(); } }
-    RecordingBitDepth getRecordingBitDepth() const { return recordingBitDepth_; }
+    void setMIDILatencyCompensation(int m) { if (midiLatencyCompensation != m) { midiLatencyCompensation = m; save(); sendChangeMessage(); } }
+    int getMIDILatencyCompensation() const { return midiLatencyCompensation; }
 
-    void setRecordingFileType(RecordingFileType type) { if (recordingFileType_ != type) { recordingFileType_ = type; save(); sendChangeMessage(); } }
-    RecordingFileType getRecordingFileType() const { return recordingFileType_; }
+    // Editing
+    void setDefaultCrossfadeMs(int m) { if (defaultCrossfadeMs != m) { defaultCrossfadeMs = m; save(); sendChangeMessage(); } }
+    int getDefaultCrossfadeMs() const { return defaultCrossfadeMs; }
 
-    void setAllowTempoChangeDuringRecord(bool allow) { if (allowTempoChangeDuringRecord_ != allow) { allowTempoChangeDuringRecord_ = allow; save(); sendChangeMessage(); } }
-    bool getAllowTempoChangeDuringRecord() const { return allowTempoChangeDuringRecord_; }
+    void setSnapToGrid(bool e) { if (snapToGrid != e) { snapToGrid = e; save(); sendChangeMessage(); } }
+    bool getSnapToGrid() const { return snapToGrid; }
 
-    //==============================================================================
-    // MIDI Settings
-    //==============================================================================
-    void setMIDIThrough(bool enabled) { if (midiThrough_ != enabled) { midiThrough_ = enabled; save(); sendChangeMessage(); } }
-    bool getMIDIThrough() const { return midiThrough_; }
+    void setLinkTrackAndEditSelection(bool e) { if (linkTrackAndEditSelection != e) { linkTrackAndEditSelection = e; save(); sendChangeMessage(); } }
+    bool getLinkTrackAndEditSelection() const { return linkTrackAndEditSelection; }
 
-    void setSendMIDIClockOut(bool enabled) { if (sendMIDIClockOut_ != enabled) { sendMIDIClockOut_ = enabled; save(); sendChangeMessage(); } }
-    bool getSendMIDIClockOut() const { return sendMIDIClockOut_; }
+    // Project
+    void setAutoSaveEnabled(bool e) { if (autoSaveEnabled != e) { autoSaveEnabled = e; save(); sendChangeMessage(); } }
+    bool getAutoSaveEnabled() const { return autoSaveEnabled; }
 
-    void setReceiveMTCIn(bool enabled) { if (receiveMTCIn_ != enabled) { receiveMTCIn_ = enabled; save(); sendChangeMessage(); } }
-    bool getReceiveMTCIn() const { return receiveMTCIn_; }
+    void setAutoSaveIntervalMinutes(int m) { if (autoSaveIntervalMinutes != m) { autoSaveIntervalMinutes = m; save(); sendChangeMessage(); } }
+    int getAutoSaveIntervalMinutes() const { return autoSaveIntervalMinutes; }
 
-    void setMIDILatencyCompensation(int ms) { if (midiLatencyCompensation_ != ms) { midiLatencyCompensation_ = ms; save(); sendChangeMessage(); } }
-    int getMIDILatencyCompensation() const { return midiLatencyCompensation_; }
+    void setMaxUndoHistory(int m) { if (maxUndoHistory != m) { maxUndoHistory = m; save(); sendChangeMessage(); } }
+    int getMaxUndoHistory() const { return maxUndoHistory; }
 
-    //==============================================================================
-    // Editing Settings
-    //==============================================================================
-    void setDefaultCrossfadeMs(int ms) { if (defaultCrossfadeMs_ != ms) { defaultCrossfadeMs_ = ms; save(); sendChangeMessage(); } }
-    int getDefaultCrossfadeMs() const { return defaultCrossfadeMs_; }
+    void setDefaultProjectFolder(const juce::String& f) { if (defaultProjectFolder != f) { defaultProjectFolder = f; save(); sendChangeMessage(); } }
+    juce::String getDefaultProjectFolder() const { return defaultProjectFolder; }
 
-    void setSnapToGrid(bool enabled) { if (snapToGrid_ != enabled) { snapToGrid_ = enabled; save(); sendChangeMessage(); } }
-    bool getSnapToGrid() const { return snapToGrid_; }
+    // Metering
+    void setMeterBallistics(MeterBallistics b) { if (meterBallistics != b) { meterBallistics = b; save(); sendChangeMessage(); } }
+    MeterBallistics getMeterBallistics() const { return meterBallistics; }
 
-    void setLinkTrackAndEditSelection(bool enabled) { if (linkTrackAndEditSelection_ != enabled) { linkTrackAndEditSelection_ = enabled; save(); sendChangeMessage(); } }
-    bool getLinkTrackAndEditSelection() const { return linkTrackAndEditSelection_; }
+    void setMeterPeakHoldSeconds(float s) { if (meterPeakHoldSeconds != s) { meterPeakHoldSeconds = s; save(); sendChangeMessage(); } }
+    float getMeterPeakHoldSeconds() const { return meterPeakHoldSeconds; }
 
-    //==============================================================================
-    // Project Settings
-    //==============================================================================
-    void setAutoSaveEnabled(bool enabled) { if (autoSaveEnabled_ != enabled) { autoSaveEnabled_ = enabled; save(); sendChangeMessage(); } }
-    bool getAutoSaveEnabled() const { return autoSaveEnabled_; }
+    void setShowVolumeInDB(bool e) { if (showVolumeInDB != e) { showVolumeInDB = e; save(); sendChangeMessage(); } }
+    bool getShowVolumeInDB() const { return showVolumeInDB; }
 
-    void setAutoSaveIntervalMinutes(int mins) { if (autoSaveIntervalMinutes_ != mins) { autoSaveIntervalMinutes_ = mins; save(); sendChangeMessage(); } }
-    int getAutoSaveIntervalMinutes() const { return autoSaveIntervalMinutes_; }
-
-    void setMaxUndoHistory(int max) { if (maxUndoHistory_ != max) { maxUndoHistory_ = max; save(); sendChangeMessage(); } }
-    int getMaxUndoHistory() const { return maxUndoHistory_; }
-
-    void setDefaultProjectFolder(const juce::String& folder) { if (defaultProjectFolder_ != folder) { defaultProjectFolder_ = folder; save(); sendChangeMessage(); } }
-    juce::String getDefaultProjectFolder() const { return defaultProjectFolder_; }
-
-    //==============================================================================
-    // Metering Settings
-    //==============================================================================
-    void setMeterBallistics(MeterBallistics ballistics) { if (meterBallistics_ != ballistics) { meterBallistics_ = ballistics; save(); sendChangeMessage(); } }
-    MeterBallistics getMeterBallistics() const { return meterBallistics_; }
-
-    void setMeterPeakHoldSeconds(float secs) { if (meterPeakHoldSeconds_ != secs) { meterPeakHoldSeconds_ = secs; save(); sendChangeMessage(); } }
-    float getMeterPeakHoldSeconds() const { return meterPeakHoldSeconds_; }
-
-    void setShowVolumeInDB(bool enabled) { if (showVolumeInDB_ != enabled) { showVolumeInDB_ = enabled; save(); sendChangeMessage(); } }
-
-    bool getShowVolumeInDB() const { return showVolumeInDB_; }
-
-    //==============================================================================
     // Wingman AI Settings
-    //==============================================================================
-    void setAIModelMode(AIModelMode mode) { if (aiModelMode_ != mode) { aiModelMode_ = mode; save(); sendChangeMessage(); } }
-    AIModelMode getAIModelMode() const { return aiModelMode_; }
+    void setAIModelMode(AIModelMode m) { if (aiModelMode != m) { aiModelMode = m; save(); sendChangeMessage(); } }
+    AIModelMode getAIModelMode() const { return aiModelMode; }
 
-    void setWingmanReasoningDisplay(bool enabled) { if (wingmanReasoningDisplay_ != enabled) { wingmanReasoningDisplay_ = enabled; save(); sendChangeMessage(); } }
-    bool getWingmanReasoningDisplay() const { return wingmanReasoningDisplay_; }
+    void setWingmanReasoningDisplay(bool e) { if (wingmanReasoningDisplay != e) { wingmanReasoningDisplay = e; save(); sendChangeMessage(); } }
+    bool getWingmanReasoningDisplay() const { return wingmanReasoningDisplay; }
 
-    void setWingmanWebSearch(bool enabled) { if (wingmanWebSearch_ != enabled) { wingmanWebSearch_ = enabled; save(); sendChangeMessage(); } }
-    bool getWingmanWebSearch() const { return wingmanWebSearch_; }
+    void setWingmanWebSearch(bool e) { if (wingmanWebSearch != e) { wingmanWebSearch = e; save(); sendChangeMessage(); } }
+    bool getWingmanWebSearch() const { return wingmanWebSearch; }
 
-    void setWingmanStreaming(bool enabled) { if (wingmanStreaming_ != enabled) { wingmanStreaming_ = enabled; save(); sendChangeMessage(); } }
-    bool getWingmanStreaming() const { return wingmanStreaming_; }
+    void setWingmanStreaming(bool e) { if (wingmanStreaming != e) { wingmanStreaming = e; save(); sendChangeMessage(); } }
+    bool getWingmanStreaming() const { return wingmanStreaming; }
 
-    void setWingmanDAWContext(bool enabled) { if (wingmanDAWContext_ != enabled) { wingmanDAWContext_ = enabled; save(); sendChangeMessage(); } }
-    bool getWingmanDAWContext() const { return wingmanDAWContext_; }
+    void setWingmanDAWContext(bool e) { if (wingmanDAWContext != e) { wingmanDAWContext = e; save(); sendChangeMessage(); } }
+    bool getWingmanDAWContext() const { return wingmanDAWContext; }
 
-    void setWingmanMaxHistory(int max) { if (wingmanMaxHistory_ != max) { wingmanMaxHistory_ = max; save(); sendChangeMessage(); } }
-    int getWingmanMaxHistory() const { return wingmanMaxHistory_; }
+    void setWingmanMaxHistory(int m) { if (wingmanMaxHistory != m) { wingmanMaxHistory = m; save(); sendChangeMessage(); } }
+    int getWingmanMaxHistory() const { return wingmanMaxHistory; }
 
-    //==============================================================================
-    // Zenith Hub Settings
-    //==============================================================================
-    void setCustomGreeting(const juce::String& greeting) { if (customGreeting_ != greeting) { customGreeting_ = greeting; save(); sendChangeMessage(); } }
-    juce::String getCustomGreeting() const { return customGreeting_; }
+    // Zenith Hub
+    void setCustomGreeting(const juce::String& g) { if (customGreeting != g) { customGreeting = g; save(); sendChangeMessage(); } }
+    juce::String getCustomGreeting() const { return customGreeting; }
 
-    //==============================================================================
-    // Power Management
-    //==============================================================================
-    void setStayAwakeDuringProject(bool stayAwake) { if (stayAwakeDuringProject_ != stayAwake) { stayAwakeDuringProject_ = stayAwake; save(); sendChangeMessage(); } }
-    bool getStayAwakeDuringProject() const { return stayAwakeDuringProject_; }
-
-    //==============================================================================
-    // Plugin Settings
-    //==============================================================================
-    // Managed by PluginHost
+    // Features
+    void setStayAwakeDuringProject(bool s) { if (stayAwakeDuringProject != s) { stayAwakeDuringProject = s; save(); sendChangeMessage(); } }
+    bool getStayAwakeDuringProject() const { return stayAwakeDuringProject; }
 
 private:
     Settings() = default;
     void sendChangeMessage() { juce::ChangeBroadcaster::sendChangeMessage(); }
+    void loadDefaults(); // For initialization after construction
 
-    // Display
-    SkiaRenderer::Backend renderBackend_ = SkiaRenderer::Backend::Auto;
-    int targetFPS_ = 60;
-    float globalScale_ = 1.0f;
-    float glowIntensity_ = 1.0f;
-    UITheme theme_ = UITheme::Neon;
-    bool animationsEnabled_ = true;
-    bool highContrastMode_ = false;
+    SkiaRenderer::Backend renderBackend = SkiaRenderer::Backend::Auto;
+    int targetFPS = 60;
+    float globalScale = 1.0f;
+    float glowIntensity = 1.0f;
+    UITheme theme = UITheme::Neon;
+    bool animationsEnabled = true;
+    bool highContrastMode = false;
 
-    // Audio
-    LinuxAudioBackend linuxAudioBackend_ = LinuxAudioBackend::Auto;
-    int bufferSize_ = 512;
-    bool pluginDelayCompensation_ = true;
-    bool softwareMonitoring_ = true;
-    float monitoringVolume_ = 1.0f;
+    LinuxAudioBackend linuxAudioBackend = LinuxAudioBackend::Auto;
+    int bufferSize = 512;
+    bool pluginDelayCompensation = true;
+    bool softwareMonitoring = true;
+    float monitoringVolume = 1.0f;
 
-    // Recording
-    int countInBars_ = 1;
-    bool metronomeCountIn_ = true;
-    RecordingBitDepth recordingBitDepth_ = RecordingBitDepth::Bit24;
-    RecordingFileType recordingFileType_ = RecordingFileType::WAV;
-    bool allowTempoChangeDuringRecord_ = false;
+    int countInBars = 1;
+    bool metronomeCountIn = true;
+    RecordingBitDepth recordingBitDepth = RecordingBitDepth::Bit24;
+    RecordingFileType recordingFileType = RecordingFileType::WAV;
+    bool allowTempoChangeDuringRecord = false;
 
-    // MIDI
-    bool midiThrough_ = true;
-    bool sendMIDIClockOut_ = false;
-    bool receiveMTCIn_ = false;
-    int midiLatencyCompensation_ = 0;
+    bool midiThrough = true;
+    bool sendMIDIClockOut = false;
+    bool receiveMTCIn = false;
+    int midiLatencyCompensation = 0;
 
-    // Editing
-    int defaultCrossfadeMs_ = 10;
-    bool snapToGrid_ = true;
-    bool linkTrackAndEditSelection_ = true;
+    int defaultCrossfadeMs = 10;
+    bool snapToGrid = true;
+    bool linkTrackAndEditSelection = true;
 
-    // Project
-    bool autoSaveEnabled_ = true;
-    int autoSaveIntervalMinutes_ = 5;
-    int maxUndoHistory_ = 100;
-    juce::String defaultProjectFolder_;
+    bool autoSaveEnabled = true;
+    int autoSaveIntervalMinutes = 5;
+    int maxUndoHistory = 100;
+    juce::String defaultProjectFolder;
 
-    // Metering
-    MeterBallistics meterBallistics_ = MeterBallistics::Peak;
-    float meterPeakHoldSeconds_ = 2.0f;
-    bool showVolumeInDB_ = true;
+    MeterBallistics meterBallistics = MeterBallistics::Peak;
+    float meterPeakHoldSeconds = 2.0f;
+    bool showVolumeInDB = true;
 
-    // Wingman AI Settings
-    AIModelMode aiModelMode_ = AIModelMode::Obedient;
-    bool wingmanReasoningDisplay_ = false;
-    bool wingmanWebSearch_ = false;
-    bool wingmanStreaming_ = true;
-    bool wingmanDAWContext_ = true;
-    int wingmanMaxHistory_ = 10;
+    AIModelMode aiModelMode = AIModelMode::Obedient;
+    bool wingmanReasoningDisplay = false;
+    bool wingmanWebSearch = false;
+    bool wingmanStreaming = true;
+    bool wingmanDAWContext = true;
+    int wingmanMaxHistory = 10;
 
-    // Zenith Hub
-    juce::String customGreeting_;
+    juce::String customGreeting;
+    bool stayAwakeDuringProject = true;
 
-    // Features
-    bool stayAwakeDuringProject_ = true;
+    // Audio settings (missing from original Settings.h)
+    int audioSampleRate = 44100;
+    int audioChannels = 2;
 };
 
 } // namespace zenith

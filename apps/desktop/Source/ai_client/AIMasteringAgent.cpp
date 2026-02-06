@@ -5,9 +5,9 @@
 */
 
 #include "AIMasteringAgent.h"
-#include "../network/SecureKeyStore.h"
-#include "../engine/Engine.h"
-#include "../engine/Track.h"
+#include "network/SecureKeyStore.h"
+#include "zenith_core/engine/Engine.h"
+#include "zenith_core/engine/Track.h"
 
 namespace zenith {
 namespace ai {

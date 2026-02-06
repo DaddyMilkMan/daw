@@ -29,7 +29,7 @@
 
 #pragma once
 
-#include "../network/AudioAnalysisService.h"
+#include <zenith_network/network/AudioAnalysisService.h>
 #include "GrokAPIClient.h"
 #include "Engine.h"
 #include "ProjectState.h"

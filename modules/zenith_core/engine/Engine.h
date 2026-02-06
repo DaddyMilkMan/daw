@@ -17,42 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- // File: Engine.h
- // Brief: Core audio engine for Zenith DAW
- *
- * This is the authoritative Engine for Zenith.
- *
- * Features:
- * - RT-safe track mixdown with unified render path
- * - Lock-free clip snapshots
-
- * - Atomic playhead tracking with loop support
- * - AudioFilePool integration for audio file caching
- * - MIDI input routing and recording
- * - Audio input recording
- * - Pre-allocated buffers (trackBuffers_, clipBuffer_)
- *
- * Manages:
- * - Audio device I/O
- * - Audio processing callback
- * - Transport state (play/stop/record)
- * - MIDI input routing
- * - Audio input recording
- * - CPU usage monitoring
- * - Sample rate and buffer size
- *
- * Thread Safety:
- * - audioDeviceIOCallback() runs on AUDIO THREAD (real-time safe!)
- * - All other methods run on MESSAGE THREAD
- * - Use std::atomic for cross-thread communication
- */
-
 #pragma once
+
+// Engine.h - Core audio engine for Zenith DAW
 
 #include <atomic>
 #include <functional>
@@ -1163,6 +1130,7 @@ private:
   zenith::MidiFifo midiFifo_; // Lock-free MIDI FIFO for input routing
   juce::MidiBuffer liveMidiPass1_;
   juce::MidiBuffer liveMidiPass2_;
+  juce::MidiBuffer liveMidiScratch_; // Avoid per-block temporaries in callback
   double lastLiveMidiCallbackTimeSeconds_ = 0.0;
 
   // Lock-free Command Queue

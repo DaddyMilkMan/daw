@@ -17,20 +17,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-//     File: EngineTrackManagement.cpp
-//     Brief: Track creation, removal, and snapshot management
-//     Note: This is a modular component of Engine - declarations remain in Engine.h
-
-
-#include "AuxBus.h"
+#include "Engine.h"
+#include "ProjectState.h"
 #include "AudioRenderer.h"
 #include "TempoMap.h"
 #include "RealTimeGarbageCollector.h"
+#include "Clip.h"
+#include "Track.h"
+#include "AuxBus.h"
 
 namespace zenith {
 
@@ -193,6 +187,7 @@ const std::vector<std::shared_ptr<zenith::Track>> &
 Engine::tracks() const noexcept {
   return tracks_;
 }
+
 
 void Engine::addTestTracks(int count) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());

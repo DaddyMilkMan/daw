@@ -17,10 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#include "AuxBusTrack.h"
+
+namespace zenith {
+
 
 AuxBusTrack::AuxBusTrack(const juce::String &name) : Track(name, Type::Bus) {}
 

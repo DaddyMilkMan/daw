@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    MeterRenderer.cpp
-    Created: 2025-12-31
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "MeterRenderer.h"
 #include <effects/SkGradientShader.h>
 #include <core/SkMaskFilter.h>

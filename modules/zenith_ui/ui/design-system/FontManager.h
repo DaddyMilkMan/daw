@@ -17,33 +17,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    FontManager.h
-    Created: 2025-12-12
-    Author:  Zenith DAW
-
-    Professional custom font management system for Zenith DAW.
-    Provides centralized font loading, caching, and configuration with
-    proper subpixel antialiasing for crisp text rendering on Windows.
-
-
-    Fonts used:
-    - Inter: Primary UI font (Regular, Medium, SemiBold, Bold)
-    - JetBrains Mono: Monospace font for code/timing displays
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <array>
+#if ZENITH_ENABLE_SKIA
 #include <core/SkRefCnt.h>
+#endif
 #include <core/SkFont.h>
 #include <core/SkFontMgr.h>
 #include <core/SkTypeface.h>

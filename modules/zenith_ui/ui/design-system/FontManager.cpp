@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    FontManager.cpp
-    Created: 2025-12-12
-    Author:  Zenith DAW
-
-    Implementation of the professional custom font management system.
-
-  ==============================================================================
-
-*/
-
 #include "FontManager.h"
 #include <core/SkFontTypes.h>
 #include <core/SkData.h>

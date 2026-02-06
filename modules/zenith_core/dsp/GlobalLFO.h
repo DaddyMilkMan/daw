@@ -17,26 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    GlobalLFO.h
-    Created: 2025-12-09
-    Author:  Zenith DAW
-
-    Global Low Frequency Oscillator for modulation.
-    Supports tempo-sync and multiple waveforms.
-
-
-    RT-SAFETY: All operations are lock-free and allocation-free.
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <atomic>

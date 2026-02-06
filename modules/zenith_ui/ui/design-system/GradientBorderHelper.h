@@ -17,25 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    GradientBorderHelper.h
-    Created: 2025-12-26
-    Author:  Zenith DAW
-
-    Helper class for drawing gradient borders on UI components.
-    Provides consistent gradient border styling across the application.
-
-
-  ==============================================================================
-*/
-
 #pragma once
+
+// GradientBorderHelper.h
+
 
 #include "ZenithDesignSystem.h"
 #include <core/SkCanvas.h>

@@ -7,6 +7,7 @@
 
 #include "ModelTrainer.h"
 #include <juce_cryptography/juce_cryptography.h>
+#include <juce_audio_formats/juce_audio_formats.h>
 #include <algorithm>
 #include <random>
 #include <chrono>
@@ -39,7 +40,8 @@ bool DatasetLoader::loadGenreDataset(const juce::File& datasetPath) {
 
 bool DatasetLoader::loadCSVFile(const juce::File& filePath) {
     juce::StringArray lines;
-    if (!filePath.readLines(lines)) {
+    filePath.readLines(lines);
+    if (lines.isEmpty()) {
         return false;
     }
     
@@ -520,7 +522,7 @@ TrainingResults ModelTrainer::trainNetwork(NeuralNetwork& network,
     return results;
 }
 
-float ModelTrainer::calculateLoss(const NeuralNetwork& network, const std::vector<TrainingSample>& dataset) {
+float ModelTrainer::calculateLoss(NeuralNetwork& network, const std::vector<TrainingSample>& dataset) {
     float totalLoss = 0.0f;
     
     for (const auto& sample : dataset) {
@@ -532,7 +534,7 @@ float ModelTrainer::calculateLoss(const NeuralNetwork& network, const std::vecto
     return totalLoss / dataset.size();
 }
 
-float ModelTrainer::calculateAccuracy(const NeuralNetwork& network, const std::vector<TrainingSample>& dataset) {
+float ModelTrainer::calculateAccuracy(NeuralNetwork& network, const std::vector<TrainingSample>& dataset) {
     int correct = 0;
     
     for (const auto& sample : dataset) {
@@ -554,7 +556,7 @@ float ModelTrainer::calculateAccuracy(const NeuralNetwork& network, const std::v
     return static_cast<float>(correct) / dataset.size();
 }
 
-ValidationMetrics ModelTrainer::calculateMetrics(const NeuralNetwork& network, const std::vector<TrainingSample>& dataset) {
+ValidationMetrics ModelTrainer::calculateMetrics(NeuralNetwork& network, const std::vector<TrainingSample>& dataset) {
     ValidationMetrics metrics;
     metrics.totalSamples = static_cast<int>(dataset.size());
     
@@ -599,7 +601,8 @@ bool ModelTrainer::shouldStopEarly(const std::vector<float>& validationLossHisto
 }
 
 bool ModelTrainer::saveModel(const NeuralNetwork& network, const juce::File& filePath) {
-    return network.saveModel(filePath);
+    network.saveModel(filePath);
+    return true;
 }
 
 std::unique_ptr<NeuralNetwork> ModelTrainer::loadModel(const juce::File& filePath) {
@@ -750,7 +753,7 @@ bool ProductionModelManager::loadModelRegistry(const juce::File& filePath) {
         }
         
         // Load active models
-        auto activeVar = obj->getProperty("activeModels", juce::var());
+        auto activeVar = obj->hasProperty("activeModels") ? obj->getProperty("activeModels") : juce::var();
         if (auto* activeObj = activeVar.getDynamicObject()) {
             for (const auto& [name, version] : activeObj->getProperties()) {
                 activeModels[name.toString()] = version.toString();

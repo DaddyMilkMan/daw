@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithEffects.h
-    Created: 2025-12-06
-    Author:  Zenith DAW
-
-    Global Effects Processor for ZenithPolySynth.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>

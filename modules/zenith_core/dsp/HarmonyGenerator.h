@@ -17,31 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    HarmonyGenerator.h
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Automatic harmony generation from lead vocal.
-    
-    Creates 2-4 part harmonies from a single vocal track.
-
-    Features:
-    - Intelligent voice leading
-    - Scale-aware harmony selection
-    - Close vs open voicing
-    - Humanize timing and pitch
-    - MIDI output for harmony voices
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_audio_basics/juce_audio_basics.h>

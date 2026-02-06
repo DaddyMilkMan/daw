@@ -17,30 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaPopupMenu.h
-    Created: 2025-12-07
-    Enhanced: 2025-12-25
-    Author:  Zenith DAW Team
-
-    Pure Skia-based popup menu component with premium features:
-    - Glassmorphic backdrop blur styling
-
-    - Icon support with SkPath
-    - Keyboard shortcut hints
-    - Full keyboard navigation (Up/Down/Enter/Escape)
-    - Animated transitions
-    - Submenu support
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "SkiaComponent.h"

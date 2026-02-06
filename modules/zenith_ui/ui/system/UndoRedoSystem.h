@@ -17,19 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    UndoRedoSystem.h
-    Comprehensive undo/redo system for audio processing
-    Phase 4: User Interface
-  ==============================================================================
-*/
-
-
 #include <juce_core/juce_core.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <memory>

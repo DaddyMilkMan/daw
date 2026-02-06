@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    InstrumentRegistry.h
-    Created: 2025-11-18
-    Author:  Zenith DAW
-
-    Registry for all built-in instruments.
-    Allows enumeration and creation of instruments by ID.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>

@@ -17,28 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    PresetBrowserComponent.h
-    Created: 2026-02-04
-    Author:  Zenith DAW Team
-
-    Full-featured Skia-based preset browser for Zenith instruments.
-    Features:
-    - Real-time search with fuzzy matching
-    - Category and tag filtering
-
-    - Preset preview with mini waveform
-    - Load/save/capture functionality
-    - Rating and favorites system
-    - Glassmorphic design with animations
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../framework/SkiaComponent.h"

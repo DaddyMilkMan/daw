@@ -17,20 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithHubComponent.cpp
-    Clean implementation with robust layout and proper font caching.
-
-  ==============================================================================
-*/
-
-
 #include "../design-system/ZenithLayout.h"
 #include "ZenithIcons.h"
 #include "../../Settings.h"

@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PlatformLogUtils.cpp
-    Created: 2025-12-28
-    Author:  Zenith DAW
-
-    Implementation of platform-agnostic logging utilities.
-
-  ==============================================================================
-
-*/
-
 #include "PlatformLogUtils.h"
 #include <juce_core/juce_core.h>
 

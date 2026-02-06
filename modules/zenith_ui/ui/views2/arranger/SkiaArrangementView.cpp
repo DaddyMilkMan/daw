@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaArrangementView.cpp
-    Created: 2026-02-03
-    Author:  Zenith DAW Team
-
-    Implementation of the timeline arrangement view.
-
-  ==============================================================================
-
-*/
-
 #include "SkiaArrangementView.h"
 #include "../../design-system/ZenithTheme.h"
 #include "../../framework/GlassmorphicPanel.h"

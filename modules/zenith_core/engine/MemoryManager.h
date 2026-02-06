@@ -17,14 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#pragma once
 
- // File: MemoryManager.h
- // Brief: Proper memory management for audio components
- */
+// MemoryManager.h
+
 
 
 #include <mutex>

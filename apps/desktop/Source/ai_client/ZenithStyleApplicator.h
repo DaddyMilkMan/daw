@@ -13,8 +13,8 @@
 
 #pragma once
 
-#include "../ui/design-system/ZenithDesignSystem.h"
-#include "../ui/legacy/ZenithLookAndFeel.h"
+#include <zenith_ui/ui/design-system/ZenithDesignSystem.h>
+#include <zenith_ui/ui/legacy/ZenithLookAndFeel.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
 // Forward declarations

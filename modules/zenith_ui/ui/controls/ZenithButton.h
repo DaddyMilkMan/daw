@@ -17,30 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithButton.h
-    Created: 2025-12-12
-    Author:  Zenith DAW
-
-    Consolidated premium button component with:
-    - Multiple styles (Primary, Secondary, Danger, Success, Warning, Ghost)
-    - Size variants (Small, Medium, Large)
-
-    - Icon support with position control
-    - Toggle mode
-    - Audio reactive mode
-    - Focus and accessibility support
-    - Animated glow effects
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../framework/SkiaComponent.h"

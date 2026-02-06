@@ -17,30 +17,15 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PlatformFontUtils.h
-    Created: 2025-12-22
-
-    Interface for platform-specific font utility functions.
-
-  ==============================================================================
-*/
-
-
-
 #pragma once
 
 #include "FontManager.h"
 
 #if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
 #include <core/SkFontMgr.h>
+#if ZENITH_ENABLE_SKIA
 #include <core/SkRefCnt.h>
+#endif
 #endif
 
 namespace zenith {

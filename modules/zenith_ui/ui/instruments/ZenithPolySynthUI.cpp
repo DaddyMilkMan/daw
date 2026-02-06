@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithPolySynthUI.cpp
-    Refactored: 2025-12-09
-    Author:  Zenith DAW
-
-    Skia-based UI for ZenithPolySynth.
-    Includes Flagship controls and Thread-Safe Rendering Pipeline.
-
-
-  ==============================================================================
-*/
-
 #include "ZenithPolySynthUI.h"
 #include "../../instruments/ZenithFilter.h" // For FilterType
 #include "../../instruments/ZenithPolySynthDefs.h" // For FilterModelType

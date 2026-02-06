@@ -7,12 +7,12 @@
   ==============================================================================
 */
 
-#include "../../../ui/framework/PlatformWindowUtils.h"
+#include "PlatformWindowUtils.h"
 #include <core/SkRefCnt.h>
 #include <gpu/ganesh/gl/GrGLAssembleInterface.h>
 #include <gpu/ganesh/gl/GrGLInterface.h>
 #include <juce_opengl/juce_opengl.h>
-#include "../../../engine/ZenithLogger.h"
+#include "ZenithLogger.h"
 
 #ifdef __linux__
 #include <X11/Xlib.h>

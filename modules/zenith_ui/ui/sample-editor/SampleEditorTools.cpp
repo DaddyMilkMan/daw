@@ -17,14 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
 
  * @file SampleEditorTools.cpp
  * @brief DSP and editing tools for SampleEditorComponent (Normalize, Reverse, Effects, etc.)
- */
 
 
 

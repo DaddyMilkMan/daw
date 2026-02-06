@@ -17,18 +17,15 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#pragma once
 
- // File: Midi2DiscoveryService.h
+// Midi2DiscoveryService.h
+
 // Brief: MIDI-CI Discovery Service for MIDI 2.0 Hardware
-
-
 
 #include <vector>
 #include <memory>
+#include <juce_audio_devices/juce_audio_devices.h>
 
 namespace zenith {
 

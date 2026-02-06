@@ -17,23 +17,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaComponent.cpp
-    Created: 2025-11-30
-    Authors: Sarah Chen, Dr. Aris Vokos, Viktor Volkov, Diego Martinez
-
-    Implementation of base Skia component.
-*/
-
-
 #include "SkiaComponent.h"
-#include "../../engine/ZenithLogger.h"
+#include "ZenithLogger.h"
 #include <core/SkBlurTypes.h> // Explicitly include
 
 #include "PlatformDisplayUtils.h"

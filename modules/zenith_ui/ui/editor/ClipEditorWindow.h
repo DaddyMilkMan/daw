@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ClipEditorWindow.h
-    Created: 2026-02-03
-    Author:  Zenith DAW Team
-
-    Clip editor window for editing clip contents.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include "../../framework/SkiaComponent.h"

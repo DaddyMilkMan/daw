@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ProjectRecoveryModal.cpp
-    Created: 2025-12-29
-    Author:  Zenith DAW Team
-
-    Premium Skia-based Project Recovery Modal implementation.
-
-  ==============================================================================
-
-*/
-
 #include "ProjectRecoveryModal.h"
 #include <core/SkTextBlob.h>
 #include <core/SkBlurTypes.h>

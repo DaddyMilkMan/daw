@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaFileChooser.h
-    Created: 2025-12-07
-    Author:  AI Assistant
-
-    Pure Skia-based file chooser component to replace juce::FileChooser
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include "SkiaButton.h"

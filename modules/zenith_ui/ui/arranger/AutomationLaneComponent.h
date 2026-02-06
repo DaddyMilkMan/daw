@@ -17,28 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file AutomationLaneComponent.h
- * @brief UI component for editing track automation envelopes
- *
- * Phase U5: Automation Lanes UI
- *
- * Features:
- * - Displays automation curves (volume/pan/mute)
- * - Visual editing of automation points:
- *   - Click empty space: add point
-
- *   - Drag point: move point
- *   - Double-click point: delete point
- * - Integrates with ProjectState and UndoManager
- * - RT-safe: all edits on message thread only
- */
-
 #pragma once
+
+// AutomationLaneComponent.h
+
 
 #include "ProjectState.h"
 #include "../framework/SkiaComponent.h"

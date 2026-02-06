@@ -16,11 +16,20 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#include "Track.h"
+#include "AudioTrack.h"
+#include "MIDITrack.h"
+#include "InstrumentTrack.h"
+#include "AuxBusTrack.h"
+#include "TrackProcessor.h"
+#include "TrackPluginManager.h"
+#include "TrackFreeze.h"
+#include "TrackSidechain.h"
+#include "TrackSendManager.h"
+#include "ZenithLogger.h"
+#include <memory>
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+namespace zenith {
 
 std::unique_ptr<Track> Track::create(const juce::String &name, Type type) {
   switch (type) {

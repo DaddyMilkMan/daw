@@ -17,22 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file TrackGroupHeader.cpp
- * @brief Track group header implementation with VU meter
- *
- * Performance notes:
- * - VU meter uses atomic operations for lock-free audio thread updates
- * - Gravity-based ballistics for natural meter decay
- * - Dirty-rect optimization for minimal repaint area
- * - AnimationCoordinator integration for centralized 60Hz updates
- */
-
-
+// TrackGroupHeader.cpp
 
 #include "TrackGroupHeader.h"
 #include "GlassmorphicPanel.h"

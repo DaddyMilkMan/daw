@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "../instruments/InstrumentPreset.h"
+#include <instruments/InstrumentPreset.h>
 #include <juce_core/juce_core.h>
 #include <map>
 #include <set>
@@ -25,6 +25,8 @@
 
 namespace zenith {
 namespace ai {
+
+using Preset = ZenithInstrumentPreset;
 
 //==============================================================================
 /**

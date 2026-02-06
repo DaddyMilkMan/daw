@@ -17,25 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ThemeManager.h
-    Created: 2026-02-02
-    Author:  Zenith DAW
-
-    Theme management for the Zenith DAW UI.
-    Supports Dark, Darker (OLED), and Light themes with runtime switching.
-
-
-  ==============================================================================
-*/
-
 #pragma once
+
+// ThemeManager.h
+
 
 #include <juce_core/juce_core.h>
 #include <juce_events/juce_events.h>

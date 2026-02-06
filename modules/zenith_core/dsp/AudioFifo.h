@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AudioFifo.h
-    Created: 2025-12-08
-    Author:  Zenith DAW
-
-    Lock-free Multi-Producer Single-Consumer (MPSC) FIFO for audio samples.
-    Safe for multiple threads pushing data (e.g. tracks) to a single consumer (e.g. UI/Disk).
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>

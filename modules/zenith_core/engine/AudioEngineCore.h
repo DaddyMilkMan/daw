@@ -17,24 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- // File: AudioEngineCore.h
- // Brief: Core audio engine interface and basic functionality
- * 
- * This is the simplified core engine that handles:
- * - Audio device I/O
- * - Basic transport control
- * - Audio processing callback interface
- * - MIDI input callback
- */
-
-
-
 #pragma once
+
+// AudioEngineCore.h
 
 #include <atomic>
 #include <functional>

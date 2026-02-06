@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ProjectEngineBridge.cpp
-    Created: 2025-12-11
-    Author:  Zenith DAW
-
-    Consolidated synchronization between ProjectState and Engine.
-
-  ==============================================================================
-
-*/
-
 #include "ProjectEngineBridge.h"
 #include "ProjectState.h"
 #include "Engine.h"
@@ -154,7 +137,7 @@ void ProjectEngineBridge::forceFullSync()
 }
 
 //==============================================================================
-// Explicit Commits (Engine → ProjectState)
+// Explicit Commits (Engine -> ProjectState)
 //==============================================================================
 
 void ProjectEngineBridge::commitTransportPosition()

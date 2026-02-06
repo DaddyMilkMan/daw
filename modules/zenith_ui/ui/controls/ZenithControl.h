@@ -17,25 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithControl.h
-    Created: 2025-12-12
-    Author:  Zenith DAW
-
-    Base class for all Zenith audio parameter controls.
-    Provides thread-safe parameter binding, hover states, and tooltip support.
-
-
-  ==============================================================================
-*/
-
 #pragma once
+
+// ZenithControl.h
+
 
 #include "SkiaComponent.h"
 #include <atomic>

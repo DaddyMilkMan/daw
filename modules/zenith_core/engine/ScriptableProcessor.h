@@ -17,28 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ScriptableProcessor.h
-    Created: 2025-12-27
-    Author:  Zenith DAW
-
-    A Lua-powered Audio Processor that runs custom DSP code in the audio thread.
-    Allows Grok to "Write an effect" and have it run instantly.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
-#include <lua.hpp>
+#include <lua5.4/lua.hpp>
 #include <atomic>
 #include <string>
 

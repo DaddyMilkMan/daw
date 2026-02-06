@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    RegisterBuiltInInstruments.cpp
-    Created: 2025-11-18
-    Author:  Zenith DAW
-
-    Implementation of built-in instrument registration.
-
-  ==============================================================================
-
-*/
-
 #include "RegisterBuiltInInstruments.h"
 #include "../utils/FactoryPresetGenerator.h"
 #include "InstrumentRegistry.h"

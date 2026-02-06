@@ -17,17 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-//     File: EngineSync.cpp
-//     Brief: Tempo, timeline synchronization, and PDC management
-//     Note: This is a modular component of Engine - declarations remain in Engine.h
-
-
-#include "../engine/Track.h"
+#include "Engine.h"
+#include "ProjectState.h"
+#include "TempoMap.h"
 
 namespace zenith {
 

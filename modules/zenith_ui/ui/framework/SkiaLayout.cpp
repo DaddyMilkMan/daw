@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaLayout.cpp
-    Created: 2025-12-07
-    Author:  AI Assistant
-
-    Unified layout management system implementation
-
-  ==============================================================================
-
-*/
-
 #include "SkiaLayout.h"
 #include "ZenithDesignSystem.h"
 

@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithAdvancedOscillators.h
-    Created: 2025-02-01
-    Author:  Zenith DAW
-
-    Advanced oscillator models including wavefolding, phase distortion,
-    additive synthesis, granular synthesis, and wavetable import.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "ZenithPolySynthDefs.h"

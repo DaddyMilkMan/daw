@@ -17,31 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AudioFilePool.h
-    Created for Phase 1.2: Audio File Pool & Caching
-    Author:  Zenith DAW
-
-    CANONICAL IMPLEMENTATION: This is the authoritative AudioFilePool for Zenith.
-    Phase 1.2 implementation (2025-11-13)
-
-
-    Pre-loads audio files on the message thread and provides RT-safe access.
-
-    Thread Safety:
-    - All file I/O happens on MESSAGE THREAD
-    - Audio thread ONLY reads from pre-loaded buffers
-    - Uses atomic ref counting via shared_ptr for safe access
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>
@@ -161,7 +136,7 @@ public:
 
 private:
     //==============================================================================
-    // File cache: path → audio handle
+    // File cache: path -> audio handle
     std::unordered_map<juce::String, HandlePtr> fileCache_;
     mutable juce::CriticalSection cacheLock_;
 

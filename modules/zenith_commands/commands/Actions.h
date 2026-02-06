@@ -17,14 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
 
  * @file Actions.h
  * @brief UndoableAction subclasses for ProjectState mutations
- */
 
 
 namespace zenith {

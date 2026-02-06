@@ -17,34 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ProjectEngineBridge.h
-    Created: 2025-12-11
-    Author:  Zenith DAW
-
-    Consolidated synchronization between ProjectState (ValueTree) and Engine.
-    
-    Replaces the following classes:
-
-    - ClipSynchronizer
-    - TrackStateSynchronizer
-    - TrackAutomationSynchronizer
-    - TempoMapSynchronizer
-
-    Thread Safety:
-    - All methods are MESSAGE THREAD ONLY
-    - Uses batched updates for efficiency
-    - Listens to ValueTree changes and dispatches to Engine
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>
@@ -67,7 +39,7 @@ class TempoMap;
     - Single listener for all ValueTree changes
     - Batched updates for efficiency
     - Timer-based automation sampling during playback
-    - Explicit commit calls for Engine → ProjectState direction
+    - Explicit commit calls for Engine -> ProjectState direction
 */
 class ProjectEngineBridge : public juce::ValueTree::Listener,
                              public juce::Timer {
@@ -100,7 +72,7 @@ public:
     void forceFullSync();
 
     //==========================================================================
-    // Explicit Commits (Engine → ProjectState)
+    // Explicit Commits (Engine -> ProjectState)
     //==========================================================================
 
     /**

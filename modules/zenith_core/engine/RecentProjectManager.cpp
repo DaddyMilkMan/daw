@@ -17,15 +17,13 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-    RecentProjectManager.cpp - Implementation of RecentProjectManager for persistent recent projects
-*/
+// RecentProjectManager.cpp
 
-
-//==============================================================================
 #include <juce_core/juce_core.h>
+#include "RecentProjectManager.h"
+#include <algorithm>
+
+namespace zenith {
 
 // RecentProjectEntry Implementation
 //==============================================================================

@@ -17,29 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ResizablePanelContainer.h
-    Created: 2025-12-12
-    Author:  Zenith DAW Team
-
-    A flexible, VS Code-style resizable panel container system.
-    Features:
-    - Drag-to-resize dividers between panels
-
-    - Collapsible panels with smooth animation
-    - Tab groups (multiple views in same panel area)
-    - Minimum panel sizes enforced
-    - Smooth resize animations
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "SkiaComponent.h"

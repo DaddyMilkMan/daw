@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    DSPStemSeparator.h
-    Created: 2025-11-29
-    Author:  Zenith DAW - Efficient C++ Team
-
-    Real-time stem separation using Mid-Side processing and Linkwitz-Riley filters.
-    This is a lightweight, zero-latency alternative to heavy AI models.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>

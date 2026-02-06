@@ -17,21 +17,15 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#pragma once
 
- * @file ITrackManager.h
- * @brief Track management interface
- *
- * Manages audio and MIDI tracks, providing thread-safe access and snapshots.
- */
-
+//==============================================================================
 
 #include <vector>
+#include <memory>
 #include <juce_core/juce_core.h>
-#include "Track.h"
+#include <juce_events/juce_events.h>
+#include "../Track.h"
 
 namespace zenith {
 

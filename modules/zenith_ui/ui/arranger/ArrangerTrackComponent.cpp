@@ -17,10 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
 
 // #include "../design-system/ZenithTheme.h" // Deprecated access
 #include "../controls/SkiaButton.h"

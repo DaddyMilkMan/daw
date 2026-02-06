@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    TimeStretcher.h
-    Created: 2025-12-25
-    Author:  Zenith DAW
-
-    High-quality Phase Vocoder for pitch-invariant time stretching.
-    Uses 4x overlap STFT with phase locking for transient preservation.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_audio_basics/juce_audio_basics.h>

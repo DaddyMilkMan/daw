@@ -1,0 +1,231 @@
+name: Build
+
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master, develop ]
+
+env:
+  CMAKE_VERSION: '3.25'
+  CMAKE_BUILD_TYPE: Release
+
+jobs:
+  # Windows build
+  windows:
+    name: Windows (${{ matrix.config.name }})
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        config:
+          - { name: "MSVC Release", generator: "Visual Studio 17 2022", arch: "x64" }
+          - { name: "MSVC Debug", generator: "Visual Studio 17 2022", arch: "x64", build_type: "Debug" }
+          - { name: "MinGW", generator: "MinGW Makefiles", arch: "x64" }
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup MSVC
+      uses: egor-tensin/setup-msvc@v1
+      with:
+        arch: ${{ matrix.config.arch }}
+
+    - name: Setup vcpkg
+      uses: lukka/setup-vcpkg@v1
+      with:
+        vcpkgJson: apps/desktop/vcpkg.json
+        vcpkgTriplet: ${{ matrix.config.arch }}
+
+    - name: Install dependencies
+      run: |
+        choco install -y ninja
+        # Install additional Windows-specific dependencies
+
+    - name: Configure CMake
+      run: |
+        cmake -B build -S apps/desktop -G "${{ matrix.config.generator }}" -A ${{ matrix.config.arch }}
+        -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type || env.CMAKE_BUILD_TYPE }}
+        -DCMAKE_TOOLCHAIN_FILE=${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+        -DBUILD_TESTS=ON
+      env:
+          VCPKG_ROOT: ${{ runner.temp }}/vcpkg
+
+    - name: Build
+      run: cmake --build build --config ${{ matrix.config.build_type || env.CMAKE_BUILD_TYPE }}
+      if: matrix.config.generator != 'MinGW Makefiles'
+
+    - name: Build (MinGW)
+      run: cmake --build build
+      if: matrix.config.generator == 'MinGW Makefiles'
+
+    - name: Run tests
+      run: ctest --output-on-failure --build-config ${{ matrix.config.build_type || env.CMAKE_BUILD_TYPE }} -C ${{ matrix.config.build_type || env.CMAKE_BUILD_TYPE }}
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: zenith-windows-${{ matrix.config.arch }}-${{ matrix.config.build_type || 'Release' }}
+        path: build/*.exe
+        retention-days: 30
+
+  # macOS build
+  macos:
+    name: macOS (${{ matrix.config.name }})
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        config:
+          - { name: "Release", build_type: "Release" }
+          - { name: "Debug", build_type: "Debug" }
+          - { name: "Universal", build_type: "Release", universal: true }
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install dependencies
+      run: |
+        brew install cmake ninja
+        brew install --cask vcpkg
+        # Install macOS-specific dependencies
+
+    - name: Setup vcpkg
+      uses: lukka/setup-vcpkg@v1
+      with:
+        vcpkgJson: apps/desktop/vcpkg.json
+        vcpkgTriplet: x64-osx
+
+    - name: Configure CMake
+      run: |
+        if ${{ matrix.config.universal }}; then
+          cmake -B build -S apps/desktop \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+            -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+        else
+          cmake -B build -S apps/desktop
+        fi
+        -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }}
+        -DCMAKE_TOOLCHAIN_FILE=${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+        -DBUILD_TESTS=ON
+      env:
+        VCPKG_ROOT: ${{ runner.temp }}/vcpkg
+
+    - name: Build
+      run: cmake --build build --config ${{ matrix.config.build_type }}
+
+    - name: Run tests
+      run: ctest --output-on-failure --build-config ${{ matrix.config.build_type }} -C ${{ matrix.config.build_type }}
+
+    - name: Package app
+      if: matrix.config.build_type == 'Release'
+      run: |
+        # Create macOS app bundle
+        mkdir -p build/ZenithDAW.app/Contents/MacOS
+        cp build/* build/ZenithDAW.app/Contents/MacOS/
+        # Add app bundle structure and icons
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: zenith-macos-${{ matrix.config.build_type }}
+        path: build/*
+        retention-days: 30
+
+  # Linux build
+  linux:
+    name: Linux (${{ matrix.config.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        config:
+          - { name: "Ubuntu", distro: "ubuntu", build_type: "Release" }
+          - { name: "Debug", distro: "ubuntu", build_type: "Debug" }
+          - { name: "Fedora", distro: "fedora", build_type: "Release" }
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup system packages
+      run: |
+        if ${{ matrix.config.distro == 'ubuntu' }}; then
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build libasound2-dev libx11-dev libxrandr-dev libxcursor-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev
+        elif ${{ matrix.config.distro == 'fedora' }}; then
+          sudo dnf install -y cmake ninja-build alsa-lib-devel libX11-devel libXrandr-devel libXcursor-devel libXinerama-devel libXi-devel mesa-libGL-devel mesa-libGLU-devel
+        fi
+
+    - name: Install dependencies
+      run: |
+        wget https://github.com/Kitware/CMake/releases/download/v${{ env.CMAKE_VERSION }}/cmake-${{ env.CMAKE_VERSION }}-Linux-x86_64.sh
+        sudo sh cmake-${{ env.CMAKE_VERSION }}-Linux-x86_64.sh --skip-license --prefix=/usr/local
+
+    - name: Setup vcpkg
+      uses: lukka/setup-vcpkg@v1
+      with:
+        vcpkgJson: apps/desktop/vcpkg.json
+        vcpkgTriplet: x64-linux
+
+    - name: Configure CMake
+      run: |
+        cmake -B build -S apps/desktop \
+          -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} \
+          -DCMAKE_TOOLCHAIN_FILE=${{ runner.temp }}/vcpkg/scripts/buildsystems/vcpkg.cmake \
+          -DBUILD_TESTS=ON
+      env:
+        VCPKG_ROOT: ${{ runner.temp }}/vcpkg
+
+    - name: Build
+      run: cmake --build build --config ${{ matrix.config.build_type }}
+
+    - name: Run tests
+      run: ctest --output-on-failure --build-config ${{ matrix.config.build_type }} -C ${{ matrix.config.build_type }}
+
+    - name: Install build dependencies
+      run: |
+        # Create Debian package
+        mkdir -p build/debian
+        # Package structure for Linux distribution
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: zenith-${{ matrix.config.distro }}-${{ matrix.config.build_type }}
+        path: build/*
+        retention-days: 30
+
+  # Docker build
+  docker:
+    name: Docker
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Build Docker image
+      run: |
+        docker build -t zenith-daw-build -f Dockerfile .
+
+    - name: Run tests in Docker
+      run: |
+        docker run --rm -v $(pwd):/workspace zenith-daw-build bash -c "cd /workspace && ./scripts/run-tests.sh --all"
+
+    - name: Build packages
+      run: |
+        docker run --rm -v $(pwd):/workspace zenith-daw-build bash -c "cd /workspace && ./scripts/build.sh --package --all"
+
+    - name: Upload Docker artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: zenith-docker-packages
+        path: packages/*
+        retention-days: 30

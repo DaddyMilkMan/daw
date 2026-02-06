@@ -17,34 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithAutoTune.h
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Built-in professional pitch correction effect.
-    Included FREE with Zenith DAW ($100 purchase).
-    
-
-    Competes with: Antares Auto-Tune, Waves Tune, Logic Flex Pitch
-    
-    Features:
-    - Real-time pitch correction
-    - Retune Speed (T-Pain effect to natural)
-    - Humanize (preserve natural variation)
-    - Formant Preservation (no chipmunk effect)
-    - Scale/Key selector
-    - Visual pitch display
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../dsp/PitchDetector.h"
@@ -76,6 +48,9 @@ public:
     void releaseResources() override;
     void processBlock(juce::AudioBuffer<float>& buffer, 
                       juce::MidiBuffer& midiMessages) override;
+    
+    juce::AudioProcessorEditor* createEditor() override;
+    bool hasEditor() const override;
     
     //==============================================================================
     // Parameters

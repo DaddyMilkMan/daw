@@ -17,30 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file ArrangementComponent.h
- * @brief Arrangement view with automation lanes (Phase 14)
- *
- * Displays:
- * - Tracks with headers
- * - Clips on timeline
- * - Automation lanes (volume/pan/mute) per track
- *
- * Features:
-
- * - Per-track automation lane selection (V/P/M buttons)
- * - Visual automation curve display
- * - Add/move/delete automation points with mouse
- * - Full undo/redo support via ProjectState
- * - Live updates from CommandAPI/Wingman
- * - Skia GPU-accelerated rendering
- */
-
 #pragma once
+
+// ArrangementComponent.h
+
 
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>

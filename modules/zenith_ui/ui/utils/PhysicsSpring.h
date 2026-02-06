@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PhysicsSpring.h
-    Created: 2025-12-23
-    Author:  Zenith DAW Team
-
-    A simple but effective spring physics solver for "juicy" UI animations.
-    Based on Hooke's Law with damping.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <algorithm>

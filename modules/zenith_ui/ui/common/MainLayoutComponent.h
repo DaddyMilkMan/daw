@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    MainLayoutComponent.h
-    Created: 2025-11-28
-    Author:  Dr. Aris Vokos + Leo Rossi + Isabella Moretti
-
-  ==============================================================================
-*/
-
-
 #pragma once
 
 #include "../framework/SkiaComponent.h"

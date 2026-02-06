@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithKnob.cpp
-    Created: 2025-12-12
-    Author:  Zenith DAW
-
-    Implementation of the premium Zenith rotary knob.
-
-  ==============================================================================
-
-*/
-
 #include "ZenithKnob.h"
 
 #include "ZenithKnob.h"
@@ -44,6 +27,7 @@
 #ifdef ZENITH_USE_SKIA
 #include "ZenithSkia.h"
 #include <utils/SkTextUtils.h>
+#include <zenith_ui/ui/framework/RenderTree.h>
 #endif
 
 namespace zenith {
@@ -451,5 +435,21 @@ sk_sp<SkShader> ZenithKnob::createArcGradient(float cx, float cy,
 }
 
 #endif // ZENITH_USE_SKIA
+
+#ifdef ZENITH_USE_SKIA
+render::KnobRenderState ZenithKnob::captureRenderState() const {
+  render::KnobRenderState state;
+  auto bounds = getLocalBounds().toFloat();
+  
+  state.bounds = SkRect::MakeXYWH(bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight());
+  state.value = getNormalizedValue();
+  state.isHovered = isHovered_;
+  state.isDragging = isDragging_;
+  state.baseColor = accentColor_;
+  state.glowIntensity = animatedGlow_ * glowIntensity_;
+  
+  return state;
+}
+#endif
 
 } // namespace zenith

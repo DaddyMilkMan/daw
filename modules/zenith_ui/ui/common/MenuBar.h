@@ -17,17 +17,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
 
  * @file MenuBar.h
  * @brief Custom Skia-based Menu Bar for Zenith DAW - Neon Noir Edition
  * 
  * Premium glassmorphic menu bar with animated hover states, vector icons,
  * and neon glow effects matching the Zenith design system.
- */
 
 
 #include "../design-system/InteractionHelper.h"

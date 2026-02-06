@@ -17,26 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file ArrangerView.h
- * @brief Timeline arranger view showing tracks and clips
- *
- * Provides UI for track management, clip editing, and automation display.
- *
- * Data Flow:
- * 1. Listens to ProjectState ValueTree for track/clip changes
- * 2. Displays clips from ProjectState CLIPS nodes
- * 3. User double-clicks MIDI clip → calls openPianoRoll callback
-
- * 4. User toggles "Show Automation" → displays AutomationLaneComponent
- * 5. User edits clips → updates ProjectState (triggers ClipSynchronizer)
- */
-
 #pragma once
+
+// ArrangerView.h
+
 
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>

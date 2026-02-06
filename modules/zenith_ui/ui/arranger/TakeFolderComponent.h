@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    TakeFolderComponent.h
-    Created: 2025-12-24
-    Author:  Zenith DAW
-
-    Component for rendering and interacting with a Take Folder.
-    Displays stacked take lanes and handles comp region selection.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>

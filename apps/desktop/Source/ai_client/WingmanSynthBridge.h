@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "../instruments/ZenithPolySynthDefs.h"
+#include <zenith_core/instruments/ZenithPolySynthDefs.h>
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_audio_processors/juce_audio_processors.h>

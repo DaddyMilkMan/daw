@@ -17,19 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    CommandAPI_SynthHandlers.cpp
-    Created: 2025-01-29
-    Author:  Zenith DAW
-
-    Synth command handlers for CommandAPI.
-    Add these methods to CommandAPI class and call from executeCommand().
+class and call from executeCommand().
 
 
   ==============================================================================*/

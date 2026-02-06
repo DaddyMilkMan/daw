@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ResizablePanelContainer.cpp
-    Created: 2025-12-12
-    Author:  Zenith DAW Team
-
-  ==============================================================================
-*/
-
-
 #include "ResizablePanelContainer.h"
 #include "../../engine/ZenithLogger.h"
 #include "GlassmorphicPanel.h"

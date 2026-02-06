@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    LoginComponent.cpp
-    Created: 2025-12-28
-    Author:  Zenith DAW Team
-
-    Premium login UI with glassmorphism and Skia rendering.
-
-  ==============================================================================
-
-*/
-
 #include "LoginComponent.h"
 #include "GlassmorphicPanel.h"
 #include "ZenithIcons.h"

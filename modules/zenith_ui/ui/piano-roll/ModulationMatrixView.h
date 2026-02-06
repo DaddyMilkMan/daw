@@ -17,30 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ModulationMatrixView.h
-    Created: 2025-12-09
-    Enhanced: 2025-12-12
-    Author:  Zenith DAW
-
-    Animated Modulation Routing Visualization.
-    Features:
-
-    - Bezier curves for modulation connections
-    - Animated particle flow along routes
-    - Neon glow on active connections
-    - Real-time visualization of modulation values
-    - Interactive drag-to-connect interface
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../../dsp/GlobalLFO.h"

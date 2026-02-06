@@ -17,15 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file ArrangerClipManager.cpp
- * @brief Implementation of clip management for ArrangerComponent
- */
-
+// ArrangerClipManager.cpp
 
 #include "ProjectState.h"
 #include "../../network/CollaborationManager.h"

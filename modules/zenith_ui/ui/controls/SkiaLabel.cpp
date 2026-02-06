@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaLabel.cpp
-    Created: 2025-12-07
-    Author:  AI Assistant
-
-    Pure Skia-based label implementation
-
-  ==============================================================================
-
-*/
-
 #include "SkiaLabel.h"
 #include "ZenithDesignSystem.h"
 

@@ -87,7 +87,7 @@ private:
     
     static const std::unordered_map<APITier, TierConfig> tierConfigs;
     
-    void checkAndResetCounters();
+    void checkAndResetCounters() const;
     void resetMinuteCounter();
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(APILimits)

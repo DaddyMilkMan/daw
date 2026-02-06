@@ -17,25 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithDesignSystem.h
-    Created: 2025-11-30
-    Authors: Leo "Lil Bit" Rossi & Yuki Tanaka
-
-    The complete Neon Noir design system for Zenith DAW.
-    "If it doesn't glow, it doesn't go!" - Leo
-    "Every pixel has a purpose." - Yuki
-
-
-  ==============================================================================
-*/
-
 #pragma once
 #include "FontManager.h"
 #include <core/SkBlurTypes.h>
@@ -728,7 +709,7 @@ void drawGlowRect(SkCanvas* canvas, const juce::Rectangle<float>& bounds, SkColo
 // COMPONENT TOKENS - Button
 // ============================================================================
 // Component-level tokens wrap semantic tokens with DAW-specific accessors.
-// This follows Material Design's primitive → semantic → component hierarchy.
+// This follows Material Design's primitive -> semantic -> component hierarchy.
 // Reference: https://material.io/design/tokens
 
 namespace button {

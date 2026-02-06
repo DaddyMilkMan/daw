@@ -17,40 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    BackdropBlur.h
-    Created: 2025-12-12
-    Author:  Zenith DAW Team
-
-    Real backdrop blur implementation for glassmorphism effects.
-
-    This is NOT fake transparency - it actually blurs the content BEHIND panels
-
-    using Skia's SkImageFilters::Blur with saveLayer.
-
-    Key Insight: saveLayer with an SkImageFilter captures all previously drawn
-    content within the specified bounds and applies the filter to it.
-
-    Usage:
-      // Simple one-shot blur panel
-      BackdropBlur::drawBlurredPanel(canvas, bounds, 12.0f, 16.0f,
-                                     colors::BG_DARK, 0.7f);
-
-      // Or using begin/end for custom content on top
-      BackdropBlur::beginBlur(canvas, bounds, 16.0f, colors::BG_DARK, 0.6f);
-      // ... draw your panel content here ...
-      BackdropBlur::endBlur(canvas);
-
-  ==============================================================================
-*/
-
 #pragma once
+
+// BackdropBlur.h
+
 
 #include "ZenithDesignSystem.h"
 #include "ZenithSkia.h"

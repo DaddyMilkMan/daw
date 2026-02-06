@@ -17,27 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    MixerChannel.cpp
-    Ported from: ZenithDAW-Native/Source/Audio/MixerChannel.cpp (2025-11-11)
-    Author:  Zenith DAW → Zenith DAW
-
-    Mixer channel strip implementation with professional compressor
-
-    JUCE 8 / C++20 adaptations:
-
-    - Wrapped in namespace zenith
-    - Professional ProCompressor with RMS/Lookahead
-    - Lock-free coefficient swapping via ReferenceCountedObject
-
-  ==============================================================================
-*/
+// MixerChannel.cpp - Mixer channel strip implementation
 
 #include "MixerChannel.h"
 #include "../dsp/AudioFifo.h"

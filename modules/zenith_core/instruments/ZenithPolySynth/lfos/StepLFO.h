@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    StepLFO.h
-    Created: 2025-01-28
-    Updated: 2025-02-02 - S-tier implementation
-    Author:  Zenith DAW
-
-    Professional step sequencer LFO with sample-accurate phase accumulation.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>

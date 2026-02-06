@@ -17,31 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ModernSettingsPanel.cpp
-    Created: 2026-02-04
-    Author:  Zenith DAW Team
-
-    Production-ready settings panel with full Settings integration.
-    
-    Features:
-
-    - Real-time settings sync with Settings singleton
-    - Persistent storage of user preferences
-    - Audio device configuration
-    - Theme and appearance settings
-    - Performance optimization options
-    - Keyboard shortcut customization
-
-  ==============================================================================
-*/
-
 #include "ModernSettingsPanel.h"
 #include "../design-system/ColorBridge.h"
 #include "../design-system/ZenithDesignSystem.h"

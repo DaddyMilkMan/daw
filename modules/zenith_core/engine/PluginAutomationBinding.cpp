@@ -17,21 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-
-    PluginAutomationBinding.cpp
-    Created: 2025-12-25
-    Author:  Zenith DAW
-
-    Plugin parameter automation binding implementation.
-
-  ==============================================================================
-
-*/
+// PluginAutomationBinding.cpp
 
 #include "PluginAutomationBinding.h"
 

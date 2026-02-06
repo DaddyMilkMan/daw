@@ -17,22 +17,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-//     File: EngineExport.cpp
-//     Brief: Offline project export and rendering implementation
-//     Note: This is a modular component of Engine - declarations remain in Engine.h
-
-
-#include "../engine/Clip.h"
-#include "../engine/AuxBus.h"
-#include "../engine/PluginHost.h"
-#include "../engine/RoutingGraph.h"
-#include "../engine/TempoMap.h"
-#include "../Source/dsp/Dither.h"
+#include "Engine.h"
+#include "AudioExporter.h"
+#include "Clip.h"
+#include "AuxBus.h"
+#include "PluginHost.h"
+#include "RoutingGraph.h"
+#include "TempoMap.h"
+#include "dsp/Dither.h"
 
 namespace zenith {
 

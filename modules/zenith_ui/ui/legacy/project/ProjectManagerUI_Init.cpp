@@ -17,18 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    ProjectManagerUI_Init.cpp
-    ProjectManagerUI initialization and layout
-  ==============================================================================
-*/
-
-
 namespace ui {
 
 void ProjectManagerUI::resized() {

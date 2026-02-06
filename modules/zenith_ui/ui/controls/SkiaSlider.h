@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaSlider.h
-    Deprecated: Replaced by ZenithSlider
-    
-    Legacy header for backward compatibility.
-
-  ==============================================================================
-*/
-
-
-
 #pragma once
 
 #include "ZenithSlider.h"

@@ -18,7 +18,7 @@
 #pragma once
 
 #include "GrokAPIClient.h"
-#include "../instruments/ZenithPresetManager.h"
+#include <zenith_core/instruments/ZenithPresetManager.h>
 #include "AIResponseCache.h"
 #include <juce_core/juce_core.h>
 #include <functional>

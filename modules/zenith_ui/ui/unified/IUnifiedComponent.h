@@ -17,13 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
 
- * @file IUnifiedComponent.h
- * @brief Unified UI component interface
+/**
+ * File: IUnifiedComponent.h
+ * Brief: Unified UI component interface
  *
  * This interface provides a common base for all UI components,
  * abstracting the rendering backend (Skia) from component logic.
@@ -38,7 +35,7 @@ namespace zenith {
 
 /**
  * @class IUnifiedComponent
- * @brief Base interface for all unified UI components
+ // Brief: Base interface for all unified UI components
  *
  * This interface defines the contract for all UI components,
  * enabling consistent behavior across different types of UI elements.
@@ -52,24 +49,24 @@ public:
     //==========================================================================
 
     /**
-     * @brief Initialize the component
+     // Brief: Initialize the component
      */
     virtual void initialize() = 0;
 
     /**
-     * @brief Update component state
+     // Brief: Update component state
      * @param deltaTime Time since last update in seconds
      */
     virtual void update(float deltaTime) = 0;
 
     /**
-     * @brief Render the component
+     // Brief: Render the component
      * @param graphics Rendering context
      */
     virtual void render(juce::Graphics& graphics) = 0;
 
     /**
-     * @brief Handle keyboard input
+     // Brief: Handle keyboard input
      * @param key The key that was pressed
      * @return True if the key was handled
      */
@@ -80,25 +77,25 @@ public:
     //==========================================================================
 
     /**
-     * @brief Set the component's enabled state
+     // Brief: Set the component's enabled state
      * @param enabled Whether the component is enabled
      */
     virtual void setEnabled(bool enabled) = 0;
 
     /**
-     * @brief Set the component's visibility
+     // Brief: Set the component's visibility
      * @param visible Whether the component is visible
      */
     virtual void setVisible(bool visible) = 0;
 
     /**
-     * @brief Check if the component is enabled
+     // Brief: Check if the component is enabled
      * @return True if the component is enabled
      */
     virtual bool isEnabled() const = 0;
 
     /**
-     * @brief Check if the component is visible
+     // Brief: Check if the component is visible
      * @return True if the component is visible
      */
     virtual bool isVisible() const = 0;
@@ -108,12 +105,12 @@ public:
     //==========================================================================
 
     /**
-     * @brief Apply theme to the component
+     // Brief: Apply theme to the component
      */
     virtual void applyTheme() = 0;
 
     /**
-     * @brief Refresh the component's appearance
+     // Brief: Refresh the component's appearance
      */
     virtual void refresh() = 0;
 
@@ -122,19 +119,19 @@ public:
     //==========================================================================
 
     /**
-     * @brief Set the click handler
+     // Brief: Set the click handler
      * @param handler Function to call when clicked
      */
     virtual void setClickHandler(std::function<void()> handler) = 0;
 
     /**
-     * @brief Set the change handler
+     // Brief: Set the change handler
      * @param handler Function to call when value changes
      */
     virtual void setChangeHandler(std::function<void()> handler) = 0;
 
     /**
-     * @brief Set the focus handler
+     // Brief: Set the focus handler
      * @param handler Function to call when focus changes
      */
     virtual void setFocusHandler(std::function<void(bool)> handler) = 0;
@@ -144,33 +141,33 @@ public:
     //==========================================================================
 
     /**
-     * @brief Set the component's size
+     // Brief: Set the component's size
      * @param width Width in pixels
      * @param height Height in pixels
      */
     virtual void setSize(int width, int height) = 0;
 
     /**
-     * @brief Set the component's position
+     // Brief: Set the component's position
      * @param x X position in pixels
      * @param y Y position in pixels
      */
     virtual void setPosition(int x, int y) = 0;
 
     /**
-     * @brief Get the preferred size
+     // Brief: Get the preferred size
      * @return Preferred size
      */
     virtual juce::Rectangle<int> getPreferredSize() const = 0;
 
     /**
-     * @brief Get the minimum size
+     // Brief: Get the minimum size
      * @return Minimum size
      */
     virtual juce::Rectangle<int> getMinimumSize() const = 0;
 
     /**
-     * @brief Get the maximum size
+     // Brief: Get the maximum size
      * @return Maximum size
      */
     virtual juce::Rectangle<int> getMaximumSize() const = 0;
@@ -180,13 +177,13 @@ public:
     //==========================================================================
 
     /**
-     * @brief Add a listener for component events
+     // Brief: Add a listener for component events
      * @param listener The listener to add
      */
     virtual void addListener(juce::ComponentListener* listener) = 0;
 
     /**
-     * @brief Remove a listener for component events
+     // Brief: Remove a listener for component events
      * @param listener The listener to remove
      */
     virtual void removeListener(juce::ComponentListener* listener) = 0;
@@ -194,44 +191,44 @@ public:
 
 /**
  * @class IUnifiedContainer
- * @brief Interface for container components
+ // Brief: Interface for container components
  */
 class IUnifiedContainer : public IUnifiedComponent {
 public:
     virtual ~IUnifiedContainer() = default;
 
     /**
-     * @brief Add a child component
+     // Brief: Add a child component
      * @param child The child component to add
      */
     virtual void addChildComponent(std::shared_ptr<IUnifiedComponent> child) = 0;
 
     /**
-     * @brief Remove a child component
+     // Brief: Remove a child component
      * @param child The child component to remove
      */
     virtual void removeChildComponent(std::shared_ptr<IUnifiedComponent> child) = 0;
 
     /**
-     * @brief Remove all child components
+     // Brief: Remove all child components
      */
     virtual void removeAllChildren() = 0;
 
     /**
-     * @brief Get the number of child components
+     // Brief: Get the number of child components
      * @return Number of child components
      */
     virtual int getNumChildComponents() const = 0;
 
     /**
-     * @brief Get a child component by index
+     // Brief: Get a child component by index
      * @param index Index of the child component
      * @return The child component, or nullptr if not found
      */
     virtual std::shared_ptr<IUnifiedComponent> getChildComponent(int index) const = 0;
 
     /**
-     * @brief Layout the child components
+     // Brief: Layout the child components
      */
     virtual void layoutChildren() = 0;
 };

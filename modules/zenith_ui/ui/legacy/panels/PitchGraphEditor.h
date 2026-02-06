@@ -17,30 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PitchGraphEditor.h
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Graph Mode pitch editor - like Melodyne/Auto-Tune Graph.
-    
-    Features:
-
-    - Visual pitch curve display
-    - Note blocks with drag-to-edit
-    - Pitch curve drawing/editing
-    - Per-note parameter editing
-    - Time/pitch grid
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>

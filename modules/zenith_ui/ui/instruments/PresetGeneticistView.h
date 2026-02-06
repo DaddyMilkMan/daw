@@ -17,27 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PresetGeneticistView.h
-    Created: 2025-12-09
-    Author:  Zenith DAW AI Team
-
-    Visualizer for the AI Sound Designer.
-    Shows the target spectrum vs the current evolved spectrum.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
-#include "../../ai/PresetGeneticistAgent.h"
+#include "ai_client/PresetGeneticistAgent.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include <juce_dsp/juce_dsp.h>
 #include <juce_gui_basics/juce_gui_basics.h>

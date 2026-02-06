@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ExpressionLaneEditor.h
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Handles mouse interactions for editing MPE expression lanes in the piano roll.
-    Supports clicking to add points, dragging to edit, and deleting points.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <core/SkCanvas.h>

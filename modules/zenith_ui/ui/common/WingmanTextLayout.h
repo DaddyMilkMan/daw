@@ -17,31 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    WingmanTextLayout.h
-    Created: 2026-01-18
-    Author:  Zenith Team
-
-    High-Fidelity Markdown Text Layout Engine for Skia.
-    Supports:
-    - Headers (#, ##)
-
-    - Bold (**text**), Italic (*text*)
-    - Inline Code (`text`)
-    - Code Blocks (```lang ... ```)
-    - Bulleted Lists (- item)
-    - Paragraph spacing
-
-    (Regex-free implementation for maximum compatibility)
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>

@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithAutoTune.cpp
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Built-in professional pitch correction effect - INCLUDED FREE.
-
-  ==============================================================================
-
-*/
-
 #include "ZenithAutoTune.h"
 
 namespace zenith {
@@ -208,9 +191,6 @@ void ZenithAutoTune::processBlock(juce::AudioBuffer<float>& buffer,
     isCorrecting_.store(pitchCorrector_.isPitchCorrecting());
     
     // Mix corrected signal back to stereo
-    // For simplicity, we apply the same correction to all channels
-    // In a full implementation, you'd calculate the difference and apply per-channel
-    
     // Calculate gain compensation
     float inputLevel = monoBuffer_.getRMSLevel(0, 0, numSamples);
     float outputLevel = correctedBuffer_.getRMSLevel(0, 0, numSamples);
@@ -235,11 +215,15 @@ void ZenithAutoTune::processBlock(juce::AudioBuffer<float>& buffer,
     }
 }
 
+bool ZenithAutoTune::hasEditor() const { return false; }
+juce::AudioProcessorEditor* ZenithAutoTune::createEditor() { return nullptr; }
+
 //==============================================================================
 // Direct parameter control
 void ZenithAutoTune::setRetuneSpeed(float ms)
 {
-    *parameters->getParameter("retuneSpeed") = ms;
+    if (auto* p = parameters->getParameter("retuneSpeed"))
+        p->setValueNotifyingHost(p->getNormalisableRange().convertTo0to1(ms));
 }
 
 float ZenithAutoTune::getRetuneSpeed() const
@@ -249,7 +233,8 @@ float ZenithAutoTune::getRetuneSpeed() const
 
 void ZenithAutoTune::setHumanize(float amount)
 {
-    *parameters->getParameter("humanize") = juce::jlimit(0.0f, 1.0f, amount);
+    if (auto* p = parameters->getParameter("humanize"))
+        p->setValueNotifyingHost(juce::jlimit(0.0f, 1.0f, amount));
 }
 
 float ZenithAutoTune::getHumanize() const
@@ -259,7 +244,8 @@ float ZenithAutoTune::getHumanize() const
 
 void ZenithAutoTune::setCorrectionAmount(float amount)
 {
-    *parameters->getParameter("correctionAmount") = juce::jlimit(0.0f, 1.0f, amount);
+    if (auto* p = parameters->getParameter("correctionAmount"))
+        p->setValueNotifyingHost(juce::jlimit(0.0f, 1.0f, amount));
 }
 
 float ZenithAutoTune::getCorrectionAmount() const
@@ -269,7 +255,8 @@ float ZenithAutoTune::getCorrectionAmount() const
 
 void ZenithAutoTune::setFormantPreservation(float amount)
 {
-    *parameters->getParameter("formantPreserve") = juce::jlimit(0.0f, 1.0f, amount);
+    if (auto* p = parameters->getParameter("formantPreserve"))
+        p->setValueNotifyingHost(juce::jlimit(0.0f, 1.0f, amount));
 }
 
 float ZenithAutoTune::getFormantPreservation() const
@@ -279,7 +266,8 @@ float ZenithAutoTune::getFormantPreservation() const
 
 void ZenithAutoTune::setKey(dsp::Note rootNote)
 {
-    *parameters->getParameter("key") = static_cast<float>(rootNote);
+    if (auto* p = parameters->getParameter("key"))
+        p->setValueNotifyingHost(p->getNormalisableRange().convertTo0to1(static_cast<float>(rootNote)));
 }
 
 dsp::Note ZenithAutoTune::getKey() const
@@ -289,7 +277,8 @@ dsp::Note ZenithAutoTune::getKey() const
 
 void ZenithAutoTune::setScale(dsp::MusicalScale scale)
 {
-    *parameters->getParameter("scale") = static_cast<float>(scale);
+    if (auto* p = parameters->getParameter("scale"))
+        p->setValueNotifyingHost(p->getNormalisableRange().convertTo0to1(static_cast<float>(scale)));
 }
 
 dsp::MusicalScale ZenithAutoTune::getScale() const

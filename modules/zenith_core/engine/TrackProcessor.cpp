@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    TrackProcessor.cpp
-    Created: 2025
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "TrackProcessor.h"
 #include <array>
 #include <algorithm>

@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    InternalPluginFormat.h
-    Created: 2025-12-19
-    Author:  Zenith DAW
-
-    Custom JUCE Plugin Format to host internal Zenith plugins (EQ, Comp, etc.)
-    as if they were VSTs.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <functional>

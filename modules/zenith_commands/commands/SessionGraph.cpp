@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SessionGraph.cpp
-    Created: 2025-11-14
-    Author:  Zenith DAW - Phase 5: Wingman v0
-
-    Project state serializer implementation
-
-  ==============================================================================
-
-*/
-
 #include "SessionGraph.h"
 #include "Engine.h"
 #include "ProjectState.h"

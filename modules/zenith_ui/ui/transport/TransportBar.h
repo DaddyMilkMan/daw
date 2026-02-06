@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    TransportBar.h
-    Created: 2025-11-28
-    Author:  Leo "Lil Bit" Rossi
-
-    Transport controls with Neon Noir styling.
-    Play, Stop, Record, Tempo, CPU meter, Timeline.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../design-system/InteractionHelper.h"

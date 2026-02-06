@@ -24,9 +24,9 @@
 
 #pragma once
 
-#include "../engine/RoutingGraph.h"
-#include "../engine/Track.h"
-#include "Engine.h"
+#include <zenith_core/engine/RoutingGraph.h>
+#include <zenith_core/engine/Track.h>
+#include <zenith_core/engine/Engine.h>
 #include <atomic>
 #include <functional>
 #include <juce_audio_basics/juce_audio_basics.h>

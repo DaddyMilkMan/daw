@@ -17,26 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-﻿/*
-  ==============================================================================
-
-    MixerController.h
-    Created: 2025-12-26
-    Author:  Zenith DAW
-
-    Controller for mixer operations.
-    Acts as a facade/manager for track mixing state, grouping, and metering.
-
-
-  ==============================================================================
-*/
-
 #pragma once
+
+// MixerController.h
+
 
 #include <juce_core/juce_core.h>
 

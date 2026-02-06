@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    InstrumentBrowserPanel.cpp
-    Implementation for the Instrument Browser Panel
-    
-    Note: Most implementation is in the header (inline) for simplicity.
-    This file exists for proper compilation unit structure.
-  ==============================================================================
-*/
-
-
 #include "InstrumentBrowserPanel.h"
 
 // InstrumentBrowserPanel is fully implemented inline in the header.

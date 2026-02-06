@@ -17,30 +17,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithPolySynthUI.h
-    Created: 2025-11-27
-    Author:  Zenith DAW
-
-    Skia-based UI for ZenithPolySynth.
-    Implements a "Neon Noir" Glassmorphism design.
-
-
-    REFACTOR: "Pure Skia" - Uses lightweight SkiaWidget structs for controls.
-*/
-
 #pragma once
 
 #include "../../Settings.h"
 #include "../../instruments/ZenithPolySynth.h"
 #include "../../instruments/ZenithPresetManager.h"
-#include "../../ai/WingmanSynthBridge.h"
+#include "ai_client/WingmanSynthBridge.h"
 #include "../../rendering/SkiaRenderer.h"
 #include "../controls/ZenithUIComponents.h"
 #include "../visualizations/FilterResponseDisplay.h"

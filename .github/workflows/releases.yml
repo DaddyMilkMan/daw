@@ -1,0 +1,351 @@
+name: Releases
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Is this a prerelease?'
+        required: true
+        type: boolean
+        default: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Version validation
+  validate-version:
+    name: Validate Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      is-prerelease: ${{ steps.version.outputs.is-prerelease }}
+    steps:
+    - name: Get version from tag or input
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "push" ] && [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          VERSION="${{ github.ref_name }}"
+          IS_PRERELEASE=false
+          echo "Version from tag: $VERSION"
+        else
+          VERSION="${{ github.event.inputs.version }}"
+          IS_PRERELEASE="${{ github.event.inputs.prerelease }}"
+          echo "Version from input: $VERSION"
+        fi
+
+        # Validate version format
+        if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$ ]]; then
+          echo "Invalid version format: $VERSION"
+          echo "Expected format: v1.0.0 or v1.0.0-beta"
+          exit 1
+        fi
+
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "is-prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+
+  # Build releases
+  build-releases:
+    name: Build Release ${{ matrix.os }} (${{ matrix.config }})
+    runs-on: ${{ matrix.os }}
+    needs: validate-version
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        config:
+          - { name: "Release", build_type: "Release" }
+          - { name: "Debug", build_type: "Debug" }
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup dependencies
+      uses: ./.github/actions/setup-dependencies
+      with:
+        os: ${{ matrix.os }}
+
+    - name: Configure CMake
+      run: |
+        cmake -B build -S apps/desktop \
+          -DCMAKE_BUILD_TYPE=${{ matrix.config.build_type }} \
+          -DBUILD_TESTS=OFF \
+          -DBUILD_EXAMPLES=OFF \
+          -DBUILD_DOCUMENTATION=ON
+
+    - name: Build
+      run: cmake --build build --config ${{ matrix.config.build_type }}
+
+    - name: Package release
+      if: matrix.config.build_type == 'Release'
+      run: |
+        # Create release packages
+        mkdir -p release-packages
+
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          # Create Windows installer
+          cp build/*.exe release-packages/
+          makensis scripts/installer/windows.nsi
+        elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+          # Create macOS app bundle
+          mkdir -p release-packages/ZenithDAW.app/Contents/MacOS
+          cp build/* release-packages/ZenithDAW.app/Contents/MacOS/
+          # Add app bundle structure
+        else
+          # Create Linux package
+          mkdir -p release-packages/usr/local/bin
+          cp build/* release-packages/usr/local/bin/
+          # Create Debian package
+          dpkg-deb --build release-packages release-packages/
+        fi
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: zenith-${{ matrix.os }}-${{ steps.version.outputs.version }}
+        path: release-packages/
+        retention-days: 90
+
+  # Build source distribution
+  build-source:
+    name: Build Source Distribution
+    runs-on: ubuntu-latest
+    needs: validate-version
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Create source archive
+      run: |
+        # Create versioned source archive
+        git archive --format tar.gz --prefix=zenith-daw-${{ steps.version.outputs.version }}/ v${{ steps.version.outputs.version }} > zenith-daw-${{ steps.version.outputs.version }}.tar.gz
+
+    - name: Upload source artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: zenith-source-${{ steps.version.outputs.version }}
+        path: zenith-daw-${{ steps.version.outputs.version }}.tar.gz
+        retention-days: 90
+
+  # Documentation
+  build-docs:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+    needs: validate-version
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup Doxygen
+      run: |
+        sudo apt-get install -y doxygen graphviz
+
+    - name: Generate documentation
+      run: |
+        doxygen docs/Doxyfile
+        cd docs/Doxygen && make html
+
+    - name: Upload documentation
+      uses: actions/upload-artifact@v4
+      with:
+        name: zenith-docs-${{ steps.version.outputs.version }}
+        path: docs/Doxygen/html/
+        retention-days: 90
+
+  # Create Release
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [validate-version, build-releases, build-source, build-docs]
+    if: success()
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts/
+
+    - name: Create release notes
+      id: release-notes
+      run: |
+        # Generate release notes
+        cat > release-notes.md << EOF
+        # Zenith DAW ${{ steps.version.outputs.version }}
+
+        ## What's New
+
+        This release includes:
+
+        - Core improvements and bug fixes
+        - Enhanced audio engine performance
+        - Updated UI components
+        - Documentation improvements
+
+        ## Installation
+
+        ### Windows
+        Download the Windows installer from the assets below.
+
+        ### macOS
+        Download the macOS app bundle from the assets below.
+
+        ### Linux
+        Download the Debian package or build from source.
+
+        ## System Requirements
+
+        - Windows 10/11, macOS 11.0+, or Ubuntu 20.04+
+        - 4GB RAM minimum (8GB recommended)
+        - 100MB disk space
+        - ASIO/WASAPI/CoreAudio compatible audio interface
+
+        ## Changelog
+
+        ### Features
+        - [ ] New feature 1
+        - [ ] New feature 2
+
+        ### Bug Fixes
+        - [ ] Fixed issue with audio playback
+        - [ ] Improved MIDI timing
+
+        ### Documentation
+        - [ ] Updated getting started guide
+        - [ ] Added troubleshooting guide
+
+        ## Support
+
+        - GitHub Issues: [Report bugs](https://github.com/${{ github.repository }}/issues)
+        - Discussions: [Community discussions](https://github.com/${{ github.repository }}/discussions)
+        - Discord: [Join our community](https://discord.gg/zenith-daw)
+
+        ## License
+
+        This release is licensed under AGPL v3. See [LICENSE](LICENSE) for details.
+
+        ## Special Thanks
+
+        Thank you to all contributors who made this release possible!
+
+        ---
+
+        Zenith DAW - Professional Audio Workstation
+        ${{ steps.version.outputs.version }}${{ steps.version.outputs.is-prerelease == 'true' && ' (Pre-release)' || '' }}
+        EOF
+
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.version.outputs.version }}
+        release_name: Zenith DAW ${{ steps.version.outputs.version }}
+        body_path: release-notes.md
+        draft: false
+        prerelease: ${{ steps.version.outputs.is-prerelease }}
+        files: |
+          artifacts/zenith-windows-latest-${{ steps.version.outputs.version }}/**
+          artifacts/zenith-macos-latest-${{ steps.version.outputs.version }}/**
+          artifacts/zenith-ubuntu-latest-${{ steps.version.outputs.version }}/**
+          artifacts/zenith-source-${{ steps.version.outputs.version }}/**
+          artifacts/zenith-docs-${{ steps.version.outputs.version }}/**
+
+  # Docker images
+  build-docker:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: validate-version
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Login to Container Registry
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # Publish to package managers
+  publish-packages:
+    name: Publish Packages
+    runs-on: ubuntu-latest
+    needs: [validate-version, build-releases, build-source, build-docs]
+    if: success()
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts/
+
+    - name: Publish to GitHub Releases
+      run: |
+        # Already handled by create-release job
+
+    - name: Publish to Snapcraft
+      env:
+        SNAPCRAFT_TOKEN: ${{ secrets.SNAPCRAFT_TOKEN }}
+      run: |
+        # Snapcraft publishing
+        if [ "${{ steps.version.outputs.is-prerelease }}" = "false" ]; then
+          snapcraft upload --release ${{ steps.version.outputs.version }} artifacts/zenith-ubuntu-latest-${{ steps.version.outputs.version }}/*.snap
+        fi
+
+    - name: Publish to Flathub
+      env:
+        FLATHUB_TOKEN: ${{ secrets.FLATHUB_TOKEN }}
+      run: |
+        # Flathub publishing
+        cd flatpak
+        flatpak-spawn --host flatpak-builder --build-dir=build --repo=repo com.zenithdaw.Zenith.json
+        flatpak-spawn --host flatpak build-repo repo
+        flatpak-spawn --host flatpak build-bundle repo ZenithDAW.flatpak com.zenithdaw.Zenith
+        mv ZenithDAW.flatpak ../artifacts/
+        # Push to Flathub (requires manual intervention or API token)
+
+    - name: Update Homebrew formula
+      env:
+        HOMEBREW_GITHUB_TOKEN: ${{ secrets.HOMEBREW_GITHUB_TOKEN }}
+      run: |
+        # Update Homebrew formula
+        brew bump-formula-pr --no-audit --dry-run --write=homebrew/zenith-daw.rb --version ${{ steps.version.outputs.version }}

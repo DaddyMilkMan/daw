@@ -17,34 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SessionViewComponent.h
-    Created: 2025-12-12
-    Author:  Zenith DAW Team
-
-    Session View (Clip Launcher) - Ableton-style grid layout
-
-    Features:
-
-    - Grid layout: Columns = Tracks, Rows = Scenes
-    - Clip slots with waveform/MIDI thumbnails
-    - Play/Stop buttons on hover
-    - Recording state indicator
-    - Color-coded by clip type
-    - Scene launch column
-    - Track headers with arm/solo/mute
-    - Drag-and-drop support
-    - Playing clip animation
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "Engine.h"

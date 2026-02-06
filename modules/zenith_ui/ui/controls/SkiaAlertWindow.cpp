@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaAlertWindow.cpp
-    Created: 2025-12-07
-    Author:  AI Assistant
-
-    Pure Skia-based alert window implementation
-
-  ==============================================================================
-
-*/
-
 #include "SkiaAlertWindow.h"
 #include "ZenithDesignSystem.h"
 

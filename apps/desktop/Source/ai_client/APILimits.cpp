@@ -224,9 +224,9 @@ void APILimits::saveConfiguration() {
     usage->setProperty("lastDayReset", lastDayReset.toMilliseconds());
     usage->setProperty("monthStart", monthStart.toMilliseconds());
     
-    config->setProperty("usage", usage);
+    config->setProperty("usage", juce::var(usage.get()));
     
-    configFile.replaceWithText(juce::JSON::toString(config));
+    configFile.replaceWithText(juce::JSON::toString(juce::var(config.get())));
 }
 
 void APILimits::checkAndResetCounters() const {

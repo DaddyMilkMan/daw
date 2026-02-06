@@ -17,24 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SvgIcon.cpp
-    Created: 2026-02-01
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "SvgIcon.h"
-#include "../../engine/ZenithLogger.h"
-#include "../../instruments/ContentPaths.h"
+#include "zenith_core/engine/ZenithLogger.h"
+#include "zenith_core/instruments/ContentPaths.h"
 #include <core/SkBlendMode.h>
 #include <core/SkSize.h>
 #include <core/SkStream.h>

@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    InstrumentRegistry.cpp
-    Created: 2025-11-18
-    Author:  Zenith DAW
-
-    Implementation of InstrumentRegistry.
-
-  ==============================================================================
-
-*/
-
 #include "InstrumentRegistry.h"
 
 namespace zenith {

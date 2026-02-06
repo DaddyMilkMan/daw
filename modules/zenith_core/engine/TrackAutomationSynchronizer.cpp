@@ -17,23 +17,16 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-//     File: TrackAutomationSynchronizer.cpp
-//     Brief: Automation synchronizer implementation
-//*
-
-
-
-// Forward declare Track from namespace
-#include "../Source/engine/Track.h"
+//==============================================================================
+#include "Track.h"
+#include "ProjectState.h"
+#include "Engine.h"
+#include "TrackAutomationSynchronizer.h"
+#include "AudioConstants.h"
+#include "TempoMap.h"
 
 using namespace zenith::constants;
 
-//==============================================================================
 namespace zenith {
 
 //==============================================================================
@@ -99,7 +92,7 @@ void TrackAutomationSynchronizer::timerCallback()
     juce::int64 playheadSamples = engine.getPlayheadSamples();
     double sampleRate = engine.getSampleRate();
     
-    // Phase 15: Use TempoMap for samples → beats conversion (handles variable tempo)
+    // Phase 15: Use TempoMap for samples -> beats conversion (handles variable tempo)
     double playbackBeats = engine.getTempoMap().samplesToBeats(playheadSamples, sampleRate);
 
     // Update all tracks with automation
@@ -303,7 +296,7 @@ double TrackAutomationSynchronizer::sampleEnvelope(const juce::ValueTree& envelo
            Alternative (Ableton/Bitwig style):
            t_curved = (exp(skew * t) - 1) / (exp(skew) - 1)
            where skew is proportional to tension.
-       //*
+        */
         
         double skew = tension * 5.0; // Scale tension to useful exponential range
         // Avoid skew=0 (handled by linear check above)

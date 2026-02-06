@@ -17,15 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file MainWindow.cpp
- * @brief Main window implementation
- */
-
+// MainWindow.cpp
 
 #include "engine/ZenithLogger.h"
 #include "network/MCPServer.h"

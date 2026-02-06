@@ -17,19 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#pragma once
 
-  ==============================================================================
-    Track.h
-    Ported from: ZenithDAW-Native/Source/Audio/Track.h (2025-11-11)
-    Author:  Zenith DAW → Zenith DAW
-    Audio/MIDI track with clip playback, plugin chain, and mixer controls
-  ==============================================================================
-*/
-
+// Track.h - Audio/MIDI track with clip playback, plugin chain, and mixer controls
 
 #include "AutomationManager.h"
 #include "EngineEvent.h" // For MidiFifo

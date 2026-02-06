@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    FilterResponseDisplay.h
-    Created: 2026-02-01
-    Author:  Zenith DAW
-
-    Real-time filter frequency response visualizer for ZenithPolySynth.
-    Shows Bode plot (magnitude response) with optional phase overlay.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../../instruments/ZenithPolySynthDefs.h"

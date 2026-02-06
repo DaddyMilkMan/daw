@@ -17,26 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    RealTimeGarbageCollector.h
-    Created: 2025-12-25
-    Author:  Zenith DAW
-
-    A release-pool garbage collector for real-time audio threads.
-    Allows the message thread to safely delete objects that might still be
-    referenced by the audio thread, by deferring deletion until a safe
-
-    interval has passed.
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <atomic>

@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithVoiceChanger.h
-    Created: 2025-12-20
-    Author:  Zenith DAW
-
-    Plugin wrapper for DSPVoiceChanger.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include "../dsp/DSPVoiceChanger.h"

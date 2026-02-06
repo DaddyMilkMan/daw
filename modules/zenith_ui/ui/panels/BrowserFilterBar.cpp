@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    BrowserFilterBar.cpp
-    Created: 2025-12-26
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "BrowserFilterBar.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../design-system/ColorBridge.h"

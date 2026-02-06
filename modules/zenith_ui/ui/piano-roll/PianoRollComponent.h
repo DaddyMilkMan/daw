@@ -17,37 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file PianoRollComponent.h
- * @brief Professional-grade MIDI Piano Roll Editor
- *
- * FEATURES:
- * ✅ Core Editing: Create, move, delete, resize notes
- * ✅ Multi-Selection: Ctrl-click, marquee, batch operations
- * ✅ Velocity Editing: Lane + gradient visualization
- * ✅ Copy/Paste: Full clipboard support
- * ✅ Quantize: With strength & swing
-
- * ✅ Smart Duplicate: Pattern-aware duplication
- * ✅ Velocity Curves: Ramp, compress, humanize
- * ✅ Chord Detection: Real-time chord naming
- * ✅ Scale Highlighting: Visual scale guide
- * ✅ Note Muting: Per-note mute toggle
- * ✅ Batched Undo: Proper multi-operation undo/redo
- * ✅ Cursor Feedback: Context-aware cursors
- * ✅ Note Color by Velocity: Visual dynamics
- *
- * Architecture:
- * - Single unified implementation
- * - All edits through ProjectState with batched undo support
- * - ValueTree reactive (auto-refresh on changes)
- */
-
 #pragma once
+
+// PianoRollComponent.h
+
 
 #include "../../engine/ProjectState.h"
 #include "../framework/SkiaComponent.h"

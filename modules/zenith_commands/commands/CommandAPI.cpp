@@ -17,25 +17,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    CommandAPI.cpp
-    Created: 2025-11-14
-    Author:  Zenith DAW - Phase 5: Wingman v0
-
-    JSON command processor implementation
-
-  ==============================================================================
-
-*/
-
 #include "CommandAPI.h"
-#include "../ai/WingmanSynthBridge.h"
+#include "ai_client/WingmanSynthBridge.h"
 #include "../engine/AuxBus.h"
 #include "../engine/InstrumentTrack.h"
 #include "../instruments/ZenithPolySynth.h"
@@ -55,8 +38,8 @@
 #include <memory>
 
 // #include "../ai/AIMasteringAgent.h"
-#include "../ai/PresetGeneticistAgent.h"
-#include "../ai/UXDirectorAgent.h"
+#include "ai_client/PresetGeneticistAgent.h"
+#include "ai_client/UXDirectorAgent.h"
 #include "../dsp/ONNXStemSeparator.h"
 
 namespace zenith {
@@ -2352,5 +2335,28 @@ juce::var CommandAPI::executeCommand(CommandID id, const juce::var &params) {
   return createErrorResponse("Unknown command ID");
 }
 
+
+//==============================================================================
+// Direct API Methods (Non-JSON)
+//==============================================================================
+
+void CommandAPI::setTrackVolume(int trackIndex, float newVolume) {
+    auto tracks = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+    auto track = tracks.getChild(trackIndex);
+    
+    if (track.isValid()) {
+        track.setProperty(ProjectState::PROP_VOLUME, newVolume, &projectState.getUndoManager());
+    }
+}
+
+void CommandAPI::undo() { projectState.getUndoManager().undo(); }
+void CommandAPI::redo() { projectState.getUndoManager().redo(); }
+
+ProjectState& CommandAPI::getProjectState() { return projectState; }
+
+bool CommandAPI::performAction(std::unique_ptr<juce::UndoableAction> action) {
+    if (action == nullptr) return false;
+    return projectState.getUndoManager().perform(action.release());
+}
 } // namespace zenith
 //==============================================================================

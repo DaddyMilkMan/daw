@@ -17,24 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file InstrumentPreset.h
- * @brief Preset system for built-in instruments
- *
- * Provides:
- * - Preset data structure (parameters + macros)
- * - Preset manager for load/save
- * - JSON/ValueTree serialization
- * - File-based preset storage
- */
-
-
-
 #pragma once
+
+// InstrumentPreset.h - Preset system for built-in instruments
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>

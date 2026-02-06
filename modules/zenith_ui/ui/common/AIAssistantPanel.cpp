@@ -17,26 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AIAssistantPanel.cpp
-    Created: 2025-12-19
-    Author:  Zenith DAW AI Team
-
-    Implementation of the AI Assistant Panel UI component.
-
-  ==============================================================================
-
-*/
-
 #include "AIAssistantPanel.h"
-#include "../../ai/SessionDebuggerAgent.h"
-#include "../../ai/UXDirectorAgent.h"
+#include "ai_client/SessionDebuggerAgent.h"
+#include "ai_client/UXDirectorAgent.h"
 #include "../design-system/ZenithDesignSystem.h"
 
 

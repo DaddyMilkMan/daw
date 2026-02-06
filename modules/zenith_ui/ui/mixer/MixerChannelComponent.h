@@ -17,29 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file MixerChannelComponent.h
- * @brief Full-featured mixer channel strip UI component
- *
- * Features:
- * - Vertical fader with metallic handle
- * - Pan knob with center detent
- * - Solo/Mute/Record arm toggle buttons
- * - Peak meter with gradient (green→yellow→red)
- * - Track name label (editable)
-
- * - 8 insert slot indicators
- * - Send level indicators
- * - Glassmorphic panel design
- * - Accent glow when selected
- * - Smooth animations via spring physics
- */
-
 #pragma once
+
+// MixerChannelComponent.h
+
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>

@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    AudioFeedback.cpp
-    Audio feedback system for UI interactions
-
-    Plays short audio cues for button clicks, errors, and notifications
-    using synthesized tones for minimal resource usage.
-  ==============================================================================
-*/
-
-
 #include "AudioFeedback.h"
 #include <cmath>
 #include <juce_audio_basics/juce_audio_basics.h>

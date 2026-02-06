@@ -17,17 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    VisualTestFramework.h
-    Created: 2026-02-05
-    Author:  Zenith DAW Team
-
-    Basic visual regression test framework for SkiaSessionView.
-    ==============================================================================
-*/
-
 #pragma once
+
+// VisualTestFramework.h
+
 
 #include "../ViewTheme.h"
 #include <juce_gui_basics/juce_gui_basics.h>

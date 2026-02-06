@@ -17,26 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    SessionAccessibility.h
-    Created: 2026-02-05
-    Author:  Zenith DAW Team
-
-    WCAG 2.1 Level AA Compliant accessibility system for SkiaSessionView.
-
-    Features:
-    - High contrast mode with dynamic color adjustment
-    - Reduced motion support with preference-based animations
-    - Screen reader support with ARIA attributes
-    - Keyboard navigation with focus indicators
-    - Audio feedback for screen readers
-
-    Patricia (Accessibility Karen) approved!
-    ==============================================================================
-*/
-
 #pragma once
+
+// SessionAccessibility.h
+
 
 #include "../../framework/SkiaAccessibility.h"
 #include "../../design-system/ZenithTheme.h"

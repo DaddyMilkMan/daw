@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ViewSwitcher.cpp
-    Created: 2026-02-03
-    Author:  Zenith DAW Team
-
-    Implementation of ViewSwitcher navigation controller.
-
-  ==============================================================================
-
-*/
-
 #include "ViewSwitcher.h"
 #include "../arranger/SkiaArrangementView.h"
 #include "../session/SkiaSessionView.h"

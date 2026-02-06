@@ -17,17 +17,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-//     File: EngineRecording.cpp
-//     Brief: Recording state management
-//     Note: This is a modular component of Engine - declarations remain in Engine.h
-
-
-#include "../engine/TransportController.h"
+#include "Engine.h"
+#include "RecordingManager.h"
+#include "TransportController.h"
+#include "ProjectState.h"
+#include "TempoMap.h"
+#include "../engine/TrackAutomationSynchronizer.h"
 #include "../engine/Track.h"
 
 namespace zenith {

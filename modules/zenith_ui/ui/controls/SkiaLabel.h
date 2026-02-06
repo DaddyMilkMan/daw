@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaLabel.h
-    Created: 2025-12-07
-    Author:  AI Assistant
-
-    Pure Skia-based label component to replace juce::Label
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include "SkiaComponent.h"

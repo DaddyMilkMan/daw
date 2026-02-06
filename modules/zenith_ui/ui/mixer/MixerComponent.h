@@ -17,28 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file MixerComponent.h
- * @brief Full-featured Mixer panel component for Zenith DAW
- *
- * Features:
- * - Horizontal scrolling viewport for many tracks
- * - Master channel strip (wider, prominent)
- * - Track channel strips with full controls
- * - Glassmorphic panel design
- * - Selection glow on active channel
-
- * - Smooth animations
- *
- * This component acts as a container for MixerChannelComponents and
- * manages the overall mixer layout including the master channel.
- */
-
 #pragma once
+
+// MixerComponent.h
+
 
 #include "Engine.h"
 #include "ProjectState.h"

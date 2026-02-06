@@ -17,18 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    MixerChannelRendering.cpp
-    MixerChannelComponent rendering implementation
-  ==============================================================================
-*/
-
-
 #include "../design-system/ZenithTypography.h"
 #include "../design-system/MeterRenderer.h"
 #include "../design-system/ZenithTheme.h"

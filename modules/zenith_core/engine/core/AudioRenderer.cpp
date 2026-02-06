@@ -17,16 +17,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+//==============================================================================
 
- * @file AudioRenderer.cpp
- * @brief Simplified audio rendering implementation
- */
-
-
+#include "AudioRenderer.h"
+#include "../MasterLimiter.h"
+#include "../Track.h" // AudioRenderer uses Track methods; needs complete type
+#include "../TempoMap.h"
 #include <algorithm>
 
 namespace zenith {
@@ -109,7 +105,7 @@ void AudioRenderer::processAudioBlock(
     processTracks(tracks, auxBuses, incomingMidi, numSamples, playheadPosition);
 
     // Mix to master
-    mixToMaster(/* track buffers would be populated here */, masterBuffer, numSamples);
+    mixToMaster(renderContext_->trackBuffers, masterBuffer, numSamples);
 
     // Apply master effects
     applyMasterEffects(masterBuffer);
@@ -130,7 +126,7 @@ void AudioRenderer::processAudioBlock(
     }
 
     // Update metering
-    updateMasterMeters(masterBuffer, numSamples);
+    resetMasterMeters();
 }
 
 void AudioRenderer::processTracks(
@@ -140,10 +136,118 @@ void AudioRenderer::processTracks(
     int numSamples,
     juce::int64 playheadPosition) {
 
-    // TODO: Implement actual track processing
-    // For now, just log
-    DBG("AudioRenderer: Processing " + juce::String(tracks.size()) +
-        " tracks, " + juce::String(auxBuses.size()) + " aux buses");
+    // Initialize track and aux buffers if needed
+    if (!renderContext_) {
+        renderContext_ = std::make_unique<AudioRenderContext>();
+    }
+
+    // Initialize track buffers
+    if (renderContext_->trackBuffers.size() != tracks.size()) {
+        renderContext_->trackBuffers.resize(tracks.size());
+
+        for (size_t i = 0; i < tracks.size(); ++i) {
+            auto* track = tracks[i];
+            if (track) {
+                int numChannels = track->getChannelCount();
+                renderContext_->trackBuffers[i] = juce::AudioBuffer<float>(numChannels, numSamples);
+                renderContext_->trackBuffers[i].clear();
+            } else {
+                renderContext_->trackBuffers[i] = juce::AudioBuffer<float>(2, numSamples);
+                renderContext_->trackBuffers[i].clear();
+            }
+        }
+    }
+
+    // Initialize aux bus buffers
+    if (renderContext_->auxBusBuffers.size() != auxBuses.size()) {
+        renderContext_->auxBusBuffers.resize(auxBuses.size());
+
+        for (size_t i = 0; i < auxBuses.size(); ++i) {
+            auto* auxBus = auxBuses[i];
+            if (auxBus) {
+                int numChannels = 2; // Aux buses typically stereo
+                renderContext_->auxBusBuffers[i] = juce::AudioBuffer<float>(numChannels, numSamples);
+                renderContext_->auxBusBuffers[i].clear();
+            } else {
+                renderContext_->auxBusBuffers[i] = juce::AudioBuffer<float>(2, numSamples);
+                renderContext_->auxBusBuffers[i].clear();
+            }
+        }
+    }
+
+    // Initialize PDC buffers if needed
+    if (pdcEnabled_.load() && renderContext_->pdcDelayBuffers.size() != tracks.size()) {
+        renderContext_->pdcDelayBuffers.resize(tracks.size());
+        renderContext_->pdcDelayWritePos.resize(tracks.size(), 0);
+        renderContext_->trackLatencies.resize(tracks.size(), 0);
+
+        for (size_t i = 0; i < tracks.size(); ++i) {
+            int maxLatency = 512; // Max latency samples
+            renderContext_->pdcDelayBuffers[i] = juce::AudioBuffer<float>(2, maxLatency);
+            renderContext_->pdcDelayBuffers[i].clear();
+        }
+    }
+
+    // Process each track
+    for (size_t i = 0; i < tracks.size(); ++i) {
+        auto* track = tracks[i];
+        if (!track || !track->isEnabled()) {
+            continue;
+        }
+
+        auto& trackBuffer = renderContext_->trackBuffers[i];
+
+        // Track-level processing via TrackProcessor
+        if (track->getProcessor()) {
+            // Create audio source channel info for the track buffer
+            juce::AudioSourceChannelInfo bufferInfo(&trackBuffer, 0, numSamples);
+
+            // Get empty MIDI buffer for track processing
+            auto& emptyMidi = track->getProcessor()->getEmptyMidiBuffer();
+
+            // Get aux buffers for this track
+            std::vector<juce::AudioBuffer<float>*> auxBuffers;
+            auxBuffers.reserve(auxBuses.size());
+
+            for (auto* auxBus : auxBuses) {
+                if (auxBus) {
+                    int auxIndex = static_cast<int>(&auxBus - &auxBuses[0]);
+                    if (auxIndex < renderContext_->auxBusBuffers.size()) {
+                        auxBuffers.push_back(&renderContext_->auxBusBuffers[auxIndex]);
+                    } else {
+                        auxBuffers.push_back(nullptr);
+                    }
+                }
+            }
+
+            // Process track via TrackProcessor
+            track->getNextAudioBlock(bufferInfo, playheadPosition, incomingMidi,
+                                    auxBuffers, nullptr, nullptr);
+        } else {
+            // Fallback: process track directly
+            juce::AudioSourceChannelInfo bufferInfo(&trackBuffer, 0, numSamples);
+            track->getNextAudioBlock(bufferInfo, playheadPosition, incomingMidi, {}, nullptr, nullptr);
+        }
+
+        // Apply track solo/mute logic
+        if (track->isMuted()) {
+            trackBuffer.clear();
+        } else if (track->isSoloed()) {
+            // Solo logic: if this track is soloed, silence non-soloed tracks
+            for (size_t j = 0; j < tracks.size(); ++j) {
+                if (i != j && tracks[j] && !tracks[j]->isSoloed() && tracks[j]->isEnabled()) {
+                    renderContext_->trackBuffers[j].clear();
+                }
+            }
+        }
+
+        // Apply PDC if enabled
+        if (pdcEnabled_.load() && i < renderContext_->pdcDelayBuffers.size()) {
+            applyPDC(trackBuffer, renderContext_->pdcDelayBuffers[i],
+                     renderContext_->pdcDelayWritePos[i],
+                     renderContext_->trackLatencies[i]);
+        }
+    }
 }
 
 void AudioRenderer::mixToMaster(
@@ -151,17 +255,48 @@ void AudioRenderer::mixToMaster(
     juce::AudioBuffer<float>& masterBuffer,
     int numSamples) {
 
-    // TODO: Implement actual mixing
-    // For now, just apply volume
+    // Clear master buffer
+    masterBuffer.clear();
+
+    // Mix all enabled tracks to master
+    for (const auto& trackBuffer : trackBuffers) {
+        if (trackBuffer.getNumSamples() > 0) {
+            // Mix track buffer to master
+            for (int channel = 0; channel < trackBuffer.getNumChannels() &&
+                 channel < masterBuffer.getNumChannels(); ++channel) {
+                const float* sourceChannel = trackBuffer.getReadPointer(channel);
+                if (sourceChannel) {
+                    for (int sample = 0; sample < numSamples && sample < masterBuffer.getNumSamples(); ++sample) {
+                        float sourceSample = sourceChannel[sample];
+                        float masterSample = masterBuffer.getSample(channel, sample);
+                        masterBuffer.setSample(channel, sample, masterSample + sourceSample);
+                    }
+                }
+            }
+        }
+    }
+
+    // Apply master volume
     float volume = masterVolume_.load();
     masterBuffer.applyGain(volume);
+
+    // Update metering
+    updateMasterMetersInternal(masterBuffer, numSamples);
 }
 
 void AudioRenderer::applyMasterEffects(juce::AudioBuffer<float>& buffer) {
-    // Apply master plugins
+    // Create temporary buffer for plugin processing if needed
+    juce::AudioBuffer<float> tempBuffer;
+
+    // Process master plugins in order
     for (const auto& plugin : masterPlugins_) {
         if (plugin && !plugin->isSuspended()) {
-            // TODO: Process through plugin
+            // Use buffer directly for processing
+            juce::MidiBuffer emptyMidi;
+            juce::AudioBuffer<float>* pluginBuffer = &buffer;
+
+            // Process audio through plugin
+            plugin->processBlock(*pluginBuffer, emptyMidi);
         }
     }
 
@@ -194,12 +329,12 @@ void AudioRenderer::applyTestTone(juce::AudioBuffer<float>& buffer, int numSampl
 }
 
 void AudioRenderer::setRenderContext(const AudioRenderContext& context) {
-    renderContext_ = context;
+    renderContext_ = std::make_unique<AudioRenderContext>(context);
     DBG("AudioRenderer: Render context updated");
 }
 
 const AudioRenderContext& AudioRenderer::getRenderContext() const {
-    return renderContext_;
+    return *renderContext_;
 }
 
 void AudioRenderer::setMasterVolume(float volume) {
@@ -335,12 +470,26 @@ void AudioRenderer::resetMasterMeters() {
     masterPeakLevel_.store(0.0f);
 }
 
-void AudioRenderer::updateMasterMeters(const juce::AudioBuffer<float>& buffer, int numSamples) {
+// Update master meters (not declared in header but needed)
+void AudioRenderer::updateMasterMetersInternal(const juce::AudioBuffer<float>& buffer, int numSamples) {
     float level = 0.0f;
     float peak = 0.0f;
 
     for (int channel = 0; channel < buffer.getNumChannels(); ++channel) {
-        channelMaxLevel(buffer.getReadPointer(channel), numSamples, level, peak);
+        // Simple channel level calculation
+        const float* channelData = buffer.getReadPointer(channel);
+        float channelRMS = 0.0f;
+        float channelPeak = 0.0f;
+
+        for (int sample = 0; sample < numSamples; ++sample) {
+            float sampleValue = std::abs(channelData[sample]);
+            channelRMS += sampleValue * sampleValue;
+            channelPeak = std::max(channelPeak, sampleValue);
+        }
+
+        channelRMS = std::sqrt(channelRMS / numSamples);
+        level = std::max(level, channelRMS);
+        peak = std::max(peak, channelPeak);
     }
 
     masterLevel_.store(level);
@@ -348,7 +497,86 @@ void AudioRenderer::updateMasterMeters(const juce::AudioBuffer<float>& buffer, i
 }
 
 void AudioRenderer::updateTrackLatencies() {
-    // TODO: Implement actual track latency updates
+    if (!renderContext_ || !pdcEnabled_.load()) {
+        return;
+    }
+
+    // Update track latencies based on plugins
+    for (size_t i = 0; i < tracks.size() && i < renderContext_->trackLatencies.size(); ++i) {
+        auto* track = tracks[i];
+        if (track && track->getProcessor()) {
+            // Calculate total latency for this track
+            int totalLatency = 0;
+
+            // Add plugin chain latency
+            auto& pluginChain = track->getProcessor()->getPluginChain();
+            totalLatency += pluginChain.getTotalLatencySamples();
+
+            // Add mixer channel latency
+            totalLatency += track->getProcessor()->getMixerChannel().getLatencySamples();
+
+            renderContext_->trackLatencies[i] = totalLatency;
+        } else {
+            renderContext_->trackLatencies[i] = 0;
+        }
+    }
+
+    // Calculate maximum latency
+    int maxLatency = 0;
+    for (int latency : renderContext_->trackLatencies) {
+        maxLatency = std::max(maxLatency, latency);
+    }
+
+    renderContext_->maxTrackLatency = maxLatency;
+}
+
+void AudioRenderer::applyPDC(juce::AudioBuffer<float>& trackBuffer,
+                           juce::AudioBuffer<float>& delayBuffer,
+                           int& delayWritePos,
+                           int trackLatency) {
+
+    if (trackLatency <= 0 || delayBuffer.getNumSamples() < trackLatency) {
+        return; // No PDC needed or buffer too small
+    }
+
+    int bufferSize = delayBuffer.getNumSamples();
+    int numSamples = trackBuffer.getNumSamples();
+    int numChannels = std::min(trackBuffer.getNumChannels(), delayBuffer.getNumChannels());
+
+    // Read from delay buffer (delayed audio)
+    for (int channel = 0; channel < numChannels; ++channel) {
+        const float* delayReadPtr = delayBuffer.getReadPointer(channel);
+        float* trackWritePtr = trackBuffer.getWritePointer(channel);
+
+        if (delayReadPtr && trackWritePtr) {
+            for (int sample = 0; sample < numSamples; ++sample) {
+                int readPos = (delayWritePos + sample) % bufferSize;
+                float delayedSample = delayReadPtr[readPos];
+                trackWritePtr[sample] += delayedSample;
+            }
+        }
+    }
+
+    // Write to delay buffer (current audio for next iteration)
+    for (int channel = 0; channel < numChannels; ++channel) {
+        const float* trackReadPtr = trackBuffer.getReadPointer(channel);
+        float* delayWritePtr = delayBuffer.getWritePointer(channel);
+
+        if (trackReadPtr && delayWritePtr) {
+            // Shift existing delay content
+            for (int sample = bufferSize - 1; sample >= trackLatency; --sample) {
+                delayWritePtr[sample] = delayWritePtr[sample - trackLatency];
+            }
+
+            // Write new content
+            for (int sample = 0; sample < trackLatency && sample < numSamples; ++sample) {
+                delayWritePtr[sample] = trackReadPtr[sample];
+            }
+        }
+    }
+
+    // Update write position
+    delayWritePos = (delayWritePos + numSamples) % bufferSize;
 }
 
 } // namespace zenith

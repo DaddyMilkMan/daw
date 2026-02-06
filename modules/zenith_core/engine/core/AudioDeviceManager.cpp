@@ -16,16 +16,13 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#include "AudioDeviceManager.h"
+#include <atomic>
+#include <exception>
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+namespace zenith {
 
- * @file AudioDeviceManager.cpp
- * @brief Concrete audio device management implementation
- */
-
+// Concrete audio device management implementation
 
 
 AudioDeviceManager::AudioDeviceManager() {
@@ -57,8 +54,8 @@ bool AudioDeviceManager::initialize(double sampleRate, int bufferSize) {
         }
 
         currentDeviceInfo_ = device->getName() + " (" +
-                           juce::String(device->getSampleRate()) + " Hz, " +
-                           juce::String(device->getBufferSizeSamples()) + " samples)";
+                           juce::String(device->getCurrentSampleRate()) + " Hz, " +
+                           juce::String(device->getCurrentBufferSizeSamples()) + " samples)";
 
         DBG("AudioDeviceManager: Device initialized - " + currentDeviceInfo_);
         initialized_.store(true);
@@ -123,10 +120,10 @@ const juce::AudioDeviceManager& AudioDeviceManager::getDeviceManager() const {
 
 void AudioDeviceManager::audioDeviceAboutToStart(juce::AudioIODevice* device) {
     DBG("AudioDeviceManager: Device about to start - " + device->getName());
-    currentDevice_.reset(device);
+    // Don't reset the device pointer - we don't own it
     currentDeviceInfo_ = device->getName() + " (" +
-                        juce::String(device->getSampleRate()) + " Hz, " +
-                        juce::String(device->getBufferSizeSamples()) + " samples)";
+                        juce::String(device->getCurrentSampleRate()) + " Hz, " +
+                        juce::String(device->getCurrentBufferSizeSamples()) + " samples)";
 }
 
 void AudioDeviceManager::audioDeviceStopped() {

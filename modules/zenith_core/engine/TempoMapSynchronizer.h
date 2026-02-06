@@ -17,29 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- // File: TempoMapSynchronizer.h
- // Brief: Synchronizes tempo map from ProjectState to Engine
- *
- * Tempo Map & Global Markers
- *
- * This class bridges the message-thread ProjectState (ValueTree) with the
- * Engine's TempoMap. It:
- * - Listens to ProjectState tempo map changes
- * - Updates Engine's TempoMap in an RT-safe manner
-
- *
- * Thread Safety:
- * - Listens to ValueTree on MESSAGE THREAD
- * - Updates TempoMap from MESSAGE THREAD
- * - Engine/audio thread reads TempoMap (lock-free, safe)
- */
-
 #pragma once
+
+// TempoMapSynchronizer.h
 
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -58,6 +38,8 @@
 class Engine;
 
 //==============================================================================
+namespace zenith {
+
 /**
  * @class TempoMapSynchronizer
  // Brief: Syncs tempo map from ProjectState to Engine
@@ -136,4 +118,6 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TempoMapSynchronizer)
 };
+
+} // namespace zenith
 

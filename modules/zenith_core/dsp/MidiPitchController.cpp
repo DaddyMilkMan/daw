@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    MidiPitchController.cpp
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    MIDI-controlled pitch target implementation.
-
-  ==============================================================================
-
-*/
-
 #include "MidiPitchController.h"
 #include <cmath>
 

@@ -10,7 +10,7 @@
 */
 
 #ifdef __linux__
-#include "../../../utils/PlatformLogUtils.h"
+#include "PlatformLogUtils.h"
 
 #include <iostream>
 

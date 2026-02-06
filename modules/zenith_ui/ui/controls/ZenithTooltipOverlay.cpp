@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithTooltipOverlay.cpp
-    Created: 2025-12-12
-    Author:  Zenith DAW
-
-    Implementation of the tooltip overlay for Learning Mode.
-
-  ==============================================================================
-
-*/
-
 #include "ZenithTooltipOverlay.h"
 
 #ifdef ZENITH_USE_SKIA

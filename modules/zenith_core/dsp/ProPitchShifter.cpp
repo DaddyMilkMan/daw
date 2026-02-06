@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ProPitchShifter.cpp
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Professional pitch shifting implementation using Rubber Band.
-
-  ==============================================================================
-
-*/
-
 #include "ProPitchShifter.h"
 #include <cmath>
 
@@ -318,7 +301,9 @@ void ProPitchShifter::process(const float* input, float* output, int numSamples)
     }
 #else
     // Fallback: simple resampling (not quality pitch shift, but functional)
+#if ZENITH_HAS_RUBBERBAND
     juce::ignoreUnused(stretcher_);
+#endif
     
     float ratio = pitchRatio_.load();
     if (std::abs(ratio - 1.0f) < 0.001f)

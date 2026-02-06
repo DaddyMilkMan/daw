@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PluginChain.cpp
-    Created: 2025
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "PluginChain.h"
 #include "RealTimeGarbageCollector.h"
 #include <algorithm>

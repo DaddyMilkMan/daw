@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AutomationStateManager.cpp
-    Created: 2025-12-12
-    Author:  Zenith DAW
-
-    Automation management implementation.
-
-  ==============================================================================
-
-*/
-
 #include "AutomationStateManager.h"
 #include "ProjectState.h"
 

@@ -17,51 +17,25 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
+//www.gnu.org/licenses/>.
+==============================================================================
     Original file header:
-*/
-
-  ==============================================================================
-    AdvancedAudioAnalyzer.h
-    Comprehensive audio analysis suite with professional features
-    Phase 5: Advanced Features
-  ==============================================================================
-*/
-
-
-/*
-    This file is part of Zenith DAW - A Digital Audio Workstation for Linux
-    
-    Copyright (C) 2025 Micah Cooley <micahcooley@protonmail.com>
-    
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as
-    published by the Free Software Foundation, either version 3 of the
-    License, or (at your option) any later version.
-    
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
-    
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
-
     ==============================================================================
-    Original file header:
 
 
+
+#include <cstddef>
+#include <initializer_list>
+#include <vector>
+#include <memory>
+#include <complex>
+#include <atomic>
+#include <algorithm>
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_dsp/juce_dsp.h>
-#include "../ui/framework/SkiaComponent.h"
-#include <memory>
-#include <vector>
-#include <complex>
-#include <atomic>
+//#include "../ui/framework/SkiaComponent.h"
 
 namespace zenith {
 namespace analysis {
@@ -543,83 +517,13 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AdvancedAudioAnalyzer)
 };
 
+/*
 // Analysis visualization component
 class AnalysisVisualizer : public zenith::SkiaComponent,
                           public AdvancedAudioAnalyzer::Listener {
-public:
-    AnalysisVisualizer();
-    ~AnalysisVisualizer() override;
-    
-    // Component overrides
-    void drawSkia(SkCanvas* canvas) override;
-    void resized() override;
-    
-    // Analyzer access
-    void setAnalyzer(AdvancedAudioAnalyzer* analyzer);
-    AdvancedAudioAnalyzer* getAnalyzer() const { return analyzer; }
-    
-    // Visualization control
-    void setAnalysisType(AnalysisType type);
-    void setShowGrid(bool show);
-    void setShowLabels(bool show);
-    void setScaleLinear(bool linear);
-    void setFrequencyRange(float minHz, float maxHz);
-    void setDynamicRange(float minDb, float maxDb);
-    
-    // AdvancedAudioAnalyzer::Listener
-    void loudnessUpdated(const LoudnessAnalysis& analysis) override;
-    void spectrumUpdated(const SpectrumAnalysis& analysis) override;
-    void phaseUpdated(const PhaseAnalysis& analysis) override;
-    void dynamicsUpdated(const DynamicAnalysis& analysis) override;
-    void pitchUpdated(const PitchAnalysis& analysis) override;
-    void rhythmUpdated(const RhythmAnalysis& analysis) override;
-    void timbreUpdated(const TimbreAnalysis& analysis) override;
-    void qualityUpdated(const QualityAnalysis& analysis) override;
-    
-private:
-    AdvancedAudioAnalyzer* analyzer = nullptr;
-    AnalysisType currentType = AnalysisType::Spectrum;
-    
-    // Visualization settings
-    bool showGrid = true;
-    bool showLabels = true;
-    bool scaleLinear = false;
-    float minFrequency = 20.0f;
-    float maxFrequency = 20000.0f;
-    float minDb = -120.0f;
-    float maxDb = 0.0f;
-    
-    // Cached analysis data
-    LoudnessAnalysis loudnessAnalysis_;
-    SpectrumAnalysis spectrumAnalysis_;
-    PhaseAnalysis phaseAnalysis_;
-    DynamicAnalysis dynamicAnalysis_;
-    PitchAnalysis pitchAnalysis_;
-    RhythmAnalysis rhythmAnalysis_;
-    TimbreAnalysis timbreAnalysis_;
-    QualityAnalysis qualityAnalysis_;
-
-    // Drawing methods
-    void drawLoudnessMeter(SkCanvas* canvas);
-    void drawSpectrum(SkCanvas* canvas);
-    void drawSpectrogram(SkCanvas* canvas);
-    void drawPhaseMeter(SkCanvas* canvas);
-    void drawDynamicRange(SkCanvas* canvas);
-    void drawPitchDetection(SkCanvas* canvas);
-    void drawRhythmGrid(SkCanvas* canvas);
-    void drawTimbreRadar(SkCanvas* canvas);
-    void drawQualityMeter(SkCanvas* canvas);
-    
-    // Utility
-    void drawGrid(SkCanvas* canvas);
-    void drawLabels(SkCanvas* canvas);
-    float frequencyToX(float hz) const;
-    float dbToY(float db) const;
-    float xToFrequency(float x) const;
-    float yToDb(float y) const;
-    
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AnalysisVisualizer)
+...
 };
+*/
 
 } // namespace analysis
 } // namespace zenith

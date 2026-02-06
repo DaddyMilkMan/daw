@@ -24,10 +24,22 @@
 #endif
 
 // Use SecureKeyStore abstraction for cross-platform secure storage
-#include "../network/SecureKeyStore.h"
+#include <network/SecureKeyStore.h>
 
 namespace zenith {
 namespace ai {
+
+GrokAPIClient::GrokAPIClient() {
+    // Security: Load API key from environment variable, not hardcoded
+    apiKey = juce::SystemStats::getEnvironmentVariable("GROK_API_KEY", "");
+
+    if (apiKey.isEmpty()) {
+      DBG("WARNING: GROK_API_KEY environment variable is not set. "
+          "GrokAPIClient will not function until a valid API key is provided.");
+    } else {
+      DBG("GrokAPIClient initialized with API key from environment");
+    }
+}
 
 // Background analysis worker implementation
 void GrokAPIClient::analysisWorker() {
@@ -121,9 +133,9 @@ void GrokAPIClient::analyzeAudioAsync(const AnalysisRequest& request,
     }).detach();
 }
 
-GrokAPIClient::AnalysisResult GrokAPIClient::getAnalysis(const juce::String& trackName, 
-                                        const juce::AudioBuffer<float>& audio,
-                                        double sampleRate) {
+AnalysisResult GrokAPIClient::getAnalysis(const juce::String& trackName, 
+                                         const juce::AudioBuffer<float>& audio,
+                                         double sampleRate) {
     AnalysisRequest request;
     request.audio = std::make_shared<juce::AudioBuffer<float>>(audio);
     request.sampleRate = sampleRate;
@@ -141,7 +153,7 @@ GrokAPIClient::AnalysisResult GrokAPIClient::getAnalysis(const juce::String& tra
     return performAnalysis(request);
 }
 
-GrokAPIClient::AnalysisResult GrokAPIClient::performAnalysis(const AnalysisRequest& request) {
+AnalysisResult GrokAPIClient::performAnalysis(const AnalysisRequest& request) {
     AnalysisResult result;
     
     try {
@@ -231,7 +243,7 @@ void GrokAPIClient::provideCreativeFeedback(const CreativeSuggestion& suggestion
     creativePartner->updateFromUserFeedback(suggestion, wasHelpful, comment);
     
     // Update learning system
-    if (wasHelpful) {
+    if (wasHelpful && journey != nullptr) {
         // Positive feedback - reinforce this type of suggestion
         UserPreference pref;
         pref.genre = "";  // Would be filled from context
@@ -255,8 +267,7 @@ ContextualInsights GrokAPIClient::getProjectInsights() const {
         return projectContext->getContextualInsights();
     }
     
-    ContextualInsights empty;
-    return empty;
+    return {};
 }
 
 void GrokAPIClient::cacheAnalysis(const juce::String& key, const AnalysisResult& result) {
@@ -504,7 +515,7 @@ bool GrokAPIClient::deleteAPIKey() {
 juce::String GrokAPIClient::encryptKey(const juce::String& key) {
     // Generate machine-specific salt
     juce::String salt = juce::SystemStats::getComputerName() + 
-                       juce::SystemStats::getUserId() + 
+                       juce::SystemStats::getLogonName() + 
                        "Zenith_Secure_Salt";
     
     juce::String encrypted;
@@ -518,7 +529,7 @@ juce::String GrokAPIClient::encryptKey(const juce::String& key) {
 
 juce::String GrokAPIClient::decryptKey(const juce::String& encrypted) {
     juce::String salt = juce::SystemStats::getComputerName() + 
-                       juce::SystemStats::getUserId() + 
+                       juce::SystemStats::getLogonName() + 
                        "Zenith_Secure_Salt";
                        
     juce::String decrypted;
@@ -546,8 +557,183 @@ void GrokAPIClient::logMessage(const juce::String& message, LogLevel level) {
     
     // Log to debug console
     DBG(logEntry);
-    
-    // Could also log to file if needed
+}
+
+juce::String GrokAPIClient::buildContextualPrompt(const juce::String& prompt, 
+                                                const AnalysisResult& analysis,
+                                                const ContextualInsights& insights) {
+    juce::String contextualPrompt = "Contextual analysis for: " + prompt + "\n";
+    contextualPrompt += "Analysis: " + analysis.contextualDescription + "\n";
+    contextualPrompt += "Genre: " + insights.overallGenre + ", Energy: " + insights.energyLevel;
+    return contextualPrompt;
+}
+
+juce::String GrokAPIClient::buildSystemPrompt() {
+    return "You are the Zenith AI creative partner, an expert in music production and audio engineering.";
+}
+
+juce::String GrokAPIClient::callGrok(const juce::String &prompt,
+                        const juce::String &systemMessage,
+                        ModelType modelType) {
+    if (!hasAPIKey()) {
+      DBG("ERROR: No API key configured. Set GROK_API_KEY environment "
+          "variable.");
+      return "{}";
+    }
+
+    DBG("======================================");
+    DBG("Calling Grok 4.1 API (" + getModelId(modelType) + ")...");
+    DBG("======================================");
+
+    // Build request JSON
+    juce::String requestBody = buildRequestJSON(prompt, systemMessage, modelType);
+
+    DBG("Request size: " + juce::String(requestBody.length()) + " bytes");
+
+    // Make HTTP request
+    juce::String response = makeHttpRequest(requestBody);
+
+    if (response.isEmpty()) {
+      DBG("ERROR: Empty response from Grok API");
+      return "{}";
+    }
+
+    // Extract content from response
+    juce::String content = extractContent(response);
+
+    DBG("Grok response received: " + juce::String(content.length()) + " bytes");
+    DBG("======================================");
+    return content;
+}
+
+void GrokAPIClient::callGrokAsync(const juce::String &prompt,
+                     const juce::String &systemMessage,
+                     std::function<void(juce::String)> callback,
+                     ModelType modelType) {
+    std::thread([this, prompt, systemMessage, callback, modelType]() {
+        juce::String response = callGrok(prompt, systemMessage, modelType);
+        callback(response);
+    }).detach();
+}
+
+void GrokAPIClient::sendQuery(const juce::String& prompt, 
+                             std::function<void(const juce::String&)> onComplete) {
+    callGrokAsync(prompt, buildSystemPrompt(), onComplete, ModelType::Fast);
+}
+
+juce::String GrokAPIClient::getModelId(ModelType type) const {
+    switch (type) {
+        case ModelType::Fast:          return "grok-4.1-fast";
+        case ModelType::FastReasoning: return "grok-4.1-fast-reasoning";
+        case ModelType::Reasoning: default: return "grok-4.1";
+    }
+}
+
+juce::String GrokAPIClient::buildRequestJSON(const juce::String &prompt,
+                                const juce::String &systemMessage,
+                                ModelType modelType) {
+    juce::DynamicObject::Ptr request = new juce::DynamicObject();
+
+    // Use selected Grok 4.1 model
+    request->setProperty("model", getModelId(modelType));
+    request->setProperty("temperature", 0.7);
+    request->setProperty("max_tokens", 2000); 
+
+    // Build messages array
+    juce::Array<juce::var> messages;
+
+    // System message
+    juce::DynamicObject::Ptr sysMsg = new juce::DynamicObject();
+    sysMsg->setProperty("role", "system");
+    sysMsg->setProperty("content", juce::var(systemMessage));
+    messages.add(juce::var(sysMsg));
+
+    // User message
+    juce::DynamicObject::Ptr userMsg = new juce::DynamicObject();
+    userMsg->setProperty("role", "user");
+    userMsg->setProperty("content", juce::var(prompt));
+    messages.add(juce::var(userMsg));
+
+    request->setProperty("messages", juce::var(messages));
+    request->setProperty("stream", false);
+
+    return juce::JSON::toString(juce::var(request));
+}
+
+juce::String GrokAPIClient::makeHttpRequest(const juce::String &requestBody) {
+    juce::URL url(apiEndpoint_);
+    url = url.withPOSTData(requestBody);
+
+    juce::String headerString = "Content-Type: application/json\r\n"
+                                "Authorization: Bearer " +
+                                apiKey;
+
+    auto options =
+        juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
+            .withExtraHeaders(headerString)
+            .withConnectionTimeoutMs(30000);
+
+    std::unique_ptr<juce::InputStream> stream = url.createInputStream(options);
+
+    if (stream == nullptr) {
+      DBG("ERROR: Failed to create HTTP connection to Grok API");
+      return "{}";
+    }
+
+    juce::String response = stream->readEntireStreamAsString();
+
+    if (response.isEmpty()) {
+      DBG("ERROR: Empty response from Grok API stream");
+      return "{}";
+    }
+
+    return response;
+}
+
+juce::String GrokAPIClient::extractContent(const juce::String &responseJson) {
+    auto json = juce::JSON::parse(responseJson);
+
+    if (json.isVoid()) {
+      DBG("ERROR: Failed to parse response JSON");
+      return "{}";
+    }
+
+    auto *obj = json.getDynamicObject();
+    if (!obj) {
+      return "{}";
+    }
+
+    // Check for API errors
+    if (obj->hasProperty("error")) {
+      auto *errorObj = obj->getProperty("error").getDynamicObject();
+      if (errorObj) {
+        juce::String errorMsg = errorObj->getProperty("message").toString();
+        DBG("API ERROR: " + errorMsg);
+      }
+      return "{}";
+    }
+
+    auto choices = obj->getProperty("choices");
+    if (!choices.isArray()) {
+      return "{}";
+    }
+
+    auto *choicesArray = choices.getArray();
+    if (choicesArray->isEmpty()) {
+      return "{}";
+    }
+
+    auto *firstChoice = (*choicesArray)[0].getDynamicObject();
+    if (!firstChoice) {
+      return "{}";
+    }
+
+    auto *message = firstChoice->getProperty("message").getDynamicObject();
+    if (!message) {
+      return "{}";
+    }
+
+    return message->getProperty("content").toString();
 }
 
 } // namespace ai

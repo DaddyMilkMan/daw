@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithEffects.cpp
-    Refactored: 2025-12-09
-    Author:  Zenith DAW
-
-    Implementation of ZenithEffects with Stereo Ping-Pong Delay.
-    Fixes: Audio Thread Allocation Optimization.
-
-
-  ==============================================================================
-*/
-
 #include "ZenithEffects.h"
 #include <algorithm>
 #include <cmath>

@@ -17,32 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- // File: TrackStateSynchronizer.h
- // Brief: Synchronizes ProjectState track properties to Engine track objects
- *
- * Phase 11: Mixer → Engine Wiring
- *
- * This class listens to ValueTree changes in ProjectState and updates
- * the corresponding Engine track objects. This keeps the engine in sync
- * with the authoritative ProjectState while maintaining proper threading:
- *
-
- * - All ValueTree changes happen on MESSAGE THREAD (enforced by ProjectState)
- * - All Engine track updates happen on MESSAGE THREAD (this class enforces)
- * - Engine Track objects use atomics, so audio thread can safely read
- *
- * Thread Safety:
- * - This class must ONLY be used from the MESSAGE THREAD
- * - ValueTree::Listener callbacks run on the thread that modified the tree
- * - Since ProjectState APIs enforce message thread, we're safe here
- */
-
 #pragma once
+
+// TrackStateSynchronizer.h
 
 #include "Engine.h"
 #include "ProjectState.h"

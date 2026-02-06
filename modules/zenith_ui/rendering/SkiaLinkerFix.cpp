@@ -17,26 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file SkiaLinkerFix.cpp
- * @brief Manual RTTI symbol definitions for Skia
- * 
- * This file provides dummy typeinfo symbols for Skia types that are missing
- * because Skia was built with -fno-rtti but the DAW is built with RTTI enabled.
- * 
- * This allows us to keep RTTI enabled for JUCE and the DAW while still
- * linking against a non-RTTI Skia library.
- * 
-
- * Mangled names: _ZTI followed by length-prefixed type name.
- * Use c++filt to verify: c++filt _ZTI8SkCanvas -> typeinfo for SkCanvas
- */
-
-#ifndef _WIN32
+// SkiaLinkerFix.cpp
 
 #include <typeinfo>
 

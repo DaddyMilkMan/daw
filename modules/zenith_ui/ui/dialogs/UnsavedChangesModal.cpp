@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    UnsavedChangesModal.cpp
-    Created: 2025-12-30
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "UnsavedChangesModal.h"
 #include "../design-system/ZenithTheme.h"
 #include "../design-system/ZenithDesignSystem.h"

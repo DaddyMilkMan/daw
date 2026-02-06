@@ -17,29 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PowerManagement.cpp
-    Created: 2026-02-04
-    Author:  Zenith DAW Team
-
-    Cross-platform power management implementation.
-    
-    Features:
-
-    - Prevent system sleep during audio playback/recording
-    - Platform-specific implementations for Windows, macOS, and Linux
-    - RAII-based resource management
-    - Automatic cleanup on destruction
-
-  ==============================================================================
-*/
-
 #include "PowerManagement.h"
 #include <juce_core/juce_core.h>
 
@@ -51,9 +28,6 @@
 #elif defined(JUCE_LINUX)
     #include <fcntl.h>
     #include <unistd.h>
-    #include <QtDBus/QDBusConnection>  // Optional: for modern Linux with logind
-    #include <QtDBus/QDBusInterface>
-    #include <QtDBus/QDBusReply>
 #endif
 
 namespace zenith {

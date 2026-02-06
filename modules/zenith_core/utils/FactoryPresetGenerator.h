@@ -17,22 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    FactoryPresetGenerator.h
-    Created: 2025-11-20
-    Author:  Zenith DAW
-
-    Utility to generate procedural presets for built-in instruments.
-*/
-
-
-
 #include <juce_data_structures/juce_data_structures.h>
 #include "../instruments/InstrumentPreset.h"
 #include "../instruments/ZenithPolySynth.h"

@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    UndoHistoryPanel.h
-    Created: 2025-12-25
-    Author:  Zenith DAW Team
-
-    Visual undo/redo history panel with click-to-navigate.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include "../framework/SkiaComponent.h"

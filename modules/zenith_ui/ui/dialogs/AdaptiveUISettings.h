@@ -17,24 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AdaptiveUISettings.h
-    Created: 2025-12-07
-    Author:  AI Assistant
-
-    Settings panel for AI-Powered Adaptive Interface
-
-  ==============================================================================
-
-*/
-#include <memory>
 #pragma once
+
+// AdaptiveUISettings.h
+
 
 #include "../controls/SkiaButton.h"
 #include "../controls/SkiaComboBox.h"

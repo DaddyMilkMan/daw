@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaTextInput.cpp
-    Created: 2026-01-10
-    Author:  Zenith DAW
-
-    Pure Skia text input - QUALITY IMPLEMENTATION.
-    Full-featured with clipboard, selection, scroll, word boundaries.
-
-
-  ==============================================================================
-*/
-
 #include "SkiaTextInput.h"
 #include "../design-system/ZenithTypography.h"
 #include <effects/SkGradientShader.h>

@@ -17,41 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    Animation.h
-    Created: 2025-12-25
-    Author:  Zenith DAW
-
-    Professional animation framework with easing functions and spring physics.
-    
-    Features:
-
-    - Smooth value interpolation with configurable duration
-    - Multiple easing curves (Linear, EaseIn, EaseOut, EaseInOut, Spring)
-    - Physics-based spring animations for natural motion
-    - Thread-safe value access
-    - Timer-independent update (pass delta time)
-
-    Usage:
-    ```cpp
-    AnimatedValue<float> opacity;
-    opacity.setTarget(1.0f, 200, Easing::EaseOut);  // Animate to 1.0 over 200ms
-    
-    // In timerCallback or paint:
-    opacity.update(deltaMs);
-    float current = opacity.get();
-    ```
-
-  ==============================================================================
-*/
-
 #pragma once
+
+// Animation.h
+
 
 #include <atomic>
 #include <cmath>

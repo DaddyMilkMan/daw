@@ -17,14 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#pragma once
 
- // File: ThreadSafeAudioProcessor.h
- // Brief: Lock-free audio processing utilities
- */
+// ThreadSafeAudioProcessor.h
+
 
 
 namespace zenith {

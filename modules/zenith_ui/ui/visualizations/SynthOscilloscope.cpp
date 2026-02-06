@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SynthOscilloscope.cpp
-    Created: 2026-02-01
-    Author:  Zenith DAW
-
-    Implementation of real-time oscilloscope for synth output.
-
-  ==============================================================================
-
-*/
-
 #include "SynthOscilloscope.h"
 #include <algorithm>
 #include <cmath>

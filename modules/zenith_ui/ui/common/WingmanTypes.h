@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    WingmanTypes.h
-    Created: 2026-02-02
-    Author:  Zenith DAW
-
-    Data structures for the Wingman AI assistant panel.
-    Separated from WingmanPanel.h for better code organization.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>

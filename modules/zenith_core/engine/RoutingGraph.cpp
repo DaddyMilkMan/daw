@@ -17,25 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    RoutingGraph.cpp
-    Created: 2025-12-03
-    Author:  Zenith DAW
-
-    THREAD SAFETY FIX: Implements lock-free RCU-style snapshot pattern.
-    - All modifications use writeLock_ and update snapshot atomically
-    - All reads use atomic snapshot load - fully RT-safe
-
-
-  ==============================================================================
-*/
-
 #include "RoutingGraph.h"
 #include "RealTimeGarbageCollector.h"
 #include "Track.h"

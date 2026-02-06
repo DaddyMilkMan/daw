@@ -17,27 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithIcons.h
-    Created: 2025-12-12
-    Author:  Leo "Lil Bit" Rossi & AI Assistant
-
-    Professional vector icon system for Zenith DAW.
-    Replaces Unicode glyphs with crisp, scalable SkPath icons.
-
-
-    All icons are defined in a 24x24 viewport and scale cleanly to any size.
-    "If it doesn't scale, it doesn't ship!" - Leo
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "ZenithSkia.h"

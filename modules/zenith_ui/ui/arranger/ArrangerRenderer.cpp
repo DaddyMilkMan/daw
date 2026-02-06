@@ -17,15 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file ArrangerRenderer.cpp
- * @brief Implementation of Skia rendering for ArrangerComponent
- */
-
+// ArrangerRenderer.cpp
 
 #include "ArrangerGridUtils.h"
 #include "ArrangerInputHandler.h"

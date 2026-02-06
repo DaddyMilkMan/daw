@@ -17,18 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    ViewTheme.h
-    Created: 2026-02-05
-    Author:  Zenith DAW Team
-
-    Comprehensive theme configuration system for SkiaSessionView.
-    Replaces hard-coded values with a configurable theme system.
-    ==============================================================================
-*/
-
 #pragma once
+
+// ViewTheme.h
+
 
 #include "../design-system/ZenithTheme.h"
 #include <juce_gui_basics/juce_gui_basics.h>

@@ -17,22 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file ArrangerComponent.cpp
- * @brief Timeline/Arranger view implementation - Core component and event dispatch
- * 
- * This file contains the ArrangerComponent core functionality. Most logic has
- * been delegated to specialized helper classes:
- * - ArrangerGridUtils: Coordinate conversion and waveform caching
- * - ArrangerClipManager: Clip lifecycle and selection
- * - ArrangerInputHandler: Mouse and keyboard input
- * - ArrangerRenderer: Skia drawing
-
- */
+// ArrangerComponent.cpp
 
 #include "ArrangerComponent.h"
 #include "ArrangerGridUtils.h"

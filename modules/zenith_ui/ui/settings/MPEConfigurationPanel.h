@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    MPEConfigurationPanel.h
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Settings panel for configuring MPE zones - following codebase patterns.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include <memory>

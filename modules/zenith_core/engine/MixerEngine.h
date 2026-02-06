@@ -17,24 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- // File: MixerEngine.h
- // Brief: Audio mixing and routing system
- * 
- * This component handles:
- * - Audio mixing and routing
- * - Effects processing
- * - Level metering
- * - Output management
- */
-
-
-
 #pragma once
+
+// MixerEngine.h
 
 #include <atomic>
 #include <memory>

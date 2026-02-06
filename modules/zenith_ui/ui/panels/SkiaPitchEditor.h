@@ -17,31 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaPitchEditor.h
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    PROFESSIONAL Skia GPU-accelerated pitch editor.
-    
-    Features:
-
-    - 60fps GPU rendering via Skia
-    - Smooth waveform display
-    - Anti-aliased pitch curves
-    - Glow effects and modern UI
-    - Smooth drag interactions
-    - Momentum scrolling
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../framework/SkiaComponent.h"

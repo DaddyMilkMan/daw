@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AIMixAssistantView.cpp
-    Created: 2025-12-20
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "AIMixAssistantView.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../../engine/Engine.h"

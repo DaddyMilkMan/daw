@@ -8,20 +8,24 @@
 
 #pragma once
 
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../ai/GrokAPIClient.h"
-#include "../audio/RealTimeAudioBuffer.h"
-#include "../ui/framework/SkiaComponent.h"
-#include "../ui/controls/SkiaListBox.h"
-#include "../ui/controls/ZenithButton.h"
-#include "../ui/controls/ZenithToggle.h"
-#include "../ui/controls/ZenithSlider.h"
+#include <juce_dsp/juce_dsp.h>
+#include "GrokAPIClient.h"
+#include <zenith_core/audio/RealTimeAudioBuffer.h>
+#include <zenith_ui/ui/framework/SkiaComponent.h>
+#include <zenith_ui/ui/controls/SkiaListBox.h>
+#include <zenith_ui/ui/controls/ZenithButton.h>
+#include <zenith_ui/ui/controls/ZenithToggle.h>
+#include <zenith_ui/ui/controls/ZenithSlider.h>
 #include <functional>
 #include <memory>
 #include <vector>
 #include <unordered_map>
 #include <atomic>
+#include <mutex>
 
 namespace zenith {
 namespace ai {
@@ -30,12 +34,24 @@ namespace ai {
 struct MixAnalysis {
     // Overall mix metrics
     float overallLoudness = -23.0f;  // LUFS
+    float momentaryLUFS = -23.0f;
+    float shortTermLUFS = -23.0f;
+    float loudnessRange = 0.0f;
+    float truePeak = -100.0f;
+    float samplePeak = -100.0f;
+    float crestFactor = 0.0f;
     float dynamicRange = 12.0f;      // dB
     float stereoWidth = 1.0f;
+    float phaseCorrelation = 1.0f;
+    float midSideRatio = 0.0f;
+    
     float clarity = 0.7f;
     float punch = 0.6f;
     float warmth = 0.5f;
     float brightness = 0.5f;
+    float presence = 0.5f;
+    float stereoImage = 0.5f;
+    float overallScore = 0.0f;
     
     // Frequency balance
     float subBassLevel = 0.0f;   // 20-60 Hz
@@ -45,6 +61,42 @@ struct MixAnalysis {
     float highMidLevel = 0.0f;   // 2000-4000 Hz
     float presenceLevel = 0.0f;  // 4000-6000 Hz
     float brillianceLevel = 0.0f; // 6000-20000 Hz
+    
+    // Spectral features
+    float spectralCentroid = 1000.0f;
+    
+    // Dynamics history
+    std::vector<float> rmsHistory;
+    float averageRMS = -23.0f;
+    float rmsVariation = 0.0f;
+    float peakToRMSRatio = 0.0f;
+    
+    // Pitch and Key
+    float fundamentalFrequency = 0.0f;
+    float fundamentalConfidence = 0.0f;
+    juce::String detectedKey = "C";
+    juce::String detectedMode = "major";
+    float keyConfidence = 0.0f;
+    
+    // Rhythm
+    float tempo = 120.0f;
+    int timeSignatureNumerator = 4;
+    int timeSignatureDenominator = 4;
+    float timeSignatureConfidence = 0.0f;
+    std::vector<float> beatPositions;
+    std::vector<float> beatStrengths;
+    std::vector<float> onsets;
+    
+    // Timbre
+    std::vector<float> mfccCoefficients;
+    float roughness = 0.0f;
+    juce::String primaryInstrument;
+    float instrumentConfidence = 0.0f;
+    std::vector<std::pair<juce::String, float>> instrumentProbabilities;
+    
+    // Channel-specific metrics
+    std::vector<float> channelLUFS;
+    std::vector<float> channelPeaks;
     
     // Track-specific analysis
     struct TrackAnalysis {
@@ -74,6 +126,7 @@ struct MixAnalysis {
     };
     
     std::vector<MixIssue> issues;
+    std::vector<juce::String> recommendations;
     
     // Genre-specific targets
     juce::String detectedGenre;
@@ -100,6 +153,9 @@ struct MixingAssistantConfig {
     bool enableRealTimeAnalysis = true;
     int analysisInterval = 1000;  // ms
     float analysisWindow = 10.0f;  // seconds
+    int fftOrder = 11;             // 2048 samples
+    juce::dsp::WindowingFunction<float>::WindowingMethod windowMethod = juce::dsp::WindowingFunction<float>::hann;
+    int updateInterval = 500;
     
     // AI settings
     bool enableAISuggestions = true;
@@ -145,7 +201,7 @@ public:
     void analyzeMix();
     void analyzeTrack(const juce::String& trackId);
     MixAnalysis getCurrentAnalysis() const;
-    MixAnalysis getTrackAnalysis(const juce::String& trackId) const;
+    MixAnalysis::TrackAnalysis getTrackAnalysis(const juce::String& trackId) const;
     
     // Suggestions
     void generateSuggestions();
@@ -207,16 +263,16 @@ private:
     double mainSampleRate = 44100.0;
     std::unordered_map<juce::String, juce::AudioBuffer<float>> trackBuffers;
     std::unordered_map<juce::String, double> trackSampleRates;
-    std::mutex audioMutex;
+    mutable std::mutex audioMutex;
     
     // Analysis
     MixAnalysis currentAnalysis;
-    std::unordered_map<juce::String, MixAnalysis> trackAnalyses;
-    std::mutex analysisMutex;
+    std::unordered_map<juce::String, MixAnalysis::TrackAnalysis> trackAnalyses;
+    mutable std::mutex analysisMutex;
     
     // Suggestions
     std::vector<MixSuggestion> suggestions;
-    std::mutex suggestionsMutex;
+    mutable std::mutex suggestionsMutex;
     
     // AI
     std::shared_ptr<GrokAPIClient> grokClient;
@@ -240,21 +296,52 @@ private:
     std::atomic<bool> needsAnalysis{false};
     std::atomic<bool> needsSuggestions{false};
     
+    // DSP
+    std::unique_ptr<juce::dsp::FFT> fft_;
+    std::unique_ptr<juce::dsp::WindowingFunction<float>> windowFunction_;
+    std::vector<std::complex<float>> fftBuffer;
+    std::vector<float> magnitudeBuffer;
+    std::vector<float> phaseBuffer;
+    
     // Listeners
     std::vector<Listener*> listeners;
     
     // Analysis methods
+    void analyzeMainMix();
+    void analyzeAllTracks();
     void analyzeLoudness(MixAnalysis& analysis, const juce::AudioBuffer<float>& buffer);
     void analyzeFrequencyBalance(MixAnalysis& analysis, const juce::AudioBuffer<float>& buffer);
     void analyzeStereoImage(MixAnalysis& analysis, const juce::AudioBuffer<float>& buffer);
     void analyzeDynamics(MixAnalysis& analysis, const juce::AudioBuffer<float>& buffer);
-    void analyzeClipping(MixAnalysis& analysis, const juce::AudioBuffer<float>& buffer);
+    void analyzePitch(MixAnalysis& analysis, const juce::AudioBuffer<float>& buffer);
+    void analyzeRhythm(MixAnalysis& analysis, const juce::AudioBuffer<float>& buffer);
+    void analyzeTimbre(MixAnalysis& analysis, const juce::AudioBuffer<float>& buffer);
+    void analyzeQuality(MixAnalysis& analysis);
+    void analyzeHarmony(MixAnalysis& analysis);
+    void detectKey(MixAnalysis& analysis);
+    float detectTempo();
+    void detectTimeSignature(MixAnalysis& analysis);
+    void trackBeats(MixAnalysis& analysis);
+    void detectOnsets(MixAnalysis& analysis);
+    void calculateMFCC(MixAnalysis& analysis);
+    void calculateTimbreDescriptors(MixAnalysis& analysis);
+    void classifyInstrument(MixAnalysis& analysis);
+    void assessClarity(MixAnalysis& analysis);
+    void assessPunch(MixAnalysis& analysis);
+    void assessWarmth(MixAnalysis& analysis);
     void detectIssues(MixAnalysis& analysis);
+    void detectMixIssues();
+    void generateRecommendations(MixAnalysis& analysis);
+    void calculateOverallScore(MixAnalysis& analysis);
+    void calculateSpectralFeatures(MixAnalysis& analysis);
+    float detectFundamental(const std::vector<float>& magnitude);
+    float calculatePitchConfidence(const juce::AudioBuffer<float>& buffer);
     
     // Track analysis
-    void analyzeTrackLevel(const juce::String& trackId, MixAnalysis::TrackAnalysis& trackAnalysis);
     void analyzeTrackFrequency(const juce::String& trackId, MixAnalysis::TrackAnalysis& trackAnalysis);
     void analyzeTrackMasking(const juce::String& trackId, MixAnalysis::TrackAnalysis& trackAnalysis);
+    juce::String detectTrackType(const MixAnalysis::TrackAnalysis& trackAnalysis);
+    juce::String generateTrackSuggestion(const MixAnalysis::TrackAnalysis& trackAnalysis);
     
     // Suggestion generation
     void generateVolumeSuggestions();
@@ -288,11 +375,19 @@ private:
     
     // Utility methods
     float calculateLUFS(const juce::AudioBuffer<float>& buffer);
+    float calculateMomentaryLUFS(const juce::AudioBuffer<float>& buffer);
+    float calculateShortTermLUFS(const juce::AudioBuffer<float>& buffer);
+    float calculateLRA(const juce::AudioBuffer<float>& buffer);
+    float calculateDynamicRange(const juce::AudioBuffer<float>& buffer);
+    float calculateTruePeak(const juce::AudioBuffer<float>& buffer);
     float calculateRMS(const juce::AudioBuffer<float>& buffer);
     float calculatePeak(const juce::AudioBuffer<float>& buffer);
+    void performFFT(const juce::AudioBuffer<float>& buffer);
     float calculateStereoWidth(const juce::AudioBuffer<float>& buffer);
-    std::vector<float> calculateSpectrum(const juce::AudioBuffer<float>& buffer);
+    float calculatePhaseCorrelation(const juce::AudioBuffer<float>& buffer);
     float calculateFrequencyCenter(const juce::AudioBuffer<float>& buffer);
+    float calculateSpectralSpread();
+    float calculateBandLevel(const std::vector<float>& spectrum, int startBin, int endBin);
     float calculateMaskingIndex(const juce::AudioBuffer<float>& track1, const juce::AudioBuffer<float>& track2);
     
     // Notification

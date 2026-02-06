@@ -17,27 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    WingmanPillEditor.h
-    Created: 2025-12-30 (Refined for Glassmorphism)
-
-    Custom pill-shaped text editor for Wingman AI.
-    Features:
-    - Pill shape with fully rounded ends
-    - Hairline border (0.5px)
-
-    - Subtle glassmorphism background
-    - Thin cyan focus glow
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../design-system/ZenithDesignSystem.h"

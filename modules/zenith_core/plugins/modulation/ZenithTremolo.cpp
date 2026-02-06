@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithTremolo.cpp
-    Created: 2025-12-19
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "ZenithTremolo.h"
 
 namespace zenith {

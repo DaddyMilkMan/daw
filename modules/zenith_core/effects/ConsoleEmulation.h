@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ConsoleEmulation.h
-    Created: 2025-12-20
-    Author:  Zenith DAW
-
-    Analog console emulation for MixerChannel (Saturation, Crosstalk, Noise).
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include <juce_dsp/juce_dsp.h>

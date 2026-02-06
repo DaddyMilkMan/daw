@@ -17,20 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- // File: RecentProjectManager.h
- // Brief: Manages a list of recently opened projects with persistence
- *
- * Stores recent project metadata (path, name, date, genre) to a JSON file
- * in the user's application data directory. Provides O(1) access to recent
- * projects and automatic pruning of stale entries.
- */
-
-
+#pragma once
 
 #include <functional>
 #include <juce_core/juce_core.h>

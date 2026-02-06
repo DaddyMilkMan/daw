@@ -17,10 +17,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#include "AutomationManager.h"
+#include "RealTimeGarbageCollector.h"
+
+namespace zenith {
+
 
 AutomationManager::AutomationManager() {
     currentSnapshot_ = std::make_shared<AutomationSnapshot>();

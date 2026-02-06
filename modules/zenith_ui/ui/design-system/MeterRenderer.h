@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    MeterRenderer.h
-    Created: 2025-12-31
-    Author:  Zenith DAW
-
-    Shared utility for rendering audio/CPU meters with consistent styling.
-    Supports vertical and horizontal orientations, gradients, and peak hold.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "ZenithDesignSystem.h"

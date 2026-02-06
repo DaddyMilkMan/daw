@@ -151,7 +151,7 @@ const std::map<juce::String, std::vector<int>>& MIDIPatternGenerator::getScaleDa
         {"hungarian_gypsy",     {0, 2, 3, 6, 7, 8, 11}},
         {"spanish_gypsy",       {0, 1, 4, 5, 7, 8, 10}},
         {"maqam_hijaz",         {0, 1, 4, 5, 7, 8, 10}},
-        {"maqam_bayati",        {0, 1.5, 3, 5, 7, 8, 10}}, // Approximated for MIDI
+        {"maqam_bayati",        {0, 2, 3, 5, 7, 8, 10}}, // Approximated for MIDI
         {"raga_bhairav",        {0, 1, 4, 5, 7, 8, 11}},
     };
     return scales;

@@ -17,34 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PluginHost.h
-    Created: 2025-11-14
-    Author:  Zenith DAW - Phase 3: VST3 Plugin Hosting MVP
-
-    Engine-level plugin hosting manager
-
-    Responsibilities:
-
-    - Scan for VST3 plugins (and AudioUnit on macOS in future)
-    - Maintain KnownPluginList of available plugins
-    - Create plugin instances on demand
-    - All operations on MESSAGE THREAD only
-
-    Thread Safety:
-    - All methods are MESSAGE THREAD ONLY
-    - Plugin scanning is synchronous (blocking) for MVP
-    - Plugin instantiation is synchronous (blocking) for MVP
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>

@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PianoKeyboardViewSkia.cpp
-    Created: 2025-11-28
-    Author:  Leo Rossi
-    Refactored: 2025-11-30 for robustness
-
-  ==============================================================================
-*/
-
-
-
 #include "PianoKeyboardViewSkia.h"
 
 #ifdef ZENITH_USE_SKIA

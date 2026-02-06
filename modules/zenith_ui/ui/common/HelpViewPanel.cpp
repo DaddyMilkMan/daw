@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    HelpViewPanel.cpp
-    Created: 2025-12-25
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "HelpViewPanel.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include <core/SkBlurTypes.h>

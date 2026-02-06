@@ -17,32 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    TakeFolder.h
-    Created: 2025-12-24
-    Author:  Zenith DAW
-
-    Take Folder implementation for multi-take recording and comping.
-
-    A TakeFolder contains multiple recording "takes" for the same region.
-
-    Users can create "comp regions" to select which take plays for each
-    section, enabling the classic "comping" workflow used in all pro DAWs.
-
-    Thread Safety:
-    - activeTakeIndex_ is atomic for RT-safe switching
-    - compRegions_ are read via RCU pattern during playback
-    - Modifications happen on message thread only
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "Clip.h"

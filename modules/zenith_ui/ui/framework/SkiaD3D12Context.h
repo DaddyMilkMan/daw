@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaD3D12Context.h
-    Created: 2026-01-03
-    Author:  Zenith DAW Team
-
-    Manages the Direct3D 12 Device, Command Queue, Swap Chain, and Skia Context.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>

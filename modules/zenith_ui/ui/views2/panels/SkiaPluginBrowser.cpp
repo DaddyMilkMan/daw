@@ -17,14 +17,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#include "SkiaPluginBrowser.h"
+
 
  * @file SkiaPluginBrowser.cpp
  * @brief Skia-based plugin browser implementation
- */
 
 
 

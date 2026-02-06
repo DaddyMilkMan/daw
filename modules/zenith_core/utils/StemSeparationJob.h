@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    StemSeparationJob.h
-    Created: 2025-12-09
-    Author:  Zenith DAW AI Team
-
-    Background job for splitting audio files into 4 stems using ONNX Runtime.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include "../dsp/ONNXStemSeparator.h"

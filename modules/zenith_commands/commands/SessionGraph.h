@@ -17,68 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SessionGraph.h
-    Created: 2025-11-14
-    Author:  Zenith DAW - Phase 5: Wingman v0
-
-    Project state serializer for AI context
-
-    Responsibilities:
-
-    - Export full project state as structured JSON
-    - Include transport status, tracks, clips, plugins
-    - Provide snapshot for AI reasoning about project
-
-    Output format:
-    {
-        "transport": {
-            "isPlaying": bool,
-            "playheadSamples": int,
-            "tempo": float,
-            "timeSigNumerator": int,
-            "timeSigDenominator": int
-        },
-        "tracks": [
-            {
-                "id": "track_0",
-                "name": "Track Name",
-                "type": "audio" | "midi",
-                "volume": float (dB),
-                "pan": float (-1.0 to 1.0),
-                "muted": bool,
-                "soloed": bool,
-                "plugins": [
-                    {
-                        "name": "Plugin Name",
-                        "format": "VST3",
-                        "bypassed": bool
-                    }
-                ],
-                "clips": [
-                    {
-                        "id": "clip_0",
-                        "type": "audio" | "midi",
-                        "name": "Clip Name",
-                        "startSamples": int,
-                        "lengthSamples": int,
-                        "audioFile": "path/to/file.wav" (audio clips),
-                        "midiNoteCount": int (MIDI clips)
-                    }
-                ]
-            }
-        ]
-    }
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>

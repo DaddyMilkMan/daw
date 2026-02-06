@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    DSPVoiceChanger.cpp
-    Created: 2025-11-29
-    Author:  Zenith DAW - Efficient C++ Team
-
-    WSOLA (Waveform Similarity Overlap-Add) pitch shifting implementation
-    with optional formant preservation and smooth character transitions.
-
-
-  ==============================================================================
-*/
-
 #include "DSPVoiceChanger.h"
 #include <algorithm>
 #include <cstring>

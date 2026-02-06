@@ -111,14 +111,13 @@ void NeuralPresetGenerator::processInferenceOutput(const std::vector<float>& out
             result.preset.category = "AI_Generated";
             
             // Add metadata tags
-            result.preset.tags.push_back("model:" + modelPath.getFileName());
+            result.preset.tags.push_back(("model:" + modelPath.getFileName()).toStdString());
             result.preset.tags.push_back("validity:checked");
             
         } else {
             result.success = false;
             // Should be rare since we clamped, but possible if schema logic fails
-            result.error = "Generated preset failed validation: " + 
-                           (validation.errors.isEmpty() ? "Unknown error" : validation.errors[0]);
+            result.error = "Generated preset failed validation: " +                            (validation.errors.empty() ? "Unknown error" : validation.errors[0]);
         }
         
     } catch (const std::exception& e) {

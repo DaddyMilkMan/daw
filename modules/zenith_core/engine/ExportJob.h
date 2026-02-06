@@ -17,18 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#pragma once
 
- // File: ExportJob.h
- // Brief: Asynchronous export job for background audio rendering
- *
- * This class enables non-blocking audio export by running the render loop
- * on a background thread with proper progress reporting and cancellation.
- */
-
+// ExportJob.h - Asynchronous export job for background audio rendering
 
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_core/juce_core.h>

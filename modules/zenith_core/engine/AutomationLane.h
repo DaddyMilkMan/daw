@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    AutomationLane.h
-    Author: Zenith DAW
-
-    A lock-free compatible container for automation data.
-    Designed to be swapped atomically (RCU style).
-  ==============================================================================
-*/
-
-
 #pragma once
 #include <algorithm>
 #include <cmath>

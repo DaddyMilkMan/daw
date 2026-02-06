@@ -17,26 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    MacroControl.h
-    Created: 2025-12-09
-    Author:  Zenith DAW
-
-    Macro Control for user-driven modulation.
-    Simple float value (0.0-1.0) with optional smoothing.
-
-
-    RT-SAFETY: All audio thread operations are lock-free.
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <array>

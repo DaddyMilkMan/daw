@@ -17,26 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    MidiPitchController.h
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    MIDI-controlled pitch targeting for Auto-Tune.
-    
-    Allows playing target notes on a MIDI keyboard while singing.
-
-    This is the classic "Auto-Tune with MIDI" workflow used by pros.
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_audio_basics/juce_audio_basics.h>

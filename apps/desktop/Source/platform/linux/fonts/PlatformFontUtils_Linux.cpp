@@ -7,7 +7,7 @@
   ==============================================================================
 */
 
-#include "../../../ui/design-system/PlatformFontUtils.h"
+#include "PlatformFontUtils.h"
 
 #ifdef __linux__
 #include <core/SkFontMgr.h>

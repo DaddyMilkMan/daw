@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithLayout.h
-    Created: 2025-12-03
-    Author:  Zenith DAW
-
-    Layout engine wrapper for Zenith UI components.
-    Provides FlexBox-based layout utilities with a fluent API.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>

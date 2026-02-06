@@ -17,10 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
 
  * @file ArrangerClipManager.h
  * @brief Clip creation, deletion, selection, and view management for ArrangerComponent
@@ -29,7 +25,6 @@
  * - Building and maintaining clip view data structures
  * - Selection state management
  * - Clip creation, deletion, and duplication
- */
 
 
 

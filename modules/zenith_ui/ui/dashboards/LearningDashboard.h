@@ -17,23 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    LearningDashboard.h
-    Learning progress dashboard with real-time monitoring
-    Phase 4: User Interface
-  ==============================================================================
-*/
-
-
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
-#include "../../ai/ModelTrainer.h"
-#include "../../ai/ProductionModelManager.h"
+#include "ai_client/ModelTrainer.h"
+#include "ai_client/ProductionModelManager.h"
 #include <memory>
 #include <vector>
 #include <thread>

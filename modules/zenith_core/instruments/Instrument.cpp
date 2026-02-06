@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    Instrument.cpp
-    Created: 2025-11-18
-    Author:  Zenith DAW
-
-    Implementation of InstrumentBase helper class.
-
-  ==============================================================================
-
-*/
-
 #include "Instrument.h"
 
 namespace zenith {

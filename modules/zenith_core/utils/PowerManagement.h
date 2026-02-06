@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PowerManagement.h
-    Created: 2026-01-13
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #pragma once
 
 #include <juce_core/juce_core.h>

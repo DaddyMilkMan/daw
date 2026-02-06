@@ -6,7 +6,7 @@
 */
 
 #include "MixingAssistant.h"
-#include "../ui/design-system/ZenithDesignSystem.h"
+#include <zenith_ui/ui/design-system/ZenithDesignSystem.h>
 #include <algorithm>
 #include <numeric>
 #include <string>
@@ -20,13 +20,13 @@ MixingAssistant::MixingAssistant() {
     config = MixingAssistantFactory::getDefaultConfig();
     
     // Initialize FFT for analysis
-    fft = juce::dsp::FFT(config.fftOrder);
-    window = juce::dsp::WindowingFunction<float>(fft.getSize(), config.windowMethod);
+    fft_ = std::make_unique<juce::dsp::FFT>(config.fftOrder);
+    windowFunction_ = std::make_unique<juce::dsp::WindowingFunction<float>>(fft_->getSize(), config.windowMethod);
     
     // Initialize analysis buffers
-    fftBuffer.resize(fft.getSize() * 2);
-    magnitudeBuffer.resize(fft.getSize() / 2 + 1);
-    phaseBuffer.resize(fft.getSize() / 2 + 1);
+    fftBuffer.resize(fft_->getSize() * 2);
+    magnitudeBuffer.resize(fft_->getSize() / 2 + 1);
+    phaseBuffer.resize(fft_->getSize() / 2 + 1);
     
     // Start timer for real-time analysis
     startTimer(config.updateInterval);
@@ -40,12 +40,12 @@ void MixingAssistant::setConfig(const MixingAssistantConfig& newConfig) {
     config = newConfig;
     
     // Reinitialize FFT if size changed
-    if (fft.getSize() != (1 << config.fftOrder)) {
-        fft = juce::dsp::FFT(config.fftOrder);
-        window = juce::dsp::WindowingFunction<float>(fft.getSize(), config.windowMethod);
-        fftBuffer.resize(fft.getSize() * 2);
-        magnitudeBuffer.resize(fft.getSize() / 2 + 1);
-        phaseBuffer.resize(fft.getSize() / 2 + 1);
+    if (!fft_ || fft_->getSize() != (1 << config.fftOrder)) {
+        fft_ = std::make_unique<juce::dsp::FFT>(config.fftOrder);
+        windowFunction_ = std::make_unique<juce::dsp::WindowingFunction<float>>(fft_->getSize(), config.windowMethod);
+        fftBuffer.resize(fft_->getSize() * 2);
+        magnitudeBuffer.resize(fft_->getSize() / 2 + 1);
+        phaseBuffer.resize(fft_->getSize() / 2 + 1);
     }
     
     // Restart timer with new interval
@@ -143,7 +143,7 @@ MixAnalysis MixingAssistant::getCurrentAnalysis() const {
     return currentAnalysis;
 }
 
-MixAnalysis MixingAssistant::getTrackAnalysis(const juce::String& trackId) const {
+MixAnalysis::TrackAnalysis MixingAssistant::getTrackAnalysis(const juce::String& trackId) const {
     std::lock_guard<std::mutex> lock(analysisMutex);
     auto it = trackAnalyses.find(trackId);
     if (it != trackAnalyses.end()) {
@@ -439,7 +439,7 @@ void MixingAssistant::analyzeFrequencyBalance(MixAnalysis& analysis, const juce:
     
     // Calculate frequency band levels
     float sampleRate = mainSampleRate;
-    int fftSize = fft.getSize();
+    int fftSize = fft_->getSize();
     float binWidth = sampleRate / fftSize;
     
     // Sub-bass (20-60 Hz)
@@ -609,10 +609,10 @@ void MixingAssistant::analyzeQuality(MixAnalysis& analysis) {
 }
 
 void MixingAssistant::performFFT(const juce::AudioBuffer<float>& buffer) {
-    if (buffer.getNumSamples() < fft.getSize()) return;
+    if (!fft_ || buffer.getNumSamples() < fft_->getSize()) return;
     
     // Copy samples to FFT buffer
-    int numSamples = juce::jmin(buffer.getNumSamples(), fft.getSize());
+    int numSamples = juce::jmin(buffer.getNumSamples(), fft_->getSize());
     
     for (int i = 0; i < numSamples; ++i) {
         float sample = 0.0f;
@@ -625,25 +625,25 @@ void MixingAssistant::performFFT(const juce::AudioBuffer<float>& buffer) {
     }
     
     // Zero pad if necessary
-    for (int i = numSamples; i < fft.getSize(); ++i) {
+    for (int i = numSamples; i < fft_->getSize(); ++i) {
         fftBuffer[i] = std::complex<float>(0.0f, 0.0f);
     }
     
     // Apply window
-    std::vector<float> windowedSamples(fft.getSize());
-    for (int i = 0; i < fft.getSize(); ++i) {
+    std::vector<float> windowedSamples(fft_->getSize());
+    for (int i = 0; i < fft_->getSize(); ++i) {
         windowedSamples[i] = fftBuffer[i].real();
     }
-    window.multiplyWithWindowingTable(windowedSamples.data(), fft.getSize());
-    for (int i = 0; i < fft.getSize(); ++i) {
+    windowFunction_->multiplyWithWindowingTable(windowedSamples.data(), fft_->getSize());
+    for (int i = 0; i < fft_->getSize(); ++i) {
         fftBuffer[i] = std::complex<float>(windowedSamples[i], 0.0f);
     }
     
     // Perform FFT
-    fft.performFrequencyOnlyForwardTransform(reinterpret_cast<float*>(fftBuffer.data()));
+    fft_->performFrequencyOnlyForwardTransform(reinterpret_cast<float*>(fftBuffer.data()));
     
     // Convert to magnitude and phase
-    for (int i = 0; i < fft.getSize() / 2 + 1; ++i) {
+    for (int i = 0; i < fft_->getSize() / 2 + 1; ++i) {
         magnitudeBuffer[i] = std::abs(fftBuffer[i]);
         phaseBuffer[i] = std::arg(fftBuffer[i]);
     }
@@ -779,7 +779,7 @@ float MixingAssistant::calculateFrequencyCenter(const juce::AudioBuffer<float>& 
     
     float weightedSum = 0.0f;
     float magnitudeSum = 0.0f;
-    float binWidth = mainSampleRate / fft.getSize();
+    float binWidth = mainSampleRate / fft_->getSize();
     
     for (int i = 1; i < magnitudeBuffer.size(); ++i) {
         float frequency = i * binWidth;
@@ -796,7 +796,7 @@ float MixingAssistant::calculateSpectralSpread() {
     float center = calculateFrequencyCenter(mainAudioBuffer);
     float weightedSum = 0.0f;
     float magnitudeSum = 0.0f;
-    float binWidth = mainSampleRate / fft.getSize();
+    float binWidth = mainSampleRate / fft_->getSize();
     
     for (int i = 1; i < magnitudeBuffer.size(); ++i) {
         float frequency = i * binWidth;
@@ -1095,7 +1095,7 @@ void MixingAssistant::requestCompressionAISuggestion(const juce::String& trackId
     requestAISuggestion(trackId, "compression");
 }
 
-void Juce::MixingAssistant::requestReverbAISuggestion(const juce::String& trackId) {
+void MixingAssistant::requestReverbAISuggestion(const juce::String& trackId) {
     requestAISuggestion(trackId, "reverb");
 }
 
@@ -1324,7 +1324,7 @@ float MixingAssistant::calculateBandLevel(const std::vector<float>& spectrum,
 void MixingAssistant::calculateSpectralFeatures(MixAnalysis& analysis) {
     float weightedSum = 0.0f;
     float magnitudeSum = 0.0f;
-    float binWidth = mainSampleRate / fft.getSize();
+    float binWidth = mainSampleRate / fft_->getSize();
     
     for (int i = 1; i < magnitudeBuffer.size(); ++i) {
         float frequency = i * binWidth;
@@ -1445,7 +1445,7 @@ float MixingAssistant::detectFundamental(const std::vector<float>& magnitude) {
         }
     }
     
-    return maxBin * mainSampleRate / fft.getSize();
+    return maxBin * mainSampleRate / fft_->getSize();
 }
 
 float MixingAssistant::calculatePitchConfidence(const juce::AudioBuffer<float>& buffer) {

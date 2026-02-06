@@ -16,16 +16,13 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#include "TempoMap.h"
+#include "ProjectState.h"
+#include <algorithm>
+#include <cstdint>
+#include <memory>
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-//     File: TempoMap.cpp
-//     Brief: RT-safe tempo map implementation
-//*
-
+namespace zenith {
 
 //==============================================================================
 // TempoMapSnapshot Implementation

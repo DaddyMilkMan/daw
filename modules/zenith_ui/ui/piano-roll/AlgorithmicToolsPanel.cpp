@@ -17,18 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    AlgorithmicToolsPanel.cpp
-    Implementation of Piano Roll Power Tools
-  ==============================================================================
-*/
-
-
 #include "../controls/SkiaAlertWindow.h"
 #include <random>
 

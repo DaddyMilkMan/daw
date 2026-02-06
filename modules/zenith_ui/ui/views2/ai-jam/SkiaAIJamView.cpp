@@ -17,30 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaAIJamView.cpp
-    Created: 2026-02-04
-    Author:  Zenith DAW Team
-
-    Production-ready AI Jam View implementation with full Grok API integration.
-    
-    Features:
-
-    - Real-time async Grok API communication
-    - Stem generation with audio preview
-    - Chat history with context preservation
-    - Error handling and retry logic
-    - Progress tracking for generation
-
-  ==============================================================================
-*/
-
 #include "SkiaAIJamView.h"
 #include "../../design-system/ZenithTheme.h"
 #include "../../../network/GrokDAWController.h"

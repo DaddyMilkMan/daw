@@ -17,26 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ClassicAutoTune.cpp
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Classic Auto-Tune 5 algorithm recreation.
-    
-    This is NOT trying to be transparent. It's trying to sound like
-
-    the iconic Auto-Tune effect from the 2000s.
-
-  ==============================================================================
-*/
-
 #include "ClassicAutoTune.h"
 #include <cmath>
 

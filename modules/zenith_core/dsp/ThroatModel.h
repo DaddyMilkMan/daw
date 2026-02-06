@@ -17,27 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ThroatModel.h
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Physical modeling of the vocal tract for timbre shaping.
-    
-    This recreates the "Throat Modeling" feature from Auto-Tune Pro,
-
-    allowing users to shape the vocal character by modeling the
-    physical dimensions of the vocal tract.
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_audio_basics/juce_audio_basics.h>

@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ProjectRecoveryModal.h
-    Created: 2025-12-29
-    Author:  Zenith DAW Team
-
-    Premium Skia-based Project Recovery Modal with glassmorphism effects.
-    Replaces ugly native JUCE dialog with a modern, glowy UI.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../framework/SkiaComponent.h"

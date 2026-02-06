@@ -17,26 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AIMixAssistantView.h
-    Created: 2025-12-20
-    Author:  Zenith DAW
-
-    UI for the AI Mix Assistant and Mastering Agent.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
-#include "../../ai/AIMasteringAgent.h"
+#include "ai_client/AIMasteringAgent.h"
 #include "../framework/GlassmorphicPanel.h"
 #include "../controls/ZenithUIComponents.h"
 #include <juce_gui_basics/juce_gui_basics.h>

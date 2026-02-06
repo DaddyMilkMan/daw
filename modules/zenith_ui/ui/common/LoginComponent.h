@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    LoginComponent.h
-    Created: 2025-12-28
-    Author:  Zenith DAW Team
-
-    Premium login UI component with Sign In / Sign Up forms,
-    Google OAuth button, and SylorLabs username/password authentication.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "SkiaComponent.h"

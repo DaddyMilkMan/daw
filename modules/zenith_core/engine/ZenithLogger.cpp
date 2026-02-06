@@ -17,15 +17,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+//==============================================================================
+#include "ZenithLogger.h"
+#include "../utils/PlatformLogUtils.h"
+#include <iostream>
 
-//     File: ZenithLogger.cpp
-//     Brief: Implementation of centralized logging system
- * @author Marcus "The Craftsman" Rodriguez - Operation Polish Phase 2
-//*
 
 
 

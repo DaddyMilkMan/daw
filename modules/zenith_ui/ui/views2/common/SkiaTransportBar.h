@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaTransportBar.h
-    Created: 2026-02-03
-    Author:  Zenith DAW Team
-
-    Transport controls bar - play, stop, record, loop, tempo, position.
-    Fixed at top of window.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../../framework/SkiaComponent.h"

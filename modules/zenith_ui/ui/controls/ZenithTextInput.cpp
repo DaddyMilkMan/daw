@@ -17,27 +17,14 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithTextInput.cpp
-    Created: 2025-12-12
-    Author:  Zenith DAW
-
-    Implementation of the premium text input.
-
-  ==============================================================================
-
-*/
-
 #include "ZenithTextInput.h"
 #include "ZenithTextInput.h"
 #include "../design-system/ColorBridge.h"
 #include "../design-system/ZenithDesignSystem.h"
+#include "../validation/ValidatorFactory.h"
+#include "../validation/ValidationDecorator.h"
+#include "../validation/ValidationError.h"
+#include <zenith_core/utils/PlatformLogUtils.h>
 // #include "../design-system/ZenithTheme.h" // Deprecated
 
 #ifdef ZENITH_USE_SKIA
@@ -247,6 +234,23 @@ void ZenithTextInput::finishEditing(bool cancelled) {
 void ZenithTextInput::validateAndApply(const juce::String &newText) {
   juce::String validatedText = newText;
 
+  // Perform validation if we have a validator
+  if (validator_) {
+    try {
+      auto result = validator_->validate();
+      setValidationState(result);
+
+      if (result.isFailure()) {
+        // Don't apply invalid values
+        return;
+      }
+    } catch (const ValidationError& e) {
+      setValidationState(ValidationResult::failure(e.getUserMessage()));
+      return;
+    }
+  }
+
+  // Apply the value
   if (inputType_ != InputType::Text) {
     double value = newText.getDoubleValue();
     setValue(value, true);
@@ -383,6 +387,166 @@ void ZenithTextInput::drawLabel(SkCanvas *canvas) {
 
 #endif // ZENITH_USE_SKIA
 
+// Validation implementation
+ValidationResult ZenithTextInput::validate() {
+  if (!validator_) {
+    // Basic validation based on input type
+    return validateText();
+  }
 
+  // Use validator if set
+  try {
+    return validator_->validate();
+  } catch (const ValidationError& e) {
+    return ValidationResult::failure(e.getUserMessage());
+  }
+}
+
+void ZenithTextInput::setValidator(Validator* validator) {
+  validator_.reset(validator);
+
+  // Validate immediately if auto-validate is enabled
+  if (autoValidate_) {
+    validate();
+  }
+}
+
+void ZenithTextInput::setAutoValidate(bool autoValidate) {
+  autoValidate_ = autoValidate;
+
+  if (autoValidate_) {
+    validate();
+  }
+}
+
+void ZenithTextInput::clearValidation() {
+  lastValidationResult_ = ValidationResult::success();
+  repaint();
+}
+
+void ZenithTextInput::setValidationCallback(std::function<void(const ValidationResult&)> callback) {
+  validationCallback_ = callback;
+}
+
+void ZenithTextInput::validateText() {
+  ValidationResult result;
+
+  // Basic input type validation
+  switch (inputType_) {
+    case InputType::Integer: {
+      bool isValid = true;
+      juce::String error;
+
+      if (text_.isEmpty()) {
+        if (isRequired_) {
+          result = ValidationResult::failure("Value is required");
+        }
+        break;
+      }
+
+      // Check if it's a valid integer
+      if (!text_.containsOnly("0123456789-")) {
+        result = ValidationResult::failure("Please enter a valid integer");
+        break;
+      }
+
+      int intValue = text_.getIntValue();
+      if (intValue < minValue_ || intValue > maxValue_) {
+        result = ValidationResult::failure("Value must be between " + juce::String((int)minValue_) +
+                                        " and " + juce::String((int)maxValue_));
+      }
+      break;
+    }
+
+    case InputType::Decimal: {
+      if (text_.isEmpty()) {
+        if (isRequired_) {
+          result = ValidationResult::failure("Value is required");
+        }
+        break;
+      }
+
+      // Check if it's a valid number
+      double value = text_.getDoubleValue();
+      if (juce::CharacterFunctions::isDigit(text_[0]) || text_[0] == '-' || text_[0] == '.') {
+        if (value < minValue_ || value > maxValue_) {
+          result = ValidationResult::failure("Value must be between " + juce::String(minValue_) +
+                                          " and " + juce::String(maxValue_));
+        }
+      } else {
+        result = ValidationResult::failure("Please enter a valid number");
+      }
+      break;
+    }
+
+    case InputType::Text: {
+      if (text_.trim().isEmpty() && isRequired_) {
+        result = ValidationResult::failure("This field is required");
+      }
+      break;
+    }
+
+    case InputType::Frequency: {
+      if (text_.isEmpty()) {
+        if (isRequired_) {
+          result = ValidationResult::failure("Frequency is required");
+        }
+        break;
+      }
+
+      // Extract numeric part
+      double frequency = text_.getDoubleValue();
+      if (frequency <= 0 || frequency > 20000) {
+        result = ValidationResult::failure("Frequency must be between 1 Hz and 20 kHz");
+      }
+      break;
+    }
+
+    case InputType::Time: {
+      if (text_.isEmpty()) {
+        if (isRequired_) {
+          result = ValidationResult::failure("Time value is required");
+        }
+        break;
+      }
+
+      // Check if it ends with ms, s, or min
+      if (!text_.endsWith("ms") && !text_.endsWith("s") && !text_.endsWith("min")) {
+        result = ValidationResult::failure("Time must end with ms, s, or min");
+      }
+
+      // Extract numeric part
+      juce::String numericPart = text_.upToFirstOccurrenceOf("ms", false, false)
+                                   .upToFirstOccurrenceOf("s", false, false)
+                                   .upToFirstOccurrenceOf("min", false, false);
+
+      double timeValue = numericPart.getDoubleValue();
+      if (timeValue < 0) {
+        result = ValidationResult::failure("Time cannot be negative");
+      }
+      break;
+    }
+  }
+
+  setValidationState(result);
+}
+
+void ZenithTextInput::addError(const juce::String& error) {
+  setValidationState(ValidationResult::failure(error));
+}
+
+void ZenithTextInput::addWarning(const juce::String& warning) {
+  setValidationState(ValidationResult::warning(warning));
+}
+
+void ZenithTextInput::setValidationState(const ValidationResult& result) {
+  lastValidationResult_ = result;
+  repaint();
+
+  // Fire callback
+  if (validationCallback_) {
+    validationCallback_(result);
+  }
+}
 
 } // namespace zenith

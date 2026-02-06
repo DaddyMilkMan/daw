@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PitchDetector.h
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Real-time pitch detection using optimized YIN algorithm.
-    Low-latency design for live vocal processing.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_audio_basics/juce_audio_basics.h>

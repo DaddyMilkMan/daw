@@ -1,0 +1,562 @@
+{
+  "bank_name": "Advanced Wavetable Presets",
+  "version": "1.0.0",
+  "author": "Zenith AI Sound Design Team",
+  "description": "Professional wavetable collection with morphing and editing capabilities",
+  "categories": {
+    "analog": "Classic analog waveforms with character",
+    "digital": "Harsh digital waves with edge",
+    "pads": "Evolving pad textures and atmospheres",
+    "bass": "Deep bass waves and sub frequencies",
+    "lead": "Cutting lead waves and solos",
+    "fx": "Sound effects and experimental waves",
+    "vocals": "Formant waves and vocal textures",
+    "acoustic": "Acoustic instrument waves",
+    "experimental": "Avant-garde and experimental waves"
+  },
+  "presets": [
+    {
+      "id": "analog_saw_01",
+      "name": "Analog Saw Wave",
+      "category": "analog",
+      "description": "Classic analog sawtooth wave with harmonic richness",
+      "frames": 32,
+      "samples_per_frame": 2048,
+      "loop_mode": true,
+      "loop_crossfade": 0.1,
+      "parameters": {
+        "wave_type": "sawtooth",
+        "harmonics": [1, 0.5, 0.33, 0.25, 0.2, 0.16, 0.14, 0.12],
+        "duty_cycle": 0.5,
+        "curve": 0.0,
+        "anti_alias": true
+      },
+      "characteristics": {
+        "brightness": 0.6,
+        "warmth": 0.4,
+        "complexity": 0.7,
+        "harmonicity": 0.9,
+        "richness": 0.8
+      },
+      "metadata": {
+        "genre": ["analog", "vintage", "synth"],
+        "era": ["1970s", "1980s"],
+        "mood": ["warm", "organic", "classic"],
+        "instruments": ["synthesizer", "analog"],
+        "usage": "leads, bass, pads"
+      },
+      "file_path": "analog/analog_saw_01.wtb"
+    },
+    {
+      "id": "analog_square_01",
+      "name": "Analog Square Wave",
+      "category": "analog",
+      "description": "Classic analog square wave with even harmonics",
+      "frames": 16,
+      "samples_per_frame": 2048,
+      "loop_mode": true,
+      "loop_crossfade": 0.05,
+      "parameters": {
+        "wave_type": "square",
+        "harmonics": [1, 0, 0.33, 0, 0.2, 0, 0.14, 0],
+        "duty_cycle": 0.5,
+        "curve": 0.1,
+        "anti_alias": true
+      },
+      "characteristics": {
+        "brightness": 0.4,
+        "warmth": 0.6,
+        "complexity": 0.5,
+        "harmonicity": 0.8,
+        "richness": 0.6
+      },
+      "metadata": {
+        "genre": ["analog", "vintage", "chip"],
+        "era": ["1980s"],
+        "mood": "retro", "nostalgic", "classic"],
+        "instruments": ["synthesizer", "gameboy"],
+        "usage": "bass, arpeggios, rhythm"
+      },
+      "file_path": "analog/analog_square_01.wtb"
+    },
+    {
+      "id": "digital_pulse_01",
+      "name": "Digital Pulse Wave",
+      "category": "digital",
+      "description": "Digital pulse wave with narrow width and edge",
+      "frames": 64,
+      "samples_per_frame": 2048,
+      "loop_mode": true,
+      "loop_crossfade": 0.02,
+      "parameters": {
+        "wave_type": "pulse",
+        "harmonics": [1, 0.8, 0.6, 0.4, 0.3, 0.2, 0.15, 0.1],
+        "duty_cycle": 0.25,
+        "curve": 0.0,
+        "anti_alias": false
+      },
+      "characteristics": {
+        "brightness": 0.8,
+        "warmth": 0.2,
+        "complexity": 0.6,
+        "harmonicity": 0.7,
+        "richness": 0.5
+      },
+      "metadata": {
+        "genre": ["digital", "chiptune", "electronic"],
+        "era": ["1990s", "2000s"],
+        "mood": "digital", "crisp", "modern"],
+        "instruments": ["synthesizer", "game"],
+        "usage": "chiptune, arpeggios, leads"
+      },
+      "file_path": "digital/digital_pulse_01.wtb"
+    },
+    {
+      "id": "digital_waveshape_01",
+      "name": "Digital Waveshape",
+      "description": "Complex digital waveshape with harmonic distortion",
+      "frames": 128,
+      "samples_per_frame": 2048,
+      "loop_mode": true,
+      "loop_crossfade": 0.1,
+      "parameters": {
+        "wave_type": "waveshape",
+        "harmonics": [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3],
+        "duty_cycle": 0.5,
+        "curve": 0.8,
+        "anti_alias": true
+      },
+      "characteristics": {
+        "brightness": 0.9,
+        "warmth": 0.1,
+        "complexity": 0.9,
+        "harmonicity": 0.6,
+        "richness": 0.7
+      },
+      "metadata": {
+        "genre": ["electronic", "techno", "industrial"],
+        "era": ["modern"],
+        "mood": "aggressive", "energetic", "futuristic"],
+        "instruments": ["synthesizer", "modular"],
+        "usage": "leads, fx, bass"
+      },
+      "file_path": "digital/digital_waveshape_01.wtb"
+    },
+    {
+      "id": "pad_atmosphere_01",
+      "name": "Atmosphere Pad",
+      "category": "pads",
+      "description": "Evolving pad texture with morphing waves",
+      "frames": 256,
+      "samples_per_frame": 4096,
+      "loop_mode": true,
+      "loop_crossfade": 0.3,
+      "parameters": {
+        "wave_type": "morph",
+        "harmonics": [1, 0.3, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002],
+        "duty_cycle": 0.5,
+        "curve": 0.3,
+        "anti_alias": true
+      },
+      "characteristics": {
+        "brightness": 0.3,
+        "warmth": 0.8,
+        "complexity": 0.8,
+        "harmonicity": 0.7,
+        "richness": 0.9
+      },
+      "metadata": {
+        "genre": ["ambient", "downtempo", "cinematic"],
+        "era": ["modern"],
+        "mood": "ethereal", "spacious", "dreamy"],
+        "instruments": ["synthesizer", "pad"],
+        "usage": "backgrounds, atmospheres, textures"
+      },
+      "file_path": "pads/pad_atmosphere_01.wtb"
+    },
+    {
+      "id": "pad_strings_01",
+      "name": "String Pad",
+      "category": "pads",
+      "description": "Simulated string ensemble pad with vibrato",
+      "frames": 128,
+      "samples_per_frame": 4096,
+      "loop_mode": true,
+      "loop_crossfade": 0.2,
+      "parameters": {
+        "wave_type": "strings",
+        "harmonics": [1, 0.8, 0.6, 0.4, 0.3, 0.2, 0.15, 0.1],
+        "duty_cycle": 0.5,
+        "curve": 0.2,
+        "anti_alias": true
+      },
+      "characteristics": {
+        "brightness": 0.5,
+        "warmth": 0.9,
+        "complexity": 0.7,
+        "harmonicity": 0.9,
+        "richness": 0.8
+      },
+      "metadata": {
+        "genre": ["classical", "cinematic", "orchestral"],
+        "era": ["modern"],
+        "mood": "expressive", "emotional", "dramatic"],
+        "instruments": ["strings", "orchestra"],
+        "usage": "backgrounds, strings, ensemble"
+      },
+      "file_path": "pads/pad_strings_01.wtb"
+    },
+    {
+      "id": "bass_sub_01",
+      "name": "Sub Bass Wave",
+      "category": "bass",
+      "description": "Deep sub-bass wave with fundamental emphasis",
+      "frames": 32,
+      "samples_per_frame": 2048,
+      "loop_mode": true,
+      "loop_crossfade": 0.05,
+      "parameters": {
+        "wave_type": "sub",
+        "harmonics": [1, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001],
+        "duty_cycle": 0.5,
+        "curve": 0.0,
+        "anti_alias": true
+      },
+      "characteristics": {
+        "brightness": 0.1,
+        "warmth": 0.9,
+        "complexity": 0.2,
+        "harmonicity": 0.9,
+        "richness": 0.5
+      },
+      "metadata": {
+        "genre": ["electronic", "dubstep", "trap"],
+        "era": ["modern"],
+        "mood": "powerful", "deep", "dark"],
+        "instruments": ["bass", "synthesizer"],
+        "usage": "sub bass, 808, low end"
+      },
+      "file_path": "bass/bass_sub_01.wtb"
+    },
+    {
+      "id": "bass_wobble_01",
+      "name": "Wobble Bass",
+      "category": "bass",
+      "description": "Wobble bass wave with morphing capabilities",
+      "frames": 64,
+      "samples_per_frame": 2048,
+      "loop_mode": true,
+      "loop_crossfade": 0.2,
+      "parameters": {
+        "wave_type": "wobble",
+        "harmonics": [1, 0.6, 0.3, 0.2, 0.1, 0.05, 0.03, 0.02],
+        "duty_cycle": 0.5,
+        "curve": 0.4,
+        "anti_alias": true
+      },
+      "characteristics": {
+        "brightness": 0.4,
+        "warmth": 0.7,
+        "complexity": 0.8,
+        "harmonicity": 0.7,
+        "richness": 0.8
+      },
+      "metadata": {
+        "genre": ["dubstep", "electronic", "bass"],
+        "era": ["modern"],
+        "mood": "aggressive", "energetic", "rhythmic"],
+        "instruments": ["bass", "synthesizer"],
+        "usage": "wobble bass, drops, drops"
+      },
+      "file_path": "bass/bass_wobble_01.wtb"
+    },
+    {
+      "id": "lead_analog_01",
+      "name": "Analog Lead",
+      "category": "lead",
+      "description": "Classic analog lead wave with bright harmonics",
+      "frames": 32,
+      "samples_per_frame": 2048,
+      "loop_mode": true,
+      "loop_crossfade": 0.1,
+      "parameters": {
+        "wave_type": "lead",
+        "harmonics": [1, 0.8, 0.6, 0.4, 0.3, 0.2, 0.15, 0.1],
+        "duty_cycle": 0.5,
+        "curve": 0.2,
+        "anti_alias": true
+      },
+      "characteristics": {
+        "brightness": 0.8,
+        "warmth": 0.3,
+        "complexity": 0.7,
+        "harmonicity": 0.8,
+        "richness": 0.6
+      },
+      "metadata": {
+        "genre": ["synthwave", "retro", "electronic"],
+        "era": ["1980s", "modern"],
+        "mood": "bright", "energetic", "futuristic"],
+        "instruments": ["lead", "synthesizer"],
+        "usage": "leads, solos, melody"
+      },
+      "file_path": "lead/lead_analog_01.wtb"
+    },
+    {
+      "id": "lead_digital_01",
+      "name": "Digital Lead",
+      "category": "lead",
+      "description": "Digital lead wave with cutting brightness",
+      "frames": 64,
+      "samples_per_frame": 2048,
+      "loop_mode": true,
+      "loop_crossfade": 0.05,
+      "parameters": {
+        "wave_type": "digital_lead",
+        "harmonics": [1, 0.9, 0.7, 0.5, 0.3, 0.2, 0.1, 0.05],
+        "duty_cycle": 0.5,
+        "curve": 0.6,
+        "anti_alias": true
+      },
+      "characteristics": {
+        "brightness": 0.9,
+        "warmth": 0.2,
+        "complexity": 0.8,
+        "harmonicity": 0.6,
+        "richness": 0.5
+      },
+      "metadata": {
+        "genre": ["electronic", "techno", "trance"],
+        "era": ["modern"],
+        "mood": "energetic", "bright", "intense"],
+        "instruments": ["lead", "synthesizer"],
+        "usage": "leads, solos, melody"
+      },
+      "file_path": "lead/lead_digital_01.wtb"
+    },
+    {
+      "id": "fx_sweep_01",
+      "name": "Sweep FX",
+      "category": "fx",
+      "description": "FX sweep wave with morphing characteristics",
+      "frames": 128,
+      "samples_per_frame": 2048,
+      "loop_mode": true,
+      "loop_crossfade": 0.3,
+      "parameters": {
+        "wave_type": "sweep",
+        "harmonics": [1, 0.5, 0.3, 0.2, 0.1, 0.05, 0.03, 0.02],
+        "duty_cycle": 0.5,
+        "curve": 0.7,
+        "anti_alias": true
+      },
+      "characteristics": {
+        "brightness": 0.7,
+        "warmth": 0.4,
+        "complexity": 0.9,
+        "harmonicity": 0.5,
+        "richness": 0.7
+      },
+      "metadata": {
+        "genre": ["electronic", "sound_design", "fx"],
+        "era": ["modern"],
+        "mood": "dynamic", "tense", "atmospheric"],
+        "instruments": ["fx", "synthesizer"],
+        "usage": "sweeps, fx, transitions"
+      },
+      "file_path": "fx/fx_sweep_01.wtb"
+    },
+    {
+      "id": "fx_riser_01",
+      "name": "Riser FX",
+      "category": "fx",
+      "description": "FX riser wave with ascending harmonics",
+      "frames": 192,
+      "samples_per_frame": 2048,
+      "loop_mode": true,
+      "loop_crossfade": 0.2,
+      "parameters": {
+        "wave_type": "riser",
+        "harmonics": [0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 0.9, 0.8],
+        "duty_cycle": 0.5,
+        "curve": 0.5,
+        "anti_alias": true
+      },
+      "characteristics": {
+        "brightness": 0.8,
+        "warmth": 0.3,
+        "complexity": 0.8,
+        "harmonicity": 0.7,
+        "richness": 0.6
+      },
+      "metadata": {
+        "genre": ["electronic", "edm", "progressive"],
+        "era": ["modern"],
+        "mood": "tense", "rising", "energetic"],
+        "instruments": ["fx", "synthesizer"],
+        "usage": "risers, fx, buildups"
+      },
+      "file_path": "fx/fx_riser_01.wtb"
+    },
+    {
+      "id": "vocal_formant_01",
+      "name": "Vocal Formant",
+      "category": "vocals",
+      "description": "Vocal formant wave with formant filtering",
+      "frames": 96,
+      "samples_per_frame": 2048,
+      "loop_mode": true,
+      "loop_crossfade": 0.15,
+      "parameters": {
+        "wave_type": "formant",
+        "harmonics": [0.2, 0.8, 0.6, 0.4, 0.3, 0.2, 0.1, 0.05],
+        "duty_cycle": 0.5,
+        "curve": 0.3,
+        "anti_alias": true
+      },
+      "characteristics": {
+        "brightness": 0.6,
+        "warmth": 0.7,
+        "complexity": 0.7,
+        "harmonicity": 0.6,
+        "richness": 0.8
+      },
+      "metadata": {
+        "genre": ["vocal", "choir", "synth"],
+        "era": ["modern"],
+        "mood": "expressive", "human", "vocal"],
+        "instruments": ["vocal", "synthesizer"],
+        "usage": "vocals, choirs, formants"
+      },
+      "file_path": "vocals/vocal_formant_01.wtb"
+    },
+    {
+      "id": "acoustic_guitar_01",
+      "name": "Acoustic Guitar",
+      "category": "acoustic",
+      "description": "Acoustic guitar sampled wave with natural decay",
+      "frames": 64,
+      "samples_per_frame": 4096,
+      "loop_mode": false,
+      "loop_crossfade": 0.0,
+      "parameters": {
+        "wave_type": "acoustic",
+        "harmonics": [1, 0.6, 0.4, 0.3, 0.2, 0.15, 0.1, 0.08],
+        "duty_cycle": 0.5,
+        "curve": 0.1,
+        "anti_alias": true
+      },
+      "characteristics": {
+        "brightness": 0.6,
+        "warmth": 0.8,
+        "complexity": 0.8,
+        "harmonicity": 0.9,
+        "richness": 0.9
+      },
+      "metadata": {
+        "genre": ["acoustic", "folk", "organic"],
+        "era": ["traditional", "modern"],
+        "mood": "natural", "organic", "expressive"],
+        "instruments": ["guitar", "acoustic"],
+        "usage": "acoustic, folk, strumming"
+      },
+      "file_path": "acoustic/acoustic_guitar_01.wtb"
+    },
+    {
+      "id": "experimental_granular_01",
+      "name": "Granular Experimental",
+      "category": "experimental",
+      "description": "Granular synthesis experimental wave",
+      "frames": 512,
+      "samples_per_frame": 2048,
+      "loop_mode": true,
+      "loop_crossfade": 0.4,
+      "parameters": {
+        "wave_type": "granular",
+        "harmonics": [1, 0.3, 0.7, 0.2, 0.5, 0.4, 0.6, 0.3],
+        "duty_cycle": 0.5,
+        "curve": 0.8,
+        "anti_alias": true
+      },
+      "characteristics": {
+        "brightness": 0.5,
+        "warmth": 0.5,
+        "complexity": 1.0,
+        "harmonicity": 0.3,
+        "richness": 1.0
+      },
+      "metadata": {
+        "genre": ["experimental", "avant_garde", "sound_art"],
+        "era": ["modern"],
+        "mood": "abstract", "textural", "unpredictable"],
+        "instruments": ["experimental", "granular"],
+        "usage": "experimental, sound_art, textures"
+      },
+      "file_path": "experimental/experimental_granular_01.wtb"
+    },
+    {
+      "id": "experimental_noise_01",
+      "name": "Noise Texture",
+      "category": "experimental",
+      "description": "Noise-based texture wave",
+      "frames": 256,
+      "samples_per_frame": 2048,
+      "loop_mode": true,
+      "loop_crossfade": 0.2,
+      "parameters": {
+        "wave_type": "noise",
+        "harmonics": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+        "duty_cycle": 0.5,
+        "curve": 0.9,
+        "anti_alias": true
+      },
+      "characteristics": {
+        "brightness": 0.8,
+        "warmth": 0.2,
+        "complexity": 0.9,
+        "harmonicity": 0.1,
+        "richness": 0.7
+      },
+      "metadata": {
+        "genre": ["experimental", "industrial", "ambient"],
+        "era": ["modern"],
+        "mood": "textural", "atmospheric", "otherworldly"],
+        "instruments": ["experimental", "noise"],
+        "usage": "textures, fx, ambient"
+      },
+      "file_path": "experimental/experimental_noise_01.wtb"
+    }
+  ],
+  "morph_combinations": [
+    {
+      "name": "Analog to Digital",
+      "source_wavetable": "analog_saw_01",
+      "target_wavetable": "digital_pulse_01",
+      "morph_path": "linear",
+      "frames": 64
+    },
+    {
+      "name": "Soft to Aggressive",
+      "source_wavetable": "pad_atmosphere_01",
+      "target_wavetable": "lead_digital_01",
+      "morph_path": "curved",
+      "frames": 128
+    },
+    {
+      "name": "Sub to Wobble",
+      "source_wavetable": "bass_sub_01",
+      "target_wavetable": "bass_wobble_01",
+      "morph_path": "exponential",
+      "frames": 96
+    }
+  ],
+  "usage_notes": {
+    "morphing": "Use morph combinations to create smooth transitions between wavetables",
+    "frame_rate": "Higher frame counts provide smoother morphing but use more memory",
+    "sample_rate": "All wavetables are 44.1kHz/24-bit for high quality",
+    "looping": "Loop crossfade reduces clicking at loop points",
+    "anti_aliasing": "Enable anti-aliasing for cleaner high frequencies",
+    "editing": "Use the wavetable editor to create custom wavetables",
+    "optimization": "Wavetables are optimized for real-time performance"
+  }
+}

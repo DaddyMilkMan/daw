@@ -17,19 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    WaveformDisplay.h
-    Real-time waveform visualization component - Skia GPU-accelerated
-    Phase 4: User Interface
-  ==============================================================================
-*/
-
-
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <core/SkCanvas.h>

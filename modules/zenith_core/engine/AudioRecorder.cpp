@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AudioRecorder.cpp
-    Created: 2025-12-09
-    Author:  Zenith DAW
-
-    Implementation of RT-safe multi-track audio recording using RCU pattern.
-
-  ==============================================================================
-
-*/
-
 #include "AudioRecorder.h"
 #include "Track.h"
 #include <juce_audio_formats/juce_audio_formats.h>

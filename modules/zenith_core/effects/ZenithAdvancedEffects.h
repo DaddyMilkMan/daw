@@ -17,27 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file ZenithAdvancedEffects.h
- * @brief Premium Quality Audio Effects for Zenith DAW
- *
- * Professional-grade DSP effects matching commercial plugin quality:
- * - Algorithmic Reverb (Moogerfooger-style)
- * - Multi-mode Delay (tape, BBD, ping-pong)
- * - Distortion (tube, bitcrush, wavefolding)
- * - Modulation (chorus, flanger, phaser)
- * - Vocoder (band-limited, Sennheiser-style)
-
- *
- * @date 2025-02-01
- * @version 1.0
- */
-
 #pragma once
+
+// ZenithAdvancedEffects.h
+
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_dsp/juce_dsp.h>

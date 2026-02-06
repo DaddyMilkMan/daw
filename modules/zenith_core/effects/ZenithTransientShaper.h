@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithTransientShaper.h
-    Created: 2025-12-20
-    Author:  Zenith DAW
-
-    Transient Shaper for controlling Attack and Sustain.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include "../plugins/ZenithPlugin.h"

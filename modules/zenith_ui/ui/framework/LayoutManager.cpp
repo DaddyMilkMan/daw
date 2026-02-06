@@ -17,23 +17,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    LayoutManager.cpp
-    Created: 2025-12-12
-    Author:  Zenith DAW Team
-
-  ==============================================================================
-*/
-
-
 #include "LayoutManager.h"
-#include "ResizablePanelContainer.h"
+#include "../common/ResizablePanelContainer.h"
 #include <juce_data_structures/juce_data_structures.h>
 
 namespace zenith {

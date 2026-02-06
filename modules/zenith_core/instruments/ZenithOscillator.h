@@ -17,27 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithOscillator.h
-    Created: 2025-12-06
-    Refactored: 2025-12-20 (Pro Wavetable Update)
-    Updated: 2025-02-01 (Phase 2: Advanced Oscillators)
-    Author:  Zenith DAW
-
-    Oscillator component for ZenithPolySynth.
-
-    Now includes professional oscillators: wavefolding, phase distortion,
-    additive synthesis, granular synthesis, and wavetable import.
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "WavetableData.h"

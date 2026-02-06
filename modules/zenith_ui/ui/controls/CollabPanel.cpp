@@ -17,19 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    CollabPanel.cpp
-    Created: 25 Dec 2025
-    Author:  Zenith DAW
-  ==============================================================================
-*/
-
-
 #include <effects/SkGradientShader.h>
 #include <core/SkMaskFilter.h>
 

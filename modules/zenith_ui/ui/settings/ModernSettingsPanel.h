@@ -17,32 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ModernSettingsPanel.h
-    Created: 2026-01-17
-    Author:  Zenith Team
-
-    Professional Settings Interface - Built from scratch
-    
-    Features:
-
-    - Modern card-based layout with proper visual hierarchy
-    - Smooth animations and micro-interactions
-    - Professional typography and spacing
-    - Contextual help and descriptions
-    - Responsive design that scales properly
-    - Accessibility compliant
-    - Clean, minimal aesthetic matching pro audio software
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../framework/SkiaComponent.h"

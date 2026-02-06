@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AudioAnalysisUtils.h
-    Created: 2025-12-26
-    Author:  Zenith DAW
-
-    Utilities for analyzing audio content (BPM detection, Pitch detection, etc.)
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include <juce_audio_basics/juce_audio_basics.h>

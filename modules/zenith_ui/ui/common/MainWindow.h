@@ -17,16 +17,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
 
  * @file MainWindow.h
  * @brief Main application window for Zenith DAW
  *
  * Contains the main UI layout and hosts the audio engine.
- */
 
 
 #include "../../commands/CommandAPI.h"

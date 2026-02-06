@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AudioFilePool.cpp
-    Created for Phase 1.2: Audio File Pool & Caching
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "AudioFilePool.h"
 #include "EngineConstants.h"
 #include <filesystem>

@@ -8,7 +8,8 @@
   ==============================================================================
 */
 
-#include "utils/PowerManagement.h"
+#include "PowerManagement.h"
+#include "ZenithLogger.h"
 
 #ifdef JUCE_LINUX
 

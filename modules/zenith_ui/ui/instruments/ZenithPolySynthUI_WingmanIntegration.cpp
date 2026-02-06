@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithPolySynthUI_WingmanIntegration.cpp
-    Created: 2025-01-29
-    Author:  Zenith DAW
-
-    UI integration with WingmanSynthBridge for real-time knob animation.
-    Add this to ZenithPolySynthUI.cpp to make UI a Wingman listener.
-
-
-  ==============================================================================*/
-
 // Add this include to ZenithPolySynthUI.cpp:
 // #include "../ai/WingmanSynthBridge.h"
 

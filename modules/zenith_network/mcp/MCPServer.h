@@ -14,9 +14,9 @@
 
 #pragma once
 
-#include "../commands/CommandAPI.h"
-#include "../engine/Engine.h"
-#include "../engine/ProjectState.h"
+#include "zenith_commands/commands/CommandAPI.h"
+#include "zenith_core/engine/Engine.h"
+#include "zenith_core/engine/ProjectState.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <thread>
 

@@ -17,18 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    ZenithHubRendering.cpp
-    ZenithHubComponent rendering implementation
-  ==============================================================================
-*/
-
-
 #include "../../engine/ZenithLogger.h"
 #include "../design-system/ZenithTypography.h"
 #include <map>

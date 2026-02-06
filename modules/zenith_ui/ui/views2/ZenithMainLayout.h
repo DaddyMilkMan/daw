@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithMainLayout.h
-    Created: 2026-02-03
-    Author:  Zenith DAW Team
-
-    Main layout container that assembles all UI components.
-    This is the root component for the new Zenith UI.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../framework/SkiaComponent.h"

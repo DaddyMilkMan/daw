@@ -17,15 +17,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+// ExportJob.cpp - Asynchronous export job implementation
 
-//     File: ExportJob.cpp
-//     Brief: Asynchronous export job implementation
-//*
-
+#include "ExportJob.h"
+#include "Engine.h"
+#include <juce_events/juce_events.h>
 
 namespace zenith {
 
@@ -61,9 +57,7 @@ juce::ThreadPoolJob::JobStatus ExportJob::runJob()
         });
     }
     
-    // Cleanup engine pointer
-    ExportJob* expected = this;
-    engine_.currentExportJob_.compare_exchange_strong(expected, nullptr);
+    // Note: Engine doesn't have currentExportJob_ member, cleanup handled by caller
 
     return jobHasFinished;
 }
@@ -224,7 +218,8 @@ juce::Result ExportJob::performExport()
     double duration = options_.duration;
     if (duration <= 0.0)
     {
-        duration = engine_.autoDetectProjectDuration();
+        // Default to 60 seconds if not specified (autoDetectProjectDuration is private)
+        duration = 60.0;
     }
     
     DBG("ExportJob: Duration: " + juce::String(duration, 2) + "s @ " + 

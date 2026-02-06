@@ -17,19 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-    RealTimeGarbageCollector.cpp
-    Created: 2025-12-25
-    Author:  Zenith DAW
-*/
-    Created: 2025-12-25
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
+// RealTimeGarbageCollector.cpp
 
 #include "RealTimeGarbageCollector.h"
 

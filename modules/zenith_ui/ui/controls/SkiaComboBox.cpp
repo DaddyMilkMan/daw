@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaComboBox.cpp
-    Created: 2025-12-07
-    Author:  AI Assistant
-
-    Pure Skia-based combo box implementation
-
-  ==============================================================================
-
-*/
-
 #include "SkiaComboBox.h"
 #include "ZenithDesignSystem.h"
 

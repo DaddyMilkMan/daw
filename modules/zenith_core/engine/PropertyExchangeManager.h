@@ -17,14 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#pragma once
 
- // File: PropertyExchangeManager.h
- // Brief: Handles MIDI-CI Property Exchange (JSON-based)
- */
+// PropertyExchangeManager.h
+
 
 
 #include <functional>

@@ -17,28 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    DeviceChainComponent.h
-    Created: 2025-12-13
-    Author:  Zenith AI
-
-    Horizontal strip of device slots (Plugins/Instruments) for the selected
-  track. Features:
-    - Horizontal scrollable list
-
-    - Device slots with name, bypass, and macros
-    - Mini-Views for native plugins (EQ curve, etc)
-    - Drag-and-drop reordering
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "Engine.h" // Corrected include path

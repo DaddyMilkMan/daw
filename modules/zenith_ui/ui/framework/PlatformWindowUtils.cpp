@@ -17,25 +17,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PlatformWindowUtils.cpp
-    Created: 2025-12-23
-    Author:  Zenith DAW Team
-
-    Implementation of platform-specific window and GL utility functions.
-
-  ==============================================================================
-
-*/
-
 #include "PlatformWindowUtils.h"
-#include "../../engine/ZenithLogger.h"
+#include <ZenithLogger.h>
 
 #ifdef ZENITH_USE_SKIA
 #include <gpu/ganesh/gl/GrGLAssembleInterface.h>

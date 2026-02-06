@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    BrowserSearchBar.cpp
-    Created: 2025-12-26
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "BrowserSearchBar.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../design-system/ZenithTheme.h"

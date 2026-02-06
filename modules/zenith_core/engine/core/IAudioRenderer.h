@@ -17,24 +17,20 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#pragma once
 
- * @file IAudioRenderer.h
- * @brief Audio rendering interface
- *
- * Handles the audio processing chain, including mixing, effects, and output.
- */
-
+//==============================================================================
 
 #include <vector>
+#include <memory>
 #include <juce_audio_basics/juce_audio_basics.h>
-#include "Track.h"
-#include "AuxBus.h"
+#include <juce_audio_processors/juce_audio_processors.h>
 
 namespace zenith {
+
+class Track;
+class AuxBus;
+struct AudioRenderContext;
 
 class IAudioRenderer {
 public:

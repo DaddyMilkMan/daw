@@ -17,18 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    SkiaSettingsPanel.cpp
-    Skia-based settings panel implementation
-  ==============================================================================
-*/
-
-
 #include <algorithm>
 
 namespace zenith {

@@ -24,6 +24,11 @@ project(ZenithDAW
     LANGUAGES CXX C
 )
 
+# Set Global C++ Standard
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 # Print welcome message
 message(STATUS "")
 message(STATUS "🎵 Welcome to Zenith DAW Build System!")
@@ -56,43 +61,66 @@ option(ZENITH_BUILD_APP "Build the main application (ZenithDAW executable)" ON)
 option(ZENITH_BUILD_TESTS
     "Build test suite (ZenithTests executable)"
     OFF
-    "Enable building of unit and integration tests. Use with -DCMAKE_BUILD_TYPE=Debug for best results"
 )
+# "Enable building of unit and integration tests. Use with -DCMAKE_BUILD_TYPE=Debug for best results"
 
 option(ZENITH_ENABLE_SKIA
     "Enable Skia GPU-accelerated rendering"
-    ON
-    "Disabling Skia will fallback to basic rendering. Not recommended for production use"
+    OFF
 )
+# "Disabling Skia will fallback to basic rendering. Not recommended for production use"
 
 option(ZENITH_ENABLE_COVERAGE
     "Enable code coverage reporting (requires gcov/lcov)"
     OFF
-    "Enables coverage reports. Use with -DCMAKE_BUILD_TYPE=Debug for best results"
 )
+# "Enables coverage reports. Use with -DCMAKE_BUILD_TYPE=Debug for best results"
 
 option(ZENITH_ENABLE_WCET
     "Enable Worst-Case Execution Time monitoring for real-time audio threads"
     ON
-    "WCET monitoring helps identify real-time audio thread violations. Should remain ON for production"
 )
+# "WCET monitoring helps identify real-time audio thread violations. Should remain ON for production"
 
 option(ZENITH_FETCH_DEPS
     "Fetch dependencies automatically if not found locally"
     ON
-    "When enabled, the build system will automatically download missing dependencies"
 )
+# "When enabled, the build system will automatically download missing dependencies"
 
 option(ZENITH_ENABLE_DEBUG_SYMBOLS
     "Generate debug symbols even in Release builds"
     OFF
-    "When enabled, adds debug symbols to Release builds for production debugging"
 )
+# "When enabled, adds debug symbols to Release builds for production debugging"
 
 option(ZENITH_ENABLE_ASSERTIONS
     "Enable runtime assertions for debugging"
     ON
-    "Disabling assertions may improve performance but reduces debuggability"
+)
+# "Disabling assertions may improve performance but reduces debuggability"
+
+option(ZENITH_ENABLE_SANITIZERS
+    "Enable AddressSanitizer and ThreadSanitizer for debugging"
+    OFF
+)
+# "When enabled, adds memory and thread safety checking - significantly impacts performance but provides detailed error reports"
+
+option(ZENITH_ENABLE_THREAD_SANITIZER
+    "Enable ThreadSanitizer specifically for data race detection"
+    OFF
+)
+# "ThreadSanitizer detects data races and deadlocks in multithreaded code"
+
+option(ZENITH_ENABLE_ADDRESS_SANITIZER
+    "Enable AddressSanitizer for memory error detection"
+    OFF
+)
+# "AddressSanitizer detects memory errors like buffer overflows, use-after-free, etc."
+
+option(ZENITH_ENABLE_LUA_SCRIPTING
+    "Enable experimental Lua scripting processor (NOT RT-safe)"
+    OFF
 )
 
 # =============================================================================
@@ -132,11 +160,11 @@ function(print_build_targets)
 
     if(ZENITH_BUILD_TESTS)
         message(STATUS "  - ZenithTests: Test suite executable")
-        message(STATUS "  - test: Run all tests")
+        message(STATUS "  - run_tests: Run all tests")
         message(STATUS "  - test_<name>: Run specific test (e.g., test_Core)")
     endif()
 
-    message(STATUS "  - help: Print available targets and options")
+    message(STATUS "  - zenith_help: Print available targets and options")
     message(STATUS "  - rebuild: Clean and rebuild everything")
     message(STATUS "")
 endfunction()
@@ -155,7 +183,7 @@ function(print_build_commands)
     message(STATUS "")
     message(STATUS "  Run tests:")
     message(STATUS "    ctest --output-on-failure")
-    message(STATUS "    cmake --build . --target test")
+    message(STATUS "    cmake --build . --target run_tests")
     message(STATUS "")
     message(STATUS "  Clean build:")
     message(STATUS "    cmake --build . --target clean")
@@ -215,6 +243,34 @@ else()
     message(STATUS "❌ Runtime assertions disabled")
 endif()
 
+# Add sanitizer support
+if(ZENITH_ENABLE_SANITIZERS)
+    # Enable all sanitizers by default when general flag is set
+    set(ZENITH_ENABLE_ADDRESS_SANITIZER ON CACHE BOOL "Enable AddressSanitizer" FORCE)
+    set(ZENITH_ENABLE_THREAD_SANITIZER ON CACHE BOOL "Enable ThreadSanitizer" FORCE)
+endif()
+
+if(ZENITH_ENABLE_THREAD_SANITIZER)
+    add_compile_definitions(ENABLE_THREAD_SANITIZER=1)
+    set(SANITIZER_FLAGS "${SANITIZER_FLAGS} -fsanitize=thread -g")
+    set(SANITIZER_LINKER_FLAGS "${SANITIZER_LINKER_FLAGS} -fsanitize=thread")
+    message(STATUS "🔍 ThreadSanitizer enabled for data race detection")
+endif()
+
+if(ZENITH_ENABLE_ADDRESS_SANITIZER)
+    add_compile_definitions(ENABLE_ADDRESS_SANITIZER=1)
+    set(SANITIZER_FLAGS "${SANITIZER_FLAGS} -fsanitize=address -fsanitize=leak -fsanitize=undefined -g")
+    set(SANITIZER_LINKER_FLAGS "${SANITIZER_LINKER_FLAGS} -fsanitize=address -fsanitize=leak -fsanitize=undefined")
+    message(STATUS "🔍 AddressSanitizer enabled for memory error detection")
+endif()
+
+if(ZENITH_ENABLE_SANITIZERS)
+    # Apply sanitizer flags to all targets
+    add_compile_options(${SANITIZER_FLAGS})
+    add_link_options(${SANITIZER_LINKER_FLAGS})
+    message(STATUS "🔍 All sanitizers enabled - performance will be impacted")
+endif()
+
 # =============================================================================
 # DEPENDENCIES
 # =============================================================================
@@ -252,18 +308,26 @@ endif()
 # Add cmake directory to include path
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
+# Detect platform/arch before including modules that key off ZENITH_PLATFORM_* variables.
+include(PlatformDetection)
+
 # Include module definitions and dependencies
 include(Dependencies)
 include(ZenithCore)
 include(ZenithDSP)
 include(ZenithAudioUtils)
-include(ZenithAudioFormats)
 include(ZenithEngineCore)
+include(ZenithAI)
+include(ZenithCommands)
+include(ZenithEffects)
 include(ZenithUIUnified)
-include(ZenithTesting)
+include(ZenithNetwork)
 
-# Add help target for user-friendly information
-add_custom_target(help
+# Removed conflicting ZenithTesting include
+# include(ZenithTesting)
+
+# Add help target for user-friendly information (RENAMED to zenith_help)
+add_custom_target(zenith_help
     COMMAND ${CMAKE_COMMAND} -E echo ""
     COMMAND ${CMAKE_COMMAND} -E echo "🎵 Zenith DAW Build Information"
     COMMAND ${CMAKE_COMMAND} -E echo "========================================"
@@ -292,7 +356,7 @@ add_custom_target(rebuild
     COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E echo ""
-    COMMAND ${CMAKE_COMMAND} --build . -j$(nproc)
+    COMMAND ${CMAKE_COMMAND} --build .
     VERBATIM
 )
 
@@ -304,8 +368,7 @@ if(ZENITH_BUILD_APP)
     # Create main executable
     add_executable(ZenithDAW
         apps/desktop/Source/Main.cpp
-        apps/desktop/Source/ZenithApplication.cpp
-        apps/desktop/Source/Settings.cpp
+        apps/desktop/Source/ui/common/MainWindow.cpp
     )
 
     # Add debug symbols if requested
@@ -325,9 +388,13 @@ if(ZENITH_BUILD_APP)
     # Link libraries
     target_link_libraries(ZenithDAW
         zenith_engine_core
-        zenith_ui_unified
         zenith_core
+        zenith_network
+        zenith_ui_unified
         zenith_audio_utils
+        zenith_ai
+        zenith_commands
+        zenith_effects
         ${ZENITH_JUCE_MODULES}
     )
 
@@ -373,8 +440,8 @@ if(ZENITH_BUILD_TESTS)
     )
 
     target_link_libraries(ZenithTests
-        zenith_engine_core
         zenith_ui_unified
+        zenith_network
         zenith_core
         zenith_audio_utils
         ${ZENITH_JUCE_MODULES}
@@ -387,8 +454,8 @@ if(ZENITH_BUILD_TESTS)
     add_test(NAME ZenithUITests COMMAND ZenithTests)
     add_test(NAME ZenithEngineTests COMMAND ZenithTests)
 
-    # Add test target
-    add_custom_target(test
+    # Add test target (renamed to run_tests to avoid conflict)
+    add_custom_target(run_tests
         COMMAND ctest --output-on-failure
         VERBATIM
     )
@@ -408,7 +475,7 @@ add_custom_target(package
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_BINARY_DIR}/Release ${CMAKE_BINARY_DIR}/package/ZenithDAW
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/LICENSE ${CMAKE_BINARY_DIR}/package/
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/README.md ${CMAKE_BINARY_DIR}/package/
-    COMMAND ${CMAKE_COMMAND} -E tar -czf ${CMAKE_BINARY_DIR}/ZenithDAW-${CMAKE_PROJECT_VERSION}-$(uname -m).tar.gz -C ${CMAKE_BINARY_DIR}/package .
+    COMMAND ${CMAKE_COMMAND} -E tar -czf ${CMAKE_BINARY_DIR}/ZenithDAW-${CMAKE_PROJECT_VERSION}-${CMAKE_SYSTEM_PROCESSOR}.tar.gz -C ${CMAKE_BINARY_DIR}/package .
     VERBATIM
 )
 
@@ -426,153 +493,3 @@ message(STATUS "🎉 Zenith DAW configuration complete!")
 message(STATUS "   Use 'make help' for more information")
 message(STATUS "")
 message(STATUS "Happy building! 🎵")
-
-# =============================================================================
-# PLATFORM CONFIGURATION
-# =============================================================================
-
-# Set build type
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
-endif()
-
-# Platform-specific flags
-if(MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /FS /bigobj" CACHE STRING "" FORCE)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /FS /bigobj" CACHE STRING "" FORCE)
-else()
-    add_compile_options(-Wno-attributes -Wno-unknown-attributes)
-endif()
-
-# =============================================================================
-# DEPENDENCIES
-# =============================================================================
-
-# JUCE is configured in Dependencies.cmake
-# Add JUCE modules to our targets
-set(ZENITH_JUCE_MODULES
-    juce_core
-    juce_cryptography
-    juce_events
-    juce_graphics
-    juce_data_structures
-    juce_gui_basics
-    juce_gui_extra
-    juce_audio_basics
-    juce_audio_devices
-    juce_audio_formats
-    juce_audio_processors
-    juce_audio_utils
-    juce_dsp
-    juce_opengl
-)
-
-# =============================================================================
-# MODULES
-# =============================================================================
-
-# Add cmake directory to include path
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
-
-# Include module definitions and dependencies
-include(Dependencies)
-include(ZenithCore)
-include(ZenithDSP)
-include(ZenithAudioUtils)
-include(ZenithAudioFormats)
-include(ZenithEngineCore)
-include(ZenithUIUnified)
-include(ZenithTesting)
-
-# =============================================================================
-# MAIN APPLICATION
-# =============================================================================
-
-if(ZENITH_BUILD_APP)
-    # Create main executable
-    add_executable(ZenithDAW
-        apps/desktop/Source/Main.cpp
-        apps/desktop/Source/ZenithApplication.cpp
-        apps/desktop/Source/Settings.cpp
-    )
-
-    # Set include directories
-    target_include_directories(ZenithDAW
-        PRIVATE
-            ${CMAKE_SOURCE_DIR}/apps/desktop/Source
-            ${CMAKE_SOURCE_DIR}/modules
-    )
-
-    # Link libraries
-    target_link_libraries(ZenithDAW
-        zenith_engine_core
-        zenith_ui_unified
-        zenith_core
-        zenith_audio_utils
-        ${ZENITH_JUCE_MODULES}
-    )
-
-    # Platform-specific linking
-    if(APPLE)
-        target_link_libraries(ZenithDAW "-framework Cocoa -framework IOKit -framework CoreAudio -framework CoreMIDI")
-    elseif(UNIX)
-        target_link_libraries(ZenithDAW "-lpthread -lasound -ldl")
-    elseif(WIN32)
-        target_link_libraries(ZenithDAW "kernel32.lib" "user32.lib" "gdi32.lib" "winspool.lib" "comdlg32.lib" "advapi32.lib" "shell32.lib" "ole32.lib" "oleaut32.lib" "uuid.lib" "odbc32.lib" "odbccp32.lib")
-    endif()
-
-    # Installation
-    install(TARGETS ZenithDAW
-        RUNTIME DESTINATION bin
-    )
-endif()
-
-# =============================================================================
-# TESTS
-# =============================================================================
-
-if(ZENITH_BUILD_TESTS)
-    enable_testing()
-
-    # Add test executable
-    add_executable(ZenithTests
-        apps/desktop/Source/tests/TestMain.cpp
-        ${ZENITH_TEST_SOURCES}
-    )
-
-    target_link_libraries(ZenithTests
-        zenith_engine_core
-        zenith_ui_unified
-        zenith_core
-        zenith_audio_utils
-        ${ZENITH_JUCE_MODULES}
-        GTest::gtest
-        GTest::gtest_main
-    )
-
-    # Add tests
-    add_test(NAME ZenithCoreTests COMMAND ZenithTests)
-    add_test(NAME ZenithUITests COMMAND ZenithTests)
-    add_test(NAME ZenithEngineTests COMMAND ZenithTests)
-endif()
-
-# =============================================================================
-# SUMMARY
-# =============================================================================
-
-message(STATUS "Zenith DAW Configuration:")
-message(STATUS "  Build type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "  Build application: ${ZENITH_BUILD_APP}")
-message(STATUS "  Build tests: ${ZENITH_BUILD_TESTS}")
-message(STATUS "  Enable Skia: ${ZENITH_ENABLE_SKIA}")
-message(STATUS "  Enable coverage: ${ZENITH_ENABLE_COVERAGE}")
-message(STATUS "  Enable WCET: ${ZENITH_ENABLE_WCET}")
-
-message(STATUS "")
-message(STATUS "Available targets:")
-message(STATUS "  - ZenithDAW: Main application")
-message(STATUS "  - zenith_engine_core: Engine core library")
-message(STATUS "  - zenith_ui_unified: UI framework library")
-if(ZENITH_BUILD_TESTS)
-    message(STATUS "  - ZenithTests: Test suite")
-endif()

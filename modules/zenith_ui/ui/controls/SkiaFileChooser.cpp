@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaFileChooser.cpp
-    Created: 2025-12-07
-    Author:  AI Assistant
-
-    Pure Skia-based file chooser implementation
-
-  ==============================================================================
-
-*/
-
 #include "SkiaFileChooser.h"
 #include "ZenithDesignSystem.h"
 

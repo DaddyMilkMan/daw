@@ -17,28 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    RoutingGraph.h
-    Created: 2025-12-03
-    Author:  Zenith DAW
-
-    Manages the audio signal flow graph, including track-to-bus routing,
-    sends, and sidechains.
-
-
-    THREAD SAFETY FIX: Uses lock-free RCU-style snapshot pattern for reads.
-    - Writes (add/remove/connect) use lock and are message-thread-only
-    - Reads use atomic snapshot mechanism - safe to call from any thread
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <atomic>

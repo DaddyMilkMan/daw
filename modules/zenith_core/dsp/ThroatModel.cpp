@@ -17,23 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ThroatModel.cpp
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Vocal tract physical modeling implementation.
-
-  ==============================================================================
-
-*/
-
+#include <vector>
 #include "ThroatModel.h"
 #include <cmath>
 

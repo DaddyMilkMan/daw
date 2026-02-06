@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PlatformWindowUtils.h
-    Created: 2025-12-22
-
-    Interface for platform-specific window and GL utility functions.
-
-  ==============================================================================
-*/
-
-
-
 #pragma once
 
 #include <gpu/ganesh/gl/GrGLInterface.h>

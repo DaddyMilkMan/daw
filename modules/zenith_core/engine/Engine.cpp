@@ -17,16 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-//     File: Engine.cpp
-//     Brief: Audio engine implementation - Core Logic
-//*
-
-
+#include "Engine.h"
 #include "TrackAutomationSynchronizer.h"
 #include "ZenithLogger.h"
 #include <algorithm> // For std::remove_if
@@ -35,32 +26,36 @@
 #include "Settings.h"
 
 // C3: Include donor headers (NOT in Engine.h to avoid exposing implementation)
-#include "../ai/AIMasteringAgent.h"
-#include "../ai/SessionDebuggerAgent.h"
-#include "../engine/AudioFilePool.h"
-#include "../engine/AuxBus.h"
-#include "../engine/Clip.h"
+#include "ai_client/AIMasteringAgent.h"
+#include "ai_client/SessionDebuggerAgent.h"
+#include "AudioFilePool.h"
+#include "AuxBus.h"
+#include "Clip.h"
 #include "ClipTrack.h"
-#include "../engine/EngineConstants.h"
-#include "../engine/MixerChannel.h"
-#include "../engine/PluginHost.h"
-#include "../engine/Track.h"
-#include "../engine/TrackFreeze.h"
-#include "../engine/Midi2DiscoveryService.h"
+#include "EngineConstants.h"
+#include "MixerChannel.h"
+#include "MixerController.h"
+#include "PluginHost.h"
+#include "ProjectState.h"
+#include "TempoMap.h"
+#include "Track.h"
+#include "TrackFreeze.h"
+#include "Midi2DiscoveryService.h"
+#include "PlatformAudioUtils.h"
+#include "RecordingManager.h"
+#include "TransportController.h"
+#include "AudioRenderer.h"
+#include "AudioExporter.h"
+#include "MeteringSystem.h"
+#include "Metronome.h"
+#include "RTSafetyChecks.h"
 #include "../instruments/InstrumentRegistry.h"
 #include "../instruments/RegisterBuiltInInstruments.h"
-#include "PluginEditorWindow.h"
-
-// Refactor 2025-12-09: Modular Components
-#include "../engine/AudioRenderer.h"
-#include "../engine/AudioExporter.h"
-#include "../engine/MeteringSystem.h"
-#include "../engine/Metronome.h"
-#include "../engine/RecordingManager.h"
-#include "../engine/TransportController.h"
-#include "RTSafetyChecks.h"  // Zero-Latency Agent: RT-safety debug infrastructure
+#include "zenith_ui/ui/common/PluginEditorWindow.h"
 
 //==============================================================================
+#include "Engine.h"
+
 namespace zenith {
 
 void Engine::updatePowerManagement() {
@@ -125,6 +120,7 @@ Engine::Engine() {
   // Pre-allocate MIDI buffers to avoid RT allocations
   liveMidiPass1_.ensureSize(2048);
   liveMidiPass2_.ensureSize(2048);
+  liveMidiScratch_.ensureSize(2048);
 
   // Initialize TrackFreezeManager for CPU optimization
   freezeManager_ = std::make_unique<TrackFreezeManager>();
@@ -585,10 +581,11 @@ void Engine::audioDeviceIOCallbackWithContext(
 
     if (wrapped && samplesBeforeLoop > 0 && !liveMidiPass1_.isEmpty()) {
       // Split MIDI across loop boundary (preserve offsets)
-      juce::MidiBuffer fullMidi;
-      fullMidi.swapWith(liveMidiPass1_);
+      liveMidiScratch_.swapWith(liveMidiPass1_);
+      liveMidiPass1_.clear(); // keep capacity
+      liveMidiPass2_.clear(); // keep capacity
 
-      for (const auto metadata : fullMidi) {
+      for (const auto metadata : liveMidiScratch_) {
         const auto sampleOffset = metadata.samplePosition;
         if (sampleOffset < samplesBeforeLoop) {
           liveMidiPass1_.addEvent(metadata.getMessage(), sampleOffset);
@@ -597,6 +594,8 @@ void Engine::audioDeviceIOCallbackWithContext(
                                   sampleOffset - samplesBeforeLoop);
         }
       }
+
+      liveMidiScratch_.clear();
     }
 
     // Pass 1

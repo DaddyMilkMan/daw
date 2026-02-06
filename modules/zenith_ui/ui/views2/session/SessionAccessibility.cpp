@@ -17,15 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    SessionAccessibility.cpp
-    Created: 2026-02-05
-    Author:  Zenith DAW Team
-
-    Implementation of WCAG 2.1 compliant accessibility system.
-    ==============================================================================
-*/
+// SessionAccessibility.cpp
 
 #include "SessionAccessibility.h"
 #include "SkiaSessionView.h"

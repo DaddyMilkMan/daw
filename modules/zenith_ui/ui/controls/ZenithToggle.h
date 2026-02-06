@@ -17,27 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithToggle.h
-    Created: 2025-12-12
-    Author:  Zenith DAW
-
-    Premium toggle switch with:
-    - Pill-shaped track
-    - Animated slide
-
-    - Glow on active
-    - Label support
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "SkiaComponent.h"

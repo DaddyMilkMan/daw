@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PlatformDisplayUtils.cpp
-    Created: 2025-12-28
-    Author:  Zenith DAW
-
-    Implementation of platform-specific display utilities.
-
-  ==============================================================================
-
-*/
-
 #include "PlatformDisplayUtils.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 

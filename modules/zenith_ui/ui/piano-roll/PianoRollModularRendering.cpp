@@ -17,18 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    PianoRollModularRendering.cpp
-    Modular rendering functions for the Piano Roll
-  ==============================================================================
-*/
-
-
 #include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
 #include <core/SkPath.h>

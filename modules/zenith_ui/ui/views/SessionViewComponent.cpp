@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SessionViewComponent.cpp
-    Created: 2025-12-12
-    Author:  Zenith DAW Team
-
-    Session View (Clip Launcher) Implementation
-
-  ==============================================================================
-
-*/
-
 #include "SessionViewComponent.h"
 #include "../design-system/ColorBridge.h"
 #include "../design-system/ZenithDesignSystem.h"

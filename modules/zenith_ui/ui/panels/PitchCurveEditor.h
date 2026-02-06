@@ -17,28 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PitchCurveEditor.h
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    ACTUALLY WORKING pitch curve editor with:
-    - Real pitch curve drawing
-    - Pitch drift correction
-
-    - Undo/redo
-    - Zero-crossing splits
-    - Copy/paste
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>

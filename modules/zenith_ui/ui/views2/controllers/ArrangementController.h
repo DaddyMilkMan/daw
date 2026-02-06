@@ -17,28 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ArrangementController.h
-    Created: 2026-02-03
-    Author:  Zenith DAW Team
-
-    Bridge between SkiaArrangementView and the engine.
-    
-    Connects the view to:
-
-    - ProjectState (tracks, clips, automation)
-    - TransportController (playhead, loop, tempo)
-    - Engine (playback state)
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../../../engine/ProjectState.h"

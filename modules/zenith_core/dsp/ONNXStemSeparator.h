@@ -17,13 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
 #pragma once
 
+#include <cstddef>
+#include <initializer_list>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
 
@@ -101,4 +98,4 @@ private:
 
 };
 
-}
+} // namespace zenith

@@ -17,36 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- // File: ProjectState.h
- // Brief: Project state management using ValueTree
- *
- * Manages all project state using JUCE's ValueTree:
- * - Project metadata (name, tempo, time signature)
- * - Tracks
- * - Clips
- * - Mixer state
- * - Plugin state
-
- * - Automation
- *
- * Benefits of ValueTree:
- * - Built-in undo/redo support
- * - Serialization to XML/JSON
- * - Efficient change notifications
- * - Thread-safe with proper listeners
- *
- * Foundation:
- * - Basic project structure
- * - Tempo and time signature
- * - Save/load to XML
- */
-
 #pragma once
+
+// ProjectState.h - Project state management using JUCE ValueTree
 
 #include <atomic>
 #include <unordered_map>

@@ -17,23 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file ArrangerInputHandler.h
- * @brief Mouse and keyboard input handling for ArrangerComponent
- * 
- * This module handles all user input for the arranger view including:
- * - Mouse events (click, drag, wheel, double-click)
- * - Keyboard shortcuts
- * - Cursor management
- * - Tooltip generation
- */
-
-
 #pragma once
+
+// ArrangerInputHandler.h
+
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <map>

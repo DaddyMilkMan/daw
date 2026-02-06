@@ -17,29 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    NeonGlow.h
-    Created: 2025-12-11
-    Author:  Zenith DAW Team
-
-    Neon glow effect utilities for Zenith DAW's "Neon Noir" design.
-
-    Usage:
-
-      NeonGlow::drawGlow(canvas, bounds, design::colors::CYAN);
-      NeonGlow::drawTextGlow(canvas, "Title", x, y, font,
-  design::colors::MAGENTA); NeonGlow::drawActiveRing(canvas, center, radius,
-  design::colors::CYAN);
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../../Settings.h"

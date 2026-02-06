@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    UnisonManager.cpp
-    Created: 2025-01-28
-    Updated: 2025-02-02 - S-tier implementation
-    Author:  Zenith DAW
-
-    Professional 16-voice unison with phase-accurate detune and stereo spread.
-
-
-  ==============================================================================
-*/
-
 #include "UnisonManager.h"
 #include <cmath>
 #include <algorithm>

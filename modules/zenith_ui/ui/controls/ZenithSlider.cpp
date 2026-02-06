@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithSlider.cpp
-    Created: 2025-12-12
-    Author:  Zenith DAW
-
-    Implementation of the premium Zenith slider/fader.
-
-  ==============================================================================
-
-*/
-
 #include "ZenithSlider.h"
 #include "../design-system/ColorBridge.h"
 #include "ui/design-system/ZenithDesignSystem.h"

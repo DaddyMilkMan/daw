@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaPopupMenu.cpp
-    Created: 2025-12-07
-    Enhanced: 2025-12-25
-    Author:  Zenith DAW Team
-
-    Premium Skia-based popup menu implementation
-
-
-  ==============================================================================
-*/
-
 #include "SkiaPopupMenu.h"
 #include "ZenithDesignSystem.h"
 #include <core/SkMaskFilter.h>

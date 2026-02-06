@@ -17,35 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AudioRecorder.h
-    Created: 2025-12-09
-    Author:  Zenith DAW
-
-    Handles audio file recording streams and threading with RT-safe ring buffer.
-
-    Thread Safety:
-
-    - write() is AUDIO THREAD ONLY (RT-safe, lock-free)
-    - startRecording()/stopRecording() are MESSAGE THREAD ONLY
-    - Uses RCU (Read-Copy-Update) pattern for lock-free session list access
-    - Uses juce::AbstractFifo for lock-free ring buffer
-
-    Architecture:
-    - Audio thread writes to ring buffer via write()
-    - Background thread (TimeSlice) flushes ring buffer to disk
-    - No locks on audio thread path
-    - Sessions managed via shared_ptr and atomic snapshot for true RT safety
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <atomic>

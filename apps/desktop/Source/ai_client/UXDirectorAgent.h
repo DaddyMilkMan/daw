@@ -28,7 +28,7 @@
 
 #pragma once
 
-#include "../engine/Track.h"
+#include <Track.h>
 #include "Engine.h"
 #include "ProjectState.h"
 #include "SkiaComponent.h"

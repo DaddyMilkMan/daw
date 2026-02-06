@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SampleEditorActions.h
-    Created: 2025-12-26
-    Author:  Zenith DAW
-
-    Undoable actions for the Sample Editor to integrate with global UndoManager.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>

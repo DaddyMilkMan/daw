@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AuroraBackground.h
-    Created: 2025-12-13
-    Author:  Zenith DAW Team
-
-    "Living" Mesh Gradient Background Renderer.
-    Replaces the "screensaver from 2005" with a premium shifting fog/aurora.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #ifdef ZENITH_USE_SKIA

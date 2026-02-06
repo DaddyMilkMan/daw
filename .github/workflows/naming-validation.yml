@@ -1,0 +1,144 @@
+# =============================================================================
+# ZENITH DAW - Naming Validation
+# =============================================================================
+# Ensures no duplicate filenames and consistent naming conventions
+# =============================================================================
+
+name: Naming Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  check-duplicate-filenames:
+    name: Check for Duplicate Filenames
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check for duplicate header files
+      run: |
+        echo "Checking for duplicate header filenames..."
+        
+        # Find all .h files and count occurrences of each basename
+        duplicates=$(find modules -name "*.h" -not -path "*/deprecated/*" | \
+                     xargs -I {} basename {} | \
+                     sort | \
+                     uniq -d)
+        
+        if [ -n "$duplicates" ]; then
+          echo "❌ ERROR: Duplicate header filenames found:"
+          echo "$duplicates"
+          echo ""
+          echo "For each duplicate, run:"
+          find modules -name "*.h" -not -path "*/deprecated/*" | \
+            xargs -I {} basename {} | \
+            sort | \
+            uniq -d | \
+            while read -r dup; do
+              echo "  Found in:"
+              find modules -name "$dup" -not -path "*/deprecated/*" | sed 's/^/    /'
+            done
+          echo ""
+          echo "See scripts/rename-duplicates.sh for naming conventions"
+          exit 1
+        fi
+        
+        echo "✅ No duplicate header filenames found"
+
+    - name: Check for duplicate cpp files
+      run: |
+        echo "Checking for duplicate cpp filenames..."
+        
+        duplicates=$(find modules -name "*.cpp" -not -path "*/deprecated/*" | \
+                     xargs -I {} basename {} | \
+                     sort | \
+                     uniq -d)
+        
+        if [ -n "$duplicates" ]; then
+          echo "❌ ERROR: Duplicate cpp filenames found:"
+          echo "$duplicates"
+          exit 1
+        fi
+        
+        echo "✅ No duplicate cpp filenames found"
+
+  check-naming-conventions:
+    name: Check Naming Conventions
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check file naming conventions
+      run: |
+        echo "Checking file naming conventions..."
+        
+        # Files should use PascalCase or domain prefix + PascalCase
+        # Allowed patterns:
+        #   - Engine*.h/cpp (engine components)
+        #   - UI*.h/cpp (UI components)
+        #   - DSP*.h/cpp (DSP components)
+        #   - Zenith*.h/cpp (generic)
+        #   - Skia*.h/cpp (Skia-specific)
+        
+        violations=$(find modules -name "*.h" -o -name "*.cpp" | \
+                     grep -v "/deprecated/" | \
+                     grep -v "/tests/" | \
+                     xargs -I {} basename {} | \
+                     grep -E "^[a-z]" || true)
+        
+        if [ -n "$violations" ]; then
+          echo "⚠️  WARNING: Files not using PascalCase:"
+          echo "$violations"
+          echo ""
+          echo "Files should start with uppercase letter"
+        fi
+        
+        echo "✅ Naming convention check complete"
+
+  check-include-conventions:
+    name: Check Include Conventions
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check for relative includes
+      run: |
+        echo "Checking for relative include paths..."
+        
+        # Find includes with ../ (relative paths)
+        relatives=$(find modules -name "*.cpp" -o -name "*.h" | \
+                    xargs grep -h "#include.*\.\./" 2>/dev/null || true)
+        
+        if [ -n "$relatives" ]; then
+          echo "⚠️  WARNING: Relative includes found (should use absolute paths):"
+          echo "$relatives" | head -20
+          echo ""
+          echo "Run: python3 scripts/fix-includes.py"
+        fi
+        
+        echo "✅ Include convention check complete"
+
+    - name: Check for incorrect include style
+      run: |
+        echo "Checking include style..."
+        
+        # Project includes should use <>, not ""
+        wrong_quotes=$(find modules -name "*.cpp" -o -name "*.h" | \
+                       xargs grep -h '#include "zenith_' 2>/dev/null || true)
+        
+        if [ -n "$wrong_quotes" ]; then
+          echo "⚠️  WARNING: Use <> for project includes:"
+          echo "$wrong_quotes" | head -10
+        fi
+        
+        echo "✅ Include style check complete"

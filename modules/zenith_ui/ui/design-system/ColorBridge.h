@@ -17,32 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ColorBridge.h
-    Created: 2025-12-25
-    Author:  Zenith DAW
-
-    Unified color access layer bridging JUCE Colours and Skia SkColors.
-    
-    The design system has two color backends:
-
-    - ZenithTheme::Colors (juce::Colour) - Used by JUCE components
-    - design::colors (SkColor) - Used by Skia rendering
-    
-    This bridge provides:
-    1. Conversion utilities between color formats
-    2. Unified accessors that return the appropriate format
-    3. A single source of truth for color values
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "ZenithDesignSystem.h"

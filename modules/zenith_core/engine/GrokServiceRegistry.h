@@ -17,17 +17,13 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#pragma once
 
-  ==============================================================================
+    ==============================================================================
     GrokServiceRegistry.h
     Dependency injection container for Grok AI services
     Replaces singleton anti-pattern with proper DI
   ==============================================================================
-*/
 
 
 #include <juce_core/juce_core.h>

@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    HelpViewPanel.h
-    Created: 2025-12-25
-    Author:  Zenith DAW
-
-    Info View panel similar to Ableton Live's, displaying context-sensitive help.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include "../framework/SkiaComponent.h"

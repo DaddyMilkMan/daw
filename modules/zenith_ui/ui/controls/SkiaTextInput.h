@@ -17,30 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaTextInput.h
-    Created: 2026-01-10
-    Author:  Zenith DAW
-
-    Pure Skia text input component - QUALITY implementation.
-    Features:
-    - Pill-shaped or rectangular styling
-
-    - Blinking cursor
-    - Full text selection (click-drag, Shift+Arrow, Ctrl+A, double-click word)
-    - Clipboard support (Ctrl+C, Ctrl+V, Ctrl+X)
-    - Horizontal scrolling for long text
-    - Clean glassmorphic appearance
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../framework/SkiaComponent.h"

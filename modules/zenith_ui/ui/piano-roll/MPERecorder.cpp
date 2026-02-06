@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    MPERecorder.cpp
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Implementation of MPE message recording as automation.
-
-  ==============================================================================
-
-*/
-
 #include "MPERecorder.h"
 #include "PianoRollComponent.h"
 #include "MPEExpressionHelpers.h"

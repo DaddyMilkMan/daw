@@ -17,15 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file MixerComponent.cpp
- * @brief Main mixer interface with horizontal scrolling and master strip
- */
-
+// MixerComponent.cpp
 
 #include "MixerChannelComponent.h"
 #include <juce_graphics/juce_graphics.h>

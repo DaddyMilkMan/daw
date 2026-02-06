@@ -17,18 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    LearningDashboard.cpp
-    Learning progress dashboard implementation
-  ==============================================================================
-*/
-
-
 #include <numeric>
 
 namespace zenith {

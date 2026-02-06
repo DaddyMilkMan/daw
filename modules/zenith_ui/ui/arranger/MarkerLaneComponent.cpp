@@ -17,24 +17,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file MarkerLaneComponent.cpp
- * @brief Marker lane implementation - FULLY IMPLEMENTED
- * 
- * Allows visual editing of timeline markers.
- * Features:
- * - Display markers as flags/pins on timeline
- * - Create markers (double-click)
- * - Drag markers horizontally to reposition
- * - Delete markers (Delete key)
-
- * - Rename markers (double-click on selected marker)
- * - Sync with ProjectState markers
- */
+// MarkerLaneComponent.cpp
 
 #include "MarkerLaneComponent.h"
 #include "../design-system/ZenithDesignSystem.h"

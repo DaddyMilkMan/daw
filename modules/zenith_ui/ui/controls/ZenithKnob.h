@@ -17,30 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithKnob.h
-    Created: 2025-12-12
-    Author:  Zenith DAW
-
-    Premium neon-glow rotary knob with:
-    - Value display on hover/drag
-    - Tick marks for snap values
-
-    - Bipolar mode (center-out for pan/detune)
-    - Double-click reset to default
-    - Shift+drag for fine control
-    - Mouse wheel support
-    - Animated glow on value change
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "ZenithControl.h"
@@ -147,6 +123,10 @@ public:
 
   // ----- Rendering -----
   void drawSkia(SkCanvas *canvas) override;
+  
+#ifdef ZENITH_USE_SKIA
+  render::KnobRenderState captureRenderState() const;
+#endif
 
   // juce::Value::Listener
   void valueChanged(juce::Value& v) override {

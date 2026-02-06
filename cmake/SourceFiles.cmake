@@ -2,14 +2,15 @@
 # SOURCE FILE ORGANIZATION - MODULAR ARCHITECTURE
 # =============================================================================
 
+include_guard(GLOBAL)
+
 # This file provides a modular organization of source files.
 # Each major component is organized into its own CMake module file.
 
 # Main application sources
 set(ZENITH_APP_SOURCES
     apps/desktop/Source/Main.cpp
-    apps/desktop/Source/ZenithApplication.cpp
-    apps/desktop/Source/Settings.cpp
+    apps/desktop/Source/ui/common/MainWindow.cpp
 )
 
 # Note: Individual modules are now defined in separate CMake files:

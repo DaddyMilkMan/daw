@@ -17,18 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    CollabPanel.h
-    Skia-based Real-Time Collaboration UI Panel
-  ==============================================================================
-*/
-
-
 #include <juce_core/juce_core.h>
 
 namespace zenith {

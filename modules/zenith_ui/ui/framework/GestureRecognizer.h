@@ -17,35 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    GestureRecognizer.h
-    Created: 2026-02-03
-    Author:  Zenith DAW
-
-    Advanced gesture recognition for fluid panel interactions.
-    
-    Features:
-
-    - Edge swipe detection (left/right edge triggers)
-    - Velocity tracking for momentum-based animations
-    - Drag gesture with threshold and direction locking
-    - Swipe actions (horizontal swipe to reveal actions)
-    - Pinch/spread (future: zoom)
-    
-    Design Philosophy:
-    - Gesture position directly controls UI element position during drag
-    - Velocity at release determines final animation (fling vs. snap back)
-    - Configurable thresholds for different interaction contexts
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>

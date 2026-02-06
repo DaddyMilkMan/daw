@@ -17,22 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file TempoLaneComponent.h
- * @brief UI component for displaying and editing tempo map
- *
- * Phase 15: Tempo Map & Global Markers MVP
- *
- * Displays tempo points as nodes along a timeline.
- * Allows adding, moving, and deleting tempo points via mouse interaction.
- */
-
-
 #pragma once
+
+// TempoLaneComponent.h
+
 
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>

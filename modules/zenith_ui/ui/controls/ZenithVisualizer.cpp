@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithVisualizer.cpp
-    Created: 2025-12-12
-    Author:  Zenith DAW
-
-    Implementation of the Zenith visualizer.
-
-  ==============================================================================
-
-*/
-
 #include "ZenithVisualizer.h"
 // Forced compilation check
 

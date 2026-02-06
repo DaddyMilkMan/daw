@@ -17,27 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    LayoutManager.h
-    Created: 2025-12-12
-    Author:  Zenith DAW Team
-
-    Central layout management system for Zenith DAW.
-    - Save/Load layout presets to JSON
-    - Manage panel arrangements
-
-    - Persist layouts on app close/restore on open
-    - Support for tab groups, collapsible panels, and drag-to-resize
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>

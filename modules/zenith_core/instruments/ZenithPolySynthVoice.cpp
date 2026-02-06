@@ -17,25 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithPolySynthVoice.cpp
-    Refactored: 2025-12-09
-    Author:  Zenith DAW
-
-    Implementation of ZenithPolySynthVoice.
-    Features: Flagship Wavetables, Moog Ladder Filter, FM, Sync.
-    Fixes: LFO Rate Mod, Osc Shape Mod, Detune Tuning, Smoothed Params.
-
-
-  ==============================================================================
-*/
-
 #include "ZenithPolySynthVoice.h"
 #include <cmath>
 #include <array>

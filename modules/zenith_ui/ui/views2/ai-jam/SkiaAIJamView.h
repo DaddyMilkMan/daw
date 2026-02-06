@@ -17,30 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaAIJamView.h
-    Created: 2026-02-03
-    Author:  Zenith DAW Team
-
-    AI-powered jamming overlay - Zenith's unique differentiator.
-    Features:
-    - Natural language prompt bar (text + voice)
-
-    - Generated stem cards with A/B/C/D variations
-    - Quick action buttons for instant transformations
-    - Loop preview with playhead
-    - Chat history for iterative refinement
-    - Glassmorphism aesthetic
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../../framework/SkiaComponent.h"

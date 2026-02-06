@@ -17,19 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    HardwareAudioInterface.h
-    Hardware audio interface support - production ready
-    Phase 2: Audio I/O & Processing
-  ==============================================================================
-*/
-
-
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "RealTimeAudioBuffer.h"

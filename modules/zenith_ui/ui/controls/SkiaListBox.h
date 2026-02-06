@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaListBox.h
-    Created: 2025-12-07
-    Author:  AI Assistant
-
-    Pure Skia-based list box component to replace juce::ListBox
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include "SkiaComponent.h"

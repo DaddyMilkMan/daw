@@ -17,26 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithDropdown.h
-    Created: 2025-12-12
-    Author:  Zenith DAW
-
-    Premium dropdown/combo box for waveform selection etc:
-    - Glass background
-    - Chevron indicator
-
-    - Popup menu styling
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "SkiaComponent.h"

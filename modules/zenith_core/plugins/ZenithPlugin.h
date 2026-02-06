@@ -17,25 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithPlugin.h
-    Created: 2025-12-19
-    Author:  Zenith DAW
-
-    Base class for all Zenith Audio/MIDI plugins.
-    Handles APVTS setup, state saving/loading, and common helpers.
-
-
-  ==============================================================================
-*/
-
 #pragma once
+
+// ZenithPlugin.h
+
 
 #include <juce_audio_processors/juce_audio_processors.h>
 

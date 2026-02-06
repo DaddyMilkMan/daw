@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    EnvelopeFollower.h
-    Created: 2025-12-09
-    Author:  Zenith DAW
-
-    Simple A/R envelope follower for modulation control signals.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include <atomic>

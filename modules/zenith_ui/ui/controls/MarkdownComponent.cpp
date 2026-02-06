@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    MarkdownComponent.cpp
-    Created: 2025-12-17
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "MarkdownComponent.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../design-system/ColorBridge.h"

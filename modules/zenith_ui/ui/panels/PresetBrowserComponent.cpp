@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    PresetBrowserComponent.cpp
-    Created: 2026-02-04
-    Author:  Zenith DAW Team
-
-    Full-featured Skia-based preset browser implementation.
-  ==============================================================================
-*/
-
-
 #include "PresetBrowserComponent.h"
 #include "../design-system/ColorBridge.h"
 #include "../design-system/ZenithDesignSystem.h"

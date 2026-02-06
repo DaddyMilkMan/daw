@@ -17,28 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AdvancedFilters.h
-    Created: 2025-01-28
-    Author: Zenith DAW
-
-    Advanced filter models for ZenithPolySynth:
-    - Diode Ladder (accurate diode simulation)
-    - Korg MS-20 (classic filter)
-
-    - Moog Ladder (4-pole ladder)
-    - Comb filter (for phaser/flanger)
-    - Filter slopes (12/24/36/48 dB)
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <juce_core/juce_core.h>

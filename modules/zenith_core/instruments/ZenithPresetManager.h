@@ -17,29 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file ZenithPresetManager.h
- * @brief Factory preset system for Zenith instruments
- *
- * Provides a centralized preset management system with:
- * - Lightweight Preset struct for metadata + parameter blob
- * - Structured on-disk format (Presets/<InstrumentName>/<Category>/)
- * - JSON serialization (.zpreset.json files)
- * - Thread-safe API (all I/O on message thread)
- * - Integration with InstrumentRegistry
-
- *
- * Thread Safety:
- * - ALL file I/O operations MUST be called from the message thread
- * - NO audio thread operations are permitted
- * - Asserts enforce thread safety in debug builds
- */
-
 #pragma once
+
+// ZenithPresetManager.h
+
 
 #include <functional>
 #include <juce_audio_basics/juce_audio_basics.h>

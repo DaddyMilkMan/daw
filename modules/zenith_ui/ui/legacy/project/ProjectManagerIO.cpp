@@ -17,18 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    ProjectManagerIO.cpp
-    Project management I/O and Template implementation
-  ==============================================================================
-*/
-
-
 namespace zenith {
 namespace ui {
 

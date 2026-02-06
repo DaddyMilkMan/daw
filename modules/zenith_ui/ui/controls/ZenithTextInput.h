@@ -17,30 +17,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithTextInput.h
-    Created: 2025-12-12
-    Author:  Zenith DAW
-
-    Premium text input for numeric entry:
-    - Click to edit
-    - Input range validation
-
-    - Up/down arrow increment
-    - Optional label
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "SkiaComponent.h"
+#include "../validation/Validator.h"
+#include "../validation/ValidationError.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #ifdef ZENITH_USE_SKIA
@@ -50,7 +31,8 @@
 namespace zenith {
 
 class ZenithTextInput : public SkiaComponent,
-                        private juce::TextEditor::Listener {
+                        private juce::TextEditor::Listener,
+                        public ValidatableComponent {
 public:
   // ----- Input Types -----
   enum class InputType {
@@ -86,6 +68,22 @@ public:
     prefix_ = prefix;
     repaint();
   }
+
+  // ----- Validation Interface Implementation -----
+  ValidationResult validate() override;
+  Validator* getValidator() override { return validator_.get(); }
+  void setValidator(Validator* validator) override;
+  void setAutoValidate(bool autoValidate) override;
+  bool getAutoValidate() const override { return autoValidate_; }
+  ValidationResult getLastValidationResult() const override { return lastValidationResult_; }
+  void clearValidation() override;
+  void setValidationCallback(std::function<void(const ValidationResult&)> callback) override;
+
+  // ----- Validation Helpers -----
+  void validateText();
+  void addError(const juce::String& error);
+  void addWarning(const juce::String& warning);
+  void setValidationState(const ValidationResult& result);
 
   // ----- Appearance -----
   void setLabel(const juce::String &label) {
@@ -157,6 +155,13 @@ private:
   std::unique_ptr<juce::TextEditor> editor_;
 
   SkColor accentColor_ = SkColorSetRGB(0, 255, 255);
+
+  // Validation state
+  std::unique_ptr<Validator> validator_;
+  ValidationResult lastValidationResult_;
+  bool autoValidate_ = true;
+  std::function<void(const ValidationResult&)> validationCallback_;
+  bool showValidationErrors_ = true;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithTextInput)
 };

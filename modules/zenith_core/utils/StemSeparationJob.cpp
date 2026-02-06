@@ -17,10 +17,11 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#include "StemSeparationJob.h"
+#include "ai_client/AIStatusManager.h"
+
+namespace zenith {
+namespace utils {
 
 StemSeparationJob::StemSeparationJob(const juce::File &inputFile,
                                      const juce::File &outputDirectory,

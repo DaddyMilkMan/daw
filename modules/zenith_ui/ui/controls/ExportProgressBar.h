@@ -17,24 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ExportProgressBar.h
-    Created: 2025-12-25
-    Author:  Zenith DAW
-
-    Skia-based progress bar for export operations.
-    Features animated gradient fill with glow effect.
-
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../framework/SkiaComponent.h"

@@ -17,23 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file ArrangerRenderer.h
- * @brief Skia rendering for ArrangerComponent
- * 
- * This module handles all Skia-based drawing for the arranger view including:
- * - Grid and timeline rendering
- * - Track backgrounds and headers
- * - Clip rendering with glassmorphic effects
- * - Playhead, loop regions, and selection indicators
- * - Waveform and MIDI blob visualization
-
- */
 #pragma once
+
+// ArrangerRenderer.h
+
 
 #ifdef ZENITH_USE_SKIA
 

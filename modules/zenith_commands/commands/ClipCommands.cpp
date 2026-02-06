@@ -17,10 +17,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
+#include "ClipCommands.h"
+
 
 ClipCommands::ClipCommands(Engine &eng, ProjectState &state, CommandAPI &apiRef)
     : engine(eng), projectState(state), api(apiRef) {}

@@ -17,22 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file MarkerLaneComponent.h
- * @brief UI component for displaying and editing markers
- *
- * Phase 15: Tempo Map & Global Markers MVP
- *
- * Displays markers as labeled flags along a timeline.
- * Allows adding, moving, renaming, and deleting markers via mouse interaction.
- */
-
-
 #pragma once
+
+// MarkerLaneComponent.h
+
 
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>

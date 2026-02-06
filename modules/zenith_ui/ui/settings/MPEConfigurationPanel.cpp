@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    MPEConfigurationPanel.cpp
-    Created: 2026-01-29
-    Author:  Zenith DAW
-
-    Implementation following codebase patterns from GlobalSettingsPanel.
-
-  ==============================================================================
-
-*/
-
 #include "MPEConfigurationPanel.h"
 #include "../design-system/ZenithDesignSystem.h"
 

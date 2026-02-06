@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithControl.cpp
-    Created: 2025-12-12
-    Author:  Zenith DAW
-
-    Implementation of the base control class.
-
-  ==============================================================================
-
-*/
-
 #include "ZenithControl.h"
 
 namespace zenith {

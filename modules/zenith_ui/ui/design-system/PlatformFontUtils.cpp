@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PlatformFontUtils.cpp
-    Created: 2025-12-28
-    Author:  Zenith DAW
-
-    Implementation of platform-specific font utility functions.
-
-  ==============================================================================
-
-*/
-
 #include "PlatformFontUtils.h"
 
 #if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA

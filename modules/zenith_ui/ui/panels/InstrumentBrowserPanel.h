@@ -17,10 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
 
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>

@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithDeEsser.h
-    Created: 2025-12-20
-    Author:  Zenith DAW
-
-    Split-band De-Esser for sibilance control.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include "../plugins/ZenithPlugin.h"

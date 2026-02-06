@@ -17,28 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SessionController.h
-    Created: 2026-02-03
-    Author:  Zenith DAW Team
-
-    Bridge between SkiaSessionView and the engine.
-    
-    Connects the view to:
-
-    - ProjectState (tracks, clips)
-    - TransportController (playhead, quantization)
-    - Engine (clip launching, meters)
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include "../../../engine/ProjectState.h"

@@ -17,23 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file ArrangerComponent.h
- * @brief Timeline/Arranger view component for Zenith DAW
- *
- * The ArrangerComponent is the main timeline view that displays tracks and
- * clips. It delegates to specialized helper classes for different concerns:
- * - ArrangerGridUtils: Coordinate conversion and waveform caching
- * - ArrangerClipManager: Clip lifecycle and selection
- * - ArrangerInputHandler: Mouse and keyboard input
- * - ArrangerRenderer: Skia drawing (when ZENITH_USE_SKIA is defined)
-
- */
 #pragma once
+
+// ArrangerComponent.h
+
 
 #include "Engine.h"
 #include "MiniMapComponent.h"

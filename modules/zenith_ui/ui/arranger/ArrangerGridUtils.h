@@ -17,10 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
 
  * @file ArrangerGridUtils.h
  * @brief Coordinate conversion, grid snapping, and waveform cache utilities for ArrangerComponent
@@ -28,7 +24,6 @@
  * This module handles all coordinate math, time conversion, and waveform caching
  * for the arranger view. It provides utilities for converting between beats/pixels,
  * track indices/Y coordinates, and manages pre-computed waveform peak data.
- */
 
 
 #include <juce_core/juce_core.h>

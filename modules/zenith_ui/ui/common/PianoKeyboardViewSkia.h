@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    PianoKeyboardViewSkia.h
-    Created: 2025-11-28
-    Author:  Leo Rossi
-
-    Skia-rendered Piano Keyboard with neon glow effects.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include "SkiaComponent.h"

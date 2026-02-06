@@ -17,14 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
 
  * @file PianoRollTools.cpp
  * @brief Piano Roll Tools and Logic - Part of PianoRollComponent
- */
 
 
 //==============================================================================

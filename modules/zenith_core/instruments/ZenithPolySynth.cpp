@@ -17,26 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ZenithPolySynth.cpp
-    Refactored: 2025-12-11
-    Author:  Zenith DAW
-
-    REFACTORED: Parameter management extracted to
-    ZenithPolySynthParameterManager. This file now contains a much cleaner
-    processor with delegation to the manager. Parameter IDs are aliases
-
-    to the manager's constants.
-
-  ==============================================================================
-*/
-
 #include "ZenithPolySynth.h"
 #include "../ui/instruments/ZenithPolySynthUI.h"
 #include "../ai/WingmanSynthBridge.h"

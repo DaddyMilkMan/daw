@@ -16,18 +16,11 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#include "UnifiedSlider.h"
+#include "../Theme.h"
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
- * @file UnifiedSlider.cpp
- * @brief Unified slider component implementation
- */
-
-
-
+namespace zenith {
+    
 UnifiedSlider::Builder& UnifiedSlider::Builder::withRange(double min, double max, double interval) {
     min_ = min;
     max_ = max;
@@ -82,7 +75,7 @@ UnifiedSlider::Builder& UnifiedSlider::Builder::withTextBoxEnabled(bool enabled)
     return *this;
 }
 
-UnifiedSlider::Builder& UnifiedSlider::Builder::withTextBoxStyle(juce::Slider::TextBoxStyle style) {
+UnifiedSlider::Builder& UnifiedSlider::Builder::withTextBoxStyle(juce::Slider::TextEntryBoxPosition style) {
     textBoxStyle_ = style;
     return *this;
 }
@@ -116,7 +109,10 @@ UnifiedSlider::UnifiedSlider() {
     initialize();
 }
 
-UnifiedSlider::UnifiedSlider(const Builder& builder) : UnifiedComponent(builder) {
+UnifiedSlider::UnifiedSlider(const Builder& builder) : UnifiedComponent() {
+    setBounds(builder.bounds_);
+    setEnabled(builder.enabled_);
+    setVisible(builder.visible_);
     min_ = builder.min_;
     max_ = builder.max_;
     interval_ = builder.interval_;
@@ -333,7 +329,7 @@ void UnifiedSlider::setTextBoxEnabled(bool enabled) {
     }
 }
 
-void UnifiedSlider::setTextBoxStyle(juce::Slider::TextBoxStyle style) {
+void UnifiedSlider::setTextBoxStyle(juce::Slider::TextEntryBoxPosition style) {
     if (textBoxStyle_ != style) {
         textBoxStyle_ = style;
         repaint();
@@ -399,7 +395,7 @@ void UnifiedSlider::onChange() {
     }
 
     // Notify listeners
-    listeners_.call(&juce::ComponentListener::componentMovedOrResized, this, false, false);
+    listeners_.call(&juce::ComponentListener::componentMovedOrResized, *this, false, false);
 }
 
 void UnifiedSlider::updateValue(double newValue) {
@@ -518,7 +514,7 @@ void UnifiedSlider::mouseDrag(const juce::MouseEvent& event) {
 
 void UnifiedSlider::mouseMove(const juce::MouseEvent& event) {
     UnifiedComponent::mouseMove(event);
-    hovered_ = getLocalBounds().contains(event.position);
+    hovered_ = getLocalBounds().toFloat().contains(event.position);
 }
 
 void UnifiedSlider::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) {

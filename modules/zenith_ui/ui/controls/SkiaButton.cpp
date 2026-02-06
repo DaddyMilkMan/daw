@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaButton.cpp
-    Created: 2025-11-30
-    Authors: Kenji Nakamura (lead), Leo Rossi, Diego Martinez, Isabella Moretti
-
-    Implementation of the beautiful, glowing, animated button.
-  ==============================================================================
-*/
-
-
-
 #include "SkiaButton.h"
 #include "ZenithSkia.h"
 

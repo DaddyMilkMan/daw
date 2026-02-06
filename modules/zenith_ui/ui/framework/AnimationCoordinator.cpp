@@ -17,25 +17,8 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    AnimationCoordinator.cpp
-    Created: 2025-12-31
-    Author:  Zenith DAW
-
-    Implementation of the central animation coordinator.
-
-  ==============================================================================
-
-*/
-
 #include "AnimationCoordinator.h"
-#include "../../engine/ZenithLogger.h"
+#include "ZenithLogger.h"
 #include <algorithm>
 #include <chrono>
 

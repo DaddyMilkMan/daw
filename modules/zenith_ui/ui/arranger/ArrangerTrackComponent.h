@@ -17,14 +17,9 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
 
  * @file ArrangerTrackComponent.h
  * @brief Component for managing individual tracks (Audio, MIDI, Group, Section)
- */
 
 
 #include "TakeFolderComponent.h"

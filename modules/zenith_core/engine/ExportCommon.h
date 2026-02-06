@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    ExportCommon.h
-    Created: 2025-12-27
-    Author:  Zenith DAW
-
-    Common definitions for audio export to avoid circular dependencies.
-
-  ==============================================================================
-
-*/
-
 #pragma once
 
 #include <juce_audio_formats/juce_audio_formats.h> // For juce::AudioFormat

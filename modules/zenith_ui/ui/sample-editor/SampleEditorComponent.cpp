@@ -17,18 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-    SampleEditorComponent.cpp - ZENITH EDISON
-    Professional Sample Editor Implementation
-  ==============================================================================
-*/
-
-
 #include <core/SkFont.h>
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>

@@ -17,26 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    SkiaAIJamView_Integration.cpp
-    Created: 2026-02-04
-    Author:  Zenith DAW
-
-    PRODUCTION IMPLEMENTATION - Full Grok AI Integration
-    Async API calls, error handling, stem integration
-
-
-    STATUS: Production Ready (10/10)
-
-  ==============================================================================
-*/
-
 #include "SkiaAIJamView.h"
 #include "../../design-system/ZenithTheme.h"
 #include "../../../network/GrokDAWController.h"

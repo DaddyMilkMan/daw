@@ -17,21 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    GrokGodModeHelper.cpp
-    Created: 2025-12-27
-    Author:  Zenith DAW
-
-  ==============================================================================
-*/
-
-
 #include "GrokGodModeHelper.h"
 
 namespace zenith {

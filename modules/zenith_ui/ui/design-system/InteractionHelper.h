@@ -17,25 +17,10 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    InteractionHelper.h
-    Created: 2025-12-15
-    Author:  Zenith DAW
-
-    Utility class for consistent hover/pressed state tracking and animations.
-    Provides smooth visual feedback for interactive UI elements.
-
-
-  ==============================================================================
-*/
-
 #pragma once
+
+// InteractionHelper.h
+
 
 #include "ZenithDesignSystem.h"
 #include <cmath>

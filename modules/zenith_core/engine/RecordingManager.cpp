@@ -17,23 +17,6 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*
-    ==============================================================================
-    Original file header:
-*/
-
-  ==============================================================================
-
-    RecordingManager.cpp
-    Created: 2025-12-09
-    Author:  Zenith DAW
-
-    Recording manager implementation with clip creation.
-
-  ==============================================================================
-
-*/
-
 #include "RecordingManager.h"
 #include "ProjectState.h"
 #include "AudioRecorder.h"
