@@ -118,7 +118,7 @@ I'd appreciate help from all kinds of people:
 
 ## Contact
 
-This is a very early project. You can reach me via:
+This is a very early project. Contact me on GitHub:
 
 * **GitHub Issues:** Report bugs or ask questions
 
