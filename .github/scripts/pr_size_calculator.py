@@ -8,6 +8,7 @@ import sys
 import os
 import json
 import requests
+import argparse
 
 def calculate_pr_size(repo, pr_number):
     """Calculate PR size based on GitHub API"""
@@ -28,9 +29,14 @@ def calculate_pr_size(repo, pr_number):
 
     # Estimate size based on PR number
     # This is just a placeholder - replace with actual calculation
-    pr_size['additions'] = int(pr_number) * 10
-    pr_size['deletions'] = int(pr_number) * 5
-    pr_size['files_changed'] = int(pr_number) * 2
+    try:
+        pr_num = int(pr_number)
+    except ValueError:
+        pr_num = 0
+
+    pr_size['additions'] = pr_num * 10
+    pr_size['deletions'] = pr_num * 5
+    pr_size['files_changed'] = pr_num * 2
 
     # Calculate total lines changed
     total_lines = pr_size['additions'] + pr_size['deletions']
@@ -42,11 +48,10 @@ def calculate_pr_size(repo, pr_number):
     return pr_size
 
 if __name__ == '__main__':
-    if len(sys.argv) != 4:
-        print("Usage: python pr_size_calculator.py --repo <repo> --pr <number>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description='Calculate PR size')
+    parser.add_argument('--repo', required=True, help='Repository name')
+    parser.add_argument('--pr', required=True, help='PR number')
 
-    repo = sys.argv[2]
-    pr_number = sys.argv[4]
+    args = parser.parse_args()
 
-    calculate_pr_size(repo, pr_number)
+    calculate_pr_size(args.repo, args.pr)
