@@ -4,6 +4,7 @@
 add_executable(GrokAITests
     GrokAITestSuite.cpp
     UITests.cpp
+    ZenithToggleTest.cpp
     MixerAccessibilityTests.cpp
     MixerChannelBenchmark.cpp
 )
