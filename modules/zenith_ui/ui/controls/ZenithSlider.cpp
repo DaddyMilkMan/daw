@@ -115,6 +115,48 @@ float ZenithSlider::getHandlePosition() const {
   return (value_ - minValue_) / (maxValue_ - minValue_);
 }
 
+bool ZenithSlider::keyPressed(const juce::KeyPress &key) {
+  bool isUp = (key == juce::KeyPress::upKey);
+  bool isDown = (key == juce::KeyPress::downKey);
+  bool isLeft = (key == juce::KeyPress::leftKey);
+  bool isRight = (key == juce::KeyPress::rightKey);
+
+  if (isUp || isDown || isLeft || isRight) {
+    float range = maxValue_ - minValue_;
+    if (std::abs(range) < 0.00001f)
+      return true;
+
+    float step = range * 0.01f; // Default 1%
+
+    if (key.getModifiers().isShiftDown()) {
+      step *= fineControlMultiplier_;
+    }
+
+    // Use interval if defined and larger than calculated step,
+    // unless strictly in fine mode?
+    // Consistent with mouseWheelMove logic: ignore interval for step size
+    // but rely on setValue or parameter to handle constraints if needed.
+    // However, if interval is large (e.g. integer steps), 1% might be too small.
+    // Let's check if interval is set.
+    if (range_.interval > 0.0f && !key.getModifiers().isShiftDown()) {
+        if (step < range_.interval) step = range_.interval;
+    }
+
+    float direction = (isUp || isRight) ? 1.0f : -1.0f;
+    float newValue = value_ + (step * direction);
+
+    setValue(newValue, true);
+    return true;
+  }
+
+  // Handle standard SkiaComponent keys (Enter, Escape, F10)
+  if (SkiaComponent::keyPressed(key, this)) {
+    return true;
+  }
+
+  return Component::keyPressed(key);
+}
+
 void ZenithSlider::mouseDrag(const juce::MouseEvent &e) {
   ZenithControl::mouseDrag(
       e); // Let base handle logic if it has any relevant logic

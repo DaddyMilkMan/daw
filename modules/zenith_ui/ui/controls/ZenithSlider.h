@@ -89,6 +89,7 @@ public:
   //==========================================================================
   // ZenithControl / SkiaComponent Overrides
   //==========================================================================
+  bool keyPressed(const juce::KeyPress &key) override;
   void drawSkia(SkCanvas *canvas) override;
   void mouseDrag(const juce::MouseEvent &e) override;
   void mouseEnter(const juce::MouseEvent &e) override;
