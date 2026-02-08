@@ -121,7 +121,7 @@ jobs:
   # BUILD & TEST - macOS
   # =============================================================================
   build-macos:
-    runs-on: macos-13
+    runs-on: macos-latest
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -559,11 +559,11 @@ jobs:
     timeout-minutes: 60
     strategy:
       matrix:
-        os: [ubuntu-22.04, macos-13, windows-2022]
+        os: [ubuntu-22.04, macos-latest, windows-2022]
         include:
           - os: ubuntu-22.04
             artifact_name: zenith-daw-linux
-          - os: macos-13
+          - os: macos-latest
             artifact_name: zenith-daw-macos
           - os: windows-2022
             artifact_name: zenith-daw-windows
@@ -587,7 +587,7 @@ jobs:
           libvulkan-dev
     
     - name: Install Dependencies (macOS)
-      if: matrix.os == 'macos-13'
+      if: matrix.os == 'macos-latest'
       run: brew install cmake ninja
     
     - name: Install Dependencies (Windows)
@@ -611,7 +611,7 @@ jobs:
         cpack -G TGZ
     
     - name: Package (macOS)
-      if: matrix.os == 'macos-13'
+      if: matrix.os == 'macos-latest'
       run: |
         cd build
         cpack -G DragNDrop
