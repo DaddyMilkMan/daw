@@ -40,19 +40,22 @@ juce::String TrackManager::createTrack(const juce::String& name, const juce::Str
     // Create track based on type
     std::shared_ptr<Track> track;
     if (type.equalsIgnoreCase("audio")) {
-        // TODO: Create AudioTrack
         DBG("TrackManager: Creating audio track - " + name);
+        track = std::shared_ptr<Track>(Track::create(name, Track::Type::Audio));
     } else if (type.equalsIgnoreCase("midi")) {
-        // TODO: Create MIDITrack
         DBG("TrackManager: Creating MIDI track - " + name);
+        track = std::shared_ptr<Track>(Track::create(name, Track::Type::MIDI));
     } else {
         DBG("TrackManager: Unknown track type - " + type);
+        // Log error and return empty string for unknown types
         return juce::String();
     }
 
     if (track) {
         track->setTrackId(trackId);
-        track->setName(name);
+        // Name is already set by create(), but we can set it again if needed to match requirements strictly,
+        // though Track::create(name, ...) already does it.
+        // track->setName(name);
         addTrack(track);
     }
 

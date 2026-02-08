@@ -31,6 +31,7 @@ set(ZENITH_LEGACY_SOURCES
 # Test sources
 set(ZENITH_TEST_SOURCES
     apps/desktop/Source/tests/
+    apps/desktop/Source/tests/TrackManagerTests.cpp
 )
 
 # Tools and utilities
