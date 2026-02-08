@@ -85,7 +85,7 @@ private:
     std::unique_ptr<WorkflowManager> workflowManager_;
     
     // Parameter management
-    std::unique_ptr<UltraSynthParameterManager> parameterManager_;
+    // Removed duplicate parameterManager_ from here as it lives in Processor
     
     // Internal state
     bool initialized_ = false;
@@ -155,6 +155,9 @@ private:
     juce::AudioProcessorValueTreeState parameters_;
     std::unique_ptr<UltraSynthParameterManager> parameterManager_;
     
+    // Helper to create layout
+    juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+
     // Performance monitoring
     std::atomic<double> maxProcessingTime_{0.0};
     std::atomic<int> maxBlockSize_{512};

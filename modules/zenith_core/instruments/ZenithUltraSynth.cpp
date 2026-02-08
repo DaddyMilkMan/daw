@@ -30,6 +30,9 @@
 
 #include "ZenithUltraSynth.h"
 #include "ZenithUltraSynthVoice.h"
+#include "UltraSynthParameterManager.h"
+#include "ContentPaths.h"
+// Placeholder includes for engines - assuming they exist or will exist
 #include "physical_modeling/PhysicalModelEngine.h"
 #include "neural_synthesis/NeuralSynthesisEngine.h"
 #include "wavetable/HybridWavetableEngine.h"
@@ -42,9 +45,12 @@ namespace zenith {
 // ZenithUltraSynth Implementation
 //==============================================================================
 
-ZenithUltraSynth::ZenithUltraSynth() {
+ZenithUltraSynth::ZenithUltraSynth()
+    : InstrumentBase(std::make_unique<ZenithUltraSynthProcessor>(), createMetadata())
+{
     // Initialize synthesis engines
     initializeEngines();
+    registerPresets();
 }
 
 void ZenithUltraSynth::initialize() {
@@ -55,8 +61,9 @@ void ZenithUltraSynth::initialize() {
         if (wavetableEngine_) wavetableEngine_->initialize();
         if (workflowManager_) workflowManager_->initialize();
         
-        // Initialize parameter manager
-        parameterManager_ = std::make_unique<UltraSynthParameterManager>();
+        // parameterManager_ in ZenithUltraSynth seems redundant or incorrect
+        // as it requires apvts which is in processor.
+        // Leaving it null here to avoid compilation error with missing arguments.
         
         initialized_ = true;
     }
@@ -80,7 +87,7 @@ InstrumentMetadata ZenithUltraSynth::createMetadata() {
     InstrumentMetadata metadata;
     metadata.name = "Zenith Ultra Synth";
     metadata.category = "Synthesizer";
-    description = "Advanced AI-Powered Synthesizer with Physical Modeling, Neural Synthesis, and Hybrid Wavetable Engines";
+    metadata.description = "Advanced AI-Powered Synthesizer with Physical Modeling, Neural Synthesis, and Hybrid Wavetable Engines";
     metadata.version = "1.0.0";
     metadata.author = "Zenith DAW Team";
     metadata.supportsMidi = true;
@@ -102,8 +109,76 @@ void ZenithUltraSynth::initializeEngines() {
 }
 
 void ZenithUltraSynth::registerPresets() {
-    // TODO: Implement preset registration
-    // This will be populated in Phase 2 with actual presets
+    auto contentRoot = ContentPaths::getInstance().getContentRoot();
+    // Assuming structure: Content/Presets/ZenithUltraSynth/*.json
+    auto presetDir = contentRoot.getChildFile("Presets").getChildFile("ZenithUltraSynth");
+
+    if (!presetDir.exists()) {
+        DBG("ZenithUltraSynth presets directory not found: " << presetDir.getFullPathName());
+        return;
+    }
+
+    // Find all bank files
+    auto bankFiles = presetDir.findChildFiles(juce::File::findFiles, false, "*_bank.json");
+
+    for (const auto& bankFile : bankFiles) {
+        juce::String jsonString = bankFile.loadFileAsString();
+        auto result = juce::JSON::parse(jsonString);
+
+        if (!result.isObject()) {
+            DBG("ZenithUltraSynth: Warning - failed to parse preset bank: " + bankFile.getFileName());
+            continue;
+        }
+
+        auto* bankObj = result.getDynamicObject();
+        if (!bankObj) continue;
+
+        auto presetsVar = bankObj->getProperty("presets");
+        if (!presetsVar.isArray()) continue;
+
+        auto* presetsArray = presetsVar.getArray();
+        for (const auto& presetVar : *presetsArray) {
+            if (!presetVar.isObject()) continue;
+            auto* presetObj = presetVar.getDynamicObject();
+
+            juce::String id = presetObj->getProperty("id").toString();
+            juce::String name = presetObj->getProperty("name").toString();
+            auto parametersVar = presetObj->getProperty("parameters");
+
+            std::map<juce::String, float> values;
+
+            if (parametersVar.isObject()) {
+                auto* paramsObj = parametersVar.getDynamicObject();
+                for (auto& prop : paramsObj->getProperties()) {
+                    juce::String key = prop.name.toString();
+
+                    // Handle array parameters (e.g. timbre_params)
+                    if (prop.value.isArray()) {
+                         auto* arr = prop.value.getArray();
+                         if (key == "timbre_params") {
+                             for (int i = 0; i < arr->size(); ++i) {
+                                 if (i >= 16) break; // Limit to 16
+                                 float val = static_cast<float>(static_cast<double>((*arr)[i]));
+                                 values[UltraSynthParameterManager::getTimbreParamID(i)] = val;
+                             }
+                         }
+                    } else if (prop.value.isDouble() || prop.value.isInt()) {
+                        float val = static_cast<float>(static_cast<double>(prop.value));
+
+                        // Map JSON keys to Parameter IDs
+                        if (key == "latent_x") values[UltraSynthParameterManager::LatentX] = val;
+                        else if (key == "latent_y") values[UltraSynthParameterManager::LatentY] = val;
+                        else if (key == "latent_z") values[UltraSynthParameterManager::LatentZ] = val;
+                        else if (key == "temperature") values[UltraSynthParameterManager::Temperature] = val;
+                        else if (key == "top_k") values[UltraSynthParameterManager::TopK] = val;
+                        else if (key == "top_p") values[UltraSynthParameterManager::TopP] = val;
+                        else if (key == "overlapping") values[UltraSynthParameterManager::Overlapping] = val;
+                    }
+                }
+            }
+            registerPreset(id, name, values);
+        }
+    }
 }
 
 //==============================================================================
@@ -231,10 +306,8 @@ void ZenithUltraSynthProcessor::processPerformanceMonitoring(int numSamples) {
     // Will be enhanced in Phase 3
 }
 
-juce::AudioProcessorParameterGroup ZenithUltraSynthProcessor::createParameterLayout() {
-    // TODO: Create parameter layout
-    // Will be implemented in Phase 2
-    return juce::AudioProcessorParameterGroup("ultrasynth", "Ultra Synth", "ultrasynth_");
+juce::AudioProcessorValueTreeState::ParameterLayout ZenithUltraSynthProcessor::createParameterLayout() {
+    return UltraSynthParameterManager::createParameterLayout();
 }
 
 } // namespace zenith
