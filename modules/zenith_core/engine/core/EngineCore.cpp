@@ -425,6 +425,22 @@ void EngineCore::initializeCoreComponents() {
 
     // Create core interface implementations
     audioDeviceManager_ = std::make_unique<AudioDeviceManager>();
+
+    // Connect audio callback
+    audioDeviceManager_->setAudioCallback([this](
+        const float* const* inputChannelData,
+        int numInputChannels,
+        float* const* outputChannelData,
+        int numOutputChannels,
+        int numSamples,
+        const juce::AudioIODeviceCallbackContext& context)
+    {
+        this->audioDeviceIOCallbackWithContext(
+            inputChannelData, numInputChannels,
+            outputChannelData, numOutputChannels,
+            numSamples, context);
+    });
+
     trackManager_ = std::make_unique<TrackManager>();
     transportController_ = std::make_unique<TransportController>();
     audioRenderer_ = std::make_unique<AudioRenderer>();

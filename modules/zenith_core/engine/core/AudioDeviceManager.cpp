@@ -53,6 +53,8 @@ bool AudioDeviceManager::initialize(double sampleRate, int bufferSize) {
             return false;
         }
 
+        deviceManager_.addAudioCallback(this);
+
         currentDeviceInfo_ = device->getName() + " (" +
                            juce::String(device->getCurrentSampleRate()) + " Hz, " +
                            juce::String(device->getCurrentBufferSizeSamples()) + " samples)";
@@ -74,6 +76,7 @@ void AudioDeviceManager::shutdown() {
 
     DBG("AudioDeviceManager: Shutting down");
 
+    deviceManager_.removeAudioCallback(this);
     deviceManager_.closeAudioDevice();
     currentDevice_.reset();
     initialized_.store(false);
@@ -100,6 +103,10 @@ bool AudioDeviceManager::isSuspended() const {
 
 void AudioDeviceManager::setCallbackEnabled(bool enabled) {
     callbackEnabled_.store(enabled);
+}
+
+void AudioDeviceManager::setAudioCallback(AudioCallback callback) {
+    audioCallback_ = callback;
 }
 
 double AudioDeviceManager::getCpuUsage() const {
@@ -153,11 +160,14 @@ void AudioDeviceManager::audioDeviceIOCallbackWithContext(
         return;
     }
 
-    // TODO: Connect to actual audio processing
-    // For now, just clear the output
-    for (int channel = 0; channel < numOutputChannels; ++channel) {
-        if (outputChannelData[channel] != nullptr) {
-            juce::FloatVectorOperations::clear(outputChannelData[channel], numSamples);
+    if (audioCallback_) {
+        audioCallback_(inputChannelData, numInputChannels, outputChannelData, numOutputChannels, numSamples, context);
+    } else {
+        // Clear output if no callback
+        for (int channel = 0; channel < numOutputChannels; ++channel) {
+            if (outputChannelData[channel] != nullptr) {
+                juce::FloatVectorOperations::clear(outputChannelData[channel], numSamples);
+            }
         }
     }
 

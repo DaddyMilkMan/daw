@@ -29,6 +29,14 @@ namespace zenith {
 class IAudioDeviceManager : public juce::AudioIODeviceCallback,
                           public juce::MidiInputCallback {
 public:
+    using AudioCallback = std::function<void(
+        const float* const* inputChannelData,
+        int numInputChannels,
+        float* const* outputChannelData,
+        int numOutputChannels,
+        int numSamples,
+        const juce::AudioIODeviceCallbackContext& context)>;
+
     virtual ~IAudioDeviceManager() = default;
 
     //==========================================================================
@@ -44,6 +52,7 @@ public:
     // Audio Processing
     //==========================================================================
 
+    virtual void setAudioCallback(AudioCallback callback) = 0;
     virtual void setSuspended(bool suspended) = 0;
     virtual bool isSuspended() const = 0;
     virtual void setCallbackEnabled(bool enabled) = 0;

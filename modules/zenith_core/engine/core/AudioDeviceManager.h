@@ -42,6 +42,7 @@ public:
     bool isInitialized() const override;
     juce::String getDeviceInfo() const override;
 
+    void setAudioCallback(AudioCallback callback) override;
     void setSuspended(bool suspended) override;
     bool isSuspended() const override;
     void setCallbackEnabled(bool enabled) override;
@@ -90,6 +91,7 @@ private:
     //==========================================================================
 
     void updateCpuUsage();
+    AudioCallback audioCallback_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioDeviceManager)
 };
