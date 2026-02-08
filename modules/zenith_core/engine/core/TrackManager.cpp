@@ -35,28 +35,32 @@ TrackManager::~TrackManager() {
 }
 
 juce::String TrackManager::createTrack(const juce::String& name, const juce::String& type) {
-    auto trackId = generateTrackId();
-
     // Create track based on type
-    std::shared_ptr<Track> track;
+    std::unique_ptr<Track> newTrack;
     if (type.equalsIgnoreCase("audio")) {
-        // TODO: Create AudioTrack
+        newTrack = Track::create(name, Track::Type::Audio);
         DBG("TrackManager: Creating audio track - " + name);
     } else if (type.equalsIgnoreCase("midi")) {
-        // TODO: Create MIDITrack
+        newTrack = Track::create(name, Track::Type::MIDI);
         DBG("TrackManager: Creating MIDI track - " + name);
     } else {
         DBG("TrackManager: Unknown track type - " + type);
         return juce::String();
     }
 
-    if (track) {
-        track->setTrackId(trackId);
-        track->setName(name);
+    if (newTrack) {
+        auto trackId = generateTrackId();
+        newTrack->setTrackId(trackId);
+        newTrack->setName(name);
+
+        // Convert to shared_ptr for storage
+        std::shared_ptr<Track> track = std::move(newTrack);
         addTrack(track);
+
+        return trackId;
     }
 
-    return trackId;
+    return juce::String();
 }
 
 void TrackManager::addTrack(std::shared_ptr<Track> track) {
