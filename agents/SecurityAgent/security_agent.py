@@ -11,6 +11,8 @@ from enum import Enum
 from pathlib import Path
 import hashlib
 import re
+import subprocess
+import platform
 
 
 class VulnerabilityType(Enum):
@@ -211,24 +213,93 @@ class SecurityAgent:
         if not plugin_path.exists():
             return False
         
-        # Calculate SHA256 hash
-        sha256_hash = hashlib.sha256()
-        with open(plugin_path, "rb") as f:
-            for chunk in iter(lambda: f.read(4096), b""):
-                sha256_hash.update(chunk)
+        try:
+            # Calculate SHA256 hash
+            sha256_hash = hashlib.sha256()
+            with open(plugin_path, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b""):
+                    sha256_hash.update(chunk)
+
+            plugin_hash = sha256_hash.hexdigest()
+
+            # Fast path: Check against trusted plugin database
+            if plugin_hash in self.known_safe_plugins:
+                return True
+
+            # If not in allowlist, verify digital signature
+            is_signed = self._verify_signature(plugin_path)
+
+            if not is_signed:
+                # Avoid spamming logs on unsupported platforms
+                if platform.system() in ["Darwin", "Windows"]:
+                    print(f"Warning: Plugin verification failed for {plugin_path.name}")
+                return False
+
+            return True
+
+        except Exception as e:
+            print(f"Error verifying plugin {plugin_path}: {e}")
+            return False
+
+    def _verify_signature(self, plugin_path: Path) -> bool:
+        """
+        Verify digital signature based on OS.
+        """
+        system = platform.system()
         
-        plugin_hash = sha256_hash.hexdigest()
-        
-        # TODO: Check against trusted plugin database
-        # TODO: Verify digital signature
-        # TODO: Check for known malicious plugins
-        
-        is_safe = plugin_hash in self.known_safe_plugins
-        
-        if not is_safe:
-            print(f"Warning: Unknown plugin {plugin_path.name}")
-        
-        return is_safe
+        if system == "Darwin":
+            return self._verify_macos_signature(plugin_path)
+        elif system == "Windows":
+            return self._verify_windows_signature(plugin_path)
+        else:
+            # On Linux/Other, we fail closed if not in allowlist
+            # We don't spam warnings here as verify_plugin_signature handles the warning
+            return False
+
+    def _verify_macos_signature(self, plugin_path: Path) -> bool:
+        """Verify macOS codesign signature."""
+        try:
+            result = subprocess.run(
+                ["codesign", "-v", "--strict", str(plugin_path)],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False
+            )
+            return result.returncode == 0
+        except Exception:
+            return False
+
+    def _verify_windows_signature(self, plugin_path: Path) -> bool:
+        """Verify Windows Authenticode signature."""
+        try:
+            # Escape single quotes for PowerShell (which uses double single-quotes)
+            safe_path = str(plugin_path).replace("'", "''")
+
+            # Use PowerShell to get deterministic status string
+            cmd = [
+                "powershell",
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                f"(Get-AuthenticodeSignature -FilePath '{safe_path}').Status.ToString()"
+            ]
+
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False
+            )
+
+            if result.returncode != 0:
+                return False
+
+            # Strict checking: must be exactly "Valid"
+            return result.stdout.strip() == "Valid"
+        except Exception:
+            return False
 
     def add_trusted_plugin(self, plugin_path: Path) -> None:
         """
