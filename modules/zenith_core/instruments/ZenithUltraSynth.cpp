@@ -42,7 +42,9 @@ namespace zenith {
 // ZenithUltraSynth Implementation
 //==============================================================================
 
-ZenithUltraSynth::ZenithUltraSynth() {
+ZenithUltraSynth::ZenithUltraSynth()
+    : InstrumentBase(std::unique_ptr<juce::AudioProcessor>(createAudioProcessor()), createMetadata())
+{
     // Initialize synthesis engines
     initializeEngines();
 }
@@ -192,14 +194,48 @@ juce::AudioProcessorEditor* ZenithUltraSynthProcessor::createEditor() {
 }
 
 void ZenithUltraSynthProcessor::getStateInformation(juce::MemoryBlock& destData) {
-    // TODO: Implement state save
-    // Will be implemented in Phase 3
+    auto state = parameters_.copyState();
+    state.setProperty("stateVersion", 1, nullptr);
+
+    if (auto xml = state.createXml())
+        copyXmlToBinary(*xml, destData);
 }
 
 void ZenithUltraSynthProcessor::setStateInformation(const void* data, int sizeInBytes) {
-    // TODO: Implement state load
-    // Will be implemented in Phase 3
+    if (auto xml = juce::getXmlFromBinary(data, sizeInBytes))
+    {
+        if (xml->hasTagName(parameters_.state.getType()))
+        {
+            auto vt = juce::ValueTree::fromXml(*xml);
+
+            // Optional: migration hook
+            const int version = vt.getProperty("stateVersion", 1);
+            (void) version;
+
+            parameters_.replaceState(vt);
+        }
+    }
 }
+
+#if JUCE_DEBUG
+static void performStateRoundtripTest(ZenithUltraSynthProcessor& p)
+{
+    // Capture state
+    juce::MemoryBlock data;
+    p.getStateInformation(data);
+
+    // Create new processor to restore state
+    ZenithUltraSynthProcessor restoredP;
+
+    // Attempt restore
+    // Note: Since we have no parameters yet, this primarily tests
+    // that the XML structure is valid and parsing doesn't crash.
+    restoredP.setStateInformation(data.getData(), (int)data.getSize());
+
+    // In future: verify specific parameters match
+    // jassert(p.getParameterManager().someValue == restoredP.getParameterManager().someValue);
+}
+#endif
 
 void ZenithUltraSynthProcessor::initializeVoices() {
     for (int i = 0; i < 16; ++i) {
