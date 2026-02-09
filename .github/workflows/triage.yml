@@ -1,8 +1,8 @@
 name: PR Triage and Labeling
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, edited]
+  # pull_request:
+  #   types: [opened, synchronize, reopened, edited]
 
 jobs:
   # PR classification

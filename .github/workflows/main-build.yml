@@ -3,8 +3,8 @@ name: Main Build Pipeline
 on:
   push:
     branches: [ master, main, work/* ]
-  pull_request:
-    branches: [ master, main, work/* ]
+  # pull_request:
+  #   branches: [ master, main, work/* ]
 
 env:
   BUILD_TYPE: RelWithDebInfo
