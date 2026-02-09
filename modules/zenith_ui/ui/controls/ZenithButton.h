@@ -113,7 +113,11 @@ public:
 
   // ----- TooltipClient -----
   juce::String getTooltip() override { return tooltip_; }
-  void setTooltip(const juce::String &text) { tooltip_ = text; }
+  void setTooltip(const juce::String &text) {
+    tooltip_ = text;
+    if (auto* handler = getAccessibilityHandler())
+      handler->notifyAccessibilityEvent(juce::AccessibilityEvent::titleChanged);
+  }
 
   // ----- Rendering -----
   void drawSkia(SkCanvas *canvas) override;
@@ -126,6 +130,8 @@ protected:
   void focusGained(juce::Component::FocusChangeType cause) override;
   void focusLost(juce::Component::FocusChangeType cause) override;
   void resized() override;
+
+  std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
 private:
 #ifdef ZENITH_USE_SKIA
