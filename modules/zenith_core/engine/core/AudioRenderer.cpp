@@ -418,12 +418,50 @@ void AudioRenderer::resetPeakMeters() {
     resetMasterMeters();
 }
 
-void AudioRenderer::recalculatePDC() {
-    updateTrackLatencies();
+void AudioRenderer::recalculatePDC(const std::vector<Track*>& tracks) {
+    if (!renderContext_) {
+        return;
+    }
+
+    // Resize latency vector to match track count
+    if (renderContext_->trackLatencies.size() != tracks.size()) {
+        renderContext_->trackLatencies.resize(tracks.size());
+    }
+
+    // Calculate latencies
+    int maxLatency = 0;
+
+    for (size_t i = 0; i < tracks.size(); ++i) {
+        int trackLatency = 0;
+        auto* track = tracks[i];
+
+        if (track && track->isEnabled()) {
+            if (auto* processor = track->getProcessor()) {
+                auto& pluginChain = processor->getPluginChain();
+                for (int p = 0; p < pluginChain.getNumPlugins(); ++p) {
+                    if (auto* plugin = pluginChain.getPlugin(p)) {
+                        int latency = plugin->getLatencySamples();
+                        if (latency > 0) {
+                            trackLatency += latency;
+                        }
+                    }
+                }
+            }
+        }
+
+        renderContext_->trackLatencies[i] = trackLatency;
+        if (trackLatency > maxLatency) {
+            maxLatency = trackLatency;
+        }
+    }
+
+    renderContext_->maxTrackLatency = maxLatency;
 }
 
 int AudioRenderer::getTrackLatency(int trackIndex) const {
-    // TODO: Implement actual track latency calculation
+    if (renderContext_ && trackIndex >= 0 && trackIndex < static_cast<int>(renderContext_->trackLatencies.size())) {
+        return renderContext_->trackLatencies[trackIndex];
+    }
     return 0;
 }
 
@@ -432,7 +470,9 @@ int AudioRenderer::getMasterLatency() const {
 }
 
 int AudioRenderer::getMaxTrackLatency() const {
-    // TODO: Implement actual maximum track latency
+    if (renderContext_) {
+        return renderContext_->maxTrackLatency;
+    }
     return 0;
 }
 
@@ -497,26 +537,6 @@ void AudioRenderer::updateMasterMetersInternal(const juce::AudioBuffer<float>& b
 
     masterLevel_.store(level);
     masterPeakLevel_.store(std::max(masterPeakLevel_.load(), peak));
-}
-
-void AudioRenderer::updateTrackLatencies() {
-    if (!renderContext_ || !pdcEnabled_.load()) {
-        return;
-    }
-
-    // TODO: This renderer currently doesn't have access to the Track list when
-    // recalculatePDC() is called (no stored snapshot). Until that wiring exists,
-    // keep PDC latencies at 0 so the engine compiles and runs without relying
-    // on undefined state.
-    std::fill(renderContext_->trackLatencies.begin(), renderContext_->trackLatencies.end(), 0);
-
-    // Calculate maximum latency
-    int maxLatency = 0;
-    for (int latency : renderContext_->trackLatencies) {
-        maxLatency = std::max(maxLatency, latency);
-    }
-
-    renderContext_->maxTrackLatency = maxLatency;
 }
 
 void AudioRenderer::applyPDC(juce::AudioBuffer<float>& trackBuffer,

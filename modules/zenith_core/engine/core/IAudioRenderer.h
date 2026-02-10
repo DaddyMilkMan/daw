@@ -107,7 +107,13 @@ public:
     // Plugin Delay Compensation
     //==========================================================================
 
-    virtual void recalculatePDC() = 0;
+    /**
+     * @brief Recalculate track latencies based on the provided list of tracks.
+     * @param tracks List of tracks to process.
+     * @note This method must be called on the message thread.
+     * @note The 'trackIndex' used in getTrackLatency() corresponds to the index in this vector.
+     */
+    virtual void recalculatePDC(const std::vector<Track*>& tracks) = 0;
     virtual int getTrackLatency(int trackIndex) const = 0;
     virtual int getMasterLatency() const = 0;
     virtual int getMaxTrackLatency() const = 0;

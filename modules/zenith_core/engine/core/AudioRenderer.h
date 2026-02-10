@@ -105,7 +105,13 @@ public:
     float getMasterPeakLevel() const override;
     void resetPeakMeters() override;
 
-    void recalculatePDC() override;
+    /**
+     * @brief Recalculate track latencies.
+     * @param tracks List of tracks to process.
+     * @note This method must be called on the message thread.
+     * @note The 'trackIndex' corresponds to the index in this vector.
+     */
+    void recalculatePDC(const std::vector<Track*>& tracks) override;
     int getTrackLatency(int trackIndex) const override;
     int getMasterLatency() const override;
     int getMaxTrackLatency() const override;
@@ -179,7 +185,6 @@ private:
     //==========================================================================
 
     void resetMasterMeters();
-    void updateTrackLatencies();
 
     // Private helper functions
     void updateMasterMetersInternal(const juce::AudioBuffer<float>& buffer, int numSamples);
