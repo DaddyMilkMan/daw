@@ -273,6 +273,40 @@ private:
     float envelopeRelease_ = 0.0f;
     
     //==========================================================================
+    // Block Processing State
+    //==========================================================================
+
+    /** Block size for formant processing optimization */
+    static constexpr int kProcessBlockSize = 32;
+
+    /** Temporary buffer for accumulating input samples */
+    std::vector<float> tempInputBuffer_;
+
+    /** Temporary buffer for accumulating pitch-shifted samples */
+    std::vector<float> tempShiftedBuffer_;
+
+    /** Temporary buffer for processed output samples */
+    std::vector<float> tempOutputBuffer_;
+
+    /** Scratch buffer for filter processing */
+    std::vector<float> scratchBuffer_;
+
+    /** Second scratch buffer for filter processing */
+    std::vector<float> scratchBuffer2_;
+
+    /** Buffer for full block processing (pitch shifted signal) */
+    std::vector<float> fullBlockBuffer_;
+
+    /** Current fill count for block buffers */
+    int bufferFillCount_ = 0;
+
+    /** Block-rate envelope follower attack coefficient */
+    float envelopeAttackBlock_ = 0.0f;
+
+    /** Block-rate envelope follower release coefficient */
+    float envelopeReleaseBlock_ = 0.0f;
+
+    //==========================================================================
     // Private Methods
     //==========================================================================
     
@@ -324,6 +358,12 @@ private:
      */
     float processFormantPreservation(float input, float pitchShifted);
     
+    /**
+     * Process formant preservation for a block of samples.
+     * @param numSamples Number of samples to process (usually kProcessBlockSize)
+     */
+    void processFormantPreservationBlock(int numSamples);
+
     /**
      * Initialize formant filter bank.
      */

@@ -32,6 +32,13 @@ DSPVoiceChanger::DSPVoiceChanger() {
     inputBuffer_.resize(kMaxBufferSamples, 0.0f);
     transitionBuffer_.resize(8192, 0.0f); // Max transition buffer (~170ms at 48kHz)
     
+    // Resize block processing buffers
+    tempInputBuffer_.resize(kProcessBlockSize, 0.0f);
+    tempShiftedBuffer_.resize(kProcessBlockSize, 0.0f);
+    tempOutputBuffer_.resize(kProcessBlockSize, 0.0f);
+    scratchBuffer_.resize(kProcessBlockSize, 0.0f);
+    scratchBuffer2_.resize(kProcessBlockSize, 0.0f);
+
     // Default formant envelopes to zero
     formantEnvelopes_.fill(0.0f);
 }
@@ -45,6 +52,9 @@ DSPVoiceChanger::~DSPVoiceChanger() = default;
 void DSPVoiceChanger::prepare(const juce::dsp::ProcessSpec& spec) {
     sampleRate_ = spec.sampleRate;
     
+    // Resize full block buffer
+    fullBlockBuffer_.resize(spec.maximumBlockSize, 0.0f);
+
     // Recalculate all WSOLA parameters for new sample rate
     recalculateWsolaParameters();
     
@@ -58,6 +68,11 @@ void DSPVoiceChanger::prepare(const juce::dsp::ProcessSpec& spec) {
     envelopeAttack_ = 1.0f - std::exp(-1.0f / (static_cast<float>(sampleRate_) * attackTimeMs / 1000.0f));
     envelopeRelease_ = 1.0f - std::exp(-1.0f / (static_cast<float>(sampleRate_) * releaseTimeMs / 1000.0f));
     
+    // Calculate block-rate envelope coefficients
+    float blockSizeSeconds = static_cast<float>(kProcessBlockSize) / static_cast<float>(sampleRate_);
+    envelopeAttackBlock_ = 1.0f - std::exp(-blockSizeSeconds / (attackTimeMs / 1000.0f));
+    envelopeReleaseBlock_ = 1.0f - std::exp(-blockSizeSeconds / (releaseTimeMs / 1000.0f));
+
     // Calculate transition fade increment
     const int transitionSamples = static_cast<int>(sampleRate_ * kTransitionFadeMs / 1000.0f);
     fadeIncrement_ = 1.0f / static_cast<float>(std::max(1, transitionSamples));
@@ -364,42 +379,78 @@ float DSPVoiceChanger::processPitchShift(float input) {
 //==============================================================================
 
 float DSPVoiceChanger::processFormantPreservation(float input, float pitchShifted) {
-    // Extract formant amplitudes from original signal
-    std::array<float, kFormantBandCount> inputFormants;
+    // Legacy single-sample implementation (kept for reference or fallback if needed)
+    return input;
+}
+
+void DSPVoiceChanger::processFormantPreservationBlock(int numSamples) {
+    if (numSamples <= 0) return;
+
+    // Clear output buffer
+    std::fill(tempOutputBuffer_.begin(), tempOutputBuffer_.begin() + numSamples, 0.0f);
+
+    // Process input (Original Signal) Analysis
     for (int i = 0; i < kFormantBandCount; ++i) {
-        float filtered = analysisFilters_[i].processSample(input);
-        float amplitude = std::abs(filtered);
+        // Copy input to scratch
+        std::copy(tempInputBuffer_.begin(), tempInputBuffer_.begin() + numSamples, scratchBuffer_.begin());
+
+        // Filter input block
+        float* channelData[] = { scratchBuffer_.data() };
+        juce::dsp::AudioBlock<float> block(channelData, 1, static_cast<size_t>(numSamples));
+        juce::dsp::ProcessContextReplacing<float> context(block);
+        analysisFilters_[i].process(context);
         
-        // Envelope follower
-        if (amplitude > formantEnvelopes_[i]) {
-            formantEnvelopes_[i] += envelopeAttack_ * (amplitude - formantEnvelopes_[i]);
+        // Find peak amplitude in block
+        float maxAmplitude = 0.0f;
+        auto range = juce::FloatVectorOperations::findMinAndMax(scratchBuffer_.data(), numSamples);
+        maxAmplitude = std::max(std::abs(range.getStart()), std::abs(range.getEnd()));
+
+        // Update envelope follower (once per block)
+        if (maxAmplitude > formantEnvelopes_[i]) {
+            formantEnvelopes_[i] += envelopeAttackBlock_ * (maxAmplitude - formantEnvelopes_[i]);
         } else {
-            formantEnvelopes_[i] += envelopeRelease_ * (amplitude - formantEnvelopes_[i]);
+            formantEnvelopes_[i] += envelopeReleaseBlock_ * (maxAmplitude - formantEnvelopes_[i]);
         }
         
-        inputFormants[i] = formantEnvelopes_[i];
+        float currentEnvelope = formantEnvelopes_[i];
+
+        // Process pitch-shifted (Synthesis Signal)
+        
+        // Copy shifted to scratch2
+        std::copy(tempShiftedBuffer_.begin(), tempShiftedBuffer_.begin() + numSamples, scratchBuffer2_.begin());
+        
+        // Filter shifted block
+        float* channelDataShifted[] = { scratchBuffer2_.data() };
+        juce::dsp::AudioBlock<float> blockShifted(channelDataShifted, 1, static_cast<size_t>(numSamples));
+        juce::dsp::ProcessContextReplacing<float> contextShifted(blockShifted);
+        synthesisFilters_[i].process(contextShifted);
+
+        // Find peak amplitude in shifted block
+        float maxShiftedAmplitude = 0.0f;
+        auto rangeShifted = juce::FloatVectorOperations::findMinAndMax(scratchBuffer2_.data(), numSamples);
+        maxShiftedAmplitude = std::max(std::abs(rangeShifted.getStart()), std::abs(rangeShifted.getEnd()));
+        maxShiftedAmplitude += 1e-10f; // Avoid division by zero
+
+        // Calculate correction gain
+        float correctionGain = currentEnvelope / maxShiftedAmplitude;
+        correctionGain = std::clamp(correctionGain, 0.1f, 10.0f);
+
+        // Apply gain to filtered shifted signal
+        juce::FloatVectorOperations::multiply(scratchBuffer2_.data(), correctionGain, numSamples);
+
+        // Accumulate to output
+        juce::FloatVectorOperations::add(tempOutputBuffer_.data(), scratchBuffer2_.data(), numSamples);
     }
     
-    // Extract formant amplitudes from pitch-shifted signal
-    float output = 0.0f;
-    float totalWeight = 0.0f;
-    
-    for (int i = 0; i < kFormantBandCount; ++i) {
-        float shiftedFiltered = synthesisFilters_[i].processSample(pitchShifted);
-        float shiftedAmplitude = std::abs(shiftedFiltered) + 1e-10f;
-        
-        // Calculate correction gain to restore original formant amplitude
-        float correctionGain = inputFormants[i] / shiftedAmplitude;
-        correctionGain = std::clamp(correctionGain, 0.1f, 10.0f); // Limit to avoid instability
-        
-        // Apply correction and accumulate
-        output += shiftedFiltered * correctionGain;
-        totalWeight += 1.0f;
+    // Mix
+    const float formantMix = 0.5f;
+    float invBandCount = 1.0f / static_cast<float>(kFormantBandCount);
+
+    for (int n = 0; n < numSamples; ++n) {
+        float corrected = tempOutputBuffer_[n] * invBandCount;
+        float original = tempShiftedBuffer_[n];
+        tempOutputBuffer_[n] = original * (1.0f - formantMix) + corrected * formantMix;
     }
-    
-    // Mix formant-corrected signal with pitch-shifted signal
-    const float formantMix = 0.5f; // 50% formant correction
-    return pitchShifted * (1.0f - formantMix) + (output / totalWeight) * formantMix;
 }
 
 //==============================================================================
@@ -409,13 +460,18 @@ float DSPVoiceChanger::processFormantPreservation(float input, float pitchShifte
 void DSPVoiceChanger::process(const juce::dsp::AudioBlock<const float>& inputBlock,
                               juce::dsp::AudioBlock<float>& outputBlock,
                               VoiceCharacter character) {
-    const auto numSamples = inputBlock.getNumSamples();
+    const auto numSamples = static_cast<size_t>(inputBlock.getNumSamples());
     const auto numChannels = std::min(inputBlock.getNumChannels(), outputBlock.getNumChannels());
     
     if (numSamples == 0 || numChannels == 0) {
         return;
     }
     
+    // Resize internal buffer if needed (safety check, should be done in prepare)
+    if (fullBlockBuffer_.size() < numSamples) {
+        fullBlockBuffer_.resize(numSamples);
+    }
+
     // Handle character transition
     handleCharacterTransition(character);
     
@@ -430,6 +486,7 @@ void DSPVoiceChanger::process(const juce::dsp::AudioBlock<const float>& inputBlo
     const float* inL = inputBlock.getChannelPointer(0);
     float* outL = outputBlock.getChannelPointer(0);
     
+    // Phase 1: Generate Raw Pitch Shifted / Effect Signal
     for (size_t i = 0; i < numSamples; ++i) {
         float input = inL[i];
         float output = 0.0f;
@@ -443,23 +500,50 @@ void DSPVoiceChanger::process(const juce::dsp::AudioBlock<const float>& inputBlo
             if (ringModPhase_ >= 1.0) {
                 ringModPhase_ -= 1.0;
             }
-            
-            // Optional formant preservation for Robot mode
-            if (formantPreservation_) {
-                output = processFormantPreservation(input, output);
-            }
         } else if (character == VoiceCharacter::Ethereal) {
             // Ethereal: Pass through (reverb handled by separate effect)
             output = input;
         } else {
             // Pitch shifting (DeepMale, Chipmunk)
             output = processPitchShift(input);
-            
-            // Apply formant preservation if enabled
-            if (formantPreservation_) {
-                output = processFormantPreservation(input, output);
-            }
         }
+
+        fullBlockBuffer_[i] = output;
+    }
+
+    // Phase 2: Formant Preservation (Block Processing)
+    if (formantPreservation_ && character != VoiceCharacter::Ethereal) {
+        // Process in chunks of kProcessBlockSize
+        size_t samplesProcessed = 0;
+
+        while (samplesProcessed < numSamples) {
+            const int chunkSize = std::min(kProcessBlockSize, static_cast<int>(numSamples - samplesProcessed));
+            
+            // Copy chunk from input
+            for (int k = 0; k < chunkSize; ++k) {
+                tempInputBuffer_[k] = inL[samplesProcessed + k];
+            }
+
+            // Copy chunk from shifted (fullBlockBuffer_)
+            for (int k = 0; k < chunkSize; ++k) {
+                tempShiftedBuffer_[k] = fullBlockBuffer_[samplesProcessed + k];
+            }
+
+            // Process chunk
+            processFormantPreservationBlock(chunkSize);
+
+            // Write chunk back to fullBlockBuffer_
+            for (int k = 0; k < chunkSize; ++k) {
+                fullBlockBuffer_[samplesProcessed + k] = tempOutputBuffer_[k];
+            }
+
+            samplesProcessed += chunkSize;
+        }
+    }
+
+    // Phase 3: Transition Logic and Output
+    for (size_t i = 0; i < numSamples; ++i) {
+        float output = fullBlockBuffer_[i];
         
         // Handle transition crossfade
         if (isTransitioning_) {
