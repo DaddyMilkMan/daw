@@ -105,7 +105,13 @@ public:
     float getMasterPeakLevel() const override;
     void resetPeakMeters() override;
 
-    void recalculatePDC() override;
+    void recalculatePDC(const std::vector<Track*>& tracks) override;
+
+    /**
+     * @brief Get the calculated latency for a track.
+     * @param trackIndex The index of the track in the vector passed to recalculatePDC().
+     * @return Latency in samples.
+     */
     int getTrackLatency(int trackIndex) const override;
     int getMasterLatency() const override;
     int getMaxTrackLatency() const override;
@@ -158,6 +164,7 @@ private:
     int bufferSize_{512};
 
     std::unique_ptr<AudioRenderContext> renderContext_;
+    mutable juce::CriticalSection pdcLock_;
     std::vector<std::shared_ptr<juce::AudioPluginInstance>> masterPlugins_;
     std::unique_ptr<MasterLimiter> masterLimiter_;
 
@@ -179,7 +186,6 @@ private:
     //==========================================================================
 
     void resetMasterMeters();
-    void updateTrackLatencies();
 
     // Private helper functions
     void updateMasterMetersInternal(const juce::AudioBuffer<float>& buffer, int numSamples);

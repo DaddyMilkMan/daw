@@ -107,7 +107,7 @@ public:
     // Plugin Delay Compensation
     //==========================================================================
 
-    virtual void recalculatePDC() = 0;
+    virtual void recalculatePDC(const std::vector<Track*>& tracks) = 0;
     virtual int getTrackLatency(int trackIndex) const = 0;
     virtual int getMasterLatency() const = 0;
     virtual int getMaxTrackLatency() const = 0;

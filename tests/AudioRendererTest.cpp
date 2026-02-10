@@ -23,6 +23,37 @@
 namespace zenith {
 namespace test {
 
+class MockLatencyPlugin : public juce::AudioPluginInstance {
+public:
+    MockLatencyPlugin(int latency) {
+        setLatencySamples(latency);
+    }
+
+    void prepareToPlay(double, int) override {}
+    void releaseResources() override {}
+    void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override {}
+
+    double getTailLengthSeconds() const override { return 0.0; }
+    bool acceptsMidi() const override { return false; }
+    bool producesMidi() const override { return false; }
+
+    juce::AudioProcessorEditor* createEditor() override { return nullptr; }
+    bool hasEditor() const override { return false; }
+
+    const juce::String getName() const override { return "MockLatency"; }
+
+    int getNumPrograms() override { return 0; }
+    int getCurrentProgram() override { return 0; }
+    void setCurrentProgram(int) override {}
+    const juce::String getProgramName(int) override { return {}; }
+    void changeProgramName(int, const juce::String&) override {}
+
+    void getStateInformation(juce::MemoryBlock&) override {}
+    void setStateInformation(const void*, int) override {}
+
+    void fillInPluginDescription(juce::PluginDescription&) const override {}
+};
+
 class AudioRendererTest : public juce::UnitTest {
 public:
     AudioRendererTest() : juce::UnitTest("AudioRenderer", "AudioEngine") {}
@@ -223,23 +254,34 @@ private:
         renderer->setPDCEnabled(true);
         expect(renderer->isPDCEnabled(), "PDC should be enabled");
 
-        // Set different latency values for tracks
-        tracks[0]->getProcessor()->getMixerChannel().setLatencySamples(64);
-        tracks[1]->getProcessor()->getMixerChannel().setLatencySamples(128);
-        tracks[2]->getProcessor()->getMixerChannel().setLatencySamples(0);
+        // Add mock plugins with latency
+        tracks[0]->addPlugin(std::make_unique<MockLatencyPlugin>(64));
+        tracks[1]->addPlugin(std::make_unique<MockLatencyPlugin>(128));
+        // Track 2 has no plugins (0 latency)
+
+        // Convert to raw pointers
+        std::vector<zenith::Track*> trackPtrs;
+        for (const auto& t : tracks) trackPtrs.push_back(t.get());
 
         // Recalculate PDC
-        renderer->recalculatePDC();
+        renderer->recalculatePDC(trackPtrs);
 
         // Test track latency reporting
-        for (int i = 0; i < 3; ++i) {
-            int latency = renderer->getTrackLatency(i);
-            expect(latency >= 0, "Track latency should be non-negative");
-        }
+        expectEquals(renderer->getTrackLatency(0), 64, "Track 0 latency incorrect");
+        expectEquals(renderer->getTrackLatency(1), 128, "Track 1 latency incorrect");
+        expectEquals(renderer->getTrackLatency(2), 0, "Track 2 latency incorrect");
 
         // Test maximum latency
         int maxLatency = renderer->getMaxTrackLatency();
-        expect(maxLatency > 0, "Maximum latency should be positive");
+        expectEquals(maxLatency, 128, "Maximum latency incorrect");
+
+        // Test with null track (should be treated as 0 latency)
+        trackPtrs[1] = nullptr;
+        renderer->recalculatePDC(trackPtrs);
+        expectEquals(renderer->getTrackLatency(1), 0, "Null track latency incorrect");
+
+        // Restore for next tests
+        trackPtrs[1] = tracks[1].get();
 
         // Test PDC disabled
         renderer->setPDCEnabled(false);

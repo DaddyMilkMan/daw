@@ -303,6 +303,11 @@ void EngineCore::syncWithProjectState() {
     // - Loading plugin settings
     // - Loading automation data
 
+    // Recalculate PDC with current tracks
+    if (audioRenderer_ && trackManager_) {
+        audioRenderer_->recalculatePDC(trackManager_->getTrackPointersSnapshot());
+    }
+
     notifyTrackStateChanged();
 }
 

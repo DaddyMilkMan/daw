@@ -137,8 +137,11 @@ void AudioRenderer::processTracks(
     juce::int64 playheadPosition) {
 
     // Initialize track and aux buffers if needed
-    if (!renderContext_) {
-        renderContext_ = std::make_unique<AudioRenderContext>();
+    {
+        const juce::ScopedLock lock(pdcLock_);
+        if (!renderContext_) {
+            renderContext_ = std::make_unique<AudioRenderContext>();
+        }
     }
 
     // Initialize track buffers
@@ -179,15 +182,19 @@ void AudioRenderer::processTracks(
     }
 
     // Initialize PDC buffers if needed
-    if (pdcEnabled_.load() && renderContext_->pdcDelayBuffers.size() != tracks.size()) {
-        renderContext_->pdcDelayBuffers.resize(tracks.size());
-        renderContext_->pdcDelayWritePos.resize(tracks.size(), 0);
-        renderContext_->trackLatencies.resize(tracks.size(), 0);
+    if (pdcEnabled_.load()) {
+        const juce::ScopedLock lock(pdcLock_);
+        // Access pdcDelayBuffers inside lock
+        if (renderContext_->pdcDelayBuffers.size() != tracks.size()) {
+            renderContext_->pdcDelayBuffers.resize(tracks.size());
+            renderContext_->pdcDelayWritePos.resize(tracks.size(), 0);
+            // Note: trackLatencies resizing is handled in recalculatePDC on message thread
 
-        for (size_t i = 0; i < tracks.size(); ++i) {
-            int maxLatency = 512; // Max latency samples
-            renderContext_->pdcDelayBuffers[i] = juce::AudioBuffer<float>(2, maxLatency);
-            renderContext_->pdcDelayBuffers[i].clear();
+            for (size_t i = 0; i < tracks.size(); ++i) {
+                int maxLatency = 512; // Max latency samples
+                renderContext_->pdcDelayBuffers[i] = juce::AudioBuffer<float>(2, maxLatency);
+                renderContext_->pdcDelayBuffers[i].clear();
+            }
         }
     }
 
@@ -245,10 +252,20 @@ void AudioRenderer::processTracks(
         }
 
         // Apply PDC if enabled
-        if (pdcEnabled_.load() && i < renderContext_->pdcDelayBuffers.size()) {
-            applyPDC(trackBuffer, renderContext_->pdcDelayBuffers[i],
-                     renderContext_->pdcDelayWritePos[i],
-                     renderContext_->trackLatencies[i]);
+        if (pdcEnabled_.load()) {
+            // Need to lock to access pdcDelayBuffers and trackLatencies safely
+            const juce::ScopedLock lock(pdcLock_);
+
+            // Check bounds again (vector size might have changed)
+            if (renderContext_ &&
+                i < renderContext_->pdcDelayBuffers.size() &&
+                i < renderContext_->trackLatencies.size()) {
+
+                int latency = renderContext_->trackLatencies[i];
+                applyPDC(trackBuffer, renderContext_->pdcDelayBuffers[i],
+                         renderContext_->pdcDelayWritePos[i],
+                         latency);
+            }
         }
     }
 }
@@ -418,12 +435,58 @@ void AudioRenderer::resetPeakMeters() {
     resetMasterMeters();
 }
 
-void AudioRenderer::recalculatePDC() {
-    updateTrackLatencies();
+void AudioRenderer::recalculatePDC(const std::vector<Track*>& tracks) {
+    const juce::ScopedLock lock(pdcLock_);
+
+    if (!renderContext_) {
+        // Create context if it doesn't exist yet (e.g. first call before processTracks)
+        renderContext_ = std::make_unique<AudioRenderContext>();
+    }
+
+    renderContext_->trackLatencies.resize(tracks.size());
+
+    // Also ensure PDC delay buffers are sized correctly to match tracks
+    // This avoids allocations in processTracks
+    if (renderContext_->pdcDelayBuffers.size() != tracks.size()) {
+        renderContext_->pdcDelayBuffers.resize(tracks.size());
+        renderContext_->pdcDelayWritePos.resize(tracks.size(), 0);
+
+        for (size_t i = 0; i < tracks.size(); ++i) {
+            int maxLatency = 512; // Default max latency
+            // Ideally should be based on actual max latency but prompt says treat missing as 0
+            if (renderContext_->pdcDelayBuffers[i].getNumSamples() < maxLatency) {
+                renderContext_->pdcDelayBuffers[i] = juce::AudioBuffer<float>(2, maxLatency);
+                renderContext_->pdcDelayBuffers[i].clear();
+            }
+        }
+    }
+
+    int maxLatency = 0;
+
+    for (size_t i = 0; i < tracks.size(); ++i) {
+        int latency = 0;
+        if (tracks[i]) {
+            // Calculate total latency for track (sum of plugins)
+            if (auto* processor = tracks[i]->getProcessor()) {
+                auto& chain = processor->getPluginChain();
+                for (int p = 0; p < chain.getNumPlugins(); ++p) {
+                    if (auto* plugin = chain.getPlugin(p)) {
+                        latency += std::max(0, plugin->getLatencySamples());
+                    }
+                }
+            }
+        }
+        renderContext_->trackLatencies[i] = latency;
+        maxLatency = std::max(maxLatency, latency);
+    }
+    renderContext_->maxTrackLatency = maxLatency;
 }
 
 int AudioRenderer::getTrackLatency(int trackIndex) const {
-    // TODO: Implement actual track latency calculation
+    const juce::ScopedLock lock(pdcLock_);
+    if (renderContext_ && trackIndex >= 0 && trackIndex < static_cast<int>(renderContext_->trackLatencies.size())) {
+        return renderContext_->trackLatencies[trackIndex];
+    }
     return 0;
 }
 
@@ -432,8 +495,8 @@ int AudioRenderer::getMasterLatency() const {
 }
 
 int AudioRenderer::getMaxTrackLatency() const {
-    // TODO: Implement actual maximum track latency
-    return 0;
+    const juce::ScopedLock lock(pdcLock_);
+    return renderContext_ ? renderContext_->maxTrackLatency : 0;
 }
 
 bool AudioRenderer::isPDCEnabled() const {
@@ -497,26 +560,6 @@ void AudioRenderer::updateMasterMetersInternal(const juce::AudioBuffer<float>& b
 
     masterLevel_.store(level);
     masterPeakLevel_.store(std::max(masterPeakLevel_.load(), peak));
-}
-
-void AudioRenderer::updateTrackLatencies() {
-    if (!renderContext_ || !pdcEnabled_.load()) {
-        return;
-    }
-
-    // TODO: This renderer currently doesn't have access to the Track list when
-    // recalculatePDC() is called (no stored snapshot). Until that wiring exists,
-    // keep PDC latencies at 0 so the engine compiles and runs without relying
-    // on undefined state.
-    std::fill(renderContext_->trackLatencies.begin(), renderContext_->trackLatencies.end(), 0);
-
-    // Calculate maximum latency
-    int maxLatency = 0;
-    for (int latency : renderContext_->trackLatencies) {
-        maxLatency = std::max(maxLatency, latency);
-    }
-
-    renderContext_->maxTrackLatency = maxLatency;
 }
 
 void AudioRenderer::applyPDC(juce::AudioBuffer<float>& trackBuffer,
