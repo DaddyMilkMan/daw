@@ -80,11 +80,14 @@ juce::AudioProcessor* ZenithUltraSynth::createAudioProcessor() {
 
 InstrumentMetadata ZenithUltraSynth::createMetadata() {
     InstrumentMetadata metadata;
+    metadata.instrumentId = "zenith_ultra_synth";
     metadata.name = "Zenith Ultra Synth";
     metadata.category = "Synthesizer";
     metadata.description = "Advanced AI-Powered Synthesizer with Physical Modeling, Neural Synthesis, and Hybrid Wavetable Engines";
     metadata.version = "1.0.0";
     metadata.author = "Zenith DAW Team";
+    metadata.isBuiltIn = true;
+    metadata.tags = {"synth", "ai", "physical_modeling", "neural", "wavetable", "hybrid"};
     return metadata;
 }
 
