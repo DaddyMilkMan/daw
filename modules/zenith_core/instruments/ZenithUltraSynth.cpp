@@ -34,6 +34,7 @@
 #include "neural_synthesis/NeuralSynthesisEngine.h"
 #include "wavetable/HybridWavetableEngine.h"
 #include "workflow/WorkflowManager.h"
+#include "UltraSynthParameterManager.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 namespace zenith {
@@ -42,7 +43,9 @@ namespace zenith {
 // ZenithUltraSynth Implementation
 //==============================================================================
 
-ZenithUltraSynth::ZenithUltraSynth() {
+ZenithUltraSynth::ZenithUltraSynth()
+    : InstrumentBase(std::unique_ptr<juce::AudioProcessor>(createAudioProcessor()), createMetadata())
+{
     // Initialize synthesis engines
     initializeEngines();
 }
@@ -192,14 +195,52 @@ juce::AudioProcessorEditor* ZenithUltraSynthProcessor::createEditor() {
 }
 
 void ZenithUltraSynthProcessor::getStateInformation(juce::MemoryBlock& destData) {
-    // TODO: Implement state save
-    // Will be implemented in Phase 3
+    auto state = parameters_.copyState();
+    std::unique_ptr<juce::XmlElement> xml(state.createXml());
+
+    // Add version property
+    xml->setAttribute("stateVersion", 1);
+
+    copyXmlToBinary(*xml, destData);
 }
 
 void ZenithUltraSynthProcessor::setStateInformation(const void* data, int sizeInBytes) {
-    // TODO: Implement state load
-    // Will be implemented in Phase 3
+    std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
+
+    if (xmlState != nullptr) {
+        if (xmlState->hasTagName(parameters_.state.getType())) {
+
+            int version = xmlState->getIntAttribute("stateVersion", 1);
+
+            if (version > 1) {
+                // Placeholder for future migration
+            }
+
+            juce::ValueTree newState = juce::ValueTree::fromXml(*xmlState);
+            parameters_.replaceState(newState);
+        }
+    }
 }
+
+#if JUCE_DEBUG
+void ZenithUltraSynthProcessor::performStateRoundtripTest() {
+    // Capture current state
+    juce::MemoryBlock savedData;
+    getStateInformation(savedData);
+
+    // Load it back
+    setStateInformation(savedData.getData(), (int)savedData.getSize());
+
+    // Verify that the state is valid and matches what we saved
+    auto currentState = parameters_.copyState();
+    std::unique_ptr<juce::XmlElement> savedXml(getXmlFromBinary(savedData.getData(), (int)savedData.getSize()));
+
+    if (savedXml != nullptr) {
+        juce::ValueTree savedTree = juce::ValueTree::fromXml(*savedXml);
+        jassert(currentState.isEquivalentTo(savedTree));
+    }
+}
+#endif
 
 void ZenithUltraSynthProcessor::initializeVoices() {
     for (int i = 0; i < 16; ++i) {

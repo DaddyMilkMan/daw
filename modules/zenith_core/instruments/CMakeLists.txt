@@ -15,6 +15,8 @@ target_sources(ZenithDAW PRIVATE
     ZenithPresetManager.cpp
     ZenithSampler.cpp
     ZenithSamplerEditor_Mod.cpp
+    ZenithUltraSynth.cpp
+    ZenithUltraSynthVoice.cpp
 )
 
 

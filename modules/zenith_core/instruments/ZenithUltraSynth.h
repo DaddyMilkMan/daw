@@ -64,9 +64,9 @@ public:
     ~ZenithUltraSynth() override = default;
 
     // InstrumentBase overrides
-    void initialize() override;
-    void configure(double sampleRate, int blockSize) override;
-    juce::AudioProcessor* createAudioProcessor() override;
+    void initialize();
+    void configure(double sampleRate, int blockSize);
+    juce::AudioProcessor* createAudioProcessor();
     
     // Accessors for synthesis engines
     PhysicalModelEngine* getPhysicalEngine() { return physicalEngine_.get(); }
@@ -132,6 +132,10 @@ public:
     // State save/load
     void getStateInformation(juce::MemoryBlock& destData) override;
     void setStateInformation(const void* data, int sizeInBytes) override;
+
+#if JUCE_DEBUG
+    void performStateRoundtripTest();
+#endif
 
     // Parameter management
     juce::AudioProcessorValueTreeState& getParameters() { return parameters_; }
