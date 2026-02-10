@@ -11,6 +11,8 @@ from enum import Enum
 from pathlib import Path
 import hashlib
 import re
+import subprocess
+import platform
 
 
 class VulnerabilityType(Enum):
@@ -219,16 +221,52 @@ class SecurityAgent:
         
         plugin_hash = sha256_hash.hexdigest()
         
-        # TODO: Check against trusted plugin database
-        # TODO: Verify digital signature
-        # TODO: Check for known malicious plugins
+        # Check against trusted plugin database (allowlist)
+        if plugin_hash in self.known_safe_plugins:
+            return True
+
+        # OS-specific signature validation
+        system = platform.system()
+        is_valid = False
         
-        is_safe = plugin_hash in self.known_safe_plugins
+        try:
+            if system == "Darwin":
+                # macOS: codesign
+                result = subprocess.run(
+                    ["codesign", "-v", "--strict", str(plugin_path)],
+                    capture_output=True,
+                    timeout=5,
+                    check=False
+                )
+                is_valid = (result.returncode == 0)
+
+            elif system == "Windows":
+                # Windows: Get-AuthenticodeSignature
+                # Escape single quotes in path for PowerShell
+                safe_path = str(plugin_path).replace("'", "''")
+                ps_command = f"Get-AuthenticodeSignature -FilePath '{safe_path}' | Select-Object -ExpandProperty Status"
+                result = subprocess.run(
+                    ["powershell", "-Command", ps_command],
+                    capture_output=True,
+                    timeout=5,
+                    check=False
+                )
+                # Output should contain "Valid"
+                stdout = result.stdout.decode('utf-8', errors='ignore')
+                is_valid = "Valid" in stdout
+
+            else:
+                # Linux/Other: Fail closed
+                is_valid = False
+
+        except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
+            print(f"Error validating signature for {plugin_path}: {e}")
+            is_valid = False
+
+        if not is_valid:
+            print(f"Warning: Unknown or untrusted plugin {plugin_path.name}")
         
-        if not is_safe:
-            print(f"Warning: Unknown plugin {plugin_path.name}")
-        
-        return is_safe
+        return is_valid
 
     def add_trusted_plugin(self, plugin_path: Path) -> None:
         """
