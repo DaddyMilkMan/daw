@@ -42,8 +42,3 @@ set(ZENITH_TOOLS_SOURCES
 set(ZENITH_AGENTS_SOURCES
     tools/agents/cpp/RealtimeAudioEngineAgent/RealtimeAudioEngineAgent.cpp
 )
-
-# Agents
-set(ZENITH_AGENTS_SOURCES
-    tools/agents/cpp/RealtimeAudioEngineAgent/RealtimeAudioEngineAgent.cpp
-)
