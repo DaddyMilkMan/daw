@@ -438,8 +438,8 @@ void EngineCore::initializeAudioProcessing() {
     // TODO: Initialize AudioFilePool
     // audioFilePool_ = std::make_unique<AudioFilePool>();
 
-    // TODO: Initialize RecordingManager
-    // recordingManager_ = std::make_unique<RecordingManager>();
+    // Initialize RecordingManager
+    recordingManager_ = std::make_unique<RecordingManager>();
 
     // TODO: Initialize Metronome
     // metronome_ = std::make_unique<Metronome>();

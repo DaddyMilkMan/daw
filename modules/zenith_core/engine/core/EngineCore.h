@@ -33,6 +33,7 @@
 #include "ITrackManager.h"
 #include "ITransportController.h"
 #include "IAudioRenderer.h"
+#include "../RecordingManager.h"
 #include <memory>
 #include <functional>
 #include <juce_core/juce_core.h>
@@ -43,8 +44,6 @@ class ProjectState;
 class InstrumentRegistry;
 class PluginHost;
 class AudioFilePool;
-// TODO: Fix incomplete type issue
-    // class RecordingManager;
 class Metronome;
 class Midi2DiscoveryService;
 class SessionDebuggerAgent;
@@ -143,8 +142,7 @@ public:
     InstrumentRegistry& getInstrumentRegistry() { return *instrumentRegistry_; }
     PluginHost& getPluginHost() { return *pluginHost_; }
     AudioFilePool& getAudioFilePool() { return *audioFilePool_; }
-    // TODO: Fix incomplete type issue
-    // RecordingManager& getRecordingManager() { return *recordingManager_; }
+    RecordingManager& getRecordingManager() { return *recordingManager_; }
     Metronome& getMetronome() { return *metronome_; }
     Midi2DiscoveryService& getMidi2DiscoveryService() { return *midi2DiscoveryService_; }
 
@@ -227,8 +225,7 @@ private:
     std::unique_ptr<InstrumentRegistry> instrumentRegistry_;
     std::unique_ptr<PluginHost> pluginHost_;
     std::unique_ptr<AudioFilePool> audioFilePool_;
-    // TODO: Fix incomplete type issue
-    // std::unique_ptr<RecordingManager> recordingManager_;
+    std::unique_ptr<RecordingManager> recordingManager_;
     std::unique_ptr<Metronome> metronome_;
     std::unique_ptr<Midi2DiscoveryService> midi2DiscoveryService_;
 
