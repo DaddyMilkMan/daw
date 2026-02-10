@@ -455,6 +455,7 @@ void AudioRenderer::recalculatePDC(const std::vector<Track*>& tracks) {
         }
     }
 
+    // Compute max latency
     renderContext_->maxTrackLatency = maxLatency;
 }
 
