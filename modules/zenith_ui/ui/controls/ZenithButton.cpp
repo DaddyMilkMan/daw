@@ -34,12 +34,14 @@ namespace zenith {
 
 ZenithButton::ZenithButton() : text_(""), iconText_("") {
   setWantsKeyboardFocus(true);
+  setMouseCursor(juce::MouseCursor::PointingHandCursor);
 }
 
 ZenithButton::ZenithButton(const juce::String &text,
                            std::function<void()> clickHandler)
     : text_(text), iconText_(""), onClick(clickHandler) {
   setWantsKeyboardFocus(true);
+  setMouseCursor(juce::MouseCursor::PointingHandCursor);
 }
 
 ZenithButton::~ZenithButton() = default;
@@ -121,11 +123,10 @@ void ZenithButton::setAudioLevel(float level) {
   }
 }
 
-void ZenithButton::setEnabled(bool enabled) {
-  if (isEnabled() != enabled) {
-    juce::Component::setEnabled(enabled);
-    repaint();
-  }
+void ZenithButton::enablementChanged() {
+  repaint();
+  setMouseCursor(isEnabled() ? juce::MouseCursor::PointingHandCursor
+                             : juce::MouseCursor::NormalCursor);
 }
 
 void ZenithButton::mouseEnter(const juce::MouseEvent &e) {

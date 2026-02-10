@@ -38,3 +38,17 @@ TEST_F(ZenithButtonTest, PaintCallsLookAndFeel) {
 
     button.setLookAndFeel(nullptr);
 }
+
+TEST_F(ZenithButtonTest, CursorIsPointingHand) {
+    zenith::ZenithButton button("TestButton");
+    EXPECT_EQ(button.getMouseCursor(), juce::MouseCursor::PointingHandCursor);
+}
+
+TEST_F(ZenithButtonTest, CursorIsNormalWhenDisabled) {
+    zenith::ZenithButton button("TestButton");
+    button.setEnabled(false);
+    EXPECT_EQ(button.getMouseCursor(), juce::MouseCursor::NormalCursor);
+
+    button.setEnabled(true);
+    EXPECT_EQ(button.getMouseCursor(), juce::MouseCursor::PointingHandCursor);
+}

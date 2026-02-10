@@ -103,7 +103,6 @@ public:
   void setAudioLevel(float level); // 0.0 to 1.0
 
   // ----- State -----
-  void setEnabled(bool enabled);
   bool isDown() const { return pressed_; }
   bool isHovered() const { return hovered_; }
 
@@ -125,6 +124,7 @@ protected:
   void mouseUp(const juce::MouseEvent &e) override;
   void focusGained(juce::Component::FocusChangeType cause) override;
   void focusLost(juce::Component::FocusChangeType cause) override;
+  void enablementChanged() override;
   void resized() override;
 
 private:
