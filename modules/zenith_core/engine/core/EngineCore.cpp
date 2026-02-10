@@ -27,6 +27,7 @@
 #include "AudioFilePool.h"
 #include "Metronome.h"
 #include "Midi2DiscoveryService.h"
+#include "../RecordingManager.h"
 #include "../ZenithLogger.h"
 #include "../AuxBus.h"
 #include "../PluginHost.h"
@@ -479,6 +480,14 @@ void EngineCore::initializeAIAgents() {
     // masteringAgent_ = std::make_unique<AIMasteringAgent>(*this);
 
     DBG("EngineCore: AI agents not initialized (requires architecture refactoring)");
+}
+
+//==========================================================================
+// Component Accessors (Implementation)
+//==========================================================================
+
+RecordingManager& EngineCore::getRecordingManager() {
+    return *recordingManager_;
 }
 
 } // namespace zenith

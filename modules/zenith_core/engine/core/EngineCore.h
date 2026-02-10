@@ -33,7 +33,6 @@
 #include "ITrackManager.h"
 #include "ITransportController.h"
 #include "IAudioRenderer.h"
-#include "../RecordingManager.h"
 #include <memory>
 #include <functional>
 #include <juce_core/juce_core.h>
@@ -44,6 +43,7 @@ class ProjectState;
 class InstrumentRegistry;
 class PluginHost;
 class AudioFilePool;
+class RecordingManager;
 class Metronome;
 class Midi2DiscoveryService;
 class SessionDebuggerAgent;
@@ -142,7 +142,7 @@ public:
     InstrumentRegistry& getInstrumentRegistry() { return *instrumentRegistry_; }
     PluginHost& getPluginHost() { return *pluginHost_; }
     AudioFilePool& getAudioFilePool() { return *audioFilePool_; }
-    RecordingManager& getRecordingManager() { return *recordingManager_; }
+    RecordingManager& getRecordingManager();
     Metronome& getMetronome() { return *metronome_; }
     Midi2DiscoveryService& getMidi2DiscoveryService() { return *midi2DiscoveryService_; }
 
