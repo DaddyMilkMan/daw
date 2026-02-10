@@ -42,7 +42,9 @@ namespace zenith {
 // ZenithUltraSynth Implementation
 //==============================================================================
 
-ZenithUltraSynth::ZenithUltraSynth() {
+ZenithUltraSynth::ZenithUltraSynth()
+    : InstrumentBase(std::unique_ptr<juce::AudioProcessor>(createAudioProcessor()), createMetadata())
+{
     // Initialize synthesis engines
     initializeEngines();
 }
@@ -80,16 +82,9 @@ InstrumentMetadata ZenithUltraSynth::createMetadata() {
     InstrumentMetadata metadata;
     metadata.name = "Zenith Ultra Synth";
     metadata.category = "Synthesizer";
-    description = "Advanced AI-Powered Synthesizer with Physical Modeling, Neural Synthesis, and Hybrid Wavetable Engines";
+    metadata.description = "Advanced AI-Powered Synthesizer with Physical Modeling, Neural Synthesis, and Hybrid Wavetable Engines";
     metadata.version = "1.0.0";
     metadata.author = "Zenith DAW Team";
-    metadata.supportsMidi = true;
-    metadata.supportsMPE = true;
-    metadata.maxVoices = 16;
-    metadata.parameterCount = 256; // Estimated
-    metadata.requiresNetwork = false; // For neural models
-    metadata.memoryUsage = "High"; // Due to neural models
-    metadata.cpuUsage = "Medium-High";
     return metadata;
 }
 
@@ -192,13 +187,28 @@ juce::AudioProcessorEditor* ZenithUltraSynthProcessor::createEditor() {
 }
 
 void ZenithUltraSynthProcessor::getStateInformation(juce::MemoryBlock& destData) {
-    // TODO: Implement state save
-    // Will be implemented in Phase 3
+    auto state = parameters_.copyState();
+    state.setProperty("stateVersion", 1, nullptr);
+    std::unique_ptr<juce::XmlElement> xml(state.createXml());
+    copyXmlToBinary(*xml, destData);
 }
 
 void ZenithUltraSynthProcessor::setStateInformation(const void* data, int sizeInBytes) {
-    // TODO: Implement state load
-    // Will be implemented in Phase 3
+    std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
+    if (xmlState != nullptr)
+    {
+        if (xmlState->hasTagName(parameters_.state.getType()))
+        {
+            int version = xmlState->getIntAttribute("stateVersion", 1);
+
+            // Placeholder for future version migrations
+            if (version > 1) {
+                // Handle newer versions if needed
+            }
+
+            parameters_.replaceState(juce::ValueTree::fromXml(*xmlState));
+        }
+    }
 }
 
 void ZenithUltraSynthProcessor::initializeVoices() {
@@ -236,5 +246,32 @@ juce::AudioProcessorParameterGroup ZenithUltraSynthProcessor::createParameterLay
     // Will be implemented in Phase 2
     return juce::AudioProcessorParameterGroup("ultrasynth", "Ultra Synth", "ultrasynth_");
 }
+
+#if JUCE_DEBUG
+void ZenithUltraSynthProcessor::performStateRoundtripTest() {
+    ZenithUltraSynthProcessor proc1;
+
+    // Save state
+    juce::MemoryBlock data;
+    proc1.getStateInformation(data);
+
+    // Load state into new processor
+    ZenithUltraSynthProcessor proc2;
+    proc2.setStateInformation(data.getData(), (int)data.getSize());
+
+    // Verify parameters count matches
+    // We should use AudioProcessor interface for generic parameter checking
+    const auto& apParams1 = proc1.AudioProcessor::getParameters();
+    const auto& apParams2 = proc2.AudioProcessor::getParameters();
+
+    jassert(apParams1.size() == apParams2.size());
+
+    // Verify values match
+    for (int i = 0; i < apParams1.size(); ++i) {
+        // Simple float comparison
+        jassert(std::abs(apParams1[i]->getValue() - apParams2[i]->getValue()) < 0.0001f);
+    }
+}
+#endif
 
 } // namespace zenith
