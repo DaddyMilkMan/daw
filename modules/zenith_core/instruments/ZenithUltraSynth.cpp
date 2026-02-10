@@ -38,14 +38,25 @@
 
 namespace zenith {
 
+class UltraSynthParameterManager {
+public:
+    UltraSynthParameterManager() {}
+    UltraSynthParameterManager(juce::AudioProcessorValueTreeState&) {}
+    void prepareToPlay(double, int) {}
+};
+
 //==============================================================================
 // ZenithUltraSynth Implementation
 //==============================================================================
 
-ZenithUltraSynth::ZenithUltraSynth() {
+ZenithUltraSynth::ZenithUltraSynth()
+    : InstrumentBase(std::unique_ptr<juce::AudioProcessor>(createAudioProcessor()), createMetadata())
+{
     // Initialize synthesis engines
     initializeEngines();
 }
+
+ZenithUltraSynth::~ZenithUltraSynth() = default;
 
 void ZenithUltraSynth::initialize() {
     if (!initialized_) {
@@ -80,16 +91,19 @@ InstrumentMetadata ZenithUltraSynth::createMetadata() {
     InstrumentMetadata metadata;
     metadata.name = "Zenith Ultra Synth";
     metadata.category = "Synthesizer";
-    description = "Advanced AI-Powered Synthesizer with Physical Modeling, Neural Synthesis, and Hybrid Wavetable Engines";
+    metadata.description = "Advanced AI-Powered Synthesizer with Physical Modeling, Neural Synthesis, and Hybrid Wavetable Engines";
     metadata.version = "1.0.0";
     metadata.author = "Zenith DAW Team";
-    metadata.supportsMidi = true;
-    metadata.supportsMPE = true;
-    metadata.maxVoices = 16;
-    metadata.parameterCount = 256; // Estimated
-    metadata.requiresNetwork = false; // For neural models
-    metadata.memoryUsage = "High"; // Due to neural models
-    metadata.cpuUsage = "Medium-High";
+
+    // Future metadata fields (Phase 2)
+    // metadata.supportsMidi = true;
+    // metadata.supportsMPE = true;
+    // metadata.maxVoices = 16;
+    // metadata.parameterCount = 256;
+    // metadata.requiresNetwork = false;
+    // metadata.memoryUsage = "High";
+    // metadata.cpuUsage = "Medium-High";
+
     return metadata;
 }
 
@@ -192,14 +206,38 @@ juce::AudioProcessorEditor* ZenithUltraSynthProcessor::createEditor() {
 }
 
 void ZenithUltraSynthProcessor::getStateInformation(juce::MemoryBlock& destData) {
-    // TODO: Implement state save
-    // Will be implemented in Phase 3
+    auto state = parameters_.copyState();
+    state.setProperty("stateVersion", 1, nullptr);
+    std::unique_ptr<juce::XmlElement> xml(state.createXml());
+    copyXmlToBinary(*xml, destData);
 }
 
 void ZenithUltraSynthProcessor::setStateInformation(const void* data, int sizeInBytes) {
-    // TODO: Implement state load
-    // Will be implemented in Phase 3
+    std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
+    if (xmlState.get() != nullptr) {
+        if (xmlState->hasTagName(parameters_.state.getType())) {
+            // Read version for future migration if needed
+            // int version = xmlState->getIntAttribute("stateVersion");
+            parameters_.replaceState(juce::ValueTree::fromXml(*xmlState));
+        }
+    }
 }
+
+#if JUCE_DEBUG
+void ZenithUltraSynthProcessor::performStateRoundtripTest() {
+    juce::MemoryBlock savedData;
+    getStateInformation(savedData);
+
+    // Simulate loading
+    setStateInformation(savedData.getData(), (int)savedData.getSize());
+
+    // Verify state validity and version
+    auto newState = parameters_.copyState();
+    jassert(newState.isValid());
+    jassert(newState.hasProperty("stateVersion"));
+    jassert((int)newState.getProperty("stateVersion") == 1);
+}
+#endif
 
 void ZenithUltraSynthProcessor::initializeVoices() {
     for (int i = 0; i < 16; ++i) {
@@ -231,10 +269,14 @@ void ZenithUltraSynthProcessor::processPerformanceMonitoring(int numSamples) {
     // Will be enhanced in Phase 3
 }
 
-juce::AudioProcessorParameterGroup ZenithUltraSynthProcessor::createParameterLayout() {
+juce::AudioProcessorValueTreeState::ParameterLayout ZenithUltraSynthProcessor::createParameterLayout() {
     // TODO: Create parameter layout
     // Will be implemented in Phase 2
-    return juce::AudioProcessorParameterGroup("ultrasynth", "Ultra Synth", "ultrasynth_");
+    return juce::AudioProcessorValueTreeState::ParameterLayout();
+}
+
+UltraSynthParameterManager& ZenithUltraSynthProcessor::getParameterManager() {
+    return *parameterManager_;
 }
 
 } // namespace zenith

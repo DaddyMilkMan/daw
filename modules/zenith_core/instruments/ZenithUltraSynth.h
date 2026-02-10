@@ -61,12 +61,12 @@ struct UltraSynthParameters;
 class ZenithUltraSynth : public InstrumentBase {
 public:
     ZenithUltraSynth();
-    ~ZenithUltraSynth() override = default;
+    ~ZenithUltraSynth() override;
 
     // InstrumentBase overrides
     void initialize() override;
     void configure(double sampleRate, int blockSize) override;
-    juce::AudioProcessor* createAudioProcessor() override;
+    juce::AudioProcessor* createAudioProcessor();
     
     // Accessors for synthesis engines
     PhysicalModelEngine* getPhysicalEngine() { return physicalEngine_.get(); }
@@ -133,9 +133,13 @@ public:
     void getStateInformation(juce::MemoryBlock& destData) override;
     void setStateInformation(const void* data, int sizeInBytes) override;
 
+#if JUCE_DEBUG
+    void performStateRoundtripTest();
+#endif
+
     // Parameter management
     juce::AudioProcessorValueTreeState& getParameters() { return parameters_; }
-    UltraSynthParameterManager& getParameterManager() { return *parameterManager_; }
+    UltraSynthParameterManager& getParameterManager();
 
     // Engine access
     ZenithUltraSynthVoice* getVoice(int index) const;
@@ -168,6 +172,8 @@ private:
     void initializeVoices();
     void updateVoiceParameters();
     void processPerformanceMonitoring(int numSamples);
+
+    static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithUltraSynthProcessor)
 };
