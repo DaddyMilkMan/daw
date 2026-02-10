@@ -6,8 +6,9 @@
 
 #include "AIMasteringAgent.h"
 #include "network/SecureKeyStore.h"
-#include "zenith_core/engine/Engine.h"
-#include "zenith_core/engine/Track.h"
+#include <zenith_core/engine/core/EngineCore.h>
+#include <zenith_core/engine/core/TrackManager.h>
+#include <zenith_core/engine/Track.h>
 
 namespace zenith {
 namespace ai {
@@ -392,7 +393,7 @@ Be precise, musical, and conservative in your decisions. Respond ONLY with valid
 // AIMasteringAgent Implementation
 //==============================================================================
 
-AIMasteringAgent::AIMasteringAgent(Engine &engine) : engine_(engine) {
+AIMasteringAgent::AIMasteringAgent(EngineCore &engine) : engine_(engine) {
   DBG("═══════════════════════════════════════════════════════════════");
   DBG("  AI MASTERING AGENT - Powered by Grok 4.1 Reasoning");
   DBG("═══════════════════════════════════════════════════════════════");
@@ -514,7 +515,7 @@ void AIMasteringAgent::applyAIDecision(
 
 void AIMasteringAgent::balanceTracks(const Options &options) {
   juce::ignoreUnused(options);
-  auto &tracks = engine_.tracks();
+  auto &tracks = engine_.getTrackManager().tracks();
   if (tracks.empty()) {
     DBG("AIMasteringAgent: No tracks to balance");
     return;
@@ -528,7 +529,7 @@ void AIMasteringAgent::balanceTracks(const Options &options) {
     if (!tracks[i])
       continue;
 
-    float level = engine_.getTrackLevel(i);
+    float level = engine_.getTrackManager().getTrackLevel(i);
     if (std::isfinite(level) && level > 0.0f) {
       maxLevel = std::max(maxLevel, level);
     }
@@ -545,12 +546,12 @@ void AIMasteringAgent::balanceTracks(const Options &options) {
     if (!tracks[i])
       continue;
 
-    float level = engine_.getTrackLevel(i);
+    float level = engine_.getTrackManager().getTrackLevel(i);
     if (level > 0.0001f) {
       float gain = (targetPeak / maxLevel);
       gain = juce::jlimit(0.25f, 4.0f, gain);
 
-      engine_.setTrackVolume(i, gain);
+      engine_.getTrackManager().setTrackVolume(i, gain);
       DBG("  Track " + juce::String(i) + ": " +
           juce::String(20.0f * std::log10(gain), 1) + " dB");
     }

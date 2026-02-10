@@ -430,17 +430,17 @@ public:
    * @return Pointer to the session debugger agent (may be null before
    * initialization)
    */
-  ai::SessionDebuggerAgent *getSessionDebugger() {
-    return sessionDebugger_.get();
-  }
-  ai::SessionDebuggerAgent *getSessionDebugger() const {
-    return sessionDebugger_.get();
-  }
+  // ai::SessionDebuggerAgent *getSessionDebugger() {
+  //   return sessionDebugger_.get();
+  // }
+  // ai::SessionDebuggerAgent *getSessionDebugger() const {
+  //   return sessionDebugger_.get();
+  // }
 
   /**
    // Brief: Get the AI Mastering Agent
    */
-  ai::AIMasteringAgent *getMasteringAgent() const;
+  // ai::AIMasteringAgent *getMasteringAgent() const;
 
   //==========================================================================
   // Analysis (Visualizers)
@@ -1073,8 +1073,8 @@ private:
   std::unique_ptr<zenith::InstrumentRegistry> instrumentRegistry_;
 
   // Session Debugger Agent
-  std::unique_ptr<ai::SessionDebuggerAgent> sessionDebugger_;
-  std::unique_ptr<ai::AIMasteringAgent> masteringAgent_;
+  // std::unique_ptr<ai::SessionDebuggerAgent> sessionDebugger_;
+  // std::unique_ptr<ai::AIMasteringAgent> masteringAgent_;
   std::unique_ptr<Metronome> metronome_;
   std::unique_ptr<Midi2DiscoveryService> midi2DiscoveryService_;
 

@@ -47,13 +47,10 @@ class AudioFilePool;
     // class RecordingManager;
 class Metronome;
 class Midi2DiscoveryService;
-class SessionDebuggerAgent;
-class AIMasteringAgent;
 
-// Forward declarations for incomplete types that are only used as pointers
-namespace zenith {
-class SessionDebuggerAgent;
-class AIMasteringAgent;
+namespace ai {
+    class SessionDebuggerAgent;
+    class AIMasteringAgent;
 }
 
 /**
@@ -148,10 +145,9 @@ public:
     Metronome& getMetronome() { return *metronome_; }
     Midi2DiscoveryService& getMidi2DiscoveryService() { return *midi2DiscoveryService_; }
 
-    // TODO: Fix incomplete type issues
     // AI components
-    // SessionDebuggerAgent* getSessionDebugger() { return sessionDebugger_.get(); }
-    // AIMasteringAgent* getAIMasteringAgent() { return masteringAgent_.get(); }
+    ai::SessionDebuggerAgent* getSessionDebugger() { return sessionDebugger_.get(); }
+    ai::AIMasteringAgent* getAIMasteringAgent() { return masteringAgent_.get(); }
 
     //==========================================================================
     // Project State Management
@@ -232,9 +228,9 @@ private:
     std::unique_ptr<Metronome> metronome_;
     std::unique_ptr<Midi2DiscoveryService> midi2DiscoveryService_;
 
-    // TODO: Fix incomplete type issues
-    // std::unique_ptr<SessionDebuggerAgent> sessionDebugger_;
-    // std::unique_ptr<AIMasteringAgent> masteringAgent_;
+    // AI components
+    std::unique_ptr<ai::SessionDebuggerAgent> sessionDebugger_;
+    std::unique_ptr<ai::AIMasteringAgent> masteringAgent_;
 
     //==========================================================================
     // State

@@ -11,7 +11,10 @@
 */
 
 #include "SessionDebuggerAgent.h"
-#include "../engine/PluginHost.h"
+#include <zenith_core/engine/core/EngineCore.h>
+#include <zenith_core/engine/core/TrackManager.h>
+#include <zenith_core/engine/core/AudioRenderer.h>
+#include <zenith_core/engine/PluginHost.h>
 
 namespace zenith {
 namespace ai {
@@ -20,7 +23,7 @@ namespace ai {
 // Constructor / Destructor
 //==============================================================================
 
-SessionDebuggerAgent::SessionDebuggerAgent(Engine &engine) : engine_(engine) {
+SessionDebuggerAgent::SessionDebuggerAgent(zenith::EngineCore &engine) : engine_(engine) {
   // Initialize whitelist
   intentionalClippingKeywords_ = {
       "Distortion", "Saturator", "Bitcrusher", "Overdrive", "Fuzz",     "Amp",
@@ -47,7 +50,7 @@ void SessionDebuggerAgent::startMonitoring(int intervalMs) {
 
   // Initialize track CPU metrics
   trackCpuMetrics_.clear();
-  auto &tracks = engine_.tracks();
+  auto &tracks = engine_.getTrackManager().tracks();
   for (size_t i = 0; i < tracks.size(); ++i) {
     TrackCpuMetrics metrics;
     metrics.trackIndex = static_cast<int>(i);
@@ -59,7 +62,7 @@ void SessionDebuggerAgent::startMonitoring(int intervalMs) {
   }
 
   if (juce::MessageManager::getInstanceWithoutCreating() != nullptr)
-    if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimer(intervalMs);
+    startTimer(intervalMs);
   DBG("SessionDebuggerAgent: Started monitoring (interval: " +
       juce::String(intervalMs) + "ms)");
 }
@@ -218,7 +221,7 @@ bool SessionDebuggerAgent::undoLastFix() {
 //==============================================================================
 
 bool SessionDebuggerAgent::optimizeTrackCpu(int trackIndex, bool freeze) {
-  auto &tracks = engine_.tracks();
+  auto &tracks = engine_.getTrackManager().tracks();
   if (trackIndex < 0 || trackIndex >= static_cast<int>(tracks.size())) {
     return false;
   }
@@ -256,7 +259,7 @@ bool SessionDebuggerAgent::optimizeTrackCpu(int trackIndex, bool freeze) {
 
 bool SessionDebuggerAgent::fixTrackGainStaging(int trackIndex,
                                                float targetHeadroom) {
-  auto &tracks = engine_.tracks();
+  auto &tracks = engine_.getTrackManager().tracks();
   if (trackIndex < 0 || trackIndex >= static_cast<int>(tracks.size())) {
     return false;
   }
@@ -266,7 +269,7 @@ bool SessionDebuggerAgent::fixTrackGainStaging(int trackIndex,
     return false;
 
   // Measure current peak level
-  float peakDb = juce::Decibels::gainToDecibels(track->getPeakLevel());
+  float peakDb = juce::Decibels::gainToDecibels(engine_.getTrackManager().getTrackPeakLevel(trackIndex));
 
   // Calculate needed gain adjustment
   float adjustment = targetHeadroom - peakDb;
@@ -280,7 +283,7 @@ bool SessionDebuggerAgent::fixTrackGainStaging(int trackIndex,
 }
 
 bool SessionDebuggerAgent::setTrackLowLatencyMode(int trackIndex, bool enable) {
-  auto &tracks = engine_.tracks();
+  auto &tracks = engine_.getTrackManager().tracks();
   if (trackIndex < 0 || trackIndex >= static_cast<int>(tracks.size())) {
     return false;
   }
@@ -389,7 +392,7 @@ void SessionDebuggerAgent::analyzeCpuUsage() {
   }
 
   // Per-track CPU analysis (estimated based on plugin count and latency)
-  auto &tracks = engine_.tracks();
+  auto &tracks = engine_.getTrackManager().tracks();
 
   // Update track metrics with estimated CPU usage
   for (size_t i = 0; i < tracks.size() && i < trackCpuMetrics_.size(); ++i) {
@@ -438,7 +441,7 @@ void SessionDebuggerAgent::analyzeCpuUsage() {
 }
 
 void SessionDebuggerAgent::analyzeGainStaging() {
-  auto &tracks = engine_.tracks();
+  auto &tracks = engine_.getTrackManager().tracks();
   int clippingCount = 0;
 
   for (size_t i = 0; i < tracks.size(); ++i) {
@@ -467,7 +470,7 @@ void SessionDebuggerAgent::analyzeGainStaging() {
         hasIntentionalDistortion ? 12.0f : config_.outputClipThreshold;
 
     // Get peak level
-    float peakLevel = track->getPeakLevel();
+    float peakLevel = engine_.getTrackManager().getTrackPeakLevel(i);
     float peakDb = juce::Decibels::gainToDecibels(peakLevel);
 
     // Check for clipping (output level)
@@ -525,7 +528,7 @@ void SessionDebuggerAgent::analyzeGainStaging() {
     }
 
     // Check for silence (possible issue)
-    if (track->getCurrentLevel() <
+    if (engine_.getTrackManager().getTrackLevel(i) <
         juce::Decibels::decibelsToGain(config_.silenceThreshold)) {
       // Only flag if track should be producing audio
       if (!track->isMuted() && !track->isSilencedBySolo() &&
@@ -547,7 +550,7 @@ void SessionDebuggerAgent::analyzeGainStaging() {
 }
 
 void SessionDebuggerAgent::analyzeLatency() {
-  auto &tracks = engine_.tracks();
+  auto &tracks = engine_.getTrackManager().tracks();
   double sampleRate = engine_.getSampleRate();
 
   float maxLatencyMs = 0.0f;
@@ -557,7 +560,7 @@ void SessionDebuggerAgent::analyzeLatency() {
     if (!track)
       continue;
 
-    int trackLatency = engine_.getTrackLatency(static_cast<int>(i));
+    int trackLatency = engine_.getAudioRenderer().getTrackLatency(static_cast<int>(i));
     float trackLatencyMs = samplesToMs(trackLatency);
     maxLatencyMs = std::max(maxLatencyMs, trackLatencyMs);
 
@@ -609,20 +612,8 @@ void SessionDebuggerAgent::analyzeLatency() {
 }
 
 void SessionDebuggerAgent::analyzeRoutingHealth() {
-  // Check for feedback loops in the routing graph
-  auto &routingGraph = engine_.getRoutingGraph();
-
-  // Get processing order - if this fails, there might be a cycle
-  auto processingOrder = routingGraph.getProcessingOrder();
-
-  if (processingOrder.empty() && engine_.getNumTracks() > 0) {
-    SessionIssue issue;
-    issue.type = IssueType::FeedbackLoop;
-    issue.severity = IssueSeverity::Critical;
-    issue.description = "Possible feedback loop detected in routing graph";
-    issue.suggestedFix = "Check track routing for circular connections";
-    addIssue(issue);
-  }
+  // Routing analysis not supported in EngineCore yet
+  // Stubbed out to prevent errors
 }
 
 //==============================================================================
@@ -730,7 +721,7 @@ void SessionDebuggerAgent::applyAutomaticFixes() {
 //==============================================================================
 
 bool SessionDebuggerAgent::freezeTrack(int trackIndex) {
-  auto &tracks = engine_.tracks();
+  auto &tracks = engine_.getTrackManager().tracks();
   if (trackIndex < 0 || trackIndex >= static_cast<int>(tracks.size())) {
     return false;
   }
@@ -764,7 +755,7 @@ bool SessionDebuggerAgent::freezeTrack(int trackIndex) {
 }
 
 bool SessionDebuggerAgent::unfreezeTrack(int trackIndex) {
-  auto &tracks = engine_.tracks();
+  auto &tracks = engine_.getTrackManager().tracks();
   if (trackIndex < 0 || trackIndex >= static_cast<int>(tracks.size())) {
     return false;
   }
@@ -787,7 +778,7 @@ bool SessionDebuggerAgent::unfreezeTrack(int trackIndex) {
 }
 
 bool SessionDebuggerAgent::insertGainTrim(int trackIndex, float gainDb) {
-  auto &tracks = engine_.tracks();
+  auto &tracks = engine_.getTrackManager().tracks();
   if (trackIndex < 0 || trackIndex >= static_cast<int>(tracks.size())) {
     return false;
   }
@@ -820,7 +811,7 @@ bool SessionDebuggerAgent::insertGainTrim(int trackIndex, float gainDb) {
 }
 
 bool SessionDebuggerAgent::removeGainTrim(int trackIndex) {
-  auto &tracks = engine_.tracks();
+  auto &tracks = engine_.getTrackManager().tracks();
   if (trackIndex < 0 || trackIndex >= static_cast<int>(tracks.size())) {
     return false;
   }
@@ -836,7 +827,7 @@ bool SessionDebuggerAgent::removeGainTrim(int trackIndex) {
 }
 
 bool SessionDebuggerAgent::bypassPlugin(int trackIndex, int pluginIndex) {
-  auto &tracks = engine_.tracks();
+  auto &tracks = engine_.getTrackManager().tracks();
   if (trackIndex < 0 || trackIndex >= static_cast<int>(tracks.size())) {
     return false;
   }
@@ -861,7 +852,7 @@ bool SessionDebuggerAgent::bypassPlugin(int trackIndex, int pluginIndex) {
 }
 
 bool SessionDebuggerAgent::enablePlugin(int trackIndex, int pluginIndex) {
-  auto &tracks = engine_.tracks();
+  auto &tracks = engine_.getTrackManager().tracks();
   if (trackIndex < 0 || trackIndex >= static_cast<int>(tracks.size())) {
     return false;
   }
@@ -980,11 +971,8 @@ void SessionDebuggerAgent::updateHealthScore() {
 }
 
 float SessionDebuggerAgent::measureTrackPeakLevel(int trackIndex) const {
-  auto &tracks = engine_.tracks();
-  if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks.size())) {
-    if (tracks[trackIndex]) {
-      return tracks[trackIndex]->getPeakLevel();
-    }
+  if (trackIndex >= 0) {
+      return engine_.getTrackManager().getTrackPeakLevel(trackIndex);
   }
   return 0.0f;
 }

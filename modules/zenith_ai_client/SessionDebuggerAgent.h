@@ -24,9 +24,7 @@
 
 #pragma once
 
-#include <zenith_core/engine/RoutingGraph.h>
 #include <zenith_core/engine/Track.h>
-#include <zenith_core/engine/Engine.h>
 #include <atomic>
 #include <functional>
 #include <juce_audio_basics/juce_audio_basics.h>
@@ -39,6 +37,9 @@
 #include <unordered_set>
 #include <vector>
 
+namespace zenith {
+class EngineCore;
+}
 
 namespace zenith {
 namespace ai {
@@ -261,7 +262,7 @@ class SessionDebuggerAgent : public juce::Timer,
                              public juce::ChangeBroadcaster {
 public:
   //==========================================================================
-  explicit SessionDebuggerAgent(Engine &engine);
+  explicit SessionDebuggerAgent(zenith::EngineCore &engine);
   ~SessionDebuggerAgent() override;
 
   //==========================================================================
@@ -508,7 +509,7 @@ private:
   // Member Variables
   //==========================================================================
 
-  Engine &engine_;
+  zenith::EngineCore &engine_;
   AnalysisConfig config_;
 
   // Monitoring state

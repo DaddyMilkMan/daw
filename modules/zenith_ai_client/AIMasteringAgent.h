@@ -15,7 +15,7 @@
 
 // Forward declarations
 namespace zenith {
-class Engine;
+class EngineCore;
 }
 
 namespace zenith {
@@ -260,7 +260,7 @@ public:
     juce::String userIntent = "balanced, professional master";
   };
 
-  explicit AIMasteringAgent(Engine &engine);
+  explicit AIMasteringAgent(EngineCore &engine);
   ~AIMasteringAgent();
 
   void prepare(double sampleRate, int samplesPerBlock, int numChannels);
@@ -284,7 +284,7 @@ private:
   void normalizeLoudness(juce::AudioBuffer<float> &buffer,
                          float targetLoudness);
 
-  Engine &engine_;
+  EngineCore &engine_;
   double sampleRate_ = 44100.0;
 
   // AI components

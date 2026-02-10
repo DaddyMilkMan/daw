@@ -57,6 +57,7 @@ target_link_libraries(zenith_engine_core
         zenith_audio_utils
         zenith_dsp
     PRIVATE
+        zenith_ai_client
         juce_audio_basics
         juce_audio_devices
         juce_audio_formats

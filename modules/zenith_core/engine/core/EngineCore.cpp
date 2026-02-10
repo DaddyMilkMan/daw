@@ -34,6 +34,9 @@
 #include "../../instruments/RegisterBuiltInInstruments.h"
 #include <algorithm>
 
+// AI Agents
+#include "SessionDebuggerAgent.h"
+#include "AIMasteringAgent.h"
 
 namespace zenith {
 
@@ -469,16 +472,10 @@ void EngineCore::initializeInstrumentsAndPlugins() {
 void EngineCore::initializeAIAgents() {
     DBG("EngineCore: Initializing AI agents");
 
-    // TODO: AI agents require refactoring to work with the new EngineCore architecture.
-    // The SessionDebuggerAgent and AIMasteringAgent currently depend on the legacy Engine class
-    // which includes the main AudioRenderer, causing a conflict with core/AudioRenderer.
-    // For now, AI agents are not initialized in the core engine.
+    sessionDebugger_ = std::make_unique<zenith::ai::SessionDebuggerAgent>(*this);
+    masteringAgent_ = std::make_unique<zenith::ai::AIMasteringAgent>(*this);
 
-    // Temporarily commented out to avoid compilation issues
-    // sessionDebugger_ = std::make_unique<SessionDebuggerAgent>(*this);
-    // masteringAgent_ = std::make_unique<AIMasteringAgent>(*this);
-
-    DBG("EngineCore: AI agents not initialized (requires architecture refactoring)");
+    DBG("EngineCore: AI agents initialized");
 }
 
 } // namespace zenith

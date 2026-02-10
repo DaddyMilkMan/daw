@@ -26,8 +26,8 @@
 #include "Settings.h"
 
 // C3: Include donor headers (NOT in Engine.h to avoid exposing implementation)
-#include "ai_client/AIMasteringAgent.h"
-#include "ai_client/SessionDebuggerAgent.h"
+// #include "ai_client/AIMasteringAgent.h"
+// #include "ai_client/SessionDebuggerAgent.h"
 #include "AudioFilePool.h"
 #include "AuxBus.h"
 #include "Clip.h"
@@ -97,12 +97,12 @@ Engine::Engine() {
   DBG("Engine: InstrumentRegistry initialized");
 
   // Initialize Session Debugger Agent (AI Technical Integrity)
-  sessionDebugger_ = std::make_unique<ai::SessionDebuggerAgent>(*this);
-  DBG("Engine: SessionDebuggerAgent initialized");
+  // sessionDebugger_ = std::make_unique<ai::SessionDebuggerAgent>(*this);
+  // DBG("Engine: SessionDebuggerAgent initialized");
 
   // Initialize AI Mastering Agent
-  masteringAgent_ = std::make_unique<ai::AIMasteringAgent>(*this);
-  DBG("Engine: AIMasteringAgent initialized");
+  // masteringAgent_ = std::make_unique<ai::AIMasteringAgent>(*this);
+  // DBG("Engine: AIMasteringAgent initialized");
 
   // MeteringSystem handles analysis FIFO internally
 
@@ -174,7 +174,7 @@ Engine::~Engine() {
   recordingManager_.reset();
   transportController_.reset();
   meteringSystem_.reset();
-  masteringAgent_.reset();
+  // masteringAgent_.reset();
 
   // Clear audio file pool
   if (audioFilePool_ != nullptr) {
@@ -290,10 +290,10 @@ bool Engine::initialize() {
 #endif
 
   // Start Session Debugger monitoring (AI Technical Integrity Agent)
-  if (sessionDebugger_) {
-    sessionDebugger_->startMonitoring(500); // Analyze every 500ms
-    DBG("Engine: SessionDebugger monitoring started");
-  }
+  // if (sessionDebugger_) {
+  //   sessionDebugger_->startMonitoring(500); // Analyze every 500ms
+  //   DBG("Engine: SessionDebugger monitoring started");
+  // }
 
   DBG("Engine: Initialization complete!");
   return true;
@@ -304,10 +304,10 @@ void Engine::shutdown() {
   DBG("Engine: Shutting down...");
 
   // Stop Session Debugger monitoring first
-  if (sessionDebugger_) {
-    sessionDebugger_->stopMonitoring();
-    DBG("Engine: SessionDebugger monitoring stopped");
-  }
+  // if (sessionDebugger_) {
+  //   sessionDebugger_->stopMonitoring();
+  //   DBG("Engine: SessionDebugger monitoring stopped");
+  // }
 
   // Stop playback
   stop();
@@ -948,9 +948,9 @@ juce::ThreadPool &Engine::getThreadPool() { return threadPool; }
 // Moved to EngineMixing.cpp
 
 
-ai::AIMasteringAgent* Engine::getMasteringAgent() const {
-  return masteringAgent_.get();
-}
+// ai::AIMasteringAgent* Engine::getMasteringAgent() const {
+//   return masteringAgent_.get();
+// }
 
 
 
