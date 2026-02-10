@@ -20,6 +20,7 @@
 #pragma once
 
 #include "ZenithPolySynthDefs.h"
+#include "WavetableData.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_core/juce_core.h>
@@ -581,6 +582,55 @@ private:
 
 //==============================================================================
 /**
+    Wavetable Oscillator
+    Plays back wavetables with MIP-mapping and interpolation.
+*/
+class WavetableOscillator {
+public:
+    WavetableOscillator() {
+        reset();
+    }
+
+    void prepare(double sampleRate) {
+        sampleRate_ = sampleRate;
+        reset();
+    }
+
+    void reset() {
+        phase_ = 0.0;
+    }
+
+    void setWavetable(const Wavetable* wt) {
+        wavetable_ = wt;
+    }
+
+    float processSample(float frequency, float shape) {
+        if (!wavetable_ || !wavetable_->isValid()) return 0.0f;
+
+        // Calculate MIP level based on frequency and sample rate
+        // This prevents aliasing at higher frequencies
+        int mipLevel = calculateMipLevel(frequency, sampleRate_);
+
+        // Get sample from wavetable with cross-frame interpolation
+        // shape (0-1) controls the frame position within the wavetable
+        float sample = wavetable_->getSample(static_cast<float>(phase_), shape, mipLevel);
+
+        // Advance phase
+        double phaseInc = frequency / sampleRate_;
+        phase_ += phaseInc;
+        if (phase_ >= 1.0) phase_ -= 1.0;
+
+        return sample;
+    }
+
+private:
+    const Wavetable* wavetable_ = nullptr;
+    double phase_ = 0.0;
+    double sampleRate_ = 44100.0;
+};
+
+//==============================================================================
+/**
     Multi-Oscillator Engine
     Combines all advanced oscillator types into one unified interface.
 */
@@ -606,6 +656,7 @@ public:
         phaseDist_.prepare(sampleRate);
         additive_.prepare(sampleRate);
         granular_.prepare(sampleRate);
+        wavetableOsc_.prepare(sampleRate);
     }
     
     void reset() {
@@ -614,6 +665,7 @@ public:
         phaseDist_.reset();
         additive_.reset();
         granular_.reset();
+        wavetableOsc_.reset();
     }
     
     void setType(OscType type) {
@@ -624,6 +676,10 @@ public:
         frequency_ = juce::jlimit(20.0f, 20000.0f, freq);
     }
     
+    void setShape(float shape) {
+        shape_ = juce::jlimit(0.0f, 1.0f, shape);
+    }
+
     float processSample() {
         switch (type_) {
             case Standard:
@@ -648,8 +704,7 @@ public:
                 return granular_.processSample(0.0f);
                 
             case WavetableImport:
-                // TODO: Implement imported wavetable playback
-                return 0.0f;
+                return wavetableOsc_.processSample(frequency_, shape_);
                 
             default:
                 return 0.0f;
@@ -661,6 +716,7 @@ public:
     PhaseDistortionOscillator& getPhaseDist() { return phaseDist_; }
     AdditiveOscillator& getAdditive() { return additive_; }
     GranularEngine& getGranular() { return granular_; }
+    WavetableOscillator& getWavetableOscillator() { return wavetableOsc_; }
     
 private:
     float processStandard() {
@@ -678,12 +734,14 @@ private:
     double phase_ = 0.0;
     double sampleRate_ = 44100.0;
     float frequency_ = 440.0f;
+    float shape_ = 0.0f;
     OscType type_ = Standard;
     
     BuchlaWavefolder wavefolder_;
     PhaseDistortionOscillator phaseDist_;
     AdditiveOscillator additive_;
     GranularEngine granular_;
+    WavetableOscillator wavetableOsc_;
 };
 
 } // namespace zenith
