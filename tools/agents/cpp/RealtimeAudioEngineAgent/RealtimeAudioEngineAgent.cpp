@@ -63,8 +63,8 @@ void RealtimeAudioEngineAgent::initialize(double sampleRate, int bufferSize) {
   outputNode_ = mainGraph_->addNode(std::make_unique<AudioGraphIOProcessor>(AudioGraphIOProcessor::audioOutputNode));
 
   if (inputNode_ && outputNode_) {
-      mainGraph_->addConnection({ inputNode_->nodeID, 0, outputNode_->nodeID, 0 });
-      mainGraph_->addConnection({ inputNode_->nodeID, 1, outputNode_->nodeID, 1 });
+      mainGraph_->addConnection({ { inputNode_->nodeID, 0 }, { outputNode_->nodeID, 0 } });
+      mainGraph_->addConnection({ { inputNode_->nodeID, 1 }, { outputNode_->nodeID, 1 } });
   }
 }
 

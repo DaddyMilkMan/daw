@@ -37,3 +37,13 @@ set(ZENITH_TEST_SOURCES
 set(ZENITH_TOOLS_SOURCES
     apps/desktop/Source/tools/
 )
+
+# Agents
+set(ZENITH_AGENTS_SOURCES
+    tools/agents/cpp/RealtimeAudioEngineAgent/RealtimeAudioEngineAgent.cpp
+)
+
+# Agents
+set(ZENITH_AGENTS_SOURCES
+    tools/agents/cpp/RealtimeAudioEngineAgent/RealtimeAudioEngineAgent.cpp
+)

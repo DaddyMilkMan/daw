@@ -381,6 +381,7 @@ if(ZENITH_BUILD_APP)
     add_executable(ZenithDAW
         apps/desktop/Source/Main.cpp
         apps/desktop/Source/ui/common/MainWindow.cpp
+        ${ZENITH_AGENTS_SOURCES}
     )
 
     # Add debug symbols if requested
