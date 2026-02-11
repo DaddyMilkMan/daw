@@ -16,6 +16,7 @@ ALLOWED_PATTERNS=(
     "ui/framework/SkiaComponent.h"
     "ui/framework/SkiaMainWindowIntegration.cpp"
     "ui/framework/SkiaMainWindowIntegration.h"
+    "ui/common/MainWindow.cpp"
 )
 
 if [[ ! -d "$UI_DIR" ]]; then
