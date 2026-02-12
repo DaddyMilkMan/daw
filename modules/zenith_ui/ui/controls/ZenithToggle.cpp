@@ -20,6 +20,7 @@
 #include "ZenithToggle.h"
 
 #ifdef ZENITH_USE_SKIA
+#include "../design-system/InteractionHelper.h"
 #include "ZenithSkia.h"
 #include <core/SkPath.h>
 #endif
@@ -68,15 +69,31 @@ void ZenithToggle::mouseUp(const juce::MouseEvent &e) {
 }
 
 void ZenithToggle::mouseEnter(const juce::MouseEvent &e) {
-  juce::ignoreUnused(e);
+  SkiaComponent::mouseEnter(e);
+  setMouseCursor(juce::MouseCursor::PointingHandCursor);
   hovered_ = true;
   repaint();
 }
 
 void ZenithToggle::mouseExit(const juce::MouseEvent &e) {
-  juce::ignoreUnused(e);
+  SkiaComponent::mouseExit(e);
+  setMouseCursor(juce::MouseCursor::NormalCursor);
   hovered_ = false;
   repaint();
+}
+
+bool ZenithToggle::keyPressed(const juce::KeyPress &key) {
+  if (key == juce::KeyPress::spaceKey || key == juce::KeyPress::returnKey) {
+    setToggleState(!toggleState_, true);
+
+    if (onClick) {
+      onClick();
+    }
+    return true;
+  }
+
+  // Fallback to SkiaComponent shared logic (context menu etc)
+  return SkiaComponent::keyPressed(key, this);
 }
 
 void ZenithToggle::drawSkia(SkCanvas *canvas) {
@@ -136,6 +153,11 @@ void ZenithToggle::drawSwitch(SkCanvas *canvas) {
   paint.setColor(trackColor);
   canvas->drawRRect(trackRRect, paint);
 
+  // Focus Ring
+  if (hasKeyboardFocus(true)) {
+    InteractionHelper::drawFocusRing(canvas, trackRect, 1.0f, trackHeight / 2);
+  }
+
   // Track glow when active
   if (toggleState_) {
     paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 6.0f));
@@ -186,6 +208,11 @@ void ZenithToggle::drawCheckbox(SkCanvas *canvas) {
   paint.setColor(toggleState_ ? activeColor_ : inactiveColor_);
   canvas->drawRRect(boxRRect, paint);
 
+  // Focus Ring
+  if (hasKeyboardFocus(true)) {
+    InteractionHelper::drawFocusRing(canvas, boxRect, 1.0f, 3.0f);
+  }
+
   // Box border
   paint.setStyle(SkPaint::kStroke_Style);
   paint.setStrokeWidth(1.0f);
@@ -222,6 +249,12 @@ void ZenithToggle::drawRadio(SkCanvas *canvas) {
 
   SkPaint paint;
   paint.setAntiAlias(true);
+
+  // Focus Ring
+  if (hasKeyboardFocus(true)) {
+    SkRect radioRect = SkRect::MakeXYWH(radioX - radioSize / 2, radioY - radioSize / 2, radioSize, radioSize);
+    InteractionHelper::drawFocusRing(canvas, radioRect, 1.0f, radioSize / 2);
+  }
 
   // Outer circle
   paint.setStyle(SkPaint::kStroke_Style);

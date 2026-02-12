@@ -81,6 +81,8 @@ public:
   // ----- Rendering -----
   void drawSkia(SkCanvas *canvas) override;
 
+  bool keyPressed(const juce::KeyPress &key) override;
+
 protected:
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
