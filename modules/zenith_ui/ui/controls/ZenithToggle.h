@@ -78,6 +78,9 @@ public:
   std::function<void(bool)> onToggle;
   std::function<void()> onClick; // Legacy
 
+  // ----- Keyboard -----
+  bool keyPressed(const juce::KeyPress &key) override;
+
   // ----- Rendering -----
   void drawSkia(SkCanvas *canvas) override;
 
