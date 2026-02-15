@@ -970,6 +970,22 @@ void TransportBar::mouseMove(const juce::MouseEvent &e) {
   
   if (anyChanged) requestRepaint();
 
+  // Tooltip Logic
+  juce::String tooltip;
+  if (playState_.isHovered) tooltip = "Start Playback (Space)";
+  else if (stopState_.isHovered) tooltip = "Stop Playback (Space)";
+  else if (recordState_.isHovered) tooltip = "Record (R)";
+  else if (loopState_.isHovered) tooltip = "Toggle Loop (L)";
+  else if (viewToggleState_.isHovered) tooltip = "Toggle View (Tab)";
+  else if (wingmanState_.isHovered) tooltip = "Wingman AI (Cmd+W)";
+  else if (settingsState_.isHovered) tooltip = "Audio Settings";
+  else if (bpmHitBounds_.contains(pos)) tooltip = "Tempo (BPM)";
+  else if (timeSigHitBounds_.contains(pos)) tooltip = "Time Signature";
+
+  if (getTooltip() != tooltip) {
+    setTooltip(tooltip);
+  }
+
   // Trigger Global Help Callbacks
   if (globalHelpCallback) {
     if (playState_.isHovered) 

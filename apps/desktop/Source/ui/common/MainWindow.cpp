@@ -42,18 +42,22 @@ public:
 
         addAndMakeVisible(play_);
         play_.setButtonText("Play");
+        play_.setTooltip("Start Playback (Space)");
         play_.onClick = [this] { engine_.play(); };
 
         addAndMakeVisible(stop_);
         stop_.setButtonText("Stop");
+        stop_.setTooltip("Stop Playback (Space)");
         stop_.onClick = [this] { engine_.stop(); };
 
         addAndMakeVisible(record_);
         record_.setButtonText("Record");
+        record_.setTooltip("Record (R)");
         record_.onClick = [this] { engine_.toggleRecording(); };
 
         addAndMakeVisible(panic_);
         panic_.setButtonText("Panic");
+        panic_.setTooltip("Stop All Sound");
         panic_.onClick = [this] { engine_.panic(); };
 
         addAndMakeVisible(dirty_);

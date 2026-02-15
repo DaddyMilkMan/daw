@@ -71,6 +71,8 @@ private:
     std::unique_ptr<ProjectState> projectState_;
     std::unique_ptr<CommandAPI> commandAPI_;
 
+    juce::TooltipWindow tooltipWindow_;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };
 
