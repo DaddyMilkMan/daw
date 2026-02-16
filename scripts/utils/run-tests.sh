@@ -423,7 +423,7 @@ run_ctest() {
         ctest_args+=("--R" "$FILTER_PATTERN")
     fi
 
-    if "${ctest_args[@]}"; then
+    if ctest "${ctest_args[@]}"; then
         print_success "All CTest tests passed"
         cd - >/dev/null
         return 0
