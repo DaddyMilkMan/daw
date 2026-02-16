@@ -404,7 +404,7 @@ configure_cmake() {
     fi
 
     # Run CMake
-    if "${cmake_args[@]}"; then
+    if cmake "${cmake_args[@]}"; then
         print_success "CMake configuration successful"
     else
         print_error "CMake configuration failed"
@@ -432,7 +432,7 @@ build_project() {
     fi
 
     # Run build
-    if "${build_args[@]}"; then
+    if cmake "${build_args[@]}"; then
         print_success "Build completed successfully"
     else
         print_error "Build failed"
