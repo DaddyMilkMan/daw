@@ -978,12 +978,20 @@ void TransportBar::mouseMove(const juce::MouseEvent &e) {
         globalHelpCallback("Stop Playback", "Stops all rendering and returns playhead to start. Double-click to return to 0.");
     else if (recordState_.isHovered) 
         globalHelpCallback("Record", "Begins recording onto armed tracks. Pro Tip: Use 'Count-in' in settings for a lead-in.");
+    else if (loopState_.isHovered)
+        globalHelpCallback("Loop Playback", "Toggles cycling of the selected time range. Enable to repeat a section.");
     else if (viewToggleState_.isHovered) 
         globalHelpCallback("Switch View", "Toggles between linear Arranger and loop-based Session view. Shortcut: Tab.");
     else if (wingmanState_.isHovered)
         globalHelpCallback("Wingman AI", "Your creative partner. Get intelligent suggestions for mixing, arrangement, and sound design. Shortcut: Cmd+W.");
     else if (settingsState_.isHovered) 
         globalHelpCallback("Audio Settings", "Configure your sound card, buffer size, and MIDI hardware here.");
+    else if (bpmHitBounds_.contains(pos))
+        globalHelpCallback("Tempo", "Click and drag to change BPM. Double-click to edit manually.");
+    else if (timeSigHitBounds_.contains(pos))
+        globalHelpCallback("Time Signature", "Click and drag to change. Double-click to edit.");
+    else if (cpuMeterBounds_.contains(pos))
+        globalHelpCallback("CPU Load", "Shows current audio processing load.");
 
   }
   
