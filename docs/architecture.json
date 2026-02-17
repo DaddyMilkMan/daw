@@ -1,0 +1,56 @@
+{
+  "overview": "Zenith DAW Core Architecture - Source of truth extracted from MD docs.",
+  "modules": {
+    "engine": {
+      "description": "Central audio engine (Engine.h/cpp) managing I/O, transport, tracks, plugins, PDC.",
+      "key_files": [
+        "modules/zenith_core/engine/Engine.h",
+        "modules/zenith_core/engine/core/EngineCore.h",
+        "modules/zenith_core/engine/AudioEngineCore.h"
+      ],
+      "status": "Production Phase 1.2"
+    },
+    "synths": {
+      "description": "Flagship instruments: PolySynth (VA/wavetable), UltraSynth (AI/hybrid). MPE, unison, effects.",
+      "key_files": [
+        "modules/zenith_core/instruments/ZenithPolySynth.h",
+        "modules/zenith_core/instruments/ZenithUltraSynth.h"
+      ],
+      "status": "Production flagship + prototype"
+    },
+    "ui": {
+      "description": "Skia GPU rendering, glassmorphism theme, neon glows. Responsive, animated.",
+      "key_files": [
+        "modules/zenith_ui/rendering/SkiaRenderer.h",
+        "modules/zenith_ui/ui/framework/SkiaComponent.h"
+      ],
+      "status": "Production"
+    },
+    "mpe": {
+      "description": "Full MPE implementation: expression helpers, recorder, poly aftertouch.",
+      "key_files": [
+        "modules/zenith_ui/ui/piano-roll/MPEExpressionHelpers.h",
+        "modules/zenith_ui/ui/piano-roll/MPERecorder.h"
+      ],
+      "status": "100% complete"
+    },
+    "ai": {
+      "description": "Wingman integration, neural synth, session debugger.",
+      "key_files": [
+        "services/ai/agents/*",
+        "modules/zenith_core/instruments/NeuralSynthEngine.h"
+      ],
+      "status": "Integrated"
+    }
+  },
+  "data_flow": {
+    "audio": "External Callback → Engine::process → Tracks → Mixer → Output",
+    "ui": "User Input → ProjectState → Listeners → repaint()",
+    "ai": "Voice/Text → CommandAPI → ProjectState → Engine"
+  },
+  "threading": {
+    "audio": "Lock-free, no allocs, atomic flags",
+    "ui": "JUCE MessageThread",
+    "background": "File I/O, AI calls, plugin scanning"
+  }
+}

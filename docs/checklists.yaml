@@ -1,0 +1,60 @@
+checklists:
+  integration:
+    source: INTEGRATION_CHECKLIST.md
+    summary: Wingman Synth Integration Master Checklist
+    items:
+      - Fix std::atomic → juce::Atomic in ALL files
+      - Fix std::array → juce::Array in ALL files
+      - Fix std::vector → juce::Array in ALL files
+      - WingmanSynthBridge.h compiles without errors
+      - All oscillator control methods implemented
+      - All filter control methods implemented
+      - All envelope control methods implemented
+      - All LFO control methods implemented
+      - All effects control methods implemented
+      - randomizePatch() works
+      - getCurrentPatchState() returns valid data
+  rt_safety:
+    source: docs/RT_SAFETY_CODE_REVIEW_CHECKLIST.md
+    summary: RT-Safety Code Review Checklist
+    items:
+      - No new or delete in processBlock
+      - No malloc or free in processBlock
+      - No std::make_unique or std::make_shared
+      - No std::mutex or std::lock_guard
+      - No std::cout, printf, or fprintf
+      - All buffers allocated in prepareToPlay()
+  autotune:
+    source: docs/AUTOTUNE_FEATURE_CHECKLIST.md
+    summary: Auto-Tune Feature Checklist
+    items:
+      - YIN algorithm implementation
+      - Basic semitone snapping
+      - Scale-aware correction
+      - Microtonal correction (cents precision)
+      - Pitch drift correction
+      - LPC formant analysis
+  ship:
+    source: docs/FINAL_SHIP_CHECKLIST.md
+    summary: Final Ship Checklist
+    items:
+      - Pitch Detection (YIN): WORKS
+      - Modern Mode (Rubber Band): WORKS
+      - Classic Mode: WORKS
+      - MIDI Input: WORKS
+      - Throat Modeling: BASIC BUT WORKS
+  pre_commit:
+    source: tools/agents/cpp/ClockSyncAgent/PRE_COMMIT_CHECKLIST.md
+    summary: ClockSyncAgent MIDI Pre-Commit
+    items:
+      - No new/malloc in processMidiMessage
+      - Uses fixed-size std::array for history
+      - driftCompensation_ is std::atomic
+  production_readiness:
+    source: PRODUCTION_READINESS_CHECKLIST.md
+    summary: ZenithUltraSynth Production Readiness
+    items:
+      - Granular synthesis engine with real-time control
+      - ONNX-based neural network inference
+      - Real-time wavetable morphing with 4 dimensions
+      - AI-assisted preset generation
