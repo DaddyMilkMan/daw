@@ -440,3 +440,20 @@ aiagentsreadthis
 *.backup
 *.modular
 
+
+# Build artifacts
+_deps/
+.venv/
+CTestTestfile.cmake
+*.a
+*.o
+*.so
+*.dylib
+
+# IDE
+.vscode/
+.clangd/
+.cache/
+
+# OS
+.DS_Store
