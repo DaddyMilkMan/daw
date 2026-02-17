@@ -93,3 +93,19 @@ __pycache__/
 /find_brace_level.py
 /launch.sh
 /apps/scanner/
+# Build artifacts
+_deps/
+.venv/
+CTestTestfile.cmake
+*.a
+*.o
+*.so
+*.dylib
+
+# IDE
+.vscode/
+.clangd/
+.cache/
+
+# OS
+.DS_Store
