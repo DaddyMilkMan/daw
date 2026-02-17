@@ -1,0 +1,199 @@
+diff --git a/.github/ISSUE_TEMPLATE/05-other-type-of-bug-report.md b/.github/ISSUE_TEMPLATE/05-other-type-of-bug-report.md
+index 1774b230de..0ae10ad9fa 100644
+--- a/.github/ISSUE_TEMPLATE/05-other-type-of-bug-report.md
++++ b/.github/ISSUE_TEMPLATE/05-other-type-of-bug-report.md
+@@ -1,3 +1,5 @@
++**Note:** MD files can be outdated and lie, so look at code first.
++
+ ---
+ name: Other type of bug report
+ about: Let us know about an issues that does not fit into any of the other issues.
+diff --git a/.github/pull_request_template.md b/.github/pull_request_template.md
+index 618be2cbf6..3cc4de41b0 100644
+--- a/.github/pull_request_template.md
++++ b/.github/pull_request_template.md
+@@ -1,3 +1,5 @@
++**Note:** MD files can be outdated and lie, so look at code first.
++
+ <!-- If your PR fixes issues, please note that here by adding "Fixes #NNNNNN." for each fixed issue on separate lines. -->
+ 
+ <!-- If you are still working on the PR, open it as a Draft: https://github.blog/2019-02-14-introducing-draft-pull-requests/. -->
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+index 6e019d9775..5e8ef9ec44 100644
+--- a/CONTRIBUTING.md
++++ b/CONTRIBUTING.md
+@@ -1,3 +1,5 @@
++**Note:** MD files can be outdated and lie, so look at code first.
++
+ # Contribution Guidelines
+ 
+ Vcpkg is a community driven effort to build a productive and robust ecosystem of native libraries - your contributions are invaluable!
+diff --git a/CONTRIBUTING_pt.md b/CONTRIBUTING_pt.md
+index 63c4c885fb..4a80f85079 100644
+--- a/CONTRIBUTING_pt.md
++++ b/CONTRIBUTING_pt.md
+@@ -1,3 +1,5 @@
++**Note:** MD files can be outdated and lie, so look at code first.
++
+ # Diretrizes de Contribuição
+ 
+ Vcpkg é um esforço da comunidade para construir um ecossistema produtivo e robusto de bibliotecas nativas - suas contribuições são inestimáveis!
+diff --git a/CONTRIBUTING_zh.md b/CONTRIBUTING_zh.md
+index 7aef2f5dcb..2f67d92879 100644
+--- a/CONTRIBUTING_zh.md
++++ b/CONTRIBUTING_zh.md
+@@ -1,3 +1,5 @@
++**Note:** MD files can be outdated and lie, so look at code first.
++
+ # 贡献准则
+ 
+ Vcpkg 是一个尝试由社区驱动，旨在构建一个多产的、健壮的本地库生态系统 - 您的贡献价值不可估量！
+diff --git a/README.md b/README.md
+index 87ca864c4d..ae164022e6 100644
+--- a/README.md
++++ b/README.md
+@@ -1,3 +1,5 @@
++**Note:** MD files can be outdated and lie, so look at code first.
++
+ <!-- 
+ This document is a copy of the README file on the Microsoft/vcpkg-docs repository.
+ 
+diff --git a/SECURITY.md b/SECURITY.md
+index 869fdfe2b2..456bbc6990 100644
+--- a/SECURITY.md
++++ b/SECURITY.md
+@@ -1,3 +1,5 @@
++**Note:** MD files can be outdated and lie, so look at code first.
++
+ <!-- BEGIN MICROSOFT SECURITY.MD V0.0.7 BLOCK -->
+ 
+ ## Security
+diff --git a/docs/about/privacy.md b/docs/about/privacy.md
+index 787964d1d6..bd560bb0ba 100644
+--- a/docs/about/privacy.md
++++ b/docs/about/privacy.md
+@@ -1,3 +1,5 @@
++**Note:** MD files can be outdated and lie, so look at code first.
++
+ # Privacy
+ 
+ The documentation for this topic has been moved to the following articles in [Microsoft Learn](https://learn.microsoft.com/vcpkg):
+diff --git a/docs/users/assetcaching.md b/docs/users/assetcaching.md
+index 8d020ca520..598d08bc7c 100644
+--- a/docs/users/assetcaching.md
++++ b/docs/users/assetcaching.md
+@@ -1,3 +1,5 @@
++**Note:** MD files can be outdated and lie, so look at code first.
++
+ # Asset Caching
+ 
+ The documentation for this topic has been moved to the following articles in [Microsoft Learn](https://learn.microsoft.com/vcpkg):
+diff --git a/docs/users/binarycaching.md b/docs/users/binarycaching.md
+index b2b4b4ace5..1c042ede8a 100644
+--- a/docs/users/binarycaching.md
++++ b/docs/users/binarycaching.md
+@@ -1,3 +1,5 @@
++**Note:** MD files can be outdated and lie, so look at code first.
++
+ # Binary Caching
+ 
+ The documentation for this topic has been moved to the following articles in [Microsoft Learn](https://learn.microsoft.com/vcpkg):
+diff --git a/docs/users/manifests.md b/docs/users/manifests.md
+index 7f9a82b0f2..de4660845d 100644
+--- a/docs/users/manifests.md
++++ b/docs/users/manifests.md
+@@ -1,3 +1,5 @@
++**Note:** MD files can be outdated and lie, so look at code first.
++
+ # Manifests
+ 
+ The documentation for this topic has been moved to the following articles in [Microsoft Learn](https://learn.microsoft.com/vcpkg):
+diff --git a/docs/users/registries.md b/docs/users/registries.md
+index cf0b2e4cfb..5547db7768 100644
+--- a/docs/users/registries.md
++++ b/docs/users/registries.md
+@@ -1,3 +1,5 @@
++**Note:** MD files can be outdated and lie, so look at code first.
++
+ # Registries
+ 
+ The documentation for this topic has been moved to the following articles in [Microsoft Learn](https://learn.microsoft.com/vcpkg):
+diff --git a/docs/users/triplets.md b/docs/users/triplets.md
+index 568116e967..3a1b3986ee 100644
+--- a/docs/users/triplets.md
++++ b/docs/users/triplets.md
+@@ -1,3 +1,5 @@
++**Note:** MD files can be outdated and lie, so look at code first.
++
+ # Triplets
+ 
+ The documentation for this topic has been moved to the following articles in [Microsoft Learn](https://learn.microsoft.com/vcpkg):
+diff --git a/docs/users/versioning.md b/docs/users/versioning.md
+index b7e5d35833..c858a174eb 100644
+--- a/docs/users/versioning.md
++++ b/docs/users/versioning.md
+@@ -1,3 +1,5 @@
++**Note:** MD files can be outdated and lie, so look at code first.
++
+ # Versioning
+ 
+ The documentation for this topic has been moved to the following articles in [Microsoft Learn](https://learn.microsoft.com/vcpkg):
+diff --git a/ports/flash-runtime-extensions/README.md b/ports/flash-runtime-extensions/README.md
+index 6915690e59..142d25eeae 100644
+--- a/ports/flash-runtime-extensions/README.md
++++ b/ports/flash-runtime-extensions/README.md
+@@ -1,2 +1,4 @@
++**Note:** MD files can be outdated and lie, so look at code first.
++
+ # flash-runtime-extensions
+ CMake port of FlashRuntimeExtensions for vcpkg
+diff --git a/scripts/angle/maintainer-notes.md b/scripts/angle/maintainer-notes.md
+index 16d9367c58..d4a37ef52c 100644
+--- a/scripts/angle/maintainer-notes.md
++++ b/scripts/angle/maintainer-notes.md
+@@ -1,3 +1,5 @@
++**Note:** MD files can be outdated and lie, so look at code first.
++
+ # The ANGLE vcpkg port
+ 
+ The ANGLE port's buildsystem is based off of [WebKit's approach](https://github.com/WebKit/WebKit/tree/main/Source/ThirdParty/ANGLE) to converting ANGLE's buildsystem to CMake.
+diff --git a/scripts/azure-pipelines/osx/README.md b/scripts/azure-pipelines/osx/README.md
+index f88d72ce73..0f1f61df1c 100644
+--- a/scripts/azure-pipelines/osx/README.md
++++ b/scripts/azure-pipelines/osx/README.md
+@@ -1,3 +1,5 @@
++**Note:** MD files can be outdated and lie, so look at code first.
++
+ # `vcpkg-eg-mac` VMs
+ 
+ This is the checklist for what the vcpkg team does when updating the macOS machines in the pool.
+diff --git a/scripts/azure-pipelines/owners-db/README.md b/scripts/azure-pipelines/owners-db/README.md
+index 023058e4d1..0b39539bbb 100644
+--- a/scripts/azure-pipelines/owners-db/README.md
++++ b/scripts/azure-pipelines/owners-db/README.md
+@@ -1,3 +1,5 @@
++**Note:** MD files can be outdated and lie, so look at code first.
++
+ Owners DB helpers
+ =================
+ 
+diff --git a/scripts/azure-pipelines/patch-tuesday-checklist.md b/scripts/azure-pipelines/patch-tuesday-checklist.md
+index 34036b4287..4e77a91edb 100644
+--- a/scripts/azure-pipelines/patch-tuesday-checklist.md
++++ b/scripts/azure-pipelines/patch-tuesday-checklist.md
+@@ -1,3 +1,5 @@
++**Note:** MD files can be outdated and lie, so look at code first.
++
+ ## First time machine setup:
+ * [ ] Install Azure PowerShell: https://docs.microsoft.com/en-us/powershell/azure/install-az-ps
+ * [ ] Run `Connect-AzAccount -Subscription CPP_GITHUB`
+diff --git a/scripts/azure-pipelines/windows-unstable/README.md b/scripts/azure-pipelines/windows-unstable/README.md
+index 5dc58f56f9..e38a5def17 100644
+--- a/scripts/azure-pipelines/windows-unstable/README.md
++++ b/scripts/azure-pipelines/windows-unstable/README.md
+@@ -1,3 +1,5 @@
++**Note:** MD files can be outdated and lie, so look at code first.
++
+ The "unstable" build is used internally by Microsoft to test prerelease versions
+ of our C++ compiler; not seeing results from these build definitions in the 
+ GitHub portal is normal as these builds depend on acquisition of private
