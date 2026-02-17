@@ -22,6 +22,7 @@
 
 // Zenith Includes
 #include "../../browser/BrowserDragSource.h"
+#include "../../engine/Track.h"
 #include "GridResolutionDropdown.h"
 #include "ZenithDesignSystem.h"
 
@@ -30,6 +31,29 @@
 #include <juce_events/juce_events.h>
 
 namespace zenith {
+
+namespace {
+juce::PluginDescription resolvePluginDescription(Engine& engine,
+                                                 const juce::String& keyOrName) {
+    juce::PluginDescription resolved;
+    const auto descriptions = engine.getPluginHost().getPluginDescriptions();
+    for (const auto& desc : descriptions) {
+        if (desc.fileOrIdentifier == keyOrName || desc.name == keyOrName) {
+            resolved = desc;
+            break;
+        }
+    }
+    return resolved;
+}
+
+Track* findTrackById(Engine& engine, const juce::String& trackId) {
+    for (const auto& track : engine.tracks()) {
+        if (track != nullptr && track->getTrackId() == trackId)
+            return track.get();
+    }
+    return nullptr;
+}
+} // namespace
 
 //==============================================================================
 // Layout Constants - USE DESIGN SYSTEM (Single Source of Truth)
@@ -373,7 +397,9 @@ bool ArrangerComponent::isInterestedInDragSource(
     juce::String description = details.description.toString();
     
     // Check for browser drag
-    if (description.startsWith("browser:")) {
+    if (description.startsWith("browser:") ||
+        BrowserDragSource::isBrowserDrag(description) ||
+        description.startsWith("zenith_plugin|")) {
         return true;
     }
     
@@ -468,6 +494,60 @@ void ArrangerComponent::itemDropped(
 
             DBG("ArrangerComponent: Dropped file at " + juce::String(beats) +
                 " beats on track " + trackId);
+        }
+    } else if (BrowserDragSource::isBrowserDrag(description)) {
+        BrowserItemType type = BrowserItemType::Unknown;
+        juce::String itemId;
+        juce::String itemName;
+        if (BrowserDragSource::parseDragDescription(description, type, itemId, itemName)) {
+            juce::ignoreUnused(itemName);
+            if (type == BrowserItemType::AudioFile || type == BrowserItemType::MidiFile) {
+                juce::File file(itemId);
+                if (file.existsAsFile()) {
+                    const bool isMidi = (type == BrowserItemType::MidiFile);
+                    juce::String clipName = file.getFileNameWithoutExtension();
+                    juce::String clipId = projectState.createEmptyClip(
+                        trackId, beats, 4.0, isMidi, clipName, "Drop browser file");
+                    if (!isMidi && clipId.isNotEmpty()) {
+                        auto [foundTrack, clip] = projectState.findClip(clipId);
+                        juce::ignoreUnused(foundTrack);
+                        if (clip.isValid()) {
+                            clip.setProperty(zenith::ProjectState::PROP_AUDIO_FILE,
+                                             file.getFullPathName(),
+                                             &projectState.getUndoManager());
+                        }
+                    }
+                }
+            } else if (type == BrowserItemType::Plugin ||
+                       type == BrowserItemType::Instrument) {
+                if (auto* targetTrack = findTrackById(engine_, trackId)) {
+                    const auto resolved = resolvePluginDescription(engine_, itemId);
+                    if (!resolved.name.isEmpty() || !resolved.fileOrIdentifier.isEmpty()) {
+                        juce::String error;
+                        const double sampleRate = engine_.getSampleRate() > 0.0 ? engine_.getSampleRate() : 44100.0;
+                        const int blockSize = engine_.getBufferSize() > 0 ? engine_.getBufferSize() : 512;
+                        if (auto plugin = engine_.getPluginHost().createInstance(
+                                resolved, sampleRate, blockSize, error)) {
+                            targetTrack->addPlugin(std::move(plugin));
+                        }
+                    }
+                }
+            }
+        }
+    } else if (description.startsWith("zenith_plugin|")) {
+        auto pluginKey = description.fromFirstOccurrenceOf("zenith_plugin|", false, false)
+                                     .upToFirstOccurrenceOf("|", false, false);
+        if (auto* targetTrack = findTrackById(engine_, trackId)) {
+            const auto resolved = resolvePluginDescription(engine_, pluginKey);
+            if (!resolved.name.isEmpty() || !resolved.fileOrIdentifier.isEmpty()) {
+                juce::String error;
+                const double sampleRate = engine_.getSampleRate() > 0.0 ? engine_.getSampleRate() : 44100.0;
+                const int blockSize = engine_.getBufferSize() > 0 ? engine_.getBufferSize() : 512;
+                if (auto plugin = engine_.getPluginHost().createInstance(
+                        resolved, sampleRate, blockSize, error)) {
+                    targetTrack->addPlugin(std::move(plugin));
+                }
+            }
         }
     }
 

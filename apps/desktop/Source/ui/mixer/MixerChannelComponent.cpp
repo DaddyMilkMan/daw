@@ -18,6 +18,7 @@
 #include "../../engine/Engine.h"
 #include "../../engine/ProjectState.h"
 #include "../../engine/AuxBus.h"
+#include "../../browser/BrowserDragSource.h"
 #include "GlassmorphicPanel.h"
 #include "NeonGlow.h"
 #include "ZenithDesignSystem.h"
@@ -50,6 +51,19 @@ constexpr int kTopHeightMaster = 40;
 constexpr int kTopHeightNormal = 34;
 constexpr int kSpectrumHeight = 50;
 constexpr int kMaxPluginNameLength = 12;
+
+juce::PluginDescription resolvePluginDescription(zenith::Engine& engine,
+                                                 const juce::String& keyOrName) {
+  juce::PluginDescription resolved;
+  const auto descriptions = engine.getPluginHost().getPluginDescriptions();
+  for (const auto& desc : descriptions) {
+    if (desc.fileOrIdentifier == keyOrName || desc.name == keyOrName) {
+      resolved = desc;
+      break;
+    }
+  }
+  return resolved;
+}
 } // namespace
 
 //==============================================================================
@@ -265,6 +279,45 @@ void MixerChannelComponent::mouseDown(const juce::MouseEvent &e) {
   SkiaComponent::mouseDown(e);
 }
 
+bool MixerChannelComponent::isInterestedInDragSource(
+    const juce::DragAndDropTarget::SourceDetails &details) {
+  const auto description = details.description.toString();
+  return BrowserDragSource::isBrowserDrag(description) ||
+         description.startsWith("zenith_plugin|");
+}
+
+void MixerChannelComponent::itemDragEnter(
+    const juce::DragAndDropTarget::SourceDetails &details) {
+  juce::ignoreUnused(details);
+  isDropTargetActive_ = true;
+  dragHoverInsertSlot_ = -1;
+  repaint();
+}
+
+void MixerChannelComponent::itemDragMove(
+    const juce::DragAndDropTarget::SourceDetails &details) {
+  dragHoverInsertSlot_ = getInsertSlotIndexAt(details.localPosition);
+  repaint();
+}
+
+void MixerChannelComponent::itemDragExit(
+    const juce::DragAndDropTarget::SourceDetails &details) {
+  juce::ignoreUnused(details);
+  isDropTargetActive_ = false;
+  dragHoverInsertSlot_ = -1;
+  repaint();
+}
+
+void MixerChannelComponent::itemDropped(
+    const juce::DragAndDropTarget::SourceDetails &details) {
+  const auto slot = dragHoverInsertSlot_ >= 0 ? dragHoverInsertSlot_ : getInsertSlotIndexAt(details.localPosition);
+  tryInsertPluginFromDragDescription(details.description.toString(), slot);
+
+  isDropTargetActive_ = false;
+  dragHoverInsertSlot_ = -1;
+  repaint();
+}
+
 //==============================================================================
 // Selection State
 //==============================================================================
@@ -302,6 +355,19 @@ void MixerChannelComponent::drawSkia(SkCanvas *canvas) {
 
   // Draw children (all the controls)
   drawChildren(canvas);
+
+  if (isDropTargetActive_ && dragHoverInsertSlot_ >= 0 &&
+      dragHoverInsertSlot_ < static_cast<int>(insertSlots_.size())) {
+    auto hoverBounds = insertSlots_[static_cast<size_t>(dragHoverInsertSlot_)]->getBounds().toFloat();
+    SkPaint hoverPaint;
+    hoverPaint.setColor(design::withAlpha(design::colors::ACCENT_PRIMARY, 0.22f));
+    hoverPaint.setAntiAlias(true);
+    canvas->drawRoundRect(SkRect::MakeXYWH(hoverBounds.getX(), hoverBounds.getY(),
+                                           hoverBounds.getWidth(),
+                                           hoverBounds.getHeight()),
+                          design::dimensions::RADIUS_SM,
+                          design::dimensions::RADIUS_SM, hoverPaint);
+  }
 
   // Draw insert slots section header
   if (!insertHeaderBounds_.isEmpty()) {
@@ -790,6 +856,61 @@ void MixerChannelComponent::LevelMeter::setLevel(float level) {
   targetLevel_.store(juce::jlimit(0.0f, 1.0f, level));
 }
 
+int MixerChannelComponent::getInsertSlotIndexAt(juce::Point<int> localPosition) const {
+  for (size_t i = 0; i < insertSlots_.size(); ++i) {
+    if (insertSlots_[i] != nullptr &&
+        insertSlots_[i]->getBounds().contains(localPosition)) {
+      return static_cast<int>(i);
+    }
+  }
+  return -1;
+}
+
+bool MixerChannelComponent::tryInsertPluginFromDragDescription(
+    const juce::String& description, int slotIndex) {
+  if (track_ == nullptr)
+    return false;
+
+  juce::String pluginKey;
+  if (description.startsWith("zenith_plugin|")) {
+    pluginKey = description.fromFirstOccurrenceOf("zenith_plugin|", false, false)
+                    .upToFirstOccurrenceOf("|", false, false);
+  } else if (BrowserDragSource::isBrowserDrag(description)) {
+    BrowserItemType type = BrowserItemType::Unknown;
+    juce::String id;
+    juce::String name;
+    if (!BrowserDragSource::parseDragDescription(description, type, id, name))
+      return false;
+    if (!(type == BrowserItemType::Plugin || type == BrowserItemType::Instrument))
+      return false;
+    juce::ignoreUnused(name);
+    pluginKey = id;
+  } else {
+    return false;
+  }
+
+  const auto resolved = resolvePluginDescription(engine_, pluginKey);
+  if (resolved.name.isEmpty() && resolved.fileOrIdentifier.isEmpty())
+    return false;
+
+  juce::String error;
+  const double sampleRate = engine_.getSampleRate() > 0.0 ? engine_.getSampleRate() : 44100.0;
+  const int blockSize = engine_.getBufferSize() > 0 ? engine_.getBufferSize() : 512;
+  auto plugin = engine_.getPluginHost().createInstance(resolved, sampleRate, blockSize, error);
+  if (!plugin)
+    return false;
+
+  if (slotIndex >= 0 && slotIndex < track_->getNumPlugins()) {
+    track_->removePlugin(slotIndex);
+    track_->insertPluginAt(slotIndex, std::move(plugin));
+  } else if (slotIndex >= 0) {
+    track_->insertPluginAt(slotIndex, std::move(plugin));
+  } else {
+    track_->addPlugin(std::move(plugin));
+  }
+  return true;
+}
+
 //==============================================================================
 // InsertSlotIndicator Implementation
 //==============================================================================
@@ -833,7 +954,7 @@ void MixerChannelComponent::InsertSlotIndicator::mouseDown(const juce::MouseEven
               if (auto* track = this->owner_.getTrack()) {
                   if (auto plugin = engine->getPluginHost().createPlugin(descArr[0])) {
                       track->removePlugin(slotIndex_);
-                      track->addPlugin(std::move(plugin));
+                      track->insertPluginAt(slotIndex_, std::move(plugin));
                   }
               }
           }
@@ -854,7 +975,7 @@ void MixerChannelComponent::InsertSlotIndicator::mouseDown(const juce::MouseEven
                   juce::String error;
                   // Note: creating instance is blocking for now, ideally async
                   if (auto plugin = this->owner_.getEngine().getPluginHost().createInstance(desc, 44100, 512, error)) {
-                       track->addPlugin(std::move(plugin));
+                       track->insertPluginAt(slotIndex_, std::move(plugin));
                   }
               }
           });

@@ -103,7 +103,6 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/panels/BrowserPreviewPanel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/panels/BrowserHoverPreview.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/panels/BrowserRecentSidebar.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/panels/PluginBrowserComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/panels/PresetBrowserComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/panels/InstrumentBrowserPanel.cpp
 )

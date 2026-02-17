@@ -14,6 +14,7 @@
 #include "../design-system/ColorBridge.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../engine/Track.h"
+#include "../../browser/BrowserDragSource.h"
 #include "FontManager.h"
 
 #ifdef ZENITH_USE_SKIA
@@ -24,6 +25,29 @@
 #endif
 
 namespace zenith {
+
+namespace {
+juce::PluginDescription resolvePluginDescription(Engine& engine,
+                                                 const juce::String& keyOrName) {
+  juce::PluginDescription resolved;
+  const auto descriptions = engine.getPluginHost().getPluginDescriptions();
+  for (const auto& desc : descriptions) {
+    if (desc.fileOrIdentifier == keyOrName || desc.name == keyOrName) {
+      resolved = desc;
+      break;
+    }
+  }
+  return resolved;
+}
+
+Track* findTrackById(Engine& engine, const juce::String& trackId) {
+  for (const auto& track : engine.tracks()) {
+    if (track != nullptr && track->getTrackId() == trackId)
+      return track.get();
+  }
+  return nullptr;
+}
+} // namespace
 
 //==============================================================================
 // Construction/Destruction
@@ -242,8 +266,10 @@ void SessionViewComponent::timerCallback() {
 bool SessionViewComponent::isInterestedInDragSource(
     const juce::DragAndDropTarget::SourceDetails &details) {
   // Accept clip drags from browser or internal
-  return details.description.toString().startsWith("clip:") ||
-         details.description.toString().startsWith("sample:");
+  const auto description = details.description.toString();
+  return description.startsWith("clip:") || description.startsWith("sample:") ||
+         BrowserDragSource::isBrowserDrag(description) ||
+         description.startsWith("zenith_plugin|");
 }
 
 void SessionViewComponent::itemDragEnter(
@@ -297,6 +323,57 @@ void SessionViewComponent::itemDropped(
       if (clipId.isNotEmpty()) {
         projectState_.setClipAudioFile(trackId, clipId, juce::File(filePath),
                                        "Set audio file");
+      }
+    } else if (BrowserDragSource::isBrowserDrag(desc)) {
+      BrowserItemType type = BrowserItemType::Unknown;
+      juce::String itemId;
+      juce::String itemName;
+      if (BrowserDragSource::parseDragDescription(desc, type, itemId, itemName)) {
+        auto trackId = trackHeaders_[dropTargetTrack_].trackId;
+        if (type == BrowserItemType::AudioFile || type == BrowserItemType::MidiFile) {
+          juce::File file(itemId);
+          if (file.existsAsFile()) {
+            double startBeats = dropTargetScene_ * 4.0;
+            const bool isMidi = (type == BrowserItemType::MidiFile);
+            auto clipId = projectState_.createEmptyClip(
+                trackId, startBeats, 4.0, isMidi,
+                file.getFileNameWithoutExtension(), "Drop browser item");
+            if (!isMidi && clipId.isNotEmpty()) {
+              projectState_.setClipAudioFile(trackId, clipId, file, "Set audio file");
+            }
+          }
+        } else if (type == BrowserItemType::Plugin ||
+                   type == BrowserItemType::Instrument) {
+          if (auto* targetTrack = findTrackById(engine_, trackId)) {
+            const auto resolved = resolvePluginDescription(engine_, itemId);
+            if (!resolved.name.isEmpty() || !resolved.fileOrIdentifier.isEmpty()) {
+              juce::String error;
+              const double sampleRate = engine_.getSampleRate() > 0.0 ? engine_.getSampleRate() : 44100.0;
+              const int blockSize = engine_.getBufferSize() > 0 ? engine_.getBufferSize() : 512;
+              if (auto plugin =
+                      engine_.getPluginHost().createInstance(resolved, sampleRate, blockSize, error)) {
+                targetTrack->addPlugin(std::move(plugin));
+              }
+            }
+          }
+        }
+      }
+    } else if (desc.startsWith("zenith_plugin|")) {
+      auto pluginKey =
+          desc.fromFirstOccurrenceOf("zenith_plugin|", false, false)
+              .upToFirstOccurrenceOf("|", false, false);
+      auto trackId = trackHeaders_[dropTargetTrack_].trackId;
+      if (auto* targetTrack = findTrackById(engine_, trackId)) {
+        const auto resolved = resolvePluginDescription(engine_, pluginKey);
+        if (!resolved.name.isEmpty() || !resolved.fileOrIdentifier.isEmpty()) {
+          juce::String error;
+          const double sampleRate = engine_.getSampleRate() > 0.0 ? engine_.getSampleRate() : 44100.0;
+          const int blockSize = engine_.getBufferSize() > 0 ? engine_.getBufferSize() : 512;
+          if (auto plugin =
+                  engine_.getPluginHost().createInstance(resolved, sampleRate, blockSize, error)) {
+            targetTrack->addPlugin(std::move(plugin));
+          }
+        }
       }
     }
   }

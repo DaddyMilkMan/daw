@@ -48,7 +48,8 @@ class ProjectState;
  * rendering with the Neon Noir glassmorphism design system.
  */
 class MixerChannelComponent : public SkiaComponent,
-                              public juce::ChangeListener {
+                              public juce::ChangeListener,
+                              public juce::DragAndDropTarget {
 public:
   //==========================================================================
   // Construction
@@ -103,6 +104,16 @@ public:
   std::function<void()> onClick;
 
   void mouseDown(const juce::MouseEvent &e) override;
+  bool isInterestedInDragSource(
+      const juce::DragAndDropTarget::SourceDetails &details) override;
+  void
+  itemDragEnter(const juce::DragAndDropTarget::SourceDetails &details) override;
+  void
+  itemDragMove(const juce::DragAndDropTarget::SourceDetails &details) override;
+  void
+  itemDragExit(const juce::DragAndDropTarget::SourceDetails &details) override;
+  void
+  itemDropped(const juce::DragAndDropTarget::SourceDetails &details) override;
 
 private:
   //==========================================================================
@@ -127,6 +138,9 @@ private:
 
   void drawInsertSlots(SkCanvas *canvas, const SkRect &bounds);
   void drawSendIndicators(SkCanvas *canvas, const SkRect &bounds);
+  int getInsertSlotIndexAt(juce::Point<int> localPosition) const;
+  bool tryInsertPluginFromDragDescription(const juce::String &description,
+                                          int slotIndex);
 
   //==========================================================================
   // Internal nested class: LevelMeter
@@ -251,6 +265,8 @@ private:
 
   // State
   bool updatingControls_{false};
+  bool isDropTargetActive_{false};
+  int dragHoverInsertSlot_{-1};
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerChannelComponent)
 };
