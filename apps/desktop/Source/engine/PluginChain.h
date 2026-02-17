@@ -42,6 +42,9 @@ public:
   // Message thread only
   void addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin,
                  double sampleRate, int blockSize);
+  void insertPluginAt(int index,
+                      std::unique_ptr<juce::AudioPluginInstance> plugin,
+                      double sampleRate, int blockSize);
   void removePlugin(int index);
   void clearPlugins();
 

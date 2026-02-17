@@ -183,6 +183,17 @@ void Track::addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin) {
   }
 }
 
+void Track::insertPluginAt(int pluginIndex,
+                           std::unique_ptr<juce::AudioPluginInstance> plugin) {
+  pluginChain.insertPluginAt(pluginIndex, std::move(plugin), currentSampleRate,
+                             currentBlockSize);
+  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+    sendChangeMessage();
+  } else {
+    juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
+  }
+}
+
 void Track::removePlugin(int pluginIndex) {
   pluginChain.removePlugin(pluginIndex);
   if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {

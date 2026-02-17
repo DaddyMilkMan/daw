@@ -39,6 +39,23 @@ void PluginChain::addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin,
   updateSnapshot();
 }
 
+void PluginChain::insertPluginAt(
+    int index, std::unique_ptr<juce::AudioPluginInstance> plugin,
+    double sampleRate, int blockSize) {
+  if (!plugin)
+    return;
+
+  auto sharedPlugin = std::shared_ptr<juce::AudioPluginInstance>(plugin.release());
+  if (sampleRate > 0) {
+    sharedPlugin->prepareToPlay(sampleRate, blockSize);
+    sharedPlugin->setNonRealtime(false);
+  }
+
+  const int clampedIndex = juce::jlimit(0, static_cast<int>(pluginsOwned_.size()), index);
+  pluginsOwned_.insert(pluginsOwned_.begin() + clampedIndex, std::move(sharedPlugin));
+  updateSnapshot();
+}
+
 void PluginChain::removePlugin(int index) {
   if (index >= 0 && index < (int)pluginsOwned_.size()) {
     auto* pluginPtr = pluginsOwned_[index].get();

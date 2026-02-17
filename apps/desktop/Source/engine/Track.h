@@ -248,6 +248,8 @@ public:
   // Audio thread can process existing plugins safely (no modifications during
   // playback)
   void addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin);
+  void insertPluginAt(int pluginIndex,
+                      std::unique_ptr<juce::AudioPluginInstance> plugin);
   void removePlugin(int pluginIndex);
   void clearPlugins();
   int getNumPlugins() const;
