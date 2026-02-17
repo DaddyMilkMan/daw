@@ -93,6 +93,7 @@ __pycache__/
 /find_brace_level.py
 /launch.sh
 /apps/scanner/
+/docs/local-backups/
 # Build artifacts
 _deps/
 .venv/
