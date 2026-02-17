@@ -23,6 +23,7 @@ Goal: eliminate JUCE widget UI usage and replace with Skia-rendered/Skia-control
 - [x] Add editable collection behavior: pinned vendor collections (persisted + keyboard toggle + nav tree section) in `SkiaPluginBrowser`.
 - [x] Add persistent browser state for favorites + recent plugins in `SkiaPluginBrowser` (`plugin_browser_state.json` under user app data).
 - [x] Add plugin drop targets across host surfaces for `zenith_plugin|...` payloads: mixer channel inserts, session view track drops, arranger track drops.
+- [x] Add true slot-accurate plugin insertion path (`insertPluginAt`) through `PluginChain` / `TrackPluginManager` / `Track`, and use it for mixer replace/drop flows.
 - [x] Add custom named collections with persisted metadata (scope/category/vendor/sort/tags), plus apply/rename/reorder/delete workflows in `SkiaPluginBrowser`.
 - [x] Remove demo-plugin fallback from `SkiaPluginBrowser`; now truthfully reports real scan state.
 
@@ -31,6 +32,7 @@ Goal: eliminate JUCE widget UI usage and replace with Skia-rendered/Skia-control
 - [ ] Runtime UX validation pass for browser panels (`PluginBrowser`, `SkiaPluginBrowser`, `PresetBrowserComponent`).
 - [ ] Full `ZenithDAW` app target still blocked by pre-existing `MainWindow.cpp` structural mismatch (`MainComponent` / `MainWindow` declaration issues).
 - [ ] Full interaction QA for newly added custom collection workflows (create, rename, tag, reorder, delete) under real plugin libraries.
+- [ ] Full interaction QA for slot-targeted plugin drop behavior in dense chains (replace vs append edge cases).
 
 ## Execution Plan (Implemented)
 
