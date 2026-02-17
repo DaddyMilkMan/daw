@@ -155,13 +155,9 @@ bool AudioExporter::exportProject(const ExportOptions &options) {
     return false;
   }
 
-  auto writerOptions = juce::AudioFormatWriterOptions()
-      .withSampleRate(options.sampleRate)
-      .withNumChannels(2)
-      .withBitsPerSample(options.bitDepth);
-
-  std::unique_ptr<juce::OutputStream> streamPtr(std::move(fileStream));
-  std::unique_ptr<juce::AudioFormatWriter> writer(format->createWriterFor(streamPtr, writerOptions));
+  std::unique_ptr<juce::AudioFormatWriter> writer(
+      format->createWriterFor(fileStream.release(), options.sampleRate, 2,
+                              options.bitDepth, {}, 0));
 
   if (!writer) {
     isExporting_.store(false);
@@ -172,7 +168,8 @@ bool AudioExporter::exportProject(const ExportOptions &options) {
 
   // Create local render context
   AudioRenderContext context;
-  context.prepare(options.sampleRate, blockSize, engine_.getNumTracks(), engine_.getNumAuxBuses());
+  context.prepare(options.sampleRate, kExportBlockSize, engine_.getNumTracks(),
+                  engine_.getNumAuxBuses());
 
   juce::int64 startSample = static_cast<juce::int64>(options.startTime * options.sampleRate);
   juce::int64 totalSamples = static_cast<juce::int64>(options.sampleRate * duration);
@@ -381,14 +378,8 @@ bool AudioExporter::renderToTempFile(const juce::File &tempFile,
   if (!stream)
     return false;
 
-  auto writerOptions = juce::AudioFormatWriterOptions()
-      .withSampleRate(sampleRate)
-      .withNumChannels(2)
-      .withBitsPerSample(32);
-
-  std::unique_ptr<juce::OutputStream> streamPtr(std::move(stream));
   std::unique_ptr<juce::AudioFormatWriter> writer(
-      wavFormat.createWriterFor(streamPtr, writerOptions));
+      wavFormat.createWriterFor(stream.release(), sampleRate, 2, 32, {}, 0));
 
   if (!writer)
     return false;
@@ -397,7 +388,8 @@ bool AudioExporter::renderToTempFile(const juce::File &tempFile,
 
   // Create local render context
   AudioRenderContext context;
-  context.prepare(sampleRate, blockSize, engine_.getNumTracks(), engine_.getNumAuxBuses());
+  context.prepare(sampleRate, kExportBlockSize, engine_.getNumTracks(),
+                  engine_.getNumAuxBuses());
 
 
   // Note: Engine playback should already be suspended here by wrapper
@@ -463,14 +455,9 @@ bool AudioExporter::writeFinalFile(const juce::File &tempFile,
   if (!outStream)
     return false;
 
-  auto writerOptions = juce::AudioFormatWriterOptions()
-      .withSampleRate(options.sampleRate)
-      .withNumChannels(2)
-      .withBitsPerSample(options.bitDepth);
-
-  std::unique_ptr<juce::OutputStream> streamPtr(std::move(outStream));
   std::unique_ptr<juce::AudioFormatWriter> writer(
-      targetFormat->createWriterFor(streamPtr, writerOptions));
+      targetFormat->createWriterFor(outStream.release(), options.sampleRate, 2,
+                                    options.bitDepth, {}, 0));
   if (!writer)
     return false;
 
@@ -803,13 +790,9 @@ bool AudioExporter::exportSingleStemInternal(int trackIndex, const ExportOptions
     return false;
   }
 
-  auto writerOptions = juce::AudioFormatWriterOptions()
-      .withSampleRate(options.sampleRate)
-      .withNumChannels(2)
-      .withBitsPerSample(options.bitDepth);
-
-  std::unique_ptr<juce::OutputStream> streamPtr(std::move(fileStream));
-  std::unique_ptr<juce::AudioFormatWriter> writer(format->createWriterFor(streamPtr, writerOptions));
+  std::unique_ptr<juce::AudioFormatWriter> writer(
+      format->createWriterFor(fileStream.release(), options.sampleRate, 2,
+                              options.bitDepth, {}, 0));
 
   if (!writer) {
     DBG("AudioExporter: Could not create writer");

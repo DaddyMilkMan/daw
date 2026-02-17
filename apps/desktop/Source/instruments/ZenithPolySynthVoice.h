@@ -74,10 +74,13 @@ public:
 
   void setAmpEnvelope(float attack, float decay, float sustain, float release);
   void setModEnvelope(float attack, float decay, float sustain, float release);
+  void setModEnvelope3(float attack, float decay, float sustain, float release);
 
   void setLFO1(float rate, float amount, LFOTarget target,
                LFOWaveform waveform);
   void setLFO2(float rate, float amount, LFOTarget target,
+               LFOWaveform waveform);
+  void setLFO3(float rate, float amount, LFOTarget target,
                LFOWaveform waveform);
 
   void setGlideTime(float glideTimeSeconds) { glideTime_ = glideTimeSeconds; }
@@ -165,13 +168,16 @@ private:
   // Envelopes
   juce::ADSR ampEnvelope_;
   juce::ADSR modEnvelope_;
+  juce::ADSR env3Envelope_;
 
   // LFOs
   double lfo1Phase_ = 0.0;
   double lfo2Phase_ = 0.0;
+  double lfo3Phase_ = 0.0;
   double bpm_ = 120.0; // BPM for Sync
   float lfo1Value_ = 0.0f;
   float lfo2Value_ = 0.0f;
+  float lfo3Value_ = 0.0f;
 
   // Parameters
   juce::SmoothedValue<float> osc1Mix_;
@@ -192,6 +198,7 @@ private:
 
   juce::ADSR::Parameters ampEnvParams_;
   juce::ADSR::Parameters modEnvParams_;
+  juce::ADSR::Parameters env3EnvParams_;
 
   float lfo1Rate_ = 1.0f;
   float lfo1Amount_ = 0.0f;
@@ -211,6 +218,15 @@ private:
   bool lfo2Retr_ = true;
   float lfo2SHValue_ = 0.0f; // Sample & Hold cached value
 
+  float lfo3Rate_ = 1.0f;
+  float lfo3Amount_ = 0.0f;
+  LFOTarget lfo3Target_ = LFOTarget::FilterCutoff;
+  LFOWaveform lfo3Waveform_ = LFOWaveform::Sine;
+  bool lfo3Sync_ = false;
+  SyncRate lfo3SyncRate_ = SyncRate::_1_4;
+  bool lfo3Retr_ = true;
+  float lfo3SHValue_ = 0.0f; // Sample & Hold cached value
+
   float glideTime_ = 0.0f;
   bool monoMode_ = false;
   QualityPreset qualityPreset_ = QualityPreset::Medium;
@@ -228,7 +244,7 @@ private:
   int midiNoteNumber_ = 60;               // Current MIDI note for key tracking
 
   // Modulation Matrix
-  std::array<ModulationSlot, 8> modulationMatrix_;
+  std::array<ModulationSlot, 16> modulationMatrix_;
   ModulationState modulationState_;
 
   // Performance state

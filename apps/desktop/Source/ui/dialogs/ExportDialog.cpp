@@ -11,7 +11,7 @@
 #include "ExportDialog.h"
 #include "../controls/ExportProgressBar.h"
 #include "../design-system/ZenithDesignSystem.h"
-#include "../commands/CommandAPI.h"
+#include "../../commands/CommandAPI.h"
 #include "../design-system/ZenithTheme.h"
 namespace zenith {
 

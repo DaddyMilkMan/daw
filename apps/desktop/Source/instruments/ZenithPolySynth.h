@@ -18,6 +18,7 @@
 #include "ZenithEffects.h"
 #include "ZenithPolySynthDefs.h"
 #include "ZenithPolySynthParameterManager.h"
+#include "MacroController.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -131,6 +132,27 @@ public:
   static const juce::String &LFO2SyncRate;
   static const juce::String &LFO2Retr;
 
+  // LFO 3 Parameters
+  static const juce::String &LFO3Rate;
+  static const juce::String &LFO3Amount;
+  static const juce::String &LFO3Target;
+  static const juce::String &LFO3Waveform;
+  static const juce::String &LFO3Sync;
+  static const juce::String &LFO3SyncRate;
+  static const juce::String &LFO3Retr;
+
+  // Envelope 3 Parameters
+  static const juce::String &Env3Attack;
+  static const juce::String &Env3Decay;
+  static const juce::String &Env3Sustain;
+  static const juce::String &Env3Release;
+
+  // Macro Control Parameters
+  static const juce::String &Macro1;
+  static const juce::String &Macro2;
+  static const juce::String &Macro3;
+  static const juce::String &Macro4;
+
   static const juce::String &GlideTime;
   static const juce::String &MonoMode;
   static const juce::String &MasterGain;
@@ -170,6 +192,11 @@ public:
   void setChorus(float amount) { effects_.setChorus(amount); }
   void setReverb(float amount) { effects_.setReverb(amount); }
 
+  // Macro Control Access
+  MacroController& getMacroController() { return macroController_; }
+  void processMacros() { macroController_.processSmoothing(256); }
+  void applyMacrosToParameters() { macroController_.applyToParameters(parameters_); }
+
 private:
   juce::SpinLock voiceLock_;
   mutable juce::SpinLock modMatrixLock_;
@@ -182,6 +209,9 @@ private:
 
   // Global Effects Chain
   ZenithEffects effects_;
+
+  // Macro Controller
+  MacroController macroController_;
 
   // Modulation Matrix Storage (Global for UI, applied to voices)
   // Modulation Matrix Storage (Global for UI, applied to voices)

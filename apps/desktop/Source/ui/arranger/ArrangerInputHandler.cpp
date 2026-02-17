@@ -115,7 +115,8 @@ void ArrangerInputHandler::mouseDown(const juce::MouseEvent& e) {
             
             menu->addItem(3, "Consolidate Selected", true, false,
                 [this]() { 
-                    juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::InfoIcon,
+                    SkiaAlertWindow::showMessageBoxAsync(
+                        SkiaAlertWindow::IconType::InfoIcon,
                         "Consolidate", "Consolidation feature coming soon!");
                 });
             
@@ -130,13 +131,15 @@ void ArrangerInputHandler::mouseDown(const juce::MouseEvent& e) {
                 
                 menu->addItem(11, "Render to Audio", true, false,
                     [this, clipId]() { 
-                         juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::InfoIcon,
+                         SkiaAlertWindow::showMessageBoxAsync(
+                            SkiaAlertWindow::IconType::InfoIcon,
                             "Render", "Render to audio feature coming soon!");
                     });
                 
                 menu->addItem(12, "Detect Tempo", true, false,
                     [this, clipId]() {
-                        juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::InfoIcon,
+                        SkiaAlertWindow::showMessageBoxAsync(
+                            SkiaAlertWindow::IconType::InfoIcon,
                             "Tempo Detection", "Tempo detection coming soon!");
                     });
                 
@@ -284,8 +287,10 @@ void ArrangerInputHandler::ripAudioToStems(const juce::String& clipId) {
 
     juce::String audioPath = clipNode[ProjectState::PROP_AUDIO_FILE].toString();
     if (audioPath.isEmpty()) {
-        juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
-            "Stem Separation", "This feature only works on audio clips with a valid file.");
+        SkiaAlertWindow::showMessageBoxAsync(
+            SkiaAlertWindow::IconType::WarningIcon,
+            "Stem Separation",
+            "This feature only works on audio clips with a valid file.");
         return;
     }
 
@@ -299,7 +304,8 @@ void ArrangerInputHandler::ripAudioToStems(const juce::String& clipId) {
     // Trigger separation job
     auto callback = [this, clipId, outputDir](const utils::StemSeparationJob::StemFiles& results) {
         if (!results.success) {
-            juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+            SkiaAlertWindow::showMessageBoxAsync(
+                SkiaAlertWindow::IconType::WarningIcon,
                 "Stem Separation Failed", results.error);
             return;
         }
@@ -347,7 +353,8 @@ void ArrangerInputHandler::ripAudioToStems(const juce::String& clipId) {
             "Neural Stem Separation Complete!" : 
             "Stem Separation Complete (DSP Fallback)";
         
-        juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::InfoIcon,
+        SkiaAlertWindow::showMessageBoxAsync(
+            SkiaAlertWindow::IconType::InfoIcon,
             "Stem Separation", msg);
     };
 
@@ -355,7 +362,8 @@ void ArrangerInputHandler::ripAudioToStems(const juce::String& clipId) {
     auto* job = new utils::StemSeparationJob(audioFile, outputDir, callback);
     owner_.engine_.getThreadPool().addJob(job, true);
     
-    juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::InfoIcon,
+    SkiaAlertWindow::showMessageBoxAsync(
+        SkiaAlertWindow::IconType::InfoIcon,
         "Stem Separation", "Neural processing started in background...");
 }
 

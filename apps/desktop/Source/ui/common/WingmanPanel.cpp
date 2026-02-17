@@ -17,6 +17,7 @@
 #include "ZenithLookAndFeel.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../design-system/ColorBridge.h"
+#include <core/SkCanvas.h>
 // #include "ZenithTheme.h" // Deprecated
 
 namespace zenith {
@@ -31,9 +32,12 @@ WingmanPanel::WingmanPanel(CommandAPI &api, Engine &engine)
   grokController = std::make_unique<GrokDAWController>(commandAPI);
 
   //==========================================================================
-  // Conversation Display (Markdown Enabled)
-  conversationDisplay = std::make_unique<widgets::MarkdownComponent>();
-  // conversationDisplay->setColour(...) - MarkdownComponent handles its own colors via Skia
+  // Conversation Display
+  conversationDisplay = std::make_unique<SkiaTextEditor>("wingman_conversation");
+  conversationDisplay->setMultiLine(true);
+  conversationDisplay->setReadOnly(true);
+  conversationDisplay->setBackgroundColour(design::colors::BG_02);
+  conversationDisplay->setTextColour(design::colors::TEXT_PRIMARY);
   addAndMakeVisible(conversationDisplay.get());
 
   // Welcome message
@@ -43,49 +47,40 @@ WingmanPanel::WingmanPanel(CommandAPI &api, Engine &engine)
 
   //==========================================================================
   // Input Field
-  inputField = std::make_unique<juce::TextEditor>("Input");
+  inputField = std::make_unique<SkiaTextEditor>("wingman_input");
   inputField->setMultiLine(false);
-  inputField->setReturnKeyStartsNewLine(false);
-  inputField->setPopupMenuEnabled(true);
-  inputField->setColour(juce::TextEditor::backgroundColourId,
-                        design::toJuceColour(design::colors::BG_02));
-  inputField->setColour(juce::TextEditor::textColourId,
-                        design::toJuceColour(design::colors::TEXT_PRIMARY));
-  inputField->setColour(juce::TextEditor::outlineColourId,
-                        design::toJuceColour(design::colors::ACCENT_PRIMARY));
-  inputField->setFont(design::typography::getJuceFont(14.0f));
+  inputField->setBackgroundColour(design::colors::BG_02);
+  inputField->setTextColour(design::colors::TEXT_PRIMARY);
   inputField->setTextToShowWhenEmpty("Ask Wingman anything...",
-                                     design::toJuceColour(design::colors::TEXT_SECONDARY));
-  inputField->addListener(this);
+                                     design::withAlpha(design::colors::TEXT_SECONDARY, 0.85f));
+  inputField->onReturnKey = [this]() { sendCommand(); };
   addAndMakeVisible(inputField.get());
 
   //==========================================================================
   // Send Button
-  sendButton = std::make_unique<juce::TextButton>("Send");
-  sendButton->setButtonText("Send");
-  sendButton->setColour(juce::TextButton::buttonColourId,
-                        design::toJuceColour(design::colors::ACCENT_PRIMARY));
-  sendButton->setColour(juce::TextButton::textColourOffId,
-                        design::toJuceColour(design::colors::TEXT_PRIMARY));
-  sendButton->addListener(this);
+  sendButton = std::make_unique<ZenithButton>("Send");
+  sendButton->setStyle(ZenithButton::Style::Primary);
+  sendButton->onClick = [this]() { sendCommand(); };
   addAndMakeVisible(sendButton.get());
 
   //==========================================================================
   // Vibe DAW Buttons (Accept/Deny)
-  acceptButton = std::make_unique<juce::TextButton>("Accept");
-  acceptButton->setButtonText("Accept Changes");
-  acceptButton->setColour(juce::TextButton::buttonColourId,
-                          design::toJuceColour(design::colors::SUCCESS));
+  acceptButton = std::make_unique<ZenithButton>("Accept Changes");
+  acceptButton->setStyle(ZenithButton::Style::Success);
+  acceptButton->onClick = [this]() {
+    grokController->acceptLastChanges();
+    appendToConversation("Wingman", "*Changes applied and committed.*");
+  };
   acceptButton->setVisible(false);
-  acceptButton->addListener(this);
   addAndMakeVisible(acceptButton.get());
 
-  denyButton = std::make_unique<juce::TextButton>("Deny");
-  denyButton->setButtonText("Rollback");
-  denyButton->setColour(juce::TextButton::buttonColourId,
-                        design::toJuceColour(design::colors::DANGER));
+  denyButton = std::make_unique<ZenithButton>("Rollback");
+  denyButton->setStyle(ZenithButton::Style::Danger);
+  denyButton->onClick = [this]() {
+    grokController->denyLastChanges();
+    appendToConversation("Wingman", "*Changes rolled back.*");
+  };
   denyButton->setVisible(false);
-  denyButton->addListener(this);
   addAndMakeVisible(denyButton.get());
 
   grokController->setOnChangesPending([this](bool pending) {
@@ -98,54 +93,41 @@ WingmanPanel::WingmanPanel(CommandAPI &api, Engine &engine)
 
   //==========================================================================
   // Mode Selector
-  modeLabel = std::make_unique<juce::Label>("ModeLabel", "Mode:");
-  modeLabel->setColour(juce::Label::textColourId,
-                       design::toJuceColour(design::colors::TEXT_PRIMARY));
-  modeLabel->setFont(design::typography::getJuceFont(14.0f));
+  modeLabel = std::make_unique<SkiaLabel>("mode_label", "Mode:");
+  modeLabel->setTextColour(design::colors::TEXT_PRIMARY);
+  modeLabel->setFont(13.0f);
   addAndMakeVisible(modeLabel.get());
 
-  modeSelector = std::make_unique<juce::ComboBox>("Mode");
+  modeSelector = std::make_unique<SkiaComboBox>("mode_selector");
   modeSelector->addItem(juce::CharPointer_UTF8("\xe2\x9a\xa1 Fast (Quick responses)"), 1);
   modeSelector->addItem(juce::CharPointer_UTF8("\xf0\x9f\xa7\xa0 Thinking (Deep analysis)"), 2);
   modeSelector->setSelectedId(1); // Default to Fast
-  modeSelector->setColour(juce::ComboBox::backgroundColourId,
-                          design::toJuceColour(design::colors::BG_02));
-  modeSelector->setColour(juce::ComboBox::textColourId,
-                          design::toJuceColour(design::colors::TEXT_PRIMARY));
-  modeSelector->setColour(juce::ComboBox::outlineColourId,
-                          design::toJuceColour(design::colors::ACCENT_PRIMARY));
   modeSelector->onChange = [this]() { updateModeFromSelector(); };
   addAndMakeVisible(modeSelector.get());
 
   //==========================================================================
   // Status Label
-  statusLabel = std::make_unique<juce::Label>("Status", "Ready");
-  statusLabel->setColour(juce::Label::textColourId,
-                         design::toJuceColour(design::colors::SUCCESS)); // Keep green for status
-  statusLabel->setFont(design::typography::getJuceFont(12.0f));
-  statusLabel->setJustificationType(juce::Justification::centredLeft);
+  statusLabel = std::make_unique<SkiaLabel>("status_label", "Ready");
+  statusLabel->setTextColour(design::colors::SUCCESS);
+  statusLabel->setFont(12.0f);
+  statusLabel->setJustification(SkiaLabel::Justification::Left);
   addAndMakeVisible(statusLabel.get());
 
   //==========================================================================
   // Clear Button
-  clearButton = std::make_unique<juce::TextButton>("Clear");
-  clearButton->setButtonText("Clear");
-  clearButton->setColour(juce::TextButton::buttonColourId,
-                         design::toJuceColour(design::colors::BG_02));
-  clearButton->setColour(juce::TextButton::textColourOffId,
-                         design::toJuceColour(design::colors::TEXT_SECONDARY));
-  clearButton->addListener(this);
+  clearButton = std::make_unique<ZenithButton>("Clear");
+  clearButton->setStyle(ZenithButton::Style::Secondary);
+  clearButton->onClick = [this]() {
+    conversationDisplay->clear();
+    grokController->clearHistory();
+  };
   addAndMakeVisible(clearButton.get());
 
   //==========================================================================
   // Settings Button
-  settingsButton = std::make_unique<juce::TextButton>("Settings");
-  settingsButton->setButtonText(juce::CharPointer_UTF8("\xe2\x9a\x99"));
-  settingsButton->setColour(juce::TextButton::buttonColourId,
-                            design::toJuceColour(design::colors::BG_02));
-  settingsButton->setColour(juce::TextButton::textColourOffId,
-                            design::toJuceColour(design::colors::TEXT_SECONDARY));
-  settingsButton->addListener(this);
+  settingsButton = std::make_unique<ZenithButton>(juce::CharPointer_UTF8("\xe2\x9a\x99"));
+  settingsButton->setStyle(ZenithButton::Style::Ghost);
+  settingsButton->onClick = [this]() { showSettings(); };
   addAndMakeVisible(settingsButton.get());
 
   // Update status based on Grok readiness (Moved to END of constructor)
@@ -154,22 +136,29 @@ WingmanPanel::WingmanPanel(CommandAPI &api, Engine &engine)
   ZENITH_LOG_UI(zenith::LogLevel::Info, "WingmanPanel: Grok initialized (or failed gracefully)");
 }
 
-WingmanPanel::~WingmanPanel() { inputField->removeListener(this); }
+WingmanPanel::~WingmanPanel() = default;
 
 //==============================================================================
-void WingmanPanel::paint(juce::Graphics &g) {
-  // Background
-  g.fillAll(design::toJuceColour(design::colors::BG_01));
- 
-  // Header
-  g.setColour(design::toJuceColour(design::colors::BG_02));
-  g.fillRect(0, 0, getWidth(), 40);
- 
-  // Title
-  g.setColour(design::toJuceColour(design::colors::ACCENT_PRIMARY));
-  g.setFont(design::typography::getJuceFont(18.0f, design::FontWeight::Bold));
-  g.drawText("Wingman AI Assistant", 10, 0, getWidth() - 20, 40,
-             juce::Justification::centredLeft);
+void WingmanPanel::drawSkia(SkCanvas *canvas) {
+  SkPaint bg;
+  bg.setColor(design::colors::BG_01);
+  canvas->drawRect(SkRect::MakeWH((float)getWidth(), (float)getHeight()), bg);
+
+  SkPaint headerBg;
+  headerBg.setColor(design::colors::BG_02);
+  canvas->drawRect(SkRect::MakeXYWH(0, 0, (float)getWidth(), 40.0f), headerBg);
+
+  SkFont titleFont = design::getSkFont(17.0f, design::FontWeight::Bold);
+  SkPaint titlePaint;
+  titlePaint.setAntiAlias(true);
+  titlePaint.setColor(design::colors::ACCENT_PRIMARY);
+  canvas->drawString("Wingman AI Assistant", 10.0f, 26.0f, titleFont, titlePaint);
+
+  if (settingsOverlay_ && settingsOverlay_->isVisible()) {
+    SkPaint scrim;
+    scrim.setColor(design::withAlpha(design::colors::BG_00, 0.72f));
+    canvas->drawRect(SkRect::MakeWH((float)getWidth(), (float)getHeight()), scrim);
+  }
 }
 
 void WingmanPanel::resized() {
@@ -215,6 +204,19 @@ void WingmanPanel::resized() {
 
   // Conversation display (remaining space)
   conversationDisplay->setBounds(bounds.reduced(10));
+
+  if (settingsOverlay_ && settingsOverlay_->isVisible()) {
+    const int overlayW = juce::jlimit(420, 880, getWidth() - 36);
+    const int overlayH = juce::jlimit(360, 700, getHeight() - 36);
+    juce::Rectangle<int> overlayBounds((getWidth() - overlayW) / 2,
+                                       (getHeight() - overlayH) / 2, overlayW,
+                                       overlayH);
+    settingsOverlay_->setBounds(overlayBounds);
+    if (closeSettingsButton_) {
+      closeSettingsButton_->setBounds(overlayBounds.getRight() - 86,
+                                      overlayBounds.getY() - 38, 86, 30);
+    }
+  }
 }
 
 //==============================================================================
@@ -222,40 +224,15 @@ bool WingmanPanel::initializeGrok(const juce::String &apiKey) {
   bool success = grokController->initialize(apiKey);
 
   if (success) {
-    setStatus("Grok Ready", design::toJuceColour(design::colors::SUCCESS));
+    setStatus("Grok Ready", design::colors::SUCCESS);
   } else {
-    setStatus("Grok initialization failed", design::toJuceColour(design::colors::DANGER));
+    setStatus("Grok initialization failed", design::colors::DANGER);
   }
 
   return success;
 }
 
 bool WingmanPanel::isGrokReady() const { return grokController->isReady(); }
-
-//==============================================================================
-void WingmanPanel::buttonClicked(juce::Button *button) {
-  if (button == sendButton.get()) {
-    sendCommand();
-  } else if (button == acceptButton.get()) {
-    grokController->acceptLastChanges();
-    appendToConversation("Wingman", "*Changes applied and committed.*");
-  } else if (button == denyButton.get()) {
-    grokController->denyLastChanges();
-    appendToConversation("Wingman", "*Changes rolled back.*");
-  } else if (button == clearButton.get()) {
-    conversationDisplay->clear();
-    grokController->clearHistory();
-  } else if (button == settingsButton.get()) {
-    showSettings();
-  }
-}
-
-//==============================================================================
-void WingmanPanel::textEditorReturnKeyPressed(juce::TextEditor &editor) {
-  if (&editor == inputField.get()) {
-    sendCommand();
-  }
-}
 
 //==============================================================================
 void WingmanPanel::sendCommand() {
@@ -280,7 +257,7 @@ void WingmanPanel::sendCommand() {
 
   // Set processing state
   isProcessing = true;
-  setStatus("Processing...", design::toJuceColour(design::colors::WARNING));
+  setStatus("Processing...", design::colors::WARNING);
   sendButton->setEnabled(false);
 
   // Send to Grok
@@ -290,7 +267,7 @@ void WingmanPanel::sendCommand() {
         // Success
         juce::MessageManager::callAsync([this, response]() {
           appendToConversation("Wingman", response);
-          setStatus("Ready", design::toJuceColour(design::colors::SUCCESS));
+          setStatus("Ready", design::colors::SUCCESS);
           isProcessing = false;
           sendButton->setEnabled(true);
         });
@@ -320,7 +297,7 @@ void WingmanPanel::sendCommand() {
              appendToConversation("Wingman", "**" + suggestedAction + "**");
           }
           
-          setStatus("Error", design::toJuceColour(design::colors::DANGER));
+          setStatus("Error", design::colors::DANGER);
           isProcessing = false;
           sendButton->setEnabled(true);
         });
@@ -328,18 +305,24 @@ void WingmanPanel::sendCommand() {
       [this](juce::String status) {
         // Progress
         juce::MessageManager::callAsync(
-            [this, status]() { setStatus(status, design::toJuceColour(design::colors::WARNING)); });
+            [this, status]() { setStatus(status, design::colors::WARNING); });
       });
 }
 
 void WingmanPanel::appendToConversation(const juce::String &speaker,
                                         const juce::String &message) {
-  conversationDisplay->appendMessage(speaker, message);
+  const juce::String prefix = "[" + speaker + "] ";
+  juce::String existing = conversationDisplay->getText();
+  if (existing.isNotEmpty()) {
+    existing << "\n\n";
+  }
+  existing << prefix << message;
+  conversationDisplay->setText(existing);
 }
 
-void WingmanPanel::setStatus(const juce::String &status, juce::Colour colour) {
+void WingmanPanel::setStatus(const juce::String &status, SkColor colour) {
   statusLabel->setText(status, juce::dontSendNotification);
-  statusLabel->setColour(juce::Label::textColourId, colour);
+  statusLabel->setTextColour(colour);
 }
 
 void WingmanPanel::updateModeFromSelector() {
@@ -347,20 +330,35 @@ void WingmanPanel::updateModeFromSelector() {
   currentMode = (selectedId == 2) ? GrokMode::Thinking : GrokMode::Fast;
 
   juce::String modeName = (currentMode == GrokMode::Fast) ? "Fast" : "Thinking";
-  setStatus("Mode: " + modeName, design::toJuceColour(design::colors::ACCENT_PRIMARY));
+  setStatus("Mode: " + modeName, design::colors::ACCENT_PRIMARY);
 }
 
 void WingmanPanel::showSettings() {
-  juce::DialogWindow::LaunchOptions options;
-  options.content.setOwned(new SettingsComponent(engine_));
-  options.content->setSize(600, 500);
-  options.dialogTitle = "Zenith DAW Settings";
-  options.dialogBackgroundColour = design::toJuceColour(design::colors::BG_01);
-  options.escapeKeyTriggersCloseButton = true;
-  options.useNativeTitleBar = true;
-  options.resizable = true;
+  if (!settingsOverlay_) {
+    settingsOverlay_ = std::make_unique<SettingsComponent>(engine_);
+    addAndMakeVisible(settingsOverlay_.get());
+  }
 
-  options.launchAsync();
+  if (!closeSettingsButton_) {
+    closeSettingsButton_ = std::make_unique<ZenithButton>("Close");
+    closeSettingsButton_->setStyle(ZenithButton::Style::Secondary);
+    closeSettingsButton_->onClick = [this]() {
+      if (settingsOverlay_) {
+        settingsOverlay_->setVisible(false);
+      }
+      if (closeSettingsButton_) {
+        closeSettingsButton_->setVisible(false);
+      }
+      repaint();
+    };
+    addAndMakeVisible(closeSettingsButton_.get());
+  }
+
+  settingsOverlay_->setVisible(true);
+  closeSettingsButton_->setVisible(true);
+  settingsOverlay_->toFront(false);
+  closeSettingsButton_->toFront(false);
+  resized();
 }
 
 //==============================================================================
@@ -391,7 +389,7 @@ void WingmanPanel::sampleImported(const juce::File &file) {
 void WingmanPanel::huntingProgressChanged(float progress,
                                           const juce::String &status) {
   juce::MessageManager::callAsync([this, progress, status]() {
-    setStatus(status, design::toJuceColour(design::colors::INFO));
+    setStatus(status, design::colors::INFO);
   });
 }
 
@@ -402,11 +400,11 @@ void WingmanPanel::huntingComplete(const zenith::ai::HuntingStats &stats,
       appendToConversation("Wingman", "Sample hunting complete! Found " +
                                           juce::String(stats.samplesFound) +
                                           " samples.");
-      setStatus("Ready", design::toJuceColour(design::colors::SUCCESS));
+      setStatus("Ready", design::colors::SUCCESS);
     } else {
       appendToConversation("Wingman",
                            "Sample hunting failed or was cancelled.");
-      setStatus("Failed", design::toJuceColour(design::colors::DANGER));
+      setStatus("Failed", design::colors::DANGER);
     }
   });
 }

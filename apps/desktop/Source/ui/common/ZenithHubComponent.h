@@ -24,6 +24,7 @@
 #include "AuroraBackground.h"
 #include "GlassmorphicPanel.h"
 #include "SkiaComponent.h"
+#include "../controls/SkiaAlertWindow.h"
 #include "ZenithDesignSystem.h"
 #include <functional>
 #include <memory>
@@ -192,7 +193,7 @@ private:
   juce::String greetingText_ = "Welcome back, User";
   SkRect greetingTextBounds_;
   SkRect greetingEditIconBounds_;
-  juce::TextEditor greetingEditor_;
+  std::unique_ptr<SkiaAlertWindow> greetingEditorDialog_;
   bool isGreetingHovered_ = false;
 
   void showGreetingEditor();

@@ -21,8 +21,11 @@
 
 #include "../controls/SkiaButton.h"
 #include "../controls/SkiaSlider.h"
+#include "../controls/SkiaTextEditor.h"
 #include "../engine/PluginHost.h"
+#include "../controls/SkiaAlertWindow.h"
 #include "../controls/SkiaComboBox.h"
+#include "../controls/SkiaFileChooser.h"
 #include "../controls/SkiaLabel.h"
 #include "Settings.h"
 #include "SkiaComponent.h"
@@ -69,6 +72,7 @@ private:
     std::unique_ptr<SkiaButton> pdcToggle_;
     std::unique_ptr<SkiaButton> monitoringToggle_;
     std::unique_ptr<SkiaSlider> monitoringVolumeSlider_;
+    std::unique_ptr<SkiaAlertWindow> deviceSelectorAlert_;
 };
 
 //==============================================================================
@@ -152,6 +156,7 @@ private:
     std::unique_ptr<SkiaSlider> autoSaveIntervalSlider_;
     std::unique_ptr<SkiaSlider> undoHistorySlider_;
     std::unique_ptr<SkiaButton> projectFolderButton_;
+    std::unique_ptr<SkiaFileChooser> folderChooser_;
     juce::String currentProjectFolder_;
 };
 
@@ -170,7 +175,7 @@ private:
 
     PluginHost& host_;
     std::unique_ptr<SkiaButton> scanButton_;
-    juce::TextEditor pathList_;
+    std::unique_ptr<SkiaTextEditor> pathList_;
 };
 
 //==============================================================================
@@ -185,7 +190,7 @@ public:
 private:
     void validateKey();
 
-    std::unique_ptr<juce::TextEditor> apiKeyEditor_;
+    std::unique_ptr<SkiaTextEditor> apiKeyEditor_;
     std::unique_ptr<SkiaButton> validateButton_;
     std::unique_ptr<SkiaLabel> helpLabel_;
     std::unique_ptr<SkiaLabel> statusLabel_;

@@ -19,11 +19,10 @@ namespace zenith {
 PluginHost::PluginHost() {
   DBG("PluginHost: Initializing...");
 
-  // JUCE 8.0.11: Use addHeadlessDefaultFormatsToManager() instead of deleted addDefaultFormats()
-  juce::addHeadlessDefaultFormatsToManager(formatManager);
+  formatManager.addDefaultFormats();
   
   // Add our internal plugin format
-  formatManager.addFormat(std::make_unique<InternalPluginFormat>());
+  formatManager.addFormat(new InternalPluginFormat());
 
   // Get VST3 format pointer for later use
   for (int i = 0; i < formatManager.getNumFormats(); ++i) {
@@ -379,4 +378,3 @@ void PluginHost::addToKnownPlugins(const juce::PluginDescription& desc) {
 }
 
 } // namespace zenith
-

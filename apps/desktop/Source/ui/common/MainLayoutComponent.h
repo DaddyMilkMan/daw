@@ -12,6 +12,7 @@
 
 #include "../framework/SkiaComponent.h"
 #include <JuceHeader.h>
+#include <map>
 
 namespace zenith {
 
@@ -20,6 +21,8 @@ class Engine;
 class ProjectState;
 class CommandAPI;
 class BrowserModel;
+class BrowserItem;
+class Instrument;
 
 class ResizablePanelContainer;
 class RemoteCursorOverlay;
@@ -67,6 +70,14 @@ private:
   MidiEditorContainer *midiEditor_ = nullptr;
 
   std::unique_ptr<RemoteCursorOverlay> cursorOverlay_;
+
+  std::map<juce::String, std::unique_ptr<Instrument>> browserInstruments_;
+  std::map<juce::String, std::unique_ptr<juce::DocumentWindow>> browserInstrumentWindows_;
+
+  void handleBrowserItemActivation(std::shared_ptr<BrowserItem> item);
+  void openBrowserInstrumentEditor(const juce::String& instrumentId,
+                                   const juce::String& displayName);
+  void closeBrowserInstrumentEditors();
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainLayoutComponent)
 };

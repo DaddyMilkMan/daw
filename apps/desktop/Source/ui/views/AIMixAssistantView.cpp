@@ -9,68 +9,76 @@
 */
 
 #include "AIMixAssistantView.h"
-#include "../ZenithDesignSystem.h"
+#include "../design-system/ZenithDesignSystem.h"
 
 namespace zenith {
 
 AIMixAssistantView::AIMixAssistantView(Engine &engine) : engine_(engine) {
   addAndMakeVisible(analyzeButton);
+  analyzeButton.setStyle(ZenithButton::Style::Primary);
   analyzeButton.onClick = [this] { performAnalysis(); };
 
   addAndMakeVisible(applyMasteringButton);
-  applyMasteringButton.setColour(juce::TextButton::buttonColourId,
-                                 zenith::design::colors::ACCENT_PRIMARY);
+  applyMasteringButton.setStyle(ZenithButton::Style::Success);
   applyMasteringButton.onClick = [this] { applyMastering(); };
 
   addAndMakeVisible(targetLufsSlider);
-  targetLufsSlider.setRange(-24.0, -6.0, 0.1);
-  targetLufsSlider.setValue(-14.0);
-  targetLufsSlider.setTextValueSuffix(" LUFS");
+  targetLufsSlider.setOrientation(ZenithSlider::Orientation::Horizontal);
+  targetLufsSlider.setRange(-24.0f, -6.0f, -14.0f);
+  targetLufsSlider.setValue(-14.0f);
 
-  addAndMakeVisible(targetLufsLabel);
-  targetLufsLabel.setText("Target Loudness", juce::dontSendNotification);
-  targetLufsLabel.attachToComponent(&targetLufsSlider, false);
+  targetLufsLabel = std::make_unique<SkiaLabel>("ai_target_lufs", "Target Loudness (LUFS)");
+  targetLufsLabel->setTextColour(zenith::design::colors::TEXT_SECONDARY);
+  addAndMakeVisible(targetLufsLabel.get());
 
   addAndMakeVisible(enableEq);
-  enableEq.setToggleState(true, juce::dontSendNotification);
+  enableEq.setStyle(ZenithButton::Style::Secondary);
+  enableEq.setToggleable(true);
+  enableEq.setToggleState(true);
 
   addAndMakeVisible(enableComp);
-  enableComp.setToggleState(true, juce::dontSendNotification);
+  enableComp.setStyle(ZenithButton::Style::Secondary);
+  enableComp.setToggleable(true);
+  enableComp.setToggleState(true);
 
   addAndMakeVisible(enableLimit);
-  enableLimit.setToggleState(true, juce::dontSendNotification);
+  enableLimit.setStyle(ZenithButton::Style::Secondary);
+  enableLimit.setToggleable(true);
+  enableLimit.setToggleState(true);
 
   addAndMakeVisible(compAmountSlider);
-  compAmountSlider.setRange(0.0, 1.0, 0.01);
-  compAmountSlider.setValue(0.5);
+  compAmountSlider.setOrientation(ZenithSlider::Orientation::Horizontal);
+  compAmountSlider.setRange(0.0f, 1.0f, 0.5f);
+  compAmountSlider.setValue(0.5f);
 
-  addAndMakeVisible(compAmountLabel);
-  compAmountLabel.setText("Compression Amount", juce::dontSendNotification);
-  compAmountLabel.attachToComponent(&compAmountSlider, false);
+  compAmountLabel = std::make_unique<SkiaLabel>("ai_comp_amt", "Compression Amount");
+  compAmountLabel->setTextColour(zenith::design::colors::TEXT_SECONDARY);
+  addAndMakeVisible(compAmountLabel.get());
 }
 
 AIMixAssistantView::~AIMixAssistantView() {}
 
-void AIMixAssistantView::paint(juce::Graphics &g) {
-  auto bounds = getLocalBounds();
+void AIMixAssistantView::drawSkia(SkCanvas *canvas) {
+  auto bounds = getLocalBounds().toFloat();
+  SkPaint bg;
+  bg.setColor(zenith::design::colors::BG_PANEL);
+  canvas->drawRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()), bg);
 
-  // Background
-  g.fillAll(zenith::design::colors::BG_PANEL);
+  SkPaint titlePaint;
+  titlePaint.setAntiAlias(true);
+  titlePaint.setColor(zenith::design::colors::TEXT_PRIMARY);
+  SkFont titleFont =
+      zenith::design::getSkFont(zenith::design::typography::FONT_LG,
+                                zenith::design::FontWeight::Bold);
+  canvas->drawString("AI Mix Assistant", 20.0f, 34.0f, titleFont, titlePaint);
 
-  // Header
-  g.setFont(zenith::design::typography::getFont(
-      zenith::design::typography::FONT_LG,
-      zenith::design::typography::FontWeight::Bold));
-  g.setColour(zenith::design::colors::TEXT_PRIMARY);
-  g.drawText("AI Mix Assistant", bounds.removeFromTop(40).reduced(10, 0),
-             juce::Justification::left, true);
-
-  // Status
-  g.setFont(
-      zenith::design::typography::getFont(zenith::design::typography::FONT_MD));
-  g.setColour(zenith::design::colors::TEXT_SECONDARY);
-  g.drawText(mixStatus, bounds.removeFromTop(30).reduced(10, 0),
-             juce::Justification::left, true);
+  SkPaint statusPaint;
+  statusPaint.setAntiAlias(true);
+  statusPaint.setColor(zenith::design::colors::TEXT_SECONDARY);
+  SkFont statusFont =
+      zenith::design::getSkFont(zenith::design::typography::FONT_MD,
+                                zenith::design::FontWeight::Regular);
+  canvas->drawString(mixStatus.toRawUTF8(), 20.0f, 58.0f, statusFont, statusPaint);
 }
 
 void AIMixAssistantView::resized() {
@@ -92,7 +100,9 @@ void AIMixAssistantView::resized() {
   enableComp.setBounds(leftCol.removeFromTop(30));
   enableLimit.setBounds(leftCol.removeFromTop(30));
 
+  if (targetLufsLabel) targetLufsLabel->setBounds(rightCol.removeFromTop(20));
   targetLufsSlider.setBounds(rightCol.removeFromTop(40));
+  if (compAmountLabel) compAmountLabel->setBounds(rightCol.removeFromTop(20));
   compAmountSlider.setBounds(rightCol.removeFromTop(40));
 
   area.removeFromTop(20);
@@ -112,11 +122,11 @@ void AIMixAssistantView::performAnalysis() {
 
 void AIMixAssistantView::applyMastering() {
   ai::AIMasteringAgent::MasteringOptions opts;
-  opts.targetLufs = (float)targetLufsSlider.getValue();
+  opts.targetLufs = targetLufsSlider.getValue();
   opts.applyEq = enableEq.getToggleState();
   opts.applyCompression = enableComp.getToggleState();
   opts.applyLimiter = enableLimit.getToggleState();
-  opts.compressionAmount = (float)compAmountSlider.getValue();
+  opts.compressionAmount = compAmountSlider.getValue();
 
   // Trigger agent
   if (auto *agent = engine_.getMasteringAgent()) {

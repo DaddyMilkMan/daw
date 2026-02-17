@@ -14,9 +14,9 @@
 #pragma once
 
 #include "SkiaComponent.h"
+#include "../controls/SkiaTextEditor.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../../network/AuthenticationService.h"
-#include <juce_gui_basics/juce_gui_basics.h>
 #include <functional>
 
 namespace zenith {
@@ -63,9 +63,9 @@ private:
     juce::String errorMessage_;
     
     // Input fields
-    juce::TextEditor usernameField_;
-    juce::TextEditor emailField_;      // Only visible in signup mode
-    juce::TextEditor passwordField_;
+    std::unique_ptr<SkiaTextEditor> usernameField_;
+    std::unique_ptr<SkiaTextEditor> emailField_;      // Only visible in signup mode
+    std::unique_ptr<SkiaTextEditor> passwordField_;
     
     // Layout bounds (calculated in resized/drawSkia)
     SkRect panelBounds_;

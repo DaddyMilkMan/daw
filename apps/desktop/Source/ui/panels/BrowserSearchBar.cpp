@@ -12,11 +12,30 @@
 #include "../design-system/ZenithDesignSystem.h"
 #include "../design-system/ZenithTheme.h"
 #include "../framework/GlassmorphicPanel.h"
+#include <array>
 #include <effects/SkGradientShader.h>
+#include <algorithm>
+
+namespace {
+struct CommandEntry {
+  const char* id;
+  const char* label;
+};
+
+const std::array<CommandEntry, 5> kCommands{{
+    {"add-folder", "Add Library Folder"},
+    {"refresh-library", "Refresh Browser Library"},
+    {"toggle-autoplay", "Toggle Preview Auto-Play"},
+    {"clear-search", "Clear Search"},
+    {"focus-list", "Focus Browser List"},
+}};
+}
 
 namespace zenith {
 
 BrowserSearchBar::BrowserSearchBar() {
+  setWantsKeyboardFocus(true);
+  setMouseClickGrabsKeyboardFocus(true);
 }
 
 BrowserSearchBar::~BrowserSearchBar() {
@@ -25,9 +44,30 @@ BrowserSearchBar::~BrowserSearchBar() {
 void BrowserSearchBar::setSearchText(const juce::String &text) {
   if (searchText_ != text) {
     searchText_ = text;
+    if (commandMode_) {
+      updateVisibleCommands();
+    }
     if (onSearchChanged) onSearchChanged(searchText_);
     repaint();
   }
+}
+
+void BrowserSearchBar::setCommandMode(bool enabled) {
+  if (commandMode_ == enabled) {
+    return;
+  }
+  commandMode_ = enabled;
+  if (commandMode_) {
+    if (!searchText_.startsWithChar('>')) {
+      searchText_ = ">";
+    }
+    updateVisibleCommands();
+    selectedCommandIndex_ = 0;
+    grabKeyboardFocus();
+  } else if (searchText_ == ">") {
+    searchText_.clear();
+  }
+  repaint();
 }
 
 void BrowserSearchBar::setBackButtonVisible(bool visible) {
@@ -115,7 +155,9 @@ void BrowserSearchBar::drawSkia(SkCanvas *canvas) {
     textPaint.setColor(searchText_.isEmpty() ? SkColorSetARGB(90, 255, 255, 255) : SkColorSetRGB(230, 230, 240));
     textPaint.setAntiAlias(true);
 
-    juce::String displayText = searchText_.isEmpty() ? "Search library..." : searchText_;
+    juce::String displayText = searchText_.isEmpty()
+                                   ? (commandMode_ ? "> command-palette" : "Search library...")
+                                   : searchText_;
     canvas->drawString(displayText.toStdString().c_str(), (float)searchBoxBounds_.getX() + 32,
                        (float)searchBoxBounds_.getCentreY() + 4, searchFont, textPaint);
   }
@@ -151,9 +193,57 @@ void BrowserSearchBar::drawSkia(SkCanvas *canvas) {
   plusPaint.setAntiAlias(true);
   canvas->drawLine(pcx - 5, pcy, pcx + 5, pcy, plusPaint);
   canvas->drawLine(pcx, pcy - 5, pcx, pcy + 5, plusPaint);
+
+  if (commandMode_) {
+    GlassmorphicPanel::draw(canvas,
+                            SkRect::MakeXYWH((float)commandPaletteBounds_.getX(),
+                                             (float)commandPaletteBounds_.getY(),
+                                             (float)commandPaletteBounds_.getWidth(),
+                                             (float)commandPaletteBounds_.getHeight()),
+                            GlassmorphicPanel::Style::Subtle);
+
+    if (visibleCommandIndices_.empty()) {
+      SkFont emptyFont = design::getSkFont(11.0f, design::FontWeight::Regular);
+      SkPaint emptyPaint;
+      emptyPaint.setAntiAlias(true);
+      emptyPaint.setColor(SkColorSetARGB(165, 230, 236, 246));
+      canvas->drawString("No matching commands", (float)commandPaletteBounds_.getX() + 10.0f,
+                         (float)commandPaletteBounds_.getY() + 18.0f, emptyFont, emptyPaint);
+    } else {
+      constexpr int rowH = 22;
+      for (int i = 0; i < (int)visibleCommandIndices_.size(); ++i) {
+        const int commandIndex = visibleCommandIndices_[(size_t)i];
+        const auto& item = kCommands[(size_t)commandIndex];
+        const int rowY = commandPaletteBounds_.getY() + i * rowH;
+
+        if (i == selectedCommandIndex_) {
+          SkPaint selPaint;
+          selPaint.setAntiAlias(true);
+          selPaint.setColor(SkColorSetARGB(76, 95, 145, 230));
+          canvas->drawRoundRect(
+              SkRect::MakeXYWH((float)commandPaletteBounds_.getX() + 4.0f, (float)rowY + 2.0f,
+                               (float)commandPaletteBounds_.getWidth() - 8.0f, (float)rowH - 3.0f),
+              5.0f, 5.0f, selPaint);
+        }
+
+        SkFont rowFont = design::getSkFont(11.0f, design::FontWeight::SemiBold);
+        SkPaint rowPaint;
+        rowPaint.setAntiAlias(true);
+        rowPaint.setColor(i == selectedCommandIndex_
+                              ? SkColorSetRGB(238, 246, 255)
+                              : SkColorSetARGB(210, 220, 232, 248));
+        canvas->drawString(item.label, (float)commandPaletteBounds_.getX() + 10.0f,
+                           (float)rowY + 16.0f, rowFont, rowPaint);
+      }
+    }
+  }
 }
 
 void BrowserSearchBar::mouseDown(const juce::MouseEvent &e) {
+  if (searchBoxBounds_.contains(e.getPosition())) {
+    grabKeyboardFocus();
+  }
+
   if (backButtonVisible_ && backButtonBounds_.contains(e.getPosition())) {
     if (onBackRequested) onBackRequested();
     return;
@@ -166,14 +256,62 @@ void BrowserSearchBar::mouseDown(const juce::MouseEvent &e) {
 }
 
 bool BrowserSearchBar::keyPressed(const juce::KeyPress &key) {
+  if (key == juce::KeyPress('k', juce::ModifierKeys::commandModifier, 0) ||
+      key == juce::KeyPress('k', juce::ModifierKeys::ctrlModifier, 0)) {
+    setCommandMode(true);
+    return true;
+  }
+
+  if (key.isKeyCode(juce::KeyPress::escapeKey)) {
+    if (commandMode_) {
+      setCommandMode(false);
+      return true;
+    }
+  }
+
+  if (commandMode_) {
+    if (key.isKeyCode(juce::KeyPress::upKey)) {
+      if (!visibleCommandIndices_.empty()) {
+        selectedCommandIndex_ =
+            juce::jlimit(0, (int)visibleCommandIndices_.size() - 1, selectedCommandIndex_ - 1);
+        repaint();
+      }
+      return true;
+    }
+    if (key.isKeyCode(juce::KeyPress::downKey)) {
+      if (!visibleCommandIndices_.empty()) {
+        selectedCommandIndex_ =
+            juce::jlimit(0, (int)visibleCommandIndices_.size() - 1, selectedCommandIndex_ + 1);
+        repaint();
+      }
+      return true;
+    }
+    if (key.isKeyCode(juce::KeyPress::returnKey)) {
+      executeSelectedCommand();
+      return true;
+    }
+  }
+
   if (key.isKeyCode(juce::KeyPress::backspaceKey)) {
     if (searchText_.isNotEmpty()) {
-      setSearchText(searchText_.dropLastCharacters(1));
+      auto nextText = searchText_.dropLastCharacters(1);
+      if (commandMode_ && nextText.isEmpty()) {
+        nextText = ">";
+      }
+      setSearchText(nextText);
       return true;
     }
   } else if (key.getTextCharacter() >= 32 && key.getTextCharacter() < 127) {
     setSearchText(searchText_ + juce::String::charToString(key.getTextCharacter()));
+    if (searchText_.startsWithChar('>')) {
+      setCommandMode(true);
+    }
     return true;
+  } else if (key.isKeyCode(juce::KeyPress::returnKey)) {
+    if (!commandMode_ && searchText_.startsWithChar('>')) {
+      setCommandMode(true);
+      return true;
+    }
   }
   return false;
 }
@@ -186,6 +324,44 @@ void BrowserSearchBar::resized() {
   backButtonBounds_ = juce::Rectangle<int>(8, 10, 28, 28);
   addFolderButtonBounds_ = juce::Rectangle<int>(w - 40, 9, 32, searchBoxHeight_ - 2);
   searchBoxBounds_ = juce::Rectangle<int>(12, 9, w - 60, searchBoxHeight_ - 2);
+  commandPaletteBounds_ = juce::Rectangle<int>(searchBoxBounds_.getX(),
+                                               searchBoxBounds_.getBottom() + 4,
+                                               searchBoxBounds_.getWidth(),
+                                               5 * 22 + 8);
+}
+
+void BrowserSearchBar::updateVisibleCommands() {
+  visibleCommandIndices_.clear();
+  juce::String query = searchText_;
+  if (query.startsWithChar('>')) {
+    query = query.substring(1);
+  }
+  query = query.trim().toLowerCase();
+
+  for (int i = 0; i < (int)kCommands.size(); ++i) {
+    const juce::String id(kCommands[(size_t)i].id);
+    const juce::String label(kCommands[(size_t)i].label);
+    if (query.isEmpty() || id.toLowerCase().contains(query) ||
+        label.toLowerCase().contains(query)) {
+      visibleCommandIndices_.push_back(i);
+    }
+  }
+  selectedCommandIndex_ =
+      juce::jlimit(0, juce::jmax(0, (int)visibleCommandIndices_.size() - 1),
+                   selectedCommandIndex_);
+}
+
+void BrowserSearchBar::executeSelectedCommand() {
+  if (visibleCommandIndices_.empty()) {
+    return;
+  }
+  const auto commandId = juce::String(
+      kCommands[(size_t)visibleCommandIndices_[(size_t)selectedCommandIndex_]].id);
+  if (onCommandExecuted) {
+    onCommandExecuted(commandId);
+  }
+  setCommandMode(false);
+  setSearchText("");
 }
 
 } // namespace zenith

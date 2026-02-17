@@ -195,6 +195,21 @@ public:
   static const juce::String LFO2Sync;
   static const juce::String LFO2SyncRate;
   static const juce::String LFO2Retr;
+  static const juce::String LFO3Rate;
+  static const juce::String LFO3Amount;
+  static const juce::String LFO3Target;
+  static const juce::String LFO3Waveform;
+  static const juce::String LFO3Sync;
+  static const juce::String LFO3SyncRate;
+  static const juce::String LFO3Retr;
+  static const juce::String Env3Attack;
+  static const juce::String Env3Decay;
+  static const juce::String Env3Sustain;
+  static const juce::String Env3Release;
+  static const juce::String Macro1;
+  static const juce::String Macro2;
+  static const juce::String Macro3;
+  static const juce::String Macro4;
 
   // Performance
   static const juce::String GlideTime;

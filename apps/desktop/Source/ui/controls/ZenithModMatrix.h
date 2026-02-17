@@ -16,6 +16,7 @@
 #include "../../instruments/ZenithPolySynth.h"
 #include "SkiaComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <vector>
 
 
 #ifdef ZENITH_USE_SKIA
@@ -39,15 +40,26 @@ protected:
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseDrag(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
+  bool keyPressed(const juce::KeyPress &key) override;
 
 private:
   void updateHover(const juce::MouseEvent &e);
+  bool cellFromPosition(juce::Point<float> pos, int& outRow, int& outCol) const;
+  void clearHoveredCell();
+  juce::Rectangle<float> getGridBounds() const;
+  bool rowMatchesFilter(int row) const;
+  bool colMatchesFilter(int col) const;
 
 #ifdef ZENITH_USE_SKIA
   void drawGrid(SkCanvas *canvas);
+  void drawBackground(SkCanvas* canvas, const juce::Rectangle<float>& bounds);
+  void drawGridLabels(SkCanvas* canvas, const juce::Rectangle<float>& gridBounds,
+                      float cellWidth, float cellHeight,
+                      int numRows, int numCols);
   void drawCell(SkCanvas *canvas, int row, int col, float x, float y,
                 float cellWidth, float cellHeight, float value);
-  void drawHeaders(SkCanvas *canvas);
+  void drawHoveredValueBadge(SkCanvas* canvas, const juce::Rectangle<float>& gridBounds,
+                             float cellWidth, float cellHeight);
 #endif
 
   ZenithPolySynthProcessor &processor_;
@@ -55,13 +67,21 @@ private:
   int hoverRow_ = -1;
   int hoverCol_ = -1;
   bool isDragging_ = false;
-  float lastMouseY_ = 0.0f;
   float startVal_ = 0.0f;
+  float dragStartY_ = 0.0f;
+  juce::Point<float> lastMousePos_;
+  juce::String filterText_;
+  bool filterTypingMode_ = false;
+
+  static constexpr float kHeaderWidth_ = 102.0f;
+  static constexpr float kHeaderHeight_ = 30.0f;
+  static constexpr float kOuterPadding_ = 12.0f;
+  static constexpr float kCellPadding_ = 3.0f;
 
   // Colors
-  SkColor positiveColor_ = SkColorSetRGB(0, 255, 100);
-  SkColor negativeColor_ = SkColorSetRGB(255, 50, 50);
-  SkColor hoverColor_ = SkColorSetARGB(100, 255, 255, 255);
+  SkColor positiveColor_ = SkColorSetRGB(0, 230, 120);
+  SkColor negativeColor_ = SkColorSetRGB(255, 90, 90);
+  SkColor hoverColor_ = SkColorSetARGB(135, 255, 255, 255);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithModMatrix)
 };

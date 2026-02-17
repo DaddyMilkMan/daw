@@ -14,18 +14,20 @@
 
 #include "../../ai/AIMasteringAgent.h"
 #include "../framework/GlassmorphicPanel.h"
-#include "../framework/ZenithControls.h"
-#include <juce_gui_basics/juce_gui_basics.h>
+#include "../framework/SkiaComponent.h"
+#include "../controls/ZenithButton.h"
+#include "../controls/ZenithSlider.h"
+#include "../controls/SkiaLabel.h"
 
 
 namespace zenith {
 
-class AIMixAssistantView : public juce::Component {
+class AIMixAssistantView : public SkiaComponent {
 public:
   AIMixAssistantView(Engine &engine);
   ~AIMixAssistantView() override;
 
-  void paint(juce::Graphics &g) override;
+  void drawSkia(SkCanvas *canvas) override;
   void resized() override;
 
 private:
@@ -37,18 +39,18 @@ private:
   // will add getMasteringAgent() to Engine.
 
   // UI Controls
-  zenith::ui::TextButton analyzeButton{"Analyze & Auto-Level Mix"};
-  zenith::ui::TextButton applyMasteringButton{"Apply Mastering Chain"};
+  ZenithButton analyzeButton{"Analyze & Auto-Level Mix"};
+  ZenithButton applyMasteringButton{"Apply Mastering Chain"};
 
-  zenith::ui::Slider targetLufsSlider;
-  juce::Label targetLufsLabel;
+  ZenithSlider targetLufsSlider;
+  std::unique_ptr<SkiaLabel> targetLufsLabel;
 
-  juce::ToggleButton enableEq{"Adaptive EQ"};
-  juce::ToggleButton enableComp{"Glue Compressor"};
-  juce::ToggleButton enableLimit{"Brickwall Limiter"};
+  ZenithButton enableEq{"Adaptive EQ"};
+  ZenithButton enableComp{"Glue Compressor"};
+  ZenithButton enableLimit{"Brickwall Limiter"};
 
-  zenith::ui::Slider compAmountSlider;
-  juce::Label compAmountLabel;
+  ZenithSlider compAmountSlider;
+  std::unique_ptr<SkiaLabel> compAmountLabel;
 
   // Visuals
   float mixHealthScore = 0.0f; // Mock score for now

@@ -586,7 +586,6 @@ public:
 
   juce::ValueTree &getState() { return state; }
   const juce::ValueTree &getState() const { return state; }
-  juce::File getAssetDirectory(const juce::String& name);
 
   //==========================================================================
   // God Mode Helpers (Eyes for AI)
@@ -651,6 +650,7 @@ private:
   void rebuildTrackMap();
   juce::ValueTree findMidiNote(const juce::String &clipId,
                                const juce::String &noteId) const;
+  void createDefaultState();
 
   //==========================================================================
   // Member Variables

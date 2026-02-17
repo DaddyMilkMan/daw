@@ -92,6 +92,29 @@ const juce::String ZenithPolySynthParameterManager::LFO2SyncRate =
     "lfo2_sync_rate";
 const juce::String ZenithPolySynthParameterManager::LFO2Retr = "lfo2_retr";
 
+// LFO 3
+const juce::String ZenithPolySynthParameterManager::LFO3Rate = "lfo3_rate";
+const juce::String ZenithPolySynthParameterManager::LFO3Amount = "lfo3_amount";
+const juce::String ZenithPolySynthParameterManager::LFO3Target = "lfo3_target";
+const juce::String ZenithPolySynthParameterManager::LFO3Waveform =
+    "lfo3_waveform";
+const juce::String ZenithPolySynthParameterManager::LFO3Sync = "lfo3_sync";
+const juce::String ZenithPolySynthParameterManager::LFO3SyncRate =
+    "lfo3_sync_rate";
+const juce::String ZenithPolySynthParameterManager::LFO3Retr = "lfo3_retr";
+
+// Envelope 3
+const juce::String ZenithPolySynthParameterManager::Env3Attack = "env3_attack";
+const juce::String ZenithPolySynthParameterManager::Env3Decay = "env3_decay";
+const juce::String ZenithPolySynthParameterManager::Env3Sustain = "env3_sustain";
+const juce::String ZenithPolySynthParameterManager::Env3Release = "env3_release";
+
+// Macro Controls
+const juce::String ZenithPolySynthParameterManager::Macro1 = "macro1";
+const juce::String ZenithPolySynthParameterManager::Macro2 = "macro2";
+const juce::String ZenithPolySynthParameterManager::Macro3 = "macro3";
+const juce::String ZenithPolySynthParameterManager::Macro4 = "macro4";
+
 // Performance
 const juce::String ZenithPolySynthParameterManager::GlideTime = "glide_time";
 const juce::String ZenithPolySynthParameterManager::MonoMode = "mono_mode";
@@ -286,6 +309,49 @@ ZenithPolySynthParameterManager::createParameterLayout() {
       4));
   params.push_back(
       std::make_unique<juce::AudioParameterBool>(LFO2Retr, "LFO 2 Retr", true));
+
+  // LFO 3
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+      LFO3Rate, "LFO 3 Rate", 0.01f, 50.0f, 0.5f));
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+      LFO3Amount, "LFO 3 Amount", 0.0f, 1.0f, 0.0f));
+  params.push_back(std::make_unique<juce::AudioParameterChoice>(
+      LFO3Target, "LFO 3 Target",
+      juce::StringArray{"Cutoff", "Osc1 Pitch", "Osc2 Pitch", "Osc1 Mix",
+                        "Osc2 Mix", "Amp", "Osc1 Shape"},
+      0));
+  params.push_back(std::make_unique<juce::AudioParameterChoice>(
+      LFO3Waveform, "LFO 3 Wave",
+      juce::StringArray{"Sine", "Triangle", "Saw", "Square", "S&H", "Noise", "User"}, 1));
+  params.push_back(std::make_unique<juce::AudioParameterBool>(
+      LFO3Sync, "LFO 3 Sync", false));
+  params.push_back(std::make_unique<juce::AudioParameterChoice>(
+      LFO3SyncRate, "LFO 3 Sync Rate",
+      juce::StringArray{"1/64", "1/32", "1/16", "1/8", "1/4", "1/2", "1/1",
+                        "2/1", "4/1"},
+      5));
+  params.push_back(
+      std::make_unique<juce::AudioParameterBool>(LFO3Retr, "LFO 3 Retr", true));
+
+  // Envelope 3
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+      Env3Attack, "Env 3 Attack", 0.001f, 10.0f, 0.01f));
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+      Env3Decay, "Env 3 Decay", 0.001f, 10.0f, 0.3f));
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+      Env3Sustain, "Env 3 Sustain", 0.0f, 1.0f, 0.0f));
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+      Env3Release, "Env 3 Release", 0.001f, 10.0f, 0.2f));
+
+  // Macro Controls
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+      Macro1, "Macro 1", 0.0f, 1.0f, 0.5f));
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+      Macro2, "Macro 2", 0.0f, 1.0f, 0.5f));
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+      Macro3, "Macro 3", 0.0f, 1.0f, 0.5f));
+  params.push_back(std::make_unique<juce::AudioParameterFloat>(
+      Macro4, "Macro 4", 0.0f, 1.0f, 0.5f));
 
   // =========================================================================
   // PERFORMANCE

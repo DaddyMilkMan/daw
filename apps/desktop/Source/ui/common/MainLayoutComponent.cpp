@@ -10,8 +10,10 @@
 
 #include "MainLayoutComponent.h"
 #include "../../browser/BrowserModel.h"
+#include "../../browser/BrowserData.h"
 #include "../../engine/Engine.h"
 #include "../../engine/PluginHost.h"
+#include "../../instruments/Instrument.h"
 #include "../../instruments/InstrumentRegistry.h"
 #include "../arranger/ArrangerComponent.h"
 #include "../arranger/ArrangerClipManager.h"
@@ -36,6 +38,33 @@
 #include "../../engine/GrokGodModeHelper.h"
 
 namespace zenith {
+
+namespace {
+class BrowserInstrumentWindow : public juce::DocumentWindow {
+public:
+  BrowserInstrumentWindow(juce::AudioProcessorEditor* editor,
+                          const juce::String& title,
+                          std::function<void()> onClose)
+      : juce::DocumentWindow(title, juce::Colours::darkgrey,
+                             juce::DocumentWindow::allButtons),
+        onClose_(std::move(onClose)) {
+    setUsingNativeTitleBar(true);
+    setContentOwned(editor, true);
+    setResizable(true, true);
+    centreWithSize(getWidth(), getHeight());
+    setVisible(true);
+  }
+
+  void closeButtonPressed() override {
+    if (onClose_) {
+      onClose_();
+    }
+  }
+
+private:
+  std::function<void()> onClose_;
+};
+} // namespace
 
 // Helper class to switch between Arranger and Session views while keeping them
 // alive
@@ -110,9 +139,7 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state, Co
         auto browser = std::make_unique<BrowserPanel>(*browserModel_);
         browser->onItemDoubleClicked =
             [this](std::shared_ptr<BrowserItem> item) {
-              if (item && !item->isDirectory) {
-                DBG("MainLayout: Browser item activated: " + item->name);
-              }
+              handleBrowserItemActivation(item);
             };
         return std::unique_ptr<juce::Component>(browser.release());
       });
@@ -122,7 +149,7 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state, Co
         auto switcher = std::make_unique<ViewSwitcher>();
         // Add Arranger
         auto arranger =
-            std::make_unique<ArrangerComponent>(engine_, projectState_, api_);
+            std::make_unique<ArrangerComponent>(engine_, projectState_);
 
         arranger->onClipDoubleClicked = [this](const juce::String &trackId,
                                                const juce::String &clipId) {
@@ -184,9 +211,7 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state, Co
   // 3a. Browser
   auto browser = std::make_unique<BrowserPanel>(*browserModel_);
   browser->onItemDoubleClicked = [this](std::shared_ptr<BrowserItem> item) {
-    if (item && !item->isDirectory) {
-      DBG("MainLayout: Browser item activated: " + item->name);
-    }
+    handleBrowserItemActivation(item);
   };
 
   layout::PanelConfig browserCfg;
@@ -234,7 +259,7 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state, Co
   auto switcher = std::make_unique<ViewSwitcher>();
   viewSwitcher_ = switcher.get();
 
-  auto arranger = std::make_unique<ArrangerComponent>(engine_, projectState_, api_);
+  auto arranger = std::make_unique<ArrangerComponent>(engine_, projectState_);
 
   arranger->onClipDoubleClicked = [this](const juce::String &trackId,
                                          const juce::String &clipId) {
@@ -336,17 +361,18 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state, Co
   
   // Set up the mapper to convert selection IDs to screen rectangles
   // This enables remote users' selections to be visualized
-  cursorOverlay_->setIdToRectMapper([arrangerPtr](const juce::String& clipId) -> juce::Rectangle<float> {
-    if (!arrangerPtr) return {};
-    auto* clipMgr = arrangerPtr->getClipManager();
-    if (!clipMgr) return {};
-    return clipMgr->getClipBounds(clipId);
-  });
+  cursorOverlay_->setIdToRectMapper(
+      [arrangerPtr](const juce::String &clipId) -> juce::Rectangle<float> {
+        juce::ignoreUnused(arrangerPtr, clipId);
+        return {};
+      });
   
   addAndMakeVisible(cursorOverlay_.get());
 }
 
-MainLayoutComponent::~MainLayoutComponent() = default;
+MainLayoutComponent::~MainLayoutComponent() {
+  closeBrowserInstrumentEditors();
+}
 
 void MainLayoutComponent::drawSkia(SkCanvas *canvas) {
   // Background
@@ -437,6 +463,73 @@ bool MainLayoutComponent::isMidiEditorVisible() const {
     }
   }
   return false;
+}
+
+void MainLayoutComponent::handleBrowserItemActivation(std::shared_ptr<BrowserItem> item) {
+  if (!item || item->isDirectory) {
+    return;
+  }
+
+  if (item->type == BrowserItemType::Instrument) {
+    openBrowserInstrumentEditor(item->id, item->name);
+    return;
+  }
+
+  DBG("MainLayout: Browser item activated: " + item->name);
+}
+
+void MainLayoutComponent::openBrowserInstrumentEditor(const juce::String& instrumentId,
+                                                      const juce::String& displayName) {
+  if (instrumentId.isEmpty()) {
+    return;
+  }
+
+  auto existingWindowIt = browserInstrumentWindows_.find(instrumentId);
+  if (existingWindowIt != browserInstrumentWindows_.end() && existingWindowIt->second) {
+    existingWindowIt->second->toFront(true);
+    return;
+  }
+
+  auto instrument = engine_.getInstrumentRegistry().createInstrument(instrumentId);
+  if (!instrument) {
+    DBG("MainLayout: Failed to create instrument '" + instrumentId + "'");
+    return;
+  }
+
+  auto* processor = instrument->getAudioProcessor();
+  if (!processor || !processor->hasEditor()) {
+    DBG("MainLayout: Instrument '" + instrumentId + "' has no editor");
+    return;
+  }
+
+  if (auto* device = engine_.getDeviceManager().getCurrentAudioDevice()) {
+    processor->prepareToPlay(device->getCurrentSampleRate(),
+                             device->getCurrentBufferSizeSamples());
+  }
+
+  auto* editor = processor->createEditor();
+  if (!editor) {
+    DBG("MainLayout: Failed to create editor for instrument '" + instrumentId + "'");
+    return;
+  }
+
+  juce::String title = displayName.isNotEmpty() ? displayName : instrumentId;
+  auto window = std::make_unique<BrowserInstrumentWindow>(
+      editor, title + " (Browser)",
+      [this, instrumentId]() {
+        juce::MessageManager::callAsync([this, instrumentId]() {
+          browserInstrumentWindows_.erase(instrumentId);
+          browserInstruments_.erase(instrumentId);
+        });
+      });
+
+  browserInstruments_[instrumentId] = std::move(instrument);
+  browserInstrumentWindows_[instrumentId] = std::move(window);
+}
+
+void MainLayoutComponent::closeBrowserInstrumentEditors() {
+  browserInstrumentWindows_.clear();
+  browserInstruments_.clear();
 }
 
 } // namespace zenith

@@ -11,6 +11,7 @@
 #include "../engine/Track.h"
 #include "../engine/MixerController.h"
 #include <memory>
+#include <cmath>
 #include <utility>
 #include <vector>
 //
@@ -27,6 +28,7 @@
 #include "../../network/CollaborationManager.h"
 #include "ZenithHubComponent.h"
 #include "../dialogs/SettingsComponent.h"
+#include "../project/ProjectManagerUISkia.h"
 #include "../piano-roll/PianoRollComponent.h"
 #include "../../ai/UXDirectorAgent.h"
 #include <core/SkFont.h>
@@ -168,17 +170,7 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   };
 
   // Connect settings callback
-  transportBar->onSettingsClicked = [this]() {
-    juce::DialogWindow::LaunchOptions options;
-    options.content.setOwned(new zenith::SettingsComponent(engine));
-    options.content->setSize(600, 500);
-    options.dialogTitle = "Zenith DAW Settings";
-    options.dialogBackgroundColour = design::toJuceColour(design::colors::BG_00);
-    options.escapeKeyTriggersCloseButton = true;
-    options.useNativeTitleBar = true;
-    options.resizable = true;
-    options.launchAsync();
-  };
+  transportBar->onSettingsClicked = [this]() { showWorkspaceOverlay(false); };
 
   // Create Zenith Hub with real project manager
   hubComponent = std::make_unique<zenith::ZenithHubComponent>(
@@ -251,6 +243,13 @@ void MainComponent::drawSkiaContent(SkCanvas *canvas) {
   SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
   aurora_.draw(canvas, skBounds, animationTime_);
 
+  if ((settingsOverlay_ && settingsOverlay_->isVisible()) ||
+      (projectManagerOverlay_ && projectManagerOverlay_->isVisible())) {
+    SkPaint scrim;
+    scrim.setColor(design::withAlpha(design::colors::BG_00, 0.72f));
+    canvas->drawRect(skBounds, scrim);
+  }
+
   // Get pointer to hubComponent once for comparison
   auto* hub = hubComponent.get();
 
@@ -316,6 +315,112 @@ void MainComponent::setMainUiVisible(bool shouldBeVisible) {
   repaint();
 }
 
+void MainComponent::showWorkspaceOverlay(bool showProjectsTab) {
+  if (!settingsOverlay_) {
+    settingsOverlay_ = std::make_unique<zenith::SettingsComponent>(engine);
+    addAndMakeVisible(settingsOverlay_.get());
+  }
+
+  if (!projectManagerOverlay_) {
+    projectManagerOverlay_ = std::make_unique<zenith::ui::ProjectManagerUISkia>();
+    projectManagerOverlay_->onOpenProject = [this](const juce::File &path) {
+      if (onLoadProject_) {
+        onLoadProject_(path);
+      }
+      dismissWorkspaceOverlay();
+      setMainUiVisible(true);
+    };
+    projectManagerOverlay_->onNewProject = [this]() {
+      if (onNewProject_) {
+        onNewProject_();
+      }
+      dismissWorkspaceOverlay();
+      setMainUiVisible(true);
+    };
+    projectManagerOverlay_->onDeleteProject = [this](const juce::File &path) {
+      recentProjectManager_.removeProject(path);
+      recentProjectManager_.save();
+      refreshProjectManagerOverlay();
+    };
+    projectManagerOverlay_->onSaveRequested = [this]() {
+      recentProjectManager_.save();
+    };
+    addAndMakeVisible(projectManagerOverlay_.get());
+  }
+
+  if (!overlayCloseButton_) {
+    overlayCloseButton_ = std::make_unique<zenith::SkiaButton>("Close");
+    overlayCloseButton_->setStyle(zenith::SkiaButton::Style::Secondary);
+    overlayCloseButton_->onClick = [this]() { dismissWorkspaceOverlay(); };
+    addAndMakeVisible(overlayCloseButton_.get());
+  }
+
+  if (!overlaySettingsTabButton_) {
+    overlaySettingsTabButton_ = std::make_unique<zenith::SkiaButton>("Settings");
+    overlaySettingsTabButton_->onClick = [this]() { showWorkspaceOverlay(false); };
+    addAndMakeVisible(overlaySettingsTabButton_.get());
+  }
+
+  if (!overlayProjectsTabButton_) {
+    overlayProjectsTabButton_ = std::make_unique<zenith::SkiaButton>("Projects");
+    overlayProjectsTabButton_->onClick = [this]() { showWorkspaceOverlay(true); };
+    addAndMakeVisible(overlayProjectsTabButton_.get());
+  }
+
+  refreshProjectManagerOverlay();
+  settingsOverlay_->setVisible(!showProjectsTab);
+  projectManagerOverlay_->setVisible(showProjectsTab);
+  overlayCloseButton_->setVisible(true);
+  overlaySettingsTabButton_->setVisible(true);
+  overlayProjectsTabButton_->setVisible(true);
+  overlaySettingsTabButton_->setStyle(showProjectsTab ? zenith::SkiaButton::Style::Ghost
+                                                      : zenith::SkiaButton::Style::Primary);
+  overlayProjectsTabButton_->setStyle(showProjectsTab ? zenith::SkiaButton::Style::Primary
+                                                      : zenith::SkiaButton::Style::Ghost);
+
+  settingsOverlay_->toFront(false);
+  projectManagerOverlay_->toFront(false);
+  overlaySettingsTabButton_->toFront(false);
+  overlayProjectsTabButton_->toFront(false);
+  overlayCloseButton_->toFront(false);
+  resized();
+}
+
+void MainComponent::dismissWorkspaceOverlay() {
+  if (settingsOverlay_) {
+    settingsOverlay_->setVisible(false);
+  }
+  if (projectManagerOverlay_) {
+    projectManagerOverlay_->setVisible(false);
+  }
+  if (overlayCloseButton_) {
+    overlayCloseButton_->setVisible(false);
+  }
+  if (overlaySettingsTabButton_) {
+    overlaySettingsTabButton_->setVisible(false);
+  }
+  if (overlayProjectsTabButton_) {
+    overlayProjectsTabButton_->setVisible(false);
+  }
+  repaint();
+}
+
+void MainComponent::refreshProjectManagerOverlay() {
+  if (!projectManagerOverlay_) {
+    return;
+  }
+
+  const auto recent = recentProjectManager_.getRecentProjects(true);
+  std::vector<zenith::ui::ProjectManagerUISkia::ProjectRow> rows;
+  rows.reserve(recent.size());
+  for (const auto &entry : recent) {
+    rows.push_back({entry.path.getFullPathName(), entry.name,
+                    entry.path.getFullPathName(),
+                    entry.getRelativeTimeString()});
+  }
+  projectManagerOverlay_->setProjects(rows);
+}
+
 void MainComponent::visibilityChanged() {
   DBG("MainComponent::visibilityChanged called, visible=" << (isVisible() ? "yes" : "no"));
   ZENITH_LOG_INFO("MainComponent::visibilityChanged called");
@@ -348,6 +453,49 @@ void MainComponent::resized() {
   if (hubComponent) {
     hubComponent->setBounds(getLocalBounds());
   }
+
+  const bool overlayVisible =
+      (settingsOverlay_ && settingsOverlay_->isVisible()) ||
+      (projectManagerOverlay_ && projectManagerOverlay_->isVisible());
+  if (overlayVisible) {
+    const int overlayW =
+        juce::jlimit(760, 1300, (int)std::round((double)getWidth() * 0.84));
+    const int overlayH =
+        juce::jlimit(520, 840, (int)std::round((double)getHeight() * 0.82));
+    juce::Rectangle<int> overlayBounds((getWidth() - overlayW) / 2,
+                                       (getHeight() - overlayH) / 2, overlayW,
+                                       overlayH);
+
+    if (settingsOverlay_) {
+      settingsOverlay_->setBounds(overlayBounds);
+    }
+    if (projectManagerOverlay_) {
+      projectManagerOverlay_->setBounds(overlayBounds);
+    }
+
+    const int tabH = 34;
+    const int tabW = 112;
+    const int y = overlayBounds.getY() - tabH - 8;
+    if (overlaySettingsTabButton_) {
+      overlaySettingsTabButton_->setBounds(overlayBounds.getX(), y, tabW, tabH);
+    }
+    if (overlayProjectsTabButton_) {
+      overlayProjectsTabButton_->setBounds(overlayBounds.getX() + tabW + 8, y,
+                                           tabW, tabH);
+    }
+    if (overlayCloseButton_) {
+      overlayCloseButton_->setBounds(overlayBounds.getRight() - 92, y, 92, tabH);
+    }
+  }
+
+  if (importFileChooser_) {
+    const int w =
+        juce::jlimit(560, 1060, (int)std::round((double)getWidth() * 0.78));
+    const int h =
+        juce::jlimit(380, 760, (int)std::round((double)getHeight() * 0.76));
+    importFileChooser_->setBounds((getWidth() - w) / 2, (getHeight() - h) / 2,
+                                  w, h);
+  }
 }
 
 void MainComponent::openPianoRoll(const juce::String &trackId,
@@ -359,43 +507,55 @@ void MainComponent::openPianoRoll(const juce::String &trackId,
 void MainComponent::handleImportAudio() {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-  auto chooser = std::make_shared<::juce::FileChooser>(
+  dismissImportChooser();
+  importFileChooser_ = std::make_unique<zenith::SkiaFileChooser>(
       "Import Audio File",
-      ::juce::File::getSpecialLocation(::juce::File::userDocumentsDirectory),
-      "*.wav;*.aiff;*.aif;*.flac;*.mp3;*.ogg");
+      juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
+      "*.wav;*.aiff;*.aif;*.flac;*.mp3;*.ogg",
+      zenith::SkiaFileChooser::Mode::OpenFile);
 
-  auto chooserFlags = ::juce::FileBrowserComponent::openMode |
-                      ::juce::FileBrowserComponent::canSelectFiles;
+  const int w =
+      juce::jlimit(560, 1060, (int)std::round((double)getWidth() * 0.78));
+  const int h =
+      juce::jlimit(380, 760, (int)std::round((double)getHeight() * 0.76));
+  importFileChooser_->setBounds((getWidth() - w) / 2, (getHeight() - h) / 2, w,
+                                h);
+  addAndMakeVisible(importFileChooser_.get());
+  importFileChooser_->toFront(true);
 
-  chooser->launchAsync(chooserFlags,
-                       [this, chooser](const ::juce::FileChooser &fc) {
-                         auto file = fc.getResult();
-                         if (!file.existsAsFile())
-                           return;
+  importFileChooser_->showAsync(
+      [this](zenith::SkiaFileChooser::Result result, const juce::File &file) {
+        if (result == zenith::SkiaFileChooser::Result::Approved &&
+            file.existsAsFile()) {
+          if (engine.getNumTracks() == 0) {
+            engine.addTestTracks(1);
+          }
 
-                         if (engine.getNumTracks() == 0) {
-                           engine.addTestTracks(1);
-                         }
+          const auto &tracks = engine.tracks();
+          if (!tracks.empty()) {
+            auto *track = tracks[0].get();
+            if (track != nullptr) {
+              auto clip = std::make_unique<zenith::Clip>();
+              clip->setType(zenith::Clip::Type::Audio);
+              clip->setName(file.getFileNameWithoutExtension());
 
-                         const auto &tracks = engine.tracks();
-                         if (tracks.empty())
-                           return;
+              auto &pool = engine.getAudioFilePool();
+              clip->setAudioFileFromPool(file, pool);
+              clip->setStartPosition(0);
+              clip->setPlaying(true);
+              track->addClip(std::move(clip));
+            }
+          }
+        }
+        dismissImportChooser();
+      });
+}
 
-                         auto *track = tracks[0].get();
-                         if (track == nullptr)
-                           return;
-
-                         auto clip = std::make_unique<zenith::Clip>();
-                         clip->setType(zenith::Clip::Type::Audio);
-                         clip->setName(file.getFileNameWithoutExtension());
-
-                         auto &pool = engine.getAudioFilePool();
-                         clip->setAudioFileFromPool(file, pool);
-                         clip->setStartPosition(0);
-                         clip->setPlaying(true);
-
-                         track->addClip(std::move(clip));
-                       });
+void MainComponent::dismissImportChooser() {
+  if (importFileChooser_) {
+    removeChildComponent(importFileChooser_.get());
+    importFileChooser_.reset();
+  }
 }
 
 //==============================================================================
@@ -502,6 +662,7 @@ MainWindow::MainWindow(const juce::String &name)
 MainWindow::~MainWindow() {
   ZENITH_LOG_INFO("MainWindow::Destructor STARTED");
   stopTimer();
+  dismissWindowOverlays();
   
   if (automationSync) {
       ZENITH_LOG_INFO("MainWindow: Stopping redundant automationSync...");
@@ -520,62 +681,125 @@ MainWindow::~MainWindow() {
   ZENITH_LOG_INFO("MainWindow::Destructor COMPLETE");
 }
 
-void MainWindow::closeButtonPressed() {
-  fprintf(stderr, "[MainWindow] closeButtonPressed() ENTER\n");
-  
-  // If no projectState or no unsaved changes, just quit immediately
-  if (projectState == nullptr) {
-    fprintf(stderr, "[MainWindow] projectState is null, calling quit\n");
-    juce::JUCEApplication::getInstance()->systemRequestedQuit();
+void MainWindow::dismissWindowOverlays() {
+  if (mainComponent) {
+    if (activeWindowAlert_) {
+      mainComponent->removeChildComponent(activeWindowAlert_.get());
+    }
+    if (activeWindowFileChooser_) {
+      mainComponent->removeChildComponent(activeWindowFileChooser_.get());
+    }
+  }
+  activeWindowAlert_.reset();
+  activeWindowFileChooser_.reset();
+}
+
+void MainWindow::showWindowAlert(
+    const juce::String &title, const juce::String &message,
+    zenith::SkiaAlertWindow::IconType iconType, const juce::String &button1,
+    const juce::String &button2, const juce::String &button3,
+    std::function<void(zenith::SkiaAlertWindow::Result)> callback) {
+  if (!mainComponent) {
     return;
   }
-  
-  fprintf(stderr, "[MainWindow] Checking hasUnsavedChanges...\n");
-  if (!projectState->hasUnsavedChanges()) {
-    fprintf(stderr, "[MainWindow] No unsaved changes, calling quit\n");
+
+  dismissWindowOverlays();
+  activeWindowAlert_ =
+      std::make_unique<zenith::SkiaAlertWindow>(title, message, iconType);
+  activeWindowAlert_->addButton(button1, zenith::SkiaAlertWindow::Result::Button1,
+                                zenith::SkiaButton::Style::Primary);
+  if (button2.isNotEmpty()) {
+    activeWindowAlert_->addButton(button2,
+                                  zenith::SkiaAlertWindow::Result::Button2,
+                                  zenith::SkiaButton::Style::Secondary);
+  }
+  if (button3.isNotEmpty()) {
+    activeWindowAlert_->addButton(button3,
+                                  zenith::SkiaAlertWindow::Result::Button3,
+                                  zenith::SkiaButton::Style::Ghost);
+  }
+
+  const int w =
+      juce::jlimit(420, 760, (int)std::round((double)getWidth() * 0.46));
+  const int h =
+      juce::jlimit(220, 420, (int)std::round((double)getHeight() * 0.34));
+  activeWindowAlert_->setBounds((getWidth() - w) / 2, (getHeight() - h) / 2, w,
+                                h);
+  mainComponent->addAndMakeVisible(activeWindowAlert_.get());
+  activeWindowAlert_->toFront(true);
+  activeWindowAlert_->showAsync([this, callback](zenith::SkiaAlertWindow::Result result) {
+    dismissWindowOverlays();
+    if (callback) {
+      callback(result);
+    }
+  });
+}
+
+void MainWindow::showProjectFileChooser(
+    const juce::String &title, zenith::SkiaFileChooser::Mode mode,
+    std::function<void(zenith::SkiaFileChooser::Result, const juce::File &)>
+        callback) {
+  if (!mainComponent) {
+    return;
+  }
+
+  dismissWindowOverlays();
+  activeWindowFileChooser_ = std::make_unique<zenith::SkiaFileChooser>(
+      title, juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
+      "*.zth", mode);
+
+  const int w =
+      juce::jlimit(560, 1100, (int)std::round((double)getWidth() * 0.80));
+  const int h =
+      juce::jlimit(380, 760, (int)std::round((double)getHeight() * 0.76));
+  activeWindowFileChooser_->setBounds((getWidth() - w) / 2,
+                                      (getHeight() - h) / 2, w, h);
+  mainComponent->addAndMakeVisible(activeWindowFileChooser_.get());
+  activeWindowFileChooser_->toFront(true);
+
+  activeWindowFileChooser_->showAsync(
+      [this, callback](zenith::SkiaFileChooser::Result result,
+                       const juce::File &file) {
+        dismissWindowOverlays();
+        if (callback) {
+          callback(result, file);
+        }
+      });
+}
+
+void MainWindow::closeButtonPressed() {
+  if (projectState == nullptr) {
     juce::JUCEApplication::getInstance()->systemRequestedQuit();
     return;
   }
 
-  fprintf(stderr, "[MainWindow] Has unsaved changes, showing dialog...\n");
-  
-  // Use AlertWindow (non-blocking) - NativeMessageBox freezes on Linux
-  auto options = juce::MessageBoxOptions()
-      .withIconType(juce::MessageBoxIconType::WarningIcon)
-      .withTitle("Unsaved Changes")
-      .withMessage("Save changes before closing?")
-      .withButton("Save")
-      .withButton("Don't Save") 
-      .withButton("Cancel")
-      .withAssociatedComponent(this);
-  
-  fprintf(stderr, "[MainWindow] About to call AlertWindow::showAsync\n");
-  
-  juce::AlertWindow::showAsync(options, [this](int result) {
-    fprintf(stderr, "[MainWindow] AlertWindow callback result=%d\n", result);
-    // 0 = Save, 1 = Don't Save, 2 = Cancel
-    if (result == 0) {
+  if (!projectState->hasUnsavedChanges()) {
+    juce::JUCEApplication::getInstance()->systemRequestedQuit();
+    return;
+  }
+
+  showWindowAlert(
+      "Unsaved Changes", "Save changes before closing?",
+      zenith::SkiaAlertWindow::IconType::WarningIcon, "Save", "Don't Save",
+      "Cancel", [this](zenith::SkiaAlertWindow::Result result) {
+        if (result == zenith::SkiaAlertWindow::Result::Button1) {
       saveProject([this](bool success) {
         if (success) {
           juce::JUCEApplication::getInstance()->systemRequestedQuit();
         }
       });
-    } else if (result == 1) {
-      juce::JUCEApplication::getInstance()->systemRequestedQuit();
-    }
-    // result == 2 is Cancel - do nothing
-  });
-  
-  fprintf(stderr, "[MainWindow] closeButtonPressed() EXITING (dialog shown)\n");
+        } else if (result == zenith::SkiaAlertWindow::Result::Button2) {
+          juce::JUCEApplication::getInstance()->systemRequestedQuit();
+        }
+      });
 }
 
 
 void MainWindow::showAboutDialog() {
   juce::String aboutMessage;
   aboutMessage << "Zenith DAW\n\nVersion: 0.1.0\nBuilt with JUCE 8.0.9";
-  juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon,
-                                         "About Zenith DAW", aboutMessage,
-                                         "OK");
+  showWindowAlert("About Zenith DAW", aboutMessage,
+                  zenith::SkiaAlertWindow::IconType::InfoIcon, "OK");
 }
 
 void MainWindow::timerCallback() {
@@ -592,26 +816,26 @@ void MainWindow::checkForRecovery() {
   if (recoveries.empty())
     return;
 
-  // Use JUCE native dialog for recovery (SkiaAlertWindow has rendering issues)
-  int result = juce::NativeMessageBox::showYesNoBox(
-      juce::AlertWindow::QuestionIcon,
+  showWindowAlert(
       "Project Recovery",
       "Zenith detected unsaved work from a previous session.\n\nWould you like to recover it?",
-      this,
-      nullptr);
+      zenith::SkiaAlertWindow::IconType::QuestionIcon, "Recover", "Skip", {},
+      [this, recoveries](zenith::SkiaAlertWindow::Result result) {
+        if (result != zenith::SkiaAlertWindow::Result::Button1) {
+          return;
+        }
 
-  if (result == 1) { // Yes
-    FileIOError error = fileIO_->recoverFromFile(recoveries.back().recoveryFile);
-    if (error == FileIOError::Success) {
-      updateWindowTitle();
-      repaint();
-    } else {
-      juce::NativeMessageBox::showMessageBoxAsync(
-          juce::AlertWindow::WarningIcon,
-          "Recovery Failed",
-          "Failed to recover the project. The backup may be corrupted.");
-    }
-  }
+        FileIOError error =
+            fileIO_->recoverFromFile(recoveries.back().recoveryFile);
+        if (error == FileIOError::Success) {
+          updateWindowTitle();
+          repaint();
+        } else {
+          showWindowAlert("Recovery Failed",
+                          "Failed to recover the project. The backup may be corrupted.",
+                          zenith::SkiaAlertWindow::IconType::WarningIcon, "OK");
+        }
+      });
 }
 
 void MainWindow::createManualBackup() {
@@ -620,9 +844,9 @@ void MainWindow::createManualBackup() {
   juce::File backupFile = fileIO_->createBackup();
 
   if (backupFile.existsAsFile()) {
-    juce::NativeMessageBox::showMessageBoxAsync(
-        juce::AlertWindow::InfoIcon, "Backup Created",
-        "Project backed up to:\n" + backupFile.getFullPathName());
+    showWindowAlert("Backup Created",
+                    "Project backed up to:\n" + backupFile.getFullPathName(),
+                    zenith::SkiaAlertWindow::IconType::InfoIcon, "OK");
   }
 }
 
@@ -645,15 +869,25 @@ void MainWindow::updateWindowTitle() {
 
 void MainWindow::newProject() {
   if (projectState->hasUnsavedChanges()) {
-    int result = juce::NativeMessageBox::showYesNoCancelBox(
-        juce::AlertWindow::WarningIcon, "Unsaved Changes",
-        "Save changes before creating a new project?", this, nullptr);
-
-    if (result == 1) {
-      saveProject();
-    } else if (result == 0) {
-      return; // Cancel
-    }
+    showWindowAlert(
+        "Unsaved Changes", "Save changes before creating a new project?",
+        zenith::SkiaAlertWindow::IconType::WarningIcon, "Save", "Discard",
+        "Cancel", [this](zenith::SkiaAlertWindow::Result result) {
+          if (result == zenith::SkiaAlertWindow::Result::Button1) {
+            saveProject([this](bool success) {
+              if (success) {
+                fileIO_->newProject();
+                updateWindowTitle();
+                repaint();
+              }
+            });
+          } else if (result == zenith::SkiaAlertWindow::Result::Button2) {
+            fileIO_->newProject();
+            updateWindowTitle();
+            repaint();
+          }
+        });
+    return;
   }
 
   fileIO_->newProject();
@@ -672,9 +906,8 @@ void MainWindow::saveProject(std::function<void(bool)> onComplete) {
   // Use async save to keep UI responsive
   fileIO_->saveToFileAsync(projectFile, {}, [this, projectFile, onComplete](bool success, juce::String error) {
     if (!success) {
-        juce::NativeMessageBox::showMessageBoxAsync(
-            juce::AlertWindow::WarningIcon, "Save Failed",
-            "Failed to save project: " + error);
+        showWindowAlert("Save Failed", "Failed to save project: " + error,
+                        zenith::SkiaAlertWindow::IconType::WarningIcon, "OK");
         if (onComplete) onComplete(false);
         return;
     }
@@ -690,67 +923,51 @@ void MainWindow::saveProject(std::function<void(bool)> onComplete) {
 }
 
 void MainWindow::saveProjectAs(std::function<void(bool)> onComplete) {
-  auto chooser = std::make_shared<::juce::FileChooser>(
-      "Save Project As...",
-      ::juce::File::getSpecialLocation(::juce::File::userDocumentsDirectory),
-      "*.zth");
-  auto chooserFlags = ::juce::FileBrowserComponent::saveMode |
-                      ::juce::FileBrowserComponent::canSelectFiles;
-
-  chooser->launchAsync(chooserFlags, [this, chooser, onComplete](const ::juce::FileChooser &fc) {
-    auto file = fc.getResult();
-    if (file == juce::File{}) {
-        if (onComplete) onComplete(false);
-        return;
-    }
-    
-    fileIO_->saveToFileAsync(file, {}, [this, file, onComplete](bool success, juce::String error) {
-        if (success) {
-            updateWindowTitle();
-            if (recentProjectManager_) {
-                recentProjectManager_->addProject(file, projectState->getProjectName());
-                recentProjectManager_->save();
-            }
-            if (onComplete) onComplete(true);
-        } else {
-            juce::NativeMessageBox::showMessageBoxAsync(juce::AlertWindow::WarningIcon, "Save Failed", error);
-            if (onComplete) onComplete(false);
-        }
-    });
-  });
-}
-      return;
-    if (!file.hasFileExtension(".zth"))
-      file = file.withFileExtension(".zth");
-
-    fileIO_->saveToFileAsync(file, {}, [this, file](bool success, juce::String error) {
-        if (!success) {
-          juce::NativeMessageBox::showMessageBoxAsync(
-              juce::AlertWindow::WarningIcon, "Save Failed",
-              "Failed to save project: " + error);
+  showProjectFileChooser(
+      "Save Project As...", zenith::SkiaFileChooser::Mode::SaveFile,
+      [this, onComplete](zenith::SkiaFileChooser::Result result,
+                         const juce::File &selectedFile) {
+        if (result != zenith::SkiaFileChooser::Result::Approved ||
+            selectedFile == juce::File{}) {
+          if (onComplete) onComplete(false);
           return;
         }
 
-        updateWindowTitle();
-        if (recentProjectManager_) {
-          recentProjectManager_->addProject(file, projectState->getProjectName());
-          recentProjectManager_->save();
+        auto file = selectedFile;
+        if (!file.hasFileExtension(".zth")) {
+          file = file.withFileExtension(".zth");
         }
-    });
-  });
-}
 
+        fileIO_->saveToFileAsync(
+            file, {},
+            [this, file, onComplete](bool success, juce::String error) {
+              if (success) {
+                updateWindowTitle();
+                if (recentProjectManager_) {
+                  recentProjectManager_->addProject(file,
+                                                    projectState->getProjectName());
+                  recentProjectManager_->save();
+                }
+                if (onComplete) onComplete(true);
+              } else {
+                showWindowAlert("Save Failed", error,
+                                zenith::SkiaAlertWindow::IconType::WarningIcon,
+                                "OK");
+                if (onComplete) onComplete(false);
+              }
+            });
+      });
+}
 bool MainWindow::loadProject(const juce::File &file) {
   if (!file.existsAsFile())
     return false;
-  
+
   engine->stop();
 
   fileIO_->loadFromFileAsync(file, [this, file](bool success, juce::String error) {
       if (!success) {
-        juce::NativeMessageBox::showMessageBoxAsync(
-            juce::AlertWindow::WarningIcon, "Load Failed",
-            "Failed to load project: " + error);
+        showWindowAlert("Load Failed", "Failed to load project: " + error,
+                        zenith::SkiaAlertWindow::IconType::WarningIcon, "OK");
         return;
       }
 
@@ -766,18 +983,14 @@ bool MainWindow::loadProject(const juce::File &file) {
 }
 
 void MainWindow::openProject() {
-  auto chooser = std::make_shared<::juce::FileChooser>(
-      "Open Project",
-      ::juce::File::getSpecialLocation(::juce::File::userDocumentsDirectory),
-      "*.zth");
-  auto chooserFlags = ::juce::FileBrowserComponent::openMode |
-                      ::juce::FileBrowserComponent::canSelectFiles;
-  chooser->launchAsync(chooserFlags,
-                       [this, chooser](const ::juce::FileChooser &fc) {
-                         auto file = fc.getResult();
-                         if (file != juce::File{})
-                           loadProject(file);
-                       });
+  showProjectFileChooser(
+      "Open Project", zenith::SkiaFileChooser::Mode::OpenFile,
+      [this](zenith::SkiaFileChooser::Result result, const juce::File &file) {
+        if (result == zenith::SkiaFileChooser::Result::Approved &&
+            file != juce::File{}) {
+          loadProject(file);
+        }
+      });
 }
 
 } // namespace zenith

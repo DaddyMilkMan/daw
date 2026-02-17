@@ -70,18 +70,6 @@ ZenithHubComponent::ZenithHubComponent(
   subPaint_.setAntiAlias(true);
   subPaint_.setColor(withAlpha(colors::TEXT_PRIMARY, 0.6f));
 
-  // Initialize Greeting Editor as permanent hidden child
-  addChildComponent(&greetingEditor_);
-  greetingEditor_.setVisible(false);
-  greetingEditor_.setMultiLine(false);
-  greetingEditor_.setReturnKeyStartsNewLine(false);
-  greetingEditor_.setSelectAllWhenFocused(true);
-
-  auto safeDismiss = [this]() { hideGreetingEditor(false); };
-  greetingEditor_.onEscapeKey = safeDismiss;
-  greetingEditor_.onFocusLost = safeDismiss;
-  greetingEditor_.onReturnKey = [this]() { hideGreetingEditor(true); };
-
   // Initialize Aurora Background
   auroraBackground_ = std::make_unique<AuroraBackground>();
 
@@ -409,9 +397,7 @@ void ZenithHubComponent::updateLayout() {
     }
   }
 
-  if (greetingEditor_.isVisible()) {
-    showGreetingEditor(); // Re-layout editor
-  }
+  juce::ignoreUnused(greetingEditorDialog_);
 }
 
 void ZenithHubComponent::timerCallback() {
@@ -913,47 +899,49 @@ void ZenithHubComponent::mouseUp(const juce::MouseEvent &e) {
 }
 
 void ZenithHubComponent::showGreetingEditor() {
-  if (greetingEditor_.isVisible())
+  if (greetingEditorDialog_)
     return;
 
-  fprintf(stderr, "[ZenithHub] showGreetingEditor() called, bounds=%.1f,%.1f %.1fx%.1f\n",
-          greetingTextBounds_.left(), greetingTextBounds_.top(),
-          greetingTextBounds_.width(), greetingTextBounds_.height());
-
   if (greetingTextBounds_.isEmpty()) {
-    fprintf(stderr, "[ZenithHub] ERROR: greetingTextBounds_ is empty!\n");
     return;
   }
 
-  greetingEditor_.setText(greetingText_);
-  greetingEditor_.setSelectAllWhenFocused(true);
-  greetingEditor_.setJustification(juce::Justification::left);
-  greetingEditor_.setFont(ZenithTheme::Typography::getFont(18.0f));
+  greetingEditorDialog_ = std::make_unique<SkiaAlertWindow>(
+      "Edit Greeting", "Update your hub greeting:",
+      SkiaAlertWindow::IconType::QuestionIcon);
+  greetingEditorDialog_->addTextEditor("greeting", greetingText_, "Greeting:");
+  greetingEditorDialog_->addButton("Cancel",
+                                   SkiaAlertWindow::Result::Cancelled,
+                                   SkiaButton::Style::Secondary);
+  greetingEditorDialog_->addButton("Save", SkiaAlertWindow::Result::Button1,
+                                   SkiaButton::Style::Primary);
 
-  // Position editor directly over the greeting text
-  constexpr int kEditorWidthPadding = 60;
-  constexpr int kEditorHeight = 28;
-
-  juce::Rectangle<int> bounds(
-      (int)greetingTextBounds_.left(),
-      (int)greetingTextBounds_.top() - 2,  // Align with text, small offset for visual fit
-      (int)(greetingTextBounds_.width() + kEditorWidthPadding), 
-      kEditorHeight);
-
-  fprintf(stderr, "[ZenithHub] Setting editor bounds: %d,%d %dx%d\n",
-          bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight());
-
-  greetingEditor_.setBounds(bounds);
-  greetingEditor_.setVisible(true);
-  greetingEditor_.selectAll();
-  greetingEditor_.grabKeyboardFocus();
+  const int w =
+      juce::jlimit(420, 760, (int)std::round((double)getWidth() * 0.52));
+  const int h =
+      juce::jlimit(220, 360, (int)std::round((double)getHeight() * 0.32));
+  greetingEditorDialog_->setBounds((getWidth() - w) / 2, (getHeight() - h) / 2,
+                                   w, h);
+  addAndMakeVisible(greetingEditorDialog_.get());
+  greetingEditorDialog_->toFront(true);
+  greetingEditorDialog_->showAsync([this](SkiaAlertWindow::Result result) {
+    if (result == SkiaAlertWindow::Result::Button1 && greetingEditorDialog_) {
+      const juce::String value =
+          greetingEditorDialog_->getTextEditorContents("greeting").trim();
+      if (value.isNotEmpty()) {
+        greetingText_ = value;
+      }
+    }
+    hideGreetingEditor(false);
+  });
 }
 
 void ZenithHubComponent::hideGreetingEditor(bool save) {
-  if (save) {
-    greetingText_ = greetingEditor_.getText();
+  juce::ignoreUnused(save);
+  if (greetingEditorDialog_) {
+    removeChildComponent(greetingEditorDialog_.get());
+    greetingEditorDialog_.reset();
   }
-  greetingEditor_.setVisible(false);
   repaint();
 }
 

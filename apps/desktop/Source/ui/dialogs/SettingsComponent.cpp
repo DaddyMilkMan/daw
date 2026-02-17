@@ -13,6 +13,7 @@
 
 #include "SettingsComponent.h"
 #include "../design-system/ColorBridge.h"
+#include <cmath>
 
 namespace zenith {
 
@@ -111,6 +112,12 @@ void AudioSettingsTab::resized() {
     if (pdcToggle_) pdcToggle_->setBounds(20, y, 250, 30); y += 40;
     if (monitoringToggle_) monitoringToggle_->setBounds(20, y, 200, 30); y += 40;
     if (monitoringVolumeSlider_) monitoringVolumeSlider_->setBounds(20, y, 250, 30);
+
+    if (deviceSelectorAlert_ && deviceSelectorAlert_->isVisible()) {
+        const int w = juce::jlimit(420, 760, (int)std::round((double)getWidth() * 0.72));
+        const int h = juce::jlimit(220, 360, (int)std::round((double)getHeight() * 0.44));
+        deviceSelectorAlert_->setBounds((getWidth() - w) / 2, (getHeight() - h) / 2, w, h);
+    }
 }
 
 void AudioSettingsTab::timerCallback() { markDirty(); }
@@ -161,18 +168,26 @@ void AudioSettingsTab::drawSkia(SkCanvas* canvas) {
 }
 
 void AudioSettingsTab::showDeviceSelector() {
-    juce::DialogWindow::LaunchOptions options;
-    auto* content = new juce::AudioDeviceSelectorComponent(
-        engine_.getDeviceManager(), 0, 256, 0, 256, false, false, false, false);
-    content->setSize(500, 450);
+    if (deviceSelectorAlert_) {
+        removeChildComponent(deviceSelectorAlert_.get());
+        deviceSelectorAlert_.reset();
+    }
 
-    options.content.setOwned(content);
-    options.dialogTitle = "Audio Device Configuration";
-    options.dialogBackgroundColour = juce::Colours::black;
-    options.escapeKeyTriggersCloseButton = true;
-    options.useNativeTitleBar = true;
-    options.resizable = false;
-    options.launchAsync();
+    deviceSelectorAlert_ = std::make_unique<SkiaAlertWindow>(
+        "Audio Device Configuration",
+        "Quick controls are available in this tab.\nFor full device routing and calibration, use the Hardware tab.",
+        SkiaAlertWindow::IconType::InfoIcon);
+    deviceSelectorAlert_->addButton("OK", SkiaAlertWindow::Result::Button1,
+                                    SkiaButton::Style::Primary);
+    addAndMakeVisible(deviceSelectorAlert_.get());
+    deviceSelectorAlert_->toFront(true);
+    resized();
+    deviceSelectorAlert_->showAsync([this](SkiaAlertWindow::Result) {
+        if (deviceSelectorAlert_) {
+            removeChildComponent(deviceSelectorAlert_.get());
+            deviceSelectorAlert_.reset();
+        }
+    });
 }
 
 //==============================================================================
@@ -245,17 +260,18 @@ PluginSettingsTab::PluginSettingsTab(PluginHost& host) : host_(host) {
     scanButton_->onClick = [this]() { startScan(); };
     addAndMakeVisible(scanButton_.get());
 
-    pathList_.setMultiLine(true);
-    pathList_.setReadOnly(true);
-    pathList_.setColour(juce::TextEditor::backgroundColourId, ZenithTheme::Colors::bg_00);
-    pathList_.setColour(juce::TextEditor::outlineColourId, ZenithTheme::Colors::border_default);
-    addAndMakeVisible(pathList_);
+    pathList_ = std::make_unique<SkiaTextEditor>("plugin_paths");
+    pathList_->setMultiLine(true);
+    pathList_->setReadOnly(true);
+    pathList_->setBackgroundColour(design::unified::bg_00());
+    pathList_->setTextColour(design::unified::text_primary());
+    addAndMakeVisible(pathList_.get());
 
     updateList();
 }
 
 void PluginSettingsTab::resized() {
-    pathList_.setBounds(20, 80, getWidth() - 40, getHeight() - 140);
+    if (pathList_) pathList_->setBounds(20, 80, getWidth() - 40, getHeight() - 140);
     scanButton_->setBounds(getWidth() - 140, getHeight() - 50, 120, 36);
 }
 
@@ -287,7 +303,7 @@ void PluginSettingsTab::updateList() {
     for (const auto& path : host_.getSearchPaths()) {
         text += path + "\n";
     }
-    pathList_.setText(text);
+    if (pathList_) pathList_->setText(text);
 }
 
 //==============================================================================
@@ -295,16 +311,13 @@ void PluginSettingsTab::updateList() {
 //==============================================================================
 
 AISettingsTab::AISettingsTab() {
-    apiKeyEditor_ = std::make_unique<juce::TextEditor>("API Key");
+    apiKeyEditor_ = std::make_unique<SkiaTextEditor>("API Key");
     apiKeyEditor_->setMultiLine(false);
-    apiKeyEditor_->setPasswordCharacter('*');
+    apiKeyEditor_->setReadOnly(false);
     apiKeyEditor_->setTextToShowWhenEmpty("Enter xAI API Key (xai-...)",
-                                          juce::Colours::white.withAlpha(0.5f));
-    apiKeyEditor_->setColour(juce::TextEditor::backgroundColourId,
-                             juce::Colours::transparentBlack);
-    apiKeyEditor_->setColour(juce::TextEditor::outlineColourId,
-                             juce::Colours::white.withAlpha(0.2f));
-    apiKeyEditor_->setColour(juce::TextEditor::textColourId, juce::Colours::white);
+                                          design::withAlpha(design::colors::TEXT_PRIMARY, 0.5f));
+    apiKeyEditor_->setBackgroundColour(design::unified::bg_00());
+    apiKeyEditor_->setTextColour(design::unified::text_primary());
 
     juce::String existingKey;
     if (SecureKeyStore::retrieveKey(SecureKeyStore::GrokAPIKey, existingKey)) {
@@ -596,18 +609,28 @@ ProjectSettingsTab::ProjectSettingsTab() {
     projectFolderButton_ = std::make_unique<SkiaButton>("Choose Project Folder...");
     projectFolderButton_->setStyle(SkiaButton::Style::Secondary);
     projectFolderButton_->onClick = [this]() {
-        auto chooser = std::make_shared<juce::FileChooser>(
-            "Select Default Project Folder", 
-            juce::File(currentProjectFolder_), "");
-        chooser->launchAsync(juce::FileBrowserComponent::openMode | 
-                             juce::FileBrowserComponent::canSelectDirectories,
-            [this, chooser](const juce::FileChooser& fc) {
-                if (fc.getResults().size() > 0) {
-                    currentProjectFolder_ = fc.getResult().getFullPathName();
-                    Settings::getInstance().setDefaultProjectFolder(currentProjectFolder_);
-                    markDirty();
-                }
-            });
+        if (folderChooser_) {
+            removeChildComponent(folderChooser_.get());
+            folderChooser_.reset();
+        }
+        folderChooser_ = std::make_unique<SkiaFileChooser>(
+            "Select Default Project Folder",
+            juce::File(currentProjectFolder_), "",
+            SkiaFileChooser::Mode::OpenDirectory);
+        addAndMakeVisible(folderChooser_.get());
+        folderChooser_->toFront(true);
+        resized();
+        folderChooser_->showAsync([this](SkiaFileChooser::Result result, const juce::File& selected) {
+            if (result == SkiaFileChooser::Result::Approved && selected.isDirectory()) {
+                currentProjectFolder_ = selected.getFullPathName();
+                Settings::getInstance().setDefaultProjectFolder(currentProjectFolder_);
+                markDirty();
+            }
+            if (folderChooser_) {
+                removeChildComponent(folderChooser_.get());
+                folderChooser_.reset();
+            }
+        });
     };
     addAndMakeVisible(projectFolderButton_.get());
 }
@@ -618,6 +641,12 @@ void ProjectSettingsTab::resized() {
     if (autoSaveIntervalSlider_) { autoSaveIntervalSlider_->setBounds(20, y, 250, 30); y += 50; }
     if (undoHistorySlider_) { undoHistorySlider_->setBounds(20, y, 250, 30); y += 50; }
     if (projectFolderButton_) { projectFolderButton_->setBounds(20, y, 260, 36); }
+
+    if (folderChooser_ && folderChooser_->isVisible()) {
+        const int w = juce::jlimit(520, 960, (int)std::round((double)getWidth() * 0.84));
+        const int h = juce::jlimit(360, 680, (int)std::round((double)getHeight() * 0.76));
+        folderChooser_->setBounds((getWidth() - w) / 2, (getHeight() - h) / 2, w, h);
+    }
 }
 
 void ProjectSettingsTab::drawSkia(SkCanvas* canvas) {
@@ -808,4 +837,3 @@ void SettingsComponent::setActiveTab(int index) {
 }
 
 } // namespace zenith
-

@@ -129,17 +129,14 @@ StemSeparationJob::writeStemToFile(const juce::AudioBuffer<float> &buffer,
   }
 
   juce::WavAudioFormat wavFormat;
-  auto writerOptions = juce::AudioFormatWriterOptions()
-                           .withSampleRate(sampleRate)
-                           .withNumChannels((int)buffer.getNumChannels())
-                           .withBitsPerSample(24);
-
-  std::unique_ptr<juce::OutputStream> fileStream(new juce::FileOutputStream(outFile));
-  if (static_cast<juce::FileOutputStream*>(fileStream.get())->failedToOpen()) {
+  auto fileStream = std::make_unique<juce::FileOutputStream>(outFile);
+  if (fileStream->failedToOpen()) {
       return juce::File(); 
   }
 
-  std::unique_ptr<juce::AudioFormatWriter> writer = wavFormat.createWriterFor(fileStream, writerOptions);
+  std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(
+      fileStream.release(), sampleRate,
+      static_cast<unsigned int>(buffer.getNumChannels()), 24, {}, 0));
 
   if (writer) {
     writer->writeFromAudioSampleBuffer(buffer, 0, buffer.getNumSamples());

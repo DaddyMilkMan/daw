@@ -1,18 +1,18 @@
 #pragma once
 #include "../instruments/ZenithPresetManager.h"
-#include <juce_gui_basics/juce_gui_basics.h>
-
+#include "../framework/SkiaComponent.h"
 #include "../controls/SkiaListBox.h"
+#include "../controls/SkiaAlertWindow.h"
 #include "../controls/ZenithButton.h"
 #include <functional>
 
-class PresetBrowserComponent : public juce::Component,
+class PresetBrowserComponent : public zenith::SkiaComponent,
                                public zenith::SkiaListBox::Model {
 public:
   PresetBrowserComponent();
   ~PresetBrowserComponent() override;
 
-  void paint(juce::Graphics &g) override;
+  void drawSkia(SkCanvas *canvas) override;
   void resized() override;
 
   // SkiaListBox::Model overrides
@@ -43,6 +43,7 @@ private:
   zenith::ZenithButton saveButton{"Save"};
   zenith::ZenithButton deleteButton{"Delete"};
   zenith::ZenithButton refreshButton{"Refresh"};
+  std::unique_ptr<zenith::SkiaAlertWindow> savePresetDialog_;
 
   void loadSelectedPreset();
   void saveCurrentPreset();

@@ -21,10 +21,15 @@
 #include "Engine.h"
 // #include "../network/AIBridgeClient.h" // File missing - disabled temporarily
 #include "../../commands/CommandAPI.h"
-#include "../controls/MarkdownComponent.h"
-#include <juce_gui_basics/juce_gui_basics.h>
+#include "../controls/SkiaComboBox.h"
+#include "../controls/SkiaLabel.h"
+#include "../controls/SkiaTextEditor.h"
+#include "../controls/ZenithButton.h"
+#include "../framework/SkiaComponent.h"
+#include <juce_core/juce_core.h>
 
 namespace zenith {
+class SettingsComponent;
 
 /**
     Wingman AI Assistant Panel
@@ -32,9 +37,7 @@ namespace zenith {
     Provides a chat-like interface for controlling the DAW with natural
    language. Now includes Sample Hunter integration for finding sounds via chat.
 */
-class WingmanPanel : public juce::Component,
-                     private juce::TextEditor::Listener,
-                     private juce::Button::Listener,
+class WingmanPanel : public SkiaComponent,
                      public ai::SampleHunterAgent::Listener {
 public:
   //==========================================================================
@@ -43,7 +46,7 @@ public:
 
   //==========================================================================
   // Component overrides
-  void paint(juce::Graphics &g) override;
+  void drawSkia(SkCanvas *canvas) override;
   void resized() override;
 
   //==========================================================================
@@ -63,13 +66,6 @@ public:
 
 private:
   //==========================================================================
-  // TextEditor::Listener
-  void textEditorReturnKeyPressed(juce::TextEditor &editor) override;
-
-  // Button::Listener
-  void buttonClicked(juce::Button *button) override;
-
-  //==========================================================================
   // SampleHunterAgent::Listener
   void sampleDownloaded(const ai::FoundSample &sample) override;
   void sampleAnalyzed(const ai::FoundSample &sample) override;
@@ -82,16 +78,18 @@ private:
   // UI Components
 
   // ...
-  std::unique_ptr<juce::TextEditor> inputField;
-  std::unique_ptr<widgets::MarkdownComponent> conversationDisplay;
-  std::unique_ptr<juce::TextButton> sendButton;
-  std::unique_ptr<juce::TextButton> acceptButton;
-  std::unique_ptr<juce::TextButton> denyButton;
-  std::unique_ptr<juce::ComboBox> modeSelector;
-  std::unique_ptr<juce::Label> modeLabel;
-  std::unique_ptr<juce::Label> statusLabel;
-  std::unique_ptr<juce::TextButton> clearButton;
-  std::unique_ptr<juce::TextButton> settingsButton;
+  std::unique_ptr<SkiaTextEditor> inputField;
+  std::unique_ptr<SkiaTextEditor> conversationDisplay;
+  std::unique_ptr<ZenithButton> sendButton;
+  std::unique_ptr<ZenithButton> acceptButton;
+  std::unique_ptr<ZenithButton> denyButton;
+  std::unique_ptr<SkiaComboBox> modeSelector;
+  std::unique_ptr<SkiaLabel> modeLabel;
+  std::unique_ptr<SkiaLabel> statusLabel;
+  std::unique_ptr<ZenithButton> clearButton;
+  std::unique_ptr<ZenithButton> settingsButton;
+  std::unique_ptr<SettingsComponent> settingsOverlay_;
+  std::unique_ptr<ZenithButton> closeSettingsButton_;
 
   //==========================================================================
   // Backend
@@ -117,8 +115,7 @@ private:
   void sendCommand();
   void appendToConversation(const juce::String &speaker,
                             const juce::String &message);
-  void setStatus(const juce::String &status,
-                 juce::Colour colour = juce::Colours::white);
+  void setStatus(const juce::String &status, SkColor colour);
   void updateModeFromSelector();
   void showSettings();
 

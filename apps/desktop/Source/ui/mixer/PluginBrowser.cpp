@@ -19,25 +19,38 @@ using namespace design;
 
 PluginBrowser::PluginBrowser(PluginHost& pluginHost, Callback callback)
     : pluginHost_(pluginHost), callback_(callback) {
-    
-    addAndMakeVisible(searchBar_);
-    searchBar_.addListener(this);
-    searchBar_.setTextToShowWhenEmpty("Search Plugins...", ZenithTheme::Colors::text_tertiary);
-    searchBar_.setColour(juce::TextEditor::backgroundColourId, juce::Colours::transparentBlack);
-    searchBar_.setColour(juce::TextEditor::outlineColourId, juce::Colours::transparentBlack);
-    searchBar_.setColour(juce::TextEditor::textColourId, ZenithTheme::Colors::text_primary);
+    searchBar_ = std::make_unique<SkiaTextEditor>("plugin_search");
+    searchBar_->setTextToShowWhenEmpty("Search Plugins...",
+                                       design::withAlpha(colors::TEXT_PRIMARY, 0.55f));
+    searchBar_->setBackgroundColour(SkColorSetARGB(0, 0, 0, 0));
+    searchBar_->setTextColour(colors::TEXT_PRIMARY);
+    searchBar_->onTextChange = [this]() {
+        currentSearch_ = searchBar_->getText();
+        filterPlugins();
+        scrollY_ = 0.0f;
+        targetScrollY_ = 0.0f;
+    };
+    searchBar_->onReturnKey = [this]() {
+        if (searchBar_) {
+            searchBar_->clear();
+        }
+        currentSearch_.clear();
+        filterPlugins();
+    };
+    addAndMakeVisible(searchBar_.get());
 
     refreshPluginList();
     if (juce::MessageManager::getInstanceWithoutCreating() != nullptr) startTimerHz(60); // Animation timer
 }
 
 PluginBrowser::~PluginBrowser() {
-    searchBar_.removeListener(this);
 }
 
 void PluginBrowser::resized() {
     auto bounds = getLocalBounds().toFloat();
-    searchBar_.setBounds(10, 10, bounds.getWidth() - 20, kSearchBarHeight);
+    if (searchBar_) {
+        searchBar_->setBounds(10, 10, (int)bounds.getWidth() - 20, (int)kSearchBarHeight);
+    }
     
     // Update Layout if needed
 }
@@ -163,20 +176,6 @@ void PluginBrowser::filterPlugins() {
     maxScrollY_ = std::max(0.0f, contentHeight - viewportHeight);
     
     repaint();
-}
-
-void PluginBrowser::textEditorTextChanged(juce::TextEditor& editor) {
-    currentSearch_ = editor.getText();
-    filterPlugins();
-    scrollY_ = 0;
-    targetScrollY_ = 0;
-}
-
-void PluginBrowser::textEditorEscapeKeyPressed(juce::TextEditor& editor) {
-    editor.setText("");
-    currentSearch_ = "";
-    filterPlugins();
-    editor.giveAwayKeyboardFocus();
 }
 
 void PluginBrowser::timerCallback() {

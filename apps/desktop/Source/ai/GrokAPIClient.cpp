@@ -51,7 +51,7 @@ void GrokAPIClient::analysisWorker() {
             auto result = performAnalysis(request);
             
             // Cache result
-            cacheAnalysis(generateCacheKey(request.trackName, *request.audio, request.sampleRate), result);
+            cacheAnalysis(generateCacheKey(request.trackName, request.audio, request.sampleRate), result);
             
         } catch (const std::exception& e) {
             DBG("Analysis failed: " << e.what());
@@ -79,7 +79,7 @@ void GrokAPIClient::analyzeAudioAsync(const AnalysisRequest& request,
                                      std::function<void(AnalysisResult)> onComplete,
                                      std::function<void(juce::String)> onError) {
     // Check cache first
-    juce::String cacheKey = generateCacheKey(request.trackName, *request.audio, request.sampleRate);
+    juce::String cacheKey = generateCacheKey(request.trackName, request.audio, request.sampleRate);
     AnalysisResult cachedResult;
     
     if (!request.forceReanalysis && getCachedAnalysis(cacheKey, cachedResult)) {
@@ -125,7 +125,7 @@ GrokAPIClient::AnalysisResult GrokAPIClient::getAnalysis(const juce::String& tra
                                         const juce::AudioBuffer<float>& audio,
                                         double sampleRate) {
     AnalysisRequest request;
-    request.audio = std::make_shared<juce::AudioBuffer<float>>(audio);
+    request.audio = audio;
     request.sampleRate = sampleRate;
     request.trackName = trackName;
     request.forceReanalysis = false;
@@ -146,10 +146,10 @@ GrokAPIClient::AnalysisResult GrokAPIClient::performAnalysis(const AnalysisReque
     
     try {
         // Visual analysis
-        result.visualAnalysis = visualAnalyzer->analyzeAudio(*request.audio, request.sampleRate);
+        result.visualAnalysis = visualAnalyzer->analyzeAudio(request.audio, request.sampleRate);
         
         // Genre detection
-        result.genrePrediction = genreDetector->detectGenre(*request.audio, request.sampleRate);
+        result.genrePrediction = genreDetector->detectGenre(request.audio, request.sampleRate);
         
         // Project context (if available)
         if (projectContext) {
@@ -157,7 +157,7 @@ GrokAPIClient::AnalysisResult GrokAPIClient::performAnalysis(const AnalysisReque
             
             // Creative analysis
             result.creativeInsight = creativePartner->analyzeCreatively(
-                *request.audio, *projectContext, result.genrePrediction);
+                request.audio, *projectContext, result.genrePrediction);
             
             // Generate contextual description
             result.contextualDescription = "Track: " + request.trackName + "\n";
@@ -503,8 +503,8 @@ bool GrokAPIClient::deleteAPIKey() {
 
 juce::String GrokAPIClient::encryptKey(const juce::String& key) {
     // Generate machine-specific salt
-    juce::String salt = juce::SystemStats::getComputerName() + 
-                       juce::SystemStats::getUserId() + 
+    juce::String salt = juce::SystemStats::getComputerName() +
+                       juce::SystemStats::getLogonName() +
                        "Zenith_Secure_Salt";
     
     juce::String encrypted;
@@ -517,8 +517,8 @@ juce::String GrokAPIClient::encryptKey(const juce::String& key) {
 }
 
 juce::String GrokAPIClient::decryptKey(const juce::String& encrypted) {
-    juce::String salt = juce::SystemStats::getComputerName() + 
-                       juce::SystemStats::getUserId() + 
+    juce::String salt = juce::SystemStats::getComputerName() +
+                       juce::SystemStats::getLogonName() +
                        "Zenith_Secure_Salt";
                        
     juce::String decrypted;

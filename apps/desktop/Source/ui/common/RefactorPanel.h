@@ -16,6 +16,7 @@
 #include "Engine.h"
 #include "ProjectState.h"
 #include "../ai/ProjectRefactorerAgent.h"
+#include "../controls/SkiaAlertWindow.h"
 #include "SkiaComponent.h"
 #include "ZenithDesignSystem.h"
 #include <juce_data_structures/juce_data_structures.h>
@@ -337,23 +338,17 @@ public:
     juce::String message = plan.getSummary();
 
     if (plan.isEmpty()) {
-      juce::AlertWindow::showMessageBoxAsync(
-          juce::MessageBoxIconType::InfoIcon, "Project Refactoring",
+      SkiaAlertWindow::showMessageBoxAsync(
+          SkiaAlertWindow::IconType::InfoIcon, "Project Refactoring",
           "Your project is already clean - no refactoring needed!", "OK");
     } else {
-      // Show confirmation dialog
-      auto options =
-          juce::MessageBoxOptions()
-              .withTitle("Project Refactoring")
-              .withMessage(message +
-                           "\n\nWould you like to apply these changes?")
-              .withButton("Apply Changes")
-              .withButton("Cancel")
-              .withIconType(juce::MessageBoxIconType::QuestionIcon);
-
-      juce::AlertWindow::showAsync(options, [this, plan](int result) {
-        if (result == 1) // Apply Changes
-        {
+      SkiaAlertWindow::showAsync(
+          SkiaAlertWindow::IconType::QuestionIcon, "Project Refactoring",
+          message + "\n\nWould you like to apply these changes?",
+          "Apply Changes", "Cancel", {},
+          [this, plan](int result) {
+            if (result ==
+                static_cast<int>(SkiaAlertWindow::Result::Button1)) {
           executeRefactoring(plan);
         }
       });
@@ -369,12 +364,12 @@ public:
         },
         [](bool success, const juce::String &message) {
           if (success) {
-            juce::AlertWindow::showMessageBoxAsync(
-                juce::MessageBoxIconType::InfoIcon, "Refactoring Complete",
+            SkiaAlertWindow::showMessageBoxAsync(
+                SkiaAlertWindow::IconType::InfoIcon, "Refactoring Complete",
                 message, "OK");
           } else {
-            juce::AlertWindow::showMessageBoxAsync(
-                juce::MessageBoxIconType::WarningIcon, "Refactoring Failed",
+            SkiaAlertWindow::showMessageBoxAsync(
+                SkiaAlertWindow::IconType::WarningIcon, "Refactoring Failed",
                 message, "OK");
           }
         });

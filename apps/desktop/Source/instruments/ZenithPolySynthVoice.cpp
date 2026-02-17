@@ -254,6 +254,9 @@ void ZenithPolySynthVoice::renderInnerBlock(
   const double baseLfo2Inc =
       (lfo2Sync_ ? getFrequencyForSyncRate(lfo2SyncRate_, bpm_) : lfo2Rate_) /
       sampleRate;
+  const double baseLfo3Inc =
+      (lfo3Sync_ ? getFrequencyForSyncRate(lfo3SyncRate_, bpm_) : lfo3Rate_) /
+      sampleRate;
 
   // Get write pointers once to avoid overhead in loop
   auto *leftOut = outputBuffer.getWritePointer(0, startSample);
@@ -262,15 +265,18 @@ void ZenithPolySynthVoice::renderInnerBlock(
                        : nullptr;
 
   for (int i = 0; i < numSamples; ++i) {
-    // Envelopes
+    // Envelopes - fetch ONCE per sample, not per modulation slot
     float env1 = ampEnvelope_.getNextSample();
     float env2 = modEnvelope_.getNextSample();
+    float env3 = env3Envelope_.getNextSample();
 
     // LFO Rate Modulation
     double rateMod1 =
         std::exp2(modulationState_.get(ModulationDestination::LFO1Rate) * 3.0f);
     double rateMod2 =
         std::exp2(modulationState_.get(ModulationDestination::LFO2Rate) * 3.0f);
+    double rateMod3 =
+        std::exp2(modulationState_.get(ModulationDestination::LFO3Rate) * 3.0f);
 
     // LFO 1
     lfo1Phase_ += baseLfo1Inc * rateMod1;
@@ -291,6 +297,16 @@ void ZenithPolySynthVoice::renderInnerBlock(
             juce::Random::getSystemRandom().nextFloat() * 2.0f - 1.0f;
     }
     lfo2Value_ = computeLFOValue(lfo2Phase_, lfo2Waveform_, lfo2SHValue_);
+
+    // LFO 3
+    lfo3Phase_ += baseLfo3Inc * rateMod3;
+    if (lfo3Phase_ >= 1.0) {
+      lfo3Phase_ -= 1.0;
+      if (lfo3Waveform_ == LFOWaveform::SampleAndHold)
+        lfo3SHValue_ =
+            juce::Random::getSystemRandom().nextFloat() * 2.0f - 1.0f;
+    }
+    lfo3Value_ = computeLFOValue(lfo3Phase_, lfo3Waveform_, lfo3SHValue_);
 
     // Reset & Route Mod Matrix
     modulationState_.reset();
@@ -355,6 +371,36 @@ void ZenithPolySynthVoice::renderInnerBlock(
       if (dest != ModulationDestination::None)
         modulationState_.add(dest, lfo2Value_ * lfo2Amount_);
     }
+    if (lfo3Amount_ != 0.0f) {
+      ModulationDestination dest = ModulationDestination::None;
+      switch (lfo3Target_) {
+      case LFOTarget::FilterCutoff:
+        dest = ModulationDestination::FilterCutoff;
+        break;
+      case LFOTarget::Osc1Pitch:
+        dest = ModulationDestination::Osc1Pitch;
+        break;
+      case LFOTarget::Osc2Pitch:
+        dest = ModulationDestination::Osc2Pitch;
+        break;
+      case LFOTarget::Osc1Mix:
+        dest = ModulationDestination::Osc1Mix;
+        break;
+      case LFOTarget::Osc2Mix:
+        dest = ModulationDestination::Osc2Mix;
+        break;
+      case LFOTarget::AmpGain:
+        dest = ModulationDestination::AmpGain;
+        break;
+      case LFOTarget::Osc1Shape:
+        dest = ModulationDestination::Osc1Shape;
+        break;
+      default:
+        break;
+      }
+      if (dest != ModulationDestination::None)
+        modulationState_.add(dest, lfo3Value_ * lfo3Amount_);
+    }
 
     // Mod Matrix Slots
     for (const auto &slot : modulationMatrix_) {
@@ -368,11 +414,17 @@ void ZenithPolySynthVoice::renderInnerBlock(
       case ModulationSource::LFO2:
         val = lfo2Value_;
         break;
+      case ModulationSource::LFO3:
+        val = lfo3Value_;
+        break;
       case ModulationSource::Env1:
         val = env1;
         break;
       case ModulationSource::Env2:
         val = env2;
+        break;
+      case ModulationSource::Env3:
+        val = env3;  // Use pre-fetched value (fetched once per sample)
         break;
       case ModulationSource::Velocity:
         val = velocity_;
@@ -639,6 +691,17 @@ void ZenithPolySynthVoice::setModEnvelope(float attack, float decay,
   modEnvParams_ = params;
 }
 
+void ZenithPolySynthVoice::setModEnvelope3(float attack, float decay,
+                                           float sustain, float release) {
+  juce::ADSR::Parameters params;
+  params.attack = attack;
+  params.decay = decay;
+  params.sustain = sustain;
+  params.release = release;
+  env3Envelope_.setParameters(params);
+  env3EnvParams_ = params;
+}
+
 void ZenithPolySynthVoice::setLFO1(float rate, float amount, LFOTarget target,
                                    LFOWaveform waveform) {
   lfo1Rate_ = rate;
@@ -653,6 +716,14 @@ void ZenithPolySynthVoice::setLFO2(float rate, float amount, LFOTarget target,
   lfo2Amount_ = amount;
   lfo2Target_ = target;
   lfo2Waveform_ = waveform;
+}
+
+void ZenithPolySynthVoice::setLFO3(float rate, float amount, LFOTarget target,
+                                   LFOWaveform waveform) {
+  lfo3Rate_ = rate;
+  lfo3Amount_ = amount;
+  lfo3Target_ = target;
+  lfo3Waveform_ = waveform;
 }
 
 void ZenithPolySynthVoice::setModulationSlot(int slotIndex,
@@ -677,6 +748,8 @@ float ZenithPolySynthVoice::getModulationSourceValue(ModulationSource source) {
     return lfo1Value_;
   case ModulationSource::LFO2:
     return lfo2Value_;
+  case ModulationSource::LFO3:
+    return lfo3Value_;
   case ModulationSource::Velocity:
     return velocity_;
   case ModulationSource::ModWheel:

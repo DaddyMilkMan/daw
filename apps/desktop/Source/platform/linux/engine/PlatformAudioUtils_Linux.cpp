@@ -124,6 +124,5 @@ void PlatformAudioUtils::initializeAudioDeviceSetup(juce::AudioDeviceManager &de
   }
 }
 
-} // namespace zenith
 
 } // namespace zenith

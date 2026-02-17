@@ -7,13 +7,11 @@ target_sources(ZenithDAW PRIVATE
     ZenithOscillator.cpp
     ZenithFilter.cpp
     ZenithEffects.cpp
+    MacroController.cpp
     ZenithPolySynthVoice.cpp
     ZenithPolySynth.cpp
     ZenithPolySynthParameterManager.cpp
     ZenithPolySynthEditor.cpp
     ZenithPresetManager.cpp
     ZenithSampler.cpp
-    ZenithSamplerEditor_Mod.cpp
 )
-
-

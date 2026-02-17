@@ -5,6 +5,7 @@
 
 #include "ExportJob.h"
 #include "AudioExporter.h"
+#include "AudioRenderer.h"
 #include "Engine.h"
 #include "../dsp/Dither.h"
 
@@ -122,23 +123,15 @@ std::unique_ptr<juce::AudioFormatWriter> ExportJob::createWriter(
     }
     
     // Create writer
-    auto writerOptions = juce::AudioFormatWriterOptions()
-        .withSampleRate(options_.sampleRate)
-        .withNumChannels(2)
-        .withBitsPerSample(options_.bitDepth);
-    
-    std::unique_ptr<juce::OutputStream> streamPtr(std::move(fileStream));
     std::unique_ptr<juce::AudioFormatWriter> writer(
-        format->createWriterFor(streamPtr, writerOptions));
+        format->createWriterFor(fileStream.release(), options_.sampleRate, 2,
+                                options_.bitDepth, {}, 0));
     
     if (!writer)
     {
         outErrorMessage = "Failed to create audio writer for format";
         return nullptr;
     }
-    
-    // Writer takes ownership of stream
-    streamPtr.release();
     
     return writer;
 }
@@ -213,6 +206,9 @@ juce::Result ExportJob::performExport()
     
     // Prepare buffers
     juce::AudioBuffer<float> buffer(2, kExportBlockSize);
+    AudioRenderContext context;
+    context.prepare(options_.sampleRate, kExportBlockSize, engine_.getNumTracks(),
+                    engine_.getNumAuxBuses());
     
     juce::int64 startSample = static_cast<juce::int64>(options_.startTime * options_.sampleRate);
     juce::int64 totalSamples = static_cast<juce::int64>(options_.sampleRate * duration);
@@ -236,7 +232,8 @@ juce::Result ExportJob::performExport()
                        totalSamples - samplesWritten));
         
         // Render audio block
-        engine_.renderOfflineBlock(buffer, numSamples, startSample + samplesWritten);
+        engine_.renderOfflineBlock(context, buffer, numSamples,
+                                   startSample + samplesWritten);
         
         // Apply dithering
         if (options_.enableDither && options_.bitDepth < 32)

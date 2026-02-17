@@ -224,20 +224,7 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/platform/linux/fonts/PlatformFontUtils_Linux.cpp
 
     # Arranger
-    apps/desktop/Source/ui/arranger/ArrangerClipManager.cpp
     apps/desktop/Source/ui/arranger/ArrangerComponent.cpp
-    apps/desktop/Source/ui/arranger/ArrangerGridUtils.cpp
-    apps/desktop/Source/ui/arranger/ArrangerInputHandler.cpp
-    apps/desktop/Source/ui/arranger/ArrangerRenderer.cpp
-    apps/desktop/Source/ui/arranger/ArrangerTrackComponent.cpp
-    apps/desktop/Source/ui/arranger/AutomationLaneComponent.cpp
-    apps/desktop/Source/ui/arranger/ClipComponent.cpp
-    apps/desktop/Source/ui/arranger/GridResolutionDropdown.cpp
-    apps/desktop/Source/ui/arranger/MarkerLaneComponent.cpp
-    apps/desktop/Source/ui/arranger/MiniMapComponent.cpp
-    apps/desktop/Source/ui/arranger/TakeFolderComponent.cpp
-    apps/desktop/Source/ui/arranger/TempoLaneComponent.cpp
-    apps/desktop/Source/ui/arranger/TimelineRuler.cpp
 
     # Browser
     apps/desktop/Source/ui/panels/BrowserFilterBar.cpp
@@ -274,7 +261,6 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/ui/controls/CollabPanel.cpp
     apps/desktop/Source/ui/framework/LayoutManager.cpp
     apps/desktop/Source/ui/controls/SpectraAnalyzerComponent.cpp
-    apps/desktop/Source/ui/controls/MarkdownComponent.cpp
     apps/desktop/Source/ui/framework/SkiaMainWindowIntegration.cpp
     apps/desktop/Source/ui/framework/ConfigurationManager.cpp
     apps/desktop/Source/browser/BrowserModel.cpp
@@ -313,12 +299,9 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/ui/common/ZenithHubComponent.cpp
     apps/desktop/Source/ai/ZenithStyleApplicator.cpp
     apps/desktop/Source/network/SecureKeyStore.cpp
-<<<<<<< HEAD
-=======
     apps/desktop/Source/network/AuthenticationService.cpp
     apps/desktop/Source/ui/common/LoginComponent.cpp
     apps/desktop/Source/platform/linux/network/SecureKeyStore_Linux.cpp
->>>>>>> origin/master
     apps/desktop/Source/ui/panels/PresetBrowserComponent.cpp
 
     apps/desktop/Source/effects/ConsoleEmulation.cpp
@@ -353,7 +336,6 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/ui/controls/SkiaAlertWindow.cpp
     apps/desktop/Source/ui/controls/SkiaListBox.cpp
     apps/desktop/Source/ui/controls/SkiaFileChooser.cpp
-    apps/desktop/Source/ui/controls/MarkdownComponent.cpp
     apps/desktop/Source/ui/controls/SpectraAnalyzerComponent.cpp
     apps/desktop/Source/ui/controls/CollabPanel.cpp
     apps/desktop/Source/ai/AIEventBus.cpp
@@ -371,6 +353,7 @@ set(ZENITH_COMMON_SOURCES
     apps/desktop/Source/network/AIPrompts.cpp
     apps/desktop/Source/network/AITools.cpp
     apps/desktop/Source/network/MCPServer.cpp
+    apps/desktop/Source/network/EmbeddedMCPHttpServer.cpp
     apps/desktop/Source/dsp/DSPStemSeparator.cpp
     apps/desktop/Source/dsp/ONNXStemSeparator.cpp
     apps/desktop/Source/ui/sample-editor/SampleEditorComponent.cpp
@@ -458,7 +441,6 @@ add_subdirectory(apps/desktop/Source/browser)
 add_subdirectory(apps/desktop/Source/ai)
 add_subdirectory(apps/desktop/Source/utils)
 add_subdirectory(apps/desktop/Source/platform)
-add_subdirectory(apps/scanner)
 
 
 # Include directories (updated for new domain-based structure)

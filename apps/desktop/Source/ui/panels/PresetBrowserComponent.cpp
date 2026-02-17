@@ -1,4 +1,7 @@
 #include "PresetBrowserComponent.h"
+#include "../design-system/ZenithDesignSystem.h"
+#include "../design-system/ColorBridge.h"
+#include <cmath>
 
 PresetBrowserComponent::PresetBrowserComponent() {
   addAndMakeVisible(presetList);
@@ -25,12 +28,16 @@ PresetBrowserComponent::PresetBrowserComponent() {
 
 PresetBrowserComponent::~PresetBrowserComponent() {}
 
-void PresetBrowserComponent::paint(juce::Graphics &g) {
-  g.fillAll(juce::Colour(0xff2a2a2a)); // Dark background
+void PresetBrowserComponent::drawSkia(SkCanvas *canvas) {
+  SkPaint bg;
+  bg.setColor(zenith::design::unified::bg_01());
+  canvas->drawRect(SkRect::MakeWH((float)getWidth(), (float)getHeight()), bg);
 
-  // Draw a border
-  g.setColour(juce::Colours::black);
-  g.drawRect(getLocalBounds(), 1);
+  SkPaint border;
+  border.setStyle(SkPaint::kStroke_Style);
+  border.setStrokeWidth(1.0f);
+  border.setColor(zenith::design::unified::border_subtle());
+  canvas->drawRect(SkRect::MakeWH((float)getWidth(), (float)getHeight()), border);
 }
 
 void PresetBrowserComponent::resized() {
@@ -125,32 +132,42 @@ void PresetBrowserComponent::saveCurrentPreset() {
   if (captureCallback) {
     auto preset = captureCallback();
 
-    // TODO: Replace with ZenithDialog (Skia-based)
-    // auto *window = new juce::AlertWindow(...);
-    // For now, just log that save is not implemented in UI
-    DBG("Save Preset requested (Dialog TODO)");
+    if (savePresetDialog_) {
+      removeChildComponent(savePresetDialog_.get());
+      savePresetDialog_.reset();
+    }
 
-    /*
-    auto *window = new juce::AlertWindow(
-        "Save Preset",
-        "Enter a name for your preset:", juce::AlertWindow::QuestionIcon, this);
-    window->addTextEditor("presetName", preset.name, "Preset Name:");
-    window->addButton("Save", 1,
-                      juce::KeyPress(juce::KeyPress::returnKey, 0, 0));
-    window->addButton("Cancel", 0,
-                      juce::KeyPress(juce::KeyPress::escapeKey, 0, 0));
+    savePresetDialog_ = std::make_unique<zenith::SkiaAlertWindow>(
+        "Save Preset", "Enter a name for your preset:",
+        zenith::SkiaAlertWindow::IconType::QuestionIcon);
+    savePresetDialog_->addTextEditor("presetName", preset.name, "Preset Name:");
+    savePresetDialog_->addButton("Cancel",
+                                 zenith::SkiaAlertWindow::Result::Cancelled,
+                                 zenith::SkiaButton::Style::Secondary);
+    savePresetDialog_->addButton("Save", zenith::SkiaAlertWindow::Result::Button1,
+                                 zenith::SkiaButton::Style::Primary);
 
-    window->enterModalState(
-        true, juce::ModalCallbackFunction::create([this, window,
-                                                   preset](int result) mutable {
-          if (result == 1) {
-            preset.name = window->getTextEditorContents("presetName");
-            zenith::ZenithPresetManager::getInstance().savePreset(preset, true);
-            refreshPresets();
-          }
-          delete window;
-        }));
-    */
+    const int w = juce::jlimit(360, 640, (int)std::round((double)getWidth() * 0.82));
+    const int h = juce::jlimit(220, 360, (int)std::round((double)getHeight() * 0.70));
+    savePresetDialog_->setBounds((getWidth() - w) / 2, (getHeight() - h) / 2, w,
+                                 h);
+    addAndMakeVisible(savePresetDialog_.get());
+    savePresetDialog_->toFront(true);
+
+    savePresetDialog_->showAsync([this, preset](zenith::SkiaAlertWindow::Result result) mutable {
+      if (result == zenith::SkiaAlertWindow::Result::Button1 &&
+          savePresetDialog_) {
+        preset.name = savePresetDialog_->getTextEditorContents("presetName").trim();
+        if (preset.name.isNotEmpty()) {
+          zenith::ZenithPresetManager::getInstance().savePreset(preset, true);
+          refreshPresets();
+        }
+      }
+      if (savePresetDialog_) {
+        removeChildComponent(savePresetDialog_.get());
+        savePresetDialog_.reset();
+      }
+    });
   }
 }
 

@@ -25,6 +25,8 @@
 #include "BrowserFilterBar.h"
 #include "BrowserListView.h"
 #include "BrowserPreviewPanel.h"
+#include "../controls/SkiaAlertWindow.h"
+#include "../controls/SkiaFileChooser.h"
 
 namespace zenith {
 
@@ -45,6 +47,7 @@ public:
   void drawSkia(SkCanvas *canvas) override;
   void resized() override;
   void timerCallback() override;
+  bool keyPressed(const juce::KeyPress &key) override;
 
   // ChangeListener override
   void changeListenerCallback(juce::ChangeBroadcaster *source) override;
@@ -77,8 +80,12 @@ private:
   void showContextMenu(int itemIndex, juce::Point<int> position);
   void toggleFavorite(std::shared_ptr<BrowserItem> item);
   void showAddFolderDialog();
+  void runBrowserCommand(const juce::String& commandId);
 
-  std::unique_ptr<juce::FileChooser> fileChooser_;
+  void dismissDialogOverlays();
+
+  std::unique_ptr<SkiaAlertWindow> activeAlert_;
+  std::unique_ptr<SkiaFileChooser> activeFileChooser_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BrowserPanel)
 };

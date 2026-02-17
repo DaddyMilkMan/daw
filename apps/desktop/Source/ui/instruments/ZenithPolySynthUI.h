@@ -18,10 +18,17 @@
 #include "../../instruments/ZenithPresetManager.h"
 #include "../../rendering/SkiaRenderer.h"
 #include "../controls/ZenithUIComponents.h"
+#include "../controls/ZenithModMatrix.h"
 #include "RenderTree.h"
 #include "SkiaMainWindowIntegration.h"
 #include "ZenithLookAndFeel.h"
-#include <JuceHeader.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_core/juce_core.h>
+#include <juce_events/juce_events.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <array>
+#include <vector>
 
 namespace zenith {
 
@@ -63,6 +70,25 @@ protected:
   void syncProcessorToUI();
 
 private:
+  struct MacroTarget {
+    enum class Curve {
+      Linear,
+      Soft,
+      Hard
+    };
+
+    juce::String paramId;
+    float depth = 0.0f;
+    bool bipolar = true;
+    Curve curve = Curve::Linear;
+  };
+
+  struct MacroDefinition {
+    juce::String name;
+    SkColor color = SK_ColorCYAN;
+    std::vector<MacroTarget> targets;
+  };
+
   ZenithPolySynthProcessor &processor;
   ZenithLookAndFeel zenithLookAndFeel_;
 
@@ -86,8 +112,34 @@ private:
 
   // Complex Components (kept as JUCE components for now)
   std::unique_ptr<ZenithVisualizer> visualizer_;
-  // std::unique_ptr<ZenithModMatrix> modMatrix_;
-  // std::unique_ptr<ZenithPresetBar> presetBar_;
+  std::unique_ptr<ZenithModMatrix> modMatrix_;
+
+  std::array<std::unique_ptr<ZenithKnob>, 4> macroKnobs_;
+  std::array<MacroDefinition, 4> macroDefs_;
+  std::array<float, 4> macroValues_{{0.5f, 0.5f, 0.5f, 0.5f}};
+  std::array<juce::RangedAudioParameter*, 4> macroParams_{{nullptr, nullptr, nullptr, nullptr}};
+  juce::RangedAudioParameter* activeMacroGestureParam_ = nullptr;
+  int activeMacroEditorIndex_ = 0;
+  int activeMacroTargetIndex_ = 0;
+  bool macroAssignArmed_ = false;
+  bool macroDepthDragging_ = false;
+  float macroDepthDragStartValue_ = 0.0f;
+  float macroDepthDragStartY_ = 0.0f;
+  juce::String pendingAssignParamId_;
+  bool macroAssignDragActive_ = false;
+  juce::Rectangle<int> macroEditorBounds_;
+  juce::Rectangle<int> macroDepthSliderBounds_;
+  juce::Rectangle<int> macroAssignButtonBounds_;
+  juce::Rectangle<int> macroBipolarToggleBounds_;
+  juce::Rectangle<int> macroAddTargetBounds_;
+  juce::Rectangle<int> macroRemoveTargetBounds_;
+  juce::Rectangle<int> macroCurveButtonBounds_;
+  std::array<juce::Rectangle<int>, 4> macroTabBounds_{};
+  std::vector<juce::Rectangle<int>> macroTargetRowBounds_;
+  std::array<juce::Rectangle<int>, 5> sectionBounds_{};
+  juce::Rectangle<int> macroBounds_;
+  juce::Rectangle<int> matrixBounds_;
+  juce::Rectangle<int> visualizerBounds_;
 
   // Internal helpers
   void renderComponentRecursively(juce::Component *comp, SkCanvas *canvas);
@@ -98,6 +150,21 @@ private:
   T *addWidget(const juce::String &name, const juce::String &paramId);
 
   void layoutWidgets();
+  void initMacroDefinitions();
+  void bindMacroTargets();
+  const juce::String& macroParamIdForIndex(int macroIndex) const;
+  void beginMacroGesture(int macroIndex);
+  void endMacroGesture(int macroIndex);
+  void applyMacroValue(int macroIndex, float value);
+  void updateMacroEditorLayout();
+  bool assignParameterToSelectedMacroTarget(juce::Component* sourceComp);
+  void assignSelectedTargetToParamId(const juce::String& paramId);
+  juce::String getDefaultAssignableParamId() const;
+  void setSelectedMacroTargetDepth(float depth, bool notify);
+  ZenithKnob* addKnob(const juce::String& name,
+                      const juce::String& paramId,
+                      const juce::String& helpText,
+                      std::vector<ZenithKnob*>& section);
   void toggleAdvancedMode();
   void toggleLearningMode();
 

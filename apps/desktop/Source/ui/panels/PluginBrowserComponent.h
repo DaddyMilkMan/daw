@@ -1,151 +1,90 @@
 /**
  * @file PluginBrowserComponent.h
- * @brief Plugin browser UI for selecting and loading VST3 plugins
- *
- * Displays available plugins from KnownPluginList and allows
- * loading them onto tracks.
+ * @brief Pure Skia plugin browser for selecting/loading audio plugins
  */
 
 #pragma once
 
-#include <juce_core/juce_core.h>
-#include <juce_gui_basics/juce_gui_basics.h>
-#include <juce_graphics/juce_graphics.h>
-#include <juce_events/juce_events.h>
-#include <juce_audio_basics/juce_audio_basics.h>
-#include <juce_audio_devices/juce_audio_devices.h>
-#include <juce_audio_formats/juce_audio_formats.h>
+#include "../controls/SkiaAlertWindow.h"
+#include "../controls/SkiaListBox.h"
+#include "../controls/SkiaTextEditor.h"
+#include "../controls/ZenithButton.h"
+#include "../controls/SkiaLabel.h"
+#include "../framework/SkiaComponent.h"
 #include <juce_audio_processors/juce_audio_processors.h>
-#include <juce_data_structures/juce_data_structures.h>
+#include <juce_core/juce_core.h>
 
 namespace zenith {
 
 class Engine;
 class Track;
 
-//==============================================================================
-/**
- * @class PluginBrowserComponent
- * @brief UI component for browsing and loading plugins
- *
- * Features:
- * - List of available plugins (name, category, manufacturer)
- * - Search/filter box
- * - Load on track button
- * - Double-click to load
- */
-class PluginBrowserComponent : public juce::Component,
-                                private juce::TableListBoxModel,
-                                private juce::TextEditor::Listener
-{
+class PluginBrowserComponent : public SkiaComponent {
 public:
-    //==========================================================================
-    explicit PluginBrowserComponent(Engine& engine);
-    ~PluginBrowserComponent() override;
+  explicit PluginBrowserComponent(Engine &engine);
+  ~PluginBrowserComponent() override;
 
-    //==========================================================================
-    // Component interface
-    //==========================================================================
+  void drawSkia(SkCanvas *canvas) override;
+  void resized() override;
 
-    void paint(juce::Graphics& g) override;
-    void resized() override;
-
-    //==========================================================================
-    // Plugin browser interface
-    //==========================================================================
-
-    /**
-     * @brief Set the target track for loading plugins
-     * @param track Pointer to track (can be nullptr)
-     */
-    void setTargetTrack(zenith::Track* track);
-
-    /**
-     * @brief Get the currently selected plugin index
-     * @return Plugin index or -1 if none selected
-     */
-    int getSelectedPluginIndex() const;
-
-    /**
-     * @brief Load the selected plugin onto the target track
-     * @return true if successful
-     */
-    bool loadSelectedPlugin();
-
-    /**
-     * @brief Refresh the plugin list (call after scanning)
-     */
-    void refresh();
+  void setTargetTrack(Track *track);
+  int getSelectedPluginIndex() const;
+  bool loadSelectedPlugin();
+  void refresh();
 
 private:
-    //==========================================================================
-    // TableListBoxModel interface
-    //==========================================================================
-
+  class PluginListModel : public SkiaListBox::Model {
+  public:
+    explicit PluginListModel(PluginBrowserComponent &owner) : owner_(owner) {}
     int getNumRows() override;
-    void paintRowBackground(juce::Graphics& g, int rowNumber, int width, int height, bool rowIsSelected) [[maybe_unused]] override;
-    void paintCell(juce::Graphics& g, int rowNumber, int columnId, int width, int height, bool rowIsSelected) [[maybe_unused]] override;
-    void cellDoubleClicked(int rowNumber, int columnId, const juce::MouseEvent& e) override;
+    void paintListBoxItem(int rowNumber, SkCanvas &canvas, int width, int height,
+                          bool rowIsSelected) override;
+    void listBoxItemDoubleClicked(int rowNumber,
+                                  const juce::MouseEvent &e) override;
 
-    //==========================================================================
-    // TextEditor::Listener interface
-    //==========================================================================
+  private:
+    PluginBrowserComponent &owner_;
+  };
 
-    void textEditorTextChanged(juce::TextEditor& editor) override;
+  void updateFilteredList();
+  void loadPluginAtIndex(int index);
+  void setStatus(const juce::String &text);
+  void cycleTargetTrack(int direction);
+  void showWarning(const juce::String &title, const juce::String &message);
+  void dismissAlert();
 
-    //==========================================================================
-    // Helper methods
-    //==========================================================================
+  Engine &engine_;
+  Track *targetTrack_ = nullptr;
 
-    void updateFilteredList();
-    void loadPluginAtIndex(int index) [[maybe_unused]];
+  std::unique_ptr<SkiaLabel> titleLabel_;
+  std::unique_ptr<SkiaLabel> searchLabel_;
+  std::unique_ptr<SkiaTextEditor> searchBox_;
+  std::unique_ptr<SkiaListBox> pluginList_;
+  std::unique_ptr<SkiaLabel> trackLabel_;
+  std::unique_ptr<ZenithButton> trackPrevButton_;
+  std::unique_ptr<ZenithButton> trackNextButton_;
+  std::unique_ptr<ZenithButton> loadButton_;
+  std::unique_ptr<SkiaLabel> statusLabel_;
 
-    //==========================================================================
-    // Member variables
-    //==========================================================================
+  std::unique_ptr<SkiaAlertWindow> activeAlert_;
+  PluginListModel listModel_;
 
-    Engine& engine;
-    zenith::Track* targetTrack = nullptr;
+  juce::Array<juce::PluginDescription> filteredPlugins_;
+  juce::String currentFilter_;
 
-    // UI Components
-    juce::Label titleLabel;
-    juce::TextEditor searchBox;
-    juce::Label searchLabel;
-    juce::TableListBox pluginTable;
-    juce::TextButton loadButton;
-    juce::Label statusLabel;
-
-    // Track selector (simple combo box for now)
-    juce::ComboBox trackSelector;
-    juce::Label trackLabel;
-
-    // Filtered list of plugin descriptions
-    juce::Array<juce::PluginDescription> filteredPlugins;
-    juce::String currentFilter;
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginBrowserComponent)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginBrowserComponent)
 };
 
-//==============================================================================
-/**
- * @class PluginBrowserWindow
- * @brief Separate window for plugin browser
- */
-class PluginBrowserWindow : public juce::DocumentWindow
-{
+class PluginBrowserWindow : public juce::DocumentWindow {
 public:
-    explicit PluginBrowserWindow(Engine& engine);
-    ~PluginBrowserWindow() override;
+  explicit PluginBrowserWindow(Engine &engine);
+  ~PluginBrowserWindow() override;
 
-    void closeButtonPressed() override;
-
-    PluginBrowserComponent* getBrowserComponent() { return browserComponent.get(); }
+  void closeButtonPressed() override;
+  PluginBrowserComponent *getBrowserComponent();
 
 private:
-    std::unique_ptr<PluginBrowserComponent> browserComponent;
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginBrowserWindow)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginBrowserWindow)
 };
 
 } // namespace zenith
-

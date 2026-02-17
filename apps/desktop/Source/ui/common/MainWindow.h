@@ -10,7 +10,9 @@
 #include "../Source/engine/RecentProjectManager.h"
 #include "../arranger/ArrangerComponent.h"
 #include "../panels/BrowserPanel.h"
+#include "../controls/SkiaAlertWindow.h"
 #include "../controls/SkiaButton.h"
+#include "../controls/SkiaFileChooser.h"
 #include "../framework/SkiaMainWindowIntegration.h"
 #include "../framework/AuroraBackground.h"
 #include "../mixer/MixerComponent.h"
@@ -47,6 +49,10 @@ class ZenithHubComponent;
 class ZenithKnob;
 class ProjectFileIO;
 class CollaborationPresenceBar;
+class SettingsComponent;
+namespace ui {
+class ProjectManagerUISkia;
+}
 namespace ai {
 class UXDirectorAgent;
 class PresetGeneticistAgent;
@@ -106,6 +112,10 @@ private:
 
   void openPianoRoll(const juce::String &trackId, const juce::String &clipId);
   void setMainUiVisible(bool shouldBeVisible);
+  void showWorkspaceOverlay(bool showProjectsTab);
+  void dismissWorkspaceOverlay();
+  void refreshProjectManagerOverlay();
+  void dismissImportChooser();
 
   zenith::Engine &engine;
   zenith::ProjectState &projectState;
@@ -118,6 +128,12 @@ private:
   std::unique_ptr<zenith::RightSidePanel> rightSidePanel;
   std::unique_ptr<zenith::BottomBar> bottomBar;
   std::unique_ptr<CollaborationPresenceBar> presenceBar;
+  std::unique_ptr<zenith::SettingsComponent> settingsOverlay_;
+  std::unique_ptr<zenith::ui::ProjectManagerUISkia> projectManagerOverlay_;
+  std::unique_ptr<zenith::SkiaButton> overlayCloseButton_;
+  std::unique_ptr<zenith::SkiaButton> overlaySettingsTabButton_;
+  std::unique_ptr<zenith::SkiaButton> overlayProjectsTabButton_;
+  std::unique_ptr<zenith::SkiaFileChooser> importFileChooser_;
 
   juce::MidiKeyboardState midiKeyboardState;
 
@@ -158,6 +174,17 @@ private:
   void checkForRecovery();
   void createManualBackup();
   void updateWindowTitle();
+  void dismissWindowOverlays();
+  void showWindowAlert(const juce::String &title, const juce::String &message,
+                       zenith::SkiaAlertWindow::IconType iconType,
+                       const juce::String &button1,
+                       const juce::String &button2 = {},
+                       const juce::String &button3 = {},
+                       std::function<void(zenith::SkiaAlertWindow::Result)> callback = {});
+  void showProjectFileChooser(const juce::String &title,
+                              zenith::SkiaFileChooser::Mode mode,
+                              std::function<void(zenith::SkiaFileChooser::Result,
+                                                 const juce::File &)> callback);
 
   juce::File currentProjectFile;
   std::unique_ptr<zenith::Engine> engine;
@@ -171,6 +198,8 @@ private:
   std::unique_ptr<zenith::ZenithLookAndFeel> lookAndFeel;
 
   std::unique_ptr<MainComponent> mainComponent;
+  std::unique_ptr<zenith::SkiaAlertWindow> activeWindowAlert_;
+  std::unique_ptr<zenith::SkiaFileChooser> activeWindowFileChooser_;
 
   std::unique_ptr<ai::UXDirectorAgent> uxDirector;
   std::unique_ptr<ai::PresetGeneticistAgent> presetGeneticist;

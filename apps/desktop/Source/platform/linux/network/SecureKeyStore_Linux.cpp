@@ -50,7 +50,7 @@ namespace {
     juce::String getMachineKey()
     {
         return juce::SystemStats::getComputerName() + "_" + 
-               juce::SystemStats::getUserId() + "_" +
+               juce::SystemStats::getLogonName() + "_" +
                "ZenithLinuxKey";
     }
 

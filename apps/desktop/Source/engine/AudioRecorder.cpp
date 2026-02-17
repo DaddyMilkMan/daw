@@ -235,16 +235,11 @@ void AudioRecorder::startRecording(
 
     juce::WavAudioFormat wavFormat;
 
-    // Move to generic OutputStream unique_ptr for the new API
-    std::unique_ptr<juce::OutputStream> outputStream = std::move(fileStream);
-
-    auto writerOptions = juce::AudioFormatWriter::Options()
-        .withSampleRate(deviceSampleRate)
-        .withNumChannels(static_cast<int>(sessionNumChannels))
-        .withBitsPerSample(constants::kRecordingBitDepth);
-
-    std::unique_ptr<juce::AudioFormatWriter> baseWriter = 
-        wavFormat.createWriterFor(outputStream, writerOptions);
+    std::unique_ptr<juce::AudioFormatWriter> baseWriter(
+        wavFormat.createWriterFor(
+            fileStream.release(), deviceSampleRate,
+            static_cast<unsigned int>(sessionNumChannels),
+            constants::kRecordingBitDepth, {}, 0));
 
     if (!baseWriter)
       continue;
@@ -303,7 +298,7 @@ void AudioRecorder::stopRecording(std::function<void(std::vector<RecordingResult
 void AudioRecorder::onLoopCycle() {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-  if (!isRecording_.load() || !loopRecordingEnabled_.load())
+  if (!isRecording() || !loopRecordingEnabled_.load())
     return;
 
   DBG("AudioRecorder: Loop cycle detected, creating new takes (take " +

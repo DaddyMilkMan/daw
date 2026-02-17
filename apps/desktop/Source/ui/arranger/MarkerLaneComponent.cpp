@@ -14,6 +14,7 @@
 
 #include "MarkerLaneComponent.h"
 #include "../design-system/ZenithDesignSystem.h"
+#include "../controls/SkiaAlertWindow.h"
 #include <core/SkPaint.h>
 #include <core/SkPath.h>
 #include <core/SkFont.h>
@@ -331,24 +332,24 @@ void MarkerLaneComponent::showRenameDialog(const juce::String& markerId)
     if (currentName.isEmpty())
         return;
 
-    // Show alert window with text editor
-    juce::AlertWindow::showAsync(
-        juce::MessageBoxOptions()
-            .withIconType(juce::MessageBoxIconType::QuestionIcon)
-            .withTitle("Rename Marker")
-            .withMessage("Enter new name for marker:")
-            .withButton("OK")
-            .withButton("Cancel"),
-        [this, markerId, currentName](int result)
-        {
-            if (result == 1) // OK
-            {
-                // Note: In a real implementation, we'd get the text from the text editor
-                // For this MVP, we'll use a placeholder approach
-                // In a full implementation, use juce::AlertWindow with addTextEditor
+    auto* alert = new SkiaAlertWindow("Rename Marker", "Enter new name for marker:",
+                                      SkiaAlertWindow::IconType::QuestionIcon);
+    alert->addTextEditor("name", currentName, "Marker Name:");
+    alert->addButton("Rename", SkiaAlertWindow::Result::Button1,
+                     SkiaButton::Style::Primary);
+    alert->addButton("Cancel", SkiaAlertWindow::Result::Cancelled,
+                     SkiaButton::Style::Secondary);
+    addAndMakeVisible(alert);
+    alert->setCentreRelative(0.5f, 0.5f);
+    alert->showAsync([this, markerId, alert](SkiaAlertWindow::Result result) {
+        if (result == SkiaAlertWindow::Result::Button1) {
+            const juce::String newName = alert->getTextEditorContents("name").trim();
+            if (newName.isNotEmpty()) {
+                projectState.renameMarker(markerId, newName, "Rename Marker");
             }
         }
-    );
+        delete alert;
+    });
 }
 
 //==============================================================================

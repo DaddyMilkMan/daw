@@ -35,19 +35,6 @@ target_sources(ZenithDAW PRIVATE
 # -----------------------------------------------------------------------------
 target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerRenderer.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerInputHandler.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerClipManager.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerGridUtils.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/GridResolutionDropdown.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerTrackComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ClipComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/TakeFolderComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/AutomationLaneComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/TimelineRuler.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/MarkerLaneComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/TempoLaneComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/MiniMapComponent.cpp
 )
 
 # -----------------------------------------------------------------------------
@@ -88,7 +75,6 @@ target_sources(ZenithDAW PRIVATE
 # AI Views
 # -----------------------------------------------------------------------------
 target_sources(ZenithDAW PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/views/AIMixAssistantView.cpp
 )
 
 # -----------------------------------------------------------------------------
@@ -137,6 +123,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/common/PianoKeyboardViewSkia.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/AIAssistantPanel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/HelpViewPanel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/project/ProjectManagerUISkia.cpp
 )
 
 # -----------------------------------------------------------------------------
@@ -152,8 +139,6 @@ target_sources(ZenithDAW PRIVATE
 # -----------------------------------------------------------------------------
 target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/instruments/ZenithPolySynthUI.cpp
-    # TEMPORARILY DISABLED - depends on disabled PresetGeneticistAgent
-    # ${CMAKE_CURRENT_SOURCE_DIR}/instruments/PresetGeneticistView.cpp
 )
 
 # -----------------------------------------------------------------------------
@@ -165,7 +150,6 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/controls/DebugConsoleComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/controls/DeviceChainComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/controls/SpectraAnalyzerComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/controls/MarkdownComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/controls/ExportProgressBar.cpp
     
     # Zenith widget system

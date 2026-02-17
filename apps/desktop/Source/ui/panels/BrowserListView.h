@@ -44,11 +44,13 @@ public:
   void navigateUp();
 
   std::shared_ptr<BrowserItem> getSelectedItem() const;
+  std::shared_ptr<BrowserItem> getItemAt(int index) const;
   std::shared_ptr<BrowserItem> getCurrentRoot() const { return currentRoot_; }
 
   std::function<void(std::shared_ptr<BrowserItem>)> onItemSelected;
   std::function<void(std::shared_ptr<BrowserItem>)> onItemDoubleClicked;
   std::function<void(int, juce::Point<int>)> onItemRightClicked;
+  std::function<void()> onCommandPaletteRequested;
 
 private:
   void drawBrowserItem(SkCanvas *canvas, int index, const juce::Rectangle<int> &bounds);

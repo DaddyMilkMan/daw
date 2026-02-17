@@ -13,14 +13,18 @@
 
 #pragma once
 
-#include <JuceHeader.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_core/juce_core.h>
+#include <juce_events/juce_events.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 #include "../framework/SkiaComponent.h"
+#include "../controls/SkiaTextEditor.h"
 #include "../../engine/PluginHost.h"
 
 namespace zenith {
 
-class PluginBrowser : public SkiaComponent, 
-                      public juce::TextEditor::Listener {
+class PluginBrowser : public SkiaComponent {
 public:
     // Callback signature: void(std::unique_ptr<juce::AudioPluginInstance>)
     using Callback = std::function<void(const juce::PluginDescription&)>;
@@ -37,10 +41,6 @@ public:
     void mouseExit(const juce::MouseEvent& e) override;
     void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
 
-    // TextEditor::Listener
-    void textEditorTextChanged(juce::TextEditor&) override;
-    void textEditorEscapeKeyPressed(juce::TextEditor&) override;
-    
     // Timer
     void timerCallback() override;
 
@@ -63,7 +63,7 @@ private:
     std::vector<PluginItem*> visiblePlugins_;
 
     // Search
-    juce::TextEditor searchBar_;
+    std::unique_ptr<SkiaTextEditor> searchBar_;
     juce::String currentSearch_;
     
     // Scroll

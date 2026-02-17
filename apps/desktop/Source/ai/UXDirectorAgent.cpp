@@ -11,7 +11,6 @@
 */
 
 #include "UXDirectorAgent.h"
-#include "../ui/arranger/ClipComponent.h"
 #include "../ui/mixer/MixerChannelComponent.h"
 #include "../ui/framework/SkiaComponent.h"
 #include "ZenithStyleApplicator.h"
@@ -259,7 +258,7 @@ bool UXDirectorAgent::isOrphanComponent(juce::Component *comp) const {
   // Use RTTI to check type
   if (dynamic_cast<zenith::MixerChannelComponent *>(comp) != nullptr)
     return true;
-  if (dynamic_cast<ClipComponent *>(comp) != nullptr)
+  if (comp->getComponentID().startsWith("clip_"))
     return true;
 
   return false;

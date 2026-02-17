@@ -1069,13 +1069,6 @@ void ProjectState::legatoClip(const juce::String &clipId, bool adjustOverlap,
 // Helper Methods
 //==============================================================================
 
-juce::File ProjectState::getAssetDirectory(const juce::String& name) {
-    if (projectFile.exists())
-        return projectFile.getSiblingFile(name);
-    return juce::File::getSpecialLocation(juce::File::userHomeDirectory)
-        .getChildFile("Documents/Zenith/Untitled/" + name);
-}
-
 void ProjectState::createDefaultState() {
   // Create root PROJECT node
   state = juce::ValueTree(ID_PROJECT);

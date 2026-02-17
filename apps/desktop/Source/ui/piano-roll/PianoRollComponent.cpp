@@ -24,6 +24,7 @@
 #include <limits>
 #include "../controls/SkiaPopupMenu.h"
 #include "../controls/ContextMenuManager.h"
+#include "../controls/SkiaAlertWindow.h"
 #include "../../network/CollaborationManager.h"
 
 #include <unordered_set>
@@ -541,20 +542,28 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
       });
       menu->addItem(3, "Legato", true, false, [this]() { applyLegato(); });
       menu->addItem(4, "Humanize...", true, false, [this]() { 
-          auto* w = new juce::AlertWindow("Humanize", "Adjust randomization parameters:", juce::AlertWindow::QuestionIcon);
-          w->addTextEditor("velocity", "10", "Velocity Range (+/-):");
-          w->addTextEditor("timing", "0.05", "Timing Range (beats):");
-          w->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
-          w->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
-          
-          w->enterModalState(true, juce::ModalCallbackFunction::create([this, w](int result) {
-              if (result != 0) {
-                  double velRange = w->getTextEditorContents("velocity").getDoubleValue();
-                  double timeRange = w->getTextEditorContents("timing").getDoubleValue();
-                  projectState.humanizeClip(currentClip.clipId, velRange, timeRange, "Humanize Selected");
+          auto* alert = new SkiaAlertWindow(
+              "Humanize", "Adjust randomization parameters:",
+              SkiaAlertWindow::IconType::QuestionIcon);
+          alert->addTextEditor("velocity", "10", "Velocity Range (+/-):");
+          alert->addTextEditor("timing", "0.05", "Timing Range (beats):");
+          alert->addButton("OK", SkiaAlertWindow::Result::Button1,
+                           SkiaButton::Style::Primary);
+          alert->addButton("Cancel", SkiaAlertWindow::Result::Cancelled,
+                           SkiaButton::Style::Secondary);
+          addAndMakeVisible(alert);
+          alert->setCentreRelative(0.5f, 0.45f);
+          alert->showAsync([this, alert](SkiaAlertWindow::Result result) {
+              if (result == SkiaAlertWindow::Result::Button1) {
+                  const double velRange =
+                      alert->getTextEditorContents("velocity").getDoubleValue();
+                  const double timeRange =
+                      alert->getTextEditorContents("timing").getDoubleValue();
+                  projectState.humanizeClip(currentClip.clipId, velRange, timeRange,
+                                            "Humanize Selected");
               }
-              delete w;
-          }), true);
+              delete alert;
+          });
       });
       menu->addSeparator();
       menu->addItem(5, "Duplicate", true, false, [this]() {

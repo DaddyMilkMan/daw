@@ -126,6 +126,42 @@ const juce::String &ZenithPolySynthProcessor::LFO2SyncRate =
 const juce::String &ZenithPolySynthProcessor::LFO2Retr =
     ZenithPolySynthParameterManager::LFO2Retr;
 
+// LFO 3
+const juce::String &ZenithPolySynthProcessor::LFO3Rate =
+    ZenithPolySynthParameterManager::LFO3Rate;
+const juce::String &ZenithPolySynthProcessor::LFO3Amount =
+    ZenithPolySynthParameterManager::LFO3Amount;
+const juce::String &ZenithPolySynthProcessor::LFO3Target =
+    ZenithPolySynthParameterManager::LFO3Target;
+const juce::String &ZenithPolySynthProcessor::LFO3Waveform =
+    ZenithPolySynthParameterManager::LFO3Waveform;
+const juce::String &ZenithPolySynthProcessor::LFO3Sync =
+    ZenithPolySynthParameterManager::LFO3Sync;
+const juce::String &ZenithPolySynthProcessor::LFO3SyncRate =
+    ZenithPolySynthParameterManager::LFO3SyncRate;
+const juce::String &ZenithPolySynthProcessor::LFO3Retr =
+    ZenithPolySynthParameterManager::LFO3Retr;
+
+// Envelope 3
+const juce::String &ZenithPolySynthProcessor::Env3Attack =
+    ZenithPolySynthParameterManager::Env3Attack;
+const juce::String &ZenithPolySynthProcessor::Env3Decay =
+    ZenithPolySynthParameterManager::Env3Decay;
+const juce::String &ZenithPolySynthProcessor::Env3Sustain =
+    ZenithPolySynthParameterManager::Env3Sustain;
+const juce::String &ZenithPolySynthProcessor::Env3Release =
+    ZenithPolySynthParameterManager::Env3Release;
+
+// Macro Controls
+const juce::String &ZenithPolySynthProcessor::Macro1 =
+    ZenithPolySynthParameterManager::Macro1;
+const juce::String &ZenithPolySynthProcessor::Macro2 =
+    ZenithPolySynthParameterManager::Macro2;
+const juce::String &ZenithPolySynthProcessor::Macro3 =
+    ZenithPolySynthParameterManager::Macro3;
+const juce::String &ZenithPolySynthProcessor::Macro4 =
+    ZenithPolySynthParameterManager::Macro4;
+
 const juce::String &ZenithPolySynthProcessor::GlideTime =
     ZenithPolySynthParameterManager::GlideTime;
 const juce::String &ZenithPolySynthProcessor::MonoMode =
@@ -223,7 +259,12 @@ void ZenithPolySynthProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     }
   }
 
-  // Update voice parameters before processing
+  // Process macro smoothing and apply to parameters FIRST
+  // This ensures updated parameter values are read by updateVoiceParameters()
+  processMacros();
+  applyMacrosToParameters();
+
+  // Update voice parameters before processing (reads the macro-modulated values)
   updateVoiceParameters();
 
   buffer.clear();
@@ -263,6 +304,16 @@ void ZenithPolySynthProcessor::getStateInformation(
     juce::MemoryBlock &destData) {
   auto state = parameters_.copyState();
   std::unique_ptr<juce::XmlElement> xml(state.createXml());
+
+  // Save macro assignments as custom data
+  juce::XmlElement macroData("macroAssignments");
+  macroData.setAttribute("version", 1);
+  macroData.addChildElement(new juce::XmlElement("macros"));
+  macroData.getChildByName("macros")->setText(
+      macroController_.saveToXml()
+  );
+  xml->addChildElement(new juce::XmlElement(macroData));
+
   copyXmlToBinary(*xml, destData);
 }
 
@@ -270,9 +321,19 @@ void ZenithPolySynthProcessor::setStateInformation(const void *data,
                                                    int sizeInBytes) {
   std::unique_ptr<juce::XmlElement> xmlState(
       getXmlFromBinary(data, sizeInBytes));
-  if (xmlState.get() != nullptr)
+  if (xmlState.get() != nullptr) {
     if (xmlState->hasTagName(parameters_.state.getType()))
       parameters_.replaceState(juce::ValueTree::fromXml(*xmlState));
+
+    // Load macro assignments
+    auto* macroData = xmlState->getChildByName("macroAssignments");
+    if (macroData) {
+      auto* macrosEl = macroData->getChildByName("macros");
+      if (macrosEl) {
+        macroController_.loadFromXml(macrosEl->getAllSubText());
+      }
+    }
+  }
 }
 
 //==============================================================================

@@ -5,6 +5,7 @@
 
 #include "ArrangerClipManager.h"
 #include "ArrangerComponent.h"
+#include "../controls/SkiaAlertWindow.h"
 #include "ArrangerGridUtils.h"
 #include "ArrangerTrackComponent.h"
 #include "MiniMapComponent.h"
@@ -651,16 +652,16 @@ void ArrangerClipManager::detectTempoForSelectedClip() {
             DBG("ArrangerClipManager::detectTempoForSelectedClip: Detected BPM = " + juce::String(detectedBpm, 1));
 
             // Show result
-            juce::AlertWindow::showMessageBoxAsync(
-                juce::AlertWindow::InfoIcon,
+            SkiaAlertWindow::showMessageBoxAsync(
+                SkiaAlertWindow::IconType::InfoIcon,
                 "Tempo Detection",
                 "Detected Tempo: " + juce::String(detectedBpm, 1) + " BPM\n\n"
                 "You can set the project tempo to this value in the Transport bar.",
                 "OK");
         } else {
             DBG("ArrangerClipManager::detectTempoForSelectedClip: Could not detect tempo");
-            juce::AlertWindow::showMessageBoxAsync(
-                juce::AlertWindow::WarningIcon,
+            SkiaAlertWindow::showMessageBoxAsync(
+                SkiaAlertWindow::IconType::WarningIcon,
                 "Tempo Detection",
                 "Could not detect tempo for this audio clip.\n"
                 "Try a clip with a clearer rhythmic structure.",
@@ -672,4 +673,3 @@ void ArrangerClipManager::detectTempoForSelectedClip() {
 }
 
 } // namespace zenith
-

@@ -9,8 +9,8 @@
 
 namespace zenith {
 
-TrackCommands::TrackCommands(Engine &eng, ProjectState &state)
-    : engine(eng), projectState(state) {}
+TrackCommands::TrackCommands(Engine &eng, ProjectState &state, CommandAPI &apiRef)
+    : engine(eng), projectState(state), api(apiRef) {}
 
 juce::var TrackCommands::listTracks(const juce::var &params) {
   juce::ignoreUnused(params);
@@ -417,13 +417,9 @@ juce::var TrackCommands::separateTrack(const juce::var &params) {
             auto fileStream = std::make_unique<juce::FileOutputStream>(stemFile);
 
             if (fileStream->openedOk()) {
-              auto writerOptions = juce::AudioFormatWriter::Options()
-                                       .withSampleRate(sampleRate)
-                                       .withNumChannels(2)
-                                       .withBitsPerSample(24);
-
-              std::unique_ptr<juce::OutputStream> outputStream = std::move(fileStream);
-              std::unique_ptr<juce::AudioFormatWriter> writer = wavFormat.createWriterFor(outputStream, writerOptions);
+              std::unique_ptr<juce::AudioFormatWriter> writer(
+                  wavFormat.createWriterFor(fileStream.release(), sampleRate, 2,
+                                            24, {}, 0));
 
               if (writer) {
                 writer->writeFromAudioSampleBuffer(stem.buffer, 0, stem.buffer.getNumSamples());

@@ -97,6 +97,8 @@ public:
   //==============================================================================
   Clip();
   ~Clip() override;
+  Clip(Clip &&other) noexcept = delete;
+  Clip &operator=(Clip &&other) noexcept = delete;
 
   //==============================================================================
   // AudioSource interface

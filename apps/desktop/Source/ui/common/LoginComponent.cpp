@@ -40,31 +40,33 @@ LoginComponent::LoginComponent(LoginSuccessCallback onSuccess)
     textPaint_.setAntiAlias(true);
     textPaint_.setColor(colors::TEXT_PRIMARY);
     
-    // Setup input fields with dark theme styling
-    auto setupField = [](juce::TextEditor& field, const juce::String& placeholder, bool isPassword = false) {
+    // Setup input fields with Skia controls
+    auto setupField = [](SkiaTextEditor& field, const juce::String& placeholder) {
         field.setMultiLine(false);
-        field.setReturnKeyStartsNewLine(false);
-        field.setTextToShowWhenEmpty(placeholder, juce::Colour(100, 100, 110));
-        field.setColour(juce::TextEditor::backgroundColourId, juce::Colour(30, 30, 40));
-        field.setColour(juce::TextEditor::textColourId, juce::Colour(240, 240, 245));
-        field.setColour(juce::TextEditor::outlineColourId, juce::Colour(60, 60, 80));
-        field.setColour(juce::TextEditor::focusedOutlineColourId, juce::Colour(0, 180, 216));
-        field.setFont(juce::Font(16.0f));
-        if (isPassword) field.setPasswordCharacter(0x2022); // Bullet
+        field.setTextToShowWhenEmpty(placeholder, SkColorSetRGB(100, 100, 110));
+        field.setBackgroundColour(SkColorSetRGB(30, 30, 40));
+        field.setTextColour(SkColorSetRGB(240, 240, 245));
     };
-    
-    setupField(usernameField_, "Username or Email");
-    setupField(emailField_, "Email Address");
-    setupField(passwordField_, "Password", true);
-    
-    addAndMakeVisible(usernameField_);
-    addChildComponent(emailField_); // Hidden by default (only in signup)
-    addAndMakeVisible(passwordField_);
-    
+
+    usernameField_ = std::make_unique<SkiaTextEditor>("login_username");
+    emailField_ = std::make_unique<SkiaTextEditor>("login_email");
+    passwordField_ = std::make_unique<SkiaTextEditor>("login_password");
+    setupField(*usernameField_, "Username or Email");
+    setupField(*emailField_, "Email Address");
+    setupField(*passwordField_, "Password");
+
+    addAndMakeVisible(usernameField_.get());
+    addChildComponent(emailField_.get()); // Hidden by default (only in signup)
+    addAndMakeVisible(passwordField_.get());
+
     // Enter key submits form
-    usernameField_.onReturnKey = [this]() { passwordField_.grabKeyboardFocus(); };
-    emailField_.onReturnKey = [this]() { passwordField_.grabKeyboardFocus(); };
-    passwordField_.onReturnKey = [this]() { handleSubmit(); };
+    usernameField_->onReturnKey = [this]() {
+        if (passwordField_) passwordField_->grabKeyboardFocus();
+    };
+    emailField_->onReturnKey = [this]() {
+        if (passwordField_) passwordField_->grabKeyboardFocus();
+    };
+    passwordField_->onReturnKey = [this]() { handleSubmit(); };
     
     if (juce::MessageManager::getInstanceWithoutCreating() != nullptr)
         startTimerHz(60);
@@ -115,17 +117,17 @@ void LoginComponent::layoutFields() {
     yPos += 30;
     
     // Username field
-    usernameField_.setBounds((int)fieldX, (int)yPos, (int)fieldW, (int)fieldH);
+    if (usernameField_) usernameField_->setBounds((int)fieldX, (int)yPos, (int)fieldW, (int)fieldH);
     yPos += fieldH + 16;
     
     // Email field (signup only)
     if (mode_ == Mode::SignUp) {
-        emailField_.setBounds((int)fieldX, (int)yPos, (int)fieldW, (int)fieldH);
+        if (emailField_) emailField_->setBounds((int)fieldX, (int)yPos, (int)fieldW, (int)fieldH);
         yPos += fieldH + 16;
     }
     
     // Password field
-    passwordField_.setBounds((int)fieldX, (int)yPos, (int)fieldW, (int)fieldH);
+    if (passwordField_) passwordField_->setBounds((int)fieldX, (int)yPos, (int)fieldW, (int)fieldH);
     yPos += fieldH + 24;
     
     // Submit button
@@ -139,7 +141,7 @@ void LoginComponent::layoutFields() {
 }
 
 void LoginComponent::updateFieldVisibility() {
-    emailField_.setVisible(mode_ == Mode::SignUp);
+    if (emailField_) emailField_->setVisible(mode_ == Mode::SignUp);
 }
 
 void LoginComponent::drawSkia(SkCanvas* canvas) {
@@ -187,13 +189,17 @@ void LoginComponent::drawSkia(SkCanvas* canvas) {
     SkPaint labelPaint = textPaint_;
     labelPaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.7f));
     
-    canvas->drawString("Username or Email", usernameField_.getX(), usernameField_.getY() - 8, labelFont_, labelPaint);
-    
-    if (mode_ == Mode::SignUp) {
-        canvas->drawString("Email Address", emailField_.getX(), emailField_.getY() - 8, labelFont_, labelPaint);
+    if (usernameField_) {
+        canvas->drawString("Username or Email", (float)usernameField_->getX(), (float)usernameField_->getY() - 8.0f, labelFont_, labelPaint);
     }
-    
-    canvas->drawString("Password", passwordField_.getX(), passwordField_.getY() - 8, labelFont_, labelPaint);
+
+    if (mode_ == Mode::SignUp && emailField_) {
+        canvas->drawString("Email Address", (float)emailField_->getX(), (float)emailField_->getY() - 8.0f, labelFont_, labelPaint);
+    }
+
+    if (passwordField_) {
+        canvas->drawString("Password", (float)passwordField_->getX(), (float)passwordField_->getY() - 8.0f, labelFont_, labelPaint);
+    }
     
     // Submit button
     drawSubmitButton(canvas);
@@ -373,9 +379,9 @@ void LoginComponent::handleGoogleLogin() {
 void LoginComponent::handleSubmit() {
     if (isLoading_) return;
     
-    juce::String username = usernameField_.getText().trim();
-    juce::String email = emailField_.getText().trim();
-    juce::String password = passwordField_.getText();
+    juce::String username = usernameField_ ? usernameField_->getText().trim() : juce::String();
+    juce::String email = emailField_ ? emailField_->getText().trim() : juce::String();
+    juce::String password = passwordField_ ? passwordField_->getText() : juce::String();
     
     errorMessage_.clear();
     
