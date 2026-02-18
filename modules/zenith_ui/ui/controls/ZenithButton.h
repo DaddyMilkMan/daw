@@ -104,6 +104,8 @@ public:
 
   // ----- State -----
   void setEnabled(bool enabled);
+  void setLoading(bool loading);
+  bool isLoading() const { return loading_; }
   bool isDown() const { return pressed_; }
   bool isHovered() const { return hovered_; }
 
@@ -126,6 +128,7 @@ protected:
   void focusGained(juce::Component::FocusChangeType cause) override;
   void focusLost(juce::Component::FocusChangeType cause) override;
   void resized() override;
+  void timerCallback() override;
 
 private:
 #ifdef ZENITH_USE_SKIA
@@ -164,6 +167,8 @@ private:
   bool pressed_ = false;
   bool hovered_ = false;
   bool focused_ = false;
+  bool loading_ = false;
+  float spinnerAngle_ = 0.0f;
 
   // Audio reactive
   bool audioReactive_ = false;

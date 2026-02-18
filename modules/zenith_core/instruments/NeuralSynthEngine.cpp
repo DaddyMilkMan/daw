@@ -387,7 +387,7 @@ std::vector<float> NeuralSynthEngine::extractTimbre(const juce::AudioBuffer<floa
     // Create timbre embedding (simplified version)
     std::vector<float> timbreVector(16);
 
-    timbreVector[0] = juce::jmap(spectralCentroid, 0.0f, sampleRate_ / 2.0f, 0.0f, 1.0f);
+    timbreVector[0] = juce::jmap(spectralCentroid, 0.0f, (float)(sampleRate_ / 2.0f), 0.0f, 1.0f);
     timbreVector[1] = parameters_.brightness;
     timbreVector[2] = parameters_.spectralContrast;
     timbreVector[3] = parameters_.harmonicity;
@@ -807,7 +807,7 @@ void NeuralSynthEngine::generateDSPAudio(NeuralVoice& voice,
     // DSP-based synthesis as fallback
     // Uses additive synthesis with neural-like modulation
 
-    float** out = buffer.getArrayOfWritePointers();
+    auto out = buffer.getArrayOfWritePointers();
 
     // Oscillator parameters
     float fundamental = voice.frequency;

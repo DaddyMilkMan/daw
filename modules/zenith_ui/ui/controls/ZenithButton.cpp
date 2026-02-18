@@ -128,6 +128,30 @@ void ZenithButton::setEnabled(bool enabled) {
   }
 }
 
+void ZenithButton::setLoading(bool loading) {
+  if (loading_ != loading) {
+    loading_ = loading;
+    if (loading_) {
+      startTimerHz(60);
+    } else {
+      stopTimer();
+    }
+    repaint();
+  }
+}
+
+void ZenithButton::timerCallback() {
+  SkiaComponent::timerCallback();
+
+  if (loading_) {
+      spinnerAngle_ += 0.15f;
+      if (spinnerAngle_ > 6.28318f) {
+          spinnerAngle_ -= 6.28318f;
+      }
+      repaint();
+  }
+}
+
 void ZenithButton::mouseEnter(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
   hovered_ = true;
@@ -142,7 +166,7 @@ void ZenithButton::mouseExit(const juce::MouseEvent &e) {
 
 void ZenithButton::mouseDown(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
-  if (!isEnabled())
+  if (!isEnabled() || loading_)
     return;
 
   pressed_ = true;
@@ -151,6 +175,8 @@ void ZenithButton::mouseDown(const juce::MouseEvent &e) {
 
 void ZenithButton::mouseUp(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
+
+  if (loading_) return;
 
   if (pressed_) {
     pressed_ = false;
@@ -252,18 +278,35 @@ void ZenithButton::drawSkia(SkCanvas *canvas) {
     calculateLayout();
   }
 
-  // Draw icon
-  if (iconPosition_ != IconPosition::Only || iconText_.isNotEmpty()
-#ifdef ZENITH_USE_SKIA
-      || icon_ != nullptr
-#endif
-  ) {
-    drawIcon(canvas, iconRect_);
-  }
+  if (loading_) {
+      // Draw spinner
+      SkPaint spinnerPaint;
+      spinnerPaint.setAntiAlias(true);
+      spinnerPaint.setStyle(SkPaint::kStroke_Style);
+      spinnerPaint.setStrokeWidth(2.5f);
+      spinnerPaint.setColor(getTextColor());
 
-  // Draw text (if not icon-only)
-  if (iconPosition_ != IconPosition::Only && text_.isNotEmpty()) {
-    drawText(canvas, textRect_);
+      float size = std::min(bounds.getWidth(), bounds.getHeight()) * 0.5f;
+      SkRect spinnerRect = SkRect::MakeXYWH(bounds.getCentreX() - size/2.0f,
+                                            bounds.getCentreY() - size/2.0f,
+                                            size, size);
+
+      // Draw spinner arc (270 degrees)
+      canvas->drawArc(spinnerRect, SkRadiansToDegrees(spinnerAngle_), 270.0f, false, spinnerPaint);
+  } else {
+      // Draw icon
+      if (iconPosition_ != IconPosition::Only || iconText_.isNotEmpty()
+#ifdef ZENITH_USE_SKIA
+          || icon_ != nullptr
+#endif
+      ) {
+        drawIcon(canvas, iconRect_);
+      }
+
+      // Draw text (if not icon-only)
+      if (iconPosition_ != IconPosition::Only && text_.isNotEmpty()) {
+        drawText(canvas, textRect_);
+      }
   }
 #else
   juce::ignoreUnused(canvas);
@@ -311,7 +354,7 @@ SkColor ZenithButton::getBackgroundColor() const {
     currentAlpha = 200;
   }
 
-  if (!isEnabled()) {
+  if (!isEnabled() && !loading_) {
     currentAlpha = 80;
   }
 
