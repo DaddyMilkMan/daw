@@ -171,6 +171,10 @@ namespace rt {
         jassert(!zenith::rt::isAudioThread() && \
                 "ZENITH_ASSERT_NONRT_THREAD: Must NOT be called from audio thread!")
 
+    // Internal helper: stringify a macro argument (two-level expansion for __LINE__)
+    #define ZENITH_DETAIL_STR(x)  #x
+    #define ZENITH_DETAIL_TOSTR(x) ZENITH_DETAIL_STR(x)
+
     /**
      * @brief Emit a debug warning (non-fatal) if called from the audio thread.
      *
@@ -181,7 +185,7 @@ namespace rt {
         do { \
             if (zenith::rt::isAudioThread()) { \
                 DBG("ZENITH_WARN_IF_RT_THREAD: Potentially RT-unsafe call from " \
-                    "audio thread at " __FILE__ ":" JUCE_STRINGIFY(__LINE__)); \
+                    "audio thread at " __FILE__ ":" ZENITH_DETAIL_TOSTR(__LINE__)); \
             } \
         } while (false)
 

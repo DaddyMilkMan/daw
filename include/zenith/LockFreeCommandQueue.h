@@ -309,6 +309,11 @@ public:
         }
 
         slot->data = item;
+        // Release publish: ensures slot->data write is visible to consumer
+        // before the consumer sees the updated sequence number (pos + 1).
+        // The consumer only reads slot->data after acquiring the sequence
+        // number match (see pop()), so there are no torn reads for any T
+        // that is trivially copyable (memcpy semantics, no in-progress state).
         slot->sequence.store(pos + 1, std::memory_order_release);
         return true;
     }

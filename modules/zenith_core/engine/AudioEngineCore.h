@@ -184,7 +184,13 @@ public:
     // MidiInputCallback Interface
     //==========================================================================
 
-    /** @note MIDI INPUT THREAD — called by JUCE MIDI subsystem */
+    /**
+     * @note MIDI INPUT THREAD — called by JUCE MIDI subsystem on a dedicated
+     *       MIDI input thread.  This thread is neither the audio thread nor the
+     *       message thread.  Implementations must be lightweight and lock-free
+     *       (use a lock-free FIFO to hand off to the audio or message thread).
+     */
+    ZENITH_NONRT_SAFE
     void handleIncomingMidiMessage(juce::MidiInput* source,
                                   const juce::MidiMessage& message) override;
 

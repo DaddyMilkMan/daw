@@ -43,7 +43,9 @@
 #   1  One or more violations found
 # =============================================================================
 
-set -euo pipefail
+# Note: We use -uo but not -e so that the explicit return-value accounting
+# in check_file() (via ||) controls error propagation, not -e auto-exit.
+set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"

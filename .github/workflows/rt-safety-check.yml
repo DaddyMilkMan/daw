@@ -26,6 +26,8 @@ jobs:
   rt-safety-check:
     name: Forbidden RT Construct Check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository
