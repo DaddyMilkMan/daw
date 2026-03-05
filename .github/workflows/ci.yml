@@ -34,7 +34,7 @@ jobs:
         fetch-depth: 0
     
     - name: Setup Build Cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cache/vcpkg
@@ -76,7 +76,7 @@ jobs:
         cmake -B build \
           -G Ninja \
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-          -DBUILD_TESTS=ON \
+          -DZENITH_BUILD_TESTS=ON \
           -DZENITH_ENABLE_WCET=ON \
           -DZENITH_ENABLE_COVERAGE=${{ matrix.build_type == 'Debug' && matrix.compiler == 'gcc-12' && 'ON' || 'OFF' }} \
           -DCMAKE_C_COMPILER_LAUNCHER=ccache \
@@ -86,36 +86,127 @@ jobs:
       run: cmake --build build --target ZenithDAW -j$(nproc)
     
     - name: Build Tests
-      run: cmake --build build --target ZenithDAWTests -j$(nproc)
+      run: cmake --build build --target ZenithTests -j$(nproc)
     
     - name: Run Unit Tests
       run: |
         cd build
-        ./ZenithDAWTests --gtest_output=json:test_results.json 2>&1 | tee test_output.log
+        ctest --output-on-failure --timeout 120 2>&1 | tee test_output.log
       timeout-minutes: 10
     
     - name: Upload Test Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results-linux-${{ matrix.compiler }}-${{ matrix.build_type }}
-        path: |
-          build/test_results.json
-          build/test_output.log
-    
-    - name: Run Stress Tests (WCET)
-      if: matrix.build_type == 'Release'
-      run: |
-        cd build
-        ./WCETStressTests --duration 60 --json-output wcet_results.json
-      timeout-minutes: 5
-    
-    - name: Upload WCET Results
-      uses: actions/upload-artifact@v3
-      if: matrix.build_type == 'Release'
+        path: build/test_output.log
+        if-no-files-found: ignore
+
+  # =============================================================================
+  # SANITIZER BUILDS - Linux (ASan+UBSan and TSan; block merge on failure)
+  # =============================================================================
+  sanitizer-linux-asan:
+    name: Linux ASan+UBSan (Clang)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
       with:
-        name: wcet-results-linux-${{ matrix.compiler }}
-        path: build/wcet_results.json
+        submodules: recursive
+        fetch-depth: 0
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential cmake ninja-build \
+          clang-15 libc++-15-dev libc++abi-15-dev \
+          libasound2-dev libjack-jackd2-dev \
+          libfreetype6-dev libfontconfig1-dev \
+          libx11-dev libxinerama-dev libxrandr-dev \
+          libxcursor-dev libxcomposite-dev libxdamage-dev \
+          libegl1-mesa-dev libgl1-mesa-dev
+
+    - name: Configure CMake (ASan preset)
+      env:
+        CC: clang-15
+        CXX: clang++-15
+      run: cmake --preset linux-asan
+
+    - name: Build Tests
+      run: cmake --build --preset linux-asan --target ZenithTests -j$(nproc)
+
+    - name: Run Tests under ASan
+      env:
+        ASAN_OPTIONS: halt_on_error=1:detect_leaks=1:check_initialization_order=1
+        UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+      run: |
+        cd build-asan
+        ctest --output-on-failure --timeout 120 2>&1 | tee asan_output.log
+      timeout-minutes: 15
+
+    - name: Upload ASan Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: asan-results-linux
+        path: build-asan/asan_output.log
+        if-no-files-found: ignore
+
+  sanitizer-linux-tsan:
+    name: Linux TSan (Clang)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        fetch-depth: 0
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential cmake ninja-build \
+          clang-15 libc++-15-dev libc++abi-15-dev \
+          libasound2-dev libjack-jackd2-dev \
+          libfreetype6-dev libfontconfig1-dev \
+          libx11-dev libxinerama-dev libxrandr-dev \
+          libxcursor-dev libxcomposite-dev libxdamage-dev \
+          libegl1-mesa-dev libgl1-mesa-dev
+
+    - name: Configure CMake (TSan preset)
+      env:
+        CC: clang-15
+        CXX: clang++-15
+      run: cmake --preset linux-tsan
+
+    - name: Build Tests
+      run: cmake --build --preset linux-tsan --target ZenithTests -j$(nproc)
+
+    - name: Run Tests under TSan
+      env:
+        TSAN_OPTIONS: halt_on_error=1:detect_deadlocks=1:history_size=7:second_deadlock_stack=1
+      run: |
+        cd build-tsan
+        ctest --output-on-failure --timeout 120 2>&1 | tee tsan_output.log
+      timeout-minutes: 20
+
+    - name: Upload TSan Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: tsan-results-linux
+        path: build-tsan/tsan_output.log
+        if-no-files-found: ignore
 
   # =============================================================================
   # BUILD & TEST - macOS
@@ -136,7 +227,7 @@ jobs:
         fetch-depth: 0
     
     - name: Setup Build Cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/Library/Caches/vcpkg
@@ -150,14 +241,13 @@ jobs:
     - name: Install Dependencies
       run: |
         brew install cmake ninja ccache
-        pip3 install numpy
     
     - name: Configure CMake
       run: |
         cmake -B build \
           -G Ninja \
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-          -DBUILD_TESTS=ON \
+          -DZENITH_BUILD_TESTS=ON \
           -DZENITH_ENABLE_WCET=ON \
           -DCMAKE_C_COMPILER_LAUNCHER=ccache \
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
@@ -166,20 +256,66 @@ jobs:
       run: cmake --build build --target ZenithDAW
     
     - name: Build Tests
-      run: cmake --build build --target ZenithDAWTests
+      run: cmake --build build --target ZenithTests
     
     - name: Run Unit Tests
       run: |
         cd build
-        ./ZenithDAWTests --gtest_output=json:test_results.json
+        ctest --output-on-failure --timeout 120 2>&1 | tee test_output.log
       timeout-minutes: 10
     
     - name: Upload Test Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results-macos-${{ matrix.build_type }}
-        path: build/test_results.json
+        path: build/test_output.log
+        if-no-files-found: ignore
+
+  # =============================================================================
+  # SANITIZER BUILD - macOS (ASan+UBSan; block merge on failure)
+  # =============================================================================
+  sanitizer-macos-asan:
+    name: macOS ASan+UBSan
+    runs-on: macos-13
+    timeout-minutes: 45
+    permissions:
+      contents: read
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        fetch-depth: 0
+
+    - name: Install Dependencies
+      run: |
+        brew install cmake ninja
+
+    - name: Configure CMake (ASan preset)
+      run: cmake --preset macos-asan
+
+    - name: Build Tests
+      run: cmake --build --preset macos-asan --target ZenithTests
+
+    - name: Run Tests under ASan
+      env:
+        # macOS leak detection via LSan is unsupported; disable detect_leaks
+        ASAN_OPTIONS: halt_on_error=1:detect_leaks=0
+        UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+      run: |
+        cd build-asan
+        ctest --output-on-failure --timeout 120 2>&1 | tee asan_output.log
+      timeout-minutes: 15
+
+    - name: Upload ASan Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: asan-results-macos
+        path: build-asan/asan_output.log
+        if-no-files-found: ignore
 
   # =============================================================================
   # BUILD & TEST - Windows
@@ -203,12 +339,11 @@ jobs:
       uses: ilammy/msvc-dev-cmd@v1
     
     - name: Setup Build Cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~\AppData\Local\vcpkg
           build\vcpkg_installed
-          C:\ProgramData\chocolatey\lib\ccache
         key: ${{ runner.os }}-${{ matrix.build_type }}-${{ hashFiles('**/CMakeLists.txt', '**/vcpkg.json') }}
         restore-keys: |
           ${{ runner.os }}-${{ matrix.build_type }}-
@@ -216,128 +351,37 @@ jobs:
     
     - name: Install Dependencies
       run: |
-        choco install ninja ccache -y
-        pip install numpy
+        choco install ninja -y
     
     - name: Configure CMake
       run: |
         cmake -B build -G Ninja `
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
-          -DBUILD_TESTS=ON `
-          -DZENITH_ENABLE_WCET=ON `
-          -DCMAKE_C_COMPILER_LAUNCHER=ccache `
-          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DZENITH_BUILD_TESTS=ON `
+          -DZENITH_ENABLE_WCET=ON
     
     - name: Build Application
       run: cmake --build build --target ZenithDAW
     
     - name: Build Tests
-      run: cmake --build build --target ZenithDAWTests
+      run: cmake --build build --target ZenithTests
     
     - name: Run Unit Tests
       run: |
         cd build
-        .\ZenithDAWTests.exe --gtest_output=json:test_results.json
+        ctest --output-on-failure --timeout 120 2>&1 | Tee-Object -FilePath test_output.log
       timeout-minutes: 10
     
     - name: Upload Test Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results-windows-${{ matrix.build_type }}
-        path: build/test_results.json
+        path: build\test_output.log
+        if-no-files-found: ignore
 
   # =============================================================================
-  # PERFORMANCE BENCHMARKS
-  # =============================================================================
-  performance-tests:
-    runs-on: ubuntu-22.04
-    needs: build-linux
-    timeout-minutes: 30
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
-    
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    
-    - name: Install Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential cmake ninja-build \
-          libasound2-dev libjack-jackd2-dev \
-          libfreetype6-dev libfontconfig1-dev \
-          libx11-dev libxinerama-dev libxrandr-dev \
-          libxcursor-dev libxcomposite-dev libxdamage-dev \
-          libegl1-mesa-dev libgl1-mesa-dev \
-          libvulkan-dev python3 python3-pip
-    
-    - name: Configure CMake (Release)
-      run: |
-        cmake -B build -G Ninja \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DBUILD_TESTS=ON \
-          -DZENITH_ENABLE_WCET=ON
-    
-    - name: Build Performance Tests
-      run: |
-        cmake --build build --target MixerChannelBenchmark -j$(nproc)
-        cmake --build build --target WavetableBenchmark -j$(nproc)
-        cmake --build build --target SampleGeneratorBenchmarkApp -j$(nproc)
-    
-    - name: Run Mixer Channel Benchmark
-      run: |
-        cd build
-        ./MixerChannelBenchmark --json-output mixer_benchmark.json
-      timeout-minutes: 5
-    
-    - name: Run Wavetable Benchmark
-      run: |
-        cd build
-        ./WavetableBenchmark --json-output wavetable_benchmark.json
-      timeout-minutes: 5
-    
-    - name: Run Sample Generator Benchmark
-      run: |
-        cd build
-        ./SampleGeneratorBenchmarkApp --json-output samplegen_benchmark.json
-      timeout-minutes: 5
-    
-    - name: Upload Benchmark Results
-      uses: actions/upload-artifact@v3
-      with:
-        name: performance-benchmarks
-        path: |
-          build/*_benchmark.json
-    
-    - name: Comment PR with Benchmark Results
-      if: github.event_name == 'pull_request'
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const fs = require('fs');
-          const mixerResults = JSON.parse(fs.readFileSync('build/mixer_benchmark.json', 'utf8'));
-          
-          const body = `## 📊 Performance Benchmark Results
-          
-          ### Mixer Channel Performance
-          - Average processing time: ${mixerResults.avg_ms}ms
-          - 99th percentile: ${mixerResults.p99_ms}ms
-          - Samples processed: ${mixerResults.total_samples}
-          
-          *Benchmarks run on GitHub Actions Ubuntu 22.04 runner*
-          `;
-          
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: body
-          });
-
-  # =============================================================================
-  # CODE COVERAGE
+  # CODE COVERAGE (Linux/GCC Debug only)
   # =============================================================================
   coverage:
     runs-on: ubuntu-22.04
@@ -355,27 +399,31 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential cmake ninja-build \
+          gcc-12 g++-12 \
           libasound2-dev libjack-jackd2-dev \
           libfreetype6-dev libfontconfig1-dev \
           libx11-dev libxinerama-dev libxrandr-dev \
           libxcursor-dev libxcomposite-dev libxdamage-dev \
           libegl1-mesa-dev libgl1-mesa-dev \
-          libvulkan-dev lcov gcovr python3 python3-pip
+          lcov gcovr
     
     - name: Configure CMake (Debug with Coverage)
+      env:
+        CC: gcc-12
+        CXX: g++-12
       run: |
         cmake -B build -G Ninja \
           -DCMAKE_BUILD_TYPE=Debug \
-          -DBUILD_TESTS=ON \
+          -DZENITH_BUILD_TESTS=ON \
           -DZENITH_ENABLE_COVERAGE=ON
     
     - name: Build with Coverage
-      run: cmake --build build --target ZenithDAWTests -j$(nproc)
+      run: cmake --build build --target ZenithTests -j$(nproc)
     
     - name: Run Tests with Coverage
       run: |
         cd build
-        ./ZenithDAWTests
+        ctest --output-on-failure --timeout 120
       timeout-minutes: 10
     
     - name: Generate Coverage Report
@@ -387,17 +435,10 @@ jobs:
         genhtml coverage.info --output-directory coverage_report
     
     - name: Upload Coverage Report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: coverage-report
         path: build/coverage_report
-    
-    - name: Upload to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        files: build/coverage.info
-        fail_ci_if_error: true
-        verbose: true
 
   # =============================================================================
   # SECURITY SCANNING
@@ -417,144 +458,62 @@ jobs:
         submodules: recursive
     
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
+      uses: github/codeql-action/init@v3
       with:
         languages: cpp, python
         queries: security-extended,security-and-quality
     
     - name: Autobuild
-      uses: github/codeql-action/autobuild@v2
+      uses: github/codeql-action/autobuild@v3
     
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
-    
-    - name: Run Bandit (Python Security)
-      run: |
-        pip3 install bandit
-        bandit -r backend/ -f json -o bandit-results.json || true
-        bandit -r backend/ || true
-    
-    - name: Upload Security Results
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: security-scan-results
-        path: bandit-results.json
+      uses: github/codeql-action/analyze@v3
 
   # =============================================================================
-  # TEST REPORT AGGREGATION
+  # CI GATE — all required checks must pass before merging
   # =============================================================================
-  test-report:
+  ci-gate:
+    name: CI Gate (required for merge)
     runs-on: ubuntu-22.04
-    needs: [build-linux, build-macos, build-windows, performance-tests]
+    needs:
+      - build-linux
+      - build-macos
+      - build-windows
+      - sanitizer-linux-asan
+      - sanitizer-linux-tsan
+      - sanitizer-macos-asan
     if: always()
-    
+    permissions: {}
     steps:
-    - name: Download All Test Artifacts
-      uses: actions/download-artifact@v3
-      with:
-        path: artifacts
-    
-    - name: Generate Test Summary
+    - name: Evaluate required checks
       run: |
-        python3 << 'EOF'
-        import json
-        import os
-        import glob
-        from pathlib import Path
-        
-        summary = {
-          "total_tests": 0,
-          "passed": 0,
-          "failed": 0,
-          "platforms": {}
-        }
-        
-        # Process test results
-        for result_file in glob.glob("artifacts/**/test_results.json", recursive=True):
-          platform = Path(result_file).parent.name
-          try:
-            with open(result_file, 'r') as f:
-              data = json.load(f)
-              
-            for suite in data.get("testsuites", []):
-              for test in suite.get("testsuite", []):
-                summary["total_tests"] += 1
-                if test.get("failures"):
-                  summary["failed"] += 1
-                else:
-                  summary["passed"] += 1
-            
-            summary["platforms"][platform] = {
-              "status": "success" if summary["failed"] == 0 else "failure"
-            }
-          except Exception as e:
-            print(f"Error processing {result_file}: {e}")
-        
-        # Write summary
-        with open("test_summary.json", "w") as f:
-          json.dump(summary, f, indent=2)
-        
-        # Print summary
-        print("=" * 60)
-        print("TEST SUMMARY")
-        print("=" * 60)
-        print(f"Total Tests: {summary['total_tests']}")
-        print(f"Passed: {summary['passed']}")
-        print(f"Failed: {summary['failed']}")
-        print(f"Success Rate: {(summary['passed'] / summary['total_tests'] * 100):.1f}%" if summary['total_tests'] > 0 else "N/A")
-        print("=" * 60)
-        for platform, status in summary["platforms"].items():
-          emoji = "✅" if status["status"] == "success" else "❌"
-          print(f"{emoji} {platform}")
-        EOF
-    
-    - name: Upload Test Summary
-      uses: actions/upload-artifact@v3
-      with:
-        name: test-summary
-        path: test_summary.json
-    
-    - name: Comment PR with Test Summary
-      if: github.event_name == 'pull_request'
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const fs = require('fs');
-          const summary = JSON.parse(fs.readFileSync('test_summary.json', 'utf8'));
-          
-          const passRate = summary.total_tests > 0 
-            ? (summary.passed / summary.total_tests * 100).toFixed(1) 
-            : 0;
-          
-          const body = `## 🧪 Test Results Summary
-          
-          | Metric | Value |
-          |--------|-------|
-          | Total Tests | ${summary.total_tests} |
-          | ✅ Passed | ${summary.passed} |
-          | ❌ Failed | ${summary.failed} |
-          | Success Rate | ${passRate}% |
-          
-          **Platforms Tested:**
-          ${Object.entries(summary.platforms).map(([p, s]) => 
-            `- ${s.status === 'success' ? '✅' : '❌'} ${p}`
-          ).join('\n')}
-          `;
-          
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: body
-          });
+        results=(
+          "${{ needs.build-linux.result }}"
+          "${{ needs.build-macos.result }}"
+          "${{ needs.build-windows.result }}"
+          "${{ needs.sanitizer-linux-asan.result }}"
+          "${{ needs.sanitizer-linux-tsan.result }}"
+          "${{ needs.sanitizer-macos-asan.result }}"
+        )
+        failed=0
+        for r in "${results[@]}"; do
+          if [[ "$r" != "success" && "$r" != "skipped" ]]; then
+            echo "❌ A required check failed: $r"
+            failed=1
+          fi
+        done
+        if [[ $failed -eq 1 ]]; then
+          echo "One or more required CI checks failed. Merge is blocked."
+          exit 1
+        fi
+        echo "✅ All required CI checks passed."
 
   # =============================================================================
   # RELEASE BUILD
   # =============================================================================
   release:
     runs-on: ${{ matrix.os }}
-    needs: [build-linux, build-macos, build-windows, test-report]
+    needs: [ci-gate]
     if: startsWith(github.ref, 'refs/tags/v')
     timeout-minutes: 60
     strategy:
@@ -598,7 +557,7 @@ jobs:
       run: |
         cmake -B build -G Ninja \
           -DCMAKE_BUILD_TYPE=Release \
-          -DBUILD_TESTS=OFF
+          -DZENITH_BUILD_TESTS=OFF
     
     - name: Build Release
       run: cmake --build build --config Release
@@ -623,7 +582,7 @@ jobs:
         cpack -G NSIS
     
     - name: Upload Release Assets
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}
         path: build/_packages/*

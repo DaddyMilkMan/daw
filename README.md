@@ -4,6 +4,9 @@ A digital audio workstation built with C++20 and JUCE. It's fast, straightforwar
 
 **Status:** Early alpha development - Linux first, cross platform goal
 
+[![CI](https://github.com/Sylorlabs/zenith-daw/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Sylorlabs/zenith-daw/actions/workflows/ci.yml)
+[![CI (develop)](https://github.com/Sylorlabs/zenith-daw/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/Sylorlabs/zenith-daw/actions/workflows/ci.yml)
+
 ## What's This About?
 
 Zenith DAW is a digital audio workstation for musicians, producers, and audio engineers. I'm building it from scratch with modern C++ to be performant and reliable. The goal is to create something that works well without getting in your creative process.
@@ -115,6 +118,16 @@ I'd appreciate help from all kinds of people:
 ├── docs/                # Documentation
 └── Content/            # Presets and samples
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for full guidelines.
+
+Key points for code contributors:
+
+- All PRs require the **RT Path Declaration** section to be filled out (see [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md)). If your change touches any audio-thread code, you must describe the impact and confirm RT safety.
+- Branch protection rules for `main` and `develop` require all CI checks — including ASan, TSan, and multi-platform builds — to pass before merge. See [`.github/branch_protection.md`](.github/branch_protection.md) for the full policy.
+- RT thread rules are documented in [`docs/tech-briefs/06-audio-thread-safety-policy.md`](docs/tech-briefs/06-audio-thread-safety-policy.md).
 
 ## Contact
 
