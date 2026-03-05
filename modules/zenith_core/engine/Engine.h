@@ -45,6 +45,7 @@
 #include "AudioRenderer.h"
 #include "EngineEvent.h"
 #include "WCETMonitor.h"
+#include "engine/RTSafetyChecks.h"
 #include "utils/PowerManagement.h"
 
 // Forward declarations
@@ -475,11 +476,14 @@ public:
   /**
    // Brief: Get a thread-safe snapshot of tracks (copy of shared_ptrs)
    // Note: Safe to iterate on any thread while tracks are being added/removed
+   // Note: NOT RT-SAFE — uses a read lock and returns a heap-allocated vector.
+   //       Never call from the audio thread.
    */
+  ZENITH_NONRT_SAFE
   std::vector<std::shared_ptr<Track>> getTracksSnapshot() const {
       // Always use lock for thread safety - the RCU optimization for message thread
       // was causing a potential data race (accessing currentSnapshotHolder_ without lock)
-      const juce::ScopedReadLock lock(tracksLock_);
+      const juce::ScopedReadLock lock(tracksLock_); // ZENITH_RT_ALLOWLIST: non-RT function
       return tracks_;
   }
 
@@ -766,6 +770,7 @@ public:
    // Brief: Called when audio device has stopped
    // Note: Runs on MESSAGE THREAD
    */
+  ZENITH_NONRT_THREAD
   void audioDeviceStopped() override;
 
   /**
@@ -792,6 +797,7 @@ public:
    * @param numSamples Number of samples per channel
    * @param context Callback context with timing info
    */
+  ZENITH_RT_THREAD
   void audioDeviceIOCallbackWithContext(
       const float *const *inputChannelData, int numInputChannels,
       float *const *outputChannelData, int numOutputChannels, int numSamples,
@@ -921,6 +927,7 @@ private:
    // Brief: Process audio when playing
    // Note: AUDIO THREAD - real-time safe!
    */
+  ZENITH_RT_THREAD
   void processAudioBlock(const float *const *inputChannelData,
                          int numInputChannels, float *const *outputChannelData,
                          int numOutputChannels, int numSamples) noexcept;
@@ -929,6 +936,7 @@ private:
    // Brief: Process pending events
    // Note: AUDIO THREAD - Lock-free
    */
+  ZENITH_RT_THREAD
   void processEvents() noexcept;
 
   // Track management (message thread only)

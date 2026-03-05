@@ -33,6 +33,8 @@
 #include <memory>
 #include <vector>
 
+#include "RTSafetyChecks.h"
+
 namespace zenith {
 
 // Forward declarations
@@ -64,12 +66,16 @@ public:
      * @param sampleRate Desired sample rate
      * @param bufferSize Desired buffer size
      * @return True if initialization successful
+     * @note MESSAGE THREAD ONLY — allocates and opens audio device
      */
+    ZENITH_NONRT_THREAD
     virtual bool initialize(double sampleRate = 48000, int bufferSize = 512);
 
     /**
      // Brief: Shutdown the audio engine
+     * @note MESSAGE THREAD ONLY
      */
+    ZENITH_NONRT_THREAD
     virtual void shutdown();
 
     //==========================================================================
@@ -78,12 +84,16 @@ public:
 
     /**
      // Brief: Get the audio device manager
+     * @note MESSAGE THREAD ONLY
      */
+    ZENITH_NONRT_THREAD
     juce::AudioDeviceManager& getDeviceManager() { return deviceManager; }
 
     /**
      // Brief: Get the plugin format manager
+     * @note MESSAGE THREAD ONLY
      */
+    ZENITH_NONRT_THREAD
     juce::AudioPluginFormatManager& getPluginFormatManager();
 
     //==========================================================================
@@ -92,28 +102,38 @@ public:
 
     /**
      // Brief: Start playback
+     * @note MESSAGE THREAD ONLY — triggers callback chain
      */
+    ZENITH_NONRT_THREAD
     virtual void startPlayback();
 
     /**
      // Brief: Stop playback
+     * @note MESSAGE THREAD ONLY — triggers callback chain
      */
+    ZENITH_NONRT_THREAD
     virtual void stopPlayback();
 
     /**
      // Brief: Check if currently playing
+     * @note Thread-safe via atomic load (callable from any thread)
      */
+    ZENITH_RT_SAFE
     virtual bool isPlaying() const { return isPlaying_.load(); }
 
     /**
      // Brief: Set playback position
      * @param positionInSamples Position in samples
+     * @note Thread-safe via atomic store (callable from any thread)
      */
+    ZENITH_RT_SAFE
     virtual void setPlaybackPosition(juce::int64 positionInSamples);
 
     /**
      // Brief: Get current playback position
+     * @note Thread-safe via atomic load (callable from any thread)
      */
+    ZENITH_RT_SAFE
     virtual juce::int64 getPlaybackPosition() const { return currentPosition_.load(); }
 
     //==========================================================================
@@ -123,16 +143,20 @@ public:
     /**
      // Brief: Set project state for tempo and automation
      * @param state Pointer to project state
+     * @note MESSAGE THREAD ONLY
      */
+    ZENITH_NONRT_THREAD
     virtual void setProjectState(ProjectState* state);
 
     /**
      // Brief: Get current sample rate
+     * @note Thread-safe (immutable after initialize())
      */
     double getSampleRate() const { return currentSampleRate_; }
 
     /**
      // Brief: Get current buffer size
+     * @note Thread-safe (immutable after initialize())
      */
     int getBufferSize() const { return currentBufferSize_; }
 
@@ -140,19 +164,27 @@ public:
     // AudioIODeviceCallback Interface
     //==========================================================================
 
+    /** @note AUDIO THREAD — called by the OS audio driver */
+    ZENITH_RT_THREAD
     void audioDeviceIOCallback(const float** inputChannelData,
                               int numInputChannels,
                               float** outputChannelData,
                               int numOutputChannels,
                               int numSamples) override;
 
+    /** @note MESSAGE THREAD — device about to open */
+    ZENITH_NONRT_THREAD
     void audioDeviceAboutToStart(juce::AudioIODevice* device) override;
+
+    /** @note MESSAGE THREAD — device closed */
+    ZENITH_NONRT_THREAD
     void audioDeviceStopped() override;
 
     //==========================================================================
     // MidiInputCallback Interface
     //==========================================================================
 
+    /** @note MIDI INPUT THREAD — called by JUCE MIDI subsystem */
     void handleIncomingMidiMessage(juce::MidiInput* source,
                                   const juce::MidiMessage& message) override;
 
@@ -160,6 +192,8 @@ public:
     // ChangeListener Interface
     //==========================================================================
 
+    /** @note MESSAGE THREAD */
+    ZENITH_NONRT_THREAD
     void changeListenerCallback(juce::ChangeBroadcaster* source) override;
 
 protected:
@@ -169,7 +203,9 @@ protected:
 
     /**
      // Brief: Process audio - override in subclasses
+     * @note AUDIO THREAD ONLY — must be RT-safe
      */
+    ZENITH_RT_THREAD
     virtual void processAudio(const float** inputChannels,
                              float** outputChannels,
                              int numInputChannels,

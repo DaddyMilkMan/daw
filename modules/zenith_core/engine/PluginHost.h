@@ -33,6 +33,8 @@
 #include <thread>
 #include <optional>
 
+#include "RTSafetyChecks.h"
+
 namespace zenith {
 
 // Forward declaration
@@ -44,6 +46,13 @@ class PluginBlacklist;
 
     This class manages VST3 plugin discovery and instantiation.
     All operations are designed to run on the message thread.
+
+    Thread Safety:
+    - ALL public methods are MESSAGE THREAD ONLY (ZENITH_NONRT_THREAD).
+    - Plugin instances must be prepared on the message thread and then
+      used on the audio thread without any further PluginHost calls.
+    - Never call any PluginHost method from audioDeviceIOCallback or
+      from code annotated ZENITH_RT_THREAD / ZENITH_RT_SAFE.
 */
 class PluginHost
 {

@@ -299,18 +299,154 @@ bool push(const T& item) {
 
 ## Function Annotations
 
-Use comments to document RT-safety:
+Zenith DAW provides a formal macro system (`include/zenith/RTSafety.h`) to
+annotate function boundaries.  Prefer these macros over freeform comments.
+
+### Macro Quick Reference
+
+| Macro | Meaning |
+|-------|---------|
+| `ZENITH_RT_THREAD` | Top-level audio callback entry point (strongest RT annotation) |
+| `ZENITH_RT_SAFE` | May be called from the audio thread safely |
+| `ZENITH_NONRT_THREAD` | Message-thread / UI entry point; must NOT be called from audio thread |
+| `ZENITH_NONRT_SAFE` | May allocate / block; must not be called from audio thread |
+| `ZENITH_RT_REGION_BEGIN` / `ZENITH_RT_REGION_END` | Inline region markers |
+| `ZENITH_ASSERT_RT_THREAD()` | Debug assert: we ARE on the audio thread |
+| `ZENITH_ASSERT_NONRT_THREAD()` | Debug assert: we are NOT on the audio thread |
+| `ZENITH_WARN_IF_RT_THREAD()` | Non-fatal debug warning if called from audio thread |
+| `ZENITH_RT_ASSERT(cond)` | Assert a condition in RT code (debug only) |
+
+### Usage Examples
 
 ```cpp
-// RT-SAFE: This function is real-time safe
-void processAudio(const juce::AudioBuffer<float>& buffer);
+#include <zenith/RTSafety.h>
 
-// NOT RT-SAFE: This function may allocate or block
-void loadPreset(const juce::File& file);
+// Mark the audio callback entry point
+ZENITH_RT_THREAD
+void audioDeviceIOCallbackWithContext(...) noexcept override {
+    ZENITH_ASSERT_RT_THREAD();
+    processAudioBlock(...);
+}
 
-// PARTIALLY RT-SAFE: Safe if prepared properly
-void applyEffect(juce::AudioBuffer<float>& buffer);
+// Mark an RT-safe helper
+ZENITH_RT_SAFE
+void processAudioBlock(...) noexcept {
+    // No allocation, no locking, no system calls
+}
+
+// Mark a non-RT function
+ZENITH_NONRT_THREAD
+void loadPreset(const juce::File& file) {
+    ZENITH_ASSERT_NONRT_THREAD();
+    // Safe to allocate / block here
+}
 ```
+
+### Runtime Initialization
+
+Call `zenith::rt::markAsAudioThread()` from `audioDeviceAboutToStart()` to
+register the audio callback thread for debug assertions:
+
+```cpp
+void audioDeviceAboutToStart(juce::AudioIODevice*) override {
+    zenith::rt::markAsAudioThread();
+}
+
+void audioDeviceStopped() override {
+    zenith::rt::unmarkAudioThread();
+}
+```
+
+## Lock-Free Command Queue (RT Boundary API)
+
+The **only sanctioned mechanism** for passing structured data across the RT
+boundary is one of the queues in `include/zenith/LockFreeCommandQueue.h`.
+
+### Choosing the Right Queue
+
+| Queue | Use when |
+|-------|----------|
+| `zenith::SPSCCommandQueue<T, N>` | Exactly one non-RT writer + one RT reader |
+| `zenith::MPSCCommandQueue<T, N>` | Multiple non-RT writers (UI + AI + services) + one RT reader |
+
+### API Contract
+
+```
+Producer side (non-RT)          Consumer side (RT audio thread)
+──────────────────────          ───────────────────────────────
+push(item)  → bool              pop(item)  → bool
+Never blocks                    Never blocks
+Any non-RT thread               Audio callback only
+```
+
+### Example — UI parameter change → audio thread
+
+```cpp
+#include <zenith/LockFreeCommandQueue.h>
+
+struct ParamChange { int paramId; float value; };
+
+// Shared between UI and audio thread
+zenith::SPSCCommandQueue<ParamChange, 512> paramQueue;
+
+// UI thread
+void sliderMoved(int id, float v) {
+    paramQueue.push({ id, v });   // lock-free, non-blocking
+}
+
+// Audio callback (RT)
+void processBlock(...) {
+    ParamChange cmd;
+    while (paramQueue.pop(cmd)) {
+        applyParam(cmd.paramId, cmd.value);
+    }
+    // render audio ...
+}
+```
+
+### Example — Multiple producers (AI + UI) → RT
+
+```cpp
+zenith::MPSCCommandQueue<EngineCommand, 256> cmdQueue;
+
+// AI service thread
+void aiAgent() { cmdQueue.push({ CMD_LOAD_PRESET, presetId }); }
+
+// UI thread
+void onButtonClick() { cmdQueue.push({ CMD_PLAY }); }
+
+// Audio callback (RT)
+void processBlock(...) {
+    EngineCommand cmd;
+    while (cmdQueue.pop(cmd)) { dispatch(cmd); }
+    // render audio ...
+}
+```
+
+## Static Analysis — Forbidden Construct Check
+
+A shell script (`tools/lint/check_rt_forbidden.sh`) scans any C++ file that
+contains RT annotations for forbidden constructs such as heap allocations,
+mutex locks, and I/O calls.
+
+### Running the check locally
+
+```bash
+# Check the default source paths
+tools/lint/check_rt_forbidden.sh
+
+# Check specific files
+tools/lint/check_rt_forbidden.sh modules/zenith_core/engine/Engine.h
+
+# Warn only (don't fail), useful for gradual adoption
+tools/lint/check_rt_forbidden.sh --warn-only
+```
+
+### CI integration
+
+The check runs automatically via `.github/workflows/rt-safety-check.yml` on
+push/PR to `main` and `develop`.  Violations are reported as GitHub warnings
+and uploaded as the `rt-safety-report` artifact.
 
 ## Testing RT-Safety
 

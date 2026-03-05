@@ -30,6 +30,7 @@
 #include "../dsp/Dither.h"
 #include "EngineConstants.h"
 #include "RoutingGraph.h"
+#include "RTSafetyChecks.h"
 
 namespace zenith {
 
@@ -156,6 +157,7 @@ public:
    * @param numInputChannels Number of input channels
    * @note AUDIO THREAD ONLY
    */
+  ZENITH_RT_THREAD
   void renderAudioGraph(
       AudioRenderContext& context,
       juce::AudioBuffer<float> &outputBuffer, int numSamples,
@@ -171,7 +173,9 @@ public:
    * @brief Update playhead position for all clips in all tracks
    * @param tracks List of tracks to synchronize
    * @param playheadPosition Current position in samples
+   * @note AUDIO THREAD ONLY
    */
+  ZENITH_RT_SAFE
   void updateClipPositions(std::span<Track *const> tracks,
                            juce::int64 playheadPosition) noexcept;
 
@@ -184,11 +188,14 @@ public:
    * @param context Render context
    * @param tracks Vector of tracks
    * @return Maximum latency in samples
+   * @note MESSAGE THREAD ONLY — may allocate
    */
+  ZENITH_NONRT_THREAD
   int calculatePDC(AudioRenderContext& context, std::span<Track *const> tracks);
 
   /**
    * @brief Enable/disable PDC
+   * @note Thread-safe via atomic store
    */
   void setPDCEnabled(bool enabled) { pdcEnabled_.store(enabled); }
   bool isPDCEnabled() const { return pdcEnabled_.load(); }
@@ -199,16 +206,21 @@ public:
 
   /**
    * @brief Get current master output level
+   * @note Thread-safe via atomic load (callable from any thread)
    */
+  ZENITH_RT_SAFE
   float getMasterLevel() const { return masterLevel_.load(); }
 
   /**
    * @brief Get peak master output level
+   * @note Thread-safe via atomic load (callable from any thread)
    */
+  ZENITH_RT_SAFE
   float getMasterPeakLevel() const { return masterPeakLevel_.load(); }
 
   /**
    * @brief Reset peak meters
+   * @note Thread-safe via atomic store (callable from any thread)
    */
   void resetPeakMeters() { masterPeakLevel_.store(0.0f); }
 
@@ -218,14 +230,18 @@ public:
 
   /**
    * @brief Get master bus latency in samples
+   * @note Thread-safe via atomic load
    */
+  ZENITH_RT_SAFE
   int getMasterLatency() const;
 
   /**
    * @brief Update cached master latency value
    * @param masterPlugins List of master plugins
    * @param limiterLatency Latency of the master limiter
+   * @note MESSAGE THREAD ONLY — may iterate plugin instances
    */
+  ZENITH_NONRT_THREAD
   void updateMasterLatency(
       std::span<const std::shared_ptr<juce::AudioPluginInstance>> masterPlugins,
       int limiterLatency);

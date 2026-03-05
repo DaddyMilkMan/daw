@@ -20,60 +20,37 @@
 #pragma once
 
 // RTSafetyChecks.h
-
-
-
+//
+// This header re-exports the canonical RT-safety macro system defined in
+// include/zenith/RTSafety.h and adds engine-internal utilities (spinlock,
+// CPU pause).  New code should #include <zenith/RTSafety.h> directly; this
+// file exists for backward compatibility with existing engine includes.
 
 #include <atomic>
 #include <thread>
 #include <juce_core/juce_core.h>
 
+// Pull in the canonical macro/annotation definitions.
+// The path is relative to the project root; ensure the project's include
+// directories contain the repo root (see CMakeLists.txt).
+#if __has_include(<zenith/RTSafety.h>)
+    #include <zenith/RTSafety.h>
+#else
+    // Fallback: resolve relative to this file's own directory tree
+    #include "../../../../include/zenith/RTSafety.h"
+#endif
+
 namespace zenith {
 namespace rt {
 
-//==============================================================================
-// Thread ID Tracking for RT-Safety Assertions
-//==============================================================================
-
-#if JUCE_DEBUG
-
-    // Thread ID of the audio callback thread (set in audioDeviceAboutToStart)
-    inline std::atomic<std::thread::id> gAudioThreadId{};
-
-    // Mark current thread as the audio thread
-    inline void markAsAudioThread() noexcept {
-        gAudioThreadId.store(std::this_thread::get_id(), std::memory_order_relaxed);
-    }
-
-    // Check if we're on the audio thread
-    inline bool isAudioThread() noexcept {
-        return std::this_thread::get_id() == gAudioThreadId.load(std::memory_order_relaxed);
-    }
-
-    // Assert we're on audio thread (use in RT-safe code)
-    #define ZENITH_ASSERT_RT_THREAD() \
-        jassert(zenith::rt::isAudioThread() && "Expected to be on audio thread!")
-
-    // Assert we're NOT on audio thread (use in allocation-safe paths)
-    #define ZENITH_ASSERT_NOT_RT_THREAD() \
-        jassert(!zenith::rt::isAudioThread() && "Allocating on audio thread!")
-
-    // Log a warning if called from audio thread (non-fatal)
-    #define ZENITH_WARN_IF_RT_THREAD() \
-        do { \
-            if (zenith::rt::isAudioThread()) { \
-                DBG("WARNING: Potentially RT-unsafe call from audio thread at " \
-                    << __FILE__ << ":" << __LINE__); \
-            } \
-        } while(0)
-
-#else
-    // Release builds - no-op
-    inline void markAsAudioThread() noexcept {}
-    inline bool isAudioThread() noexcept { return false; }
-    #define ZENITH_ASSERT_RT_THREAD()
-    #define ZENITH_ASSERT_NOT_RT_THREAD()
-    #define ZENITH_WARN_IF_RT_THREAD()
+// ---------------------------------------------------------------------------
+// Backward-compatibility aliases
+// ---------------------------------------------------------------------------
+// The canonical names in RTSafety.h are ZENITH_ASSERT_NONRT_THREAD() and
+// ZENITH_WARN_IF_RT_THREAD().  The old name ZENITH_ASSERT_NOT_RT_THREAD()
+// is preserved here so existing call sites continue to compile.
+#ifndef ZENITH_ASSERT_NOT_RT_THREAD
+    #define ZENITH_ASSERT_NOT_RT_THREAD()  ZENITH_ASSERT_NONRT_THREAD()
 #endif
 
 //==============================================================================

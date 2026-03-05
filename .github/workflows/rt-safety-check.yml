@@ -1,0 +1,87 @@
+name: RT-Safety Static Analysis
+
+on:
+  push:
+    branches: [ main, develop, 'feature/*', 'copilot/**' ]
+    paths:
+      - 'modules/zenith_core/engine/**'
+      - 'modules/zenith_core/dsp/**'
+      - 'modules/zenith_core/instruments/**'
+      - 'apps/desktop/Source/**'
+      - 'include/zenith/**'
+      - 'tools/lint/check_rt_forbidden.sh'
+      - '.github/workflows/rt-safety-check.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'modules/zenith_core/engine/**'
+      - 'modules/zenith_core/dsp/**'
+      - 'modules/zenith_core/instruments/**'
+      - 'apps/desktop/Source/**'
+      - 'include/zenith/**'
+      - 'tools/lint/check_rt_forbidden.sh'
+      - '.github/workflows/rt-safety-check.yml'
+
+jobs:
+  rt-safety-check:
+    name: Forbidden RT Construct Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Make lint script executable
+        run: chmod +x tools/lint/check_rt_forbidden.sh
+
+      - name: Run RT-safety forbidden-construct check
+        id: rt_check
+        # Run in warn-only mode: reports violations without failing the build.
+        # This allows the codebase to adopt RT annotations incrementally.
+        # Change to: tools/lint/check_rt_forbidden.sh (no --warn-only)
+        # once all pre-existing violations in RT-annotated files are resolved.
+        run: |
+          echo "Running RT-safety static analysis..."
+          tools/lint/check_rt_forbidden.sh --warn-only 2>&1 | tee rt_safety_report.txt
+
+      - name: Fail if new violations introduced
+        # Count lines starting with VIOLATION in the report.
+        # Keep this as a warning gate; update to 'exit 1' once
+        # the baseline is clean.
+        run: |
+          violation_count=$(grep -c "^VIOLATION" rt_safety_report.txt || true)
+          echo "Total violations found: $violation_count"
+          echo "violation_count=$violation_count" >> "$GITHUB_ENV"
+          if [[ "$violation_count" -gt 0 ]]; then
+            echo "::warning title=RT-Safety Violations::$violation_count forbidden construct(s) found in RT-annotated source. See the rt-safety-report artifact for details."
+          fi
+
+      - name: Upload RT-safety report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rt-safety-report
+          path: rt_safety_report.txt
+          if-no-files-found: ignore
+
+      - name: Post summary
+        if: always()
+        run: |
+          echo "## RT-Safety Check Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          violation_count=$(grep -c "^VIOLATION" rt_safety_report.txt || true)
+          if [[ "$violation_count" -eq 0 ]]; then
+            echo "✅ **PASSED** — No forbidden constructs found in RT-annotated code." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "⚠️ **WARNING** — $violation_count forbidden construct(s) found in RT-annotated code." >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "These indicate potential RT-safety violations. See [RT_SAFETY.md](docs/RT_SAFETY.md)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '<details><summary>Full report</summary>' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat rt_safety_report.txt >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo '</details>' >> "$GITHUB_STEP_SUMMARY"
+

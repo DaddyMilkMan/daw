@@ -24,6 +24,7 @@
 #include <functional>
 
 #include "EngineConstants.h"
+#include "RTSafetyChecks.h"
 
 namespace zenith {
 
@@ -59,7 +60,9 @@ public:
 
     /**
      * @brief Set sample rate for time conversions
+     * @note MESSAGE THREAD ONLY — typically called from prepareToPlay
      */
+    ZENITH_NONRT_THREAD
     void setSampleRate(double sampleRate) { 
         sampleRate_.store(sampleRate); 
     }
@@ -70,7 +73,9 @@ public:
 
     /**
      * @brief Start playback
+     * @note MESSAGE THREAD ONLY — triggers onPlay_ callback
      */
+    ZENITH_NONRT_THREAD
     void play() {
         isPlaying_.store(true);
         if (onPlay_) onPlay_();
@@ -78,7 +83,9 @@ public:
 
     /**
      * @brief Stop playback
+     * @note MESSAGE THREAD ONLY — triggers onStop_ callback
      */
+    ZENITH_NONRT_THREAD
     void stop() {
         isPlaying_.store(false);
         if (onStop_) onStop_();
@@ -86,7 +93,9 @@ public:
 
     /**
      * @brief Toggle playback state
+     * @note MESSAGE THREAD ONLY
      */
+    ZENITH_NONRT_THREAD
     void togglePlayback() {
         if (isPlaying_.load()) {
             stop();
@@ -97,7 +106,9 @@ public:
 
     /**
      * @brief Rewind to start
+     * @note MESSAGE THREAD ONLY — triggers onSeek_ callback
      */
+    ZENITH_NONRT_THREAD
     void rewind() {
         playheadSamples_.store(0);
         if (onSeek_) onSeek_();
@@ -105,7 +116,9 @@ public:
 
     /**
      * @brief Check if playing
+     * @note Thread-safe via atomic load (callable from any thread, including RT)
      */
+    ZENITH_RT_SAFE
     bool isPlaying() const { return isPlaying_.load(); }
 
     //==========================================================================
@@ -114,7 +127,9 @@ public:
 
     /**
      * @brief Set playhead position in samples
+     * @note MESSAGE THREAD ONLY — triggers onSeek_ callback
      */
+    ZENITH_NONRT_THREAD
     void setPlayheadSamples(juce::int64 position) {
         playheadSamples_.store(position);
         if (onSeek_) onSeek_();
@@ -122,15 +137,18 @@ public:
 
     /**
      * @brief Get playhead position in samples
+     * @note Thread-safe via atomic load (callable from any thread, including RT)
      */
+    ZENITH_RT_SAFE
     juce::int64 getPlayheadSamples() const { 
         return playheadSamples_.load(); 
     }
 
     /**
      * @brief Advance playhead by specified samples
-     * @note AUDIO THREAD - RT-safe
+     * @note AUDIO THREAD ONLY — RT-safe, no callbacks
      */
+    ZENITH_RT_THREAD
     void advancePlayhead(int numSamples) {
         if (isLooping_.load()) {
             juce::int64 newPos = playheadSamples_.load() + numSamples;
@@ -154,12 +172,16 @@ public:
 
     /**
      * @brief Get playhead position in beats
+     * @note Thread-safe (reads atomics only)
      */
+    ZENITH_RT_SAFE
     double getPlayheadBeats() const;
 
     /**
      * @brief Get playhead position in seconds
+     * @note Thread-safe via atomic loads (callable from any thread, including RT)
      */
+    ZENITH_RT_SAFE
     double getPlayheadSeconds() const {
         double sr = sampleRate_.load();
         return sr > 0.0 ? static_cast<double>(playheadSamples_.load()) / sr : 0.0;
@@ -171,6 +193,7 @@ public:
 
     /**
      * @brief Enable/disable looping
+     * @note Thread-safe via atomic store (typically called from message thread)
      */
     void setLooping(bool shouldLoop) {
         isLooping_.store(shouldLoop);
@@ -178,11 +201,14 @@ public:
 
     /**
      * @brief Check if looping is enabled
+     * @note Thread-safe via atomic load
      */
+    ZENITH_RT_SAFE
     bool isLooping() const { return isLooping_.load(); }
 
     /**
      * @brief Set loop region in samples
+     * @note Thread-safe via atomic stores (typically called from message thread)
      */
     void setLoopRegionSamples(juce::int64 start, juce::int64 end) {
         loopStartSamples_.store(start);
@@ -191,12 +217,16 @@ public:
 
     /**
      * @brief Get loop start in samples
+     * @note Thread-safe via atomic load
      */
+    ZENITH_RT_SAFE
     juce::int64 getLoopStartSamples() const { return loopStartSamples_.load(); }
 
     /**
      * @brief Get loop end in samples
+     * @note Thread-safe via atomic load
      */
+    ZENITH_RT_SAFE
     juce::int64 getLoopEndSamples() const { return loopEndSamples_.load(); }
 
     /**
