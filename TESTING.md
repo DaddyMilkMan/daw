@@ -12,6 +12,7 @@ Zenith DAW includes multiple layers of testing:
 - **Integration Tests**: End-to-end testing of features like collaboration
 - **Security Scans**: CodeQL and Bandit analysis
 - **Code Coverage**: Line and function coverage tracking
+- **Phase 3 – A+ Audio Quality**: Golden render harness, engine stress tests, soak tests
 
 ## Quick Start
 
@@ -337,6 +338,154 @@ public:
 
 static MyNewTest myNewTest;
 ```
+
+---
+
+## Phase 3 – A+ Audio Production Quality
+
+Phase 3 adds three new test suites that must pass before every merge to
+`main` or `develop`.  They are enforced by the CI workflow
+`.github/workflows/audio-quality.yml`.
+
+### 1. Golden Render Test Harness
+
+**Source**: `apps/desktop/Source/tests/GoldenRenderTest.cpp`
+
+Verifies that the audio engine produces **bit-identical output** across runs
+and platforms by computing an FNV-1a 64-bit hash over all rendered samples and
+comparing it against a stored golden reference.
+
+**Golden reference file**: `tests/golden/canonical_session_golden.json`
+
+The canonical test session:
+| Parameter | Value |
+|-----------|-------|
+| Sample rate | 44100 Hz |
+| Block size | 512 samples |
+| Blocks rendered | 100 |
+| Input | PRNG noise, seed `0xDEADBEEF` |
+| Hash algorithm | FNV-1a 64-bit |
+
+#### Running locally
+
+```bash
+# Build tests
+cmake -B build -DBUILD_TESTS=ON
+cmake --build build --target ZenithDAWTests
+
+# Verify against golden file
+python3 scripts/run_golden_tests.py --verify --build-dir build
+
+# Regenerate golden file after an intentional engine change
+python3 scripts/run_golden_tests.py --regenerate --build-dir build
+# → review and commit tests/golden/canonical_session_golden.json
+```
+
+#### Interpreting results
+
+| Outcome | Meaning |
+|---------|---------|
+| Hash matches | Engine output is bit-identical to the reference – ✅ |
+| Hash mismatch | Engine output changed – if intentional, run `--regenerate`; otherwise it's a regression |
+| "Golden file not found" | First run; the file is auto-created – commit it |
+| NaN / Inf detected | Engine produced invalid samples – always a bug |
+
+---
+
+### 2. Engine Stress Tests
+
+**Source**: `apps/desktop/Source/tests/EngineStressTest.cpp`
+
+Three worst-case scenarios run back-to-back (≈ 3 minutes total):
+
+| Scenario | What it does | Detects |
+|----------|-------------|---------|
+| **Automation storm** | 500+ rapid volume/pan/mute changes on 8 tracks while rendering 500 blocks | NaN output, xruns |
+| **Plugin chaos** | Rapid track insert/remove on a live session (40 cycles, 3 tracks per cycle) while a second thread renders continuously | Data-race crashes, NaN |
+| **Sample-rate chaos** | Engine re-prepared at 7 different sample rates in sequence (44.1 k → 48 k → 88.2 k → 96 k → …) | NaN, segfaults |
+
+```bash
+# Run stress tests
+python3 scripts/run_golden_tests.py --stress --build-dir build
+# or directly:
+./build/ZenithDAWTests Performance
+```
+
+Xrun warnings are **soft** (logged but not fail-gating) because shared CI
+runners are not real-time systems.  NaN/Inf is always a hard failure.
+
+---
+
+### 3. Soak Tests
+
+**Source**: `apps/desktop/Source/tests/SoakTest.cpp`
+
+Drives continuous playback/record for a configurable duration while monitoring:
+
+| Metric | Pass threshold |
+|--------|---------------|
+| NaN / Inf samples | 0 (hard fail) |
+| Deadlock (watchdog) | none (hard fail) |
+| Playhead drift | ≤ 0.5 % of expected |
+| Xrun rate | ≤ 5 % (soft warning) |
+
+**Duration** is controlled by the `ZENITH_SOAK_SECONDS` environment variable
+(default: **60 s** in CI, **600 s** on nightly runs).
+
+```bash
+# Default 60 s soak
+python3 scripts/run_golden_tests.py --soak --build-dir build
+
+# Custom duration (e.g. 5 minutes)
+python3 scripts/run_golden_tests.py --soak --soak-seconds 300 --build-dir build
+
+# Overnight soak (1 hour)
+ZENITH_SOAK_SECONDS=3600 python3 scripts/run_golden_tests.py --soak --build-dir build
+```
+
+---
+
+### 4. Running All Phase 3 Tests
+
+```bash
+# Run golden + stress + soak in one command
+python3 scripts/run_golden_tests.py --all --build-dir build
+
+# With custom soak duration
+python3 scripts/run_golden_tests.py --all --soak-seconds 120 --build-dir build
+```
+
+---
+
+### 5. CI Integration
+
+The workflow `.github/workflows/audio-quality.yml` runs automatically on:
+
+- Every push to `main`, `develop`, `feature/*`, `copilot/**`
+- Every pull request targeting `main` or `develop`
+- Nightly at 03:00 UTC (with extended 10-minute soak)
+
+The **`phase3-gate`** job is the merge gate.  It will block merging if any of
+the three suites fails, and post an explanatory comment on the PR.
+
+#### Re-triggering manually
+
+```bash
+gh workflow run audio-quality.yml
+# Or with a custom soak duration:
+gh workflow run audio-quality.yml -f soak_seconds=120
+```
+
+---
+
+### 6. Adding a New Golden Scenario
+
+1. Add a new rendering helper in `GoldenRenderTest.cpp`.
+2. Add its hash as a new key in `canonical_session_golden.json`.
+3. Run `--regenerate` to populate the hash.
+4. Commit the updated golden file together with the code change.
+
+---
 
 ## Resources
 

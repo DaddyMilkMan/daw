@@ -1,0 +1,35 @@
+{
+  "description": "Canonical golden render hash for Zenith DAW engine. This file pins the expected audio output hash for the deterministic canonical test session. Regenerate with: python3 scripts/run_golden_tests.py --regenerate",
+  "schema_version": "1",
+  "session": {
+    "name": "canonical_session",
+    "description": "One stereo audio track, input-monitor enabled, fed deterministic PRNG noise (FNV-1a seed 0xDEADBEEF). 100 blocks × 512 samples at 44100 Hz.",
+    "sample_rate": 44100,
+    "block_size": 512,
+    "num_blocks": 100,
+    "num_channels": 2,
+    "rng_seed": "0xDEADBEEF",
+    "input_type": "PRNG noise [-1, +1]",
+    "tracks": [
+      {
+        "name": "Golden Track",
+        "type": "audio",
+        "input_monitor": true
+      }
+    ]
+  },
+  "hashing": {
+    "algorithm": "FNV-1a 64-bit",
+    "endianness": "little-endian float bytes",
+    "note": "Hash over all rendered output samples across both channels and all blocks."
+  },
+  "canonical_hash": "PLACEHOLDER",
+  "generated_at": "PLACEHOLDER",
+  "_instructions": [
+    "The 'canonical_hash' field is populated on first run of GoldenRenderTest.",
+    "After the first run, commit the updated file to lock the reference.",
+    "To intentionally reset after an approved engine change, run:",
+    "  python3 scripts/run_golden_tests.py --regenerate",
+    "then review and commit the new hash."
+  ]
+}

@@ -1,0 +1,349 @@
+name: Phase 3 – Audio Quality Tests
+
+# ============================================================================
+# PURPOSE
+# -------
+# This workflow gates every PR against three suites that together provide
+# "A+ audio production quality" confidence:
+#
+#   1. golden-render  – bit-exact deterministic render comparison (fast)
+#   2. stress-tests   – automation storms, plugin chaos, sample-rate chaos
+#   3. soak-test      – 60-second continuous playback/record health monitor
+#
+# Runtime on a standard GitHub-Actions runner is ≈ 15 minutes.
+# Nightly runs extend the soak to 10 minutes for deeper confidence.
+#
+# GATES
+# -----
+# PRs targeting main/develop must pass all three jobs before merge.
+# ============================================================================
+
+on:
+  push:
+    branches: [ main, develop, 'feature/*', 'copilot/**' ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Nightly extended soak at 03:00 UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      soak_seconds:
+        description: 'Soak test duration in seconds (default: 60)'
+        required: false
+        default: '60'
+
+env:
+  CMAKE_BUILD_PARALLEL_LEVEL: 4
+  # Default CI soak duration; nightly schedule overrides this below.
+  ZENITH_SOAK_SECONDS: 60
+
+jobs:
+
+  # ============================================================================
+  # BUILD – compile test binary once, reuse across jobs
+  # ============================================================================
+  build:
+    name: Build Test Binary
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Cache build artefacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            build
+            ~/.ccache
+          key: phase3-build-${{ runner.os }}-${{ hashFiles('**/CMakeLists.txt') }}-${{ github.sha }}
+          restore-keys: |
+            phase3-build-${{ runner.os }}-${{ hashFiles('**/CMakeLists.txt') }}-
+            phase3-build-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y \
+            build-essential cmake ninja-build ccache \
+            libasound2-dev libjack-jackd2-dev \
+            libfreetype6-dev libfontconfig1-dev \
+            libx11-dev libxinerama-dev libxrandr-dev \
+            libxcursor-dev libxcomposite-dev libxdamage-dev \
+            libegl1-mesa-dev libgl1-mesa-dev \
+            libcurl4-openssl-dev \
+            python3 python3-pip
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTS=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: Build ZenithDAWTests
+        run: cmake --build build --target ZenithDAWTests -j$(nproc)
+
+      - name: Upload test binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-binary-linux
+          path: |
+            build/ZenithDAWTests
+            build/ZenithDAWTests_artefacts/
+          retention-days: 1
+
+  # ============================================================================
+  # JOB 1 – Golden render test
+  # ============================================================================
+  golden-render:
+    name: Golden Render Test
+    runs-on: ubuntu-22.04
+    needs: build
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install runtime dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y \
+            libasound2-dev libjack-jackd2-dev \
+            libfreetype6-dev libfontconfig1-dev \
+            libx11-dev libxinerama-dev libxrandr-dev \
+            libxcursor-dev libxcomposite-dev \
+            libegl1-mesa-dev libgl1-mesa-dev \
+            python3
+
+      - name: Download test binary
+        uses: actions/download-artifact@v4
+        with:
+          name: test-binary-linux
+          path: build
+
+      - name: Make binary executable
+        run: |
+          chmod +x build/ZenithDAWTests \
+            build/ZenithDAWTests_artefacts/Release/ZenithDAWTests 2>/dev/null || true
+
+      - name: Run golden render test
+        run: |
+          python3 scripts/run_golden_tests.py \
+            --verify \
+            --build-dir build
+        env:
+          DISPLAY: ""
+
+      - name: Upload golden file (if created/updated)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-file
+          path: tests/golden/canonical_session_golden.json
+
+      - name: Upload test output
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-render-failure-log
+          path: build/*.log
+
+  # ============================================================================
+  # JOB 2 – Stress tests
+  # ============================================================================
+  stress-tests:
+    name: Engine Stress Tests
+    runs-on: ubuntu-22.04
+    needs: build
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install runtime dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y \
+            libasound2-dev libjack-jackd2-dev \
+            libfreetype6-dev libfontconfig1-dev \
+            libx11-dev libxinerama-dev libxrandr-dev \
+            libxcursor-dev libxcomposite-dev \
+            libegl1-mesa-dev libgl1-mesa-dev \
+            python3
+
+      - name: Download test binary
+        uses: actions/download-artifact@v4
+        with:
+          name: test-binary-linux
+          path: build
+
+      - name: Make binary executable
+        run: |
+          chmod +x build/ZenithDAWTests \
+            build/ZenithDAWTests_artefacts/Release/ZenithDAWTests 2>/dev/null || true
+
+      - name: Run engine stress tests
+        run: |
+          python3 scripts/run_golden_tests.py \
+            --stress \
+            --build-dir build
+        env:
+          DISPLAY: ""
+
+      - name: Upload stress test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stress-test-results
+          path: |
+            build/*.json
+            build/*.log
+
+  # ============================================================================
+  # JOB 3 – Soak test
+  # ============================================================================
+  soak-test:
+    name: Soak Test (${{ github.event.schedule && '10m nightly' || '60s CI' }})
+    runs-on: ubuntu-22.04
+    needs: build
+    # Soak is more expensive; run on PRs and main, skip draft PRs
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.draft == false) ||
+      github.ref == 'refs/heads/main' ||
+      github.ref == 'refs/heads/develop'
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install runtime dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y \
+            libasound2-dev libjack-jackd2-dev \
+            libfreetype6-dev libfontconfig1-dev \
+            libx11-dev libxinerama-dev libxrandr-dev \
+            libxcursor-dev libxcomposite-dev \
+            libegl1-mesa-dev libgl1-mesa-dev \
+            python3
+
+      - name: Download test binary
+        uses: actions/download-artifact@v4
+        with:
+          name: test-binary-linux
+          path: build
+
+      - name: Make binary executable
+        run: |
+          chmod +x build/ZenithDAWTests \
+            build/ZenithDAWTests_artefacts/Release/ZenithDAWTests 2>/dev/null || true
+
+      - name: Determine soak duration
+        id: soak_dur
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "seconds=600" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "seconds=${{ github.event.inputs.soak_seconds }}" >> $GITHUB_OUTPUT
+          else
+            echo "seconds=60" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run soak test
+        run: |
+          python3 scripts/run_golden_tests.py \
+            --soak \
+            --soak-seconds ${{ steps.soak_dur.outputs.seconds }} \
+            --build-dir build
+        env:
+          DISPLAY: ""
+          ZENITH_SOAK_SECONDS: ${{ steps.soak_dur.outputs.seconds }}
+
+      - name: Upload soak results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: soak-test-results
+          path: |
+            build/*.json
+            build/*.log
+
+  # ============================================================================
+  # GATE – All three Phase 3 jobs must pass before merge
+  # ============================================================================
+  phase3-gate:
+    name: "Phase 3 Gate ✅"
+    runs-on: ubuntu-22.04
+    needs: [ golden-render, stress-tests, soak-test ]
+    if: always()
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Check results
+        run: |
+          if [[ "${{ needs.golden-render.result }}"  != "success" ]] ||
+             [[ "${{ needs.stress-tests.result }}"   != "success" ]] ||
+             [[ "${{ needs.soak-test.result }}"      != "success" ]]; then
+            echo "❌ One or more Phase 3 tests failed."
+            echo "  golden-render : ${{ needs.golden-render.result }}"
+            echo "  stress-tests  : ${{ needs.stress-tests.result }}"
+            echo "  soak-test     : ${{ needs.soak-test.result }}"
+            exit 1
+          fi
+          echo "✅ All Phase 3 tests passed."
+
+      - name: PR comment on failure
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = [
+              "## ❌ Phase 3 Audio Quality Gate Failed",
+              "",
+              "| Test Suite     | Result |",
+              "|----------------|--------|",
+              `| Golden Render  | ${{ needs.golden-render.result == 'success' && '✅ passed' || '❌ failed' }} |`,
+              `| Stress Tests   | ${{ needs.stress-tests.result  == 'success' && '✅ passed' || '❌ failed' }} |`,
+              `| Soak Test      | ${{ needs.soak-test.result     == 'success' && '✅ passed' || '❌ failed' }} |`,
+              "",
+              "Please review the workflow logs and fix all failures before merging.",
+              "",
+              "**Golden render failure?** Engine output changed – run `python3 scripts/run_golden_tests.py --regenerate` after reviewing the change is intentional, then commit the updated golden file.",
+              "**Soak failure?** Check for NaN samples, playhead drift, or deadlock in the soak log artifact."
+            ].join("\n");
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
