@@ -17,8 +17,7 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
 
-namespace zenith {
-namespace tests {
+namespace zenith::tests {
 
 // ... (Previous tests remain unchanged)
 
@@ -499,8 +498,8 @@ public:
       inBuffer.clear();
       outBuffer.clear();
       
-      float* inChans[] = { inBuffer.getWritePointer(0), inBuffer.getWritePointer(1) };
-      float* outChans[] = { outBuffer.getWritePointer(0), outBuffer.getWritePointer(1) };
+      std::array<float*, 2> inChans = { inBuffer.getWritePointer(0), inBuffer.getWritePointer(1) };
+      std::array<float*, 2> outChans = { outBuffer.getWritePointer(0), outBuffer.getWritePointer(1) };
       
       // Construct dummy context
       juce::AudioIODeviceCallbackContext context{}; 
@@ -511,8 +510,8 @@ public:
       
       // Run block 1
       engine.audioDeviceIOCallbackWithContext(
-          (const float* const*)inChans, 2,
-          outChans, 2, blockSize,
+          (const float* const*)inChans.data(), 2,
+          outChans.data(), 2, blockSize,
           context
       );
       
@@ -525,8 +524,8 @@ public:
       // Run block 2
       outBuffer.clear();
       engine.audioDeviceIOCallbackWithContext(
-          (const float* const*)inChans, 2,
-          outChans, 2, blockSize,
+          (const float* const*)inChans.data(), 2,
+          outChans.data(), 2, blockSize,
           context
       );
       
@@ -588,15 +587,15 @@ public:
     // Fill input with some valid data (silence or noise)
     inBuffer.clear(); // Silence input
 
-    float* inChans[] = { inBuffer.getWritePointer(0), inBuffer.getWritePointer(1) };
-    float* outChans[] = { outBuffer.getWritePointer(0), outBuffer.getWritePointer(1) };
+    std::array<float*, 2> inChans = { inBuffer.getWritePointer(0), inBuffer.getWritePointer(1) };
+    std::array<float*, 2> outChans = { outBuffer.getWritePointer(0), outBuffer.getWritePointer(1) };
     
     juce::AudioIODeviceCallbackContext context{}; 
 
     // Run the engine callback
     engine.audioDeviceIOCallbackWithContext(
-        (const float* const*)inChans, 2,
-        outChans, 2, numSamples,
+        (const float* const*)inChans.data(), 2,
+        outChans.data(), 2, numSamples,
         context
     );
 
@@ -617,5 +616,4 @@ public:
 
 static AudioStabilityTest audioStabilityTest;
 
-} // namespace tests
-} // namespace zenith
+} // namespace zenith::tests

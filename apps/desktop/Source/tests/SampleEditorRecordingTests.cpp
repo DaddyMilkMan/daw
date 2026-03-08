@@ -12,6 +12,7 @@
 
 #include <juce_core/juce_core.h>
 #include <juce_events/juce_events.h>
+#include <array>
 #include "../ui/sample-editor/SampleEditorComponent.h"
 #include "../engine/Engine.h"
 #include "../engine/ProjectState.h"
@@ -57,15 +58,15 @@ public:
             auto* w = inBuffer.getWritePointer(0);
             for(int i=0; i<numSamples; ++i) w[i] = 0.5f;
             
-            const float* inputData[] = { inBuffer.getReadPointer(0) };
-            float* outputData[] = { nullptr }; // We don't care about output
+            std::array<const float*, 1> inputData = { inBuffer.getReadPointer(0) };
+            std::array<float*, 1> outputData = { nullptr }; // We don't care about output
             
             // Context
             juce::AudioIODeviceCallbackContext ctx; // Dummy
             
             // Call callback 10 times -> ~5000 samples
             for(int i=0; i<10; ++i) {
-                cb->audioDeviceIOCallbackWithContext(inputData, numChannels, outputData, 0, numSamples, ctx);
+                cb->audioDeviceIOCallbackWithContext(inputData.data(), numChannels, outputData.data(), 0, numSamples, ctx);
             }
             
             // 4. Trigger Timer to drain FIFO

@@ -46,8 +46,7 @@
 #include <random>
 #include <vector>
 
-namespace zenith {
-namespace ai {
+namespace zenith::ai {
 
 //==============================================================================
 /**
@@ -126,8 +125,13 @@ struct Individual {
   Individual() = default;
   explicit Individual(const Preset &p) : preset(p) {}
 
-  bool operator<(const Individual &other) const {
-    return fitness > other.fitness; // Higher fitness = better
+  // Spaceship operator for consistent ordering (higher fitness = better)
+  auto operator<=>(const Individual &other) const {
+    // Reverse comparison since higher fitness is better
+    return other.fitness <=> fitness;
+  }
+  bool operator==(const Individual &other) const {
+    return fitness == other.fitness;
   }
 };
 
@@ -146,9 +150,9 @@ struct EvolutionStats {
   float worstFitness = 1.0f;
 
   juce::String bestPresetName;
-  juce::Time lastUpdateTime;
+  juce::Time lastUpdateTime = juce::Time::getCurrentTime();
 
-  EvolutionStats() : lastUpdateTime(juce::Time::getCurrentTime()) {}
+  EvolutionStats() = default;
 };
 
 //==============================================================================
@@ -311,8 +315,8 @@ public:
     virtual void individualEvaluated(const Individual &individual) = 0;
   };
 
-  void addListener(Listener *listener);
-  void removeListener(Listener *listener);
+  void addEvolutionListener(Listener *listener);
+  void removeEvolutionListener(Listener *listener);
 
 private:
   //==========================================================================
@@ -489,5 +493,4 @@ private:
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PresetGeneticistAgent)
 };
 
-} // namespace ai
-} // namespace zenith
+} // namespace zenith::ai

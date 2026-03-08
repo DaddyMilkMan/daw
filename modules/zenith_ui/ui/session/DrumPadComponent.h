@@ -105,8 +105,8 @@ public:
 
 private:
   //==============================================================================
-  zenith::Engine &engine;
   zenith::ProjectState &projectState;
+  zenith::Engine &engine;
   juce::String currentClipId;
   juce::ValueTree midiNotesNode;
 

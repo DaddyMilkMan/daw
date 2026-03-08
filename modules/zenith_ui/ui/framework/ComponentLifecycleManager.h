@@ -23,8 +23,7 @@
 #include <juce_core/juce_core.h>
 #include <vector>
 
-namespace zenith {
-namespace lifecycle {
+namespace zenith::lifecycle {
 
 // ============================================================================
 // Component State
@@ -83,15 +82,17 @@ class LifecycleAware {
 public:
   virtual ~LifecycleAware() = default;
 
-  // Lifecycle hooks
-  virtual void onCreate() {}
-  virtual void onInitialize() {}
-  virtual void onUpdate() {}
-  virtual void onSuspend() {}
-  virtual void onResume() {}
-  virtual void onDestroy() {}
+  // Lifecycle hooks - default implementations are empty.
+  // Subclasses override these to handle lifecycle transitions.
+  virtual void onCreate() { /* No-op: Override in subclasses */ }
+  virtual void onInitialize() { /* No-op: Override in subclasses */ }
+  virtual void onUpdate() { /* No-op: Override in subclasses */ }
+  virtual void onSuspend() { /* No-op: Override in subclasses */ }
+  virtual void onResume() { /* No-op: Override in subclasses */ }
+  virtual void onDestroy() { /* No-op: Override in subclasses */ }
   virtual void onStateChange(ComponentState oldState, ComponentState newState) {
     juce::ignoreUnused(oldState, newState);
+    /* No-op: Override in subclasses to handle state transitions */
   }
 
   // State queries
@@ -181,7 +182,7 @@ private:
 
 class LifecycleComponent : public SkiaComponent, public LifecycleAware {
 public:
-  LifecycleComponent(const juce::String &componentId = {});
+  explicit LifecycleComponent(const juce::String &componentId = {});
   ~LifecycleComponent() override;
 
   // SkiaComponent overrides
@@ -341,5 +342,4 @@ private:
                                  const juce::String &data);
 };
 
-} // namespace lifecycle
-} // namespace zenith
+} // namespace zenith::lifecycle

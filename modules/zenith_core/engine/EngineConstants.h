@@ -21,8 +21,7 @@
 
 #include <cstdint>
 
-namespace zenith {
-namespace constants {
+namespace zenith::constants {
 
 //==============================================================================
 // Audio Processing Constants
@@ -369,5 +368,4 @@ constexpr int64_t msToSamples(double ms, double sampleRate) noexcept {
   return static_cast<int64_t>(ms * sampleRate / 1000.0);
 }
 
-} // namespace constants
-} // namespace zenith
+} // namespace zenith::constants

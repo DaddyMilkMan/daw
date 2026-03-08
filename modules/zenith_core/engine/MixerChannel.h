@@ -37,80 +37,11 @@
 #include "../effects/ConsoleEmulation.h"
 #include "AudioConstants.h"
 #include "MeteringSystem.h"
+#include "ProCompressor.h"
 
 namespace zenith {
 
 class AudioFifo; // Forward declaration
-
-//==============================================================================
-/**
-    Professional-grade compressor with RMS detection, lookahead, and soft knee.
-
-    Features:
-    - RMS envelope detection (more musical than peak)
-    - Lookahead for transparent limiting
-    - Soft knee option
-    - Auto makeup gain
-*/
-class ProCompressor {
-public:
-  ProCompressor() = default;
-
-  void prepare(double sampleRate, int maxBlockSize);
-  void reset();
-
-  void setThreshold(float thresholdDb);
-  void setRatio(float ratio);
-  void setAttack(float attackMs);
-  void setRelease(float releaseMs);
-  void setMakeup(float makeupDb);
-  void setKnee(float kneeDb);
-  void setAutoMakeup(bool enabled);
-  void setLookaheadEnabled(bool enabled);
-  void setRmsEnabled(bool enabled);
-
-  float getGainReduction() const;
-
-  void process(juce::AudioBuffer<float> &buffer);
-
-private:
-  double sampleRate_ = ::zenith::constants::kDefaultSampleRate;
-
-  // Parameters (initialized from EngineConstants)
-  float threshold_ = ::zenith::constants::kDefaultCompThresholdDb;
-  float ratio_ = ::zenith::constants::kDefaultCompRatio;
-  float attackMs_ = ::zenith::constants::kDefaultCompAttackMs;
-  float releaseMs_ = ::zenith::constants::kDefaultCompReleaseMs;
-  float makeup_ = 0.0f;
-  float knee_ = 6.0f; // Soft knee width in dB
-  float autoMakeup_ = 0.0f;
-  bool autoMakeupEnabled_ = false;
-  bool lookaheadEnabled_ = true;
-  bool useRms_ = true;
-
-  // State
-  float attackCoeff_ = 0.0f;
-  float releaseCoeff_ = 0.0f;
-  float envL_ = 0.0f;
-  float envR_ = 0.0f;
-  float gainSmooth_ = 1.0f;
-  std::atomic<float> gainReduction_{0.0f};
-
-  // Lookahead
-  juce::AudioBuffer<float> lookaheadBuffer_;
-  int lookaheadSamples_ = 0;
-  int lookaheadWritePos_ = 0;
-
-  // RMS detection
-  std::vector<float> rmsBuffer_;
-  int rmsWindowSamples_ = 0;
-  int rmsWritePos_ = 0;
-  float rmsSum_ = 0.0f;
-
-  void updateCoefficients();
-  void updateAutoMakeup();
-  float computeGainReduction(float inputDb) const;
-};
 
 //==============================================================================
 /**
@@ -269,15 +200,15 @@ public:
 
   //==============================================================================
   // Level metering
-  void setMeterMode(MeteringSystem::MeterMode mode) { meterMode.store(mode); }
-  MeteringSystem::MeterMode getMeterMode() const { return meterMode.load(); }
+  void setMeterMode(MeteringSystem::MeterMode mode) { meterMode_.store(mode); }
+  MeteringSystem::MeterMode getMeterMode() const { return meterMode_.load(); }
 
-  float getInputLevel() const { return inputMeter.getLevel(meterMode.load()); }
+  float getInputLevel() const { return inputMeter.getLevel(meterMode_.load()); }
   float getInputPeak() const { return inputMeter.getPeak(); }
   void resetInputPeak() { inputMeter.resetPeak(); }
 
   float getOutputLevel() const {
-    return outputMeter.getLevel(meterMode.load());
+    return outputMeter.getLevel(meterMode_.load());
   }
   float getOutputPeak() const { return outputMeter.getPeak(); }
   void resetOutputPeak() { outputMeter.resetPeak(); }
@@ -322,9 +253,9 @@ private:
   //==============================================================================
   // EQ section
   static constexpr int numEQBands = ::zenith::constants::kNumEQBands;
-  EQBand eqBands[numEQBands];
-  juce::IIRFilter eqFiltersL[numEQBands];
-  juce::IIRFilter eqFiltersR[numEQBands];
+  std::array<EQBand, numEQBands> eqBands{};
+  std::array<juce::IIRFilter, numEQBands> eqFiltersL{};
+  std::array<juce::IIRFilter, numEQBands> eqFiltersR{};
 
   // RT-safe coefficient swapping using atomic pointer and RealTimeGarbageCollector
   std::atomic<FilterCoefficients*> activeCoeffs_{nullptr};
@@ -346,8 +277,8 @@ private:
   //==============================================================================
   // Send effects
   static constexpr int numSends = ::zenith::constants::kNumSends;
-  std::atomic<float> sendLevels[numSends];
-  std::atomic<bool> sendPreFader[numSends];
+  std::array<std::atomic<float>, numSends> sendLevels{};
+  std::array<std::atomic<bool>, numSends> sendPreFader{};
 
   //==============================================================================
   // Output section
@@ -361,7 +292,7 @@ private:
   // Metering
   MeteringSystem inputMeter;
   MeteringSystem outputMeter;
-  std::atomic<MeteringSystem::MeterMode> meterMode{
+  std::atomic<MeteringSystem::MeterMode> meterMode_{
       MeteringSystem::MeterMode::Peak};
 
   // Legacy (kept to compile, but likely unused by getters)

@@ -41,8 +41,8 @@ public:
   // JUCEApplication interface
   //==========================================================================
 
-  const juce::String getApplicationName() override { return "Zenith DAW"; }
-  const juce::String getApplicationVersion() override { return "0.1.0"; }
+  juce::String getApplicationName() override { return "Zenith DAW"; }
+  juce::String getApplicationVersion() override { return "0.1.0"; }
   bool moreThanOneInstanceAllowed() override { return false; }
 
   //==========================================================================

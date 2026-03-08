@@ -20,8 +20,7 @@
 #include "ComponentLifecycleManager.h"
 #include "ZenithDesignSystem.h"
 
-namespace zenith {
-namespace lifecycle {
+namespace zenith::lifecycle {
 
 // ============================================================================
 // ComponentLifecycleManager Implementation
@@ -857,5 +856,4 @@ void ComponentStatePersistence::deserializeComponentState(
   }
 }
 
-} // namespace lifecycle
-} // namespace zenith
+} // namespace zenith::lifecycle

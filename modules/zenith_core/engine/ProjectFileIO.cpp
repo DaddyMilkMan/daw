@@ -28,6 +28,7 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
+#include <ranges>
 #include <string>
 
 namespace zenith {
@@ -371,10 +372,9 @@ juce::File ProjectFileIO::getRecoveryFile() const {
   }
 
   // Sort by modification time (most recent last)
-  std::sort(files.begin(), files.end(),
-            [](const juce::File &a, const juce::File &b) {
-              return a.getLastModificationTime() < b.getLastModificationTime();
-            });
+  std::ranges::sort(files, [](const juce::File &a, const juce::File &b) {
+    return a.getLastModificationTime() < b.getLastModificationTime();
+  });
 
   return files.getLast();
 }
@@ -435,11 +435,7 @@ juce::File ProjectFileIO::createBackup() {
     // Clean up old backups
     auto backups = getBackupFiles();
     if ((int)backups.size() > maxBackups_) {
-      std::sort(backups.begin(), backups.end(),
-                [](const juce::File &a, const juce::File &b) {
-                  return a.getLastModificationTime() <
-                         b.getLastModificationTime();
-                });
+      std::ranges::sort(backups, [](const juce::File &a, const juce::File &b) {\n        return a.getLastModificationTime() < b.getLastModificationTime();\n      });
 
       for (int i = 0; i < (int)backups.size() - maxBackups_; ++i) {
         backups[i].deleteFile();

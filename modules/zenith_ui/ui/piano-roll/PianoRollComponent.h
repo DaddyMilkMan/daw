@@ -25,6 +25,7 @@
 #include "../../engine/ProjectState.h"
 #include "../framework/SkiaComponent.h"
 #include "../session/DrumPadComponent.h"
+#include "PianoRollTypes.h"
 #include <functional>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
@@ -43,20 +44,10 @@
 
 namespace zenith {
 
-//==============================================================================
-/**
- * @struct MidiClipContext
- * @brief Identifies which MIDI clip is being edited
- */
-struct MidiClipContext {
-  juce::String clipId;
-  juce::String trackId;
-  double clipStartBeats = 0.0;
-  double clipLengthBeats = 4.0;
-  juce::String clipName = "Untitled Clip";
-
-  bool isValid() const { return clipId.isNotEmpty(); }
-};
+// Types are now defined in PianoRollTypes.h
+// MidiClipContext, ScaleType, ChordType, GrooveTemplate, ArpPattern,
+// StrumDirection, HarmonyType, VelocityCurve, ExpressionType, ExpressionPoint,
+// CCPoint, QuantizeOptions, RiffSettings are available via include.
 
 //==============================================================================
 /**

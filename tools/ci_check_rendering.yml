@@ -1,0 +1,15 @@
+# Minimal CI job snippet to enforce Skia-only rendering
+# Run this in your CI pipeline as a job that executes scan_juce_rendering.py
+
+name: Check Skia-only Rendering
+
+on: [push, pull_request]
+
+jobs:
+  check-render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run JUCE rendering scanner
+        run: |
+          python3 tools/scan_juce_rendering.py

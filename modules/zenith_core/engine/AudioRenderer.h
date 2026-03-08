@@ -111,8 +111,8 @@ struct AudioRenderContext {
     for (auto &buffer : trackBuffers) buffer.clear();
     for (auto &buffer : auxBusBuffers) buffer.clear();
     for (auto &buffer : pdcDelayBuffers) buffer.clear();
-    std::fill(pdcDelayWritePos.begin(), pdcDelayWritePos.end(), 0);
-    std::fill(trackLatencies.begin(), trackLatencies.end(), 0);
+    std::ranges::fill(pdcDelayWritePos, 0);
+    std::ranges::fill(trackLatencies, 0);
     maxTrackLatency = 0;
   }
 };

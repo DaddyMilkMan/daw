@@ -15,8 +15,7 @@
 #include <cmath>
 #include <numeric>
 
-namespace zenith {
-namespace ai {
+namespace zenith::ai {
 
 //==============================================================================
 // Static parameter data for ZenithPolySynth
@@ -299,11 +298,11 @@ juce::File PresetGeneticistAgent::getOutputDirectory() const {
 // Listeners
 //==============================================================================
 
-void PresetGeneticistAgent::addListener(Listener *listener) {
+void PresetGeneticistAgent::addEvolutionListener(Listener *listener) {
   listeners_.add(listener);
 }
 
-void PresetGeneticistAgent::removeListener(Listener *listener) {
+void PresetGeneticistAgent::removeEvolutionListener(Listener *listener) {
   listeners_.remove(listener);
 }
 

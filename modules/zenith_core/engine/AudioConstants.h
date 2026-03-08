@@ -23,15 +23,14 @@
 // definitions for all audio engine constants
 #include "EngineConstants.h"
 
-namespace zenith {
-namespace constants {
+namespace zenith::constants {
 
 //==============================================================================
 // Audio Constants
 //==============================================================================
 
-// Currently effectively a forward to EngineConstants.h
-// Future audio-specific constants can be added here.
+// This header includes EngineConstants.h for the full set of engine constants.
+// It provides a dedicated namespace for additional audio-specific constants.
+// Currently no additional constants are defined beyond those in EngineConstants.h.
 
-} // namespace constants
-} // namespace zenith
+} // namespace zenith::constants
