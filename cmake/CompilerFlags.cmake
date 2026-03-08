@@ -2,8 +2,6 @@
 # COMPILER FLAGS CONFIGURATION
 # =============================================================================
 
-include_guard(GLOBAL)
-
 # Modern C++ standards and conformance
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_STANDARD 20)

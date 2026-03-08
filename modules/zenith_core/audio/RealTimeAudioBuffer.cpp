@@ -1,79 +1,126 @@
 /*
-    RealTimeAudioBuffer.cpp - Stub implementation for diagnosis
+    This file is part of Zenith DAW - A Digital Audio Workstation for Linux
+
+    Copyright (C) 2025 Micah Cooley <micahcooley@protonmail.com>
+
+    SPDX-License-Identifier: Apache-2.0
 */
 
-#include <functional>
-#include <chrono>
-#include <thread>
 #include "RealTimeAudioBuffer.h"
+#include <juce_core/juce_core.h>
 
 namespace zenith {
 namespace audio {
 
-// Stub implementations to satisfy linker if needed, but mostly to check compilation
+//==============================================================================
+RealTimeAudioBuffer::RealTimeAudioBuffer() = default;
 
-RealTimeAudioBuffer::RealTimeAudioBuffer(int n, int b) : numChannels(n), bufferSize(b) {}
+RealTimeAudioBuffer::RealTimeAudioBuffer(int numChannels, int numSamples)
+{
+    setSize(numChannels, numSamples);
+}
+
 RealTimeAudioBuffer::~RealTimeAudioBuffer() = default;
-bool RealTimeAudioBuffer::writeAudio(const juce::AudioBuffer<float>&) { return true; }
-bool RealTimeAudioBuffer::readAudio(juce::AudioBuffer<float>&) { return true; }
-void RealTimeAudioBuffer::setNumChannels(int) {}
-void RealTimeAudioBuffer::setBufferSize(int) {}
-float RealTimeAudioBuffer::getLevel(int) const { return 0.0f; }
-bool RealTimeAudioBuffer::isClipping(int) const { return false; }
-void RealTimeAudioBuffer::resetLevels() {}
-float RealTimeAudioBuffer::getAverageLatency() const { return 0.0f; }
-void RealTimeAudioBuffer::resetStatistics() {}
-void RealTimeAudioBuffer::updateLevels(const juce::AudioBuffer<float>&) {}
-void RealTimeAudioBuffer::estimateLatencyFromBufferLevel() {}
 
-AudioDeviceManager::AudioDeviceManager() {}
-AudioDeviceManager::~AudioDeviceManager() {}
-bool AudioDeviceManager::initialize(double, int) { return true; }
-void AudioDeviceManager::shutdown() {}
-std::vector<juce::String> AudioDeviceManager::getAvailableInputDevices() const { return {}; }
-std::vector<juce::String> AudioDeviceManager::getAvailableOutputDevices() const { return {}; }
-bool AudioDeviceManager::setSampleRate(double) { return true; }
-bool AudioDeviceManager::setBufferSize(int) { return true; }
-double AudioDeviceManager::getCurrentSampleRate() const { return 44100.0; }
-int AudioDeviceManager::getCurrentBufferSize() const { return 512; }
-void AudioDeviceManager::setAudioCallback(juce::AudioIODeviceCallback*) {}
-void AudioDeviceManager::removeAudioCallback() {}
-float AudioDeviceManager::getInputLevel(int) const { return 0.0f; }
-float AudioDeviceManager::getOutputLevel(int) const { return 0.0f; }
-bool AudioDeviceManager::isDeviceActive() const { return false; }
-juce::String AudioDeviceManager::getLastError() const { return {}; }
-bool AudioDeviceManager::hasErrors() const { return false; }
+//==============================================================================
+bool RealTimeAudioBuffer::setSize(int numChannels, int numSamples)
+{
+    if (numChannels <= 0 || numSamples <= 0)
+        return false;
 
-SampleRateConverter::SampleRateConverter() {}
-SampleRateConverter::~SampleRateConverter() {}
-bool SampleRateConverter::convert(const juce::AudioBuffer<float>&, juce::AudioBuffer<float>&, double, double, Quality) { return true; }
-void SampleRateConverter::setQuality(Quality) {}
-double SampleRateConverter::getLatency() const { return 0.0; }
-bool SampleRateConverter::convertLinear(const juce::AudioBuffer<float>&, juce::AudioBuffer<float>&, double) { return true; }
-bool SampleRateConverter::convertSinc(const juce::AudioBuffer<float>&, juce::AudioBuffer<float>&, double) { return true; }
-void SampleRateConverter::buildSincKernel(double) {}
+    buffer.setSize(numChannels, numSamples, false, true, false);
+    this->numChannels = numChannels;
+    this->numSamples = numSamples;
 
-RealTimeAudioProcessor::RealTimeAudioProcessor() {}
-RealTimeAudioProcessor::~RealTimeAudioProcessor() = default;
-bool RealTimeAudioProcessor::initialize(int, double, int) { return true; }
-void RealTimeAudioProcessor::shutdown() {}
-void RealTimeAudioProcessor::processAudio(juce::AudioBuffer<float>&) {}
-bool RealTimeAudioProcessor::setInputBuffer(const juce::AudioBuffer<float>&) { return true; }
-bool RealTimeAudioProcessor::getOutputBuffer(juce::AudioBuffer<float>&) { return true; }
-int RealTimeAudioProcessor::getLatencySamples() const { return 0; }
-double RealTimeAudioProcessor::getLatencySeconds() const { return 0.0; }
-void RealTimeAudioProcessor::setTargetLatency(double) {}
-float RealTimeAudioProcessor::getCpuUsage() const { return 0.0f; }
-int RealTimeAudioProcessor::getUnderruns() const { return 0; }
-int RealTimeAudioProcessor::getOverruns() const { return 0; }
-void RealTimeAudioProcessor::resetPerformanceCounters() {}
-bool RealTimeAudioProcessor::isRealTimeSafe() const { return true; }
-void RealTimeAudioProcessor::setRealTimePriority(bool) {}
-void RealTimeAudioProcessor::updatePerformanceMetrics() {}
-bool RealTimeAudioProcessor::checkRealTimeSafety() const { return true; }
+    return true;
+}
 
-// Missing AudioInterface implementation which caused potential linker or deeper issues?
-// No, AudioInterface is high level.
+void RealTimeAudioBuffer::clear()
+{
+    buffer.clear();
+}
+
+//==============================================================================
+const float* RealTimeAudioBuffer::getReadPointer(int channel) const
+{
+    return buffer.getReadPointer(channel);
+}
+
+const float** RealTimeAudioBuffer::getArrayOfReadPointers() const
+{
+    return buffer.getArrayOfReadPointers();
+}
+
+float* RealTimeAudioBuffer::getWritePointer(int channel)
+{
+    return buffer.getWritePointer(channel);
+}
+
+float** RealTimeAudioBuffer::getArrayOfWritePointers()
+{
+    return buffer.getArrayOfWritePointers();
+}
+
+//==============================================================================
+void RealTimeAudioBuffer::copyFrom(const juce::AudioBuffer<float>& source)
+{
+    if (source.getNumChannels() != numChannels ||
+        source.getNumSamples() != numSamples)
+    {
+        // Resize to match source
+        setSize(source.getNumChannels(), source.getNumSamples());
+    }
+
+    for (int channel = 0; channel < numChannels; ++channel)
+    {
+        buffer.copyFrom(channel, 0, source, channel, 0, numSamples);
+    }
+}
+
+void RealTimeAudioBuffer::copyTo(juce::AudioBuffer<float>& dest) const
+{
+    auto destChannels = dest.getNumChannels();
+    auto destSamples = dest.getNumSamples();
+
+    for (int channel = 0; channel < juce::jmin(numChannels, destChannels); ++channel)
+    {
+        auto samplesToCopy = juce::jmin(numSamples, destSamples);
+        dest.copyFrom(channel, 0, buffer, channel, 0, samplesToCopy);
+    }
+}
+
+//==============================================================================
+void RealTimeAudioBuffer::applyGain(float gain)
+{
+    buffer.applyGain(gain);
+}
+
+void RealTimeAudioBuffer::applyGain(int channel, float gain)
+{
+    if (channel >= 0 && channel < numChannels)
+        buffer.applyGain(channel, 0, numSamples, gain);
+}
+
+void RealTimeAudioBuffer::applyGainRamp(int channel, int startSample, int numSamples,
+                                        float startGain, float endGain)
+{
+    if (channel >= 0 && channel < numChannels)
+        buffer.applyGainRamp(channel, startSample, numSamples, startGain, endGain);
+}
+
+//==============================================================================
+void RealTimeAudioBuffer::addFrom(int destChannel, int destStartSample,
+                                  const juce::AudioBuffer<float>& source,
+                                  int sourceChannel, int sourceStartSample,
+                                  int numSamples, float gainToApplyToSource)
+{
+    if (destChannel >= 0 && destChannel < numChannels)
+    {
+        auto actualSamples = juce::jmin(numSamples, this->numSamples - destStartSample);
+        buffer.addFrom(destChannel, destStartSample, source, sourceChannel,
+                      sourceStartSample, actualSamples, gainToApplyToSource);
+    }
+}
 
 } // namespace audio
 } // namespace zenith

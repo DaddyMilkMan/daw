@@ -6,7 +6,7 @@ Copy and paste this entire prompt to an AI coding agent to execute the UI transf
 
 ## PROMPT START
 
-You are tasked with transforming the Zenith DAW's user interface from its current barebones state to a professional "Neon Noir Glassmorphism" design.
+You are tasked with transforming the Zenith DAW's user interface from its current barebones state to a premium matte-black / blue-accent design.
 
 ### YOUR MISSION
 
@@ -61,14 +61,14 @@ Style these files in order:
 
 ```cpp
 // Colors
-design::colors::CYAN          // 0xFF00F0FF - Primary accent
-design::colors::MAGENTA       // 0xFFFF00D4 - Secondary accent
+design::colors::CYAN          // 0xFF3B82F6 - Primary blue accent
+design::colors::MAGENTA       // 0xFF8B5CF6 - Secondary blue-violet accent
 design::colors::BG_DARKEST    // 0xFF0D0D11 - Window background
 design::colors::BG_DARKER     // 0xFF141419 - Panel background
 
 // Effects
 design::effects::GLOW_MEDIUM  // 4.0f - Active glow radius
-design::effects::BLUR_GLASS   // 20.0f - Glassmorphism blur
+design::effects::BLUR_GLASS   // 20.0f - Overlay blur for elevated surfaces
 
 // For glow: SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, radius)
 // For gradients: SkGradientShader::MakeLinear(pts, colors, nullptr, 2, SkTileMode::kClamp)
@@ -78,19 +78,19 @@ design::effects::BLUR_GLASS   // 20.0f - Glassmorphism blur
 
 Create feature branches for each phase:
 ```bash
-git checkout -b feature/ui-neon-noir-phase1
+git checkout -b feature/ui-professional-dark-phase1
 # ... make changes ...
 git add .
-git commit -m "feat(ui): Apply Neon Noir foundation"
-git push -u origin feature/ui-neon-noir-phase1
+git commit -m "feat(ui): Apply premium dark foundation"
+git push -u origin feature/ui-professional-dark-phase1
 ```
 
 ### SUCCESS CRITERIA
 
 - [ ] No hardcoded colors remain
 - [ ] Background has subtle gradient
-- [ ] Panels use glassmorphic styling
-- [ ] Active controls have neon glow
+- [ ] Overlays use selective glass styling while core surfaces stay matte
+- [ ] Active controls have restrained accent glow
 - [ ] VU meters animate smoothly with gradients
 - [ ] 60fps render performance
 
@@ -102,7 +102,7 @@ git push -u origin feature/ui-neon-noir-phase1
 4. Start with MainLayoutComponent.cpp gradient background
 5. Take screenshots before/after each change
 
-Go make this UI GLOW! 🔥
+Go make this UI feel studio-grade.
 
 ---
 

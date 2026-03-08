@@ -19,6 +19,10 @@
 
 namespace zenith {
 
+const juce::String SecureKeyStore::GrokAPIKey = "zenith_grok_api_key";
+const juce::String SecureKeyStore::OpenAIAPIKey = "zenith_openai_api_key";
+const juce::String SecureKeyStore::AnthropicAPIKey = "zenith_anthropic_api_key";
+
 // Internal helpers
 namespace {
 

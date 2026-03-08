@@ -3,50 +3,32 @@
 
     Copyright (C) 2025 Micah Cooley <micahcooley@protonmail.com>
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as
-    published by the Free Software Foundation, either version 3 of the
-    License, or (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
-
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
-
-/*
-  ==============================================================================
-
-    ProCompressor.h
-    Extracted from MixerChannel.h
-    
-    Professional-grade compressor with RMS detection, lookahead, and soft knee.
-
-  ==============================================================================
+    SPDX-License-Identifier: Apache-2.0 
 */
 
 #pragma once
 
-#include <atomic>
-#include <vector>
+// MixerChannel.h - Mixer channel strip with EQ, dynamics, and send/return processing
+
+#include <array>
+#include <span>
+#include <cmath>
 #include <juce_audio_basics/juce_audio_basics.h>
-#include "EngineConstants.h"
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_core/juce_core.h>
+#include <juce_data_structures/juce_data_structures.h>
+#include <juce_events/juce_events.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+
+#include "../effects/ConsoleEmulation.h"
+#include "AudioConstants.h"
+#include "MeteringSystem.h"
 
 namespace zenith {
 
-//==============================================================================
-/**
-    Professional-grade compressor with RMS detection, lookahead, and soft knee.
-
-    Features:
-    - RMS envelope detection (more musical than peak)
-    - Lookahead for transparent limiting
-    - Soft knee option
-    - Auto makeup gain
-*/
 class ProCompressor {
 public:
   ProCompressor() = default;
@@ -107,4 +89,9 @@ private:
   float computeGainReduction(float inputDb) const;
 };
 
-} // namespace zenith
+//==============================================================================
+/**
+    Pre-calculated filter coefficients for RT-safe coefficient swapping.
+*/
+
+} // namespace

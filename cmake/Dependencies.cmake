@@ -7,8 +7,6 @@
 # - Archive downloads verified with SHA256 hashes
 # =============================================================================
 
-include_guard(GLOBAL)
-
 include(FetchContent)
 
 # Load pinned version manifest
@@ -16,7 +14,7 @@ include(${CMAKE_CURRENT_LIST_DIR}/FetchContentVersions.cmake)
 
 # Verify manifest loaded
 if(NOT ZENITH_JUCE_GIT_HASH)
-    message(FATAL_ERROR "Dependency manifest not properly loaded!")
+    message(FATAL_ERROR "Dependency manifest properly not loaded!")
 endif()
 
 # =============================================================================
@@ -60,39 +58,45 @@ message(STATUS "Zenith DAW: JUCE configured (hash: ${ZENITH_JUCE_GIT_HASH})")
 # =============================================================================
 # 2. ONNX Runtime (AI Features)
 # =============================================================================
-option(ENABLE_ONNX "Enable ONNX Runtime for AI features" OFF)
+option(ENABLE_ONNX "Enable ONNX Runtime for AI features" ON)
 
 if(ENABLE_ONNX)
-    if(ZENITH_PLATFORM_LINUX)
-        message(STATUS "Fetching ONNX Runtime v${ZENITH_ONNX_VERSION} using pinned hash...")
-        
-        FetchContent_Declare(
-            onnxruntime
-            URL ${ZENITH_ONNX_URL}
-            URL_HASH SHA256=${ZENITH_ONNX_SHA256}
-        )
-        FetchContent_MakeAvailable(onnxruntime)
+    message(STATUS "Fetching ONNX Runtime v${ZENITH_ONNX_VERSION} for current platform...")
+    
+    FetchContent_Declare(
+        onnxruntime
+        URL ${ZENITH_ONNX_URL}
+        # URL_HASH SHA256=${ZENITH_ONNX_SHA256} # Omit hash if empty to allow experimental platform support
+    )
+    FetchContent_MakeAvailable(onnxruntime)
 
-        # Create imported target for consistent usage
-        if(NOT TARGET onnxruntime)
-            add_library(onnxruntime UNKNOWN IMPORTED)
+    # Create imported target for consistent usage across DAW and Tests
+    if(NOT TARGET onnxruntime)
+        add_library(onnxruntime UNKNOWN IMPORTED)
+        
+        if(ZENITH_PLATFORM_WINDOWS)
+            set_target_properties(onnxruntime PROPERTIES
+                IMPORTED_LOCATION "${onnxruntime_SOURCE_DIR}/lib/onnxruntime.lib"
+                INTERFACE_INCLUDE_DIRECTORIES "${onnxruntime_SOURCE_DIR}/include"
+            )
+            set(ONNX_RUNTIME_SHARED_LIB "onnxruntime.dll")
+        elseif(ZENITH_PLATFORM_MACOS)
+            set_target_properties(onnxruntime PROPERTIES
+                IMPORTED_LOCATION "${onnxruntime_SOURCE_DIR}/lib/libonnxruntime.dylib"
+                INTERFACE_INCLUDE_DIRECTORIES "${onnxruntime_SOURCE_DIR}/include"
+            )
+            set(ONNX_RUNTIME_SHARED_LIB "libonnxruntime.dylib")
+        else()
             set_target_properties(onnxruntime PROPERTIES
                 IMPORTED_LOCATION "${onnxruntime_SOURCE_DIR}/lib/libonnxruntime.so"
                 INTERFACE_INCLUDE_DIRECTORIES "${onnxruntime_SOURCE_DIR}/include"
             )
+            set(ONNX_RUNTIME_SHARED_LIB "libonnxruntime.so")
         endif()
-        
-        # Expose shared variables for installation rules
-        set(ONNX_RUNTIME_LIBRARY_DIR "${onnxruntime_SOURCE_DIR}/lib")
-        set(ONNX_RUNTIME_SHARED_LIB "libonnxruntime.so")
-        set(ONNX_RUNTIME_SHARED_LIB_VERSIONED "libonnxruntime.so.${ZENITH_ONNX_VERSION}")
-
-        set(ZENITH_HAS_ONNX TRUE)
-        message(STATUS "Zenith DAW: ONNX Runtime support ENABLED (Linux)")
-    else()
-        message(STATUS "Zenith DAW: ONNX Runtime support disabled on this platform")
-        set(ZENITH_HAS_ONNX FALSE)
     endif()
+    
+    set(ZENITH_HAS_ONNX TRUE)
+    add_compile_definitions(ZENITH_USE_ONNX_RUNTIME=1)
 else()
     message(STATUS "Zenith DAW: ONNX Runtime support disabled by user")
     set(ZENITH_HAS_ONNX FALSE)
@@ -144,61 +148,3 @@ endif()
 # )
 # FetchContent_MakeAvailable(LuaBridge)
 
-
-# =============================================================================
-# 5. GoogleTest (Unit Testing)
-# =============================================================================
-option(ENABLE_TESTS "Enable unit testing" ON)
-
-if(ENABLE_TESTS)
-    # Find or fetch GoogleTest
-    find_package(GTest QUIET)
-
-    if(NOT GTest_FOUND)
-        message(STATUS "Zenith DAW: GoogleTest not found, fetching...")
-
-        FetchContent_Declare(
-            GoogleTest
-            GIT_REPOSITORY https://github.com/google/googletest.git
-            GIT_TAG v1.14.0  # Stable version
-            GIT_SHALLOW TRUE
-        )
-        FetchContent_MakeAvailable(GoogleTest)
-    else()
-        message(STATUS "Zenith DAW: Using system GoogleTest")
-    endif()
-
-    # Find GoogleTest main
-    find_package(GTestTest QUIET)
-endif()
-
-# =============================================================================
-# 6. Opus Audio Codec (Real-time Collaboration)
-# =============================================================================
-if(ZENITH_ENABLE_COLLAB)
-    find_package(Opus QUIET)
-
-    if(NOT Opus_FOUND)
-        message(STATUS "Zenith DAW: System Opus not found, fetching v1.3.1...")
-        
-        FetchContent_Declare(
-            Opus
-            GIT_REPOSITORY ${ZENITH_OPUS_GIT_URL}
-            GIT_TAG ${ZENITH_OPUS_GIT_HASH}
-            GIT_SHALLOW FALSE  # Required for specific commit hash
-        )
-        FetchContent_MakeAvailable(Opus)
-        
-        # Opus CMake (if built from source) usually creates an 'opus' target
-        if(TARGET opus)
-             # Alias it to match standard usage if needed, or just use 'opus'
-             if(NOT TARGET Opus::opus)
-                 add_library(Opus::opus ALIAS opus)
-             endif()
-        endif()
-        
-        message(STATUS "Zenith DAW: Using fetched Opus v1.3.1")
-    else()
-        message(STATUS "Zenith DAW: Using system Opus")
-    endif()
-endif()

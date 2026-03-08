@@ -1,0 +1,708 @@
+# 🤖 ZENITH DAW - AI AGENT RULES & ARCHITECTURE
+**Permanent Reference - Valid Throughout Entire Project**
+
+> **Purpose:** This document defines the non-negotiable rules, architectural patterns, and quality standards for Zenith DAW. Read this BEFORE generating ANY code.
+
+---
+
+## 🚨 NON-NEGOTIABLE RULES
+
+### **Thread Safety (ABSOLUTE)**
+
+```cpp
+AUDIO THREAD (Real-Time Priority - ~1ms budget):
+  ❌ NEVER:
+    - malloc, new, delete, std::vector::push_back
+    - std::mutex, juce::CriticalSection (any lock)
+    - std::cout, printf, DBG(), any logging
+    - File I/O (open, read, write)
+    - juce::MessageManager calls
+    - ValueTree direct access
+    
+  ✅ ONLY:
+    - std::atomic reads (lock-free)
+    - Pre-allocated buffer access
+    - Arithmetic operations
+    - Read from audio files (pre-loaded)
+
+UI THREAD:
+  ✅ ALLOWED:
+    - Skia rendering (no juce::Graphics)
+    - ValueTree read/write
+    - std::atomic reads
+    - Memory allocations
+    - JUCE MessageManager
+    
+  ❌ FORBIDDEN:
+    - Audio processing
+    - Blocking >16ms (causes frame drops)
+
+BACKGROUND THREADS:
+  ✅ ALLOWED:
+    - Everything (file I/O, HTTP, allocations)
+    
+  ❌ FORBIDDEN:
+    - Direct audio/UI data access (use MessageManager::callAsync)
+```
+
+### **Wayland Context Loss (CRITICAL)**
+
+```cpp
+// OpenGL context can be LOST at ANY time on Wayland
+// MUST check EVERY frame
+
+void renderFrame(int width, int height) {
+    // 1. Validate context (REQUIRED)
+    if (!grContext_ || grContext_->abandoned()) {
+        recreateContext();
+        return;
+    }
+    
+    // 2. Query FBO (NEVER cache this!)
+    GLint fbo;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &fbo);
+    
+    // 3. Recreate surface on resize
+    if (width != lastWidth_ || height != lastHeight_) {
+        recreateSurface(width, height);
+    }
+    
+    // 4. Now render
+}
+
+CAUSES OF CONTEXT LOSS:
+- User switches workspace
+- Window moved to different monitor
+- Compositor restart
+- System sleep/wake
+- GPU driver reset
+```
+
+### **Zero Warnings Policy**
+
+```bash
+# ALL builds MUST have zero warnings
+cmake --build build --config Release 2>&1 | grep "warning:"
+# Output: (nothing)
+
+# Build with warnings-as-errors
+cmake --build build -- -Werror
+```
+
+### **Memory Safety**
+
+```cpp
+❌ FORBIDDEN:
+  - Raw pointers (use std::unique_ptr, std::shared_ptr)
+  - Manual memory management (use RAII)
+  - Uninitialized variables (use {} initialization)
+  - Memory leaks (must pass valgrind)
+
+✅ REQUIRED:
+  - Smart pointers for ownership
+  - References for non-owning access
+  - {} initialization for all variables
+  - RAII for all resources
+```
+
+---
+
+## 🏗️ ARCHITECTURE ESSENTIALS
+
+### **Single Source of Truth: ValueTree**
+
+```cpp
+// ALL application state lives in ValueTree
+class ProjectState {
+    juce::ValueTree state_;  // UI thread access
+    
+    // Atomic copies for audio thread (lock-free)
+    std::atomic<double> tempo_{120.0};
+    std::atomic<float> masterVolume_{0.8f};
+};
+
+// UI thread writes:
+void setTempo(double t) {
+    state_.setProperty(ID_TEMPO, t, &undoManager_);
+    tempo_.store(t);  // Sync atomic
+}
+
+// Audio thread reads:
+double getTempo() const {
+    return tempo_.load();  // Lock-free
+}
+
+❌ NEVER have dual state (ValueTree + separate variables)
+✅ ALWAYS keep atomics in sync with ValueTree
+```
+
+### **Rendering: Skia Only**
+
+```cpp
+❌ FORBIDDEN:
+  - juce::Graphics for any new UI (legacy only)
+  - Creating own FBOs (wrap JUCE's existing FBO)
+  - Calling makeCurrent() (JUCE owns GL thread)
+  - Caching FBO IDs (recreate every frame)
+
+✅ REQUIRED:
+  - All new UI uses Skia (SkCanvas)
+  - Wrap JUCE's FBO with GrBackendRenderTarget
+  - Query FBO binding every frame
+  - Validate context every frame (Wayland)
+```
+
+### **Namespace Convention**
+
+```cpp
+// STANDARD:
+namespace Zenith {  // Capital Z
+    class SkiaRenderer { ... };
+}
+
+// USE: Zenith:: (capital Z) for ALL code
+```
+
+---
+
+## 📦 TECH STACK
+
+```yaml
+Framework:        JUCE 8.0.11
+Language:         C++20
+Compiler:         GCC 13+ or Clang 18+
+Build:            CMake 3.25+
+Testing:          Catch2
+Graphics:         Skia (GPU-accelerated)
+Audio:            PipeWire (primary), JACK (fallback)
+State:            ValueTree + std::atomic
+Platform:         Pop!_OS Cosmic (Wayland primary, X11 fallback)
+Hardware:         AMD 5600X | 16GB DDR4 | RX 5700XT
+```
+
+---
+
+## 🎯 FEATURE PRIORITIES
+
+```
+HIGH PRIORITY (Build First):
+  1. Multi-track Recording (7/10) ← TOP PRIORITY
+  2. MIDI Editing (2/10)
+  3. Audio Editing (3/10) - cut/paste/fade
+  4. Mixer with EQ/Compression (4/10)
+
+MEDIUM PRIORITY (Build After Core):
+  5. Plugin Hosting (5/10) - VST3/CLAP/LV2
+  6. Automation Curves (4/10)
+  7. Time Stretching (6/10)
+
+LOW PRIORITY (Future Updates):
+  8. AI Composition "Wingman" (8/10) - Grok 4.1
+  9. Collaboration (7/10) - Google Docs style
+  10. Cloud Sync (10/10) - lowest priority
+```
+
+---
+
+## 📁 KEY FILE LOCATIONS
+
+```
+Rendering:
+  include/rendering/SkiaRenderer.h
+  src/rendering/SkiaRenderer.cpp
+
+State Management:
+  include/state/ProjectState.h
+  include/state/Schema.h
+
+Audio Engine:
+  include/audio/AudioEngine.h
+  src/audio/AudioEngine.cpp
+
+UI Components:
+  include/ui/
+  src/ui/
+
+Architecture Docs:
+  docs/architecture/OVERVIEW.md
+  docs/architecture/RENDERING_PIPELINE.md
+  docs/architecture/THREADING_MODEL.md
+  docs/architecture/STATE_MANAGEMENT.md
+
+Build:
+  CMakeLists.txt
+  BUILD_INSTRUCTIONS.md
+```
+
+---
+
+## ❌ ANTI-PATTERNS (INSTANT FAILURE)
+
+```cpp
+// 1. AUDIO THREAD VIOLATIONS
+void audioCallback(float** output, int numSamples) {
+    std::vector<float> buffer;         // ❌ ALLOCATION
+    mutex.lock();                      // ❌ LOCK
+    std::cout << "audio";              // ❌ I/O
+    projectState.getRoot();            // ❌ ValueTree access
+}
+
+// 2. MEMORY LEAKS
+void createRenderer() {
+    auto* renderer = new SkiaRenderer();  // ❌ RAW POINTER
+    // Never deleted = leak
+}
+
+// 3. WAYLAND UNSAFE
+void render() {
+    static GLuint fbo = /* cached */;     // ❌ CACHED FBO
+    // Context can be lost, this will crash
+}
+
+// 4. HARDCODED VALUES
+canvas->clear(SkColorSetARGB(255, 26, 26, 31));  // ❌ MAGIC NUMBERS
+
+// 5. STUB IMPLEMENTATIONS
+void importantMethod() {
+    // TODO: implement later                // ❌ STUB
+}
+
+// 6. MISSING ERROR HANDLING
+auto file = juce::File::openRead(path);         // ❌ NO CHECK
+// What if file doesn't exist?
+
+// 7. UNINITIALIZED VARIABLES
+int frameCount;                                  // ❌ UNINITIALIZED
+// Use: int frameCount{0};
+
+// 8. JUCE GRAPHICS IN NEW CODE
+void paint(juce::Graphics& g) {
+    g.fillAll(juce::Colours::black);     // ❌ Use Skia instead
+}
+
+// 9. BLOCKING UI THREAD
+void buttonClicked() {
+    auto data = loadFromDisk();          // ❌ I/O on UI thread
+    // Use background thread instead
+}
+
+// 10. DIRECT AUDIO THREAD UPDATES
+void sliderChanged(float value) {
+    audioEngine.setVolume(value);        // ❌ No thread safety
+    // Use atomic instead
+}
+```
+
+---
+
+## ✅ CORRECT PATTERNS
+
+```cpp
+// 1. AUDIO THREAD SAFE
+class AudioEngine {
+    std::atomic<double> tempo_{120.0};
+    std::vector<float> preallocatedBuffer_;  // Pre-allocated
+    
+    void audioCallback(float** output, int numSamples) {
+        double t = tempo_.load();  // ✅ Atomic read
+        // Use preallocatedBuffer_ (no allocation)
+    }
+};
+
+// 2. MEMORY SAFE
+void createRenderer() {
+    auto renderer = std::make_unique<SkiaRenderer>();  // ✅ Smart pointer
+    // Automatically deleted
+}
+
+// 3. WAYLAND SAFE
+void render() {
+    GLint fbo;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &fbo);  // ✅ Query every frame
+}
+
+// 4. NAMED CONSTANTS
+namespace Theme {
+    constexpr SkColor Background{0xFF1A1A1F};  // ✅ Named constant
+}
+canvas->clear(Theme::Background);
+
+// 5. COMPLETE IMPLEMENTATION
+void importantMethod() {
+    // ✅ Full implementation with error handling
+    if (!initialize()) {
+        jassertfalse;
+        DBG("Failed to initialize: " << getLastError());
+        return;
+    }
+    // ... complete logic
+}
+
+// 6. ERROR HANDLING
+auto file = juce::File::openRead(path);
+if (!file.exists()) {
+    DBG("File not found: " << path);
+    return false;
+}
+// ✅ Checked before use
+
+// 7. INITIALIZED VARIABLES
+int frameCount{0};           // ✅ Initialized
+float volume{0.8f};          // ✅ Initialized
+bool isReady{false};         // ✅ Initialized
+
+// 8. SKIA RENDERING
+void render(SkCanvas* canvas) {
+    canvas->clear(Theme::Background);    // ✅ Skia
+}
+
+// 9. NON-BLOCKING UI
+void buttonClicked() {
+    std::thread([this]() {
+        auto data = loadFromDisk();
+        juce::MessageManager::callAsync([data]() {
+            updateUI(data);  // ✅ Back to UI thread
+        });
+    }).detach();
+}
+
+// 10. THREAD-SAFE AUDIO UPDATES
+void sliderChanged(float value) {
+    volumeAtomic_.store(value);          // ✅ Atomic write
+    // Audio thread reads volumeAtomic_.load()
+}
+```
+
+---
+
+## 🔍 QUICK DEBUGGING
+
+### **Build Fails?**
+
+```bash
+# Check error category
+grep "error:" build_output.log
+
+COMMON ISSUES:
+1. Missing header     → Add #include
+2. Undefined symbol   → Link library in CMakeLists.txt
+3. Namespace error    → Using zenith:: instead of Zenith::
+4. Skia not found     → Add to CMakeLists.txt or build Skia
+5. JUCE module missing → Add to target_link_libraries
+```
+
+### **Runtime Crash?**
+
+```bash
+# Run with debugger
+gdb ./build/ZenithDAW
+(gdb) run
+[crash]
+(gdb) bt
+
+COMMON CAUSES:
+1. GL context null         → Check grContext_ != nullptr
+2. Crash on resize         → Recreate surface on size change
+3. Segfault in audio       → Check buffer bounds
+4. Crash on workspace switch → Wayland context loss not handled
+5. Nullptr dereference     → Check pointer before use
+```
+
+### **Performance Bad?**
+
+```bash
+# Profile
+perf record -F 999 -g ./build/ZenithDAW
+perf report
+
+COMMON ISSUES:
+1. Allocating in renderFrame() → Pre-allocate
+2. Expensive ops in audio thread → Move to background
+3. No vsync → Enable setContinuousRepainting(true)
+4. Redrawing everything → Implement dirty rectangles
+5. Unoptimized Skia calls → Use SkPicture for caching
+```
+
+### **Memory Leaks?**
+
+```bash
+# Run valgrind
+valgrind --leak-check=full \
+         --show-leak-kinds=all \
+         --log-file=valgrind.log \
+         ./build/ZenithDAW
+
+# Check results
+grep "definitely lost" valgrind.log
+grep "indirectly lost" valgrind.log
+
+# Target: 0 bytes lost
+```
+
+---
+
+## 📊 PERFORMANCE TARGETS
+
+```yaml
+Audio Latency:      < 5ms roundtrip (16 samples @ 48kHz)
+UI Frame Rate:      60fps minimum, adaptive up to 260fps
+Frame Budget:       < 16ms @ 60Hz, < 4ms @ 240Hz
+Cold Start:         < 2 seconds
+Project Load:       < 3 seconds (100-track project)
+Memory (Idle):      < 500MB
+Memory (100 tracks): < 2GB
+Build Time:         < 2 minutes (clean build)
+```
+
+---
+
+## 🎨 CODE STYLE
+
+```cpp
+// Naming
+class MyClass { };           // PascalCase for classes
+void doSomething();          // camelCase for methods
+int frameCount_;             // camelCase + trailing _ for members
+constexpr int MAX_SIZE{100}; // UPPER_CASE for constants
+
+// Modern C++20
+auto value = getValue();              // ✅ auto when type is obvious
+std::unique_ptr<T> ptr{nullptr};     // ✅ {} initialization
+if (auto* p = getPointer(); p) { }   // ✅ Init-statement in if
+
+// Error Handling
+if (!success) {
+    jassertfalse;  // Debug assertion
+    DBG("Error: " << details);  // Log to console
+    return false;  // Propagate error
+}
+
+// Comments
+// Explain WHY, not WHAT
+// GOOD: "Recreate surface on resize (Wayland requirement)"
+// BAD:  "Set width and height"
+
+// File Organization
+class MyClass {
+public:
+    // Public interface first
+    
+private:
+    // Private implementation last
+    
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MyClass)
+};
+```
+
+---
+
+## 📋 VALIDATION CHECKLIST (For Every Task)
+
+```markdown
+Before marking ANY task complete:
+
+BUILD:
+□ Compiles successfully
+□ Zero warnings (grep "warning:" build_output.log → nothing)
+□ Zero errors
+□ Executable created and runs
+
+CODE QUALITY:
+□ No raw pointers (use smart pointers)
+□ No memory leaks (valgrind clean)
+□ All variables initialized with {}
+□ Error handling for all operations
+□ No stub implementations
+□ No magic numbers (use named constants)
+□ Meaningful variable names (no single letters except i, j in loops)
+
+THREAD SAFETY:
+□ Audio thread has no allocations
+□ Audio thread has no locks
+□ Audio thread has no logging
+□ Atomics used correctly for shared state
+□ No data races (verified with ThreadSanitizer if available)
+
+WAYLAND:
+□ Context validated every frame
+□ FBO queried every frame (not cached)
+□ Surface recreated on resize
+□ Context loss handled gracefully
+□ Tested on both Wayland AND X11
+
+PERFORMANCE:
+□ Frame time < 16ms @ 60Hz
+□ No frame drops during resize
+□ Memory usage within targets
+□ No allocations in hot paths
+
+TESTING:
+□ Unit tests written (for business logic)
+□ Integration tests written (for audio/rendering)
+□ Manual testing done
+□ Edge cases tested (empty project, 100 tracks, rapid operations)
+
+DOCUMENTATION:
+□ Code comments explain WHY
+□ Public methods documented
+□ Architecture decisions recorded
+□ Known limitations documented
+```
+
+---
+
+## 🛠️ BUILD COMMANDS
+
+```bash
+# Clean build
+rm -rf build/
+cmake --preset=default
+cmake --build build --config Release
+
+# Development build (with debug symbols)
+cmake --preset=debug
+cmake --build build-debug
+
+# Run
+./build/ZenithDAW
+
+# Run tests
+cd build && ctest --output-on-failure
+
+# Check for warnings
+cmake --build build 2>&1 | grep "warning:"
+# Should output: (nothing)
+
+# Memory leak check (if valgrind installed)
+valgrind --leak-check=full ./build/ZenithDAW
+
+# Performance profile
+perf record -F 999 -g ./build/ZenithDAW
+perf report
+```
+
+---
+
+## 🎯 COMMIT MESSAGE FORMAT
+
+```
+type(scope): description
+
+[optional body]
+
+[optional footer]
+```
+
+**Types:**
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation only
+- `style`: Formatting, missing semicolons, etc.
+- `refactor`: Code change that neither fixes bug nor adds feature
+- `perf`: Performance improvement
+- `test`: Adding tests
+- `chore`: Updating build tasks, etc.
+
+**Examples:**
+```
+feat(audio): implement multi-track recording engine
+
+- Added AudioRecordingEngine class
+- Lock-free ring buffer for audio data
+- Background thread writes to disk
+- Supports 24-bit WAV format
+
+Resolves: #42
+```
+
+```
+fix(rendering): handle Wayland context loss correctly
+
+- Query FBO every frame instead of caching
+- Recreate SkSurface on context invalidation
+- Add grContext->abandoned() check
+
+Fixes crash when switching workspaces.
+```
+
+---
+
+## 📚 ESSENTIAL REFERENCES
+
+**Architecture Docs (Read These First):**
+1. `docs/architecture/OVERVIEW.md` - System architecture
+2. `docs/architecture/THREADING_MODEL.md` - Thread safety rules
+3. `docs/architecture/RENDERING_PIPELINE.md` - Skia-JUCE integration
+4. `docs/architecture/STATE_MANAGEMENT.md` - ValueTree patterns
+
+**External Documentation:**
+- [JUCE 8 Documentation](https://docs.juce.com/master/)
+- [Skia Documentation](https://skia.org/docs/)
+- [Wayland Protocol](https://wayland.freedesktop.org/docs/html/)
+- [PipeWire Documentation](https://docs.pipewire.org/)
+- [C++20 Reference](https://en.cppreference.com/w/cpp/20)
+
+---
+
+## 🤖 FOR AI AGENTS
+
+**When starting work on Zenith DAW:**
+
+1. **Read this file first** (you're here) ✅
+2. **Read architecture docs:**
+   - `docs/architecture/OVERVIEW.md`
+   - `docs/architecture/THREADING_MODEL.md`
+   - Relevant specific docs for your task
+3. **Ask the developer:**
+   - "What task am I working on?"
+   - "Are there any blockers?"
+   - "What files have been modified recently?"
+4. **Before generating code, confirm you understand:**
+   - Thread safety requirements for this task
+   - Wayland implications (if rendering)
+   - Performance budget
+   - Validation criteria
+
+**Generate code that:**
+- Is complete (no stubs, no TODOs without GitHub issue numbers)
+- Has error handling (every operation can fail)
+- Follows patterns from this document
+- Passes the validation checklist
+- Includes comments explaining WHY (not what)
+
+**Your output should include:**
+```markdown
+1. Complete file implementation (not snippets)
+2. Exact commands to build/test
+3. Anti-patterns specific to this task (❌ DON'T...)
+4. Validation checklist for this task
+5. Expected output/behavior
+```
+
+---
+
+## 🎓 LEARNING FROM MISTAKES
+
+**Common mistakes AI agents make:**
+
+1. **"TODO: implement later"** → ❌ Implement it NOW or don't include it
+2. **"This is a simple example"** → ❌ Give COMPLETE implementation
+3. **Forgetting error handling** → ❌ EVERY operation can fail
+4. **Mixing up threads** → ❌ Know which thread your code runs on
+5. **Assuming context persists** → ❌ Wayland can invalidate it anytime
+6. **Caching state** → ❌ Query fresh every time (FBO, context, etc.)
+7. **Magic numbers** → ❌ Use named constants
+8. **Not testing edge cases** → ❌ Test empty, full, rapid changes
+
+**Before submitting ANY code, ask yourself:**
+- Will this crash on Wayland context loss?
+- Will this cause xruns in the audio thread?
+- Did I handle all error cases?
+- Are there any magic numbers?
+- Is every variable initialized?
+- Would valgrind complain?
+- Does this follow the patterns in this document?
+
+---
+
+**This document is the source of truth for Zenith DAW development. When in doubt, refer here.**

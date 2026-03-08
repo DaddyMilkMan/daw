@@ -1,0 +1,1153 @@
+JUCE v8.0.9
+Available Unit Tests:
+ - [AudioEngine] Track Processing
+ - [AudioEngine] Clip Playback
+ - [AudioEngine] MIDI Routing
+ - [AudioEngine] Mixer Channel
+ - [AudioEngine] Plugin Hosting
+ - [AudioEngine] Basic Audio Processing
+ - [Stability] Audio Stability (NaN/Inf)
+ - [ProjectState] ValueTree Integrity
+ - [ProjectState] Undo/Redo
+ - [ProjectState] Track Manipulation
+ - [ProjectState] Clip Manipulation
+ - [ProjectState] Automation Data
+ - [ProjectState] Project Serialization
+ - [ProjectState] Piano Roll Features
+ - [AudioEngine] Core Engine
+ - [Concurrency] Lock-Free Stress Test
+ - [Concurrency] Master Plugin RCU Stress Test
+ - [Concurrency] Engine Plugin Management Stress Test
+ - [] Theme System Tests
+ - [] UITests
+ - [MIDI] MIDI 2.0 Property Exchange
+ - [AI] AI Integration
+ - [Accessibility] AccessibilityTests
+ - [Network] CRDT Synchronization
+ - [DSP] ONNX Pipeline
+ - [Automation] PluginAutomationTests
+ - [] SampleEditorRecordingTests
+ - [Networking] Collaboration Multi-Peer
+-----------------------------------
+Random seed: 0x6585dda
+-----------------------------------------------------------------
+Starting tests in: Track Processing / Track creation...
+Completed tests in Track Processing / Track creation
+-----------------------------------------------------------------
+Starting tests in: Track Processing / Track mute/solo...
+Completed tests in Track Processing / Track mute/solo
+-----------------------------------------------------------------
+Starting tests in: Track Processing / Track volume processing...
+Completed tests in Track Processing / Track volume processing
+-----------------------------------------------------------------
+Starting tests in: Track Processing / Track pan processing...
+Completed tests in Track Processing / Track pan processing
+-----------------------------------------------------------------
+Starting tests in: Clip Playback / Clip Timing Accuracy...
+Completed tests in Clip Playback / Clip Timing Accuracy
+-----------------------------------------------------------------
+Starting tests in: Clip Playback / Clip start/stop...
+Completed tests in Clip Playback / Clip start/stop
+-----------------------------------------------------------------
+Starting tests in: Clip Playback / Clip looping...
+Completed tests in Clip Playback / Clip looping
+-----------------------------------------------------------------
+Starting tests in: MIDI Routing / MIDI note routing...
+Completed tests in MIDI Routing / MIDI note routing
+-----------------------------------------------------------------
+Starting tests in: MIDI Routing / MIDI channel filtering...
+Completed tests in MIDI Routing / MIDI channel filtering
+-----------------------------------------------------------------
+Starting tests in: Mixer Channel / EQ processing applies gain...
+JUCE Assertion failure in juce_IIRFilter_Impl.h:106
+JUCE Assertion failure in juce_IIRFilter_Impl.h:107
+JUCE Assertion failure in juce_IIRFilter_Impl.h:106
+JUCE Assertion failure in juce_IIRFilter_Impl.h:107
+JUCE Assertion failure in juce_IIRFilter_Impl.h:106
+JUCE Assertion failure in juce_IIRFilter_Impl.h:107
+JUCE Assertion failure in juce_IIRFilter_Impl.h:106
+JUCE Assertion failure in juce_IIRFilter_Impl.h:107
+JUCE Assertion failure in juce_IIRFilter_Impl.h:106
+JUCE Assertion failure in juce_IIRFilter_Impl.h:107
+JUCE Assertion failure in juce_IIRFilter_Impl.h:106
+JUCE Assertion failure in juce_IIRFilter_Impl.h:107
+JUCE Assertion failure in juce_IIRFilter_Impl.h:106
+JUCE Assertion failure in juce_IIRFilter_Impl.h:107
+JUCE Assertion failure in juce_IIRFilter_Impl.h:106
+JUCE Assertion failure in juce_IIRFilter_Impl.h:107
+JUCE Assertion failure in juce_IIRFilter_Impl.h:106
+JUCE Assertion failure in juce_IIRFilter_Impl.h:107
+JUCE Assertion failure in juce_IIRFilter_Impl.h:106
+JUCE Assertion failure in juce_IIRFilter_Impl.h:107
+Completed tests in Mixer Channel / EQ processing applies gain
+-----------------------------------------------------------------
+Starting tests in: Mixer Channel / Compression reduces gain above threshold...
+JUCE Assertion failure in juce_IIRFilter_Impl.h:106
+JUCE Assertion failure in juce_IIRFilter_Impl.h:107
+Completed tests in Mixer Channel / Compression reduces gain above threshold
+-----------------------------------------------------------------
+Starting tests in: Mixer Channel / Send levels route signal to aux buffers...
+JUCE Assertion failure in juce_IIRFilter_Impl.h:106
+JUCE Assertion failure in juce_IIRFilter_Impl.h:107
+Completed tests in Mixer Channel / Send levels route signal to aux buffers
+-----------------------------------------------------------------
+Starting tests in: Plugin Hosting / Plugin Delay Compensation...
+Completed tests in Plugin Hosting / Plugin Delay Compensation
+-----------------------------------------------------------------
+Starting tests in: Plugin Hosting / Plugin instantiation...
+Completed tests in Plugin Hosting / Plugin instantiation
+-----------------------------------------------------------------
+Starting tests in: Basic Audio Processing / Engine processes audio graph...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+Engine: Constructor
+Engine: Modular components initialized
+Engine: AudioFilePool created
+PluginHost: Initializing...
+PluginHost: WARNING - VST3 format not available!
+PluginHost: Initialized
+Engine: PluginHost initialized with 0 cached plugins
+PluginEditorWindowManager created
+InstrumentRegistry: Initialized
+InstrumentRegistry: Registered instrument 'zenith_poly_synth'
+PluginHost: Starting async scan...
+PluginHost: Async scan complete.
+InstrumentRegistry: Registered instrument 'zenith_sampler'
+InstrumentRegistry: Registered instrument 'zenith_sampler.808_essentials'
+InstrumentRegistry: Registered instrument 'zenith_sampler.lofi_keys'
+InstrumentRegistry: Registered instrument 'zenith_sampler.trap_pluck'
+InstrumentRegistry: Registered instrument 'zenith_sampler.orchestral_strings'
+InstrumentRegistry: Registered instrument 'zenith_sampler.fx_impacts'
+Built-in instruments registered successfully (2 synths + 5 sample-based instruments)
+ContentPaths: Using repo content directory: /home/micah/Desktop/zenith/daw/Content
+Generated 500 presets for Zenith Poly Synth
+Engine: InstrumentRegistry initialized
+SessionDebuggerAgent: Initialized
+Engine: SessionDebuggerAgent initialized
+WARNING: GROK_API_KEY environment variable is not set. GrokAPIClient will not function until a valid API key is provided.
+GrokMasteringAI: No API key found in SecureKeyStore or Env Var
+GrokMasteringAI initialized with Grok 4.1 reasoning model
+═══════════════════════════════════════════════════════════════
+  AI MASTERING AGENT - Powered by Grok 4.1 Reasoning
+═══════════════════════════════════════════════════════════════
+Engine: AIMasteringAgent initialized
+Engine: TempoMap initialized
+Engine: Midi2DiscoveryService initialized
+Engine: TrackFreezeManager initialized
+Engine: Master bus registered in RoutingGraph
+Engine: Constructor complete
+Engine: Setting project state
+Engine: RecordingManager wired to ProjectState
+TrackAutomationSynchronizer: Constructor
+TrackAutomationSynchronizer: Rebuilt listeners for 0 tracks
+Engine: Created automation synchronizer
+Engine: Syncing with project state
+Engine: Synced 0 tracks
+TempoMap: Updated with 1 tempo points
+Engine: Audio device starting...
+Engine: Preparing 0 tracks
+Engine: Audio device started
+  Sample Rate: 44100 Hz
+  Buffer Size: 512 samples
+TrackStateManager: Inserted track 'Test Track' at index -1 (ID: track_74acf5e1)
+Engine: Syncing with project state
+Engine: Synced 1 tracks
+Engine: Play
+TrackAutomationSynchronizer: Started at 60 Hz
+Engine: Started automation synchronizer
+JUCE Assertion failure in juce_IIRFilter_Impl.h:106
+JUCE Assertion failure in juce_IIRFilter_Impl.h:107
+JUCE Assertion failure in juce_IIRFilter_Impl.h:106
+JUCE Assertion failure in juce_IIRFilter_Impl.h:107
+Engine: Audio device stopped
+
+**********************************************************
+Zenith DAW Log Started
+Log started: 27 Dec 2025 10:11:39am
+
+[10:11:39] [INFO   ] Engine: Destructor STARTED
+[10:11:39] [INFO   ] Engine: Destructor STARTED
+[10:11:39] [INFO   ] Engine: Destructor STARTED
+Engine: Destructor
+[10:11:39] [INFO   ] Engine: Stopping automationSynchronizer...
+[10:11:39] [INFO   ] Engine: Stopping automationSynchronizer...
+[10:11:39] [INFO   ] Engine: Stopping automationSynchronizer...
+TrackAutomationSynchronizer: Stopped
+TrackAutomationSynchronizer: Destructor
+[10:11:39] [INFO   ] Engine: Disabling MIDI input...
+[10:11:39] [INFO   ] Engine: Disabling MIDI input...
+[10:11:39] [INFO   ] Engine: Disabling MIDI input...
+Engine: Disabling MIDI inputs...
+Engine: MIDI inputs stopped
+[10:11:39] [INFO   ] Engine::shutdown() STARTED
+[10:11:39] [INFO   ] Engine::shutdown() STARTED
+[10:11:39] [INFO   ] Engine::shutdown() STARTED
+Engine: Shutting down...
+Engine: SessionDebugger monitoring stopped
+Engine: Stop
+AudioFilePool: Clearing all files (0 loaded)
+[10:11:39] [INFO   ] Engine: shutdown() COMPLETE
+[10:11:39] [INFO   ] Engine: shutdown() COMPLETE
+[10:11:39] [INFO   ] Engine: shutdown() COMPLETE
+Engine: Shutdown complete
+[10:11:39] [INFO   ] Engine: Resetting modular components...
+[10:11:39] [INFO   ] Engine: Resetting modular components...
+[10:11:39] [INFO   ] Engine: Resetting modular components...
+AI Mastering Agent destroyed
+[10:11:39] [INFO   ] Engine: Resetting audioFilePool...
+[10:11:39] [INFO   ] Engine: Resetting audioFilePool...
+[10:11:39] [INFO   ] Engine: Resetting audioFilePool...
+AudioFilePool: Clearing all files (0 loaded)
+[10:11:39] [INFO   ] Engine: Destructor COMPLETE
+[10:11:39] [INFO   ] Engine: Destructor COMPLETE
+[10:11:39] [INFO   ] Engine: Destructor COMPLETE
+Engine: Cleanup complete
+SessionDebuggerAgent: Destroyed
+PluginEditorWindowManager: Closed all editor windows
+PluginHost: Destructor
+ProjectState: Destructor
+Completed tests in Basic Audio Processing / Engine processes audio graph
+-----------------------------------------------------------------
+Starting tests in: Audio Stability (NaN/Inf) / Track processes audio without NaN/Inf...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+Engine: Constructor
+Engine: Modular components initialized
+Engine: AudioFilePool created
+PluginHost: Initializing...
+PluginHost: WARNING - VST3 format not available!
+PluginHost: Initialized
+Engine: PluginHost initialized with 0 cached plugins
+PluginEditorWindowManager created
+InstrumentRegistry: Initialized
+PluginHost: Starting async scan...
+PluginHost: Async scan complete.
+InstrumentRegistry: Registered instrument 'zenith_poly_synth'
+InstrumentRegistry: Registered instrument 'zenith_sampler'
+InstrumentRegistry: Registered instrument 'zenith_sampler.808_essentials'
+InstrumentRegistry: Registered instrument 'zenith_sampler.lofi_keys'
+InstrumentRegistry: Registered instrument 'zenith_sampler.trap_pluck'
+InstrumentRegistry: Registered instrument 'zenith_sampler.orchestral_strings'
+InstrumentRegistry: Registered instrument 'zenith_sampler.fx_impacts'
+Built-in instruments registered successfully (2 synths + 5 sample-based instruments)
+Generated 500 presets for Zenith Poly Synth
+Engine: InstrumentRegistry initialized
+SessionDebuggerAgent: Initialized
+Engine: SessionDebuggerAgent initialized
+WARNING: GROK_API_KEY environment variable is not set. GrokAPIClient will not function until a valid API key is provided.
+GrokMasteringAI: No API key found in SecureKeyStore or Env Var
+GrokMasteringAI initialized with Grok 4.1 reasoning model
+═══════════════════════════════════════════════════════════════
+  AI MASTERING AGENT - Powered by Grok 4.1 Reasoning
+═══════════════════════════════════════════════════════════════
+Engine: AIMasteringAgent initialized
+Engine: TempoMap initialized
+Engine: Midi2DiscoveryService initialized
+Engine: TrackFreezeManager initialized
+Engine: Master bus registered in RoutingGraph
+Engine: Constructor complete
+Engine: Setting project state
+Engine: RecordingManager wired to ProjectState
+TrackAutomationSynchronizer: Constructor
+TrackAutomationSynchronizer: Rebuilt listeners for 0 tracks
+Engine: Created automation synchronizer
+Engine: Syncing with project state
+Engine: Synced 0 tracks
+TempoMap: Updated with 1 tempo points
+Engine: Audio device starting...
+Engine: Preparing 0 tracks
+Engine: Audio device started
+  Sample Rate: 48000 Hz
+  Buffer Size: 512 samples
+TrackStateManager: Inserted track 'Stability Test Track' at index -1 (ID: track_36c7465f)
+Engine: Syncing with project state
+Engine: Synced 1 tracks
+Engine: Audio device stopped
+[10:11:39] [INFO   ] Engine: Destructor STARTED
+[10:11:39] [INFO   ] Engine: Destructor STARTED
+[10:11:39] [INFO   ] Engine: Destructor STARTED
+Engine: Destructor
+[10:11:39] [INFO   ] Engine: Stopping automationSynchronizer...
+[10:11:39] [INFO   ] Engine: Stopping automationSynchronizer...
+[10:11:39] [INFO   ] Engine: Stopping automationSynchronizer...
+TrackAutomationSynchronizer: Stopped
+TrackAutomationSynchronizer: Destructor
+[10:11:39] [INFO   ] Engine: Disabling MIDI input...
+[10:11:39] [INFO   ] Engine: Disabling MIDI input...
+[10:11:39] [INFO   ] Engine: Disabling MIDI input...
+Engine: Disabling MIDI inputs...
+Engine: MIDI inputs stopped
+[10:11:39] [INFO   ] Engine::shutdown() STARTED
+[10:11:39] [INFO   ] Engine::shutdown() STARTED
+[10:11:39] [INFO   ] Engine::shutdown() STARTED
+Engine: Shutting down...
+Engine: SessionDebugger monitoring stopped
+Engine: Stop
+AudioFilePool: Clearing all files (0 loaded)
+[10:11:39] [INFO   ] Engine: shutdown() COMPLETE
+[10:11:39] [INFO   ] Engine: shutdown() COMPLETE
+[10:11:39] [INFO   ] Engine: shutdown() COMPLETE
+Engine: Shutdown complete
+[10:11:39] [INFO   ] Engine: Resetting modular components...
+[10:11:39] [INFO   ] Engine: Resetting modular components...
+[10:11:39] [INFO   ] Engine: Resetting modular components...
+AI Mastering Agent destroyed
+[10:11:39] [INFO   ] Engine: Resetting audioFilePool...
+[10:11:39] [INFO   ] Engine: Resetting audioFilePool...
+[10:11:39] [INFO   ] Engine: Resetting audioFilePool...
+AudioFilePool: Clearing all files (0 loaded)
+[10:11:39] [INFO   ] Engine: Destructor COMPLETE
+[10:11:39] [INFO   ] Engine: Destructor COMPLETE
+[10:11:39] [INFO   ] Engine: Destructor COMPLETE
+Engine: Cleanup complete
+SessionDebuggerAgent: Destroyed
+PluginEditorWindowManager: Closed all editor windows
+PluginHost: Destructor
+ProjectState: Destructor
+Completed tests in Audio Stability (NaN/Inf) / Track processes audio without NaN/Inf
+-----------------------------------------------------------------
+Starting tests in: ValueTree Integrity / ValueTree creation...
+Completed tests in ValueTree Integrity / ValueTree creation
+-----------------------------------------------------------------
+Starting tests in: ValueTree Integrity / Property get/set...
+Completed tests in ValueTree Integrity / Property get/set
+-----------------------------------------------------------------
+Starting tests in: ValueTree Integrity / Child add/remove...
+Completed tests in ValueTree Integrity / Child add/remove
+-----------------------------------------------------------------
+Starting tests in: Undo/Redo / Simple undo/redo...
+Completed tests in Undo/Redo / Simple undo/redo
+-----------------------------------------------------------------
+Starting tests in: Undo/Redo / Multiple undos...
+Completed tests in Undo/Redo / Multiple undos
+-----------------------------------------------------------------
+Starting tests in: Undo/Redo / Undo with child operations...
+Completed tests in Undo/Redo / Undo with child operations
+-----------------------------------------------------------------
+Starting tests in: Track Manipulation / Add track...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+TrackStateManager: Inserted track 'Audio 1' at index -1 (ID: track_bb2be718)
+ProjectState: Destructor
+Completed tests in Track Manipulation / Add track
+-----------------------------------------------------------------
+Starting tests in: Track Manipulation / Remove track...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+TrackStateManager: Inserted track 'T1' at index -1 (ID: track_a513a26c)
+TrackStateManager: Inserted track 'T2' at index -1 (ID: track_3853908f)
+TrackStateManager: Removed track ID: track_a513a26c
+ProjectState: Destructor
+Completed tests in Track Manipulation / Remove track
+-----------------------------------------------------------------
+Starting tests in: Track Manipulation / Reorder tracks...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+TrackStateManager: Inserted track 'T1' at index -1 (ID: track_e028d763)
+TrackStateManager: Inserted track 'T2' at index -1 (ID: track_0f7655ec)
+ProjectState: Destructor
+Completed tests in Track Manipulation / Reorder tracks
+-----------------------------------------------------------------
+Starting tests in: Clip Manipulation / Add clip to track...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+TrackStateManager: Inserted track 'Audio' at index -1 (ID: track_cc664fcc)
+[10:11:39] [INFO   ] ClipStateManager: Created empty clip (ID: clip_50c15840)
+[10:11:39] [INFO   ] ClipStateManager: Created empty clip (ID: clip_50c15840)
+[10:11:39] [INFO   ] ClipStateManager: Created empty clip (ID: clip_50c15840)
+ProjectState: Destructor
+Completed tests in Clip Manipulation / Add clip to track
+-----------------------------------------------------------------
+Starting tests in: Clip Manipulation / Move clip position...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+TrackStateManager: Inserted track 'Audio' at index -1 (ID: track_554ee9c5)
+[10:11:39] [INFO   ] ClipStateManager: Created empty clip (ID: clip_bd94c798)
+[10:11:39] [INFO   ] ClipStateManager: Created empty clip (ID: clip_bd94c798)
+[10:11:39] [INFO   ] ClipStateManager: Created empty clip (ID: clip_bd94c798)
+ProjectState: Destructor
+Completed tests in Clip Manipulation / Move clip position
+-----------------------------------------------------------------
+Starting tests in: Clip Manipulation / Delete clip...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+TrackStateManager: Inserted track 'Audio' at index -1 (ID: track_512ed9d1)
+[10:11:39] [INFO   ] ClipStateManager: Created empty clip (ID: clip_4f49a17f)
+[10:11:39] [INFO   ] ClipStateManager: Created empty clip (ID: clip_4f49a17f)
+[10:11:39] [INFO   ] ClipStateManager: Created empty clip (ID: clip_4f49a17f)
+[10:11:39] [INFO   ] ClipStateManager: Removed clip clip_4f49a17f
+[10:11:39] [INFO   ] ClipStateManager: Removed clip clip_4f49a17f
+[10:11:39] [INFO   ] ClipStateManager: Removed clip clip_4f49a17f
+ProjectState: Undo
+ProjectState: Destructor
+Completed tests in Clip Manipulation / Delete clip
+-----------------------------------------------------------------
+Starting tests in: Clip Manipulation / Split clip...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+TrackStateManager: Inserted track 'Audio' at index -1 (ID: track_be3e4368)
+[10:11:39] [INFO   ] ClipStateManager: Created empty clip (ID: clip_74c78e64)
+[10:11:39] [INFO   ] ClipStateManager: Created empty clip (ID: clip_74c78e64)
+[10:11:39] [INFO   ] ClipStateManager: Created empty clip (ID: clip_74c78e64)
+ProjectState: Created clip 'Clip (L)' with ID clip_0 on track track_be3e4368
+ProjectState: Created clip 'Clip (R)' with ID clip_1 on track track_be3e4368
+[10:11:39] [INFO   ] ClipStateManager: Removed clip clip_74c78e64
+[10:11:39] [INFO   ] ClipStateManager: Removed clip clip_74c78e64
+[10:11:39] [INFO   ] ClipStateManager: Removed clip clip_74c78e64
+ProjectState: Split clip clip_74c78e64 into clip_0 and clip_1
+ProjectState: Destructor
+Completed tests in Clip Manipulation / Split clip
+-----------------------------------------------------------------
+Starting tests in: Automation Data / Add automation point...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+TrackStateManager: Inserted track 'Audio' at index -1 (ID: track_0790eb46)
+ProjectState: Destructor
+Completed tests in Automation Data / Add automation point
+-----------------------------------------------------------------
+Starting tests in: Automation Data / Move automation point...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+TrackStateManager: Inserted track 'Audio' at index -1 (ID: track_6a288043)
+ProjectState: Destructor
+Completed tests in Automation Data / Move automation point
+-----------------------------------------------------------------
+Starting tests in: Automation Data / Delete automation point...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+TrackStateManager: Inserted track 'Audio' at index -1 (ID: track_3ede4475)
+ProjectState: Undo
+ProjectState: Destructor
+Completed tests in Automation Data / Delete automation point
+-----------------------------------------------------------------
+Starting tests in: Automation Data / Automation envelope interpolation...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+TrackStateManager: Inserted track 'Audio' at index -1 (ID: track_ec9d78a1)
+ProjectState: Destructor
+Completed tests in Automation Data / Automation envelope interpolation
+-----------------------------------------------------------------
+Starting tests in: Project Serialization / Save project to XML...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+ProjectState: Destructor
+Completed tests in Project Serialization / Save project to XML
+-----------------------------------------------------------------
+Starting tests in: Project Serialization / Binary write/read...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+TrackStateManager: Inserted track 'T1' at index -1 (ID: track_8c614d61)
+ProjectState: Destructor
+Completed tests in Project Serialization / Binary write/read
+-----------------------------------------------------------------
+Starting tests in: Piano Roll Features / Tension Storage...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+TrackStateManager: Inserted track 'MIDI' at index -1 (ID: track_8fb50de9)
+[10:11:39] [INFO   ] ClipStateManager: Created empty clip (ID: clip_2fdfae1d)
+[10:11:39] [INFO   ] ClipStateManager: Created empty clip (ID: clip_2fdfae1d)
+[10:11:39] [INFO   ] ClipStateManager: Created empty clip (ID: clip_2fdfae1d)
+ProjectState: Added MIDI note note_0 to clip clip_2fdfae1d
+ProjectState: Destructor
+Completed tests in Piano Roll Features / Tension Storage
+-----------------------------------------------------------------
+Starting tests in: Piano Roll Features / Humanize Logic...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+TrackStateManager: Inserted track 'MIDI' at index -1 (ID: track_3921f198)
+[10:11:39] [INFO   ] ClipStateManager: Created empty clip (ID: clip_76fca36c)
+[10:11:39] [INFO   ] ClipStateManager: Created empty clip (ID: clip_76fca36c)
+[10:11:39] [INFO   ] ClipStateManager: Created empty clip (ID: clip_76fca36c)
+ProjectState: Added note note_0 (pitch=60, start=0 beats)
+ProjectState: Added note note_1 (pitch=62, start=1 beats)
+ProjectState: Destructor
+Completed tests in Piano Roll Features / Humanize Logic
+-----------------------------------------------------------------
+Starting tests in: Piano Roll Features / Legato Logic...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+TrackStateManager: Inserted track 'MIDI' at index -1 (ID: track_6a29567d)
+[10:11:39] [INFO   ] ClipStateManager: Created empty clip (ID: clip_aa83099a)
+[10:11:39] [INFO   ] ClipStateManager: Created empty clip (ID: clip_aa83099a)
+[10:11:39] [INFO   ] ClipStateManager: Created empty clip (ID: clip_aa83099a)
+ProjectState: Added note note_0 (pitch=60, start=0 beats)
+ProjectState: Added note note_1 (pitch=62, start=1 beats)
+ProjectState: Destructor
+Completed tests in Piano Roll Features / Legato Logic
+-----------------------------------------------------------------
+Starting tests in: Core Engine / Lock-free Event Queue...
+Engine: Constructor
+Engine: Modular components initialized
+Engine: AudioFilePool created
+PluginHost: Initializing...
+PluginHost: WARNING - VST3 format not available!
+PluginHost: Initialized
+Engine: PluginHost initialized with 0 cached plugins
+PluginEditorWindowManager created
+InstrumentRegistry: Initialized
+InstrumentRegistry: Registered instrument 'zenith_poly_synth'
+PluginHost: Starting async scan...
+PluginHost: Async scan complete.
+InstrumentRegistry: Registered instrument 'zenith_sampler'
+InstrumentRegistry: Registered instrument 'zenith_sampler.808_essentials'
+InstrumentRegistry: Registered instrument 'zenith_sampler.lofi_keys'
+InstrumentRegistry: Registered instrument 'zenith_sampler.trap_pluck'
+InstrumentRegistry: Registered instrument 'zenith_sampler.orchestral_strings'
+InstrumentRegistry: Registered instrument 'zenith_sampler.fx_impacts'
+Built-in instruments registered successfully (2 synths + 5 sample-based instruments)
+Generated 500 presets for Zenith Poly Synth
+Engine: InstrumentRegistry initialized
+SessionDebuggerAgent: Initialized
+Engine: SessionDebuggerAgent initialized
+WARNING: GROK_API_KEY environment variable is not set. GrokAPIClient will not function until a valid API key is provided.
+GrokMasteringAI: No API key found in SecureKeyStore or Env Var
+GrokMasteringAI initialized with Grok 4.1 reasoning model
+═══════════════════════════════════════════════════════════════
+  AI MASTERING AGENT - Powered by Grok 4.1 Reasoning
+═══════════════════════════════════════════════════════════════
+Engine: AIMasteringAgent initialized
+Engine: TempoMap initialized
+Engine: Midi2DiscoveryService initialized
+Engine: TrackFreezeManager initialized
+Engine: Master bus registered in RoutingGraph
+Engine: Constructor complete
+[10:11:39] [INFO   ] Engine: Destructor STARTED
+[10:11:39] [INFO   ] Engine: Destructor STARTED
+[10:11:39] [INFO   ] Engine: Destructor STARTED
+Engine: Destructor
+[10:11:39] [INFO   ] Engine: Disabling MIDI input...
+[10:11:39] [INFO   ] Engine: Disabling MIDI input...
+[10:11:39] [INFO   ] Engine: Disabling MIDI input...
+Engine: Disabling MIDI inputs...
+Engine: MIDI inputs stopped
+[10:11:39] [INFO   ] Engine::shutdown() STARTED
+[10:11:39] [INFO   ] Engine::shutdown() STARTED
+[10:11:39] [INFO   ] Engine::shutdown() STARTED
+Engine: Shutting down...
+Engine: SessionDebugger monitoring stopped
+Engine: Stop
+AudioFilePool: Clearing all files (0 loaded)
+[10:11:39] [INFO   ] Engine: shutdown() COMPLETE
+[10:11:39] [INFO   ] Engine: shutdown() COMPLETE
+[10:11:39] [INFO   ] Engine: shutdown() COMPLETE
+Engine: Shutdown complete
+[10:11:39] [INFO   ] Engine: Resetting modular components...
+[10:11:39] [INFO   ] Engine: Resetting modular components...
+[10:11:39] [INFO   ] Engine: Resetting modular components...
+AI Mastering Agent destroyed
+[10:11:39] [INFO   ] Engine: Resetting audioFilePool...
+[10:11:39] [INFO   ] Engine: Resetting audioFilePool...
+[10:11:39] [INFO   ] Engine: Resetting audioFilePool...
+AudioFilePool: Clearing all files (0 loaded)
+[10:11:39] [INFO   ] Engine: Destructor COMPLETE
+[10:11:39] [INFO   ] Engine: Destructor COMPLETE
+[10:11:39] [INFO   ] Engine: Destructor COMPLETE
+Engine: Cleanup complete
+SessionDebuggerAgent: Destroyed
+PluginEditorWindowManager: Closed all editor windows
+PluginHost: Destructor
+Completed tests in Core Engine / Lock-free Event Queue
+-----------------------------------------------------------------
+Starting tests in: Core Engine / MIDI FIFO...
+Completed tests in Core Engine / MIDI FIFO
+-----------------------------------------------------------------
+Starting tests in: Lock-Free Stress Test / MidiFifo Saturation...
+Completed tests in Lock-Free Stress Test / MidiFifo Saturation
+-----------------------------------------------------------------
+Starting tests in: Master Plugin RCU Stress Test / Concurrent Snapshot Update and Access...
+Completed tests in Master Plugin RCU Stress Test / Concurrent Snapshot Update and Access
+-----------------------------------------------------------------
+Starting tests in: Engine Plugin Management Stress Test / Concurrent Plugin Add/Remove with Audio Callback...
+Engine: Constructor
+Engine: Modular components initialized
+Engine: AudioFilePool created
+PluginHost: Initializing...
+PluginHost: WARNING - VST3 format not available!
+PluginHost: Initialized
+Engine: PluginHost initialized with 0 cached plugins
+PluginEditorWindowManager created
+InstrumentRegistry: Initialized
+InstrumentRegistry: Registered instrument 'zenith_poly_synth'
+PluginHost: Starting async scan...
+PluginHost: Async scan complete.
+InstrumentRegistry: Registered instrument 'zenith_sampler'
+InstrumentRegistry: Registered instrument 'zenith_sampler.808_essentials'
+InstrumentRegistry: Registered instrument 'zenith_sampler.lofi_keys'
+InstrumentRegistry: Registered instrument 'zenith_sampler.trap_pluck'
+InstrumentRegistry: Registered instrument 'zenith_sampler.orchestral_strings'
+InstrumentRegistry: Registered instrument 'zenith_sampler.fx_impacts'
+Built-in instruments registered successfully (2 synths + 5 sample-based instruments)
+Generated 500 presets for Zenith Poly Synth
+Engine: InstrumentRegistry initialized
+SessionDebuggerAgent: Initialized
+Engine: SessionDebuggerAgent initialized
+WARNING: GROK_API_KEY environment variable is not set. GrokAPIClient will not function until a valid API key is provided.
+GrokMasteringAI: No API key found in SecureKeyStore or Env Var
+GrokMasteringAI initialized with Grok 4.1 reasoning model
+═══════════════════════════════════════════════════════════════
+  AI MASTERING AGENT - Powered by Grok 4.1 Reasoning
+═══════════════════════════════════════════════════════════════
+Engine: AIMasteringAgent initialized
+Engine: TempoMap initialized
+Engine: Midi2DiscoveryService initialized
+Engine: TrackFreezeManager initialized
+Engine: Master bus registered in RoutingGraph
+Engine: Constructor complete
+Stress test completed: 100 update cycles, 123958 audio cycles.
+[10:11:41] [INFO   ] Engine: Destructor STARTED
+[10:11:41] [INFO   ] Engine: Destructor STARTED
+[10:11:41] [INFO   ] Engine: Destructor STARTED
+Engine: Destructor
+[10:11:41] [INFO   ] Engine: Disabling MIDI input...
+[10:11:41] [INFO   ] Engine: Disabling MIDI input...
+[10:11:41] [INFO   ] Engine: Disabling MIDI input...
+Engine: Disabling MIDI inputs...
+Engine: MIDI inputs stopped
+[10:11:41] [INFO   ] Engine::shutdown() STARTED
+[10:11:41] [INFO   ] Engine::shutdown() STARTED
+[10:11:41] [INFO   ] Engine::shutdown() STARTED
+Engine: Shutting down...
+Engine: SessionDebugger monitoring stopped
+Engine: Stop
+AudioFilePool: Clearing all files (0 loaded)
+[10:11:41] [INFO   ] Engine: shutdown() COMPLETE
+[10:11:41] [INFO   ] Engine: shutdown() COMPLETE
+[10:11:41] [INFO   ] Engine: shutdown() COMPLETE
+Engine: Shutdown complete
+[10:11:41] [INFO   ] Engine: Resetting modular components...
+[10:11:41] [INFO   ] Engine: Resetting modular components...
+[10:11:41] [INFO   ] Engine: Resetting modular components...
+AI Mastering Agent destroyed
+[10:11:41] [INFO   ] Engine: Resetting audioFilePool...
+[10:11:41] [INFO   ] Engine: Resetting audioFilePool...
+[10:11:41] [INFO   ] Engine: Resetting audioFilePool...
+AudioFilePool: Clearing all files (0 loaded)
+[10:11:41] [INFO   ] Engine: Destructor COMPLETE
+[10:11:41] [INFO   ] Engine: Destructor COMPLETE
+[10:11:41] [INFO   ] Engine: Destructor COMPLETE
+Engine: Cleanup complete
+SessionDebuggerAgent: Destroyed
+PluginEditorWindowManager: Closed all editor windows
+PluginHost: Destructor
+Completed tests in Engine Plugin Management Stress Test / Concurrent Plugin Add/Remove with Audio Callback
+-----------------------------------------------------------------
+Starting tests in: Theme System Tests / ThemeManager Preset Switching...
+Completed tests in Theme System Tests / ThemeManager Preset Switching
+-----------------------------------------------------------------
+Starting tests in: Theme System Tests / Theme Listener Notification...
+Completed tests in Theme System Tests / Theme Listener Notification
+-----------------------------------------------------------------
+Starting tests in: Theme System Tests / FontManager Initialization...
+Fontconfig error: Cannot load default config file: No such file: (null)
+[FontManager] Loading fonts from: /home/micah/Desktop/zenith/daw/apps/desktop/Resources/fonts
+[FontManager] Loaded: Inter-Regular.ttf
+[FontManager] Loaded: Inter-Medium.ttf
+[FontManager] Loaded: Inter-SemiBold.ttf
+[FontManager] Loaded: Inter-Bold.ttf
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/core/SkRefCnt.h:142:17: runtime error: member call on address 0x50f000000b80 which does not point to an object of type 'SkRefCntBase'
+0x50f000000b80: note: object has invalid vptr
+ 00 00 00 00  98 1e 30 8a 25 57 00 00  01 00 00 00 01 00 00 00  01 00 00 00 90 01 05 00  00 00 00 00
+              ^~~~~~~~~~~~~~~~~~~~~~~
+              invalid vptr
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/core/SkRefCnt.h:63:9: runtime error: member call on address 0x50f000000b80 which does not point to an object of type 'SkRefCntBase'
+0x50f000000b80: note: object has invalid vptr
+ 00 00 00 00  98 1e 30 8a 25 57 00 00  01 00 00 00 01 00 00 00  01 00 00 00 90 01 05 00  00 00 00 00
+              ^~~~~~~~~~~~~~~~~~~~~~~
+              invalid vptr
+[FontManager] WARNING: Some essential fonts failed to load.
+[FontManager]   Inter-Regular: OK
+[FontManager]   JetBrainsMono-Regular: FAILED
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/core/SkRefCnt.h:142:17: runtime error: member call on address 0x50f000000b80 which does not point to an object of type 'SkRefCntBase'
+0x50f000000b80: note: object has invalid vptr
+ 00 00 00 00  98 1e 30 8a 25 57 00 00  02 00 00 00 01 00 00 00  01 00 00 00 90 01 05 00  00 00 00 00
+              ^~~~~~~~~~~~~~~~~~~~~~~
+              invalid vptr
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/core/SkRefCnt.h:151:19: runtime error: member call on address 0x50f000000b80 which does not point to an object of type 'SkRefCntBase'
+0x50f000000b80: note: object has invalid vptr
+ 00 00 00 00  98 1e 30 8a 25 57 00 00  04 00 00 00 01 00 00 00  01 00 00 00 90 01 05 00  00 00 00 00
+              ^~~~~~~~~~~~~~~~~~~~~~~
+              invalid vptr
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/core/SkRefCnt.h:73:9: runtime error: member call on address 0x50f000000b80 which does not point to an object of type 'SkRefCntBase'
+0x50f000000b80: note: object has invalid vptr
+ 00 00 00 00  98 1e 30 8a 25 57 00 00  04 00 00 00 01 00 00 00  01 00 00 00 90 01 05 00  00 00 00 00
+              ^~~~~~~~~~~~~~~~~~~~~~~
+              invalid vptr
+Completed tests in Theme System Tests / FontManager Initialization
+-----------------------------------------------------------------
+Starting tests in: UITests / ZenithLayout Grid...
+Completed tests in UITests / ZenithLayout Grid
+-----------------------------------------------------------------
+Starting tests in: UITests / FrameBufferSwap Lock-Free...
+Completed tests in UITests / FrameBufferSwap Lock-Free
+-----------------------------------------------------------------
+Starting tests in: MIDI 2.0 Property Exchange / PropertyExchangeManager Logic...
+PropertyExchangeManager: Requesting property list from MUID: 12345
+PropertyExchangeManager: Updated 1 properties for 12345
+PropertyExchangeManager: Setting filter_cutoff to 0.8 on MUID 12345
+Completed tests in MIDI 2.0 Property Exchange / PropertyExchangeManager Logic
+-----------------------------------------------------------------
+Starting tests in: MIDI 2.0 Property Exchange / Discovery Response Parsing...
+Engine: Constructor
+Engine: Modular components initialized
+Engine: AudioFilePool created
+PluginHost: Initializing...
+PluginHost: WARNING - VST3 format not available!
+PluginHost: Initialized
+Engine: PluginHost initialized with 0 cached plugins
+PluginEditorWindowManager created
+InstrumentRegistry: Initialized
+InstrumentRegistry: Registered instrument 'zenith_poly_synth'
+PluginHost: Starting async scan...
+PluginHost: Async scan complete.
+InstrumentRegistry: Registered instrument 'zenith_sampler'
+InstrumentRegistry: Registered instrument 'zenith_sampler.808_essentials'
+InstrumentRegistry: Registered instrument 'zenith_sampler.lofi_keys'
+InstrumentRegistry: Registered instrument 'zenith_sampler.trap_pluck'
+InstrumentRegistry: Registered instrument 'zenith_sampler.orchestral_strings'
+InstrumentRegistry: Registered instrument 'zenith_sampler.fx_impacts'
+Built-in instruments registered successfully (2 synths + 5 sample-based instruments)
+Generated 500 presets for Zenith Poly Synth
+Engine: InstrumentRegistry initialized
+SessionDebuggerAgent: Initialized
+Engine: SessionDebuggerAgent initialized
+WARNING: GROK_API_KEY environment variable is not set. GrokAPIClient will not function until a valid API key is provided.
+GrokMasteringAI: No API key found in SecureKeyStore or Env Var
+GrokMasteringAI initialized with Grok 4.1 reasoning model
+═══════════════════════════════════════════════════════════════
+  AI MASTERING AGENT - Powered by Grok 4.1 Reasoning
+═══════════════════════════════════════════════════════════════
+Engine: AIMasteringAgent initialized
+Engine: TempoMap initialized
+Engine: Midi2DiscoveryService initialized
+Engine: TrackFreezeManager initialized
+Engine: Master bus registered in RoutingGraph
+Engine: Constructor complete
+!!! Test 1 failed: Properties should be discovered for MUID 393
+JUCE Assertion failure in juce_UnitTest.cpp:314
+[10:11:41] [INFO   ] Engine: Destructor STARTED
+[10:11:41] [INFO   ] Engine: Destructor STARTED
+[10:11:41] [INFO   ] Engine: Destructor STARTED
+Engine: Destructor
+[10:11:41] [INFO   ] Engine: Disabling MIDI input...
+[10:11:41] [INFO   ] Engine: Disabling MIDI input...
+[10:11:41] [INFO   ] Engine: Disabling MIDI input...
+Engine: Disabling MIDI inputs...
+Engine: MIDI inputs stopped
+[10:11:41] [INFO   ] Engine::shutdown() STARTED
+[10:11:41] [INFO   ] Engine::shutdown() STARTED
+[10:11:41] [INFO   ] Engine::shutdown() STARTED
+Engine: Shutting down...
+Engine: SessionDebugger monitoring stopped
+Engine: Stop
+AudioFilePool: Clearing all files (0 loaded)
+[10:11:41] [INFO   ] Engine: shutdown() COMPLETE
+[10:11:41] [INFO   ] Engine: shutdown() COMPLETE
+[10:11:41] [INFO   ] Engine: shutdown() COMPLETE
+Engine: Shutdown complete
+[10:11:41] [INFO   ] Engine: Resetting modular components...
+[10:11:41] [INFO   ] Engine: Resetting modular components...
+[10:11:41] [INFO   ] Engine: Resetting modular components...
+AI Mastering Agent destroyed
+[10:11:41] [INFO   ] Engine: Resetting audioFilePool...
+[10:11:41] [INFO   ] Engine: Resetting audioFilePool...
+[10:11:41] [INFO   ] Engine: Resetting audioFilePool...
+AudioFilePool: Clearing all files (0 loaded)
+[10:11:41] [INFO   ] Engine: Destructor COMPLETE
+[10:11:41] [INFO   ] Engine: Destructor COMPLETE
+[10:11:41] [INFO   ] Engine: Destructor COMPLETE
+Engine: Cleanup complete
+SessionDebuggerAgent: Destroyed
+PluginEditorWindowManager: Closed all editor windows
+PluginHost: Destructor
+
+FAILED!!  1 test failed, out of a total of 1
+
+-----------------------------------------------------------------
+Starting tests in: AI Integration / Grok Malformed JSON Handling...
+Completed tests in AI Integration / Grok Malformed JSON Handling
+-----------------------------------------------------------------
+Starting tests in: AI Integration / AIStatusManager Operations...
+AIStatusManager: Started [TestAgent] Testing operation
+AIStatusManager: Completed [TestAgent] Success!
+Completed tests in AI Integration / AIStatusManager Operations
+-----------------------------------------------------------------
+Starting tests in: AI Integration / AIResponseCache Put/Get...
+AIResponseCache: Loaded 0 cached entries
+AIResponseCache: Initialized at /home/micah/.config/ZenithDAW/AICache
+AIResponseCache: PUT 8f4d03a896106c53... (TTL: 60s)
+AIResponseCache: HIT for 8f4d03a896106c53...
+Completed tests in AI Integration / AIResponseCache Put/Get
+-----------------------------------------------------------------
+Starting tests in: AI Integration / AudioFitnessEvaluator Scoring...
+Completed tests in AI Integration / AudioFitnessEvaluator Scoring
+-----------------------------------------------------------------
+Starting tests in: AI Integration / AIEventBus Pub/Sub...
+AIEventBus: TestSubscriber subscribed to SamplesFound (ID: 1)
+AIEventBus: Published SamplesFound from TestAgent (1 subscribers)
+AIEventBus: Unsubscribed TestSubscriber (ID: 1)
+Completed tests in AI Integration / AIEventBus Pub/Sub
+-----------------------------------------------------------------
+Starting tests in: AI Integration / StemSeparationJob Lifecycle...
+AIStatusManager: Started [NeuralEngine] Separating stems for zenith_test_audio.wav
+ONNXStemSeparator: ONNX Runtime environment initialized [v17]
+StemSeparationJob: Model initialization failed, attempting DSP fallback
+ONNXStemSeparator: Using DSP fallback
+AIStatusManager: Completed [NeuralEngine] Stem separation completed successfully
+!!! Test 1 failed
+JUCE Assertion failure in juce_UnitTest.cpp:314
+
+FAILED!!  1 test failed, out of a total of 1
+
+-----------------------------------------------------------------
+Starting tests in: AccessibilityTests / PanelHeader Accessibility Handler...
+Note: Accessibility handler not available (headless environment)
+Completed tests in AccessibilityTests / PanelHeader Accessibility Handler
+-----------------------------------------------------------------
+Starting tests in: AccessibilityTests / PanelDivider Accessibility Handler...
+Note: Accessibility handler not available (headless environment)
+Completed tests in AccessibilityTests / PanelDivider Accessibility Handler
+-----------------------------------------------------------------
+Starting tests in: AccessibilityTests / TabGroup Accessibility Handler...
+Note: Accessibility handler not available (headless environment)
+Completed tests in AccessibilityTests / TabGroup Accessibility Handler
+-----------------------------------------------------------------
+Starting tests in: AccessibilityTests / Component Hierarchy Accessibility...
+Found 0 accessible PanelHeaders
+Found 0 accessible PanelDividers
+Note: No accessibility handlers available (headless environment)
+Completed tests in AccessibilityTests / Component Hierarchy Accessibility
+-----------------------------------------------------------------
+Starting tests in: CRDT Synchronization / Simple property synchronization...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+/home/micah/Desktop/zenith/daw/external/JUCE/modules/juce_core/memory/juce_MemoryBlock.cpp:89:16: runtime error: null pointer passed as argument 1, which is declared to never be null
+/home/micah/Desktop/zenith/daw/external/JUCE/modules/juce_core/memory/juce_MemoryBlock.cpp:89:16: runtime error: null pointer passed as argument 2, which is declared to never be null
+TrackStateManager: Inserted track 'Track 1' at index -1 (ID: track_12a75261)
+ProjectState: Destructor
+ProjectState: Destructor
+Completed tests in CRDT Synchronization / Simple property synchronization
+-----------------------------------------------------------------
+Starting tests in: CRDT Synchronization / Concurrent edits resolution (LWW)...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+TrackStateManager: Inserted track 'Shared' at index -1 (ID: track_6ce62068)
+ProjectState: Destructor
+ProjectState: Destructor
+Completed tests in CRDT Synchronization / Concurrent edits resolution (LWW)
+-----------------------------------------------------------------
+Starting tests in: CRDT Synchronization / Timeline synchronization (Moving Clips)...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+TrackStateManager: Inserted track 'Audio' at index -1 (ID: track_1cb7b1b0)
+[10:11:41] [INFO   ] ClipStateManager: Created empty clip (ID: clip_e9f33e49)
+[10:11:41] [INFO   ] ClipStateManager: Created empty clip (ID: clip_e9f33e49)
+[10:11:41] [INFO   ] ClipStateManager: Created empty clip (ID: clip_e9f33e49)
+ProjectState: Destructor
+ProjectState: Destructor
+Completed tests in CRDT Synchronization / Timeline synchronization (Moving Clips)
+-----------------------------------------------------------------
+Starting tests in: ONNX Pipeline / Missing Model File Handling...
+ONNXStemSeparator: ONNX Runtime environment initialized [v17]
+ONNXStemSeparator: Provided path not found or empty, searching for default...
+ONNXStemSeparator: Model file not found - /this/path/does/not/exist/model.onnx
+ONNXStemSeparator: Provided path not found or empty, searching for default...
+ONNXStemSeparator: Model file not found - 
+OnnxPipelineTests: Empty path init result = false
+Completed tests in ONNX Pipeline / Missing Model File Handling
+-----------------------------------------------------------------
+Starting tests in: ONNX Pipeline / Corrupt/Small Model File Handling...
+ONNXStemSeparator: ONNX Runtime environment initialized [v17]
+ONNXStemSeparator: Model file too small (0 bytes) - likely corrupt or incomplete
+ONNXStemSeparator: Model file too small (1024 bytes) - likely corrupt or incomplete
+ONNXStemSeparator: Unexpected ONNX header byte 0x0 - file may be corrupt or not ONNX format
+ONNXStemSeparator: ONNX Runtime error - Load model from /tmp/zenith_onnx_test/notonnx.onnx failed:Protobuf parsing failed.
+ONNXStemSeparator: Model file appears corrupt or invalid ONNX format
+OnnxPipelineTests: Wrong format file result = false
+Completed tests in ONNX Pipeline / Corrupt/Small Model File Handling
+-----------------------------------------------------------------
+Starting tests in: ONNX Pipeline / DSP Fallback Verification...
+Completed tests in ONNX Pipeline / DSP Fallback Verification
+-----------------------------------------------------------------
+Starting tests in: ONNX Pipeline / Single Inference Pass (No Crash)...
+ONNXStemSeparator: ONNX Runtime environment initialized [v17]
+OnnxPipelineTests: No default model found, will use DSP fallback
+ONNXStemSeparator: Using DSP fallback
+OnnxPipelineTests: Separation used DSP Fallback
+Completed tests in ONNX Pipeline / Single Inference Pass (No Crash)
+-----------------------------------------------------------------
+Starting tests in: ONNX Pipeline / Model Discovery...
+OnnxPipelineTests: No default model found (this is OK for testing)
+ONNXStemSeparator: ONNX Runtime environment initialized [v17]
+Completed tests in ONNX Pipeline / Model Discovery
+-----------------------------------------------------------------
+Starting tests in: PluginAutomationTests / Binding Creation...
+PluginAutomationBinding: Prepared with 220.5 samples of smoothing
+PluginAutomationBinding: Prepared with 220.5 samples of smoothing
+Completed tests in PluginAutomationTests / Binding Creation
+-----------------------------------------------------------------
+Starting tests in: PluginAutomationTests / Parameter Smoothing...
+PluginAutomationBinding: Prepared with 220.5 samples of smoothing
+Completed tests in PluginAutomationTests / Parameter Smoothing
+-----------------------------------------------------------------
+Starting tests in: SampleEditorRecordingTests / Recording Flow...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+Engine: Constructor
+Engine: Modular components initialized
+Engine: AudioFilePool created
+PluginHost: Initializing...
+PluginHost: WARNING - VST3 format not available!
+PluginHost: Initialized
+Engine: PluginHost initialized with 0 cached plugins
+PluginEditorWindowManager created
+InstrumentRegistry: Initialized
+PluginHost: Starting async scan...
+InstrumentRegistry: Registered instrument 'zenith_poly_synth'
+PluginHost: Async scan complete.
+InstrumentRegistry: Registered instrument 'zenith_sampler'
+InstrumentRegistry: Registered instrument 'zenith_sampler.808_essentials'
+InstrumentRegistry: Registered instrument 'zenith_sampler.lofi_keys'
+InstrumentRegistry: Registered instrument 'zenith_sampler.trap_pluck'
+InstrumentRegistry: Registered instrument 'zenith_sampler.orchestral_strings'
+InstrumentRegistry: Registered instrument 'zenith_sampler.fx_impacts'
+Built-in instruments registered successfully (2 synths + 5 sample-based instruments)
+Generated 500 presets for Zenith Poly Synth
+Engine: InstrumentRegistry initialized
+SessionDebuggerAgent: Initialized
+Engine: SessionDebuggerAgent initialized
+WARNING: GROK_API_KEY environment variable is not set. GrokAPIClient will not function until a valid API key is provided.
+GrokMasteringAI: No API key found in SecureKeyStore or Env Var
+GrokMasteringAI initialized with Grok 4.1 reasoning model
+═══════════════════════════════════════════════════════════════
+  AI MASTERING AGENT - Powered by Grok 4.1 Reasoning
+═══════════════════════════════════════════════════════════════
+Engine: AIMasteringAgent initialized
+Engine: TempoMap initialized
+Engine: Midi2DiscoveryService initialized
+Engine: TrackFreezeManager initialized
+Engine: Master bus registered in RoutingGraph
+Engine: Constructor complete
+Engine: Setting project state
+Engine: RecordingManager wired to ProjectState
+TrackAutomationSynchronizer: Constructor
+TrackAutomationSynchronizer: Rebuilt listeners for 0 tracks
+Engine: Created automation synchronizer
+Engine: Syncing with project state
+Engine: Synced 0 tracks
+TempoMap: Updated with 1 tempo points
+Generating waveform cache...
+Engine: Setting project state
+[10:11:42] [INFO   ] Engine: Stopping old automationSynchronizer...
+[10:11:42] [INFO   ] Engine: Stopping old automationSynchronizer...
+[10:11:42] [INFO   ] Engine: Stopping old automationSynchronizer...
+TrackAutomationSynchronizer: Stopped
+TrackAutomationSynchronizer: Destructor
+Engine: RecordingManager wired to ProjectState
+[10:11:42] [INFO   ] Engine: Destructor STARTED
+[10:11:42] [INFO   ] Engine: Destructor STARTED
+[10:11:42] [INFO   ] Engine: Destructor STARTED
+Engine: Destructor
+[10:11:42] [INFO   ] Engine: Disabling MIDI input...
+[10:11:42] [INFO   ] Engine: Disabling MIDI input...
+[10:11:42] [INFO   ] Engine: Disabling MIDI input...
+Engine: Disabling MIDI inputs...
+Engine: MIDI inputs stopped
+[10:11:42] [INFO   ] Engine::shutdown() STARTED
+[10:11:42] [INFO   ] Engine::shutdown() STARTED
+[10:11:42] [INFO   ] Engine::shutdown() STARTED
+Engine: Shutting down...
+Engine: SessionDebugger monitoring stopped
+Engine: Stop
+AudioFilePool: Clearing all files (0 loaded)
+[10:11:42] [INFO   ] Engine: shutdown() COMPLETE
+[10:11:42] [INFO   ] Engine: shutdown() COMPLETE
+[10:11:42] [INFO   ] Engine: shutdown() COMPLETE
+Engine: Shutdown complete
+[10:11:42] [INFO   ] Engine: Resetting modular components...
+[10:11:42] [INFO   ] Engine: Resetting modular components...
+[10:11:42] [INFO   ] Engine: Resetting modular components...
+AI Mastering Agent destroyed
+[10:11:42] [INFO   ] Engine: Resetting audioFilePool...
+[10:11:42] [INFO   ] Engine: Resetting audioFilePool...
+[10:11:42] [INFO   ] Engine: Resetting audioFilePool...
+AudioFilePool: Clearing all files (0 loaded)
+[10:11:42] [INFO   ] Engine: Destructor COMPLETE
+[10:11:42] [INFO   ] Engine: Destructor COMPLETE
+[10:11:42] [INFO   ] Engine: Destructor COMPLETE
+Engine: Cleanup complete
+SessionDebuggerAgent: Destroyed
+PluginEditorWindowManager: Closed all editor windows
+PluginHost: Destructor
+ProjectState: Destructor
+Completed tests in SampleEditorRecordingTests / Recording Flow
+-----------------------------------------------------------------
+Starting tests in: Collaboration Multi-Peer / Initial State...
+Completed tests in Collaboration Multi-Peer / Initial State
+-----------------------------------------------------------------
+Starting tests in: Collaboration Multi-Peer / CRDT Initialization...
+ProjectState: Constructor
+ProjectFileIO: Initialized
+ProjectState: Default state created
+ProjectFileIO: Creating new blank project
+ProjectState: Default state created
+ProjectFileIO: New project created successfully
+Collab: CRDT System Initialized
+Completed tests in Collaboration Multi-Peer / CRDT Initialization
+-----------------------------------------------------------------
+Starting tests in: Collaboration Multi-Peer / Connection State Machine...
+Collab: CRDT System Shutdown
+ProjectState: Destructor
+Completed tests in Collaboration Multi-Peer / Connection State Machine
+*** Leaked objects detected: 1 instance(s) of class PluginAutomationBinding
+JUCE Assertion failure in juce_LeakedObjectDetector.h:104
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/core/SkRefCnt.h:151:19: runtime error: member call on address 0x5070000e2860 which does not point to an object of type 'SkRefCntBase'
+0x5070000e2860: note: object has invalid vptr
+ 00 00 00 00  e8 bd 29 8a 25 57 00 00  01 00 00 00 be be be be  00 f3 01 00 10 51 00 00  98 f3 14 95
+              ^~~~~~~~~~~~~~~~~~~~~~~
+              invalid vptr
+/home/micah/Desktop/zenith/daw/external/vcpkg/installed/x64-linux/include/skia/include/core/SkRefCnt.h:78:35: runtime error: member call on address 0x5070000e2860 which does not point to an object of type 'SkRefCntBase'
+0x5070000e2860: note: object has invalid vptr
+ 00 00 00 00  e8 bd 29 8a 25 57 00 00  00 00 00 00 be be be be  00 f3 01 00 10 51 00 00  98 f3 14 95
+              ^~~~~~~~~~~~~~~~~~~~~~~
+              invalid vptr
+*** Leaked objects detected: 2 instance(s) of class AudioProcessorParameterNode
+JUCE Assertion failure in juce_LeakedObjectDetector.h:104
+*** Leaked objects detected: 2 instance(s) of class AudioParameterFloat
+JUCE Assertion failure in juce_LeakedObjectDetector.h:104
+*** Leaked objects detected: 2 instance(s) of class AudioProcessorParameterWithID
+JUCE Assertion failure in juce_LeakedObjectDetector.h:104
+*** Leaked objects detected: 2 instance(s) of class AudioProcessorParameter
+JUCE Assertion failure in juce_LeakedObjectDetector.h:104
+*** Leaked objects detected: 301 instance(s) of class AudioPluginInstance
+JUCE Assertion failure in juce_LeakedObjectDetector.h:104
+*** Leaked objects detected: 301 instance(s) of class AudioProcessor
+JUCE Assertion failure in juce_LeakedObjectDetector.h:104
+*** Leaked objects detected: 301 instance(s) of class AudioProcessorParameterGroup
+JUCE Assertion failure in juce_LeakedObjectDetector.h:104
+*** Leaked objects detected: 301 instance(s) of class OwnedArray
+JUCE Assertion failure in juce_LeakedObjectDetector.h:104
+*** Leaked objects detected: 602 instance(s) of class OwnedArray
+JUCE Assertion failure in juce_LeakedObjectDetector.h:104
+JUCE Assertion failure in juce_Timer.cpp:99
+
+=================================================================
+==1373185==ERROR: LeakSanitizer: detected memory leaks
+
+Direct leak of 96 byte(s) in 1 object(s) allocated from:
+    #0 0x77484c6fd340 in calloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:77
+    #1 0x77484c04b4e9  (/home/micah/Desktop/zenith/daw/build/_deps/onnxruntime-src/lib/libonnxruntime.so.1.17.1+0xa4b4e9) (BuildId: 447ab91a6114db18ea788c5a7e9d57a54ebbd080)
+
+Direct leak of 96 byte(s) in 1 object(s) allocated from:
+    #0 0x77484c6fd340 in calloc ../../../../src/libsanitizer/asan/asan_malloc_linux.cpp:77
+    #1 0x77484c04b4cd  (/home/micah/Desktop/zenith/daw/build/_deps/onnxruntime-src/lib/libonnxruntime.so.1.17.1+0xa4b4cd) (BuildId: 447ab91a6114db18ea788c5a7e9d57a54ebbd080)
+
+SUMMARY: AddressSanitizer: 192 byte(s) leaked in 2 allocation(s).

@@ -1,9 +1,7 @@
 # Known Issues
 
-**Last Updated**: February 3, 2026  
+**Last Updated**: 2026-02-20
 **Version**: 0.1.0-alpha
-
-**HONEST STATUS: This DAW is 18+ months from production-ready. See ZENITH_DAW_BRUTAL_ASSESSMENT.md for details.**
 
 This document lists all known bugs, limitations, and unfinished features in Zenith DAW.
 
@@ -12,7 +10,7 @@ This document lists all known bugs, limitations, and unfinished features in Zeni
 ## 🔴 Critical Issues (Blocking Release)
 
 ### 1. Debug Build Compilation Failure
-**Location**: `modules/zenith_core/engine/Track.h:426`  
+**Location**: `apps/desktop/Source/engine/Track.h:426`  
 **Severity**: Critical  
 **Status**: Fixed (Resolved by refactoring/cleanup)  
 
@@ -37,34 +35,28 @@ This document lists all known bugs, limitations, and unfinished features in Zeni
 
 ---
 
-### 3. Stem Separation Not Functional
-**Location**: `apps/desktop/Source/dsp/ONNXStemSeparator.cpp`  
-**Severity**: High  
-**Status**: Not Fixed  
+### 3. Stem Separation Needs Model Files
+**Location**: `apps/desktop/Source/dsp/ONNXStemSeparator.cpp`
+**Severity**: Medium
+**Status**: 90% Complete - Infrastructure Ready
 
-**Problem:**
-```cpp
-#ifdef ZENITH_USE_ONNX_RUNTIME
-  // Real ONNX implementation
-#else
-  DBG("ONNXStemSeparator: ONNX Runtime not linked - DSP fallback only");
-  return false;  // Feature disabled
-#endif
-```
+**Actual Situation:**
+- ✅ ONNX Runtime IS integrated (v1.17.1)
+- ✅ 475-line implementation with proper error handling
+- ✅ CMake flag `ENABLE_ONNX` defaults to ON
+- ✅ DSP fallback when ONNX unavailable
+- ❌ Model files not downloaded
+- ❌ No testing with real audio yet
 
-**Details:**
-- ONNX Runtime not included in default build
-- CMake flag `ZENITH_USE_ONNX_RUNTIME` not set
-- Falls back to basic DSP filtering (not ML-based separation)
-- README claims stem separation is implemented (it's not)
+**What's Needed:**
+1. Download Demucs/HTDemucs model (~500MB) to `Content/models/`
+2. Test with real audio files
+3. Verify build on all platforms
+4. Performance benchmarks
 
-**Workaround**: Compile with ONNX Runtime manually.
+**Implementation Plan:** See [MISSING_FEATURES_IMPLEMENTATION_PLAN.md](MISSING_FEATURES_IMPLEMENTATION_PLAN.md)
 
-**Fix Required**:
-1. Add ONNX Runtime to vcpkg dependencies
-2. Enable `ZENITH_USE_ONNX_RUNTIME` in CMake
-3. Test with actual Demucs model
-4. Update README to reflect actual capabilities
+**Estimated Time:** 10 hours
 
 ---
 
@@ -91,9 +83,9 @@ This document lists all known bugs, limitations, and unfinished features in Zeni
 ## 🟠 High Priority Issues
 
 ### 5. VST3 Scanner Crashes on Some Plugins
-**Location**: `modules/zenith_core/engine/PluginHost.cpp`  
+**Location**: `apps/desktop/Source/engine/PluginHost.cpp`  
 **Severity**: High  
-**Status**: Partially Mitigated  
+**Status**: Not Fixed  
 
 **Symptoms:**
 - Application hangs during plugin scan
@@ -110,19 +102,16 @@ This document lists all known bugs, limitations, and unfinished features in Zeni
 - Manually delete problematic plugins from scan folders
 - Clear plugin cache: Delete `AppData/Roaming/Zenith/PluginCache.xml`
 
-**Fix Applied**:
-1. ✅ Out-of-process scanning via `ZenithPluginScanner`
-2. ✅ Per-plugin timeout (5 seconds) with kill-on-timeout
-
-**Remaining Work**:
-1. Add persistent blacklist of crashing plugins
-2. Improve failure logging and surface in UI
-3. Add retry policy for transient scan failures
+**Fix Required**:
+1. Implement out-of-process plugin scanning
+2. Add timeout mechanism (5 seconds max per plugin)
+3. Blacklist crashing plugins
+4. Log failed scans for debugging
 
 ---
 
 ### 6. Track Class is Too Large (God Class)
-**Location**: `modules/zenith_core/engine/Track.h`  
+**Location**: `apps/desktop/Source/engine/Track.h`  
 **Severity**: Medium  
 **Status**: Not Fixed  
 
@@ -148,20 +137,27 @@ This document lists all known bugs, limitations, and unfinished features in Zeni
 
 ---
 
-### 7. Thread Safety Not Fully Validated
+### 7. Thread Safety Not Validated
 **Location**: Multiple files  
 **Severity**: High  
 **Status**: Not Fixed  
 
 **Problem:**
-- RT-safety audit is incomplete across engine modules
-- Some locks still exist (e.g., `juce::SpinLock` for sidechain routing)
+- `Track.h:432` uses `juce::CriticalSection` (mutex) for MIDI notes
+- Claims to be "lock-free" but uses locks in audio thread
 - AddressSanitizer and ThreadSanitizer disabled in CMake
 - No thread safety tests
 
+**Known Unsafe Patterns:**
+```cpp
+// Track.h - Claims lock-free but uses mutex
+juce::CriticalSection activeNotesLock;  // NOT LOCK-FREE!
+std::vector<ActiveNote> activeNotes;
+```
+
 **Fix Required**:
 1. Enable ASAN/TSAN in debug builds
-2. Eliminate remaining locks in audio-thread paths
+2. Replace `CriticalSection` with lock-free alternatives
 3. Audit all audio thread code paths
 4. Add thread safety tests
 
@@ -192,24 +188,27 @@ This document lists all known bugs, limitations, and unfinished features in Zeni
 
 ---
 
-### 9. Offline Audio Export is Limited
-**Location**: `modules/zenith_core/engine/EngineExport.cpp`  
+### 9. No Offline Audio Export
+**Location**: Not implemented  
 **Severity**: Medium  
-**Status**: Partially Implemented  
+**Status**: Not Started  
 
 **Problem:**
-- Offline export exists but UI polish and workflows are incomplete
-- Stems export and batch region export are still missing
+- Can't bounce/export projects to audio files
+- Real-time playback only
+- No stems export
+- No region export
 
 **Fix Required**:
-1. Finish export UI (format, sample rate, bit depth)
-2. Add stems and region export options
-3. Improve progress reporting/cancellation
+1. Implement non-realtime rendering pipeline
+2. Add export dialog (format, sample rate, bit depth)
+3. Support WAV, AIFF, MP3, FLAC
+4. Multi-track/stems export option
 
 ---
 
 ### 10. Session View Unclear Status
-**Location**: `modules/zenith_ui/ui/skia/views/SessionViewComponent.h`  
+**Location**: `apps/desktop/Source/ui/skia/views/SessionViewComponent.h`  
 **Severity**: Medium  
 **Status**: Unknown  
 

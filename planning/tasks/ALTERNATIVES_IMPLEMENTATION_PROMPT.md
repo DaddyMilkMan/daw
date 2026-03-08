@@ -6,7 +6,7 @@
 
 1.  **NO STUBS:** Never write `// TODO: implement later` or create empty placeholder methods. If a feature is required, implement it fully.
 2.  **NO SHORTCUTS:** Do not mock data unless absolutely necessary for testing. Connect to the real `Engine`, `ProjectState`, and `FileSystem`.
-3.  **VISUAL EXCELLENCE:** Use the Skia-based "Neon Noir" design system. Components must look professional, polished, and animated.
+3.  **VISUAL EXCELLENCE:** Use the Skia-based premium matte-black / blue-accent design system. Components must feel studio-grade, polished, and selectively animated.
 4.  **VERIFICATION:** You must compile and verify every step.
 
 ---

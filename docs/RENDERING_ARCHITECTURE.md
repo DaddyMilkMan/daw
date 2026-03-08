@@ -11,7 +11,7 @@ Zenith DAW uses **Skia** as its primary 2D graphics rendering engine, integrated
 
 - 🎨 **Hardware-accelerated rendering** via OpenGL/Metal backends
 - 🚀 **60 FPS smooth animations** for timeline scrubbing, waveforms, and meters
-- 🎭 **Custom "Neon Noir Glassmorphism" design system** with glow effects and gradients
+- 🎭 **Custom matte-black / electric-blue design system** with restrained glow and selective glass overlays
 - 🔧 **Familiar JUCE component model** for layout and event handling
 
 ---
@@ -70,7 +70,7 @@ public:
     void animateWithSpring(const juce::String& property, float target, 
                            float stiffness, float damping);
     
-    // Glow effects (Neon Noir design)
+    // Glow effects (reserved for focus and active states)
     void setGlowEnabled(bool enabled);
     void setGlowColor(SkColor color);
     void setGlowRadius(float radius);
@@ -113,12 +113,12 @@ Design tokens for consistent styling:
 namespace zenith::design {
 
 namespace colors {
-    constexpr SkColor BG_DARKEST = 0xFF0D0D0D;
-    constexpr SkColor BG_DARK = 0xFF1A1A1A;
-    constexpr SkColor NEON_GREEN = 0xFF00FF88;
-    constexpr SkColor NEON_PINK = 0xFFFF0088;
-    constexpr SkColor GLASS_FILL = 0x40FFFFFF;
-    constexpr SkColor BORDER_GLOW = 0x60FFFFFF;
+    constexpr SkColor BG_DARKEST = 0xFF0D0D11;
+    constexpr SkColor BG_DARK = 0xFF1A1A22;
+    constexpr SkColor ACCENT_PRIMARY = 0xFF3B82F6;
+    constexpr SkColor ACCENT_SECONDARY = 0xFF8B5CF6;
+    constexpr SkColor PANEL_TINT = 0x14FFFFFF;
+    constexpr SkColor BORDER_FOCUS = 0xFF3B82F6;
 }
 
 namespace typography {

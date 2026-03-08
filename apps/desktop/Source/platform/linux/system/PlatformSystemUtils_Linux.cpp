@@ -7,10 +7,8 @@
   ==============================================================================
 */
 
-#include "PlatformSystemUtils.h"
-#include "ZenithLogger.h"
+#include "utils/PlatformSystemUtils.h"
 
-#ifdef __linux__
 namespace zenith {
 
 void PlatformSystemUtils::logSystemInfo() {
@@ -22,4 +20,3 @@ juce::String PlatformSystemUtils::getSystemInfoString() {
 }
 
 } // namespace zenith
-#endif

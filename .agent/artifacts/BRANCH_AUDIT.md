@@ -26,7 +26,7 @@
 | fix/build-arranger-track | 2025-12-11 | 0/3 | ✅ | **DELETE** | Already merged via PR #164 |
 | feature/polysynth-ui | 2025-12-11 | 0/6 | ✅ | **DELETE** | Already in master history |
 | feature/mixer-fix | 2025-12-11 | 0/9 | ✅ | **DELETE** | Already in master history |
-| agent/architect/plugin-sandbox | 2025-12-11 | 0/61 | ✅ | **DELETE** | Already in master history, Neon Noir UI work |
+| agent/architect/plugin-sandbox | 2025-12-11 | 0/61 | ✅ | **DELETE** | Already in master history, earlier UI work |
 | agent/architect/sync-overhaul | 2025-12-10 | 0/28 | ✅ | **DELETE** | Already in master history |
 | agent/director/arranger-polish | 2025-12-10 | 0/29 | ✅ | **DELETE** | Already in master history |
 | agent/virtuoso/piano-roll-polish | 2025-12-10 | 0/29 | ✅ | **DELETE** | Already in master history |

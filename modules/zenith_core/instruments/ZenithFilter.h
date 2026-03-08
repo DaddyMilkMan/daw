@@ -10,97 +10,104 @@
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
     GNU Affero General Public License for more details.
 
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 */
 
 #pragma once
 
 #include "ZenithPolySynthDefs.h"
-#include "ZenithAdvancedFilters.h"
 #include <juce_audio_basics/juce_audio_basics.h>
-#include <juce_core/juce_core.h>
 #include <juce_dsp/juce_dsp.h>
-#include <memory>
 #include <array>
+#include <cmath>
 
 namespace zenith {
 
-/**
-    Professional multimode filter with multiple circuit models
-*/
+//==============================================================================
+// PROFESSIONAL FILTER WITH OVERSAMPLING
+//==============================================================================
+
 class ZenithFilter {
 public:
-  ZenithFilter() : oversamplingFactor_(4) {
-    // Filters will be lazily initialized on first use
-  }
+    ZenithFilter() = default;
 
-  void setType(FilterType type) { type_ = type; }
-  void setSampleRate(double sampleRate);
-  void setCutoff(float cutoffHz);
-  void setResonance(float resonance);
-  void setDrive(float drive) { drive_ = drive; }
-  void reset();
-  float getResonance() const { return resonanceSmoothed_.getTargetValue(); }
-  
-  void setModel(FilterModelType model) { 
-    model_ = static_cast<int>(model); 
-    // Reset sub-filters when model changes
-    if (moogFilter_) moogFilter_->reset();
-    if (ms20Filter_) ms20Filter_->reset();
-    if (prophetFilter_) prophetFilter_->reset();
-    if (semFilter_) semFilter_->reset();
-    if (tb303Filter_) tb303Filter_->reset();
-  }
-  
-  void setOversamplingFactor(int factor) {
-    oversamplingFactor_ = juce::jlimit(1, 4, factor);
-  }
+    //==========================================================================
+    // Configuration
+    //==========================================================================
 
-  /**
-   * @brief Process one sample
-   * @param input Input sample
-   * @return Filtered sample
-   */
-  float processSample(float input);
+    void setType(FilterType type) { type_ = type; }
+    void setModel(FilterModelType model) { model_ = model; }
+    void setCutoff(float cutoffHz) { cutoff_ = juce::jlimit(20.0f, 20000.0f, cutoffHz); }
+    void setResonance(float res) { resonance_ = juce::jlimit(0.0f, 1.0f, res); }
+    void setDrive(float drive) { drive_ = juce::jlimit(0.0f, 1.0f, drive); }
+    void setKeyTrackAmount(float amount) { keyTrackAmount_ = juce::jlimit(0.0f, 1.0f, amount); }
 
-  /**
-   * @brief Process block of samples (more efficient)
-   */
-  void processBlock(juce::AudioBuffer<float>& buffer);
+    //==========================================================================
+    // Sample Rate
+    //==========================================================================
+
+    void setSampleRate(double sr) { sampleRate_ = sr; }
+    void reset();
+    void setOversampling(int factor);
+
+    //==========================================================================
+    // Processing
+    //==========================================================================
+
+    float processSample(float input, float midiNote = 60.0f);
+    void process(juce::AudioBuffer<float>& buffer, float midiNote = 60.0f);
 
 private:
-  FilterType type_ = FilterType::Lowpass;
-  int model_ = 0; // FilterModelType enum value
-  double sampleRate_ = 44100.0;
-  int oversamplingFactor_ = 4; // Default to 4x for best quality
+    //==========================================================================
+    // State Variables
+    //==========================================================================
 
-  // Smoothed parameters to avoid zipper noise
-  juce::SmoothedValue<float> cutoffSmoothed_;
-  juce::SmoothedValue<float> resonanceSmoothed_;
-  float drive_ = 1.0f;
+    FilterType type_ = FilterType::LowPass;
+    FilterModelType model_ = FilterModelType::SVF;
+    float cutoff_ = 1000.0f;
+    float resonance_ = 0.5f;
+    float drive_ = 0.0f;
+    float keyTrackAmount_ = 0.0f;
+    double sampleRate_ = 44100.0;
+    int oversamplingFactor_ = 1;
 
-  // SVF State (legacy, for backward compatibility)
-  float ic1eq_ = 0.0f, ic2eq_ = 0.0f;
+    //==========================================================================
+    // Filter State (SVF)
+    //==========================================================================
 
-  // Advanced filter instances (lazy initialization)
-  std::unique_ptr<MoogLadderFilter> moogFilter_;
-  std::unique_ptr<MS20LowpassFilter> ms20Filter_;
-  std::unique_ptr<Prophet5Filter> prophetFilter_;
-  std::unique_ptr<SEMFilter> semFilter_;
-  std::unique_ptr<TB303Filter> tb303Filter_;
+    struct SVFState {
+        double low = 0.0;
+        double band = 0.0;
+        double high = 0.0;
+    } svf_;
 
-  // Oversamplers for quality
-  std::unique_ptr<juce::dsp::Oversampling<float>> oversampler2x_;
-  std::unique_ptr<juce::dsp::Oversampling<float>> oversampler4x_;
+    //==========================================================================
+    // Internal Helpers
+    //==========================================================================
 
-  // Helper methods
-  void initializeFilters();
-  float processSVF(float input);
-  float processWithOversampling(float input);
+    float calculateCutoffWithKeyTrack(float midiNote);
+    float applyDrive(float sample);
+    float processSVF(float input);
+    float processMoog(float input);
+    float processMS20(float input);
+    float processSEM(float input);
+    float processTB303(float input);
+
+    //==========================================================================
+    // Helper Functions
+    //==========================================================================
+
+    inline float softClip(float x) { return juce::jlimit(-1.0f, 1.0f, x); }
+    inline float asymmetricClip(float x) {
+        if (x > 1.0f) return 1.0f - std::exp(-x + 1.0f);
+        if (x < -1.0f) return -1.0f + std::exp(x + 1.0f);
+        return x;
+    }
 };
 
 } // namespace zenith

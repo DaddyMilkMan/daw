@@ -16,8 +16,6 @@
 #   4. Run full test suite before committing
 # =============================================================================
 
-include_guard(GLOBAL)
-
 # -----------------------------------------------------------------------------
 # JUCE Framework
 # -----------------------------------------------------------------------------
@@ -86,16 +84,6 @@ set(ZENITH_LUABRIDGE_GIT_HASH "e0a7f3ce67e83a0e80cd4f9cc4c1c1ea77604ac1"
 set(ZENITH_LUABRIDGE_GIT_URL "https://github.com/vinniefalco/LuaBridge.git"
     CACHE STRING "LuaBridge git repository URL")
 
-# -----------------------------------------------------------------------------
-# Opus (real-time collaboration audio codec)
-# -----------------------------------------------------------------------------
-# Version: 1.3.1
-# Commit hash corresponding to tag v1.3.1.
-set(ZENITH_OPUS_GIT_HASH "e85ed7726db5d677c9c0677298ea0cb9c65bdd23"
-    CACHE STRING "Opus git commit hash for version 1.3.1")
-set(ZENITH_OPUS_GIT_URL "https://github.com/xiph/opus.git"
-    CACHE STRING "Opus git repository URL")
-
 # =============================================================================
 # Version Summary
 # =============================================================================
@@ -106,5 +94,4 @@ message(STATUS "  JUCE:         ${ZENITH_JUCE_GIT_HASH} (8.0.11)")
 message(STATUS "  ONNX Runtime: v${ZENITH_ONNX_VERSION}")
 message(STATUS "  OpenSSL:      v${ZENITH_OPENSSL_VERSION} (fallback)")
 message(STATUS "  LuaBridge:    ${ZENITH_LUABRIDGE_GIT_HASH} (2.8)")
-message(STATUS "  Opus:         ${ZENITH_OPUS_GIT_HASH} (1.3.1)")
 message(STATUS "═══════════════════════════════════════════════════════════════")

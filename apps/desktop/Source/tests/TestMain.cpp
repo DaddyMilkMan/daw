@@ -70,38 +70,35 @@ extern "C" int main(int argc, char *argv[]) {
       for (int i = 0; i < runner.getNumResults(); ++i) {
           const auto* result = runner.getResult(i);
           
-          auto* suiteObj = new juce::DynamicObject();
-          juce::var suiteVar(suiteObj);
-          suiteObj->setProperty("name", result->unitTestName);
-          suiteObj->setProperty("tests", 1);
-          suiteObj->setProperty("failures", result->failures);
-          suiteObj->setProperty("errors", 0);
-          suiteObj->setProperty("time", "0"); // Time not tracked per test in standard runner easily without custom printer
+          juce::var suiteObj(new juce::DynamicObject());
+          suiteObj.getDynamicObject()->setProperty("name", result->unitTestName);
+          suiteObj.getDynamicObject()->setProperty("tests", 1);
+          suiteObj.getDynamicObject()->setProperty("failures", result->failures);
+          suiteObj.getDynamicObject()->setProperty("errors", 0);
+          suiteObj.getDynamicObject()->setProperty("time", "0"); // Time not tracked per test in standard runner easily without custom printer
 
           juce::var testcases;
           
-          auto* testcaseObj = new juce::DynamicObject();
-          juce::var testcaseVar(testcaseObj);
-          testcaseObj->setProperty("classname", result->unitTestName);
-          testcaseObj->setProperty("name", result->subcategoryName.isNotEmpty() ? result->subcategoryName : "Main");
-          testcaseObj->setProperty("time", "0");
+          juce::var testcase(new juce::DynamicObject());
+          testcase.getDynamicObject()->setProperty("classname", result->unitTestName);
+          testcase.getDynamicObject()->setProperty("name", result->subcategoryName.isNotEmpty() ? result->subcategoryName : "Main");
+          testcase.getDynamicObject()->setProperty("time", "0");
 
           if (result->failures > 0) {
               juce::var failures;
               for (const auto& msg : result->messages) {
                   // Heuristic: messages usually contain failure info
-                  auto* failureObj = new juce::DynamicObject();
-                  juce::var failureVar(failureObj);
-                  failureObj->setProperty("message", msg);
-                  failures.append(failureVar);
+                  juce::var failure(new juce::DynamicObject());
+                  failure.getDynamicObject()->setProperty("message", msg);
+                  failures.append(failure);
               }
-              testcaseObj->setProperty("failures", failures);
+              testcase.getDynamicObject()->setProperty("failures", failures);
           }
 
-          testcases.append(testcaseVar);
-          suiteObj->setProperty("testsuite", testcases); // Agent expects "testsuite" array inside
+          testcases.append(testcase);
+          suiteObj.getDynamicObject()->setProperty("testsuite", testcases); // Agent expects "testsuite" array inside
           
-          testsuites.append(suiteVar);
+          testsuites.append(suiteObj);
       }
 
       // Root object structure: { "testsuites": [ ... ] }

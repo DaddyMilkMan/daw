@@ -168,7 +168,7 @@ See `IntegrationExamples.cpp` for complete examples including:
 
 ## Files You Need
 
-All in `apps/desktop/Source/ai_client/`:
+All in `apps/desktop/Source/ai/`:
 - ✅ `AIMasteringAgent.h` - Main interface
 - ✅ `AIMasteringAgent.cpp` - Implementation
 - ✅ `GrokAPIClient.h` - Grok API integration (your key is here)

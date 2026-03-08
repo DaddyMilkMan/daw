@@ -2,8 +2,6 @@
 # SKIA INTEGRATION
 # =============================================================================
 
-include_guard(GLOBAL)
-
 # Skia rendering option (Release recommended)
 option(ZENITH_ENABLE_SKIA "Enable Skia Hardware-Accelerated Rendering" ON)
 

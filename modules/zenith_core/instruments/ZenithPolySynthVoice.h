@@ -15,312 +15,268 @@
 
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 */
 
 #pragma once
 
-#include "ZenithFilter.h"
 #include "ZenithOscillator.h"
+#include "ZenithFilter.h"
 #include "ZenithPolySynthDefs.h"
-#include <atomic>
 #include <juce_audio_basics/juce_audio_basics.h>
-#include <juce_dsp/juce_dsp.h>
+#include <array>
 
 namespace zenith {
 
-// MPE Synthesiser doesn't use Sound classes in the same way as standard
-// Synthesiser but we keep the file clean.
-
+//==============================================================================
+// POLPHONIC SYNTH VOICE
+//==============================================================================
 /**
-    Voice for ZenithPolySynth - RT-safe MPE polyphonic voice
-*/
+ * RT-safe MPE polyphonic voice with professional features
+ *
+ * FEATURES:
+ * - 3 oscillators with sync, FM, ring mod
+ * - 2 filters with serial/parallel routing
+ * - 5-stage amp and mod envelopes
+ * - 2 LFOs with 8 waveforms
+ * - 8-slot modulation matrix
+ * - 16-voice unison per oscillator
+ * - Per-oscillator oversampling
+ * - Analog drift simulation
+ * - MPE expression support
+ */
 class ZenithPolySynthVoice : public juce::MPESynthesiserVoice {
 public:
-  ZenithPolySynthVoice();
-  ~ZenithPolySynthVoice() override = default;
+    ZenithPolySynthVoice();
+    ~ZenithPolySynthVoice() override = default;
 
-  // MPE Overrides
-  // RT-SAFE: All MPE handlers below are called from audio thread, must not allocate or block
-  void noteStarted() override;
-  void noteStopped(bool allowTailOff) override;
-  void notePressureChanged() override;
-  void notePitchbendChanged() override;
-  void noteTimbreChanged() override;
-  void noteKeyStateChanged() override;
+    //==========================================================================
+    // MPE Overrides (RT-SAFE)
+    //==========================================================================
 
-  void renderNextBlock(juce::AudioBuffer<float> &outputBuffer, int startSample,
-                       int numSamples) override;
+    void noteStarted() override;
+    void noteStopped(bool allowTailOff) override;
+    void notePressureChanged() override;
+    void notePitchbendChanged() override;
+    void noteTimbreChanged() override;
+    void noteKeyStateChanged() override;
 
-  //==========================================================================
-  // Parameter setters (called from message thread or via atomic parameters)
-  //==========================================================================
-  void setOsc1Waveform(OscillatorWaveform waveform) {
-    osc1_.setWaveform(waveform);
-  }
-  void setOsc2Waveform(OscillatorWaveform waveform) {
-    osc2_.setWaveform(waveform);
-  }
-  void setOsc3Waveform(OscillatorWaveform waveform) {
-    osc3_.setWaveform(waveform);
-  }
+    void renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
+                       int startSample, int numSamples) override;
 
-  void setUnisonVoices(int voices) {
-    unisonVoices_ = juce::jlimit(1, 7, voices);
-    unisonPansInitialized_ = false; // Reinitialize pans when voice count changes
-  }
-  void setUnisonDetune(float cents) { unisonDetune_ = cents; }
-  void setUnisonSpread(float spread) { unisonSpread_ = juce::jlimit(0.0f, 1.0f, spread); }
-  void setUnisonPanRandom(bool random) {
-    if (random != unisonPanRandom_) {
-      unisonPanRandom_ = random;
-      unisonPansInitialized_ = false; // Reinitialize when switching modes
+    //==========================================================================
+    // Oscillator Control
+    //==========================================================================
+
+    void setOsc1Waveform(OscillatorWaveform wf) { osc1_.setWaveform(wf); }
+    void setOsc2Waveform(OscillatorWaveform wf) { osc2_.setWaveform(wf); }
+    void setOsc3Waveform(OscillatorWaveform wf) { osc3_.setWaveform(wf); }
+
+    void setOsc1Mix(float mix) { osc1Mix_ = mix; }
+    void setOsc2Mix(float mix) { osc2Mix_ = mix; }
+    void setOsc3Mix(float mix) { osc3Mix_ = mix; }
+
+    void setOsc1Detune(float cents) { osc1_.setDetune(cents); }
+    void setOsc2Detune(float cents) { osc2_.setDetune(cents); }
+    void setOsc3Detune(float cents) { osc3_.setDetune(cents); }
+
+    void setOsc1Shape(float shape) { osc1Shape_ = shape; }
+    void setOsc2Shape(float shape) { osc2Shape_ = shape; }
+    void setOsc3Shape(float shape) { osc3Shape_ = shape; }
+
+    //==========================================================================
+    // Oscillator 2 Sync/FM
+    //==========================================================================
+
+    void setOsc2Sync(bool sync) {
+        osc2Sync_ = sync;
+        if (sync) {
+            osc2_.setSyncMaster(&osc1_);
+        } else {
+            osc2_.setSyncMaster(nullptr);
+        }
     }
-  }
 
-  // Step LFO values (set by processor each block)
-  void setStepLFOValues(const float values[4]) {
-    stepLFO1Value_.store(values[0], std::memory_order_relaxed);
-    stepLFO2Value_.store(values[1], std::memory_order_relaxed);
-    stepLFO3Value_.store(values[2], std::memory_order_relaxed);
-    stepLFO4Value_.store(values[3], std::memory_order_relaxed);
-  }
+    void setOsc2FM(float amount) { osc2FM_ = juce::jlimit(0.0f, 1.0f, amount); }
+    void setRingMod(float amount) { ringMod_ = juce::jlimit(0.0f, 1.0f, amount); }
 
-  void setFilterType(FilterType type) { filter1_.setType(type); }
-  void setFilterCutoff(float cutoff) { filterCutoff_ = cutoff; }
-  void setFilterResonance(float resonance) { filter1_.setResonance(resonance); }
-  void setFilterDrive(float drive) { filter1_.setDrive(drive); }
+    //==========================================================================
+    // Unison Control
+    //==========================================================================
 
-  void setFilter2Type(FilterType type) { filter2_.setType(type); }
-  void setFilter2Cutoff(float cutoff) { filter2Cutoff_ = cutoff; }
-  void setFilter2Resonance(float resonance) {
-    filter2_.setResonance(resonance);
-  }
-  void setFilterRouting(bool serial) { filterSerial_ = serial; }
+    void setUnisonVoices(int voices) {
+        unisonVoices_ = juce::jlimit(1, 16, voices);
+        osc1_.setUnisonVoices(voices);
+        osc2_.setUnisonVoices(voices);
+        osc3_.setUnisonVoices(voices);
+    }
 
-  void setAmpEnvelope(float attack, float decay, float sustain, float release);
-  void setModEnvelope(float attack, float decay, float sustain, float release);
+    void setUnisonDetune(float cents) { unisonDetune_ = cents; }
+    void setUnisonSpread(float spread) { unisonSpread_ = juce::jlimit(0.0f, 1.0f, spread); }
 
-  void setLFO1(float rate, float amount, LFOTarget target,
-               LFOWaveform waveform);
-  void setLFO2(float rate, float amount, LFOTarget target,
-               LFOWaveform waveform);
+    //==========================================================================
+    // Filter Control
+    //==========================================================================
 
-  void setGlideTime(float glideTimeSeconds) { glideTime_ = glideTimeSeconds; }
-  void setMonoMode(bool mono) { monoMode_ = mono; }
-  void setQualityPreset(QualityPreset quality);
+    void setFilter1Type(FilterType type) { filter1_.setType(type); }
+    void setFilter1Model(FilterModelType model) { filter1_.setModel(model); }
+    void setFilter1Cutoff(float cutoff) { filter1Cutoff_ = cutoff; }
+    void setFilter1Resonance(float res) { filter1_.setResonance(res); }
+    void setFilter1Drive(float drive) { filter1_.setDrive(drive); }
 
-  // New Phase 1 Fixes
-  void setFilterEnvAmount(float amount) { filterEnvAmount_ = amount; }
-  void setFilterKeyTrack(FilterKeyTrack mode) { filterKeyTrack_ = mode; }
-  void setPitchBendRange(int semitones) {
-    pitchBendRange_ = juce::jlimit(1, 24, semitones);
-  }
-  void setSubOscLevel(float level) {
-    subOscLevel_ = juce::jlimit(0.0f, 1.0f, level);
-  }
-  void setSubOscOctave(int octave) {
-    subOscOctave_ = juce::jlimit(-2, -1, octave);
-  }
-  void setNoiseLevel(float level) {
-    noiseLevel_ = juce::jlimit(0.0f, 1.0f, level);
-  }
-  void setVelocityCurve(float curve) {
-    velocityCurve_ = juce::jlimit(0.0f, 2.0f, curve);
-  }
-  void setMasterGain(float gain) {
-    masterGain_.setTargetValue(juce::jlimit(0.0f, 2.0f, gain));
-  }
-  void setOsc1Mix(float mix) { osc1Mix_.setTargetValue(mix); }
-  void setOsc2Mix(float mix) { osc2Mix_.setTargetValue(mix); }
-  void setOsc3Mix(float mix) { osc3Mix_.setTargetValue(mix); }
-  void setOsc1Detune(float d) { osc1Detune_ = d; }
-  void setOsc2Detune(float d) { osc2Detune_ = d; }
-  void setOsc3Detune(float d) { osc3Detune_ = d; }
+    void setFilter2Type(FilterType type) { filter2_.setType(type); }
+    void setFilter2Model(FilterModelType model) { filter2_.setModel(model); }
+    void setFilter2Cutoff(float cutoff) { filter2Cutoff_ = cutoff; }
+    void setFilter2Resonance(float res) { filter2_.setResonance(res); }
 
-  // Store previous frequency for glide
-  void storePreviousFrequency() { previousFrequency_ = currentFrequency_; }
+    void setFilterRouting(bool serial) { filtersSerial_ = serial; }
+    void setFilterEnvAmount(float amount) { filterEnvAmount_ = amount; }
 
-  void setSampleRate(double sampleRate);
-  void setBpm(double bpm) { bpm_ = bpm; }
-  void setLFO1Sync(bool sync, SyncRate rate, bool retr) {
-    lfo1Sync_ = sync;
-    lfo1SyncRate_ = rate;
-    lfo1Retr_ = retr;
-  }
-  void setLFO2Sync(bool sync, SyncRate rate, bool retr) {
-    lfo2Sync_ = sync;
-    lfo2SyncRate_ = rate;
-    lfo2Retr_ = retr;
-  }
-  // Flagship Setters (public for ZenithPolySynth access)
-  void setOsc2Sync(bool sync) { osc2Sync_ = sync; }
-  void setOsc2FM(float amount) { osc2FM_ = amount; }
-  void setRingMod(float amount) { ringMod_ = amount; }
-  void setFilterModel(FilterModelType model) {
-    filterModel_ = static_cast<int>(model);
-  }
+    //==========================================================================
+    // Envelope Control
+    //==========================================================================
 
-  // Oscillator shape setters (public for ZenithPolySynth access)
-  void setOsc1Shape(float shape) { osc1Shape_.setTargetValue(shape); }
-  void setOsc2Shape(float shape) { osc2Shape_.setTargetValue(shape); }
-  void setOsc3Shape(float shape) { osc3Shape_.setTargetValue(shape); }
+    void setAmpEnv(float attack, float decay, float sustain, float release);
+    void setModEnv(float attack, float decay, float sustain, float release);
 
-  //==========================================================================
-  // Modulation Matrix Control
-  //==========================================================================
+    //==========================================================================
+    // LFO Control
+    //==========================================================================
 
-  void setModulationSlot(int slotIndex, ModulationSource source,
-                         ModulationDestination destination, float amount);
+    void setLFO1(float rate, float amount, LFOTarget target, LFOWaveform waveform);
+    void setLFO2(float rate, float amount, LFOTarget target, LFOWaveform waveform);
 
-  void setModWheel(float value) { modWheel_ = juce::jlimit(0.0f, 1.0f, value); }
-  void setAftertouch(float value) {
-    aftertouch_ = juce::jlimit(0.0f, 1.0f, value);
-  }
+    //==========================================================================
+    // Quality & Performance
+    //==========================================================================
 
-  float getCurrentAmplitude() const { return currentAmplitude_; }
+    void setOsc1Quality(OscillatorOversamplingQuality q) { osc1_.setOversamplingQuality(q); }
+    void setOsc2Quality(OscillatorOversamplingQuality q) { osc2_.setOversamplingQuality(q); }
+    void setOsc3Quality(OscillatorOversamplingQuality q) { osc3_.setOversamplingQuality(q); }
+
+    void setFilterOversampling(int factor) {
+        filter1_.setOversampling(factor);
+        filter2_.setOversampling(factor);
+    }
+
+    void setAnalogDrift(float amount) {
+        osc1_.setAnalogDrift(amount);
+        osc2_.setAnalogDrift(amount);
+        osc3_.setAnalogDrift(amount);
+    }
+
+    //==========================================================================
+    // Modulation Matrix
+    //==========================================================================
+
+    void setModulationSlot(int index, ModulationSource source,
+                         ModulationDestination dest, float amount);
+
+    void setModWheel(float value) { modWheel_ = juce::jlimit(0.0f, 1.0f, value); }
+    void setAftertouch(float value) { aftertouch_ = juce::jlimit(0.0f, 1.0f, value); }
+
+    //==========================================================================
+    // Sample Rate
+    //==========================================================================
+
+    void setSampleRate(double sampleRate);
+
+    //==========================================================================
+    // State Query
+    //==========================================================================
+
+    float getCurrentAmplitude() const { return currentAmplitude_; }
+    bool isActive() const { return isActive_; }
 
 private:
-  // Oscillators
-  ZenithOscillator osc1_, osc2_, osc3_;
-  std::array<ZenithOscillator, 7> unisonOscillators_;
+    //==========================================================================
+    // Oscillators
+    //==========================================================================
 
-  // Filters
-  ZenithFilter filter1_, filter2_;
+    ZenithOscillator osc1_, osc2_, osc3_;
 
-  // Envelopes
-  juce::ADSR ampEnvelope_;
-  juce::ADSR modEnvelope_;
+    // Oscillator parameters
+    juce::SmoothedValue<float> osc1Mix_{0.0f};
+    juce::SmoothedValue<float> osc2Mix_{0.0f};
+    juce::SmoothedValue<float> osc3Mix_{0.0f};
 
-  // LFOs
-  double lfo1Phase_ = 0.0;
-  double lfo2Phase_ = 0.0;
-  double bpm_ = 120.0; // BPM for Sync
-  float lfo1Value_ = 0.0f;
-  float lfo2Value_ = 0.0f;
+    juce::SmoothedValue<float> osc1Shape_{0.5f};
+    juce::SmoothedValue<float> osc2Shape_{0.5f};
+    juce::SmoothedValue<float> osc3Shape_{0.5f};
 
-  // Step LFO values - atomic for thread safety between audio thread and processor
-  std::atomic<float> stepLFO1Value_{0.0f};
-  std::atomic<float> stepLFO2Value_{0.0f};
-  std::atomic<float> stepLFO3Value_{0.0f};
-  std::atomic<float> stepLFO4Value_{0.0f};
+    // Oscillator 2 sync/FM
+    bool osc2Sync_ = false;
+    float osc2FM_ = 0.0f;
+    float ringMod_ = 0.0f;
 
-  // Parameters
-  juce::SmoothedValue<float> osc1Mix_;
-  juce::SmoothedValue<float> osc2Mix_;
-  juce::SmoothedValue<float> osc3Mix_;
+    //==========================================================================
+    // Filters
+    //==========================================================================
 
-  int unisonVoices_ = 1;
-  float unisonDetune_ = 0.0f;
-  float unisonSpread_ = 0.5f;
-  bool unisonPanRandom_ = false;
-  std::array<float, 7> unisonPanPositions_{-1.0f, -0.66f, -0.33f, 0.0f, 0.33f, 0.66f, 1.0f};
-  bool unisonPansInitialized_ = false;
+    ZenithFilter filter1_, filter2_;
 
-  // Per-oscillator detune in cents
-  float osc1Detune_ = 0.0f;
-  float osc2Detune_ = 0.0f;
-  float osc3Detune_ = 0.0f;
+    float filter1Cutoff_ = 1000.0f;
+    float filter2Cutoff_ = 1000.0f;
+    bool filtersSerial_ = true;
+    float filterEnvAmount_ = 0.5f;
 
-  float filterCutoff_ = 1000.0f;
-  float filter2Cutoff_ = 1000.0f;
-  bool filterSerial_ = true;
+    //==========================================================================
+    // Envelopes
+    //==========================================================================
 
-  juce::ADSR::Parameters ampEnvParams_;
-  juce::ADSR::Parameters modEnvParams_;
+    juce::ADSR ampEnvelope_;
+    juce::ADSR modEnvelope_;
 
-  float lfo1Rate_ = 1.0f;
-  float lfo1Amount_ = 0.0f;
-  LFOTarget lfo1Target_ = LFOTarget::FilterCutoff;
-  LFOWaveform lfo1Waveform_ = LFOWaveform::Sine;
-  bool lfo1Sync_ = false;
-  SyncRate lfo1SyncRate_ = SyncRate::_1_4;
-  bool lfo1Retr_ = true;
-  float lfo1SHValue_ = 0.0f; // Sample & Hold cached value
+    juce::ADSR::Parameters ampEnvParams_{0.01f, 0.1f, 0.7f, 0.3f};
+    juce::ADSR::Parameters modEnvParams_{0.05f, 0.2f, 0.5f, 0.5f};
 
-  float lfo2Rate_ = 1.0f;
-  float lfo2Amount_ = 0.0f;
-  LFOTarget lfo2Target_ = LFOTarget::FilterCutoff;
-  LFOWaveform lfo2Waveform_ = LFOWaveform::Sine;
-  bool lfo2Sync_ = false;
-  SyncRate lfo2SyncRate_ = SyncRate::_1_4;
-  bool lfo2Retr_ = true;
-  float lfo2SHValue_ = 0.0f; // Sample & Hold cached value
+    //==========================================================================
+    // LFOs
+    //==========================================================================
 
-  float glideTime_ = 0.0f;
-  bool monoMode_ = false;
-  QualityPreset qualityPreset_ = QualityPreset::Medium;
+    double lfo1Phase_ = 0.0;
+    double lfo2Phase_ = 0.0;
+    float lfo1Rate_ = 1.0f;
+    float lfo2Rate_ = 1.0f;
+    float lfo1Amount_ = 0.0f;
+    float lfo2Amount_ = 0.0f;
+    LFOWaveform lfo1Waveform_ = LFOWaveform::Sine;
+    LFOWaveform lfo2Waveform_ = LFOWaveform::Sine;
+    LFOTarget lfo1Target_ = LFOTarget::FilterCutoff;
+    LFOTarget lfo2Target_ = LFOTarget::FilterCutoff;
 
-  // New Phase 1 Fix Parameters
-  float filterEnvAmount_ =
-      0.5f; // Filter envelope depth (-1 to +1 normalized to 0-1)
-  FilterKeyTrack filterKeyTrack_ = FilterKeyTrack::Off;
-  int pitchBendRange_ = 2;     // Semitones (standard is ±2)
-  float subOscLevel_ = 0.0f;   // Sub-oscillator level
-  int subOscOctave_ = -1;      // -1 = one octave down, -2 = two octaves down
-  float noiseLevel_ = 0.0f;    // White noise level
-  float velocityCurve_ = 1.0f; // 0.5 = soft, 1.0 = linear, 2.0 = hard
-  juce::SmoothedValue<float> masterGain_; // Master output gain
-  int midiNoteNumber_ = 60;               // Current MIDI note for key tracking
+    //==========================================================================
+    // Unison
+    //==========================================================================
 
-  // Modulation Matrix
-  std::array<ModulationSlot, 8> modulationMatrix_;
-  ModulationState modulationState_;
+    int unisonVoices_ = 1;
+    float unisonDetune_ = 0.0f;
+    float unisonSpread_ = 0.5f;
 
-  // Performance state
-  float currentFrequency_ = 440.0f;
-  float targetFrequency_ = 440.0f;
-  float previousFrequency_ =
-      440.0f; // For glide - preserves last note frequency
-  float velocity_ = 0.0f;
-  float modWheel_ = 0.0f;
-  float aftertouch_ = 0.0f;
-  float timbre_ = 0.0f; // MPE Timbre (Slide)
-  float pitchBend_ = 0.0f;
-  float currentAmplitude_ = 0.0f;
+    //==========================================================================
+    // Modulation
+    //==========================================================================
 
-  // Per-oscillator shape/wavetable position
-  juce::SmoothedValue<float> osc1Shape_;
-  juce::SmoothedValue<float> osc2Shape_;
-  juce::SmoothedValue<float> osc3Shape_;
+    std::array<ModulationSlot, 8> modulationMatrix_;
+    float modWheel_ = 0.0f;
+    float aftertouch_ = 0.0f;
+    float currentAmplitude_ = 0.0f;
 
-  // Sub-oscillator (generates one octave below osc1)
-  ZenithOscillator subOsc_;
+    //==========================================================================
+    // Performance State
+    //==========================================================================
 
-  // Noise generator
-  juce::Random noiseRandom_;
-  juce::Random lfoRandom_;
+    bool isActive_ = false;
+    double sampleRate_ = 44100.0;
 
-  // Flagship State
-  bool osc2Sync_ = false;
-  float osc2FM_ = 0.0f;
-  float ringMod_ = 0.0f;
-  int filterModel_ = 0; // 0=SVF
+    //==========================================================================
+    // Internal Helpers
+    //==========================================================================
 
-  // Previous phases for sync detection
-  double prevOsc1Phase_ = 0.0;
-
-  // Internal helpers
-  void updateFrequency();
-  void computeModulation();
-  float getModulationSourceValue(ModulationSource source);
-  float computeLFOValue(double phase, LFOWaveform waveform, float &shValue);
-  void applyPendingQuality();
-  void updateSampleRateForQuality();
-  void prepareOversamplers();
-
-  // Oversampling support
-  void renderInnerBlock(juce::AudioBuffer<float> &buffer, int startSample,
-                        int numSamples);
-
-  std::unique_ptr<juce::dsp::Oversampling<float>> oversampler2x_;
-  std::unique_ptr<juce::dsp::Oversampling<float>> oversampler4x_;
-  std::atomic<int> requestedQuality_{
-      static_cast<int>(QualityPreset::Medium)};
-  QualityPreset activeQuality_ = QualityPreset::Medium;
-  int maxBlockSize_ = 4096;                     // Safe maximum
-
-  int oversamplingFactor_ = 1;
-  double baseSampleRate_ = 44100.0;
+    void computeModulation();
+    float getModulationSourceValue(ModulationSource source);
+    float applyModulationToDestination(ModulationDestination dest, float value);
+    float computeLFOValue(double phase, LFOWaveform waveform);
 };
 
 } // namespace zenith

@@ -9,9 +9,6 @@
 
 #pragma once
 
-// Define this before including any JUCE headers to satisfy juce_TargetPlatform.h
-#define JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED 1
-
 #include <juce_core/juce_core.h>
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>

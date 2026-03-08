@@ -54,13 +54,6 @@ pch.h.gch
 .DS_Store
 Thumbs.db
 Desktop.ini
-*.tmp
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
 
 # ============================================
 # 4. IDE Clutter
@@ -75,10 +68,6 @@ Thumbs.db
 *.swo
 *.code-workspace
 .clangd
-.vs/
-*.sublime-*
-*.sublime-project
-*.sublime-workspace
 
 # ============================================
 # 5. Local Environment
@@ -86,22 +75,12 @@ Thumbs.db
 .env
 *.local
 .venv/
-venv/
-ENV/
-env/
-*.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 
 # ============================================
 # 6. Node Dependencies
 # ============================================
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
+npm-debug.log
 
 # ============================================
 # 7. Build Logs and Error Files
@@ -128,12 +107,6 @@ server_log.txt
 *.backup
 *.orig
 *~
-*.#
-*~
-*.orig
-*.rej
-*.patch
-*.~
 
 # ============================================
 # 9. Python Artifacts
@@ -143,11 +116,6 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
 
 # Local Python venv for tools/mcp_server
 /tools/mcp_server/venv/
@@ -166,7 +134,6 @@ venv.bak/
 # ============================================
 *.ps1
 *.patch
-*.diff
 
 # ============================================
 # 11. Images in Root (stray artifacts)
@@ -174,9 +141,6 @@ venv.bak/
 /*.png
 /*.jpg
 /*.gif
-/*.jpeg
-/*.bmp
-/*.svg
 
 # ============================================
 # 12. Zenith DAW Specific Transients
@@ -205,7 +169,7 @@ venv.bak/
 /docs/archive/root-cleanup-*/
 
 # ============================================
-# 14. Text Files (except CMakeLists)
+# 13. Text Files (except CMakeLists)
 # ============================================
 *.txt
 !CMakeLists.txt
@@ -214,232 +178,9 @@ venv.bak/
 !LICENSE.txt
 !docs/**/*.txt
 .venv/
-
-# ============================================
-# 15. GitHub and Git related
-# ============================================
-.github/pull_request_template.md
-.github/PULL_REQUEST_TEMPLATE/pull_request_template.md
-
-# ============================================
-# 16. Open Source Specific Files
-# ============================================
-# CodeQL analysis results
-.codeql/
-
-# Dependency vulnerability scanning
-dependency-check-report.html
-dependency-check-report.json
-
-# SonarQube analysis
-sonar-project.properties
-sonarqube/
-
-# Snyk reports
-.snyk/
-snyk-report.html
-
-# OWASP Dependency-Check
-dependency-check-report.*
-
-# Security scanning reports
-*.sarif
-*.scans
-
-# ESLint reports
-.eslintcache
-reports/
-
-# Test coverage
-coverage/
-.nyc_output/
-lcov-report/
-lcov.info
-*.lcov
-
-# Code coverage reports
-*.coverage
-coverage.xml
-clover.xml
-cobertura.xml
-jacoco.xml
-
-# ============================================
-# 17. Community Platform Files
-# ============================================
-# Discord webhook URLs
-discord*.txt
-discord*.json
-
-# Community platform exports
-*.csv
-*.xlsx
-community-export.*
-user-export.*
-
-# ============================================
-# 18. Translation Files
-# ============================================
-# Localization files
-*.pot
-*.po
-*.mo
-i18n/
-translations/
-
-# ============================================
-# 19. Temporary Community Files
-# ============================================
-# Temporary files for community contributions
-/community-tmp/
-temp_contributions/
-draft_prs/
-
-# ============================================
-# 20. Community Asset Files
-# ============================================
-# Community assets
-/community-assets/
-user-generated/
-templates/
-
-# ============================================
-# 21. CI/CD Secrets
-# ============================================
-.secrets/
-secrets/
-*.key
-*.pem
-*.p12
-*.pfx
-credentials.json
-secrets.json
-secrets.yml
-secrets.yaml
-
-# ============================================
-# 22. Performance Profiling
-# ============================================
-/perf/
-profiling/
-*.prof
-*.profile
-*.svg
-graphs/
-
-# ============================================
-# 23. Documentation Building
-# ============================================
-/_build/
-/_site/
-docs/_build/
-docs/_site/
-*.md.backup
-
-# ============================================
-# 24. Package Manager Files
-# ============================================
-# Package managers
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-Gemfile.lock
-*.gem
-Podfile.lock
-composer.lock
-go.sum
-poetry.lock
-
-# ============================================
-# 25. Docker Files
-# ============================================
-.dockerignore
-docker-compose.override.yml
-*.docker
-
-# ============================================
-# 26. AI/ML Related
-# ============================================
-# Model files
-*.pth
-*.pt
-*.h5
-*.hdf5
-*.pb
-*.onnx
-*.tflite
-models/
-model_data/
-*.model
-
-# Training artifacts
 checkpoints/
-logs/training/
-tensorboard/
-
-# ============================================
-# 27. Audio Files (Large Assets)
-# ============================================
-# Large audio files
-*.wav
-*.mp3
-*.flac
-*.aac
-*.ogg
-*.m4a
-*.aiff
-*.wma
-*.opus
-samples/
-audio_test_data/
-soundfonts/
-
-# ============================================
-# 28. Video Files
-# ============================================
-# Video tutorials and demos
-*.mp4
-*.avi
-*.mov
-*.mkv
-*.flv
-*.wmv
-videos/
-tutorials/
-recordings/
-
-# ============================================
-# 29. Database Files
-# ============================================
-# Database files
-*.db
-*.sqlite
-*.sqlite3
-*.mdb
-*.accdb
-*.dbf
-*.dat
-databases/
-*/data/
-
-# ============================================
-# 30. Temporary Development Files
-# ============================================
-# Development tools
-*.tmp
-temp_*
-dev_*
-debug_*
-*.debug
-# Cleaned up Ignore
-*_tmp/
-*_tmp
-test_new_architecture*
-AGENTS.md
-aiagentsreadthis
-*.backup
-*.modular
-
-
-# Windows reserved filenames
-nul
+AliasingFFTBenchmark
+CompleteVoiceBenchmark
+PluginScanner
+SynthPerformanceBenchmark
+ZenithTests

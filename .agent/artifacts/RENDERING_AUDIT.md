@@ -222,7 +222,7 @@ ui/skia/
 
 ### Task 4.3: Keep JUCE for Dialogs - Decision Documented
 
-**Decision:** The codebase has already chosen to use Skia for ALL components, including dialogs. This provides visual consistency with the "Neon Noir Glassmorphism" design system. The original task suggested keeping JUCE for dialogs, but since Skia dialogs are already implemented and working, we KEEP the current approach.
+**Decision:** The codebase has already chosen to use Skia for ALL components, including dialogs. This provides visual consistency with the premium matte-black / blue-accent design system. The original task suggested keeping JUCE for dialogs, but since Skia dialogs are already implemented and working, we KEEP the current approach.
 
 Components that CAN remain pure JUCE if ever rewritten:
 - File browsers (using native OS dialogs via JUCE)

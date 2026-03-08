@@ -7,26 +7,27 @@
 ```
 apps/desktop/Source/
 ├── Main.cpp                    # Application entry point
-├── ai_client/                  # C++ client for Python AI service
-├── browser/                    # Browser and marketplace integration
-├── platform/                   # OS-specific code paths
+├── engine/                     # Core audio engine
+│   ├── Engine.h/cpp            # Main audio processor
+│   ├── ProjectState.h/cpp      # ValueTree-based state management
+│   ├── Track.h/cpp             # Base track class
+│   ├── AudioTrack.h/cpp        # Audio clip playback
+│   ├── MIDITrack.h/cpp         # MIDI sequencing
+│   ├── Clip.h/cpp              # Audio/MIDI clip representation
+│   ├── PluginHost.h/cpp        # VST3/AU hosting
+│   └── ProjectFileIO.h/cpp     # Save/load system
+├── ui/                         # User interface
+│   ├── framework/              # Skia integration, layout
+│   ├── common/                 # MainWindow, menus
+│   ├── arranger/               # Timeline view
+│   ├── mixer/                  # Mixer panel
+│   ├── piano-roll/             # MIDI editor
+│   └── controls/               # Buttons, sliders, knobs
+├── ai/                         # AI features
+├── dsp/                        # Signal processing
+├── instruments/                # Built-in instruments
+├── network/                    # Networking, collaboration
 └── tests/                      # Test files
-
-modules/
-├── zenith_core/                # Engine, DSP, instruments, plugins, utils
-│   ├── engine/                 # Core audio engine
-│   ├── dsp/                    # Signal processing
-│   ├── instruments/            # Built-in instruments
-│   ├── plugins/                # Internal plugins
-│   └── utils/                  # Cross-cutting utilities
-├── zenith_ui/                  # Skia UI components
-│   ├── ui/                     # UI framework, panels, views
-│   └── rendering/              # Skia renderer integration
-├── zenith_network/             # Collaboration and network services
-└── zenith_commands/            # Command API for AI integration
-
-services/
-└── ai/                         # Python backend and agents
 ```
 
 ## Threading Model
@@ -79,9 +80,9 @@ class MyComponent : public juce::ValueTree::Listener {
 
 ### New Instrument
 
-1. Create `modules/zenith_core/instruments/MyInstrument.h/cpp`
+1. Create `Source/instruments/MyInstrument.h/cpp`
 2. Inherit from `juce::AudioProcessor`
-3. Register in `modules/zenith_core/instruments/RegisterBuiltInInstruments.cpp`:
+3. Register in `RegisterBuiltInInstruments.cpp`:
 ```cpp
 registry.registerInstrument("zenith.myinstrument", 
     []() { return std::make_unique<MyInstrument>(); });
@@ -89,7 +90,7 @@ registry.registerInstrument("zenith.myinstrument",
 
 ### New UI Component
 
-1. Create in `modules/zenith_ui/ui/`
+1. Create in `Source/ui/`
 2. Inherit from `SkiaComponent` for GPU rendering:
 ```cpp
 class MyPanel : public SkiaComponent {
@@ -102,7 +103,7 @@ public:
 
 ### New Command (for AI integration)
 
-1. Add to `modules/zenith_commands/commands/CommandAPI.cpp`:
+1. Add to `CommandAPI.cpp`:
 ```cpp
 if (command == "myCommand") {
     // Execute command

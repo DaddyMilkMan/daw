@@ -2,25 +2,59 @@
  * @file Main.cpp
  * @brief Zenith DAW - Main application entry point
  *
- * This file initializes the JUCE application and the main window.
+ * This file initializes the JUCE application and creates the main window.
  */
 
-// Prevent ProjectInfo redefinition when other headers include JuceHeader.h
-#define JUCE_DONT_DECLARE_PROJECTINFO 1
+// JUCE includes first
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_core/juce_core.h>
+#include <juce_data_structures/juce_data_structures.h>
+#include <juce_events/juce_events.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_gui_extra/juce_gui_extra.h>
 
-// Include all JUCE modules using manual JuceHeader.h
-#include "JuceHeader.h"
-#include "zenith_core/engine/ProjectState.h"
-#include "zenith_core/engine/Engine.h"
-#include "zenith_commands/commands/CommandAPI.h"
-#include "zenith_core/utils/SampleGenerator.h"
-#include "zenith_core/utils/PlatformSystemUtils.h"
-#include "zenith_core/engine/ZenithLogger.h"
-#include "zenith_core/engine/Settings.h"
+// Project includes after JUCE
 #include "ui/common/MainWindow.h"
-#include "zenith_network/mcp/MCPServer.h"
-#include <cstdlib>
+#include "engine/ProjectState.h"
+#include "utils/SampleGenerator.h"
+#include "utils/PlatformSystemUtils.h"
+#include "ui/design-system/FontManager.h"
+#include "engine/ZenithLogger.h"
+#include "Settings.h"
+#include "ui/framework/PlatformWindowUtils.h"
 
+namespace {
+class ZenithHostWindow : public juce::DocumentWindow {
+public:
+  explicit ZenithHostWindow(zenith::MainWindow& content)
+      : juce::DocumentWindow(
+            content.getName(),
+            juce::Desktop::getInstance().getDefaultLookAndFeel().findColour(
+                juce::ResizableWindow::backgroundColourId),
+            0),
+        content_(content) {
+    setUsingNativeTitleBar(false);
+    setTitleBarHeight(0);
+    setResizable(true, false);
+    setResizeLimits(800, 600, 4096, 2160);
+    setBounds(100, 100, content.getWidth(), content.getHeight());
+    setContentNonOwned(&content_, false);
+    setDropShadowEnabled(false);
+    setVisible(true);
+    toFront(true);
+    zenith::PlatformWindowUtils::removeWindowDecorations(this);
+    content_.onHostShown();
+  }
+
+  void closeButtonPressed() override { content_.requestClose(); }
+
+private:
+  zenith::MainWindow& content_;
+};
+} // namespace
 
 //==============================================================================
 /**
@@ -49,20 +83,13 @@ public:
   //==========================================================================
   void initialise(const juce::String &commandLine) override {
     // Input validation should be added here for production releases
-    auto args = juce::StringArray::fromTokens(commandLine, true);
-    const bool mcpServerMode = args.contains("--mcp-server");
-    const bool mcpStdioGui = args.contains("--mcp-stdio");
-    if (mcpStdioGui) {
-#if JUCE_WINDOWS
-      _putenv_s("MCP_STDIO", "1");
-#else
-      setenv("MCP_STDIO", "1", 1);
-#endif
-    }
+    juce::ignoreUnused(commandLine);
     
     // Load settings immediately on startup
     // FIX: This was missing, causing changes to be lost on relaunch
-    ::zenith::Settings::getInstance().load();
+    auto& settings = ::zenith::Settings::getInstance();
+    settings.load();
+    settings.incrementAppLaunchCount();
 
     // Log startup
     DBG("Zenith DAW starting...");
@@ -72,34 +99,18 @@ public:
     // Log system info
     ::zenith::PlatformSystemUtils::logSystemInfo();
 
-    if (mcpServerMode) {
-      mcpHeadless_ = true;
-
-      mcpProjectState_ = std::make_unique<::zenith::ProjectState>();
-      mcpEngine_ = std::make_unique<::zenith::Engine>();
-      mcpCommandAPI_ = std::make_unique<::zenith::CommandAPI>(*mcpProjectState_, *mcpEngine_);
-
-      mcpEngine_->setProjectState(mcpProjectState_.get());
-      mcpEngine_->initialize();
-
-      mcpServer_ = std::make_unique<::zenith::mcp::MCPServer>(
-          *mcpCommandAPI_, *mcpProjectState_, *mcpEngine_);
-      mcpServer_->onStop = []() {
-        // stdin closed or server stopped: shut down cleanly.
-        juce::JUCEApplication::getInstance()->quit();
-      };
-      mcpServer_->startBackground();
-
-      ZENITH_LOG_INFO("[MCP STDIO] Headless MCP server running (--mcp-server)");
-      return;
-    }
-
     // Ensure content validity (Generate missing samples if needed)
     // Run asynchronously to unblock startup
     ::zenith::SampleGenerator::generateMissingSamples(&threadPool);
 
-    // Create main window
+    // Pre-initialize FontManager to avoid hangs when UI is created
+    DBG("Initializing FontManager...");
+    ::zenith::design::FontManager::getInstance();
+    DBG("FontManager initialized.");
+
+    // Create main window controller + host shell
     mainWindow = std::make_unique<::zenith::MainWindow>(getApplicationName());
+    hostWindow = std::make_unique<ZenithHostWindow>(*mainWindow);
 
     DBG("Zenith DAW initialized successfully!");
   }
@@ -111,20 +122,8 @@ public:
     // Stop background tasks
     threadPool.removeAllJobs(true, 4000);
 
-    if (mcpHeadless_) {
-      if (mcpServer_) {
-        mcpServer_->stop();
-        mcpServer_.reset();
-      }
-      if (mcpEngine_) {
-        mcpEngine_->shutdown();
-        mcpEngine_.reset();
-      }
-      mcpCommandAPI_.reset();
-      mcpProjectState_.reset();
-    }
-
-    // Close main window (releases all resources)
+    // Close host window first, then main UI controller
+    hostWindow.reset();
     mainWindow.reset();
 
     ZENITH_LOG_INFO("ZenithApplication::shutdown() COMPLETE");
@@ -156,13 +155,9 @@ public:
 
 private:
   //==========================================================================
+  std::unique_ptr<ZenithHostWindow> hostWindow;
   std::unique_ptr<::zenith::MainWindow> mainWindow;
   juce::ThreadPool threadPool;
-  bool mcpHeadless_ = false;
-  std::unique_ptr<::zenith::ProjectState> mcpProjectState_;
-  std::unique_ptr<::zenith::Engine> mcpEngine_;
-  std::unique_ptr<::zenith::CommandAPI> mcpCommandAPI_;
-  std::unique_ptr<::zenith::mcp::MCPServer> mcpServer_;
 };
 
 //==============================================================================

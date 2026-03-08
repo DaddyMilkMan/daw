@@ -2,15 +2,7 @@
 
 **Windows-first development workflow for building, debugging, and testing Zenith DAW.**
 
-**License Note:** **Zenith DAW is 100% proprietary closed-source software.**
-
-### Pricing
-
-- **Zenith DAW Application:** $100 (one-time purchase)
-- **AI Wingman Add-on:**
-  - Zenith Light: $10/month
-  - Zenith Pro: $20/month
-  - Zenith Heavy: $50/month
+This guide covers the recommended development setup on Windows using Visual Studio 2022, CMake, and optional alternative IDEs.
 
 ---
 

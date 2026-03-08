@@ -15,129 +15,94 @@
 
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 */
 
 #pragma once
 
 #include "WavetableData.h"
-#include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
-#include <memory>
+#include <vector>
 
 namespace zenith {
 
 //==============================================================================
-/**
-    Result of a wavetable loading operation
-*/
-struct WavetableLoadResult {
-  std::unique_ptr<Wavetable> wavetable;
-  juce::String errorMessage;
-  bool success = false;
-
-  static WavetableLoadResult ok(std::unique_ptr<Wavetable> wt) {
-    return {std::move(wt), {}, true};
-  }
-
-  static WavetableLoadResult error(const juce::String &msg) {
-    return {nullptr, msg, false};
-  }
-};
-
+// WAVETABLE FILE LOADER
 //==============================================================================
 /**
-    Loads wavetables from various file formats.
-
-    Supported formats:
-    - WAV (mono, 32-bit float or 16-bit): Split into frames of 2048 samples
-    - WT (Serum format): Header + raw frame data
-    - Single-cycle WAV: Resampled to 2048 samples
-
-    Thread Safety:
-    - generateBasicWavetable() is SAFE from any thread (pure function, allocates locally)
-    - All file I/O methods (loadFromFile, loadWavFile, loadWtFile) are MESSAGE THREAD ONLY
-    - setContentDirectory() and getBundledWavetableNames() are MESSAGE THREAD ONLY
-    - WARNING: generateBasicWavetable() is NOT real-time safe (allocates memory)
-*/
+ * Professional wavetable file loader supporting multiple formats
+ *
+ * FEATURES:
+ * - Support for 16-bit, 24-bit, 32-bit float .wav files
+ * - Auto-detection of wavetable format (Serum-style single vs multi-cycle)
+ * - Cross-fade loop handling for seamless frame transitions
+ * - RMS normalization for consistent levels
+ * - Metadata extraction (name, author, etc.)
+ *
+ * FILE FORMATS SUPPORTED:
+ * - Serum .wav (single-cycle wavetable, 2048 samples, 16-bit)
+ * - Vital .wav (multi-cycle wavetable, 2048 samples, 32-bit)
+ * - Standard .wav (any wavetable file)
+ */
 class WavetableLoader {
 public:
-  WavetableLoader();
-  ~WavetableLoader() = default;
+    WavetableLoader() = default;
 
-  /**
-      Load a wavetable from file.
-      @param file Path to .wav or .wt file
-      @return Result containing wavetable or error message
-  */
-  WavetableLoadResult loadFromFile(const juce::File &file);
+    /**
+     * @brief Load a wavetable file from disk
+     * @param file Path to .wav file
+     * @return Result containing WavetableData on success, or error message
+     */
+    juce::Result loadWavetable(const juce::File& file, WavetableData& outData);
 
-  /**
-      Load a wavetable from memory buffer.
-      @param data Raw audio data
-      @param numSamples Total number of samples
-      @param samplesPerFrame Samples per wavetable frame (default: 2048)
-      @return Result containing wavetable or error message
-  */
-  WavetableLoadResult
-  loadFromBuffer(const float *data, int numSamples,
-                 int samplesPerFrame = WAVETABLE_FRAME_SIZE);
-
-  /**
-      Generate a basic wavetable from waveform type using additive synthesis.
-      
-      Uses trigonometric recurrence relations to optimize harmonic generation:
-      - Saw: 64 harmonics with step-1 recurrence (sin((n+1)θ) = sin(nθ)cos(θ) + cos(nθ)sin(θ))
-      - Square/Triangle: 32 odd harmonics with step-2 recurrence (θ' = 2θ)
-      - PWM: 32 harmonics with precomputed phase-shifted coefficients
-      
-      @param type Waveform type (0=Sine, 1=Saw, 2=Square, 3=Triangle, 4=PWM, 5=Formant)
-      @param numFrames Number of frames (1 for static, >1 for morphing wavetables)
-      @return Wavetable with procedurally generated waveforms
-      
-      @note Maximum numerical error: <2e-6 compared to direct std::sin
-      @warning Not real-time safe (allocates memory for frame buffers)
-      @warning Thread-safe (no shared state), but not suitable for audio thread
-  */
-  std::unique_ptr<Wavetable> generateBasicWavetable(int type,
-                                                    int numFrames = 1);
-
-  /**
-      Get list of bundled wavetable names.
-      @return Array of wavetable names available in Content directory
-  */
-  juce::StringArray getBundledWavetableNames() const;
-
-  /**
-      Load a bundled wavetable by name.
-      @param name Wavetable name (from getBundledWavetableNames())
-      @return Result containing wavetable or error message
-  */
-  WavetableLoadResult loadBundledWavetable(const juce::String &name);
-
-  /**
-      Set the content directory path for bundled wavetables.
-      @param path Path to Content/Wavetables directory
-  */
-  void setContentDirectory(const juce::File &path);
+    /**
+     * @brief Get list of available wavetable files in a directory
+     * @param directoryPath Directory to scan
+     * @return Array of wavetable file paths
+     */
+    static juce::StringArray getAvailableWavetables(const juce::File& directoryPath);
 
 private:
-  juce::AudioFormatManager formatManager_;
-  juce::File contentDirectory_;
+    // Constants
+    static constexpr int SERUM_HEADER_SIZE = 100;
+    static constexpr int MAX_WAVETABLE_SIZE = 2048 * 256; // Max samples to load
+    static constexpr int MAX_WAVETABLE_FRAMES = 256;
 
-  WavetableLoadResult loadWavFile(const juce::File &file);
-  WavetableLoadResult loadWtFile(const juce::File &file);
+    /**
+     * @brief Detect wavetable format from file header
+     * @param file File to check
+     * @return Format type
+     */
+    WavetableFormat detectFormat(const juce::File& file);
 
-  /**
-      Resample audio data to match wavetable frame size.
-      Used for single-cycle waveforms that aren't exactly 2048 samples.
-  */
-  std::vector<float> resampleToFrameSize(const float *data, int numSamples);
+    /**
+     * @brief Detect format from memory buffer
+     */
+    WavetableFormat detectFormatFromBuffer(const void* data, size_t size);
 
-  /**
-      Resample audio data to match wavetable frame size.
-      Writes directly to output buffer to avoid allocation.
-  */
-  void resampleToFrameSize(const float *data, float *dst, int numSamples);
+    /**
+     * @brief Parse 16-bit PCM sample from data
+     */
+    static float parseSample16(const uint8_t* data);
+
+    /**
+     * @brief Parse 24-bit PCM sample from data
+     */
+    static float parseSample24(const uint8_t* data);
+
+    /**
+     * @brief Parse 32-bit float sample from data
+     */
+    static float parseSample32(const uint8_t* data);
+
+    /**
+     * @brief Calculate RMS level for normalization
+     */
+    static float calculateRMS(const std::vector<float>& samples);
+
+    // Temporary buffer for file loading
+    std::vector<float> tempBuffer_;
 };
 
 } // namespace zenith

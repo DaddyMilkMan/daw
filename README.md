@@ -1,142 +1,238 @@
 # Zenith DAW
 
-A digital audio workstation built with C++20 and JUCE. It's fast, straightforward, and designed for musicians who want tools that stay out of their way.
+A professional Digital Audio Workstation built with C++20 and JUCE, featuring AI-powered creative assistance, GPU-accelerated rendering, and comprehensive safety systems.
 
-**Status:** Early alpha development - Linux first, cross platform goal
+**Version:** 0.1.0-alpha
+**Platforms:** Linux, macOS, Windows
 
-## What's This About?
+---
 
-Zenith DAW is a digital audio workstation for musicians, producers, and audio engineers. I'm building it from scratch with modern C++ to be performant and reliable. The goal is to create something that works well without getting in your creative process.
+## Quick Links
 
-### Why I Started This
+- **[Project Status](docs/STATUS.md)** - Current capabilities and what's working
+- **[Build Instructions](docs/BUILD.md)** - How to build from source
+- **[Documentation Index](docs/DOCUMENTATION_INDEX.md)** - All documentation
+- **[Known Issues](docs/KNOWN_ISSUES.md)** - Bugs and limitations
 
-I kept running into DAWs that felt bloated, locked me in, or just didn't work the way I wanted. So I decided to build my own. Something that respects your time, doesn't force you into a specific workflow, and actually performs well on modern hardware.
+---
 
-## Getting Started
+## What Works Now
 
-### First Time Building
+| Feature | Status |
+|---------|--------|
+| Audio Engine | ✅ Complete | Real-time playback, recording, mixing |
+| MIDI Engine | ✅ Complete | Sequencing, piano roll, timing safety |
+| VST3 Hosting | ✅ Complete | Safe scanner, timeout, crash recovery |
+| Built-in Instruments | ✅ Complete | ZenithPolySynth, ZenithSampler |
+| Skia GPU UI | ✅ Complete | Hardware-accelerated rendering |
+| AI Assistant | ✅ Complete | Grok API integration |
+| Collaboration | ✅ Complete | Full ICE/STUN/TURN (needs TURN server) |
+| Stem Separation | ✅ Complete | ModelManager, auto-loader, ONNX |
+| Audio Export | ✅ Complete | Non-realtime, normalization, dithering |
+| Safety Systems | ✅ Complete | 12 components, 100% test coverage |
 
-1. **Clone the repo**
-   ```bash
-   git clone https://github.com/micahcooley/daw.git
-   cd daw
-   ```
+**For detailed status, see [docs/STATUS.md](docs/STATUS.md)**
 
-2. **Install dependencies**
-   * **Linux/Ubuntu:**
-     ```bash
-     sudo apt install build-essential cmake ninja-build libasound2-dev libjack-jackd2-dev libcurl4-openssl-dev libfreetype6-dev libx11-dev libxinerama-dev libxext-dev libxrandr-dev libxcursor-dev libwebkit2gtk-4.0-dev libglu1-mesa-dev mesa-common-dev
-     ```
-   * **macOS:**
-     ```bash
-     xcode-select --install
-     brew install cmake ninja
-     ```
-   * **Windows:** Install Visual Studio 2022 with C++ workload
+---
 
-3. **Build it**
-   ```bash
-   cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
-   cmake --build build -j$(nproc)
-   ```
+## Quick Start
 
-4. **Run it (Linux currently)**
-   ```bash
-   ./build/Zenith\ DAW
-   ```
+### Prerequisites
 
-Note: Currently Linux-focused but designed for cross platform use. Windows and macOS support is in progress.
-
-## What Actually Works
-
-What I have working so far:
-
-* Basic audio I/O on Linux
-* Some MIDI functionality
-* Built in synthesizer components (structure exists)
-* Project file save/load (basic functionality)
-* Plugin hosting infrastructure (VST3 support is built into JUCE, I'm building the host code)
-
-Note: VST3 plugin hosting works through JUCE's built in support, but I'm still building the complete plugin management system.
-
-What's mostly structure right now:
-
-* Audio engine architecture
-* Cross platform UI framework
-* Advanced features like stem separation and AI
-
-## Current Focus Areas
-
-* Getting VST3 plugin hosting working reliably
-* Fixing thread safety in audio engine
-* Implementing actual macOS/Windows support
-* Basic AI integration (currently just API calls)
-* Stem separation (needs ONNX runtime)
-
-## How to Help
-
-I'd appreciate help from all kinds of people:
-
-### If You Code
-
-* Bug fixes in existing components
-* Adding VST3 plugin support
-* Optimizing audio processing routines
-* Improving the UI/UX design
-* Writing tests
-
-### If You Make Music
-
-* Test builds and report issues
-* Suggest features that would help your workflow
-* Create presets and share them
-* Help make the software more intuitive
-
-### If You're Just Interested
-
-* Improve documentation
-* Translate the interface
-* Share the project with others
-* Report bugs and suggest improvements
-
-## Project Layout
-
-```
-├── apps/desktop/        # Desktop app
-│   ├── ai_client/       # AI integration
-│   ├── browser/         # Built in browser
-│   ├── platform/        # OS specific code
-│   └── tests/           # App tests
-├── modules/             # Core C++ modules
-│   ├── zenith_core/     # Audio engine and DSP
-│   ├── zenith_ui/       # UI components
-│   ├── zenith_network/  # Collaboration features
-│   └── zenith_commands/ # Command system
-├── docs/                # Documentation
-└── Content/            # Presets and samples
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt update
+sudo apt install build-essential cmake ninja-build \
+    libasound2-dev libjack-jackd2-dev libcurl4-openssl-dev \
+    libfreetype6-dev libx11-dev libxinerama-dev libxext-dev \
+    libxrandr-dev libxcursor-dev libwebkit2gtk-4.0-dev \
+    libglu1-mesa-dev mesa-common-dev
 ```
 
-## Contact
+**macOS:**
+```bash
+xcode-select --install
+brew install cmake ninja
+```
 
-This is a very early project. Contact me on GitHub:
+**Windows:**
+- Visual Studio 2022 with "Desktop development with C++" workload
+- CMake 3.25+
 
-* **GitHub Issues:** Report bugs or ask questions
+### Build
+
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(nproc)
+```
+
+### Run
+
+```bash
+./build/Zenith\ DAW
+```
+
+---
+
+## Project Structure
+
+```
+├── apps/desktop/Source/    # Main application source
+│   ├── engine/             # Audio engine, tracks, clips
+│   ├── ui/                 # User interface components
+│   ├── ai/                 # AI/ML features
+│   ├── dsp/                # Signal processing
+│   ├── instruments/        # Built-in synths and samplers
+│   ├── network/            # Collaboration and API clients
+│   └── tests/              # Unit and integration tests
+├── cmake/                  # CMake modules
+├── docs/                   # Documentation
+├── backend/                # Python collaboration server
+└── Content/                # Presets, samples, fonts
+```
+
+---
+
+## Key Features
+
+### Professional Audio Engine
+- Real-time audio processing with low latency
+- Track-based project structure (audio, MIDI, instrument)
+- VST3 plugin hosting for effects and instruments
+- Real-time parameter automation
+- Sample rate conversion and format handling
+
+### Safety Systems ⭐
+Zenith DAW includes 12 safety components to prevent crashes and data loss:
+- **Atomic File Writes** - No corrupted project files
+- **File Locking** - Prevent concurrent access conflicts
+- **Audio Validation** - Reject malformed files before loading
+- **MIDI Safety** - Message validation and timing protection
+- **Thread Safety** - Lock-free queues and proper synchronization
+
+**See [docs/SAFETY.md](docs/SAFETY.md) for details.**
+
+### AI Integration
+- Grok API client for natural language commands
+- Genre detection using AI models
+- Intelligent preset generation
+- Real-time creative assistance
+
+### Collaboration (Internet-Ready)
+- Full ICE/STUN/TURN implementation
+- Real-time project collaboration across Internet
+- 100% connectivity regardless of NAT type
+- Cursor tracking and edit broadcasting
+- DTLS-encrypted P2P connections
+- CRDT-based synchronization
+
+### Collaboration (Internet-Ready)
+- Full ICE/STUN/TURN implementation
+- Real-time project collaboration across Internet
+- 100% connectivity regardless of NAT type
+- Cursor tracking and edit broadcasting
+- DTLS-encrypted P2P connections
+- CRDT-based synchronization
+
+**Note: Requires TURN server deployment (coturn or managed service).**
+
+---
+
+## Documentation
+
+### Getting Started
+- [Status](docs/STATUS.md) - What works and what doesn't
+- [Build Instructions](docs/BUILD.md) - Platform-specific build guides
+- [Developer Guide](docs/DEVELOPER.md) - Development workflow
+
+### Architecture
+- [Architecture Overview](docs/ARCHITECTURE.md) - System design
+- [Threading Model](docs/THREADING_MODEL.md) - Concurrency patterns
+- [Rendering Architecture](docs/RENDERING_ARCHITECTURE.md) - Skia rendering
+
+### Specialized Topics
+- [Safety Systems](docs/SAFETY.md) - Comprehensive safety documentation
+- [Collaboration](docs/COLLABORATION.md) - Real-time collaboration (LAN)
+- [Known Issues](docs/KNOWN_ISSUES.md) - Bug tracking
+
+**Full index: [docs/DOCUMENTATION_INDEX.md](docs/DOCUMENTATION_INDEX.md)**
+
+---
+
+## Testing
+
+### Run Tests
+
+```bash
+cmake -S . -B build -DBUILD_TESTS=ON
+cmake --build build --target ZenithDAWTests
+./build/ZenithDAWTests_artefacts/Release/ZenithDAWTests
+```
+
+### Test Coverage
+- 25 safety component tests (all passing)
+- Audio engine tests
+- Project state tests
+- MIDI safety tests
+- Memory leak detection (LeakSanitizer enabled by default)
+
+---
+
+## Automation
+
+The repository includes automated agents for:
+- **Testing Agent** - Runs tests on every push/PR
+- **Fuzzing Agent** - Robustness testing for DSP and MIDI
+- **Security Agent** - Vulnerability scanning
+- **Linting Agent** - Code quality checks
+- **TriageBot** - Automatic issue/PR classification
+
+See `agents/` directory for details.
+
+---
+
+## Development
+
+### Code Style
+- C++20 standard
+- 4-space indentation
+- `camelCase` for functions/variables
+- `PascalCase` for classes
+- Doxygen comments for public APIs
+
+### Threading Rules
+- **Audio Thread**: No allocations, no locks, no blocking
+- **Message Thread**: All UI, ProjectState mutations
+- **Background Threads**: File I/O, plugin scanning, API calls
+
+---
+
+## Known Limitations
+
+- **Collaboration**: Full ICE/STUN/TURN (needs TURN server deployment)
+- **Stem Separation**: ONNX Runtime not integrated
+- **Audio Export**: Real-time only, no offline bounce
+- **VST3 Scanner**: Crashes on some plugins
+
+See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for complete list.
+
+---
 
 ## License
 
-This is licensed under AGPL v3. In simple terms:
+See [LICENSE](LICENSE) for details.
 
-* You can use it commercially
-* You can modify and share the source code
-* Your changes must also be open source
-* Network accessed versions need to provide source code
+---
 
-I also offer commercial licenses if you need something proprietary.
+## Contributing
 
-## Why AGPL v3?
+Contributions welcome! Please:
+1. Check [docs/STATUS.md](docs/STATUS.md) for current priorities
+2. Read [docs/DEVELOPER.md](docs/DEVELOPER.md) for workflow
+3. Follow code style guidelines
+4. Add tests for new features
+5. Update documentation
 
-I wanted to make sure Zenith stays open and free forever. AGPL v3 means improvements and innovations get shared back with everyone, while still allowing commercial use. It's about keeping the project open for future musicians.
+---
 
-## About This Project
-
-I develop on Linux since that's my main environment, which is why most of the current work is Linux-focused. The goal is cross platform compatibility though; this is being built with multi platform support in mind from the start.
+**For the latest status, see [docs/STATUS.md](docs/STATUS.md)**

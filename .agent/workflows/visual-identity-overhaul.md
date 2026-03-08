@@ -1,28 +1,28 @@
 ---
-description: Complete Visual Identity Overhaul - The "Neon Noir" Standard
+description: Complete Visual Identity Overhaul - Studio Black + Blue Standard
 ---
 
 # Context
-The current UI feels "functional but flat". It lacks the "Wow" factor. The goal is to eradicate any trace of default JUCE look-and-feel and establish a premium, cohesive "Neon Noir" aesthetic.
+The current UI feels functional but visually fragmented. The goal is to establish a premium, cohesive matte-black visual language with restrained electric-blue accents and calm studio-grade polish.
 
 # Objectives
 1.  **Color Palette Refinement**:
-    *   Audit `ZenithDesignSystem.h`. The current "Neon Cyan" (0xFF00FFFF) is too raw. Shift to "Electric Blue" (0xFF00F0FF) and "Deep Violet" (0xFF7000FF).
-    *   Backgrounds must not be black. Use "obsidian" (0xFF0D0D11) and "charcoal" (0xFF1C1C24).
-    *   Text must never be pure white. Use "starlight" (0xFFF2F2F7).
+    *   Audit `ZenithDesignSystem.h`. Keep the primary accent in the professional blue range and use violet only as a restrained secondary accent.
+    *   Backgrounds should read as obsidian, charcoal, and elevated graphite rather than flat black or loud gradients.
+    *   Text must stay soft and readable, never stark pure white on every surface.
 
 2.  **Typography**:
     *   Enforce **Inter** for UI and **JetBrains Mono** for values.
     *   Delete all usages of `juce::Font`. Use `design::getSkFont()` exclusively.
-    *   Kerning and Line Height: Increase breathing room. `LINE_HEIGHT_RELAXED` (1.5).
+    *   Keep kerning and line height relaxed enough to feel premium and unhurried.
 
 3.  **Global Polish**:
-    *   Corner Radius: Standardize to 8px (Small) and 16px (Large).
-    *   Borders: 1px subtle gradients, not solid colors.
-    *   Shadows: `SkShadowUtils::DrawShadow` for depth, not just `DropShadowEffect`.
+    *   Standardize corner radii and spacing.
+    *   Use subtle borders and depth cues instead of heavy chrome or gamer neon.
+    *   Reserve glow for active, focused, or AI-related moments.
 
 # Execution Steps
-1.  Modify `ZenithDesignSystem.h` to refine the color palette.
-2.  Scan codebase for `juce::Colours::...` and replace with `zenith::design::colors::...`.
-3.  Scan codebase for `drawRect` and replace with `drawRRect` (Rounded Rects) everywhere.
-4.  Implement a `GlowEffect` helper in `SkiaComponent` that adds an outer glow to any path.
+1.  Modify `ZenithDesignSystem.h` to keep the palette aligned with the matte-black / blue-accent direction.
+2.  Scan the codebase for direct `juce::Colours::...` usage and replace it with `zenith::design::colors::...` where appropriate.
+3.  Round and soften surfaces with intent instead of applying the same effect everywhere.
+4.  Keep overlays, menus, and dialogs visually elevated while core work surfaces remain matte and stable.

@@ -1,77 +1,187 @@
-/*
-    MainWindow.h - Main application window for Zenith DAW
-
-    This file is part of Zenith DAW - A Digital Audio Workstation for Linux
-
-    Copyright (C) 2025 Micah Cooley <micahcooley@protonmail.com>
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as
-    published by the Free Software Foundation, either version 3 of the
-    License, or (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
-
-    You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
-*/
+/**
+ * @file MainWindow.h
+ * @brief Main application window for Zenith DAW
+ *
+ * Contains the main UI layout and hosts the audio engine.
+ */
 
 #pragma once
 
+#include "../Source/engine/RecentProjectManager.h"
+#include "../../commands/CommandAPI.h"
+#include "../framework/SkiaMainWindowIntegration.h"
+#include "../framework/AuroraBackground.h"
+#include "../design-system/ZenithLookAndFeel.h"
+#include "Engine.h"
+#include "ProjectState.h"
+#include "../transport/TransportBar.h"
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_audio_utils/juce_audio_utils.h>
+#include <juce_core/juce_core.h>
+#include <juce_data_structures/juce_data_structures.h>
+#include <juce_events/juce_events.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "TitleBarComponent.h"
 #include <memory>
+#include "../dialogs/ExportDialog.h"
+#include "../settings/ModernSettingsPanel.h"
+#include "../dialogs/ProjectRecoveryModal.h"
+#include "../dialogs/UnsavedChangesModal.h"
+#include "../controls/SkiaAlertWindow.h"
+#include "../controls/SkiaFileChooser.h"
 
 namespace zenith {
 
-class CommandAPI;
-class Engine;
-class ProjectState;
+// namespace network { class EmbeddedMCPHttpServer; }
 
+class ProjectRecoveryModal;
+class MainLayoutComponent;
+class RightSidePanel;
+class ZenithHubComponent;
+class ProjectFileIO;
+
+//==============================================================================
 /**
- * @class MainWindow
- * @brief Main application window for Zenith DAW
- *
- * This is the main window that contains all the UI components.
+ * @class MainComponent
+ * @brief Main content component that holds the UI
  */
-class MainWindow : public juce::DocumentWindow {
+class MainComponent : public SkiaMainWindowIntegration,
+                      public juce::KeyListener {
 public:
-    /**
-     * @brief Constructor
-     * @param application Reference to the main application
-     */
-    MainWindow(juce::String name);
+  using LoadProjectCallback = std::function<void(const juce::File &)>;
+  using NewProjectCallback = std::function<void()>;
 
-    /**
-     * @brief Destructor
-     */
-    ~MainWindow() override;
+  MainComponent(Engine &engine, CommandAPI &api,
+                ProjectState &state,
+                RecentProjectManager &recentProjects,
+                LoadProjectCallback onLoadProject,
+                NewProjectCallback onNewProject);
+  ~MainComponent() override;
 
-    /**
-     * @brief Called when the user tries to close the window
-     */
-    void closeButtonPressed() override;
+  // Menu Callbacks
+  std::function<void()> onOpenProjectRequest;
+  std::function<void()> onSaveProjectRequest;
+  std::function<void()> onSaveProjectAsRequest;
+  std::function<void()> onUndoRequest;
+  std::function<void()> onRedoRequest;
+  std::function<void()> onToggleMixerRequest;
 
-    /**
-     * @brief Get the project state from the main window
-     * @return Pointer to project state, or nullptr if not available
-     */
-    zenith::ProjectState* getProjectState();
 
-    /**
-     * @brief Check for unsaved changes and handle quit confirmation
-     */
-    void checkUnsavedAndQuit();
+  void paint(juce::Graphics &g) override;
+  void resized() override;
+  void parentHierarchyChanged() override;
+  void visibilityChanged() override;
+  void mouseDown(const juce::MouseEvent &e) override;
+  void mouseDrag(const juce::MouseEvent &e) override;
+  void mouseUp(const juce::MouseEvent &e) override;
+  
+  // Diagnostic
+  void logHierarchy();
+  
+  void handleAnimationTimer();
+  void startAnimations();
+
+protected:
+  void drawSkiaContent(SkCanvas *canvas) override;
+
+public:
+  bool keyPressed(const juce::KeyPress &key,
+                  Component *originatingComponent) override;
 
 private:
-    // Keep these alive for the lifetime of the window.
-    std::unique_ptr<Engine> engine_;
-    std::unique_ptr<ProjectState> projectState_;
-    std::unique_ptr<CommandAPI> commandAPI_;
+  struct AnimationTimer : public juce::Timer {
+      MainComponent& owner;
+      AnimationTimer(MainComponent& o) : owner(o) {}
+      void timerCallback() override { owner.handleAnimationTimer(); }
+  };
+  std::unique_ptr<AnimationTimer> animationTimer_;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
+  juce::Component *activeDragComponent = nullptr;
+  juce::Rectangle<int> dragStartBounds;
+
+  zenith::AuroraBackground aurora_;
+  float animationTime_ = 0.0f;
+
+  void openPianoRoll(const juce::String &trackId, const juce::String &clipId);
+  void setMainUiVisible(bool shouldBeVisible);
+
+  Engine &engine;
+  ProjectState &projectState;
+  RecentProjectManager &recentProjectManager_;
+  LoadProjectCallback onLoadProject_;
+  NewProjectCallback onNewProject_;
+
+  std::unique_ptr<ZenithHubComponent> hubComponent;
+  std::unique_ptr<TransportBar> transportBar;
+  std::unique_ptr<TitleBarComponent> titleBar;
+  std::unique_ptr<MainLayoutComponent> mainLayout;
+  
+  std::unique_ptr<ExportDialog> exportDialog;
+  std::unique_ptr<ModernSettingsPanel> settingsPanel;
+  // std::unique_ptr<network::EmbeddedMCPHttpServer> mcpHttpServer;
+  float lastCpuPercent_ = -1.0f;
+  bool lastPlayingState_ = false;
+  bool lastRecordingState_ = false;
+  double lastTempoState_ = -1.0;
+
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
+};
+
+//==============================================================================
+/**
+ * @class MainWindow
+ * @brief Top-level application window
+ */
+class MainWindow : public juce::Component, private juce::Timer {
+public:
+  explicit MainWindow(const juce::String &name);
+  ~MainWindow() override;
+
+  void requestClose();
+  void resized() override;
+  void onHostShown();
+
+  zenith::ProjectState *getProjectState() const { return projectState.get(); }
+
+  void saveProject();
+  void saveProjectAs();
+  bool loadProject(const juce::File &file);
+  void openProject();
+  void newProject();
+
+  zenith::RecentProjectManager &getRecentProjectManager() {
+    return *recentProjectManager_;
+  }
+  
+  // Requests a quit check (checks dirty state, shows modal if needed)
+  void checkUnsavedAndQuit(); 
+
+private:
+  void showAboutDialog();
+  void timerCallback() override;
+  void checkForRecovery();
+  void createManualBackup();
+  void updateWindowTitle();
+
+  juce::File currentProjectFile;
+  std::unique_ptr<Engine> engine;
+  std::unique_ptr<ProjectState> projectState;
+  std::unique_ptr<ProjectFileIO> fileIO_;
+  std::unique_ptr<CommandAPI> commandAPI;
+  std::unique_ptr<RecentProjectManager> recentProjectManager_;
+  std::unique_ptr<ZenithLookAndFeel> lookAndFeel;
+
+  std::unique_ptr<MainComponent> mainComponent;
+
+  std::unique_ptr<ProjectRecoveryModal> recoveryModal_;
+  std::unique_ptr<UnsavedChangesModal> unsavedChangesModal_;
+  std::unique_ptr<SkiaAlertWindow> activeAlert_;
+  std::unique_ptr<SkiaFileChooser> activeFileChooser_;
+
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };
 
 } // namespace zenith

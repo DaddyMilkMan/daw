@@ -21,7 +21,7 @@
 ## 2. Sarah (UI/UX Lead)
 **Focus:** Aesthetics, User Experience, Skia Rendering
 
-> "The 'Neon Noir' aesthetic in `ZenithUIComponents.h` is stunning. The glassmorphism on the `ZenithTooltipOverlay` and the glowing arcs on the `ZenithKnob` are exactly what we wanted for that premium feel.
+> "The matte-black / electric-blue aesthetic in `ZenithUIComponents.h` is strong. The restrained overlay depth on the `ZenithTooltipOverlay` and the focused blue arcs on the `ZenithKnob` push it toward the premium studio feel we want.
 >
 > *   **Preset Bar:** Connecting the `<` and `>` buttons to the actual preset list makes the synth feel 'alive' now. Users can finally browse sounds without menu diving.
 > *   **Visualizer:** The oscilloscope looks smooth. The glow effect (`SkMaskFilter::MakeBlur`) adds that nice analog touch."

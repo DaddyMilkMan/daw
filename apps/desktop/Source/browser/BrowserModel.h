@@ -46,6 +46,8 @@ public:
     
     void refresh();
     void setUserLibraryPaths(const juce::StringArray& paths);
+    void addUserLibraryPath(const juce::String& path);
+    void removeUserLibraryPath(const juce::String& path);
     juce::StringArray getUserLibraryPaths() const { return userLibraryPaths_; }
 
     //==============================================================================
@@ -183,6 +185,9 @@ private:
     // Persistence helpers
     juce::File getFavoritesFile() const;
     juce::File getTagsFile() const;
+    juce::File getLibraryPathsFile() const;
+    void saveUserLibraryPaths();
+    void loadUserLibraryPaths();
 
     juce::WeakReference<BrowserModel>::Master masterReference;
     friend class juce::WeakReference<BrowserModel>;

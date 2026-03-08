@@ -142,7 +142,7 @@ void ZenithKnob::drawSkia(SkCanvas* canvas) {
     // 3. Value arc with gradient
     drawValueArc(canvas);
     
-    // 4. Center cap (metallic)
+    // 4. Center cap (matte highlight)
     drawCenterCap(canvas);
     
     // 5. Indicator line

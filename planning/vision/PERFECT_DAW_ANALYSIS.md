@@ -175,7 +175,7 @@
 
 ---
 
-### Universal Audio LUNA
+### Universal Audio's flagship DAW
 **Praised Features:**
 - Tight Apollo interface integration (zero latency)
 - Analog-style workflow (tape, Neve summing)
@@ -744,20 +744,24 @@ Sample added!
 
 ## Business Model
 
-### Proprietary DAW with AI Subscription
+### Open Source + Premium
 
-**Zenith DAW Application (One-Time Purchase):**
-- Full proprietary DAW application
-- Complete audio engine and UI
-- All built-in instruments
-- Price: $100
+**Free (Open Source):**
+- Basic plugin shell
+- OSC/MCU control surface code
+- Communication bridge
+- Simple command execution
 
-**AI Wingman Subscription (Add-on):**
-- Zenith Light ($10/month): Basic AI assistance
-- Zenith Pro ($20/month): Advanced AI features
-- Zenith Heavy ($50/month): Professional AI tools, cloud processing
+**Premium ($19-49/month):**
+- Advanced AI models (mixing, arrangement)
+- Cloud LLM processing
+- Premium sound libraries
+- Priority DAW support
 
-**Important:** **Zenith DAW is 100% proprietary closed-source software.** No open-source components.
+**Enterprise (Custom):**
+- On-premise deployment
+- Custom models
+- White-label options
 
 ---
 

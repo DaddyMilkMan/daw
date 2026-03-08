@@ -11,7 +11,7 @@ This document defines the UI/UX for a custom DAW that combines the best-loved fe
 - 🎯 **Idea → Sound in 3 clicks** (Ableton's speed)
 - 🎹 **Best-in-class editing** (FL's piano roll + Pro Tools' audio)
 - 🧩 **Everything in reach** (Studio One's drag-and-drop)
-- 🎨 **Beautiful by default** (LUNA's aesthetics)
+- 🎨 **Beautiful by default** (premium matte-black surfaces with restrained blue accents)
 - ⚡ **Customizable for power users** (Reaper's flexibility)
 - 🤖 **AI-first workflow** (Wingman integrated)
 
@@ -44,7 +44,7 @@ This document defines the UI/UX for a custom DAW that combines the best-loved fe
 - Session/Arrangement split: **Ableton Live**
 - Docked panels: **Studio One** (no floating windows!)
 - Bottom editor: **FL Studio** (persistent, instant access)
-- Clean aesthetics: **LUNA** + modern design
+- Clean aesthetics: matte obsidian surfaces + restrained electric-blue accents
 
 ---
 
@@ -77,7 +77,7 @@ This document defines the UI/UX for a custom DAW that combines the best-loved fe
 - Dark theme by default (less eye strain)
 - **Always visible** (never hide transport)
 - Wingman input **always accessible** (zero-click AI)
-- Follows **macOS Big Sur** design language (rounded, spacious)
+- Follows a studio-grade Skia language: matte obsidian, calm spacing, restrained blue focus accents
 
 ---
 
@@ -875,8 +875,8 @@ ipcMain.on('meters-update', (event, data) => {
 |-----------|----------------|-------------|
 | **Fast ideation** | Session View + Drag-and-drop browser | Ableton + Studio One |
 | **Best editing** | FL piano roll + Pro Tools audio editor | FL Studio + Pro Tools |
-| **Power without complexity** | Command palette + Smart defaults | Reaper (customization) + LUNA (simplicity) |
-| **Beautiful & modern** | Dark theme, spacious, clean | LUNA aesthetics |
+| **Power without complexity** | Command palette + Smart defaults | Reaper (customization) + premium studio simplicity |
+| **Beautiful & modern** | Matte-black theme, spacious, clean | Professional studio black + blue-accent language |
 | **Modular routing** | Grid view, visual routing | Bitwig + Reason |
 | **AI-first** | Wingman integrated everywhere | Unique innovation |
 | **Cross-platform** | Electron + React | Industry standard |

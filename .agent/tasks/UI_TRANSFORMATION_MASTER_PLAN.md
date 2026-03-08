@@ -9,12 +9,12 @@
 
 ## 📋 EXECUTIVE SUMMARY
 
-The Zenith DAW currently has a **barebones, developer-placeholder UI** that does not reflect the sophisticated "Neon Noir Glassmorphism" design system that has been defined. The design tokens, colors, effects, and typography are all specified in `ZenithDesignSystem.h` but are **NOT BEING APPLIED** to the actual UI components.
+The Zenith DAW currently has a **barebones, developer-placeholder UI** that does not reflect the sophisticated premium matte-black / blue-accent design system that has been defined. The design tokens, colors, effects, and typography are all specified in `ZenithDesignSystem.h` but are **NOT BEING APPLIED** to the actual UI components.
 
 ### Current State (UNACCEPTABLE)
 - Flat, dead black backgrounds
 - No visual hierarchy or depth
-- No glow effects, gradients, or glassmorphism
+- No restrained blue focus accents, depth, or elevated overlay treatments
 - Minimal meter animations
 - Generic track headers
 - No transport bar visible
@@ -23,8 +23,8 @@ The Zenith DAW currently has a **barebones, developer-placeholder UI** that does
 
 ### Target State (PROFESSIONAL DAW)
 - Rich gradient backgrounds with depth
-- Glassmorphic panels with blur/transparency
-- Neon glow effects on active elements
+- Matte-black panels with selective blur/transparency on overlays
+- Restrained blue accent glows on active elements
 - Animated VU meters with peak indicators
 - Real-time waveform visualization in clips
 - Full transport bar (Play/Stop/Record/Loop)
@@ -50,9 +50,9 @@ canvas->clear(design::colors::BG_DARKEST);  // 0xFF0D0D11
 
 The following are DEFINED but NOT USED:
 - `colors::CYAN`, `colors::MAGENTA`, `colors::VIOLET` - Accent colors
-- `colors::GLASS_*` - Glassmorphism overlays
-- `effects::GLOW_*` - Neon glow radii
-- `effects::BLUR_GLASS` - Glassmorphism blur (20.0f)
+- `colors::GLASS_*` - Overlay surface treatments
+- `effects::GLOW_*` - Accent glow radii
+- `effects::BLUR_GLASS` - Overlay blur (20.0f)
 - `dimensions::*` - Consistent sizing
 - `typography::*` - Font system
 
@@ -60,7 +60,7 @@ The following are DEFINED but NOT USED:
 The Skia rendering code uses flat `SkPaint` fills instead of:
 - `SkGradientShader::MakeLinear()` for gradients
 - `SkMaskFilter::MakeBlur()` for glow effects
-- `SkImageFilters::Blur()` for glassmorphism backdrop blur
+- `SkImageFilters::Blur()` for selective backdrop blur on overlays
 
 ### Problem 4: Missing Core UI Components
 - **Transport Bar** - Not rendered or styled
@@ -430,7 +430,7 @@ BUTTON_HEIGHT = 32.0f
 4. **Phase Plant** - Modular patching visualization
 
 ### Design Trends
-1. **Glassmorphism** - Frosted glass, blur, transparency
+1. **Selective Glass Surfaces** - Frosted blur only on overlays and elevated panels
 2. **Neon/Cyberpunk** - Glow effects, dark backgrounds, vibrant accents
 3. **Dark Mode First** - OLED-friendly, reduced eye strain
 4. **Micro-animations** - Subtle motion for feedback
@@ -463,7 +463,7 @@ cmake --build build --config Debug --target ZenithDAW
 code apps/desktop/Source/ui/MainLayoutComponent.cpp
 ```
 
-**First commit should be:** "feat(ui): Apply Neon Noir design system to MainLayoutComponent"
+**First commit should be:** "feat(ui): Apply premium dark design system to MainLayoutComponent"
 
 ---
 

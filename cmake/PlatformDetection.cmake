@@ -12,8 +12,6 @@
 #   ZENITH_PLATFORM_DEFINES (compile definitions for platform)
 # =============================================================================
 
-include_guard(GLOBAL)
-
 # -----------------------------------------------------------------------------
 # Platform detection
 # -----------------------------------------------------------------------------
@@ -93,3 +91,4 @@ message(STATUS "  Architecture: ${ZENITH_ARCH_NAME}")
 message(STATUS "  Processor: ${CMAKE_SYSTEM_PROCESSOR}")
 message(STATUS "  Defines: ${ZENITH_PLATFORM_DEFINES}")
 message(STATUS "═══════════════════════════════════════════════════════════════")
+

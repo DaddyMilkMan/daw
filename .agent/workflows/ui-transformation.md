@@ -1,5 +1,5 @@
 ---
-description: Complete UI transformation to apply Neon Noir Glassmorphism design system
+description: Complete UI transformation to apply the premium matte-black / blue-accent design system
 ---
 
 # 🔥 UI TRANSFORMATION MASTER PLAN

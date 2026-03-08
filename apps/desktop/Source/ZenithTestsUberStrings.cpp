@@ -17,5 +17,5 @@
 
 // We need to define ZENITH_DAW_TESTS so that if the cpp files verify it, they know.
 
-#include "modules/zenith_core/instruments/ZenithPolySynthParameterManager.cpp"
-#include "modules/zenith_ui/ui/controls/ZenithVisualizer.cpp"
+#include "apps/desktop/Source/instruments/ZenithPolySynthParameterManager.cpp"
+#include "apps/desktop/Source/ui/controls/ZenithVisualizer.cpp"

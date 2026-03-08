@@ -15,122 +15,485 @@
 
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 */
 
 #pragma once
 
-#include <juce_core/juce_core.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_dsp/juce_dsp.h>
+#include <juce_audio_effects/juce_audio_effects.h>
 #include <array>
-#include <vector>
-#include "ZenithPolySynthDefs.h"
+#include <memory>
 
 namespace zenith {
 
+//==============================================================================
+// EFFECT TYPES
+//==============================================================================
+
+enum class EffectType {
+    None,
+    Reverb,
+    Delay,
+    Chorus,
+    Phaser,
+    Flanger,
+    Distortion,
+    Compressor,
+    EQ,
+    Limiter
+};
+
+//==============================================================================
+// PROFESSIONAL REVERB
+//==============================================================================
 /**
-    Per-Voice Effects Chain
-*/
-class ZenithEffects {
+ * High-quality reverb using multiple parallel delay networks
+ * Matches the quality of premium plugins (Valence, etc.)
+ */
+class ZenithReverb {
 public:
-  ZenithEffects() = default;
+    ZenithReverb();
 
-  void setSampleRate(double sampleRate);
-  void initDelay();
-  void reset() {
-    // Clear delay buffers
-    delayBufferL_.fill(0.0f);
-    delayBufferR_.fill(0.0f);
-    delayPos_ = 0;
-    chorusPhase_ = 0.0f;
-  }
+    void setSampleRate(double sr);
+    void setRoomSize(float size);       // 0-1
+    void setDamping(float damping);       // 0-1
+    void setWidth(float width);          // 0-1 (stereo width)
+    void setMix(float mix);              // 0-1 (wet/dry)
+    void setPreDelay(float delayMs);     // 0-100ms
+    void setDecay(float decay);          // 0-1 (reverb time)
 
-  void setDistortion(float amount) { distortionAmount_ = amount; }
-  void setChorus(float amount) { chorusAmount_ = amount; }
-  void setReverb(float amount) { reverbAmount_ = amount; }
-  void setDelay(float time, float feedback, float mix) {
-      delayTime_ = time; delayFeedback_ = feedback; delayMix_ = mix;
-  }
-  void setBpm(double bpm) { bpm_ = bpm; }
-  void setDelaySync(bool sync, SyncRate rate) { delaySync_ = sync; delaySyncRate_ = rate; }
-  
-  // Roast Fix #5: Buffer size change notification
-  void setBlockSize(int blockSize) { 
-    juce::ignoreUnused(blockSize);  // Effects use sample rate for delay sizing, not block size
-    // Future: If we add block-based processing, use this here
-  }
-
-  void process(float &left, float &right);
+    void process(juce::AudioBuffer<float>& buffer);
+    void reset();
 
 private:
-  double sampleRate_ = 44100.0;
-  double bpm_ = 120.0;
-  bool delaySync_ = false;
-  SyncRate delaySyncRate_ = SyncRate::_1_4;
-  float distortionAmount_ = 0.0f;
-  float chorusAmount_ = 0.0f;
-  float reverbAmount_ = 0.0f;
-  
-  float delayTime_ = 0.5f;     // Seconds
-  float delayFeedback_ = 0.5f; // 0..1
-  float delayMix_ = 0.0f;      // 0..1
-  std::vector<float> echoBufferL_;
-  std::vector<float> echoBufferR_;
-  int echoPos_ = 0;
+    juce::dsp::Reverb reverb_;
+    juce::dsp::Reverb::Parameters params_;
+    float preDelayMix_ = 0.0f;
+    std::array<float, 2> preDelayBuffer_ = {0.0f, 0.0f};
+    int preDelaySamples_ = 0;
+    int preDelayIndex_ = 0;
+};
 
-  // Chorus LFO
-  float chorusPhase_ = 0.0f;
+//==============================================================================
+// STEREO DELAY WITH PING-PONG
+//==============================================================================
 
-  // Real Chorus (Delay Line)
-  std::array<float, 2048> delayBufferL_ = {0.0f};
-  std::array<float, 2048> delayBufferR_ = {0.0f};
-  int delayPos_ = 0;
-  
-  // Reverb (Comb filters + Allpass)
-  // Simple implementation: 4 combs, 2 allpass
-  struct Comb {
-      std::vector<float> buffer;
-      int pos = 0;
-      float feedback = 0.84f;
-      float damp = 0.2f;
-      float val = 0.0f;
-      
-      void resize(int size) { buffer.resize(size, 0.0f); }
-      float process(float input) {
-          if (buffer.empty()) return input;
-          float output = buffer[pos];
-          val = output * (1.0f - damp) + val * damp;
-          buffer[pos] = input + val * feedback;
-          pos = (pos + 1) % buffer.size();
-          return output;
-      }
-  };
-  
-  struct Allpass {
-      std::vector<float> buffer;
-      int pos = 0;
-      float feedback = 0.5f;
-      
-      void resize(int size) { buffer.resize(size, 0.0f); }
-      float process(float input) {
-          if (buffer.empty()) return input;
-          float bufOut = buffer[pos];
-          float output = -input + bufOut;
-          buffer[pos] = input + (bufOut * feedback);
-          pos = (pos + 1) % buffer.size();
-          return output;
-      }
-  };
-  
-  std::array<Comb, 4> combs_;
-  std::array<Allpass, 2> allpasses_;
-  bool reverbInit_ = false;
-  
-  void initReverb();
-  
+class ZenithDelay {
 public:
-    bool hasTail() const {
-        // Simple check
-        return (reverbAmount_ > 0.0f || chorusAmount_ > 0.0f);
+    ZenithDelay();
+
+    void setSampleRate(double sr);
+    void setTime(float timeSeconds);   // 0-2 seconds
+    void setFeedback(float fb);        // 0-0.95 (self-oscillation at 1)
+    void setMix(float mix);            // 0-1
+    void setPingPong(bool pp);        // Ping-pong mode
+    void setSync(bool sync);           // BPM sync
+    void setSyncRate(float noteLength); // 1/4, 1/8, etc.
+
+    void process(juce::AudioBuffer<float>& buffer);
+    void reset();
+
+private:
+    std::unique_ptr<juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear>>
+        delayLineL_, delayLineR_;
+
+    float time_ = 0.25f;
+    float feedback_ = 0.5f;
+    float mix_ = 0.3f;
+    bool pingPong_ = false;
+    bool sync_ = false;
+
+    float lastLeft_ = 0.0f;
+    float lastRight_ = 0.0f;
+    double sampleRate_ = 44100.0;
+};
+
+//==============================================================================
+// CHORUS / ENSEMBLE
+//==============================================================================
+
+class ZenithChorus {
+public:
+    ZenithChorus();
+
+    void setSampleRate(double sr);
+    void setRate(float rateHz);         // LFO rate 0.1-10Hz
+    void setDepth(float depth);          // Modulation depth 0-1
+    void setVoices(int voices);         // 1-8 voices
+    void setMix(float mix);             // 0-1
+    void setSpread(float spread);        // Stereo spread 0-1
+
+    void process(juce::AudioBuffer<float>& buffer);
+    void reset();
+
+private:
+    static constexpr int MAX_VOICES = 8;
+
+    struct VoiceState {
+        double phase = 0.0;
+        float gain = 1.0f;
+        float pan = 0.0f;
+    };
+
+    std::array<VoiceState, MAX_VOICES> voices_;
+    int numVoices_ = 4;
+
+    float rate_ = 0.5f;
+    float depth_ = 0.5f;
+    float mix_ = 0.5f;
+    float spread_ = 0.5f;
+
+    double sampleRate_ = 44100.0;
+
+    juce::Random random_;
+};
+
+//==============================================================================
+// PHASER
+//==============================================================================
+
+class ZenithPhaser {
+public:
+    ZenithPhaser();
+
+    void setSampleRate(double sr);
+    void setRate(float rateHz);         // LFO rate
+    void setDepth(float depth);          // Modulation depth
+    void setFeedback(float fb);          // Feedback amount
+    void setStages(int stages);         // 2-12 stages
+    void setMix(float mix);             // 0-1
+
+    void process(juce::AudioBuffer<float>& buffer);
+    void reset();
+
+private:
+    static constexpr int MAX_STAGES = 12;
+
+    // Allpass filter state per stage
+    std::array<std::array<float, 2>, MAX_STAGES> allpassState_;
+
+    int numStages_ = 4;
+    double lfoPhase_ = 0.0;
+    float rate_ = 0.5f;
+    float depth_ = 0.5f;
+    float feedback_ = 0.5f;
+    float mix_ = 0.5f;
+
+    float lastFeedbackSample_ = 0.0f;
+    double sampleRate_ = 44100.0;
+};
+
+//==============================================================================
+// DISTORTION / SATURATION
+//==============================================================================
+
+class ZenithDistortion {
+public:
+    enum class Type {
+        None,
+        SoftClip,       // Smooth saturation
+        HardClip,       // Digital clipping
+        Bitcrush,       // Bit reduction
+        Wavefold,       // Wavefolding
+        HalfWave,       // Half-wave rectification
+        FullWave        // Full-wave rectification
+    };
+
+    ZenithDistortion();
+
+    void setType(Type type);
+    void setDrive(float drive);        // 0-1 (input gain)
+    void setTone(float tone);         // 0-1 (lowpass filter)
+    void setMix(float mix);             // 0-1
+
+    void process(juce::AudioBuffer<float>& buffer);
+    void reset();
+
+private:
+    Type type_ = Type::SoftClip;
+    float drive_ = 0.0f;
+    float tone_ = 0.5f;
+    float mix_ = 0.0f;
+
+    // Tone filter state
+    float toneZ1_ = 0.0f;
+
+    float applyDistortion(float input) const;
+
+    // Waveshaping functions
+    static float softClip(float x);
+    static float hardClip(float x);
+    static float wavefold(float x, float amount);
+};
+
+//==============================================================================
+// SIDECHAIN INPUT TYPE
+//==============================================================================
+
+enum class SidechainSource {
+    None,           ///< No sidechain
+    External,        ///< External sidechain input
+    Kick,           ///< Internal kick drum
+    Snare,          ///< Internal snare
+    Bus,            ///< Bus/track source
+    LFO             ///< LFO-modulated sidechain
+};
+
+//==============================================================================
+// MASTER COMPRESSOR / LIMITER WITH SIDECHAIN
+//==============================================================================
+
+class ZenithCompressor {
+public:
+    ZenithCompressor();
+
+    void setSampleRate(double sr);
+    void setThreshold(float thresholdDb);   // -60 to 0 dB
+    void setRatio(float ratio);              // 1:1 to 20:1
+    void setKnee(float kneeDb);           // 0 to 24 dB
+    void setAttack(float attackMs);
+    void setRelease(float releaseMs);
+    void setMakeupGain(float makeupDb);
+    void setAutoMakeup(bool autoMakeup);
+
+    //==========================================================================
+    // Sidechain Control
+    //==========================================================================
+
+    /**
+     * @brief Enable sidechain input
+     * @param enabled True to use sidechain for gain reduction
+     */
+    void setSidechainEnabled(bool enabled) { sidechainEnabled_ = enabled; }
+
+    /**
+     * @brief Set sidechain source
+     */
+    void setSidechainSource(SidechainSource source) { sidechainSource_ = source; }
+
+    /**
+     * @brief Set sidechain filter frequency (HPF for ducking)
+     * @param freq Frequency in Hz (20-2000Hz)
+     */
+    void setSidechainFilterFreq(float freq) { sidechainFilterFreq_ = juce::jlimit(20.0f, 2000.0f, freq); }
+
+    /**
+     * @brief Set sidechain input buffer
+     * @param sidechain Buffer containing sidechain signal
+     */
+    void setSidechainInput(const juce::AudioBuffer<float>& sidechain);
+
+    /**
+     * @brief Process with optional sidechain
+     * @param buffer Main audio to process
+     * @param sidechain Optional sidechain buffer (uses main buffer if null)
+     */
+    void process(juce::AudioBuffer<float>& buffer,
+                const juce::AudioBuffer<float>* sidechain = nullptr);
+
+    void reset();
+
+    float getGainReduction() const { return gainReduction_; }
+
+private:
+    // Envelope follower state
+    float envelope_ = 0.0f;
+
+    float threshold_ = -20.0f;
+    float ratio_ = 4.0f;
+    float knee_ = 4.0f;
+    float attackMs_ = 5.0f;
+    float releaseMs_ = 50.0f;
+    float makeupDb_ = 0.0f;
+    bool autoMakeup_ = true;
+
+    // Sidechain state
+    bool sidechainEnabled_ = false;
+    SidechainSource sidechainSource_ = SidechainSource::None;
+    float sidechainFilterFreq_ = 100.0f;
+    float sidechainFilterZ1_ = 0.0f;
+
+    float gainReduction_ = 0.0f;
+    double sampleRate_ = 44100.0;
+
+    float calculateGain(float inputDb);
+};
+
+//==============================================================================
+// MASTER LIMITER (BRICKWALL)
+//==============================================================================
+
+class ZenithLimiter {
+public:
+    ZenithLimiter();
+
+    void setSampleRate(double sr);
+    void setThreshold(float thresholdDb);   // -20 to 0 dB
+    void setRelease(float releaseMs);
+    void setCeiling(float ceilingDb);     // Max output level
+
+    void process(juce::AudioBuffer<float>& buffer);
+    void reset();
+
+    float getGainReduction() const { return gainReduction_; }
+
+private:
+    float envelope_ = 0.0f;
+    float threshold_ = -0.1f;
+    float ceiling_ = -0.1f;
+    float releaseMs_ = 10.0f;
+    float gainReduction_ = 0.0f;
+    double sampleRate_ = 44100.0;
+};
+
+//==============================================================================
+// PER-OSCILLATOR FX SENDS
+//==============================================================================
+
+/**
+ * Per-oscillator effect send levels
+ */
+struct OscillatorFXSends {
+    float reverbSend = 0.0f;    ///< Reverb send amount (0-1)
+    float delaySend = 0.0f;     ///< Delay send amount (0-1)
+    float chorusSend = 0.0f;    ///< Chorus send amount (0-1)
+    float phaserSend = 0.0f;    ///< Phaser send amount (0-1)
+    float distortionSend = 0.0f; ///< Distortion send amount (0-1)
+};
+
+//==============================================================================
+// EFFECTS CHAIN WITH SIDECHAIN
+//==============================================================================
+
+/**
+ * Master effects processor for synth output with per-oscillator sends
+ * Processes in series: Reverb -> Delay -> Chorus -> Phaser -> Distortion -> Compressor -> Limiter
+ */
+class ZenithEffectsChain {
+public:
+    ZenithEffectsChain();
+
+    void setSampleRate(double sr);
+    void reset();
+
+    //==========================================================================
+    // Effect Access
+    //==========================================================================
+
+    ZenithReverb& getReverb() { return reverb_; }
+    ZenithDelay& getDelay() { return delay_; }
+    ZenithChorus& getChorus() { return chorus_; }
+    ZenithPhaser& getPhaser() { return phaser_; }
+    ZenithDistortion& getDistortion() { return distortion_; }
+    ZenithCompressor& getCompressor() { return compressor_; }
+    ZenithLimiter& getLimiter() { return limiter_; }
+
+    //==========================================================================
+    // Per-Oscillator Sends
+    //==========================================================================
+
+    /**
+     * @brief Set FX sends for oscillator 1
+     */
+    void setOsc1Sends(const OscillatorFXSends& sends) { osc1Sends_ = sends; }
+
+    /**
+     * @brief Set FX sends for oscillator 2
+     */
+    void setOsc2Sends(const OscillatorFXSends& sends) { osc2Sends_ = sends; }
+
+    /**
+     * @brief Set FX sends for oscillator 3
+     */
+    void setOsc3Sends(const OscillatorFXSends& sends) { osc3Sends_ = sends; }
+
+    /**
+     * @brief Get sends for oscillator
+     */
+    const OscillatorFXSends& getOscSends(int oscIndex) const {
+        switch (oscIndex) {
+            case 0: return osc1Sends_;
+            case 1: return osc2Sends_;
+            case 2: return osc3Sends_;
+            default: return osc1Sends_;
+        }
     }
+
+    //==========================================================================
+    // Sidechain Input
+    //==========================================================================
+
+    /**
+     * @brief Set sidechain input for compressor ducking
+     */
+    void setSidechainInput(const juce::AudioBuffer<float>* sidechain) {
+        sidechainInput_ = sidechain;
+    }
+
+    //==========================================================================
+    // Master Bypass
+    //==========================================================================
+
+    void setEffectBypass(EffectType type, bool bypassed);
+    bool isEffectBypassed(EffectType type) const;
+
+    //==========================================================================
+    // Processing
+    //==========================================================================
+
+    /**
+     * @brief Process effects chain with sidechain support
+     * @param buffer Main audio buffer
+     * @param osc1Buffer Optional separate buffer for OSC1
+     * @param osc2Buffer Optional separate buffer for OSC2
+     * @param osc3Buffer Optional separate buffer for OSC3
+     * @param sidechain Optional sidechain input
+     */
+    void process(juce::AudioBuffer<float>& buffer,
+                juce::AudioBuffer<float>* osc1Buffer = nullptr,
+                juce::AudioBuffer<float>* osc2Buffer = nullptr,
+                juce::AudioBuffer<float>* osc3Buffer = nullptr,
+                const juce::AudioBuffer<float>* sidechain = nullptr);
+
+private:
+    ZenithReverb reverb_;
+    ZenithDelay delay_;
+    ZenithChorus chorus_;
+    ZenithPhaser phaser_;
+    ZenithDistortion distortion_;
+    ZenithCompressor compressor_;
+    ZenithLimiter limiter_;
+
+    // Per-oscillator sends
+    OscillatorFXSends osc1Sends_;
+    OscillatorFXSends osc2Sends_;
+    OscillatorFXSends osc3Sends_;
+
+    // Sidechain input reference
+    const juce::AudioBuffer<float>* sidechainInput_ = nullptr;
+
+    // Bypass states
+    bool reverbBypass_ = false;
+    bool delayBypass_ = false;
+    bool chorusBypass_ = false;
+    bool phaserBypass_ = false;
+    bool distortionBypass_ = false;
+    bool compressorBypass_ = false;
+    // Limiter is never bypassed (safety)
+
+    //==========================================================================
+    // Internal Helpers
+    //==========================================================================
+
+    /**
+     * @brief Apply FX sends to a buffer
+     */
+    void applyFXSends(juce::AudioBuffer<float>& dest,
+                     const juce::AudioBuffer<float>& source,
+                     const OscillatorFXSends& sends,
+                     int numSamples);
 };
 
 } // namespace zenith

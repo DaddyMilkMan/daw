@@ -1,0 +1,16 @@
+[Unit]
+Description=Zenith DAW backend (signaling + UPnP)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/micah/Desktop/zenith/daw/backend
+Environment=ZENITH_SIGNALING_HOST=0.0.0.0
+ExecStart=/usr/bin/env python3 -m backend.run_backend --health-port 8000 --log-file /var/log/zenith-backend.log
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/zenith-backend.log
+StandardError=inherit
+
+[Install]
+WantedBy=multi-user.target

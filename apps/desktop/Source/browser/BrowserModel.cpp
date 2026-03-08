@@ -19,11 +19,7 @@ namespace zenith {
 
 BrowserModel::BrowserModel(InstrumentRegistry &registry, PluginHost &host)
     : instrumentRegistry_(registry), pluginHost_(host) {
-  // Default paths
-  // userLibraryPaths_.add(
-  //    juce::File::getSpecialLocation(juce::File::userMusicDirectory)
-  //        .getFullPathName());
-  // userLibraryPaths_.add(juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getFullPathName());
+  loadUserLibraryPaths();
 
   refresh();
 }
@@ -43,6 +39,33 @@ void BrowserModel::refresh() {
 
 void BrowserModel::setUserLibraryPaths(const juce::StringArray &paths) {
   userLibraryPaths_ = paths;
+  userLibraryPaths_.removeEmptyStrings();
+  userLibraryPaths_.removeDuplicates(false);
+  saveUserLibraryPaths();
+  refresh();
+}
+
+void BrowserModel::addUserLibraryPath(const juce::String &path) {
+  const juce::String normalized = juce::File(path).getFullPathName();
+  if (normalized.isEmpty()) {
+    return;
+  }
+
+  if (!userLibraryPaths_.contains(normalized)) {
+    userLibraryPaths_.add(normalized);
+    saveUserLibraryPaths();
+    refresh();
+  }
+}
+
+void BrowserModel::removeUserLibraryPath(const juce::String &path) {
+  const juce::String normalized = juce::File(path).getFullPathName();
+  if (normalized.isEmpty()) {
+    return;
+  }
+
+  userLibraryPaths_.removeString(normalized);
+  saveUserLibraryPaths();
   refresh();
 }
 
@@ -165,52 +188,81 @@ void BrowserModel::populatePlugins() {
 }
 
 void BrowserModel::populateUserLibrary() {
-  // Real file scanning
-  juce::StringArray supportedExtensions = {".wav", ".aif", ".aiff", ".mp3",
-                                           ".ogg", ".mid", ".midi"};
+  // Real file scanning (recursive with limits to avoid UI stalls).
+  const juce::StringArray supportedAudioExts = {".wav", ".aif", ".aiff", ".mp3",
+                                                ".ogg", ".flac", ".m4a"};
+  const juce::StringArray supportedMidiExts = {".mid", ".midi"};
+  constexpr int kMaxDepth = 4;
+  constexpr int kMaxItemsPerRoot = 1200;
+  const juce::StringArray skipDirs = {
+      ".git", ".cache", ".Trash", "node_modules", "build", "dist"
+  };
 
   for (const auto &path : userLibraryPaths_) {
-    juce::File dir(path);
-    if (dir.isDirectory()) {
-      auto dirNode = std::make_shared<BrowserItem>(path, dir.getFileName(),
-                                                   BrowserItemType::Folder);
-      userLibraryNode->addChild(dirNode);
+    const juce::File dir(path);
+    if (!dir.isDirectory()) {
+      continue;
+    }
 
-      // Scan 1 level deep for now to avoid freezing
-      // Phase 2: Move this to background thread with deeper recursion
-      juce::RangedDirectoryIterator iter(dir, false, "*",
+    auto dirNode = std::make_shared<BrowserItem>(path, dir.getFileName(),
+                                                 BrowserItemType::Folder);
+    userLibraryNode->addChild(dirNode);
+
+    int scannedCount = 0;
+
+    std::function<void(const juce::File&, const std::shared_ptr<BrowserItem>&, int)> scanDir;
+    scanDir = [&](const juce::File& currentDir,
+                  const std::shared_ptr<BrowserItem>& parentNode,
+                  int depth) {
+      if (depth > kMaxDepth || scannedCount >= kMaxItemsPerRoot) {
+        return;
+      }
+
+      juce::RangedDirectoryIterator iter(currentDir, false, "*",
                                          juce::File::findFilesAndDirectories);
-
       for (const auto &entry : iter) {
+        if (scannedCount >= kMaxItemsPerRoot) {
+          break;
+        }
+
+        const juce::File f = entry.getFile();
         if (entry.isDirectory()) {
-          auto subDir = std::make_shared<BrowserItem>(
-              entry.getFile().getFullPathName(), entry.getFile().getFileName(),
-              BrowserItemType::Folder);
-          dirNode->addChild(subDir);
-        } else {
-          juce::String ext = entry.getFile().getFileExtension().toLowerCase();
-          if (supportedExtensions.contains(ext)) {
-            BrowserItemType type = (ext == ".mid" || ext == ".midi")
-                                       ? BrowserItemType::MidiFile
-                                       : BrowserItemType::AudioFile;
-
-            auto fileItem = std::make_shared<BrowserItem>(
-                entry.getFile().getFullPathName(),
-                entry.getFile().getFileName(), type);
-            // Use explicit bool variable for clarity
-            bool isFav = isFavorite(entry.getFile().getFullPathName());
-            fileItem->isFavorite = isFav;
-
-            dirNode->addChild(fileItem);
-            allIndexableItems_.push_back(fileItem);
-
-            if (fileItem->isFavorite) {
-              favoritesNode_->addChild(fileItem);
-            }
+          if (skipDirs.contains(f.getFileName())) {
+            continue;
           }
+          auto subDir = std::make_shared<BrowserItem>(
+              f.getFullPathName(), f.getFileName(), BrowserItemType::Folder);
+          parentNode->addChild(subDir);
+          scanDir(f, subDir, depth + 1);
+          continue;
+        }
+
+        const juce::String ext = f.getFileExtension().toLowerCase();
+        BrowserItemType type = BrowserItemType::Unknown;
+        if (supportedAudioExts.contains(ext)) {
+          type = BrowserItemType::AudioFile;
+        } else if (supportedMidiExts.contains(ext)) {
+          type = BrowserItemType::MidiFile;
+        } else {
+          continue;
+        }
+
+        auto fileItem = std::make_shared<BrowserItem>(f.getFullPathName(),
+                                                      f.getFileName(),
+                                                      type);
+        fileItem->isFavorite = isFavorite(f.getFullPathName());
+
+        parentNode->addChild(fileItem);
+        allIndexableItems_.push_back(fileItem);
+        ++scannedCount;
+
+        if (fileItem->isFavorite) {
+          favoritesNode_->addChild(fileItem);
         }
       }
-    }
+    };
+
+    scanDir(dir, dirNode, 0);
   }
 }
 
@@ -358,6 +410,41 @@ juce::File BrowserModel::getFavoritesFile() const {
              juce::File::userApplicationDataDirectory)
       .getChildFile("ZenithDAW")
       .getChildFile("browser_favorites.txt");
+}
+
+juce::File BrowserModel::getLibraryPathsFile() const {
+  return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+      .getChildFile("ZenithDAW")
+      .getChildFile("browser_library_paths.txt");
+}
+
+void BrowserModel::saveUserLibraryPaths() {
+  juce::StringArray paths = userLibraryPaths_;
+  paths.removeEmptyStrings();
+  paths.removeDuplicates(false);
+
+  juce::File file = getLibraryPathsFile();
+  file.getParentDirectory().createDirectory();
+  file.create();
+  file.replaceWithText(paths.joinIntoString("\n"));
+}
+
+void BrowserModel::loadUserLibraryPaths() {
+  userLibraryPaths_.clear();
+
+  juce::File file = getLibraryPathsFile();
+  if (file.existsAsFile()) {
+    userLibraryPaths_.addTokens(file.loadFileAsString(), "\n", "");
+    userLibraryPaths_.removeEmptyStrings();
+    userLibraryPaths_.removeDuplicates(false);
+  }
+
+  // Sensible defaults for first run: keep startup fast and deterministic.
+  if (userLibraryPaths_.isEmpty()) {
+    juce::File projectContent = juce::File::getCurrentWorkingDirectory().getChildFile("Content");
+    if (projectContent.isDirectory()) userLibraryPaths_.add(projectContent.getFullPathName());
+    userLibraryPaths_.removeDuplicates(false);
+  }
 }
 
 //==============================================================================
@@ -625,7 +712,6 @@ void BrowserModel::addToRecent(std::shared_ptr<BrowserItem> item) {
   recentItemIds_.push_front(item->id);
   while (recentItemIds_.size() > maxRecentSize_) recentItemIds_.pop_back();
   saveRecent();
-  sendChangeMessage();
 }
 
 std::vector<std::shared_ptr<BrowserItem>> BrowserModel::getRecentItems() const {

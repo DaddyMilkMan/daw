@@ -9,8 +9,7 @@
   ==============================================================================
 */
 
-#ifdef __linux__
-#include "PlatformLogUtils.h"
+#include "utils/PlatformLogUtils.h"
 
 #include <iostream>
 
@@ -28,4 +27,3 @@ void PlatformLogUtils::freeDebugConsole() {
 }
 
 } // namespace zenith
-#endif

@@ -1,6 +1,6 @@
 /*
     This file is part of Zenith DAW - A Digital Audio Workstation for Linux
-
+#pragma once
     Copyright (C) 2025 Micah Cooley <micahcooley@protonmail.com>
 
     This program is free software: you can redistribute it and/or modify
