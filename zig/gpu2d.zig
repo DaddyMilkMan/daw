@@ -204,16 +204,18 @@ const rect_fs: [*:0]const u8 =
     \\  vec4 fillc = mix(vFill, vFill2, vT);
     \\  vec4 col = mix(fillc, vBorderCol, band);
     \\  vec3 rgb = col.rgb;
-    \\  // material depth (elevated surfaces): specular top rim + soft inner shadow.
+    \\  // clean lighting: a crisp ~1px rim of light along the top edge (light catching
+    \\  // the edge) + a very subtle sheen below it + a soft bottom shade. No smudge.
     \\  float distTop = vLocal.y + vHalf.y;        // 0 at top inner edge, grows down
     \\  float distBot = vHalf.y - vLocal.y;        // 0 at bottom inner edge
     \\  float interior = clamp(aInner, 0.0, 1.0);  // don't light the border ring
-    \\  float spec = exp(-distTop / 4.5) * 0.05  * vElev * interior;
-    \\  float ish  = exp(-distBot / 8.0) * 0.035 * vElev * interior;
-    \\  rgb += spec - ish;
-    \\  // ordered dither to break gradient banding in large dark fills
+    \\  float rim   = (1.0 - smoothstep(0.0, 1.4, distTop)) * 0.14 * vElev * interior;
+    \\  float sheen = exp(-distTop / 7.0) * 0.022 * vElev * interior;
+    \\  float ish   = exp(-distBot / 9.0) * 0.03  * vElev * interior;
+    \\  rgb += rim + sheen - ish;
+    \\  // low-amplitude dither to break banding without reading as grain
     \\  float n = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
-    \\  rgb += (n - 0.5) * (1.3 / 255.0);
+    \\  rgb += (n - 0.5) * (0.7 / 255.0);
     \\  float a = aOuter * col.a;
     \\  frag = vec4(clamp(rgb, 0.0, 1.0) * a, a);
     \\}

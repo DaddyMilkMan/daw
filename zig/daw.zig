@@ -20,8 +20,8 @@ pub const WinAction = enum { none, close, minimize, maximize, move };
 pub const State = struct {
     playing: bool = false,
     window_action: WinAction = .none,
-    sel_track: i32 = -1,
-    sel_clip: i32 = -1,
+    sel_track: i32 = 2,
+    sel_clip: i32 = 0,
     master_gain: f32 = 0.8,
     nav_sel: i32 = 0,
     sends: [8][2]f32 = .{
@@ -58,32 +58,33 @@ const Cols = struct { pal: [5]Color, accent: Color, accent2: Color };
 const C: Cols = blk: {
     @setEvalBranchQuota(1_000_000);
     break :blk .{
-        // slightly desaturated for a more confident, less candy look
-        .pal = .{ oklch(0.76, 0.115, 56), oklch(0.79, 0.120, 152), oklch(0.78, 0.095, 233), oklch(0.72, 0.125, 295), oklch(0.74, 0.130, 356) },
-        .accent = oklch(0.80, 0.110, 228),
-        .accent2 = oklch(0.72, 0.130, 295),
+        // vibrant, cleanly-separated hues — modern category colors
+        .pal = .{ oklch(0.72, 0.155, 40), oklch(0.79, 0.150, 150), oklch(0.75, 0.130, 224), oklch(0.67, 0.165, 292), oklch(0.71, 0.165, 352) },
+        .accent = oklch(0.68, 0.150, 266), // electric indigo
+        .accent2 = oklch(0.67, 0.165, 300),
     };
 };
 const pal = C.pal;
 const accent = C.accent;
 
-// modern dark surfaces — near-black, flat, near-invisible hairlines, restraint
-const bg_top = Color.rgb(16, 17, 22);
-const bg_bot = Color.rgb(9, 10, 13);
-const panel_t = Color.rgb(21, 23, 29);
-const panel_b = Color.rgb(17, 18, 23);
-const card_t = Color.rgb(30, 33, 41);
-const card_b = Color.rgb(26, 28, 35);
-const lane = Color.rgb(13, 14, 18);
-const lane2 = Color.rgb(15, 16, 21);
-const titlebar_t = Color.rgb(23, 25, 31);
-const titlebar_b = Color.rgb(16, 17, 22);
-const bord = Color.rgba(255, 255, 255, 9);
-const rim = Color.rgba(255, 255, 255, 18);
+// modern dark surfaces — clean cool-dark with clear elevation steps so cards
+// pop off panels (helped by the crisp rim lighting), subtle hairlines.
+const bg_top = Color.rgb(18, 19, 25);
+const bg_bot = Color.rgb(11, 12, 16);
+const panel_t = Color.rgb(24, 26, 33);
+const panel_b = Color.rgb(19, 21, 27);
+const card_t = Color.rgb(34, 37, 46);
+const card_b = Color.rgb(29, 31, 39);
+const lane = Color.rgb(14, 15, 20);
+const lane2 = Color.rgb(16, 18, 23);
+const titlebar_t = Color.rgb(25, 27, 34);
+const titlebar_b = Color.rgb(18, 19, 25);
+const bord = Color.rgba(255, 255, 255, 10);
+const rim = Color.rgba(255, 255, 255, 20);
 const grid = Color.rgba(255, 255, 255, 7);
-const txt = Color.rgb(235, 238, 245);
-const dim = Color.rgb(130, 138, 154);
-const faint = Color.rgb(82, 89, 103);
+const txt = Color.rgb(236, 239, 246);
+const dim = Color.rgb(132, 140, 156);
+const faint = Color.rgb(84, 91, 106);
 const amber = Color.rgb(238, 176, 80);
 const green = Color.rgb(120, 208, 140);
 const red = Color.rgb(236, 100, 100);
@@ -201,6 +202,7 @@ fn drawClips(g: *Gpu, fb: *const Font, u: *widgets.Ui, p: *project.Project, ti: 
         }
         const sel = state.sel_track == @as(i32, @intCast(ti)) and state.sel_clip == @as(i32, @intCast(ci));
         const cc = if (muted) mix(col, Color.rgb(72, 76, 88), 0.7) else col;
+        if (sel) g.shadow(cx - 3, cy - 3, cw + 6, ch + 6, 9, 10, Color.rgba(108, 147, 244, 150)); // accent selection glow
         g.shadow(cx, cy, cw, ch, 6, 4, Color.rgba(0, 0, 0, 110));
         g.card(cx, cy, cw, ch, 6, mix(cc, Color.rgb(255, 255, 255), if (hovered) 0.24 else 0.12), mix(cc, panel_b, 0.5), 1, bord, 1.0);
         g.rect(cx, cy, cw, 16, 6, mix(cc, Color.rgb(255, 255, 255), 0.2));
@@ -444,7 +446,7 @@ pub const View = struct {
         // transport
         const picol = if (state.playing) Color.rgb(14, 18, 22) else txt;
         if (c.rectOf(1)) |r| {
-            if (state.playing) glow(g, r[0] + r[2] / 2, r[1] + r[3] / 2, 20, Color.rgba(96, 210, 235, 110));
+            if (state.playing) glow(g, r[0] + r[2] / 2, r[1] + r[3] / 2, 22, Color.rgba(108, 147, 244, 150));
             if (u.iconSlot(1, r[0], r[1], r[2], r[3], state.playing)) state.playing = !state.playing;
             if (state.playing) icons.pause(g, r[0] + r[2] / 2, r[1] + r[3] / 2, 13, picol) else icons.play(g, r[0] + r[2] / 2, r[1] + r[3] / 2, 14, picol);
         }

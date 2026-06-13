@@ -8,9 +8,10 @@ const gpu2d = @import("gpu2d.zig");
 const Color = gpu2d.Color;
 const Gpu = gpu2d.Gpu;
 
-const accent = Color.rgb(96, 210, 235);
-const border = Color.rgba(255, 255, 255, 16);
-const track_bg = Color.rgb(28, 31, 39);
+const accent = Color.rgb(108, 147, 244); // electric indigo
+const accent_hi = Color.rgb(190, 205, 255);
+const border = Color.rgba(255, 255, 255, 14);
+const track_bg = Color.rgb(24, 26, 33);
 
 pub const Input = struct { mx: f32 = -1, my: f32 = -1, mouse_down: bool = false };
 const Anim = struct { id: u32 = 0, used: bool = false, hover: f32 = 0, press: f32 = 0, extra: f32 = 0 };
@@ -97,7 +98,7 @@ pub const Ui = struct {
         a.hover = ease(a.hover, if (hov or self.active == id) 1 else 0, self.dt, 14);
         self.g.rect(x, y, w, h, w / 2, track_bg);
         const fill = value.* * h;
-        self.g.rect(x, y + h - fill, w, fill, w / 2, lerp(Color.rgb(70, 120, 150), accent, a.hover));
+        self.g.rect(x, y + h - fill, w, fill, w / 2, lerp(Color.rgb(66, 84, 150), accent, a.hover));
         const grow = a.hover * 3;
         const knob_y = y + h - value.* * (h - 16) - 16;
         self.g.shadow(x - 11 - grow, knob_y, 24 + 2 * grow, 16, 6, 5, Color.rgba(0, 0, 0, 150));
@@ -124,7 +125,7 @@ pub const Ui = struct {
         const t = (value.* - lo) / (hi - lo);
         const kx = x + t * (w - 6);
         const grow = a.hover * 2;
-        self.g.card(kx - grow, y - 3 - grow, 6 + 2 * grow, h + 6 + 2 * grow, 4, lerp(Color.rgb(150, 195, 220), accent, a.hover), lerp(Color.rgb(110, 160, 190), accent, a.hover), 0, border, 1.0);
+        self.g.card(kx - grow, y - 3 - grow, 6 + 2 * grow, h + 6 + 2 * grow, 4, lerp(Color.rgb(124, 144, 214), accent, a.hover), lerp(Color.rgb(92, 110, 188), accent, a.hover), 0, border, 1.0);
         return changed;
     }
 
@@ -165,7 +166,7 @@ pub const Ui = struct {
             const cxp = cx + @cos(ang) * ar;
             const cyp = cy + @sin(ang) * ar;
             const on = t <= value.*;
-            const col = if (on) lerp(accent, Color.rgb(200, 240, 255), a.hover * 0.5) else Color.rgb(46, 50, 60);
+            const col = if (on) lerp(accent, accent_hi, a.hover * 0.5) else Color.rgb(44, 48, 58);
             self.g.line(prevx, prevy, cxp, cyp, 2.6, col);
             prevx = cxp;
             prevy = cyp;
