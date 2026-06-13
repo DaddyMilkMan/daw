@@ -67,6 +67,7 @@ pub const Style = struct {
     elev: f32 = 0, // material depth on the bg
     shadow: f32 = 0, // shadow sigma (0 = none)
     tracking: f32 = 0, // letter-spacing for text nodes
+    tabular: bool = false, // render numbers with fixed-width (tabular) figures
     // interaction
     id: u64 = 0, // nonzero = interactive (hover/press/click)
     hover_bg: ?Color = null, // bg lerps toward this on hover
@@ -376,7 +377,9 @@ pub const Ctx = struct {
             self.g.stroke(nn.x, nn.y, nn.w, nn.h, s.radius, s.border_w, bd);
         }
         if (nn.text) |t| {
-            if (nn.font) |f| f.textTracked(self.g, nn.x, nn.y, t, nn.text_col, s.tracking);
+            if (nn.font) |f| {
+                if (s.tabular) f.textNum(self.g, nn.x, nn.y, t, nn.text_col) else f.textTracked(self.g, nn.x, nn.y, t, nn.text_col, s.tracking);
+            }
         }
         var c = nn.first;
         while (c >= 0) : (c = self.nodes[@intCast(c)].next) self.render(c);

@@ -18,7 +18,7 @@ const groww = flex.groww;
 
 pub const WinAction = enum { none, close, minimize, maximize, move };
 pub const State = struct {
-    playing: bool = false,
+    playing: bool = true,
     window_action: WinAction = .none,
     sel_track: i32 = 2,
     sel_clip: i32 = 0,
@@ -187,6 +187,14 @@ const icons = struct {
 fn frac(x: f32) f32 {
     return x - @floor(x);
 }
+/// Live meter level — bouncing transients while playing, static (gain) when stopped.
+fn meterLevel(ti: usize, ts: f32, gain: f32, playing: bool) f32 {
+    if (!playing) return gain * 0.72;
+    const t = ts * 2.0 + @as(f32, @floatFromInt(ti)) * 0.37; // ~2 beats/sec @120bpm
+    const env = @exp(-frac(t) * 3.5);
+    const n = frac(@sin((t + @as(f32, @floatFromInt(ti))) * 53.13) * 43758.5453);
+    return std.math.clamp(gain * (0.45 + 0.6 * env * (0.55 + 0.45 * n)), 0.0, 1.0);
+}
 
 // ---- a small, consistent thin-stroke icon set (browser categories) ---------
 const ico = struct {
@@ -304,6 +312,7 @@ pub const View = struct {
     fb: *const Font, // body 14
     fu: *const Font, // title 16
     fd: *const Font, // display 28
+    tc_buf: [16]u8 = undefined, // live timecode string
 
     pub fn init(g: *Gpu, fc: *const Font, fb: *const Font, fu: *const Font, fd: *const Font) View {
         return .{ .g = g, .c = flex.Ctx.init(g, fb, fu, fd), .u = widgets.Ui.init(g), .fc = fc, .fb = fb, .fu = fu, .fd = fd };
@@ -330,6 +339,12 @@ pub const View = struct {
         var tip_y: f32 = 0;
 
         const ntr = p.tracks.items.len;
+        const ts = state.playhead * 8.0; // 4 bars @120bpm ≈ 8s
+        const tc = std.fmt.bufPrint(&self.tc_buf, "{d:0>2} : {d:0>2} : {d:0>2}", .{
+            @as(u32, @intFromFloat(ts / 60)),
+            @as(u32, @intFromFloat(@mod(ts, 60))),
+            @as(u32, @intFromFloat(@mod(ts * 100, 100))),
+        }) catch "00 : 00 : 00";
         c.begin(W, H, mx, my, down, 0.016);
         c.open(.{ .dir = .col, .w = px(W), .h = px(H) });
         {
@@ -346,12 +361,12 @@ pub const View = struct {
                 c.close();
                 c.open(.{ .dir = .col, .gap = 1 });
                 {
-                    c.label("120", self.fd, txt, .{});
+                    c.label("120", self.fd, txt, .{ .tabular = true });
                     c.label("BPM  4 / 4", self.fc, faint, .{ .tracking = 0.6 });
                 }
                 c.close();
                 c.box(.{ .w = grow() });
-                c.label("00 : 00 : 04", self.fd, txt, .{});
+                c.label(tc, self.fd, txt, .{ .tabular = true });
                 c.box(.{ .w = grow() });
                 c.open(.{ .dir = .col, .gap = 1, .aligni = .end });
                 {
@@ -632,14 +647,18 @@ pub const View = struct {
             }
             if (c.rectOf(500 + @as(u64, ti))) |r| {
                 g.rect(r[0], r[1], r[2], r[3], 4, Color.rgb(15, 17, 22));
-                const lvl = if (!is_master and state.mutes[ti]) 0.0 else gain.* * 0.92;
+                const muted = !is_master and state.mutes[ti];
+                const lvl = if (muted) 0.0 else meterLevel(ti, ts, gain.*, state.playing);
                 const mh = lvl * r[3];
                 if (mh > 1) g.rectGrad(r[0], r[1] + r[3] - mh, r[2], mh, 4, meter_hi, meter_lo, 0, bord);
+                // peak tick
+                const pk = if (muted) 0.0 else @min(lvl + 0.08, 1.0);
+                g.rect(r[0], r[1] + r[3] - pk * r[3], r[2], 1.5, 0, Color.rgba(255, 255, 255, 130));
             }
             if (c.rectOf(100 + @as(u64, ti))) |r| {
                 var vbuf: [8]u8 = undefined;
                 const vs = std.fmt.bufPrint(&vbuf, "{d:.0}", .{gain.* * 100}) catch "";
-                self.fb.text(g, r[0] - 6, r[1] + r[3] + 5, vs, dim);
+                self.fc.textNum(g, r[0] - 6, r[1] + r[3] + 6, vs, dim);
             }
         }
 
@@ -660,7 +679,7 @@ pub const View = struct {
             var buf: [8]u8 = undefined;
             const s = std.fmt.bufPrint(&buf, "{d:.0}", .{tip_val}) catch "";
             const sw = self.fb.textWidth(s);
-            self.fb.text(g, tx + (tw - sw) / 2, ty + (th - 15) / 2, s, txt);
+            self.fb.textNum(g, tx + (tw - sw) / 2, ty + (th - 15) / 2, s, txt);
             g.flush();
         }
         return state.window_action;

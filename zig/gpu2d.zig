@@ -880,6 +880,27 @@ pub const GpuFont = struct {
     pub fn text(self: *const GpuFont, g: *Gpu, x: f32, y: f32, s: []const u8, color: Color) void {
         self.textTracked(g, x, y, s, color, 0);
     }
+    /// Tabular figures: digits/':'/'.' rendered at a fixed cell width (the '0'
+    /// advance), centered in the cell, so numbers don't jitter as they change.
+    pub fn textNum(self: *const GpuFont, g: *Gpu, x: f32, y: f32, s: []const u8, color: Color) void {
+        const zero = if ('0' >= self.first and '0' < self.first + self.n) @as(f32, @floatFromInt(self.advance['0' - self.first])) else 8;
+        var pen = x;
+        const ry = @round(y);
+        for (s) |ch| {
+            const mono = (ch >= '0' and ch <= '9') or ch == ':' or ch == '.';
+            if (ch < self.first or ch >= self.first + self.n) {
+                pen += if (mono) zero else 6;
+                continue;
+            }
+            const gi = ch - self.first;
+            const gw: f32 = @floatFromInt(self.width[gi]);
+            const adv: f32 = @floatFromInt(self.advance[gi]);
+            const u = self.uv[gi];
+            const ox = if (mono) (zero - gw) / 2 else 0;
+            g.pushGlyph(self.tex, @round(pen + ox), ry, gw, self.cell_h, u[0], u[1], u[2], u[3], color);
+            pen += if (mono) zero else adv;
+        }
+    }
     /// Text with extra letter-spacing (px between glyphs) — for small-caps labels.
     pub fn textTracked(self: *const GpuFont, g: *Gpu, x: f32, y: f32, s: []const u8, color: Color, tracking: f32) void {
         var pen = x;
