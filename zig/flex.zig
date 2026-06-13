@@ -110,6 +110,8 @@ pub const Ctx = struct {
     sp: u32 = 0,
     W: f32 = 0,
     H: f32 = 0,
+    ox: f32 = 0, // origin — lay the tree out anywhere (sub-regions, overlays)
+    oy: f32 = 0,
     mx: f32 = -1,
     my: f32 = -1,
     mdown: bool = false,
@@ -129,8 +131,14 @@ pub const Ctx = struct {
     }
 
     pub fn begin(self: *Ctx, w: f32, h: f32, mx: f32, my: f32, mdown: bool, dt: f32) void {
+        self.beginAt(0, 0, w, h, mx, my, mdown, dt);
+    }
+    /// Begin a layout whose root is placed at (ox,oy) — for sub-regions/overlays.
+    pub fn beginAt(self: *Ctx, ox: f32, oy: f32, w: f32, h: f32, mx: f32, my: f32, mdown: bool, dt: f32) void {
         self.pressed = mdown and !self.prevdown;
         self.released = !mdown and self.prevdown;
+        self.ox = ox;
+        self.oy = oy;
         self.W = w;
         self.H = h;
         self.mx = mx;
@@ -213,7 +221,7 @@ pub const Ctx = struct {
     pub fn end(self: *Ctx) void {
         self.close(); // root
         self.measure(0);
-        self.arrange(0, 0, 0, self.W, self.H);
+        self.arrange(0, self.ox, self.oy, self.W, self.H);
         self.render(0);
         self.prevdown = self.mdown;
     }

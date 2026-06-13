@@ -240,6 +240,21 @@ pub fn build(b: *std.Build) void {
     const gpu_step = b.step("gpu", "Run the GPU 2D renderer smoke test");
     gpu_step.dependOn(&run_gpu.step);
 
+    // Mixer laid out by the flex engine + GPU widgets.
+    const flexmix = b.addExecutable(.{
+        .name = "zenith_flexmix",
+        .root_source_file = b.path("main_flexmix.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    flexmix.linkSystemLibrary("GL");
+    flexmix.linkSystemLibrary("X11");
+    flexmix.linkLibC();
+    b.installArtifact(flexmix);
+    const run_flexmix = b.addRunArtifact(flexmix);
+    const flexmix_step = b.step("flexmix", "Run the flex-laid-out mixer");
+    flexmix_step.dependOn(&run_flexmix.step);
+
     // Flexbox layout engine demo.
     const flex = b.addExecutable(.{
         .name = "zenith_flex",
