@@ -172,7 +172,7 @@ pub fn main() !void {
                 g.flush();
                 // blur the backdrop behind the panel, then composite frosted glass
                 g.captureBlur(W, H);
-                g.glass(mxp, myp, iw, hh, 14, Color.rgba(36, 40, 52, 150), Color.rgba(255, 255, 255, 46));
+                g.glass(mxp, myp, iw, hh, 16, Color.rgba(84, 92, 114, 76), Color.rgba(255, 255, 255, 220));
                 // foreground items
                 menu_hot = -1;
                 const fmx: f32 = @floatFromInt(mx);

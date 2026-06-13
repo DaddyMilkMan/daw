@@ -209,9 +209,9 @@ const rect_fs: [*:0]const u8 =
     \\  float distTop = vLocal.y + vHalf.y;        // 0 at top inner edge, grows down
     \\  float distBot = vHalf.y - vLocal.y;        // 0 at bottom inner edge
     \\  float interior = clamp(aInner, 0.0, 1.0);  // don't light the border ring
-    \\  float rim   = (1.0 - smoothstep(0.0, 1.4, distTop)) * 0.14 * vElev * interior;
+    \\  float rim   = (1.0 - smoothstep(0.0, 1.5, distTop)) * 0.18 * vElev * interior;
     \\  float sheen = exp(-distTop / 7.0) * 0.022 * vElev * interior;
-    \\  float ish   = exp(-distBot / 9.0) * 0.03  * vElev * interior;
+    \\  float ish   = exp(-distBot / 9.0) * 0.045 * vElev * interior;
     \\  rgb += rim + sheen - ish;
     \\  // low-amplitude dither to break banding without reading as grain
     \\  float n = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
@@ -290,18 +290,31 @@ const glass_fs: [*:0]const u8 =
     \\  vec2 center = uRect.xy + uRect.zw*0.5;
     \\  vec2 hs = uRect.zw*0.5;
     \\  float d = sdRound(vScreen - center, hs, uRadius);
-    \\  float aOuter = clamp(0.5 - d, 0.0, 1.0);
-    \\  if (aOuter <= 0.0) discard;
-    \\  vec2 uv = vec2(vScreen.x/uRes.x, 1.0 - vScreen.y/uRes.y);
-    \\  vec3 blur = toLin(texture(blurTex, uv).rgb);
-    \\  vec3 col = mix(blur, toLin(uTint.rgb), uTint.a);
-    \\  // hairline border + top specular for the glass edge
-    \\  float aInner = clamp(0.5 - (d + 1.5), 0.0, 1.0);
-    \\  float ring = clamp(aOuter - aInner, 0.0, 1.0);
-    \\  col = mix(col, toLin(uBorder.rgb), ring * uBorder.a);
+    \\  float aa = max(fwidth(d), 1.0);
+    \\  float aOuter = clamp(0.5 - d/aa, 0.0, 1.0);
+    \\  if (aOuter <= 0.002) discard;
+    \\  // EDGE LENSING (refraction): bend the backdrop sample outward near the rim,
+    \\  // along the SDF gradient (the edge normal). This is the signature look —
+    \\  // content magnifies/curves at the glass edge instead of just blurring.
+    \\  vec2 n = normalize(vec2(dFdx(d), dFdy(d)) + vec2(1e-6));
+    \\  float edge = 1.0 - smoothstep(0.0, 16.0, -d);          // 1 at rim -> 0 ~16px in
+    \\  vec2 refr = n * pow(edge, 2.4) * 10.0;                  // up to ~10px outward bend
+    \\  vec2 uv = vec2((vScreen.x + refr.x)/uRes.x, 1.0 - (vScreen.y + refr.y)/uRes.y);
+    \\  vec3 back = toLin(texture(blurTex, clamp(uv, vec2(0.0), vec2(1.0))).rgb);
+    \\  // bright translucency: lift the lensed backdrop, then a light tint wash
+    \\  vec3 glass = back * 1.14 + 0.016;
+    \\  glass = mix(glass, toLin(uTint.rgb), uTint.a);
+    \\  // specular: a bright crisp streak on the top edge + a faint bottom edge + sheen
     \\  float distTop = vScreen.y - uRect.y;
-    \\  col += exp(-distTop/4.0) * 0.06 * aInner;
-    \\  frag = vec4(col * aOuter, aOuter);
+    \\  float distBot = (uRect.y + uRect.w) - vScreen.y;
+    \\  float topSpec = (1.0 - smoothstep(0.0, 2.4, distTop));
+    \\  float botSpec = (1.0 - smoothstep(0.0, 1.8, distBot)) * 0.45;
+    \\  float sheen   = exp(-distTop/10.0) * 0.05;
+    \\  vec3 spec = toLin(uBorder.rgb);
+    \\  glass += spec * ((topSpec * 0.9 + botSpec) * uBorder.a + sheen);
+    \\  // edge catches light from the lensing
+    \\  glass += pow(edge, 3.0) * 0.12;
+    \\  frag = vec4(glass * aOuter, aOuter);
     \\}
 ;
 const shadow_vs: [*:0]const u8 =

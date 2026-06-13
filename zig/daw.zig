@@ -79,7 +79,8 @@ const lane = Color.rgb(14, 15, 20);
 const lane2 = Color.rgb(16, 18, 23);
 const titlebar_t = Color.rgb(25, 27, 34);
 const titlebar_b = Color.rgb(18, 19, 25);
-const bord = Color.rgba(255, 255, 255, 10);
+// no gray border lines — surfaces separate by rim light + shadow + fill contrast
+const bord = Color.rgba(255, 255, 255, 0);
 const rim = Color.rgba(255, 255, 255, 20);
 const grid = Color.rgba(255, 255, 255, 7);
 const txt = Color.rgb(236, 239, 246);
@@ -556,7 +557,7 @@ pub const View = struct {
             const tx = std.math.clamp(tip_x - tw / 2, 2, W - tw - 2);
             const ty = @max(tip_y - th - 4, 2);
             g.captureBlur(@intFromFloat(W), @intFromFloat(H));
-            g.glass(tx, ty, tw, th, 7, Color.rgba(30, 34, 44, 150), Color.rgba(255, 255, 255, 50));
+            g.glass(tx, ty, tw, th, 9, Color.rgba(86, 94, 116, 70), Color.rgba(255, 255, 255, 220));
             var buf: [8]u8 = undefined;
             const s = std.fmt.bufPrint(&buf, "{d:.0}", .{tip_val}) catch "";
             const sw = self.fb.textWidth(s);
