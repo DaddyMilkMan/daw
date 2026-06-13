@@ -27,8 +27,8 @@ fn edgeDir(x: i32, y: i32, w: i32, h: i32) ?c_long {
 
 pub fn main() !void {
     const a = std.heap.page_allocator;
-    var W: usize = 960;
-    var H: usize = 560;
+    var W: usize = 1180;
+    var H: usize = 740;
     const bar: u64 = 96000;
 
     var cv = try r2d.Canvas.init(a, W, H);

@@ -307,7 +307,7 @@ fn arrangement(ui: *uikit.Ui, p: *project.Project, bar: u64, region: L, state: *
     const grid_top = inner.y + ruler_h + 6;
     const rows_h = inner.h - ruler_h - 6;
     const gap: i32 = 6;
-    const row_h: i32 = std.math.clamp(@divTrunc(rows_h - (ntracks - 1) * gap, ntracks), 44, 96);
+    const row_h: i32 = std.math.clamp(@divTrunc(rows_h - (ntracks - 1) * gap, ntracks), 28, 96);
 
     for (p.tracks.items, 0..) |t, ti| {
         const ry = grid_top + @as(i32, @intCast(ti)) * (row_h + gap);
@@ -317,8 +317,9 @@ fn arrangement(ui: *uikit.Ui, p: *project.Project, bar: u64, region: L, state: *
         const hdr = L{ .x = inner.x, .y = ry, .w = hdr_w, .h = row_h };
         card(cv, hdr, 9, c_card_top, c_card_bot);
         cv.fillRoundedRect(inner.x + 8, ry + 9, 4, row_h - 18, 2, col);
-        cv.textAA(inner.x + 22, ry + 9, t.name.items, c_text, fu);
-        cv.textAA(inner.x + 22, ry + 31, if (t.instrument == .sampler) "Sampler" else "Synth", c_dim, fb);
+        const name_y = if (row_h >= 46) ry + 9 else ry + @divTrunc(row_h - 16, 2);
+        cv.textAA(inner.x + 22, name_y, t.name.items, c_text, fu);
+        if (row_h >= 46) cv.textAA(inner.x + 22, ry + 31, if (t.instrument == .sampler) "Sampler" else "Synth", c_dim, fb);
         if (miniToggle(ui, 340 + @as(u32, @intCast(ti)), inner.x + hdr_w - 46, ry + 9, 18, 15, "M", state.mutes[ti], c_amber)) state.mutes[ti] = !state.mutes[ti];
         if (miniToggle(ui, 360 + @as(u32, @intCast(ti)), inner.x + hdr_w - 25, ry + 9, 18, 15, "S", state.solos[ti], c_green)) state.solos[ti] = !state.solos[ti];
 
@@ -362,28 +363,36 @@ fn channelStrip(ui: *uikit.Ui, b: L, name: []const u8, col: Color, gain: *f32, p
     if (is_master) cv.glow(b.x + b.w - 16, b.y + 11, 10, Color.rgba(96, 210, 235, 90));
     cv.textAA(b.x + 12, b.y + 18, name, c_text, fu);
 
+    const bottom = b.y + b.h - 22; // reserve space for the value readout
+    var cy = b.y + 40; // running cursor; adaptively stack controls above the fader
     if (!is_master) {
         // mute / solo
-        if (miniToggle(ui, 300 + @as(u32, @intCast(ti)), b.x + 12, b.y + 40, 22, 16, "M", state.mutes[ti], c_amber)) state.mutes[ti] = !state.mutes[ti];
-        if (miniToggle(ui, 320 + @as(u32, @intCast(ti)), b.x + 38, b.y + 40, 22, 16, "S", state.solos[ti], c_green)) state.solos[ti] = !state.solos[ti];
-
+        if (miniToggle(ui, 300 + @as(u32, @intCast(ti)), b.x + 12, cy, 22, 16, "M", state.mutes[ti], c_amber)) state.mutes[ti] = !state.mutes[ti];
+        if (miniToggle(ui, 320 + @as(u32, @intCast(ti)), b.x + 38, cy, 22, 16, "S", state.solos[ti], c_green)) state.solos[ti] = !state.solos[ti];
+        if (pan != null) label(cv, b.x + b.w - 36, cy + 2, "PAN");
+        cy += 22;
         // pan
         if (pan) |pp| {
-            label(cv, b.x + b.w - 36, b.y + 42, "PAN");
-            _ = ui.hSlider(id + 1000, b.x + 12, b.y + 64, b.w - 24, 6, pp, -1.0, 1.0);
+            _ = ui.hSlider(id + 1000, b.x + 12, cy, b.w - 24, 6, pp, -1.0, 1.0);
+            cy += 16;
         }
-        // sends A / B
-        const ay = b.y + 92;
-        const ax = b.x + @divTrunc(b.w, 2) - 26;
-        const bx = b.x + @divTrunc(b.w, 2) + 26;
-        _ = ui.knob(200 + @as(u32, @intCast(ti)) * 2, ax, ay, 12, &state.sends[ti][0]);
-        _ = ui.knob(201 + @as(u32, @intCast(ti)) * 2, bx, ay, 12, &state.sends[ti][1]);
-        cv.textAA(ax - 4, ay + 18, "A", c_faint, fb);
-        cv.textAA(bx - 4, ay + 18, "B", c_faint, fb);
+        // sends A / B — only when the strip is tall enough to keep a real fader
+        if (bottom - (cy + 6) > 96) {
+            const ay = cy + 12;
+            const ax = b.x + @divTrunc(b.w, 2) - 26;
+            const bx = b.x + @divTrunc(b.w, 2) + 26;
+            _ = ui.knob(200 + @as(u32, @intCast(ti)) * 2, ax, ay, 12, &state.sends[ti][0]);
+            _ = ui.knob(201 + @as(u32, @intCast(ti)) * 2, bx, ay, 12, &state.sends[ti][1]);
+            cv.textAA(ax - 4, ay + 18, "A", c_faint, fb);
+            cv.textAA(bx - 4, ay + 18, "B", c_faint, fb);
+            cy += 40;
+        }
+    } else {
+        cy = b.y + 46;
     }
 
-    const fy = if (is_master) b.y + 56 else b.y + 122;
-    const fader_h = b.y + b.h - 22 - fy;
+    const fy = cy + 6;
+    const fader_h = @max(bottom - fy, 24);
     const fx = b.x + @divTrunc(b.w, 2) - 18;
     _ = ui.vFader(id, fx, fy, 8, fader_h, gain);
     // meter
@@ -435,7 +444,7 @@ pub fn frame(ui: *uikit.Ui, p: *project.Project, bar: u64, state: *State) void {
     const tb = root.cutTop(58);
     const browser_w: i32 = std.math.clamp(@divTrunc(W * 20, 100), 170, 230);
     const leftBox = root.cutLeft(browser_w);
-    const mix_h: i32 = std.math.clamp(@divTrunc(H * 46, 100), 240, 420);
+    const mix_h: i32 = std.math.clamp(@divTrunc(H * 44, 100), 220, 400);
     const mixBox = root.cutBottom(mix_h);
     const arrBox = root;
 
