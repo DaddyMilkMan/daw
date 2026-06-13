@@ -6,8 +6,7 @@
 //! via the window's glXGetProcAddress; nothing here is JUCE/Skia-derived.
 
 const std = @import("std");
-const r2d = @import("render2d.zig");
-pub const Color = r2d.Color;
+pub const Color = @import("color.zig").Color;
 
 // ---- GL constants ----------------------------------------------------------
 const GL_FLOAT: u32 = 0x1406;

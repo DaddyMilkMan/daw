@@ -6,18 +6,7 @@ const std = @import("std");
 const font = @import("font_data.zig");
 const FontT = @import("font.zig").Font;
 
-pub const Color = struct {
-    r: u8,
-    g: u8,
-    b: u8,
-    a: u8 = 255,
-    pub fn rgb(r: u8, g: u8, b: u8) Color {
-        return .{ .r = r, .g = g, .b = b };
-    }
-    pub fn rgba(r: u8, g: u8, b: u8, a: u8) Color {
-        return .{ .r = r, .g = g, .b = b, .a = a };
-    }
-};
+pub const Color = @import("color.zig").Color;
 
 fn lerp(a: u8, b: u8, t: f32) u8 {
     return @intFromFloat(@as(f32, @floatFromInt(a)) * (1 - t) + @as(f32, @floatFromInt(b)) * t);
