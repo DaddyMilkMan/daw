@@ -211,6 +211,66 @@ pub const Canvas = struct {
         }
     }
 
+    /// Antialiased rounded rect filled with a vertical gradient (top -> bot).
+    /// The core "elevated glass surface" look — flat fills read as cheap.
+    pub fn fillRoundedRectV(self: *Canvas, x: i32, y: i32, w: i32, h: i32, radius: i32, top: Color, bot: Color) void {
+        const r: f32 = @floatFromInt(@min(radius, @min(@divTrunc(w, 2), @divTrunc(h, 2))));
+        const wf: f32 = @floatFromInt(w);
+        const hf: f32 = @floatFromInt(h);
+        var yy: i32 = 0;
+        while (yy < h) : (yy += 1) {
+            const t = @as(f32, @floatFromInt(yy)) / @as(f32, @floatFromInt(@max(h - 1, 1)));
+            const cr = lerp(top.r, bot.r, t);
+            const cg = lerp(top.g, bot.g, t);
+            const cb = lerp(top.b, bot.b, t);
+            var xx: i32 = 0;
+            while (xx < w) : (xx += 1) {
+                const cov = roundedCoverage(@floatFromInt(xx), @floatFromInt(yy), wf, hf, r);
+                if (cov <= 0.003) continue;
+                const a: u32 = @intFromFloat(cov * @as(f32, @floatFromInt(top.a)));
+                self.pset(x + xx, y + yy, .{ .r = cr, .g = cg, .b = cb, .a = @intCast(@min(a, 255)) });
+            }
+        }
+    }
+
+    /// Antialiased 1px rounded-rect border (a hairline rim). Drawn as the
+    /// difference between the outer and 1px-inset coverage.
+    pub fn strokeRoundedRect(self: *Canvas, x: i32, y: i32, w: i32, h: i32, radius: i32, c: Color) void {
+        const r: f32 = @floatFromInt(@min(radius, @min(@divTrunc(w, 2), @divTrunc(h, 2))));
+        const wf: f32 = @floatFromInt(w);
+        const hf: f32 = @floatFromInt(h);
+        var yy: i32 = 0;
+        while (yy < h) : (yy += 1) {
+            var xx: i32 = 0;
+            while (xx < w) : (xx += 1) {
+                const co = roundedCoverage(@floatFromInt(xx), @floatFromInt(yy), wf, hf, r);
+                const ci = roundedCoverage(@as(f32, @floatFromInt(xx)) - 1.0, @as(f32, @floatFromInt(yy)) - 1.0, wf - 2, hf - 2, @max(r - 1.0, 0.0));
+                const ring = std.math.clamp(co - ci, 0.0, 1.0);
+                if (ring <= 0.01) continue;
+                const a: u32 = @intFromFloat(ring * @as(f32, @floatFromInt(c.a)));
+                self.pset(x + xx, y + yy, .{ .r = c.r, .g = c.g, .b = c.b, .a = @intCast(@min(a, 255)) });
+            }
+        }
+    }
+
+    /// Soft radial glow centered at (cx,cy). Quadratic falloff to the radius.
+    /// Use behind accents (active transport, selection) for the web-UI bloom.
+    pub fn glow(self: *Canvas, cx: i32, cy: i32, radius: i32, c: Color) void {
+        const rf: f32 = @floatFromInt(@max(radius, 1));
+        var yy: i32 = -radius;
+        while (yy <= radius) : (yy += 1) {
+            var xx: i32 = -radius;
+            while (xx <= radius) : (xx += 1) {
+                const d = @sqrt(@as(f32, @floatFromInt(xx * xx + yy * yy))) / rf;
+                if (d >= 1.0) continue;
+                const fall = 1.0 - d;
+                const a: u32 = @intFromFloat(fall * fall * @as(f32, @floatFromInt(c.a)));
+                if (a == 0) continue;
+                self.pset(cx + xx, cy + yy, .{ .r = c.r, .g = c.g, .b = c.b, .a = @intCast(@min(a, 255)) });
+            }
+        }
+    }
+
     /// Separable box blur over a region, in place. (CPU now; this is exactly the
     /// kind of effect a GPU shader does for free — see window_gl.zig.)
     pub fn boxBlur(self: *Canvas, rx: i32, ry: i32, rw0: i32, rh0: i32, radius: i32) void {
