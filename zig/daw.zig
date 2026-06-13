@@ -24,6 +24,7 @@ pub const State = struct {
     sel_clip: i32 = 0,
     master_gain: f32 = 0.8,
     nav_sel: i32 = 0,
+    playhead: f32 = 0.34, // 0..1 position across the arrangement
     sends: [8][2]f32 = .{
         .{ 0.28, 0.10 }, .{ 0.40, 0.16 }, .{ 0.22, 0.30 }, .{ 0.34, 0.12 },
         .{ 0.18, 0.08 }, .{ 0.30, 0.20 }, .{ 0.26, 0.14 }, .{ 0.36, 0.18 },
@@ -183,6 +184,26 @@ const icons = struct {
     }
 };
 
+fn frac(x: f32) f32 {
+    return x - @floor(x);
+}
+/// Procedural but deterministic audio waveform fill (mirrored around center) —
+/// drum-like transients with decay + noise texture, so audio clips read as real.
+fn drawWaveform(g: *Gpu, x: f32, y: f32, w: f32, h: f32, seed: f32, col: Color) void {
+    if (w < 2 or h < 4) return;
+    const cy = y + h * 0.5;
+    const amp = h * 0.46;
+    var i: f32 = 0;
+    while (i < w) : (i += 2) {
+        const t = i / w;
+        const phase = frac(t * 8.0); // 8 transients across the clip
+        const env = @exp(-phase * 5.5);
+        const n = frac(@sin((t + seed) * 537.3) * 43758.5453);
+        const a = @max(env * (0.30 + 0.70 * n) * amp, 1.0);
+        g.rect(x + i, cy - a, 1.3, a * 2, 0.6, col);
+    }
+}
+
 fn drawClips(g: *Gpu, fb: *const Font, u: *widgets.Ui, p: *project.Project, ti: usize, r: [4]f32, bar: u64, state: *State) void {
     const bars: f32 = 4;
     const total: f64 = @floatFromInt(@as(i64, 4) * @as(i64, @intCast(bar)));
@@ -209,8 +230,10 @@ fn drawClips(g: *Gpu, fb: *const Font, u: *widgets.Ui, p: *project.Project, ti: 
         g.shadow(cx, cy, cw, ch, 6, 4, Color.rgba(0, 0, 0, 110));
         g.card(cx, cy, cw, ch, 6, mix(cc, Color.rgb(255, 255, 255), if (hovered) 0.24 else 0.12), mix(cc, panel_b, 0.5), 1, bord, 1.0);
         g.rect(cx, cy, cw, 16, 6, mix(cc, Color.rgb(255, 255, 255), 0.2));
-        // notes
-        if (clip.length != 0) {
+        // audio tracks show a waveform; MIDI tracks show note blocks
+        if (t.instrument == .sampler) {
+            drawWaveform(g, cx + 3, cy + 18, cw - 6, ch - 22, @as(f32, @floatFromInt(ci)) * 13.7, mix(cc, Color.rgb(255, 255, 255), 0.55));
+        } else if (clip.length != 0) {
             const clen: f32 = @floatFromInt(clip.length);
             const nc = mix(cc, Color.rgb(255, 255, 255), 0.5);
             for (clip.notes.items) |note| {
@@ -496,6 +519,20 @@ pub const View = struct {
                 state.solos[ti] = !state.solos[ti];
             };
             if (c.rectOf(800 + @as(u64, ti))) |r| drawClips(g, self.fb, u, p, ti, r, bar, state);
+        }
+
+        // playhead — a bright line across the timeline + a marker in the ruler
+        if (state.playing) state.playhead = frac(state.playhead + 0.0016);
+        if (c.rectOf(800)) |l0| {
+            if (c.rectOf(950)) |rl| {
+                const phx = l0[0] + state.playhead * l0[2];
+                const top = rl[1] + 2;
+                var bot = l0[1] + l0[3];
+                if (c.rectOf(800 + @as(u64, ntr - 1))) |lN| bot = lN[1] + lN[3];
+                g.shadow(phx - 1.5, top, 3, bot - top, 1, 4, Color.rgba(108, 147, 244, 90));
+                g.rect(phx - 0.75, top, 1.5, bot - top, 0, Color.rgb(150, 180, 255));
+                g.tri(phx - 4, rl[1] + 3, phx + 4, rl[1] + 3, phx, rl[1] + 11, Color.rgb(150, 180, 255));
+            }
         }
 
         // mixer widgets
