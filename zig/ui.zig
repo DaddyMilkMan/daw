@@ -30,13 +30,49 @@ pub const State = struct {
     solos: [8]bool = [_]bool{false} ** 8,
 };
 
-const palette = [_]Color{
-    .{ .r = 245, .g = 158, .b = 88 }, // orange
-    .{ .r = 122, .g = 211, .b = 140 }, // green
-    .{ .r = 96, .g = 206, .b = 240 }, // cyan
-    .{ .r = 178, .g = 140, .b = 248 }, // violet
-    .{ .r = 240, .g = 132, .b = 170 }, // pink
+/// OKLCH -> sRGB. Perceptually-uniform color: vary L for even ramps, hold C/H
+/// for a consistent hue. Lets us pick track colors at equal *perceived*
+/// lightness instead of RGB values where orange visually screams over violet.
+fn oklch(light: f32, chroma: f32, Hdeg: f32) Color {
+    const h = Hdeg * std.math.pi / 180.0;
+    const a = chroma * @cos(h);
+    const b = chroma * @sin(h);
+    const l_ = light + 0.3963377774 * a + 0.2158037573 * b;
+    const m_ = light - 0.1055613458 * a - 0.0638541728 * b;
+    const s_ = light - 0.0894841775 * a - 1.2914855480 * b;
+    const l = l_ * l_ * l_;
+    const m = m_ * m_ * m_;
+    const s = s_ * s_ * s_;
+    return .{
+        .r = encSrgb(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+        .g = encSrgb(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+        .b = encSrgb(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s),
+    };
+}
+fn encSrgb(c: f32) u8 {
+    const x = std.math.clamp(c, 0.0, 1.0);
+    const s = if (x <= 0.0031308) x * 12.92 else 1.055 * std.math.pow(f32, x, 1.0 / 2.4) - 0.055;
+    return @intFromFloat(@round(std.math.clamp(s, 0.0, 1.0) * 255.0));
+}
+
+// All OKLCH-derived colors computed in one comptime block (pow needs a raised
+// eval-branch quota). Track/clip palette sits at ~equal perceived lightness.
+const Cols = struct { palette: [5]Color, accent: Color, accent2: Color };
+const cols: Cols = blk: {
+    @setEvalBranchQuota(1_000_000);
+    break :blk .{
+        .palette = .{
+            oklch(0.77, 0.135, 58), // orange
+            oklch(0.80, 0.145, 152), // green
+            oklch(0.78, 0.110, 233), // cyan
+            oklch(0.73, 0.150, 295), // violet
+            oklch(0.75, 0.150, 358), // pink
+        },
+        .accent = oklch(0.80, 0.115, 228),
+        .accent2 = oklch(0.73, 0.150, 295),
+    };
 };
+const palette = cols.palette;
 
 // Refined "web dashboard" palette: bluish charcoal, layered elevation.
 const c_bg_top = Color.rgb(26, 28, 36);
@@ -50,8 +86,8 @@ const c_lane_alt = Color.rgb(24, 26, 34);
 const c_border = Color.rgba(255, 255, 255, 16);
 const c_rim = Color.rgba(255, 255, 255, 30);
 const c_grid = Color.rgba(255, 255, 255, 10);
-const c_accent = Color.rgb(96, 210, 235);
-const c_accent2 = Color.rgb(178, 140, 248);
+const c_accent = cols.accent;
+const c_accent2 = cols.accent2;
 const c_text = Color.rgb(236, 239, 246);
 const c_dim = Color.rgb(140, 148, 164);
 const c_faint = Color.rgb(96, 103, 119);

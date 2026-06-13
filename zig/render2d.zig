@@ -23,6 +23,41 @@ fn lerp(a: u8, b: u8, t: f32) u8 {
     return @intFromFloat(@as(f32, @floatFromInt(a)) * (1 - t) + @as(f32, @floatFromInt(b)) * t);
 }
 
+// --- Gamma-correct (linear-space) alpha compositing -------------------------
+// Browsers and every serious renderer blend in LINEAR light, not sRGB. Blending
+// sRGB bytes directly (the naive path) darkens AA edges and makes overlays look
+// muddy. We composite through 12-bit linear LUTs: decode sRGB->linear, lerp by
+// alpha, encode linear->sRGB — two table lookups + a mul-add per channel.
+var srgb_to_lin: [256]u32 = undefined; // sRGB byte -> linear in [0,4095]
+var lin_to_srgb: [4096]u8 = undefined; // linear [0,4095] -> sRGB byte
+var tables_ready: bool = false;
+
+fn srgbToLinearF(c: f32) f32 {
+    return if (c <= 0.04045) c / 12.92 else std.math.pow(f32, (c + 0.055) / 1.055, 2.4);
+}
+fn linearToSrgbF(c: f32) f32 {
+    return if (c <= 0.0031308) c * 12.92 else 1.055 * std.math.pow(f32, c, 1.0 / 2.4) - 0.055;
+}
+fn initBlendTables() void {
+    if (tables_ready) return;
+    var i: usize = 0;
+    while (i < 256) : (i += 1) {
+        const lin = srgbToLinearF(@as(f32, @floatFromInt(i)) / 255.0);
+        srgb_to_lin[i] = @intFromFloat(@round(std.math.clamp(lin, 0, 1) * 4095.0));
+    }
+    i = 0;
+    while (i < 4096) : (i += 1) {
+        const s = linearToSrgbF(@as(f32, @floatFromInt(i)) / 4095.0);
+        lin_to_srgb[i] = @intFromFloat(@round(std.math.clamp(s, 0, 1) * 255.0));
+    }
+    tables_ready = true;
+}
+/// Composite src over dst (one channel, both sRGB bytes) in linear light. a 0..255.
+inline fn blendCh(dst: u8, src: u8, a: u32) u8 {
+    const out = (srgb_to_lin[src] * a + srgb_to_lin[dst] * (255 - a)) / 255;
+    return lin_to_srgb[out];
+}
+
 pub const Canvas = struct {
     pixels: []u8, // RGBA, row-major
     width: usize,
@@ -30,6 +65,7 @@ pub const Canvas = struct {
     allocator: std.mem.Allocator,
 
     pub fn init(a: std.mem.Allocator, w: usize, h: usize) !Canvas {
+        initBlendTables();
         const px = try a.alloc(u8, w * h * 4);
         @memset(px, 0);
         return .{ .pixels = px, .width = w, .height = h, .allocator = a };
@@ -57,10 +93,9 @@ pub const Canvas = struct {
             self.pixels[idx + 2] = c.b;
         } else {
             const a: u32 = c.a;
-            const ia: u32 = 255 - a;
-            self.pixels[idx] = @intCast((@as(u32, c.r) * a + @as(u32, self.pixels[idx]) * ia) / 255);
-            self.pixels[idx + 1] = @intCast((@as(u32, c.g) * a + @as(u32, self.pixels[idx + 1]) * ia) / 255);
-            self.pixels[idx + 2] = @intCast((@as(u32, c.b) * a + @as(u32, self.pixels[idx + 2]) * ia) / 255);
+            self.pixels[idx] = blendCh(self.pixels[idx], c.r, a);
+            self.pixels[idx + 1] = blendCh(self.pixels[idx + 1], c.g, a);
+            self.pixels[idx + 2] = blendCh(self.pixels[idx + 2], c.b, a);
         }
     }
 
@@ -90,15 +125,14 @@ pub const Canvas = struct {
             }
         } else {
             const a: u32 = c.a;
-            const ia: u32 = 255 - a;
             var yy = y0;
             while (yy < y1) : (yy += 1) {
                 var idx = (yy * self.width + x0) * 4;
                 var xx = x0;
                 while (xx < x1) : (xx += 1) {
-                    self.pixels[idx] = @intCast((@as(u32, c.r) * a + @as(u32, self.pixels[idx]) * ia) / 255);
-                    self.pixels[idx + 1] = @intCast((@as(u32, c.g) * a + @as(u32, self.pixels[idx + 1]) * ia) / 255);
-                    self.pixels[idx + 2] = @intCast((@as(u32, c.b) * a + @as(u32, self.pixels[idx + 2]) * ia) / 255);
+                    self.pixels[idx] = blendCh(self.pixels[idx], c.r, a);
+                    self.pixels[idx + 1] = blendCh(self.pixels[idx + 1], c.g, a);
+                    self.pixels[idx + 2] = blendCh(self.pixels[idx + 2], c.b, a);
                     idx += 4;
                 }
             }
@@ -144,9 +178,9 @@ pub const Canvas = struct {
     fn psetSub(self: *Canvas, x: i32, y: i32, r: u8, g: u8, b: u8, ar: u32, ag: u32, ab: u32) void {
         if (x < 0 or y < 0 or x >= @as(i32, @intCast(self.width)) or y >= @as(i32, @intCast(self.height))) return;
         const i = (@as(usize, @intCast(y)) * self.width + @as(usize, @intCast(x))) * 4;
-        self.pixels[i] = @intCast((@as(u32, r) * ar + @as(u32, self.pixels[i]) * (255 - ar)) / 255);
-        self.pixels[i + 1] = @intCast((@as(u32, g) * ag + @as(u32, self.pixels[i + 1]) * (255 - ag)) / 255);
-        self.pixels[i + 2] = @intCast((@as(u32, b) * ab + @as(u32, self.pixels[i + 2]) * (255 - ab)) / 255);
+        self.pixels[i] = blendCh(self.pixels[i], r, ar);
+        self.pixels[i + 1] = blendCh(self.pixels[i + 1], g, ag);
+        self.pixels[i + 2] = blendCh(self.pixels[i + 2], b, ab);
     }
 
     /// Antialiased proportional text — grayscale or LCD subpixel coverage.
@@ -380,12 +414,22 @@ pub const Canvas = struct {
         }
     }
 
-    /// Soft drop shadow behind a rounded rect (draw before the element).
+    /// Layered elevation shadow: a soft wide ambient shadow plus a tighter, darker
+    /// contact shadow — the two-shadow stack real design systems use for depth,
+    /// instead of a single blur. Draw before the element.
     pub fn dropShadow(self: *Canvas, x: i32, y: i32, w: i32, h: i32, radius: i32, spread: i32) void {
-        var s: i32 = spread;
+        // ambient: wide, soft, low alpha, offset further down
+        const amb = spread + 5;
+        var s: i32 = amb;
         while (s >= 1) : (s -= 1) {
-            const a: u8 = @intCast(@as(u32, 26) * @as(u32, @intCast(spread - s + 1)) / @as(u32, @intCast(spread)));
-            self.fillRoundedRect(x - s, y - s + 4, w + 2 * s, h + 2 * s, radius + s, .{ .r = 0, .g = 0, .b = 0, .a = a });
+            const a: u8 = @intCast(@as(u32, 9) * @as(u32, @intCast(amb - s + 1)) / @as(u32, @intCast(amb)));
+            self.fillRoundedRect(x - s, y - s + 7, w + 2 * s, h + 2 * s, radius + s, .{ .r = 0, .g = 0, .b = 0, .a = a });
+        }
+        // contact: tight, darker, small offset
+        s = spread;
+        while (s >= 1) : (s -= 1) {
+            const a: u8 = @intCast(@as(u32, 24) * @as(u32, @intCast(spread - s + 1)) / @as(u32, @intCast(spread)));
+            self.fillRoundedRect(x - s, y - s + 2, w + 2 * s, h + 2 * s, radius + s, .{ .r = 0, .g = 0, .b = 0, .a = a });
         }
     }
 };
