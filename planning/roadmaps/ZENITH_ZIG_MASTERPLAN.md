@@ -64,6 +64,9 @@ Append to the Progress Log. Keep it honest — no "done" that isn't verified.
   port. Note on/off only.
 - ✅ **Real-time loop** (`main_live.zig`): poll MIDI → synth → stream. Verified
   end-to-end (aplaymidi → port → synth → recorded WAV).
+- ✅ **Live looper** (`transport.zig` + `sequence.zig` + `main_loop.zig`): tempo/looping
+  transport, MIDI record + loop-aware replay + overdub. Verified: pass-0 input replays
+  across later loops.
 
 **That is ~1–2% of a full JUCE replacement, and the easiest part.** Everything in §4 below
 is the rest.
@@ -128,12 +131,12 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ Delay lines, modulation (LFOs, envelope followers)
 
 ### 4.7 Engine — the DAW core  *(was Zenith's own C++; rebuild in Zig)*
-- ❌ **Transport / clock / playhead**: play/stop/record, position, loop, tempo, time signature, metronome
+- 🟡 **Transport / clock / playhead**: tempo + looping playhead done; ❌ stop/record-arm, time signature, metronome, linear (non-loop) mode
 - ❌ **Track model**: audio / MIDI / instrument tracks
 - ❌ **Clip / region model** + **arrangement timeline**
 - ❌ **Mixer / routing graph**: channel strips, gain/pan, sends, buses, master; PDC (plugin delay compensation)
-- ❌ **Sequencer/playback**: read timeline → schedule events → render
-- ❌ **Recording**: capture MIDI and audio to the timeline (punch in/out)
+- 🟡 **Sequencer/playback**: loop-based MIDI scheduling done; ❌ timeline/arrangement playback
+- 🟡 **Recording**: MIDI loop capture + overdub done; ❌ audio capture, punch in/out, quantize
 - ❌ **Automation**: lanes, curves, sample-accurate application
 - ❌ Audio-clip **streaming**, **warp / time-stretch**, pitch-shift
 - ❌ Quantize / groove, comping (take folders)
@@ -178,10 +181,11 @@ Status: ✅ done · 🟡 partial · ❌ not started
 
 - ✅ **M1 — Zig makes sound** (synth → WAV + ALSA out)
 - ✅ **M2 — Play live from MIDI** (ALSA seq in → synth, real-time)
-- ⏳ **M3 — Transport + MIDI record/loop** *(NEXT, in progress)*: a clock/playhead;
-  capture played notes into a timed sequence; loop playback; overdub. Turns the
-  instrument into a looping mini-DAW. Needs: `transport.zig`, `sequence.zig`, wire into
-  `main_live`. Verify: self-test record→play→WAV + live record→loop.
+- ✅ **M3 — Transport + MIDI record/loop**: `transport.zig` (clock/playhead, tempo,
+  looping) + `sequence.zig` (timed MIDI capture, loop-aware playback) + `main_loop.zig`
+  (live looper: play → record → replay → overdub). `zig build loop`. VERIFIED: scripted
+  pass-0 notes replay bit-for-bit across loops 1-3 (input only in loop 0); unit tests for
+  window-wrap + event layout pass.
 - ❌ **M4 — Load & play samples** (WAV read + resampler + a sampler instrument)
 - ❌ **M5 — Audio recording** (audio input + capture to timeline)
 - ❌ **M6 — Mixer graph** (tracks → buses → master; gain/pan/sends)
@@ -245,5 +249,10 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
 - **M2 done**: live MIDI input (ALSA seq) + real-time streaming; verified e2e via
   aplaymidi; fixed a real cap-bit bug. Commit `54fbdc23`.
 - Created this master plan (consolidates the prior migration doc).
+- **M3 done**: live looper (transport + sequence + record/replay/overdub). Verified
+  pass-0 input replays identically across loops 1-3. Unit tests for window-wrap + event
+  layout. `zig build loop`.
+- NEXT: **M4 — load & play samples** (WAV read + resampler + sampler), or M5 audio
+  recording. (M4 unlocks drum loops / sample-based music.)
 
 *(Add new dated entries as milestones complete.)*

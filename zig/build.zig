@@ -49,10 +49,27 @@ pub fn build(b: *std.Build) void {
     const live_step = b.step("live", "Run the real-time MIDI engine (connect a keyboard via aconnect)");
     live_step.dependOn(&run_live.step);
 
-    // Unit tests (MIDI event struct layout, etc.)
-    const tests = b.addTest(.{ .root_source_file = b.path("midi_alsa.zig"), .target = target, .optimize = optimize });
-    tests.linkSystemLibrary("asound");
-    tests.linkLibC();
+    // Looping recorder (M3).
+    const loop = b.addExecutable(.{
+        .name = "zenith_loop",
+        .root_source_file = b.path("main_loop.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    loop.linkSystemLibrary("asound");
+    loop.linkLibC();
+    b.installArtifact(loop);
+
+    const run_loop = b.addRunArtifact(loop);
+    const loop_step = b.step("loop", "Run the live looper (connect a keyboard via aconnect)");
+    loop_step.dependOn(&run_loop.step);
+
+    // Unit tests.
     const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&b.addRunArtifact(tests).step);
+    for ([_][]const u8{ "midi_alsa.zig", "sequence.zig" }) |src| {
+        const t = b.addTest(.{ .root_source_file = b.path(src), .target = target, .optimize = optimize });
+        t.linkSystemLibrary("asound");
+        t.linkLibC();
+        test_step.dependOn(&b.addRunArtifact(t).step);
+    }
 }
