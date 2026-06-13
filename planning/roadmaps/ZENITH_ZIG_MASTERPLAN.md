@@ -111,8 +111,11 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ Sample metadata (loop points, root note, embedded markers)
 
 ### 4.4 Platform — Windowing / input / native UI shell  *(JUCE: juce_gui_basics/extra)*
-- 🟡 **Window creation**: X11 done (`window_x11.zig`, blit verified on screen); ❌ Wayland, Win32, Cocoa
-- 🟡 Input events: X11 mouse + keyboard + close done; ❌ scroll, touch, drag-drop, other platforms
+- 🟡 **Window creation**: X11 — **borderless/custom chrome** (Motif hints), **live resize**
+  (ConfigureNotify → recreate framebuffer + reflow), move/resize/min/maximize via EWMH
+  `_NET_WM_MOVERESIZE` (cross-WM). Verified resizing through normal/large/small/ultra-wide.
+  ❌ Wayland, Win32, Cocoa
+- 🟡 Input events: X11 mouse + keyboard + close + resize done; ❌ scroll, touch, drag-drop, other platforms
 - ❌ HiDPI / scaling, multi-monitor
 - ❌ Native **file dialogs**, **menus**, clipboard, system tray
 - ❌ GPU surface creation (GL/Vulkan/Metal) for the renderer

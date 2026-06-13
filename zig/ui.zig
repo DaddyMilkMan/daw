@@ -8,7 +8,8 @@ const project = @import("project.zig");
 const uikit = @import("uikit.zig");
 const Color = r2d.Color;
 
-pub const State = struct { playing: bool = false };
+pub const WinAction = enum { none, close, minimize, maximize, move };
+pub const State = struct { playing: bool = false, window_action: WinAction = .none };
 
 pub const palette = [_]Color{
     .{ .r = 240, .g = 150, .b = 70 },
@@ -63,13 +64,24 @@ pub fn frame(ui: *uikit.Ui, p: *project.Project, bar: u64, state: *State) void {
     const text_dim = Color.rgb(150, 158, 172);
     const text_hi = Color.rgb(232, 236, 244);
 
+    state.window_action = .none;
     cv.clear(bg);
 
-    // transport
+    // custom title bar / transport (no OS decorations)
     cv.vGradient(0, 0, W, 46, Color.rgb(44, 48, 60), Color.rgb(30, 33, 41));
     cv.fillRect(0, 46, W, 2, Color.rgb(14, 15, 19));
     cv.text(16, 14, "ZENITH", accent, 2);
     if (ui.button(1, 170, 12, 26, 22, ">", state.playing)) state.playing = !state.playing;
+
+    // window controls (top-right): minimize / maximize / close
+    if (ui.button(900, W - 96, 13, 26, 20, "-", false)) state.window_action = .minimize;
+    if (ui.button(901, W - 66, 13, 26, 20, "[]", false)) state.window_action = .maximize;
+    if (ui.button(902, W - 36, 13, 26, 20, "X", false)) state.window_action = .close;
+
+    // drag the bar to move the window (empty regions only)
+    if (state.window_action == .none and ui.pressed and ui.in.my < 46 and
+        (ui.in.mx < 168 or (ui.in.mx > 268 and ui.in.mx < W - 104)))
+        state.window_action = .move;
     cv.fillRect(202, 12, 26, 22, Color.rgb(40, 44, 54));
     cv.fillRect(210, 18, 10, 10, text_dim);
     cv.fillRect(234, 12, 26, 22, Color.rgb(40, 44, 54));
