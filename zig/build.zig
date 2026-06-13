@@ -225,6 +225,21 @@ pub fn build(b: *std.Build) void {
     const window_step = b.step("window", "Open the live Zenith window (GPU/GLX)");
     window_step.dependOn(&run_window.step);
 
+    // GPU 2D renderer smoke test (SDF shapes + analytic shadows).
+    const gpu = b.addExecutable(.{
+        .name = "zenith_gpu",
+        .root_source_file = b.path("main_gpu.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    gpu.linkSystemLibrary("GL");
+    gpu.linkSystemLibrary("X11");
+    gpu.linkLibC();
+    b.installArtifact(gpu);
+    const run_gpu = b.addRunArtifact(gpu);
+    const gpu_step = b.step("gpu", "Run the GPU 2D renderer smoke test");
+    gpu_step.dependOn(&run_gpu.step);
+
     // Effects demo (EQ / delay / reverb).
     const fx = b.addExecutable(.{
         .name = "zenith_fx",

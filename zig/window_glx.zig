@@ -108,6 +108,7 @@ extern fn glXCreateContext(d: *Display, vis: *XVisualInfo, share: GLXContext, di
 extern fn glXMakeCurrent(d: *Display, drawable: Window, ctx: GLXContext) c_int;
 extern fn glXSwapBuffers(d: *Display, drawable: Window) void;
 extern fn glXDestroyContext(d: *Display, ctx: GLXContext) void;
+extern fn glXGetProcAddressARB(name: [*:0]const u8) ?*const anyopaque;
 
 extern fn glViewport(x: c_int, y: c_int, w: c_int, h: c_int) void;
 extern fn glClearColor(r: f32, g: f32, b: f32, a: f32) void;
@@ -185,6 +186,18 @@ pub const NativeWindow = struct {
     pub fn resize(self: *NativeWindow, w: usize, h: usize) void {
         self.width = @max(w, 1);
         self.height = @max(h, 1);
+    }
+
+    /// Make this window's GL context current (for callers issuing their own GL).
+    pub fn makeCurrent(self: *NativeWindow) void {
+        _ = glXMakeCurrent(self.display, self.win, self.ctx);
+    }
+    /// Swap the back buffer to screen (for the GPU primitive renderer path).
+    pub fn swapBuffers(self: *NativeWindow) void {
+        glXSwapBuffers(self.display, self.win);
+    }
+    pub fn glProc(name: [*:0]const u8) ?*const anyopaque {
+        return glXGetProcAddressARB(name);
     }
 
     /// Upload the RGBA framebuffer to the GPU and present it on a textured quad.
