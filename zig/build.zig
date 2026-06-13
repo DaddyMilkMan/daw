@@ -240,6 +240,21 @@ pub fn build(b: *std.Build) void {
     const gpu_step = b.step("gpu", "Run the GPU 2D renderer smoke test");
     gpu_step.dependOn(&run_gpu.step);
 
+    // Flexbox layout engine demo.
+    const flex = b.addExecutable(.{
+        .name = "zenith_flex",
+        .root_source_file = b.path("main_flex.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    flex.linkSystemLibrary("GL");
+    flex.linkSystemLibrary("X11");
+    flex.linkLibC();
+    b.installArtifact(flex);
+    const run_flex = b.addRunArtifact(flex);
+    const flex_step = b.step("flex", "Run the flexbox layout engine demo");
+    flex_step.dependOn(&run_flex.step);
+
     // The live DAW, rendered entirely on the GPU toolkit.
     const gpudaw = b.addExecutable(.{
         .name = "zenith_gpu_daw",
