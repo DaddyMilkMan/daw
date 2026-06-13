@@ -71,9 +71,9 @@ pub fn main() !void {
         fd.text(&g, 40, 18, "Zenith GPU", accent);
         fu.text(&g, 760, 26, "SDF shapes  -  analytic shadows", Color.rgb(140, 148, 164));
 
-        // a big glass card with a soft elevation shadow + GRADIENT fill + accent bar
+        // a big glass card: elevation shadow + GRADIENT fill + material depth
         g.shadow(40, 240, 1020, 360, 18, 28, Color.rgba(0, 0, 0, 160));
-        g.rectGrad(40, 240, 1020, 360, 18, Color.rgb(37, 40, 51), Color.rgb(27, 29, 38), 1, border);
+        g.card(40, 240, 1020, 360, 18, Color.rgb(40, 44, 56), Color.rgb(28, 30, 39), 1, border, 1.0);
         g.rect(64, 264, 200, 6, 3, accent);
         // a transport "glass" pill with a play triangle (tri primitive) + a stop square
         g.rectGrad(560, 250, 120, 36, 9, Color.rgb(30, 33, 42), Color.rgb(23, 25, 33), 1, border);
@@ -87,7 +87,7 @@ pub fn main() !void {
         while (j < 4) : (j += 1) {
             const x: f32 = 64 + @as(f32, @floatFromInt(j)) * 250;
             g.shadow(x, 300, 220, 270, 12, 14, Color.rgba(0, 0, 0, 150));
-            g.rectBordered(x, 300, 220, 270, 12, Color.rgb(38, 42, 52), 1, border);
+            g.card(x, 300, 220, 270, 12, Color.rgb(48, 52, 65), Color.rgb(35, 38, 49), 1, border, 1.0);
             g.rect(x + 16, 320, 188, 5, 2, cols[j]);
             fu.text(&g, x + 16, 334, names[j], Color.rgb(236, 239, 246));
             fb.text(&g, x + 16, 360, "the quick brown fox", Color.rgb(140, 148, 164));

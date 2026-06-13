@@ -162,20 +162,21 @@ const rect_vs: [*:0]const u8 =
     \\layout(location=5) in vec4 iFill;
     \\layout(location=6) in vec4 iBorderCol;
     \\layout(location=7) in vec4 iFill2;
+    \\layout(location=8) in float iElev;
     \\uniform vec2 uRes;
-    \\out vec2 vLocal; out vec2 vHalf; out float vRadius; out float vBorder; out vec4 vFill; out vec4 vBorderCol; out vec4 vFill2; out float vT;
+    \\out vec2 vLocal; out vec2 vHalf; out float vRadius; out float vBorder; out vec4 vFill; out vec4 vBorderCol; out vec4 vFill2; out float vT; out float vElev;
     \\void main(){
     \\  vec2 px = iMin + quad * iSize;
     \\  vHalf = iSize * 0.5;
     \\  vLocal = px - (iMin + vHalf);
-    \\  vRadius = iRadius; vBorder = iBorder; vFill = iFill; vBorderCol = iBorderCol; vFill2 = iFill2; vT = quad.y;
+    \\  vRadius = iRadius; vBorder = iBorder; vFill = iFill; vBorderCol = iBorderCol; vFill2 = iFill2; vT = quad.y; vElev = iElev;
     \\  vec2 clip = (px / uRes) * 2.0 - 1.0;
     \\  gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
     \\}
 ;
 const rect_fs: [*:0]const u8 =
     \\#version 330 core
-    \\in vec2 vLocal; in vec2 vHalf; in float vRadius; in float vBorder; in vec4 vFill; in vec4 vBorderCol; in vec4 vFill2; in float vT;
+    \\in vec2 vLocal; in vec2 vHalf; in float vRadius; in float vBorder; in vec4 vFill; in vec4 vBorderCol; in vec4 vFill2; in float vT; in float vElev;
     \\out vec4 frag;
     \\float sdRound(vec2 p, vec2 b, float r){ vec2 q = abs(p)-b+r; return min(max(q.x,q.y),0.0)+length(max(q,vec2(0.0)))-r; }
     \\void main(){
@@ -185,8 +186,19 @@ const rect_fs: [*:0]const u8 =
     \\  float band = clamp(aOuter - aInner, 0.0, 1.0);
     \\  vec4 fillc = mix(vFill, vFill2, vT);
     \\  vec4 col = mix(fillc, vBorderCol, band);
+    \\  vec3 rgb = col.rgb;
+    \\  // material depth (elevated surfaces): specular top rim + soft inner shadow.
+    \\  float distTop = vLocal.y + vHalf.y;        // 0 at top inner edge, grows down
+    \\  float distBot = vHalf.y - vLocal.y;        // 0 at bottom inner edge
+    \\  float interior = clamp(aInner, 0.0, 1.0);  // don't light the border ring
+    \\  float spec = exp(-distTop / 4.0) * 0.085 * vElev * interior;
+    \\  float ish  = exp(-distBot / 7.0) * 0.05  * vElev * interior;
+    \\  rgb += spec - ish;
+    \\  // ordered dither to break gradient banding in large dark fills
+    \\  float n = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
+    \\  rgb += (n - 0.5) * (1.3 / 255.0);
     \\  float a = aOuter * col.a;
-    \\  frag = vec4(col.rgb * a, a);
+    \\  frag = vec4(clamp(rgb, 0.0, 1.0) * a, a);
     \\}
 ;
 const tri_vs: [*:0]const u8 =
@@ -279,7 +291,7 @@ const glyph_fs: [*:0]const u8 =
     \\}
 ;
 
-const RECT_FLOATS = 18; // min2 size2 radius border fill4 border4 fill2_4
+const RECT_FLOATS = 19; // min2 size2 radius border fill4 border4 fill2_4 elev
 const SHADOW_FLOATS = 10; // lower2 upper2 sigma corner color4
 const GLYPH_FLOATS = 12; // dst4 uv4 color4
 const TRI_FLOATS = 6; // x y r g b a  (per vertex)
@@ -375,8 +387,8 @@ pub const Gpu = struct {
         glGenBuffers(1, &self.rect_ivbo);
         glBindBuffer(GL_ARRAY_BUFFER, self.rect_ivbo);
         const stride: c_int = RECT_FLOATS * @sizeOf(f32);
-        // loc1 min(2) loc2 size(2) loc3 radius loc4 border loc5 fill(4) loc6 bordercol(4) loc7 fill2(4)
-        const specs = [_][3]u32{ .{ 1, 2, 0 }, .{ 2, 2, 2 }, .{ 3, 1, 4 }, .{ 4, 1, 5 }, .{ 5, 4, 6 }, .{ 6, 4, 10 }, .{ 7, 4, 14 } };
+        // loc1 min(2) loc2 size(2) loc3 radius loc4 border loc5 fill(4) loc6 bordercol(4) loc7 fill2(4) loc8 elev(1)
+        const specs = [_][3]u32{ .{ 1, 2, 0 }, .{ 2, 2, 2 }, .{ 3, 1, 4 }, .{ 4, 1, 5 }, .{ 5, 4, 6 }, .{ 6, 4, 10 }, .{ 7, 4, 14 }, .{ 8, 1, 18 } };
         inline for (specs) |s| {
             glEnableVertexAttribArray(s[0]);
             glVertexAttribPointer(s[0], @intCast(s[1]), GL_FLOAT, GL_FALSE, stride, s[2] * @sizeOf(f32));
@@ -458,14 +470,22 @@ pub const Gpu = struct {
     pub fn rectBordered(self: *Gpu, x: f32, y: f32, w: f32, h: f32, radius: f32, fill: Color, border_w: f32, border: Color) void {
         const f = lin(fill);
         const b = lin(border);
-        self.rects.appendSlice(&.{ x, y, w, h, radius, border_w, f[0], f[1], f[2], f[3], b[0], b[1], b[2], b[3], f[0], f[1], f[2], f[3] }) catch {};
+        self.rects.appendSlice(&.{ x, y, w, h, radius, border_w, f[0], f[1], f[2], f[3], b[0], b[1], b[2], b[3], f[0], f[1], f[2], f[3], 0 }) catch {};
     }
-    /// Vertically-graded rounded rect (top -> bottom), with optional border.
+    /// Vertically-graded rounded rect (top -> bottom), with optional border. Flat (no material).
     pub fn rectGrad(self: *Gpu, x: f32, y: f32, w: f32, h: f32, radius: f32, top: Color, bot: Color, border_w: f32, border: Color) void {
+        self.gradElev(x, y, w, h, radius, top, bot, border_w, border, 0);
+    }
+    /// An elevated glass card: gradient fill + border + material depth (specular
+    /// top rim, soft inner shadow, dither). `elev` ~1.0 for raised surfaces.
+    pub fn card(self: *Gpu, x: f32, y: f32, w: f32, h: f32, radius: f32, top: Color, bot: Color, border_w: f32, border: Color, elev: f32) void {
+        self.gradElev(x, y, w, h, radius, top, bot, border_w, border, elev);
+    }
+    fn gradElev(self: *Gpu, x: f32, y: f32, w: f32, h: f32, radius: f32, top: Color, bot: Color, border_w: f32, border: Color, elev: f32) void {
         const t = lin(top);
         const bt = lin(bot);
         const b = lin(border);
-        self.rects.appendSlice(&.{ x, y, w, h, radius, border_w, t[0], t[1], t[2], t[3], b[0], b[1], b[2], b[3], bt[0], bt[1], bt[2], bt[3] }) catch {};
+        self.rects.appendSlice(&.{ x, y, w, h, radius, border_w, t[0], t[1], t[2], t[3], b[0], b[1], b[2], b[3], bt[0], bt[1], bt[2], bt[3], elev }) catch {};
     }
     /// Solid triangle (pixel coords). Use for icons.
     pub fn tri(self: *Gpu, x0: f32, y0: f32, x1: f32, y1: f32, x2: f32, y2: f32, color: Color) void {
