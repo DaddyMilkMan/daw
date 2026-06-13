@@ -22,8 +22,8 @@ pub fn main() !void {
 
     var fr: usize = 0;
     while (fr < 12) : (fr += 1) {
-        // hover the play button (id 1, at ~150..180 x, 15..39 y)
-        u.begin(.{ .mx = 165, .my = 27, .mouse_down = false }, 0.016);
+        // hover the play button (id 1)
+        u.begin(.{ .mx = 177, .my = 29, .mouse_down = false }, 0.016);
         ui.frame(&u, &p, bar, &state);
         u.end();
         var name_buf: [32]u8 = undefined;

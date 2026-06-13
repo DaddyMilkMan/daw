@@ -65,10 +65,43 @@ pub const Canvas = struct {
     }
 
     pub fn fillRect(self: *Canvas, x: i32, y: i32, w: i32, h: i32, c: Color) void {
-        var yy = y;
-        while (yy < y + h) : (yy += 1) {
-            var xx = x;
-            while (xx < x + w) : (xx += 1) self.pset(xx, yy, c);
+        const cw: i32 = @intCast(self.width);
+        const ch: i32 = @intCast(self.height);
+        const x0i = @max(x, 0);
+        const y0i = @max(y, 0);
+        const x1i = @min(x + w, cw);
+        const y1i = @min(y + h, ch);
+        if (x1i <= x0i or y1i <= y0i) return;
+        const x0: usize = @intCast(x0i);
+        const y0: usize = @intCast(y0i);
+        const x1: usize = @intCast(x1i);
+        const y1: usize = @intCast(y1i);
+        if (c.a == 255) {
+            var yy = y0;
+            while (yy < y1) : (yy += 1) {
+                var idx = (yy * self.width + x0) * 4;
+                var xx = x0;
+                while (xx < x1) : (xx += 1) {
+                    self.pixels[idx] = c.r;
+                    self.pixels[idx + 1] = c.g;
+                    self.pixels[idx + 2] = c.b;
+                    idx += 4;
+                }
+            }
+        } else {
+            const a: u32 = c.a;
+            const ia: u32 = 255 - a;
+            var yy = y0;
+            while (yy < y1) : (yy += 1) {
+                var idx = (yy * self.width + x0) * 4;
+                var xx = x0;
+                while (xx < x1) : (xx += 1) {
+                    self.pixels[idx] = @intCast((@as(u32, c.r) * a + @as(u32, self.pixels[idx]) * ia) / 255);
+                    self.pixels[idx + 1] = @intCast((@as(u32, c.g) * a + @as(u32, self.pixels[idx + 1]) * ia) / 255);
+                    self.pixels[idx + 2] = @intCast((@as(u32, c.b) * a + @as(u32, self.pixels[idx + 2]) * ia) / 255);
+                    idx += 4;
+                }
+            }
         }
     }
 

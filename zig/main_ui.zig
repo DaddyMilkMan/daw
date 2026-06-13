@@ -6,10 +6,17 @@ const bmp = @import("bmp.zig");
 const uikit = @import("uikit.zig");
 const ui = @import("ui.zig");
 
+fn envU(a: std.mem.Allocator, name: []const u8, default: usize) usize {
+    if (std.process.getEnvVarOwned(a, name)) |v| {
+        defer a.free(v);
+        return std.fmt.parseInt(usize, v, 10) catch default;
+    } else |_| return default;
+}
+
 pub fn main() !void {
     const a = std.heap.page_allocator;
-    const W: usize = 960;
-    const H: usize = 560;
+    const W: usize = envU(a, "ZENITH_W", 960);
+    const H: usize = envU(a, "ZENITH_H", 560);
     const bar: u64 = 96000;
 
     var cv = try r2d.Canvas.init(a, W, H);

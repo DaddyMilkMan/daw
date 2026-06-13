@@ -62,11 +62,17 @@ pub fn main() !void {
     var elapsed: f64 = 0;
     var rt_timer: usize = 0;
     var rt_idx: usize = 0;
+    var cooldown: usize = 40; // frames left to keep rendering (dirty window)
 
     while (elapsed < secs) {
         while (true) {
-            switch (window.poll()) {
+            const ev = window.poll();
+            switch (ev) {
                 .none => break,
+                else => cooldown = 30, // any event -> render a burst (covers animations)
+            }
+            switch (ev) {
+                .none => {},
                 .close => {
                     elapsed = secs;
                     break;
@@ -102,19 +108,23 @@ pub fn main() !void {
             }
         }
 
-        u.begin(.{ .mx = mx, .my = my, .mouse_down = down }, 0.016);
-        ui.frame(&u, &p, bar, &state);
-        u.end();
+        // Only re-render when something changed or animations are settling.
+        if (cooldown > 0) {
+            u.begin(.{ .mx = mx, .my = my, .mouse_down = down }, 0.016);
+            ui.frame(&u, &p, bar, &state);
+            u.end();
 
-        switch (state.window_action) {
-            .none => {},
-            .close => elapsed = secs,
-            .minimize => window.minimize(),
-            .maximize => window.toggleMaximize(),
-            .move => window.startMoveResize(win.MOVE, lrx, lry),
+            switch (state.window_action) {
+                .none => {},
+                .close => elapsed = secs,
+                .minimize => window.minimize(),
+                .maximize => window.toggleMaximize(),
+                .move => window.startMoveResize(win.MOVE, lrx, lry),
+            }
+
+            window.present(cv.pixels);
+            cooldown -= 1;
         }
-
-        window.present(cv.pixels);
 
         if (resize_test) {
             rt_timer += 1;
