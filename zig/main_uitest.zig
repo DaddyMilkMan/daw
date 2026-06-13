@@ -10,7 +10,7 @@ const uikit = @import("uikit.zig");
 const ui = @import("ui.zig");
 
 fn step(u: *uikit.Ui, p: *project.Project, bar: u64, state: *ui.State, mx: i32, my: i32, down: bool) void {
-    u.begin(.{ .mx = mx, .my = my, .mouse_down = down });
+    u.begin(.{ .mx = mx, .my = my, .mouse_down = down }, 1.0);
     ui.frame(u, p, bar, state);
     u.end();
 }

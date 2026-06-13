@@ -209,6 +209,18 @@ pub fn build(b: *std.Build) void {
     const uitest_step = b.step("uitest", "Run the headless interactive-UI test");
     uitest_step.dependOn(&run_uitest.step);
 
+    // Animation/micro-interaction capture.
+    const anim = b.addExecutable(.{
+        .name = "zenith_anim",
+        .root_source_file = b.path("main_anim.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(anim);
+    const run_anim = b.addRunArtifact(anim);
+    const anim_step = b.step("anim", "Capture hover-animation frames");
+    anim_step.dependOn(&run_anim.step);
+
     // Unit tests.
     const test_step = b.step("test", "Run unit tests");
     for ([_][]const u8{ "midi_alsa.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig", "effects.zig" }) |src| {

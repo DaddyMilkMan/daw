@@ -67,7 +67,7 @@ pub fn main() !void {
                 .expose => {},
             }
         }
-        u.begin(.{ .mx = mx, .my = my, .mouse_down = down });
+        u.begin(.{ .mx = mx, .my = my, .mouse_down = down }, 0.016);
         ui.frame(&u, &p, bar, &state);
         u.end();
         window.present(cv.pixels);

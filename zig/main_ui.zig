@@ -19,7 +19,7 @@ pub fn main() !void {
 
     var u = uikit.Ui.init(&cv);
     var state = ui.State{};
-    u.begin(.{});
+    u.begin(.{}, 1.0);
     ui.frame(&u, &p, bar, &state);
     u.end();
 
