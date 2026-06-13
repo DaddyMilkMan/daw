@@ -111,8 +111,8 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ Sample metadata (loop points, root note, embedded markers)
 
 ### 4.4 Platform — Windowing / input / native UI shell  *(JUCE: juce_gui_basics/extra)*
-- ❌ **Window creation**: X11, **Wayland**, Win32, Cocoa
-- ❌ Input events: mouse, keyboard, scroll, touch, drag-drop
+- 🟡 **Window creation**: X11 done (`window_x11.zig`, blit verified on screen); ❌ Wayland, Win32, Cocoa
+- 🟡 Input events: X11 mouse + keyboard + close done; ❌ scroll, touch, drag-drop, other platforms
 - ❌ HiDPI / scaling, multi-monitor
 - ❌ Native **file dialogs**, **menus**, clipboard, system tray
 - ❌ GPU surface creation (GL/Vulkan/Metal) for the renderer
@@ -170,7 +170,7 @@ Status: ✅ done · 🟡 partial · ❌ not started
 
 ### 4.11 GUI  *(JUCE: gui_basics/graphics/opengl — was ~91K LOC)* — the long pole
 - 🟡 **Renderer**: pure-Zig software 2D renderer started (`render2d.zig` + bitmap font); ❌ GPU acceleration (OpenGL/Vulkan) decision later
-- ❌ Window + input layer (X11/Wayland/Win32/Cocoa or GLFW); event routing
+- 🟡 Window + input layer: X11 native window + blit + mouse/keyboard done (`window_x11.zig`/`main_window.zig`); ❌ Wayland/Win32/Cocoa, scroll/drag
 - ❌ Widget/component framework + layout (immediate-mode planned)
 - 🟡 DAW views: static transport + timeline + mixer **rendered** (`main_ui.zig`); ❌ interactive arranger/piano-roll/mixer, browser, sample editor
 - 🟡 Theming + meters/faders drawn; ❌ waveform drawing, scopes, full design system

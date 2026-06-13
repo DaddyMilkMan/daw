@@ -159,6 +159,20 @@ pub fn build(b: *std.Build) void {
     const ui_step = b.step("ui", "Render the Zenith UI frame to a BMP");
     ui_step.dependOn(&run_ui.step);
 
+    // Live native window (X11).
+    const window = b.addExecutable(.{
+        .name = "zenith_window",
+        .root_source_file = b.path("main_window.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    window.linkSystemLibrary("X11");
+    window.linkLibC();
+    b.installArtifact(window);
+    const run_window = b.addRunArtifact(window);
+    const window_step = b.step("window", "Open the live Zenith window (X11)");
+    window_step.dependOn(&run_window.step);
+
     // Unit tests.
     const test_step = b.step("test", "Run unit tests");
     for ([_][]const u8{ "midi_alsa.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig" }) |src| {

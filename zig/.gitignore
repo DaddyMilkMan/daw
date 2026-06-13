@@ -14,6 +14,6 @@ zig-out/
 *.wav
 *.mid
 *.zpr
-live.log
+*.log
 *.bmp
 *.png
