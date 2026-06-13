@@ -134,7 +134,7 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - 🟡 **Transport / clock / playhead**: tempo + looping playhead done; ❌ stop/record-arm, time signature, metronome, linear (non-loop) mode
 - ❌ **Track model**: audio / MIDI / instrument tracks
 - ❌ **Clip / region model** + **arrangement timeline**
-- ❌ **Mixer / routing graph**: channel strips, gain/pan, sends, buses, master; PDC (plugin delay compensation)
+- 🟡 **Mixer / routing graph**: per-track gain/pan → stereo master done (`mixer.zig`); ❌ sends, buses, mute/solo, metering, PDC (plugin delay compensation)
 - 🟡 **Sequencer/playback**: loop-based MIDI scheduling done; ❌ timeline/arrangement playback
 - 🟡 **Recording**: MIDI loop capture + overdub done; ❌ audio capture, punch in/out, quantize
 - ❌ **Automation**: lanes, curves, sample-accurate application
@@ -191,7 +191,9 @@ Status: ✅ done · 🟡 partial · ❌ not started
   sample pitched across MIDI notes to within 0.4% of target frequency; WAV round-trip +
   interp unit-tested. `zig build sampler`.
 - ❌ **M5 — Audio recording** (audio input + capture to timeline)
-- ❌ **M6 — Mixer graph** (tracks → buses → master; gain/pan/sends)
+- 🟡 **M6 — Mixer** (`mixer.zig`): N mono tracks → per-track gain + constant-power pan
+  → stereo master. Verified: synth+sampler mixed, channels differ (pan), pan-law unit
+  test passes. ❌ buses/sends, mute/solo, metering (later).
 - ❌ **M7 — CLAP plugin hosting** (host third-party instruments/effects)
 - ❌ **M8 — Real RT audio callback + device selection** (proper RT thread, xrun-robust)
 - ❌ **M9 — Project save/load + undo** (the data model)
@@ -258,7 +260,10 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
 - **M4 done**: WAV reader (16/24/32-bit + float32) + cubic-Hermite resampler + polyphonic
   sampler. Verified: one A3 sample pitched across MIDI notes to <0.4% freq error; WAV
   round-trip + interp unit tests. `zig build sampler`.
-- NEXT: **M5 — audio recording** (audio input capture) or **M6 — mixer graph** (tracks →
-  buses → master). M6 lets the synth + sampler play together through real routing.
+- **M6 (basic) done**: `mixer.zig` — N tracks → gain/pan → stereo master. Synth+sampler
+  mixed; pan verified (|L-R| rms 3250); pan-law unit test. `zig build mixer`.
+- NEXT: **M5 — audio recording** (ALSA capture / audio input — the one missing platform
+  I/O direction), or **M9 — project save/load + undo** (the data model), or deepen M6
+  (buses/sends) / M7 (CLAP host).
 
 *(Add new dated entries as milestones complete.)*

@@ -76,9 +76,21 @@ pub fn build(b: *std.Build) void {
     const sampler_step = b.step("sampler", "Run the sampler demo");
     sampler_step.dependOn(&run_sampler.step);
 
+    // Mixer demo (M6): synth + sampler -> stereo master.
+    const mixer = b.addExecutable(.{
+        .name = "zenith_mixer",
+        .root_source_file = b.path("main_mixer.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(mixer);
+    const run_mixer = b.addRunArtifact(mixer);
+    const mixer_step = b.step("mixer", "Run the mixer demo");
+    mixer_step.dependOn(&run_mixer.step);
+
     // Unit tests.
     const test_step = b.step("test", "Run unit tests");
-    for ([_][]const u8{ "midi_alsa.zig", "sequence.zig", "wav.zig", "resample.zig" }) |src| {
+    for ([_][]const u8{ "midi_alsa.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig" }) |src| {
         const t = b.addTest(.{ .root_source_file = b.path(src), .target = target, .optimize = optimize });
         t.linkSystemLibrary("asound");
         t.linkLibC();
