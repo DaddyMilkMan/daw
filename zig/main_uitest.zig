@@ -35,14 +35,14 @@ pub fn main() !void {
     try bmp.write("uitest_before.bmp", cv.pixels, W, H);
 
     // click the play button (press then release inside it)
-    step(&u, &p, bar, &state, 182, 22, true);
-    step(&u, &p, bar, &state, 182, 22, false);
+    step(&u, &p, bar, &state, 165, 27, true);
+    step(&u, &p, bar, &state, 165, 27, false);
     const play1 = state.playing;
 
     // grab track-0 fader near the top, drag to the bottom, release
-    step(&u, &p, bar, &state, 58, 326, true);
-    step(&u, &p, bar, &state, 58, 478, true);
-    step(&u, &p, bar, &state, 58, 478, false);
+    step(&u, &p, bar, &state, 62, 415, true);
+    step(&u, &p, bar, &state, 62, 522, true);
+    step(&u, &p, bar, &state, 62, 522, false);
     const g1 = p.tracks.items[0].gain;
 
     try bmp.write("uitest_after.bmp", cv.pixels, W, H);

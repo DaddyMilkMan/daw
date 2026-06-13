@@ -6,6 +6,7 @@ const std = @import("std");
 const r2d = @import("render2d.zig");
 const Canvas = r2d.Canvas;
 const Color = r2d.Color;
+const fb = &@import("font_body.zig").font;
 
 pub const Input = struct {
     mx: i32 = -1,
@@ -92,7 +93,8 @@ pub const Ui = struct {
         const inset: i32 = @intFromFloat(a.press * 1.5);
         self.cv.fillRoundedRect(x + inset, y + inset, w - 2 * inset, h - 2 * inset, 7, col);
         if (a.hover > 0.02 and !on) self.cv.fillRoundedRect(x, y, w, 1, 7, .{ .r = 96, .g = 210, .b = 235, .a = @intFromFloat(a.hover * 120) });
-        self.cv.text(x + 7, y + @divTrunc(h - 8, 2), label, if (on) Color.rgb(16, 20, 24) else Color.rgb(232, 236, 244), 1);
+        const tw = r2d.Canvas.textWidth(label, fb);
+        self.cv.textAA(x + @divTrunc(w - tw, 2), y + @divTrunc(h - 12, 2), label, if (on) Color.rgb(16, 20, 24) else Color.rgb(232, 236, 244), fb);
         return clicked;
     }
 
