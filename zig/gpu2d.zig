@@ -270,6 +270,10 @@ const glyph_fs: [*:0]const u8 =
     \\uniform sampler2D uAtlas;
     \\void main(){
     \\  float cov = texture(uAtlas, vUv).r;
+    \\  // Stem darkening: the coverage was authored for sRGB compositing; blending
+    \\  // it in linear light thins the strokes. Fatten with a gamma so light-on-dark
+    \\  // text keeps its proper weight (the FreeType/Skia gamma-correct-text fix).
+    \\  cov = pow(cov, 0.62);
     \\  float a = cov * vColor.a;
     \\  frag = vec4(vColor.rgb * a, a);
     \\}
@@ -620,6 +624,7 @@ pub const GpuFont = struct {
     }
     pub fn text(self: *const GpuFont, g: *Gpu, x: f32, y: f32, s: []const u8, color: Color) void {
         var pen = x;
+        const ry = @round(y); // pixel-snap the baseline so atlas sampling stays 1:1 crisp
         for (s) |ch| {
             if (ch < self.first or ch >= self.first + self.n) {
                 pen += 6;
@@ -628,7 +633,7 @@ pub const GpuFont = struct {
             const gi = ch - self.first;
             const gw: f32 = @floatFromInt(self.width[gi]);
             const u = self.uv[gi];
-            g.pushGlyph(self.tex, pen, y, gw, self.cell_h, u[0], u[1], u[2], u[3], color);
+            g.pushGlyph(self.tex, @round(pen), ry, gw, self.cell_h, u[0], u[1], u[2], u[3], color);
             pen += @floatFromInt(self.advance[gi]);
         }
     }
