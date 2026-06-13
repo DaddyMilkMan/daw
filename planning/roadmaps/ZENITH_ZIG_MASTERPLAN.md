@@ -137,10 +137,10 @@ Status: ✅ done · 🟡 partial · ❌ not started
 
 ### 4.7 Engine — the DAW core  *(was Zenith's own C++; rebuild in Zig)*
 - 🟡 **Transport / clock / playhead**: tempo + looping playhead done; ❌ stop/record-arm, time signature, metronome, linear (non-loop) mode
-- ❌ **Track model**: audio / MIDI / instrument tracks
-- ❌ **Clip / region model** + **arrangement timeline**
+- 🟡 **Track model** (`project.zig`: instrument/gain/pan/clips per track); ❌ audio tracks, track types
+- 🟡 **Clip / region model** + **arrangement timeline** (`arrangement.zig`: clips at frame positions, linear multi-track scheduler, record-to-clip); ❌ audio clips, loop regions, clip editing
 - 🟡 **Mixer / routing graph**: per-track gain/pan → stereo master done (`mixer.zig`); ❌ sends, buses, mute/solo, metering, PDC (plugin delay compensation)
-- 🟡 **Sequencer/playback**: loop-based MIDI scheduling done; ❌ timeline/arrangement playback
+- 🟡 **Sequencer/playback**: loop-based + linear timeline scheduling done (`arrangement.zig`); ❌ advanced (swing, latency-comp scheduling)
 - 🟡 **Recording**: MIDI loop capture + overdub done; ❌ audio capture, punch in/out, quantize
 - ❌ **Automation**: lanes, curves, sample-accurate application
 - ❌ Audio-clip **streaming**, **warp / time-stretch**, pitch-shift
@@ -277,8 +277,9 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   snapshot undo (`History`). Verified save→reload→play + round-trip/undo tests. `zig build project`.
 - **M5 done**: `StreamIn` ALSA capture + `main_record.zig`. Verified end-to-end recording
   a 440Hz tone (measured 440.4Hz). Audio I/O now bidirectional in Zig. `zig build record`.
-- NEXT options: **arrangement/timeline** (beyond loops — capture-to-clip, linear playback),
-  **M7 — CLAP host** (third-party plugins), deepen M6 (buses/sends), or **GUI foundation**
-  (the long pole; user weighing 100%-Zig GUI). All must stay cross-platform-ready.
+- **Arrangement done**: project model → clips (format v2); `arrangement.zig` linear
+  multi-track scheduler + record-to-clip. Verified: 2-track song, clips at timeline
+  positions, lead enters mid-song (pan visible in stereo), save→reload→play. `zig build arrange`.
+- IN PROGRESS: **M7 — CLAP plugin hosting** (next).
 
 *(Add new dated entries as milestones complete.)*

@@ -18,12 +18,13 @@ pub fn main() !void {
     p.tempo = 120.0;
     p.sample_rate = sr;
     const t = try p.addTrack("Lead Synth", .synth);
+    const c = try t.addClip("melody", 0);
     const beat: u64 = @intFromFloat(0.4 * srf);
     const melody = [_]u8{ 60, 64, 67, 72, 67, 64 }; // C E G C5 G E
     for (melody, 0..) |pitch, i| {
-        try t.notes.append(.{ .start = @as(u64, i) * beat, .len = beat - 2000, .pitch = pitch, .velocity = 100 });
+        try c.notes.append(.{ .start = @as(u64, i) * beat, .len = beat - 2000, .pitch = pitch, .velocity = 100 });
     }
-    std.debug.print("built project: {d} track(s), {d} notes, {d:.0} BPM\n", .{ p.tracks.items.len, t.notes.items.len, p.tempo });
+    std.debug.print("built project: {d} track(s), {d} notes, {d:.0} BPM\n", .{ p.tracks.items.len, c.notes.items.len, p.tempo });
 
     // 2. Save.
     try p.save("demo_project.zpr");
@@ -41,7 +42,7 @@ pub fn main() !void {
     @memset(buf, 0.0);
 
     var syn = Synth{ .sample_rate = @floatCast(srf) };
-    const notes = q.tracks.items[0].notes.items;
+    const notes = q.tracks.items[0].clips.items[0].notes.items;
     const block: usize = 256;
     var i: usize = 0;
     while (i < total) {

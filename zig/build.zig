@@ -114,9 +114,21 @@ pub fn build(b: *std.Build) void {
     const record_step = b.step("record", "Record audio input to a WAV");
     record_step.dependOn(&run_record.step);
 
+    // Arrangement demo (timeline of clips).
+    const arrange_exe = b.addExecutable(.{
+        .name = "zenith_arrange",
+        .root_source_file = b.path("main_arrange.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(arrange_exe);
+    const run_arrange = b.addRunArtifact(arrange_exe);
+    const arrange_step = b.step("arrange", "Run the arrangement/timeline demo");
+    arrange_step.dependOn(&run_arrange.step);
+
     // Unit tests.
     const test_step = b.step("test", "Run unit tests");
-    for ([_][]const u8{ "midi_alsa.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig" }) |src| {
+    for ([_][]const u8{ "midi_alsa.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig" }) |src| {
         const t = b.addTest(.{ .root_source_file = b.path(src), .target = target, .optimize = optimize });
         t.linkSystemLibrary("asound");
         t.linkLibC();
