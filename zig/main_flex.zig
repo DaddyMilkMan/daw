@@ -50,7 +50,12 @@ pub fn main() !void {
     var mx: i32 = -1;
     var my: i32 = -1;
     var down = false;
+    var prev_down = false;
     var elapsed: f64 = 0;
+    // dropdown state (open by default so the screenshot shows it)
+    var menu_open = true;
+    var menu_anim: f32 = 1;
+    var menu_hot: i32 = -1;
 
     const nav = [_][]const u8{ "Sounds", "Drums", "Instruments", "Audio FX", "Samples" };
     const devs = [_]struct { name: []const u8, kind: []const u8, col: Color }{
@@ -97,6 +102,7 @@ pub fn main() !void {
         {
             c.label("Zenith", &fd, accent, .{});
             c.box(.{ .w = grow() }); // spacer pushes the rest right
+            _ = c.button("View", 13, .{ .w = px(84), .h = px(34) });
             _ = c.button("New", 10, .{ .w = px(84), .h = px(34) });
             _ = c.button("Open", 11, .{ .w = px(84), .h = px(34) });
             _ = c.button("Export", 12, .{ .w = px(96), .h = px(34), .bg = accent, .bg2 = Color.rgb(64, 168, 196), .hover_bg = Color.rgb(140, 230, 250) });
@@ -143,6 +149,43 @@ pub fn main() !void {
         c.close();
 
         c.end();
+
+        // ---- animated dropdown overlay (drawn on top of the layout) --------
+        if (c.click == 13) menu_open = !menu_open;
+        const target: f32 = if (menu_open) 1.0 else 0.0;
+        menu_anim += (target - menu_anim) * 0.28;
+        const released = !down and prev_down;
+        prev_down = down;
+        if (menu_anim > 0.01) {
+            if (c.rectOf(13)) |r| {
+                const items = [_][]const u8{ "Arrangement", "Mixer", "Piano Roll", "Settings" };
+                const iw: f32 = 180;
+                const ih: f32 = 36;
+                const full_h: f32 = ih * items.len + 12;
+                const ease = menu_anim * menu_anim * (3.0 - 2.0 * menu_anim); // smoothstep
+                const hh = full_h * ease;
+                const mxp = r[0];
+                const myp = r[1] + r[3] + 6;
+                g.shadow(mxp, myp, iw, hh, 12, 20, Color.rgba(0, 0, 0, @intFromFloat(180 * ease)));
+                g.card(mxp, myp, iw, hh, 12, panel_t, panel_b, 1, border, 1.0);
+                menu_hot = -1;
+                for (items, 0..) |it, i| {
+                    const iy = myp + 6 + @as(f32, @floatFromInt(i)) * ih;
+                    if (iy + ih > myp + hh - 2) continue;
+                    const fmx: f32 = @floatFromInt(mx);
+                    const fmy: f32 = @floatFromInt(my);
+                    const hov = fmx >= mxp + 6 and fmx < mxp + iw - 6 and fmy >= iy and fmy < iy + ih;
+                    if (hov) {
+                        menu_hot = @intCast(i);
+                        g.rect(mxp + 6, iy, iw - 12, ih, 7, Color.rgba(96, 210, 235, 36));
+                        g.rect(mxp + 6, iy + 7, 3, ih - 14, 1, accent);
+                        if (released) menu_open = false;
+                    }
+                    fb.text(&g, mxp + 18, iy + (ih - 15) / 2, it, if (hov) txt else dim);
+                }
+            }
+        }
+
         g.flush();
         window.swapBuffers();
         std.time.sleep(16 * std.time.ns_per_ms);
