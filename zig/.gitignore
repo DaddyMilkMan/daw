@@ -15,3 +15,5 @@ zig-out/
 *.mid
 *.zpr
 live.log
+*.bmp
+*.png

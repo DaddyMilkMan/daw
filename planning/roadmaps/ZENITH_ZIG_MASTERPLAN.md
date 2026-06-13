@@ -169,10 +169,11 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ Preset system + content/sample library
 
 ### 4.11 GUI  *(JUCE: gui_basics/graphics/opengl — was ~91K LOC)* — the long pole
-- ❌ **Renderer** decision: own GPU renderer vs Skia-via-Zig bindings vs other
-- ❌ Widget/component framework + layout + event routing
-- ❌ DAW views: **arranger/timeline**, **piano roll**, **mixer**, **transport**, browser, sample editor
-- ❌ Theming/design system, meters/scopes, waveform drawing
+- 🟡 **Renderer**: pure-Zig software 2D renderer started (`render2d.zig` + bitmap font); ❌ GPU acceleration (OpenGL/Vulkan) decision later
+- ❌ Window + input layer (X11/Wayland/Win32/Cocoa or GLFW); event routing
+- ❌ Widget/component framework + layout (immediate-mode planned)
+- 🟡 DAW views: static transport + timeline + mixer **rendered** (`main_ui.zig`); ❌ interactive arranger/piano-roll/mixer, browser, sample editor
+- 🟡 Theming + meters/faders drawn; ❌ waveform drawing, scopes, full design system
 - ❌ Accessibility, keyboard shortcuts
 
 ### 4.12 The AI wedge  *(the differentiator — after the core is playable)*
@@ -210,7 +211,11 @@ Status: ✅ done · 🟡 partial · ❌ not started
   endian-explicit binary format (`ZNPR`, cross-platform), file save/load, snapshot-based
   undo (`History`). Verified: save→reload→play melody; round-trip + undo unit tests.
   ❌ change-notification/observable, auto-save, format migration.
-- ❌ **M10 — GUI** (the long pole; renderer decision first)
+- 🟡 **M10 — GUI** (the long pole): **foundation started** — pure-Zig software 2D renderer
+  (`render2d.zig`: rects/gradients/alpha/text), generated 8x16 bitmap font (`font_data.zig`),
+  BMP writer (`bmp.zig`), and a real DAW frame (`main_ui.zig`: transport + clip timeline from
+  project data + mixer with faders/meters). `zig build ui`. ❌ live windowing (X11/Wayland/
+  GLFW), input/interaction, the editor views, GPU acceleration.
 - ❌ **M11 — VST3/AU hosting** (hardest; possibly last)
 - ❌ **M12 — Cross-platform** (Windows/macOS audio+MIDI+window backends)
 - ❌ **M13 — AI wedge**
@@ -290,5 +295,8 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
 - This session shipped M1–M9 + arrangement + CLAP host. **The hardest area (plugin
   hosting) is now proven feasible.** Remaining big pieces: GUI (long pole), cross-platform
   backends, real-plugin CLAP/VST3/AU, depth (effects/automation).
+- **GUI foundation done**: pure-Zig software 2D renderer + generated bitmap font + BMP
+  output + a real DAW frame (transport/timeline-from-project-data/mixer). `zig build ui`.
+  Next GUI step: live windowing (X11/GLFW) + input, then make a view interactive.
 
 *(Add new dated entries as milestones complete.)*

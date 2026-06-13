@@ -147,6 +147,18 @@ pub fn build(b: *std.Build) void {
     const clap_step = b.step("clap", "Host a CLAP plugin (defaults to the test plugin)");
     clap_step.dependOn(&run_clap.step);
 
+    // GUI foundation: render a DAW frame to an image.
+    const ui = b.addExecutable(.{
+        .name = "zenith_ui",
+        .root_source_file = b.path("main_ui.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(ui);
+    const run_ui = b.addRunArtifact(ui);
+    const ui_step = b.step("ui", "Render the Zenith UI frame to a BMP");
+    ui_step.dependOn(&run_ui.step);
+
     // Unit tests.
     const test_step = b.step("test", "Run unit tests");
     for ([_][]const u8{ "midi_alsa.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig" }) |src| {
