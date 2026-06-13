@@ -107,7 +107,16 @@ pub const Canvas = struct {
         }
     }
 
-    /// Antialiased proportional text (grayscale-coverage vector font).
+    /// Per-channel alpha blend (for subpixel text). aR/aG/aB are 0..255.
+    fn psetSub(self: *Canvas, x: i32, y: i32, r: u8, g: u8, b: u8, ar: u32, ag: u32, ab: u32) void {
+        if (x < 0 or y < 0 or x >= @as(i32, @intCast(self.width)) or y >= @as(i32, @intCast(self.height))) return;
+        const i = (@as(usize, @intCast(y)) * self.width + @as(usize, @intCast(x))) * 4;
+        self.pixels[i] = @intCast((@as(u32, r) * ar + @as(u32, self.pixels[i]) * (255 - ar)) / 255);
+        self.pixels[i + 1] = @intCast((@as(u32, g) * ag + @as(u32, self.pixels[i + 1]) * (255 - ag)) / 255);
+        self.pixels[i + 2] = @intCast((@as(u32, b) * ab + @as(u32, self.pixels[i + 2]) * (255 - ab)) / 255);
+    }
+
+    /// Antialiased proportional text — grayscale or LCD subpixel coverage.
     pub fn textAA(self: *Canvas, x: i32, y: i32, s: []const u8, c: Color, f: *const FontT) void {
         var pen = x;
         for (s) |ch| {
@@ -123,10 +132,19 @@ pub const Canvas = struct {
             while (gy < f.cell_h) : (gy += 1) {
                 var gx: usize = 0;
                 while (gx < w) : (gx += 1) {
-                    const cov = f.data[off + gy * w + gx];
-                    if (cov == 0) continue;
-                    const aa: u32 = (@as(u32, cov) * @as(u32, c.a)) / 255;
-                    self.pset(pen + @as(i32, @intCast(gx)), y + @as(i32, @intCast(gy)), .{ .r = c.r, .g = c.g, .b = c.b, .a = @intCast(aa) });
+                    if (f.subpixel) {
+                        const base = off + gy * (w * 3) + gx * 3;
+                        const cr = f.data[base];
+                        const cg = f.data[base + 1];
+                        const cb = f.data[base + 2];
+                        if ((cr | cg | cb) == 0) continue;
+                        const ca: u32 = c.a;
+                        self.psetSub(pen + @as(i32, @intCast(gx)), y + @as(i32, @intCast(gy)), c.r, c.g, c.b, @as(u32, cr) * ca / 255, @as(u32, cg) * ca / 255, @as(u32, cb) * ca / 255);
+                    } else {
+                        const cov = f.data[off + gy * w + gx];
+                        if (cov == 0) continue;
+                        self.pset(pen + @as(i32, @intCast(gx)), y + @as(i32, @intCast(gy)), .{ .r = c.r, .g = c.g, .b = c.b, .a = @intCast((@as(u32, cov) * @as(u32, c.a)) / 255) });
+                    }
                 }
             }
             pen += f.advance[gi];
