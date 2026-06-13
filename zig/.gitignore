@@ -1,7 +1,14 @@
 # build artifacts
 ab_harness
+simd_bench
+zenith_render
+zenith_play
 *.a
 *.a.o
 *.o
 zig-cache/
 .zig-cache/
+zig-out/
+
+# rendered audio
+*.wav

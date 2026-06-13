@@ -163,3 +163,113 @@ export fn zdsp_svf_process_block_opt(
         .highpass => svfBlockSpecialized(.highpass, state, input, output, num_samples, f, r),
     }
 }
+
+//==============================================================================
+// Voice-parallel SVF — SIMD across independent voices (the real Zig win).
+//
+// A polysynth runs many independent filters (one per voice), each with its own
+// cutoff. They can't be vectorized across time (serial recurrence) but they ARE
+// independent across voices — so we put voice v in SIMD lane v and advance all
+// of them in lockstep, one @Vector op per time step. This is where Zig's
+// explicit, guaranteed SIMD competes directly with C++ auto-vectorization.
+//==============================================================================
+
+const SIMD_VOICES = 8;
+
+/// Process SIMD_VOICES independent lowpass SVFs in lockstep.
+///   state_*  : [SIMD_VOICES] integrator state, host-owned
+///   f_coef   : [SIMD_VOICES] per-voice integrator coefficient
+///   r_coef   : [SIMD_VOICES] per-voice damping (1/Q)
+///   input    : [num_samples * SIMD_VOICES], interleaved by voice (lane-major)
+///   output   : [num_samples * SIMD_VOICES]
+export fn zdsp_svf_voices_simd(
+    state_low: [*]f64,
+    state_high: [*]f64,
+    state_band: [*]f64,
+    f_coef: [*]const f64,
+    r_coef: [*]const f64,
+    input: [*]const f32,
+    output: [*]f32,
+    num_samples: usize,
+) void {
+    const V = SIMD_VOICES;
+    const Vec = @Vector(V, f64);
+
+    const lo_ptr: *[V]f64 = @ptrCast(state_low);
+    const hi_ptr: *[V]f64 = @ptrCast(state_high);
+    const ba_ptr: *[V]f64 = @ptrCast(state_band);
+
+    const f: Vec = @as(*const [V]f64, @ptrCast(f_coef)).*;
+    const r: Vec = @as(*const [V]f64, @ptrCast(r_coef)).*;
+
+    var lo: Vec = lo_ptr.*;
+    var hi: Vec = hi_ptr.*;
+    var ba: Vec = ba_ptr.*;
+
+    var i: usize = 0;
+    while (i < num_samples) : (i += 1) {
+        const base = i * V;
+        const xf: @Vector(V, f32) = @as(*const [V]f32, @ptrCast(input + base)).*;
+        const x: Vec = @floatCast(xf);
+
+        const low1 = lo + f * ba;
+        const high1 = x - low1 - r * ba;
+        const band1 = ba + f * high1;
+        lo = low1;
+        hi = high1;
+        ba = band1;
+
+        const of: @Vector(V, f32) = @floatCast(lo);
+        @as(*[V]f32, @ptrCast(output + base)).* = of;
+    }
+
+    lo_ptr.* = lo;
+    hi_ptr.* = hi;
+    ba_ptr.* = ba;
+}
+
+/// Tuned variant: all-f32, full native vector width, no f32<->f64 round-trip.
+/// This is the version that actually exploits Zig's control over the layout.
+export fn zdsp_svf_voices_simd_f32(
+    state_low: [*]f32,
+    state_high: [*]f32,
+    state_band: [*]f32,
+    f_coef: [*]const f32,
+    r_coef: [*]const f32,
+    input: [*]const f32,
+    output: [*]f32,
+    num_samples: usize,
+) void {
+    const V = SIMD_VOICES;
+    const Vec = @Vector(V, f32);
+
+    const lo_ptr: *[V]f32 = @ptrCast(state_low);
+    const hi_ptr: *[V]f32 = @ptrCast(state_high);
+    const ba_ptr: *[V]f32 = @ptrCast(state_band);
+
+    const f: Vec = @as(*const [V]f32, @ptrCast(f_coef)).*;
+    const r: Vec = @as(*const [V]f32, @ptrCast(r_coef)).*;
+
+    var lo: Vec = lo_ptr.*;
+    var hi: Vec = hi_ptr.*;
+    var ba: Vec = ba_ptr.*;
+
+    var i: usize = 0;
+    while (i < num_samples) : (i += 1) {
+        const base = i * V;
+        const x: Vec = @as(*const [V]f32, @ptrCast(input + base)).*;
+
+        const low1 = lo + f * ba;
+        const high1 = x - low1 - r * ba;
+        const band1 = ba + f * high1;
+        lo = low1;
+        hi = high1;
+        ba = band1;
+
+        @as(*[V]f32, @ptrCast(output + base)).* = lo;
+    }
+
+    lo_ptr.* = lo;
+    hi_ptr.* = hi;
+    ba_ptr.* = ba;
+}

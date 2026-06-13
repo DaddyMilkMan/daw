@@ -56,6 +56,28 @@ void  zdsp_svf_process_block_opt(zdsp_svf_state* state,
                                  double sample_rate,
                                  zdsp_filter_type ftype);
 
+/* Voice-parallel SVF: ZDSP_SIMD_VOICES independent lowpass filters via SIMD.
+ * input/output are interleaved lane-major: idx = sample*ZDSP_SIMD_VOICES + voice. */
+#define ZDSP_SIMD_VOICES 8
+void  zdsp_svf_voices_simd(double* state_low,
+                           double* state_high,
+                           double* state_band,
+                           const double* f_coef,
+                           const double* r_coef,
+                           const float* input,
+                           float* output,
+                           size_t num_samples);
+
+/* Tuned all-f32 variant (full native vector width, no f32<->f64 conversions). */
+void  zdsp_svf_voices_simd_f32(float* state_low,
+                               float* state_high,
+                               float* state_band,
+                               const float* f_coef,
+                               const float* r_coef,
+                               const float* input,
+                               float* output,
+                               size_t num_samples);
+
 #ifdef __cplusplus
 }
 #endif

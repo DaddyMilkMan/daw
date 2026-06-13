@@ -200,6 +200,13 @@ content library first); do not chase breadth.
 - **Result: real source files 2076 → 1101 (-47%).** Build config intact.
 - **DEFERRED:** `ai_client/` (88 files / 32K LOC) — a *diverged* twin of the canonical `ai/` (every feature exists in both). Worth a diff-for-salvage pass (AI is the strategic wedge) before deleting, not a blind `rm`.
 
+**MILESTONE "Zig makes sound" — DONE (2026-06-12, Path B greenfield, `zig/`, no JUCE):**
+- Pure-Zig subtractive synth: polyBLEP saw -> linear ADSR -> Chamberlin SVF lowpass, 16-voice polyphonic (`synth.zig`).
+- WAV writer (`wav.zig`) + ALSA device backend over libasound (`audio_alsa.zig`).
+- `zig build render` -> `zenith_hello.wav` (verified: peak 95% FS, musical structure = arpeggio C-E-G-C then held C-major chord). `zig build play` -> live ALSA playback ran clean (open/set_params/writei/drain/close).
+- `build.zig` drives it. This is the seed of the real engine — all forward effort now lands here, not on the throwaway C++.
+- NEXT: real-time audio callback loop (synthesize on the fly, low latency) instead of pre-render-then-play; then MIDI input ("play Zenith live from a keyboard, in Zig"); then formalize the device side of `zenith_platform.h`.
+
 **1.3 First Zig kernel — DONE as a spike (`zig/`, builds + runs with zig 0.14.1, no JUCE):**
 - `zig/zenith_dsp.zig` — native Zig SVF filter over a flat C ABI (`zig/zenith_dsp.h`, first slice of `zenith_platform.h`).
 - `zig/ab_harness.cpp` — A/B vs the C++ `ZenithFilter::processSVF` reference. Result: **bit-exact (`0.000e+00`)** across per-sample and block paths; toolchain + C-ABI interop proven end-to-end.

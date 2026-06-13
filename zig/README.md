@@ -21,12 +21,15 @@ every future kernel will follow (see `planning/roadmaps/ZIG_MIGRATION_MASTER_PLA
 - **Correctness:** Zig kernel matches the C++ reference to `0.000e+00` over
   480k samples — per-sample *and* block paths. The harness guards every change.
 - **Interop:** Zig → C-ABI static lib → linked into C++ works end-to-end.
-- **Performance (honest):** a *naive* port runs ~15–20% slower than C++ `-O2`
-  on this serial filter; `comptime` branch-elimination did not close it. The
-  benchmark also favors C++ (its reference is inlinable; the Zig kernel is an
-  opaque library call), so "same ballpark" is the fair read. The real Zig wins
-  are systems-level (graph, allocation, cache, threading) and earned DSP work
-  (`@Vector` SIMD across voices/channels) — not free from a literal translation.
+- **Performance (honest, measured):** Zig ≈ C++. On the single serial filter a
+  naive port was ~15% slower; on the voice-parallel SIMD workload (`simd_bench`,
+  Zig `@Vector` vs C++ `-O3 -march=native` auto-vec) the two trade places within
+  run-to-run noise — the tuned all-f32 Zig kernel even edged C++ in one run. Both
+  go through LLVM, so machine code is comparable. **Conclusion: choosing Zig
+  costs ~nothing on speed, but does not reliably beat C++ on raw throughput.**
+  Pick Zig for ownership / transparency / `comptime` / explicit memory layout —
+  not for a mythical speed win. "More control" lets you *reliably reach* C++'s
+  performance ceiling; it doesn't raise it.
 
 ## Next
 - Add a fair benchmark (C++ reference in its own TU).
