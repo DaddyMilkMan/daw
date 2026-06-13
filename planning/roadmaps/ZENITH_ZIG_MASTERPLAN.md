@@ -83,9 +83,9 @@ is the rest.
 Status: ✅ done · 🟡 partial · ❌ not started
 
 ### 4.1 Platform — Audio device I/O  *(JUCE: juce_audio_devices)*
-- 🟡 ALSA **output** (one device, blocking)
+- 🟡 ALSA **output** (one device, blocking) — `StreamOut`
 - ❌ Real **RT audio callback** (dedicated high-priority thread, lock-free handoff, xrun-robust)
-- ❌ Audio **input / capture** (record from mic/line)
+- ✅ Audio **input / capture** (`StreamIn`, ALSA; verified capturing a tone) — ❌ to-timeline, duplex
 - ❌ **Duplex** (simultaneous in+out for monitoring)
 - ❌ Device **enumeration & selection** (list devices, sample rate, buffer size)
 - ❌ **PipeWire-native** backend (Linux modern)
@@ -195,7 +195,9 @@ Status: ✅ done · 🟡 partial · ❌ not started
   cubic-Hermite resampler (`resample.zig`), polyphonic `sampler.zig`. Verified: one A3
   sample pitched across MIDI notes to within 0.4% of target frequency; WAV round-trip +
   interp unit-tested. `zig build sampler`.
-- ❌ **M5 — Audio recording** (audio input + capture to timeline)
+- 🟡 **M5 — Audio recording** (`audio_alsa.zig` `StreamIn` + `main_record.zig`): ALSA
+  capture → WAV. Verified end-to-end (recorded a 440Hz tone, measured 440.4Hz). ❌ capture
+  to the timeline/clips, duplex monitoring, punch in/out.
 - 🟡 **M6 — Mixer** (`mixer.zig`): N mono tracks → per-track gain + constant-power pan
   → stereo master. Verified: synth+sampler mixed, channels differ (pan), pan-law unit
   test passes. ❌ buses/sends, mute/solo, metering (later).
@@ -273,7 +275,10 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
 - Added **cross-platform** as a standing goal (vision §); platform code behind seams.
 - **M9 done**: `project.zig` — Project/Track/Note model, `ZNPR` endian-explicit save/load,
   snapshot undo (`History`). Verified save→reload→play + round-trip/undo tests. `zig build project`.
-- NEXT: **M5 — audio recording** (ALSA capture — the missing I/O direction; structure it
-  behind a capture interface for cross-platform).
+- **M5 done**: `StreamIn` ALSA capture + `main_record.zig`. Verified end-to-end recording
+  a 440Hz tone (measured 440.4Hz). Audio I/O now bidirectional in Zig. `zig build record`.
+- NEXT options: **arrangement/timeline** (beyond loops — capture-to-clip, linear playback),
+  **M7 — CLAP host** (third-party plugins), deepen M6 (buses/sends), or **GUI foundation**
+  (the long pole; user weighing 100%-Zig GUI). All must stay cross-platform-ready.
 
 *(Add new dated entries as milestones complete.)*

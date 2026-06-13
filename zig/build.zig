@@ -100,6 +100,20 @@ pub fn build(b: *std.Build) void {
     const project_step = b.step("project", "Run the project save/load demo");
     project_step.dependOn(&run_project.step);
 
+    // Audio recorder (M5).
+    const record = b.addExecutable(.{
+        .name = "zenith_record",
+        .root_source_file = b.path("main_record.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    record.linkSystemLibrary("asound");
+    record.linkLibC();
+    b.installArtifact(record);
+    const run_record = b.addRunArtifact(record);
+    const record_step = b.step("record", "Record audio input to a WAV");
+    record_step.dependOn(&run_record.step);
+
     // Unit tests.
     const test_step = b.step("test", "Run unit tests");
     for ([_][]const u8{ "midi_alsa.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig" }) |src| {
