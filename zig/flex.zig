@@ -367,7 +367,12 @@ pub const Ctx = struct {
             // subtle press feedback: darken a touch
             if (bg) |b| bg = lerp(b, Color.rgb(12, 14, 18), a.press * 0.12);
         }
-        if (s.shadow > 0) self.g.shadow(nn.x, nn.y, nn.w, nn.h, s.radius, s.shadow, Color.rgba(0, 0, 0, 130));
+        if (s.shadow > 0) {
+            // layered directional drop shadow (light from above): a soft wide
+            // ambient offset down + a tighter contact. Low opacity = modern.
+            self.g.shadow(nn.x, nn.y + s.shadow * 0.55, nn.w, nn.h, s.radius, s.shadow * 1.35, Color.rgba(0, 0, 0, 52));
+            self.g.shadow(nn.x, nn.y + 3, nn.w, nn.h, s.radius, s.shadow * 0.42, Color.rgba(0, 0, 0, 70));
+        }
         if (bg) |b| {
             const b2 = s.bg2 orelse b;
             const bw: f32 = if (s.border != null) s.border_w else 0;

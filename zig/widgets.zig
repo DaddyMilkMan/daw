@@ -10,7 +10,7 @@ const Gpu = gpu2d.Gpu;
 
 const accent = Color.rgb(108, 147, 244); // electric indigo
 const accent_hi = Color.rgb(190, 205, 255);
-const border = Color.rgba(255, 255, 255, 14);
+const border = Color.rgba(255, 255, 255, 0); // no border lines on widgets
 const track_bg = Color.rgb(24, 26, 33);
 
 pub const Input = struct { mx: f32 = -1, my: f32 = -1, mouse_down: bool = false };
@@ -151,7 +151,7 @@ pub const Ui = struct {
         }
         a.hover = ease(a.hover, if (within or self.active == id) 1 else 0, self.dt, 14);
         const r = radius;
-        self.g.card(cx - r, cy - r, 2 * r, 2 * r, r, Color.rgb(38, 42, 52), Color.rgb(28, 31, 39), 1, border, 0.6);
+        self.g.card(cx - r, cy - r, 2 * r, 2 * r, r, Color.rgb(38, 42, 52), Color.rgb(28, 31, 39), 0, border, 0.6);
         // solid arc (modern) — connected segments, track + accent progress
         const start = std.math.pi * 0.75;
         const sweep = std.math.pi * 1.5;

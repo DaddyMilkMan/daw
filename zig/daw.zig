@@ -280,8 +280,8 @@ fn drawClips(g: *Gpu, fb: *const Font, u: *widgets.Ui, p: *project.Project, ti: 
         }
         const sel = state.sel_track == @as(i32, @intCast(ti)) and state.sel_clip == @as(i32, @intCast(ci));
         const cc = if (muted) mix(col, Color.rgb(72, 76, 88), 0.7) else col;
-        if (sel) g.shadow(cx - 3, cy - 3, cw + 6, ch + 6, 9, 10, Color.rgba(108, 147, 244, 150)); // accent selection glow
-        g.shadow(cx, cy, cw, ch, 6, 4, Color.rgba(0, 0, 0, 110));
+        if (sel) g.shadow(cx - 3, cy - 3, cw + 6, ch + 6, 9, 13, Color.rgba(108, 147, 244, 120)); // accent selection glow
+        g.shadow(cx, cy + 3, cw, ch, 6, 9, Color.rgba(0, 0, 0, 60)); // soft directional drop
         g.card(cx, cy, cw, ch, 6, mix(cc, Color.rgb(255, 255, 255), if (hovered) 0.24 else 0.12), mix(cc, panel_b, 0.5), 1, bord, 1.0);
         g.rect(cx, cy, cw, 16, 6, mix(cc, Color.rgb(255, 255, 255), 0.2));
         // audio tracks show a waveform; MIDI tracks show note blocks
@@ -679,7 +679,7 @@ pub const View = struct {
             const tx = std.math.clamp(tip_x - tw / 2, 2, W - tw - 2);
             const ty = @max(tip_y - th - 4, 2);
             g.captureBlur(@intFromFloat(W), @intFromFloat(H));
-            g.glass(tx, ty, tw, th, 9, Color.rgba(86, 94, 116, 70), Color.rgba(255, 255, 255, 220));
+            g.glass(tx, ty, tw, th, 9, Color.rgba(86, 94, 116, 70), Color.rgba(255, 255, 255, 150));
             var buf: [8]u8 = undefined;
             const s = std.fmt.bufPrint(&buf, "{d:.0}", .{tip_val}) catch "";
             const sw = self.fb.textWidth(s);
@@ -707,7 +707,7 @@ pub const View = struct {
             g.shadow(cmx, cmy, iw, hh, 12, 22, Color.rgba(0, 0, 0, @intFromFloat(170 * eased)));
             g.flush();
             g.captureBlur(@intFromFloat(W), @intFromFloat(H));
-            g.glass(cmx, cmy, iw, hh, 12, Color.rgba(84, 92, 114, 76), Color.rgba(255, 255, 255, 220));
+            g.glass(cmx, cmy, iw, hh, 12, Color.rgba(84, 92, 114, 76), Color.rgba(255, 255, 255, 150));
             var hit: i32 = -1;
             for (items, 0..) |it, i| {
                 const iy = cmy + 6 + @as(f32, @floatFromInt(i)) * ih;

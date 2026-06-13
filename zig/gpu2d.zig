@@ -312,11 +312,11 @@ const glass_fs: [*:0]const u8 =
     \\  // specular: a bright crisp streak on the top edge + a faint bottom edge + sheen
     \\  float distTop = vScreen.y - uRect.y;
     \\  float distBot = (uRect.y + uRect.w) - vScreen.y;
-    \\  float topSpec = (1.0 - smoothstep(0.0, 2.4, distTop));
-    \\  float botSpec = (1.0 - smoothstep(0.0, 1.8, distBot)) * 0.45;
-    \\  float sheen   = exp(-distTop/10.0) * 0.05;
+    \\  float topSpec = (1.0 - smoothstep(0.0, 3.5, distTop));
+    \\  float botSpec = (1.0 - smoothstep(0.0, 2.5, distBot)) * 0.4;
+    \\  float sheen   = exp(-distTop/12.0) * 0.04;
     \\  vec3 spec = toLin(uBorder.rgb);
-    \\  glass += spec * ((topSpec * 0.9 + botSpec) * uBorder.a + sheen);
+    \\  glass += spec * ((topSpec * 0.5 + botSpec * 0.6) * uBorder.a + sheen);
     \\  // edge catches light from the lensing
     \\  glass += pow(edge, 3.0) * 0.12;
     \\  frag = vec4(glass * aOuter, aOuter);
