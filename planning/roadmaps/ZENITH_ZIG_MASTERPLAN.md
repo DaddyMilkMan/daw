@@ -171,8 +171,9 @@ Status: ✅ done · 🟡 partial · ❌ not started
 ### 4.11 GUI  *(JUCE: gui_basics/graphics/opengl — was ~91K LOC)* — the long pole
 - 🟡 **Renderer**: pure-Zig 2D renderer — **subpixel/AA vector text**, AA rounded rects,
   shadows, gradients, **box blur (glassmorphism)** (`render2d.zig`). **OpenGL (GLX) present
-  backend** (`window_gl.zig`) uploads the framebuffer as a GPU texture (verified, 313 frames).
-  ❌ blur/draw IN a GL shader (currently CPU-blur then GPU-present), Vulkan/Metal
+  backend** (`window_gl.zig`) uploads the framebuffer as a GPU texture, and a **GLSL
+  fragment shader does the glassmorphism blur on the GPU in real time** (verified: animated
+  moving frosted panel, 375 fps-frames). ❌ full GL-native vector drawing, Vulkan/Metal
 - 🟡 Window + input layer: X11 native window + blit + mouse/keyboard done (`window_x11.zig`/`main_window.zig`); ❌ Wayland/Win32/Cocoa, scroll/drag
 - 🟡 Widget/component framework: immediate-mode toolkit done (`uikit.zig`: button/vFader/hSlider, hot/active model); ❌ layout system, more widgets
 - 🟡 DAW views: transport + timeline + **interactive mixer** (play toggles, faders/pans drag → state) wired to the live window; ❌ arranger/piano-roll editing, browser, sample editor
