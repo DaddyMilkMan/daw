@@ -21,7 +21,14 @@ pub fn main() !void {
         return e;
     };
     defer g.deinit();
-    std.debug.print("gpu2d ready — drawing SDF shapes + analytic shadows\n", .{});
+
+    var fd = try gpu2d.GpuFont.init(a, &@import("font_display.zig").font);
+    defer fd.deinit();
+    var fu = try gpu2d.GpuFont.init(a, &@import("font_ui.zig").font);
+    defer fu.deinit();
+    var fb = try gpu2d.GpuFont.init(a, &@import("font_body.zig").font);
+    defer fb.deinit();
+    std.debug.print("gpu2d ready — SDF shapes + analytic shadows + atlas text\n", .{});
 
     const secs: f64 = blk: {
         if (std.process.getEnvVarOwned(a, "ZENITH_WINDOW_SECONDS")) |v| {
@@ -61,19 +68,25 @@ pub fn main() !void {
             g.rectBordered(x, 60, 120, 120, rad, card_top, 1, border);
         }
 
+        fd.text(&g, 40, 18, "Zenith GPU", accent);
+        fu.text(&g, 760, 26, "SDF shapes  -  analytic shadows", Color.rgb(140, 148, 164));
+
         // a big glass card with a soft elevation shadow + accent bar
         g.shadow(40, 240, 1020, 360, 18, 28, Color.rgba(0, 0, 0, 160));
         g.rectBordered(40, 240, 1020, 360, 18, Color.rgb(31, 34, 43), 1, border);
         g.rect(64, 264, 200, 6, 3, accent);
 
-        // nested cards with various accents
+        // nested cards with various accents + labels
         const cols = [_]Color{ Color.rgb(245, 158, 88), Color.rgb(122, 211, 140), accent, Color.rgb(178, 140, 248) };
+        const names = [_][]const u8{ "Drums", "Bass", "Lead", "Pad" };
         var j: usize = 0;
         while (j < 4) : (j += 1) {
             const x: f32 = 64 + @as(f32, @floatFromInt(j)) * 250;
             g.shadow(x, 300, 220, 270, 12, 14, Color.rgba(0, 0, 0, 150));
             g.rectBordered(x, 300, 220, 270, 12, Color.rgb(38, 42, 52), 1, border);
             g.rect(x + 16, 320, 188, 5, 2, cols[j]);
+            fu.text(&g, x + 16, 334, names[j], Color.rgb(236, 239, 246));
+            fb.text(&g, x + 16, 360, "the quick brown fox", Color.rgb(140, 148, 164));
             g.rect(x + 16, 520, 120, 30, 8, cols[j]);
         }
 

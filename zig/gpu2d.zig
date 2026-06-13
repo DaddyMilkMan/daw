@@ -231,22 +231,61 @@ const shadow_fs: [*:0]const u8 =
     \\}
 ;
 
+const glyph_vs: [*:0]const u8 =
+    \\#version 330 core
+    \\layout(location=0) in vec2 quad;
+    \\layout(location=1) in vec4 iDst;
+    \\layout(location=2) in vec4 iUv;
+    \\layout(location=3) in vec4 iColor;
+    \\uniform vec2 uRes;
+    \\out vec2 vUv; out vec4 vColor;
+    \\void main(){
+    \\  vec2 px = iDst.xy + quad*iDst.zw;
+    \\  vUv = iUv.xy + quad*iUv.zw;
+    \\  vColor = iColor;
+    \\  vec2 clip = (px/uRes)*2.0-1.0;
+    \\  gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
+    \\}
+;
+const glyph_fs: [*:0]const u8 =
+    \\#version 330 core
+    \\in vec2 vUv; in vec4 vColor; out vec4 frag;
+    \\uniform sampler2D uAtlas;
+    \\void main(){
+    \\  float cov = texture(uAtlas, vUv).r;
+    \\  float a = cov * vColor.a;
+    \\  frag = vec4(vColor.rgb * a, a);
+    \\}
+;
+
 const RECT_FLOATS = 14; // min2 size2 radius border fill4 border4
 const SHADOW_FLOATS = 10; // lower2 upper2 sigma corner color4
+const GLYPH_FLOATS = 12; // dst4 uv4 color4
+
+const FontT = @import("font.zig").Font;
+
+/// Glyphs are grouped by atlas texture so each font flushes in one draw call.
+const GlyphBatch = struct { tex: c_uint, data: std.ArrayList(f32) };
 
 pub const Gpu = struct {
     allocator: std.mem.Allocator,
     rect_prog: c_uint,
     shadow_prog: c_uint,
+    glyph_prog: c_uint,
     rect_u_res: c_int,
     shadow_u_res: c_int,
+    glyph_u_res: c_int,
+    glyph_u_atlas: c_int,
     quad_vbo: c_uint,
     rect_vao: c_uint,
     rect_ivbo: c_uint,
     shadow_vao: c_uint,
     shadow_ivbo: c_uint,
+    glyph_vao: c_uint,
+    glyph_ivbo: c_uint,
     rects: std.ArrayList(f32),
     shadows: std.ArrayList(f32),
+    glyph_batches: std.ArrayList(GlyphBatch),
     width: f32 = 0,
     height: f32 = 0,
 
@@ -254,6 +293,7 @@ pub const Gpu = struct {
         try loadAll(get);
         const rect_prog = try linkProgram(rect_vs, rect_fs);
         const shadow_prog = try linkProgram(shadow_vs, shadow_fs);
+        const glyph_prog = try linkProgram(glyph_vs, glyph_fs);
 
         // unit quad (triangle strip): (0,0)(1,0)(0,1)(1,1)
         const quad = [_]f32{ 0, 0, 1, 0, 0, 1, 1, 1 };
@@ -266,18 +306,25 @@ pub const Gpu = struct {
             .allocator = a,
             .rect_prog = rect_prog,
             .shadow_prog = shadow_prog,
+            .glyph_prog = glyph_prog,
             .rect_u_res = glGetUniformLocation(rect_prog, "uRes"),
             .shadow_u_res = glGetUniformLocation(shadow_prog, "uRes"),
+            .glyph_u_res = glGetUniformLocation(glyph_prog, "uRes"),
+            .glyph_u_atlas = glGetUniformLocation(glyph_prog, "uAtlas"),
             .quad_vbo = quad_vbo,
             .rect_vao = 0,
             .rect_ivbo = 0,
             .shadow_vao = 0,
             .shadow_ivbo = 0,
+            .glyph_vao = 0,
+            .glyph_ivbo = 0,
             .rects = std.ArrayList(f32).init(a),
             .shadows = std.ArrayList(f32).init(a),
+            .glyph_batches = std.ArrayList(GlyphBatch).init(a),
         };
         g.setupRectVao();
         g.setupShadowVao();
+        g.setupGlyphVao();
         return g;
     }
 
@@ -316,12 +363,37 @@ pub const Gpu = struct {
             glVertexAttribDivisor(s[0], 1);
         }
     }
+    fn setupGlyphVao(self: *Gpu) void {
+        glGenVertexArrays(1, &self.glyph_vao);
+        glBindVertexArray(self.glyph_vao);
+        self.attribQuad();
+        glGenBuffers(1, &self.glyph_ivbo);
+        glBindBuffer(GL_ARRAY_BUFFER, self.glyph_ivbo);
+        const stride: c_int = GLYPH_FLOATS * @sizeOf(f32);
+        const specs = [_][3]u32{ .{ 1, 4, 0 }, .{ 2, 4, 4 }, .{ 3, 4, 8 } };
+        inline for (specs) |s| {
+            glEnableVertexAttribArray(s[0]);
+            glVertexAttribPointer(s[0], @intCast(s[1]), GL_FLOAT, GL_FALSE, stride, s[2] * @sizeOf(f32));
+            glVertexAttribDivisor(s[0], 1);
+        }
+    }
+    fn glyphBatch(self: *Gpu, tex: c_uint) *GlyphBatch {
+        for (self.glyph_batches.items) |*b| if (b.tex == tex) return b;
+        self.glyph_batches.append(.{ .tex = tex, .data = std.ArrayList(f32).init(self.allocator) }) catch {};
+        return &self.glyph_batches.items[self.glyph_batches.items.len - 1];
+    }
+    pub fn pushGlyph(self: *Gpu, tex: c_uint, dx: f32, dy: f32, dw: f32, dh: f32, ux: f32, uy: f32, uw: f32, uh: f32, color: Color) void {
+        const c = lin(color);
+        const b = self.glyphBatch(tex);
+        b.data.appendSlice(&.{ dx, dy, dw, dh, ux, uy, uw, uh, c[0], c[1], c[2], c[3] }) catch {};
+    }
 
     pub fn begin(self: *Gpu, w: usize, h: usize, bg: Color) void {
         self.width = @floatFromInt(w);
         self.height = @floatFromInt(h);
         self.rects.clearRetainingCapacity();
         self.shadows.clearRetainingCapacity();
+        for (self.glyph_batches.items) |*b| b.data.clearRetainingCapacity();
         glViewport(0, 0, @intCast(w), @intCast(h));
         glEnable(GL_FRAMEBUFFER_SRGB); // shaders output linear; GPU encodes to sRGB
         glEnable(GL_BLEND);
@@ -364,10 +436,124 @@ pub const Gpu = struct {
             glBufferData(GL_ARRAY_BUFFER, @intCast(self.rects.items.len * @sizeOf(f32)), self.rects.items.ptr, GL_DYNAMIC_DRAW);
             glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, @intCast(self.rects.items.len / RECT_FLOATS));
         }
+        // glyphs last (on top), one instanced draw per font atlas
+        var any_glyphs = false;
+        for (self.glyph_batches.items) |*b| if (b.data.items.len > 0) {
+            any_glyphs = true;
+        };
+        if (any_glyphs) {
+            glUseProgram(self.glyph_prog);
+            glUniform2f(self.glyph_u_res, self.width, self.height);
+            glUniform1i(self.glyph_u_atlas, 0);
+            glBindVertexArray(self.glyph_vao);
+            glActiveTexture(GL_TEXTURE0);
+            for (self.glyph_batches.items) |*b| {
+                if (b.data.items.len == 0) continue;
+                glBindTexture(GL_TEXTURE_2D, b.tex);
+                glBindBuffer(GL_ARRAY_BUFFER, self.glyph_ivbo);
+                glBufferData(GL_ARRAY_BUFFER, @intCast(b.data.items.len * @sizeOf(f32)), b.data.items.ptr, GL_DYNAMIC_DRAW);
+                glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, @intCast(b.data.items.len / GLYPH_FLOATS));
+            }
+        }
     }
 
     pub fn deinit(self: *Gpu) void {
         self.rects.deinit();
         self.shadows.deinit();
+        for (self.glyph_batches.items) |*b| b.data.deinit();
+        self.glyph_batches.deinit();
+    }
+};
+
+/// A GPU glyph font: an alpha atlas baked from a CPU `font.Font` (subpixel
+/// channels averaged to coverage), plus per-glyph metrics for layout.
+pub const GpuFont = struct {
+    tex: c_uint,
+    cell_h: f32,
+    first: u8,
+    n: usize,
+    advance: []const u8,
+    width: []const u8,
+    uv: [][4]f32,
+    allocator: std.mem.Allocator,
+
+    pub fn init(a: std.mem.Allocator, f: *const FontT) !GpuFont {
+        const n = f.advance.len;
+        var maxw: usize = 1;
+        for (f.width) |w| maxw = @max(maxw, w);
+        const cw = maxw + 2;
+        const ch = f.cell_h + 2;
+        const cols = @max(@as(usize, 1), 1024 / cw);
+        const rows = (n + cols - 1) / cols;
+        const aw = cols * cw;
+        const ah = rows * ch;
+        const atlas = try a.alloc(u8, aw * ah);
+        defer a.free(atlas);
+        @memset(atlas, 0);
+        const uv = try a.alloc([4]f32, n);
+        const awf: f32 = @floatFromInt(aw);
+        const ahf: f32 = @floatFromInt(ah);
+        var gi: usize = 0;
+        while (gi < n) : (gi += 1) {
+            const col = gi % cols;
+            const row = gi / cols;
+            const ox = col * cw + 1;
+            const oy = row * ch + 1;
+            const gw = f.width[gi];
+            const off = f.offset[gi];
+            var yy: usize = 0;
+            while (yy < f.cell_h) : (yy += 1) {
+                var xx: usize = 0;
+                while (xx < gw) : (xx += 1) {
+                    const cov: u32 = if (f.subpixel) blk: {
+                        const base = off + yy * (gw * 3) + xx * 3;
+                        break :blk (@as(u32, f.data[base]) + f.data[base + 1] + f.data[base + 2]) / 3;
+                    } else f.data[off + yy * gw + xx];
+                    atlas[(oy + yy) * aw + (ox + xx)] = @intCast(cov);
+                }
+            }
+            uv[gi] = .{
+                @as(f32, @floatFromInt(ox)) / awf,
+                @as(f32, @floatFromInt(oy)) / ahf,
+                @as(f32, @floatFromInt(gw)) / awf,
+                @as(f32, @floatFromInt(f.cell_h)) / ahf,
+            };
+        }
+        var tex: c_uint = 0;
+        glGenTextures(1, &tex);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, tex);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, @intCast(aw), @intCast(ah), 0, GL_RED, GL_UNSIGNED_BYTE, atlas.ptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        return .{ .tex = tex, .cell_h = @floatFromInt(f.cell_h), .first = f.first, .n = n, .advance = f.advance, .width = f.width, .uv = uv, .allocator = a };
+    }
+
+    pub fn textWidth(self: *const GpuFont, s: []const u8) f32 {
+        var w: f32 = 0;
+        for (s) |ch| {
+            w += if (ch >= self.first and ch < self.first + self.n) @as(f32, @floatFromInt(self.advance[ch - self.first])) else 6;
+        }
+        return w;
+    }
+    pub fn text(self: *const GpuFont, g: *Gpu, x: f32, y: f32, s: []const u8, color: Color) void {
+        var pen = x;
+        for (s) |ch| {
+            if (ch < self.first or ch >= self.first + self.n) {
+                pen += 6;
+                continue;
+            }
+            const gi = ch - self.first;
+            const gw: f32 = @floatFromInt(self.width[gi]);
+            const u = self.uv[gi];
+            g.pushGlyph(self.tex, pen, y, gw, self.cell_h, u[0], u[1], u[2], u[3], color);
+            pen += @floatFromInt(self.advance[gi]);
+        }
+    }
+    pub fn deinit(self: *GpuFont) void {
+        self.allocator.free(self.uv);
     }
 };
