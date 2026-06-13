@@ -64,9 +64,21 @@ pub fn build(b: *std.Build) void {
     const loop_step = b.step("loop", "Run the live looper (connect a keyboard via aconnect)");
     loop_step.dependOn(&run_loop.step);
 
+    // Sampler demo (M4): generate -> write -> read -> play pitched.
+    const sampler = b.addExecutable(.{
+        .name = "zenith_sampler",
+        .root_source_file = b.path("main_sampler.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(sampler);
+    const run_sampler = b.addRunArtifact(sampler);
+    const sampler_step = b.step("sampler", "Run the sampler demo");
+    sampler_step.dependOn(&run_sampler.step);
+
     // Unit tests.
     const test_step = b.step("test", "Run unit tests");
-    for ([_][]const u8{ "midi_alsa.zig", "sequence.zig" }) |src| {
+    for ([_][]const u8{ "midi_alsa.zig", "sequence.zig", "wav.zig", "resample.zig" }) |src| {
         const t = b.addTest(.{ .root_source_file = b.path(src), .target = target, .optimize = optimize });
         t.linkSystemLibrary("asound");
         t.linkLibC();

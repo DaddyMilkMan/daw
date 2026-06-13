@@ -98,8 +98,8 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ Cross-platform MIDI (Windows/macOS)
 
 ### 4.3 Platform — Audio file formats  *(JUCE: juce_audio_formats)*
-- 🟡 WAV **write** (16-bit only)
-- ❌ WAV **read** (and 24-bit / 32-float)
+- 🟡 WAV **write** (16-bit only; ❌ 24/float write)
+- ✅ WAV **read** (16/24/32-bit PCM + IEEE float32, multichannel, chunk-skipping)
 - ❌ **AIFF**, **FLAC**, **Ogg/Vorbis** read/write
 - ❌ **MP3** decode (patent-aware; consider PD decoder)
 - ❌ **Streaming** large files from disk (don't load whole files into RAM)
@@ -126,7 +126,7 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ **FFT** (own radix-2/4 or KISS-style)
 - ❌ **Convolution** (reverb / cab / IR)
 - ❌ **Oversampling** / anti-aliasing helpers
-- ❌ Resampler (sinc/Lagrange) — needed for sample playback & SRC
+- 🟡 Resampler — cubic Hermite (Catmull-Rom) point-read done (`resample.zig`); ❌ high-quality sinc/SRC for device-rate conversion
 - ❌ Dither, gain/pan laws, metering (peak/RMS/LUFS), DC blocker
 - ❌ Delay lines, modulation (LFOs, envelope followers)
 
@@ -158,7 +158,7 @@ Status: ✅ done · 🟡 partial · ❌ not started
 
 ### 4.10 Instruments & effects
 - ✅ ZenithPolySynth (basic) in Zig
-- ❌ Sampler (load samples → needs WAV read + resampler), multisampling, velocity layers
+- 🟡 Sampler (`sampler.zig`): load mono sample, pitch per MIDI note, polyphonic + AR env. ❌ multisampling, velocity layers, loop points, stereo
 - ❌ Synth depth: mod matrix, LFOs, sub/noise, unison, more filter models, FM/sync
 - ❌ Stock effects: EQ, compressor, limiter, reverb, delay, distortion, chorus
 - ❌ Preset system + content/sample library
@@ -186,7 +186,10 @@ Status: ✅ done · 🟡 partial · ❌ not started
   (live looper: play → record → replay → overdub). `zig build loop`. VERIFIED: scripted
   pass-0 notes replay bit-for-bit across loops 1-3 (input only in loop 0); unit tests for
   window-wrap + event layout pass.
-- ❌ **M4 — Load & play samples** (WAV read + resampler + a sampler instrument)
+- ✅ **M4 — Load & play samples**: WAV reader (`wav.zig`, 16/24/32-bit PCM + float32),
+  cubic-Hermite resampler (`resample.zig`), polyphonic `sampler.zig`. Verified: one A3
+  sample pitched across MIDI notes to within 0.4% of target frequency; WAV round-trip +
+  interp unit-tested. `zig build sampler`.
 - ❌ **M5 — Audio recording** (audio input + capture to timeline)
 - ❌ **M6 — Mixer graph** (tracks → buses → master; gain/pan/sends)
 - ❌ **M7 — CLAP plugin hosting** (host third-party instruments/effects)
@@ -252,7 +255,10 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
 - **M3 done**: live looper (transport + sequence + record/replay/overdub). Verified
   pass-0 input replays identically across loops 1-3. Unit tests for window-wrap + event
   layout. `zig build loop`.
-- NEXT: **M4 — load & play samples** (WAV read + resampler + sampler), or M5 audio
-  recording. (M4 unlocks drum loops / sample-based music.)
+- **M4 done**: WAV reader (16/24/32-bit + float32) + cubic-Hermite resampler + polyphonic
+  sampler. Verified: one A3 sample pitched across MIDI notes to <0.4% freq error; WAV
+  round-trip + interp unit tests. `zig build sampler`.
+- NEXT: **M5 — audio recording** (audio input capture) or **M6 — mixer graph** (tracks →
+  buses → master). M6 lets the synth + sampler play together through real routing.
 
 *(Add new dated entries as milestones complete.)*
