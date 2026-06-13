@@ -8,11 +8,17 @@ const project = @import("project.zig");
 const uikit = @import("uikit.zig");
 const Color = r2d.Color;
 
+const icons = @import("icons.zig");
 const fb = &@import("font_body.zig").font;
 const fd = &@import("font_display.zig").font;
 
 pub const WinAction = enum { none, close, minimize, maximize, move };
-pub const State = struct { playing: bool = false, window_action: WinAction = .none };
+pub const State = struct {
+    playing: bool = false,
+    window_action: WinAction = .none,
+    sel_track: i32 = -1,
+    sel_clip: i32 = -1,
+};
 
 pub const palette = [_]Color{
     .{ .r = 245, .g = 158, .b = 88 },
@@ -30,6 +36,15 @@ fn mix(a: Color, b: Color, t: f32) Color {
     };
 }
 
+fn fillClip(c: *project.Clip, pitches: []const u8) !void {
+    const n = pitches.len;
+    if (n == 0) return;
+    const step = c.length / n;
+    for (pitches, 0..) |pitch, i| {
+        try c.notes.append(.{ .start = @as(u64, i) * step, .len = step * 3 / 4, .pitch = pitch, .velocity = 100 });
+    }
+}
+
 pub fn buildDemoProject(a: std.mem.Allocator, bar: u64) !project.Project {
     var p = project.Project.init(a);
     const drums = try p.addTrack("Drums", .sampler);
@@ -37,6 +52,7 @@ pub fn buildDemoProject(a: std.mem.Allocator, bar: u64) !project.Project {
     inline for (0..4) |i| {
         const c = try drums.addClip("beat", i * bar);
         c.length = bar - 4000;
+        try fillClip(c, &[_]u8{ 36, 42, 38, 42, 36, 42, 38, 45 });
     }
     const bass = try p.addTrack("Bass", .synth);
     bass.gain = 0.7;
@@ -44,8 +60,10 @@ pub fn buildDemoProject(a: std.mem.Allocator, bar: u64) !project.Project {
     {
         const c1 = try bass.addClip("A", 0);
         c1.length = 2 * bar - 4000;
+        try fillClip(c1, &[_]u8{ 40, 40, 43, 45, 40, 47, 43, 45 });
         const c2 = try bass.addClip("B", 2 * bar);
         c2.length = 2 * bar - 4000;
+        try fillClip(c2, &[_]u8{ 45, 45, 48, 50, 45, 52, 48, 43 });
     }
     const lead = try p.addTrack("Lead", .synth);
     lead.gain = 0.6;
@@ -53,6 +71,7 @@ pub fn buildDemoProject(a: std.mem.Allocator, bar: u64) !project.Project {
     {
         const c = try lead.addClip("riff", bar);
         c.length = 2 * bar - 4000;
+        try fillClip(c, &[_]u8{ 72, 76, 79, 76, 74, 72, 71, 69 });
     }
     const pad = try p.addTrack("Pad", .synth);
     pad.gain = 0.5;
@@ -60,8 +79,22 @@ pub fn buildDemoProject(a: std.mem.Allocator, bar: u64) !project.Project {
     {
         const c = try pad.addClip("chords", 0);
         c.length = 4 * bar - 4000;
+        try fillClip(c, &[_]u8{ 60, 64, 67, 72, 65, 69, 72, 60 });
     }
     return p;
+}
+
+fn drawClipNotes(cv: *r2d.Canvas, clip: project.Clip, cx: i32, cy: i32, cw: i32, ch: i32, nc: Color) void {
+    if (clip.length == 0) return;
+    const lo: f32 = 32;
+    const hi: f32 = 92;
+    for (clip.notes.items) |note| {
+        const nx = cx + @as(i32, @intFromFloat(@as(f32, @floatFromInt(note.start)) / @as(f32, @floatFromInt(clip.length)) * @as(f32, @floatFromInt(cw))));
+        const nw = @max(@as(i32, @intFromFloat(@as(f32, @floatFromInt(note.len)) / @as(f32, @floatFromInt(clip.length)) * @as(f32, @floatFromInt(cw)))), 2);
+        const pn = std.math.clamp((@as(f32, @floatFromInt(note.pitch)) - lo) / (hi - lo), 0.0, 1.0);
+        const ny = cy + ch - 4 - @as(i32, @intFromFloat(pn * @as(f32, @floatFromInt(ch - 8))));
+        cv.fillRoundedRect(nx + 1, ny, nw - 1, 3, 1, nc);
+    }
 }
 
 pub fn frame(ui: *uikit.Ui, p: *project.Project, bar: u64, state: *State) void {
@@ -86,11 +119,13 @@ pub fn frame(ui: *uikit.Ui, p: *project.Project, bar: u64, state: *State) void {
     cv.fillRect(0, tb_h, W, 1, Color.rgb(12, 13, 17));
     cv.textAA(20, 12, "Zenith", accent, fd);
 
-    if (ui.button(1, 150, 15, 30, 24, ">", state.playing)) state.playing = !state.playing;
-    cv.fillRoundedRect(186, 15, 30, 24, 7, Color.rgb(40, 44, 54));
-    cv.fillRoundedRect(196, 22, 10, 10, 2, dim);
-    cv.fillRoundedRect(222, 15, 30, 24, 7, Color.rgb(40, 44, 54));
-    cv.fillRoundedRect(232, 23, 8, 8, 4, Color.rgb(235, 88, 88));
+    if (ui.iconSlot(1, 150, 15, 32, 24, state.playing)) state.playing = !state.playing;
+    const picol = if (state.playing) Color.rgb(16, 20, 24) else text;
+    if (state.playing) icons.pause(cv, 166, 27, 10, picol) else icons.play(cv, 166, 27, 11, picol);
+    _ = ui.iconSlot(2, 188, 15, 32, 24, false);
+    icons.stop(cv, 204, 27, 11, dim);
+    _ = ui.iconSlot(3, 226, 15, 32, 24, false);
+    icons.record(cv, 242, 27, 11, Color.rgb(235, 88, 88));
 
     cv.textAA(286, 9, "120", text, fd);
     cv.textAA(286, 34, "BPM  4/4", dim, fb);
@@ -98,10 +133,13 @@ pub fn frame(ui: *uikit.Ui, p: *project.Project, bar: u64, state: *State) void {
     cv.textAA(W - 280, 12, if (state.playing) "Playing" else "Stopped", if (state.playing) accent else dim, fb);
     cv.textAA(W - 280, 30, "100% Zig · CLAP", dim, fb);
 
-    // window controls
-    if (ui.button(900, W - 102, 16, 28, 22, "_", false)) state.window_action = .minimize;
-    if (ui.button(901, W - 70, 16, 28, 22, "[]", false)) state.window_action = .maximize;
-    if (ui.button(902, W - 38, 16, 28, 22, "x", false)) state.window_action = .close;
+    // window controls (vector icons)
+    if (ui.iconSlot(900, W - 102, 16, 28, 22, false)) state.window_action = .minimize;
+    icons.minimize(cv, W - 88, 27, 10, dim);
+    if (ui.iconSlot(901, W - 70, 16, 28, 22, false)) state.window_action = .maximize;
+    icons.maximize(cv, W - 56, 26, 9, dim);
+    if (ui.iconSlot(902, W - 38, 16, 28, 22, false)) state.window_action = .close;
+    icons.close(cv, W - 24, 27, 9, if (ui.hoverOf(902) > 0.1) Color.rgb(248, 120, 120) else dim);
     if (state.window_action == .none and ui.pressed and ui.in.my < tb_h and
         (ui.in.mx < 148 or (ui.in.mx > 252 and ui.in.mx < W - 290)))
         state.window_action = .move;
@@ -124,13 +162,28 @@ pub fn frame(ui: *uikit.Ui, p: *project.Project, bar: u64, state: *State) void {
         cv.textAA(36, ry + 7, t.name.items, text, fb);
         cv.textAA(36, ry + 24, if (t.instrument == .sampler) "Sampler" else "Synth", dim, fb);
         cv.fillRoundedRect(tl_x, ry, tl_w, row_h, 8, lane);
-        for (t.clips.items) |clip| {
+        for (t.clips.items, 0..) |clip, ci| {
             const cx = tl_x + @as(i32, @intFromFloat(@as(f64, @floatFromInt(clip.start)) * scale)) + 4;
             const cw = @max(@as(i32, @intFromFloat(@as(f64, @floatFromInt(clip.length)) * scale)) - 6, 10);
-            cv.dropShadow(cx, ry + 6, cw, row_h - 12, 7, 3);
-            cv.fillRoundedRect(cx, ry + 6, cw, row_h - 12, 7, mix(col, panel, 0.32));
-            cv.fillRoundedRect(cx, ry + 6, cw, 15, 7, mix(col, Color.rgb(255, 255, 255), 0.12));
-            cv.textAA(cx + 8, ry + 9, clip.name.items, Color.rgb(20, 22, 28), fb);
+            const cyt = ry + 6;
+            const cht = row_h - 12;
+            const hovered = ui.in.mx >= cx and ui.in.mx < cx + cw and ui.in.my >= cyt and ui.in.my < cyt + cht;
+            if (hovered and ui.pressed) {
+                state.sel_track = @intCast(ti);
+                state.sel_clip = @intCast(ci);
+            }
+            const selected = state.sel_track == @as(i32, @intCast(ti)) and state.sel_clip == @as(i32, @intCast(ci));
+            cv.dropShadow(cx, cyt, cw, cht, 7, 3);
+            cv.fillRoundedRect(cx, cyt, cw, cht, 7, mix(col, panel, if (hovered) 0.18 else 0.34));
+            cv.fillRoundedRect(cx, cyt, cw, 14, 7, mix(col, Color.rgb(255, 255, 255), 0.14));
+            drawClipNotes(cv, clip, cx, cyt + 14, cw, cht - 14, mix(col, Color.rgb(255, 255, 255), 0.38));
+            cv.textAA(cx + 7, cyt + 1, clip.name.items, Color.rgb(18, 20, 26), fb);
+            if (selected) {
+                cv.fillRoundedRect(cx, cyt, cw, 2, 1, accent);
+                cv.fillRoundedRect(cx, cyt + cht - 2, cw, 2, 1, accent);
+                cv.fillRoundedRect(cx, cyt, 2, cht, 1, accent);
+                cv.fillRoundedRect(cx + cw - 2, cyt, 2, cht, 1, accent);
+            }
         }
     }
 

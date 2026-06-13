@@ -242,6 +242,51 @@ pub const Canvas = struct {
         }
     }
 
+    /// Antialiased filled triangle (2x2 supersampled edges). For icons.
+    pub fn fillTriangle(self: *Canvas, x0: f32, y0: f32, x1: f32, y1: f32, x2: f32, y2: f32, c: Color) void {
+        const minx: i32 = @intFromFloat(@floor(@min(x0, @min(x1, x2))));
+        const maxx: i32 = @intFromFloat(@ceil(@max(x0, @max(x1, x2))));
+        const miny: i32 = @intFromFloat(@floor(@min(y0, @min(y1, y2))));
+        const maxy: i32 = @intFromFloat(@ceil(@max(y0, @max(y1, y2))));
+        const offs = [_]f32{ 0.25, 0.75 };
+        var py = miny;
+        while (py <= maxy) : (py += 1) {
+            var px = minx;
+            while (px <= maxx) : (px += 1) {
+                var cov: u32 = 0;
+                for (offs) |ox| for (offs) |oy| {
+                    if (inTri(@as(f32, @floatFromInt(px)) + ox, @as(f32, @floatFromInt(py)) + oy, x0, y0, x1, y1, x2, y2)) cov += 1;
+                };
+                if (cov > 0) self.pset(px, py, .{ .r = c.r, .g = c.g, .b = c.b, .a = @intCast(@as(u32, c.a) * cov / 4) });
+            }
+        }
+    }
+
+    /// Antialiased line of given thickness (distance-field based).
+    pub fn line(self: *Canvas, x0: f32, y0: f32, x1: f32, y1: f32, thick: f32, c: Color) void {
+        const minx: i32 = @intFromFloat(@floor(@min(x0, x1) - thick));
+        const maxx: i32 = @intFromFloat(@ceil(@max(x0, x1) + thick));
+        const miny: i32 = @intFromFloat(@floor(@min(y0, y1) - thick));
+        const maxy: i32 = @intFromFloat(@ceil(@max(y0, y1) + thick));
+        const dx = x1 - x0;
+        const dy = y1 - y0;
+        const len2 = @max(dx * dx + dy * dy, 0.0001);
+        var py = miny;
+        while (py <= maxy) : (py += 1) {
+            var px = minx;
+            while (px <= maxx) : (px += 1) {
+                const fx = @as(f32, @floatFromInt(px)) + 0.5;
+                const fy = @as(f32, @floatFromInt(py)) + 0.5;
+                const t = std.math.clamp(((fx - x0) * dx + (fy - y0) * dy) / len2, 0.0, 1.0);
+                const cxp = x0 + t * dx;
+                const cyp = y0 + t * dy;
+                const d = @sqrt((fx - cxp) * (fx - cxp) + (fy - cyp) * (fy - cyp));
+                const cov = std.math.clamp(thick * 0.5 - d + 0.5, 0.0, 1.0);
+                if (cov > 0.003) self.pset(px, py, .{ .r = c.r, .g = c.g, .b = c.b, .a = @intFromFloat(cov * @as(f32, @floatFromInt(c.a))) });
+            }
+        }
+    }
+
     /// Soft drop shadow behind a rounded rect (draw before the element).
     pub fn dropShadow(self: *Canvas, x: i32, y: i32, w: i32, h: i32, radius: i32, spread: i32) void {
         var s: i32 = spread;
@@ -251,6 +296,15 @@ pub const Canvas = struct {
         }
     }
 };
+
+fn inTri(px: f32, py: f32, x0: f32, y0: f32, x1: f32, y1: f32, x2: f32, y2: f32) bool {
+    const d1 = (px - x1) * (y0 - y1) - (x0 - x1) * (py - y1);
+    const d2 = (px - x2) * (y1 - y2) - (x1 - x2) * (py - y2);
+    const d3 = (px - x0) * (y2 - y0) - (x2 - x0) * (py - y0);
+    const neg = (d1 < 0) or (d2 < 0) or (d3 < 0);
+    const pos = (d1 > 0) or (d2 > 0) or (d3 > 0);
+    return !(neg and pos);
+}
 
 fn roundedCoverage(px: f32, py: f32, w: f32, h: f32, r: f32) f32 {
     if (r <= 0) return 1.0;

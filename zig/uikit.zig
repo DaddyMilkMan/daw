@@ -147,6 +147,20 @@ pub const Ui = struct {
         return changed;
     }
 
+    /// Button background only (no label) — caller draws an icon on top. Animated.
+    pub fn iconSlot(self: *Ui, id: u32, x: i32, y: i32, w: i32, h: i32, active: bool) bool {
+        const hov = self.inside(x, y, w, h);
+        if (hov) self.hot = id;
+        if (hov and self.pressed) self.active = id;
+        const clicked = self.active == id and self.released and hov;
+        const a = self.anim(id);
+        a.hover = ease(a.hover, if (hov) 1 else 0, self.dt, 14);
+        a.press = ease(a.press, if (self.active == id) 1 else 0, self.dt, 24);
+        const base = if (active) Color.rgb(96, 210, 235) else lerp(Color.rgb(38, 42, 52), Color.rgb(60, 66, 80), a.hover);
+        self.cv.fillRoundedRect(x, y, w, h, 7, lerp(base, Color.rgb(255, 255, 255), a.press * 0.14));
+        return clicked;
+    }
+
     /// Rotary knob, `value` 0..1, vertical drag changes it. Ring-progress style.
     pub fn knob(self: *Ui, id: u32, cx: i32, cy: i32, radius: i32, value: *f32) bool {
         const dx = self.in.mx - cx;
