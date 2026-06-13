@@ -178,6 +178,70 @@ pub const Canvas = struct {
         }
     }
 
+    /// Separable box blur over a region, in place. (CPU now; this is exactly the
+    /// kind of effect a GPU shader does for free — see window_gl.zig.)
+    pub fn boxBlur(self: *Canvas, rx: i32, ry: i32, rw0: i32, rh0: i32, radius: i32) void {
+        const x0: usize = @intCast(@max(rx, 0));
+        const y0: usize = @intCast(@max(ry, 0));
+        const x1: usize = @intCast(@min(rx + rw0, @as(i32, @intCast(self.width))));
+        const y1: usize = @intCast(@min(ry + rh0, @as(i32, @intCast(self.height))));
+        if (x1 <= x0 or y1 <= y0) return;
+        const rw = x1 - x0;
+        const rh = y1 - y0;
+        const r: i32 = @max(radius, 1);
+        const tmp = self.allocator.alloc(u8, rw * rh * 3) catch return;
+        defer self.allocator.free(tmp);
+
+        var yy: usize = 0;
+        while (yy < rh) : (yy += 1) {
+            var xx: usize = 0;
+            while (xx < rw) : (xx += 1) {
+                var sr: u32 = 0;
+                var sg: u32 = 0;
+                var sb: u32 = 0;
+                var cnt: u32 = 0;
+                var k: i32 = -r;
+                while (k <= r) : (k += 1) {
+                    const sx = @as(i32, @intCast(xx)) + k;
+                    if (sx < 0 or sx >= @as(i32, @intCast(rw))) continue;
+                    const idx = ((y0 + yy) * self.width + (x0 + @as(usize, @intCast(sx)))) * 4;
+                    sr += self.pixels[idx];
+                    sg += self.pixels[idx + 1];
+                    sb += self.pixels[idx + 2];
+                    cnt += 1;
+                }
+                const ti = (yy * rw + xx) * 3;
+                tmp[ti] = @intCast(sr / cnt);
+                tmp[ti + 1] = @intCast(sg / cnt);
+                tmp[ti + 2] = @intCast(sb / cnt);
+            }
+        }
+        yy = 0;
+        while (yy < rh) : (yy += 1) {
+            var xx: usize = 0;
+            while (xx < rw) : (xx += 1) {
+                var sr: u32 = 0;
+                var sg: u32 = 0;
+                var sb: u32 = 0;
+                var cnt: u32 = 0;
+                var k: i32 = -r;
+                while (k <= r) : (k += 1) {
+                    const sy = @as(i32, @intCast(yy)) + k;
+                    if (sy < 0 or sy >= @as(i32, @intCast(rh))) continue;
+                    const ti = (@as(usize, @intCast(sy)) * rw + xx) * 3;
+                    sr += tmp[ti];
+                    sg += tmp[ti + 1];
+                    sb += tmp[ti + 2];
+                    cnt += 1;
+                }
+                const idx = ((y0 + yy) * self.width + (x0 + xx)) * 4;
+                self.pixels[idx] = @intCast(sr / cnt);
+                self.pixels[idx + 1] = @intCast(sg / cnt);
+                self.pixels[idx + 2] = @intCast(sb / cnt);
+            }
+        }
+    }
+
     /// Soft drop shadow behind a rounded rect (draw before the element).
     pub fn dropShadow(self: *Canvas, x: i32, y: i32, w: i32, h: i32, radius: i32, spread: i32) void {
         var s: i32 = spread;

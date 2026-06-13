@@ -183,6 +183,18 @@ pub fn build(b: *std.Build) void {
     const kit_step = b.step("kit", "Render the widget/layout demo");
     kit_step.dependOn(&run_kit.step);
 
+    // Glassmorphism demo (software blur).
+    const glass = b.addExecutable(.{
+        .name = "zenith_glass",
+        .root_source_file = b.path("main_glass.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(glass);
+    const run_glass = b.addRunArtifact(glass);
+    const glass_step = b.step("glass", "Render the glassmorphism demo");
+    glass_step.dependOn(&run_glass.step);
+
     // Live native window (X11).
     const window = b.addExecutable(.{
         .name = "zenith_window",
