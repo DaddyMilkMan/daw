@@ -187,6 +187,52 @@ const icons = struct {
 fn frac(x: f32) f32 {
     return x - @floor(x);
 }
+
+// ---- a small, consistent thin-stroke icon set (browser categories) ---------
+const ico = struct {
+    fn sound(g: *Gpu, cx: f32, cy: f32, c: Color) void { // level bars
+        g.rect(cx - 4.6, cy - 2, 1.7, 4, 0.85, c);
+        g.rect(cx - 1.6, cy - 5, 1.7, 10, 0.85, c);
+        g.rect(cx + 1.4, cy - 3.5, 1.7, 7, 0.85, c);
+        g.rect(cx + 4.4, cy - 1, 1.7, 2, 0.85, c);
+    }
+    fn drum(g: *Gpu, cx: f32, cy: f32, c: Color) void { // 2x2 pads
+        g.stroke(cx - 5, cy - 5, 4.4, 4.4, 1.3, 1.2, c);
+        g.stroke(cx + 0.7, cy - 5, 4.4, 4.4, 1.3, 1.2, c);
+        g.stroke(cx - 5, cy + 0.7, 4.4, 4.4, 1.3, 1.2, c);
+        g.stroke(cx + 0.7, cy + 0.7, 4.4, 4.4, 1.3, 1.2, c);
+    }
+    fn instrument(g: *Gpu, cx: f32, cy: f32, c: Color) void { // piano keys
+        var k: f32 = 0;
+        while (k < 4) : (k += 1) g.rect(cx - 5 + k * 2.7, cy - 5, 1.9, 10, 0.7, c);
+    }
+    fn fx(g: *Gpu, cx: f32, cy: f32, c: Color) void { // knob
+        g.stroke(cx - 5, cy - 5, 10, 10, 5, 1.3, c);
+        g.line(cx, cy, cx + 2.6, cy - 3.2, 1.4, c);
+    }
+    fn midi(g: *Gpu, cx: f32, cy: f32, c: Color) void { // note
+        g.rect(cx - 4.2, cy + 1.4, 4.6, 3.6, 1.8, c);
+        g.rect(cx - 0.1, cy - 5, 1.6, 7.6, 0, c);
+        g.rect(cx - 0.1, cy - 5, 4.2, 1.6, 0, c);
+    }
+    fn sample(g: *Gpu, cx: f32, cy: f32, c: Color) void { // waveform
+        g.rect(cx - 5, cy - 1.5, 1.5, 3, 0, c);
+        g.rect(cx - 2.6, cy - 5, 1.5, 10, 0, c);
+        g.rect(cx - 0.2, cy - 3, 1.5, 6, 0, c);
+        g.rect(cx + 2.2, cy - 4.5, 1.5, 9, 0, c);
+        g.rect(cx + 4.6, cy - 2, 1.5, 4, 0, c);
+    }
+    fn cat(g: *Gpu, kind: u8, cx: f32, cy: f32, c: Color) void {
+        switch (kind) {
+            0 => sound(g, cx, cy, c),
+            1 => drum(g, cx, cy, c),
+            2 => instrument(g, cx, cy, c),
+            3 => fx(g, cx, cy, c),
+            4 => midi(g, cx, cy, c),
+            else => sample(g, cx, cy, c),
+        }
+    }
+};
 /// Procedural but deterministic audio waveform fill (mirrored around center) —
 /// drum-like transients with decay + noise texture, so audio clips read as real.
 fn drawWaveform(g: *Gpu, x: f32, y: f32, w: f32, h: f32, seed: f32, col: Color) void {
@@ -336,7 +382,7 @@ pub const View = struct {
                         const sel = state.nav_sel == @as(i32, @intCast(i));
                         c.open(.{ .dir = .row, .h = px(32), .pad = 8, .gap = 9, .radius = 7, .aligni = .center, .id = 1000 + @as(u64, i), .bg = if (sel) Color.rgb(40, 52, 60) else panel_t, .bg2 = if (sel) Color.rgb(33, 43, 51) else panel_b, .hover_bg = Color.rgb(44, 49, 60), .border = if (sel) bord else null });
                         {
-                            c.box(.{ .w = px(8), .h = px(8), .radius = 2, .bg = nv.col });
+                            c.box(.{ .w = px(15), .h = px(15), .id = 1100 + @as(u64, i) });
                             c.label(nv.n, self.fb, if (sel) txt else dim, .{});
                         }
                         c.close();
@@ -505,6 +551,14 @@ pub const View = struct {
         }
         // nav selection (flex hover handled in chrome; click via flex)
         if (c.click >= 1000 and c.click < 1010) state.nav_sel = @intCast(c.click - 1000);
+        // browser category icons (thin-stroke, in category color)
+        const navico = [_]struct { k: u8, col: Color }{
+            .{ .k = 0, .col = accent }, .{ .k = 1, .col = pal[0] }, .{ .k = 2, .col = pal[3] },
+            .{ .k = 3, .col = pal[1] }, .{ .k = 4, .col = pal[4] }, .{ .k = 5, .col = C.accent2 },
+        };
+        for (navico, 0..) |ni, i| {
+            if (c.rectOf(1100 + @as(u64, i))) |r| ico.cat(g, ni.k, r[0] + r[2] / 2, r[1] + r[3] / 2, ni.col);
+        }
 
         // ruler
         if (c.rectOf(950)) |r| ruler(g, self.fb, r);
