@@ -13,6 +13,7 @@ pub const Color = r2d.Color;
 const GL_FLOAT: u32 = 0x1406;
 const GL_FALSE: u8 = 0;
 const GL_TRIANGLE_STRIP: u32 = 0x0005;
+const GL_TRIANGLES: u32 = 0x0004;
 const GL_ARRAY_BUFFER: u32 = 0x8892;
 const GL_STATIC_DRAW: u32 = 0x88E4;
 const GL_DYNAMIC_DRAW: u32 = 0x88E8;
@@ -51,6 +52,7 @@ extern fn glBindTexture(target: c_uint, t: c_uint) void;
 extern fn glTexImage2D(target: c_uint, level: c_int, internal: c_int, w: c_int, h: c_int, border: c_int, fmt: c_uint, ty: c_uint, data: ?*const anyopaque) void;
 extern fn glTexParameteri(target: c_uint, pname: c_uint, param: c_int) void;
 extern fn glPixelStorei(pname: c_uint, param: c_int) void;
+extern fn glDrawArrays(mode: c_uint, first: c_int, count: c_int) void;
 
 // ---- modern GL (loaded via glXGetProcAddress) ------------------------------
 var glCreateShader: *const fn (c_uint) callconv(.c) c_uint = undefined;
@@ -159,20 +161,21 @@ const rect_vs: [*:0]const u8 =
     \\layout(location=4) in float iBorder;
     \\layout(location=5) in vec4 iFill;
     \\layout(location=6) in vec4 iBorderCol;
+    \\layout(location=7) in vec4 iFill2;
     \\uniform vec2 uRes;
-    \\out vec2 vLocal; out vec2 vHalf; out float vRadius; out float vBorder; out vec4 vFill; out vec4 vBorderCol;
+    \\out vec2 vLocal; out vec2 vHalf; out float vRadius; out float vBorder; out vec4 vFill; out vec4 vBorderCol; out vec4 vFill2; out float vT;
     \\void main(){
     \\  vec2 px = iMin + quad * iSize;
     \\  vHalf = iSize * 0.5;
     \\  vLocal = px - (iMin + vHalf);
-    \\  vRadius = iRadius; vBorder = iBorder; vFill = iFill; vBorderCol = iBorderCol;
+    \\  vRadius = iRadius; vBorder = iBorder; vFill = iFill; vBorderCol = iBorderCol; vFill2 = iFill2; vT = quad.y;
     \\  vec2 clip = (px / uRes) * 2.0 - 1.0;
     \\  gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
     \\}
 ;
 const rect_fs: [*:0]const u8 =
     \\#version 330 core
-    \\in vec2 vLocal; in vec2 vHalf; in float vRadius; in float vBorder; in vec4 vFill; in vec4 vBorderCol;
+    \\in vec2 vLocal; in vec2 vHalf; in float vRadius; in float vBorder; in vec4 vFill; in vec4 vBorderCol; in vec4 vFill2; in float vT;
     \\out vec4 frag;
     \\float sdRound(vec2 p, vec2 b, float r){ vec2 q = abs(p)-b+r; return min(max(q.x,q.y),0.0)+length(max(q,vec2(0.0)))-r; }
     \\void main(){
@@ -180,10 +183,24 @@ const rect_fs: [*:0]const u8 =
     \\  float aOuter = clamp(0.5 - d, 0.0, 1.0);
     \\  float aInner = clamp(0.5 - (d + max(vBorder,0.0)), 0.0, 1.0);
     \\  float band = clamp(aOuter - aInner, 0.0, 1.0);
-    \\  vec4 col = mix(vFill, vBorderCol, band);
+    \\  vec4 fillc = mix(vFill, vFill2, vT);
+    \\  vec4 col = mix(fillc, vBorderCol, band);
     \\  float a = aOuter * col.a;
     \\  frag = vec4(col.rgb * a, a);
     \\}
+;
+const tri_vs: [*:0]const u8 =
+    \\#version 330 core
+    \\layout(location=0) in vec2 pos;
+    \\layout(location=1) in vec4 col;
+    \\uniform vec2 uRes;
+    \\out vec4 vColor;
+    \\void main(){ vColor = col; vec2 clip = (pos/uRes)*2.0-1.0; gl_Position = vec4(clip.x,-clip.y,0.0,1.0); }
+;
+const tri_fs: [*:0]const u8 =
+    \\#version 330 core
+    \\in vec4 vColor; out vec4 frag;
+    \\void main(){ frag = vec4(vColor.rgb*vColor.a, vColor.a); }
 ;
 const shadow_vs: [*:0]const u8 =
     \\#version 330 core
@@ -258,9 +275,10 @@ const glyph_fs: [*:0]const u8 =
     \\}
 ;
 
-const RECT_FLOATS = 14; // min2 size2 radius border fill4 border4
+const RECT_FLOATS = 18; // min2 size2 radius border fill4 border4 fill2_4
 const SHADOW_FLOATS = 10; // lower2 upper2 sigma corner color4
 const GLYPH_FLOATS = 12; // dst4 uv4 color4
+const TRI_FLOATS = 6; // x y r g b a  (per vertex)
 
 const FontT = @import("font.zig").Font;
 
@@ -272,10 +290,12 @@ pub const Gpu = struct {
     rect_prog: c_uint,
     shadow_prog: c_uint,
     glyph_prog: c_uint,
+    tri_prog: c_uint,
     rect_u_res: c_int,
     shadow_u_res: c_int,
     glyph_u_res: c_int,
     glyph_u_atlas: c_int,
+    tri_u_res: c_int,
     quad_vbo: c_uint,
     rect_vao: c_uint,
     rect_ivbo: c_uint,
@@ -283,8 +303,11 @@ pub const Gpu = struct {
     shadow_ivbo: c_uint,
     glyph_vao: c_uint,
     glyph_ivbo: c_uint,
+    tri_vao: c_uint,
+    tri_vbo: c_uint,
     rects: std.ArrayList(f32),
     shadows: std.ArrayList(f32),
+    tris: std.ArrayList(f32),
     glyph_batches: std.ArrayList(GlyphBatch),
     width: f32 = 0,
     height: f32 = 0,
@@ -294,6 +317,7 @@ pub const Gpu = struct {
         const rect_prog = try linkProgram(rect_vs, rect_fs);
         const shadow_prog = try linkProgram(shadow_vs, shadow_fs);
         const glyph_prog = try linkProgram(glyph_vs, glyph_fs);
+        const tri_prog = try linkProgram(tri_vs, tri_fs);
 
         // unit quad (triangle strip): (0,0)(1,0)(0,1)(1,1)
         const quad = [_]f32{ 0, 0, 1, 0, 0, 1, 1, 1 };
@@ -307,10 +331,12 @@ pub const Gpu = struct {
             .rect_prog = rect_prog,
             .shadow_prog = shadow_prog,
             .glyph_prog = glyph_prog,
+            .tri_prog = tri_prog,
             .rect_u_res = glGetUniformLocation(rect_prog, "uRes"),
             .shadow_u_res = glGetUniformLocation(shadow_prog, "uRes"),
             .glyph_u_res = glGetUniformLocation(glyph_prog, "uRes"),
             .glyph_u_atlas = glGetUniformLocation(glyph_prog, "uAtlas"),
+            .tri_u_res = glGetUniformLocation(tri_prog, "uRes"),
             .quad_vbo = quad_vbo,
             .rect_vao = 0,
             .rect_ivbo = 0,
@@ -318,13 +344,17 @@ pub const Gpu = struct {
             .shadow_ivbo = 0,
             .glyph_vao = 0,
             .glyph_ivbo = 0,
+            .tri_vao = 0,
+            .tri_vbo = 0,
             .rects = std.ArrayList(f32).init(a),
             .shadows = std.ArrayList(f32).init(a),
+            .tris = std.ArrayList(f32).init(a),
             .glyph_batches = std.ArrayList(GlyphBatch).init(a),
         };
         g.setupRectVao();
         g.setupShadowVao();
         g.setupGlyphVao();
+        g.setupTriVao();
         return g;
     }
 
@@ -341,8 +371,8 @@ pub const Gpu = struct {
         glGenBuffers(1, &self.rect_ivbo);
         glBindBuffer(GL_ARRAY_BUFFER, self.rect_ivbo);
         const stride: c_int = RECT_FLOATS * @sizeOf(f32);
-        // loc1 min(2) loc2 size(2) loc3 radius(1) loc4 border(1) loc5 fill(4) loc6 bordercol(4)
-        const specs = [_][3]u32{ .{ 1, 2, 0 }, .{ 2, 2, 2 }, .{ 3, 1, 4 }, .{ 4, 1, 5 }, .{ 5, 4, 6 }, .{ 6, 4, 10 } };
+        // loc1 min(2) loc2 size(2) loc3 radius loc4 border loc5 fill(4) loc6 bordercol(4) loc7 fill2(4)
+        const specs = [_][3]u32{ .{ 1, 2, 0 }, .{ 2, 2, 2 }, .{ 3, 1, 4 }, .{ 4, 1, 5 }, .{ 5, 4, 6 }, .{ 6, 4, 10 }, .{ 7, 4, 14 } };
         inline for (specs) |s| {
             glEnableVertexAttribArray(s[0]);
             glVertexAttribPointer(s[0], @intCast(s[1]), GL_FLOAT, GL_FALSE, stride, s[2] * @sizeOf(f32));
@@ -377,6 +407,19 @@ pub const Gpu = struct {
             glVertexAttribDivisor(s[0], 1);
         }
     }
+    fn setupTriVao(self: *Gpu) void {
+        glGenVertexArrays(1, &self.tri_vao);
+        glBindVertexArray(self.tri_vao);
+        glGenBuffers(1, &self.tri_vbo);
+        glBindBuffer(GL_ARRAY_BUFFER, self.tri_vbo);
+        const stride: c_int = TRI_FLOATS * @sizeOf(f32);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, 0);
+        glVertexAttribDivisor(0, 0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, stride, 2 * @sizeOf(f32));
+        glVertexAttribDivisor(1, 0);
+    }
     fn glyphBatch(self: *Gpu, tex: c_uint) *GlyphBatch {
         for (self.glyph_batches.items) |*b| if (b.tex == tex) return b;
         self.glyph_batches.append(.{ .tex = tex, .data = std.ArrayList(f32).init(self.allocator) }) catch {};
@@ -393,6 +436,7 @@ pub const Gpu = struct {
         self.height = @floatFromInt(h);
         self.rects.clearRetainingCapacity();
         self.shadows.clearRetainingCapacity();
+        self.tris.clearRetainingCapacity();
         for (self.glyph_batches.items) |*b| b.data.clearRetainingCapacity();
         glViewport(0, 0, @intCast(w), @intCast(h));
         glEnable(GL_FRAMEBUFFER_SRGB); // shaders output linear; GPU encodes to sRGB
@@ -410,7 +454,33 @@ pub const Gpu = struct {
     pub fn rectBordered(self: *Gpu, x: f32, y: f32, w: f32, h: f32, radius: f32, fill: Color, border_w: f32, border: Color) void {
         const f = lin(fill);
         const b = lin(border);
-        self.rects.appendSlice(&.{ x, y, w, h, radius, border_w, f[0], f[1], f[2], f[3], b[0], b[1], b[2], b[3] }) catch {};
+        self.rects.appendSlice(&.{ x, y, w, h, radius, border_w, f[0], f[1], f[2], f[3], b[0], b[1], b[2], b[3], f[0], f[1], f[2], f[3] }) catch {};
+    }
+    /// Vertically-graded rounded rect (top -> bottom), with optional border.
+    pub fn rectGrad(self: *Gpu, x: f32, y: f32, w: f32, h: f32, radius: f32, top: Color, bot: Color, border_w: f32, border: Color) void {
+        const t = lin(top);
+        const bt = lin(bot);
+        const b = lin(border);
+        self.rects.appendSlice(&.{ x, y, w, h, radius, border_w, t[0], t[1], t[2], t[3], b[0], b[1], b[2], b[3], bt[0], bt[1], bt[2], bt[3] }) catch {};
+    }
+    /// Solid triangle (pixel coords). Use for icons.
+    pub fn tri(self: *Gpu, x0: f32, y0: f32, x1: f32, y1: f32, x2: f32, y2: f32, color: Color) void {
+        const c = lin(color);
+        self.tris.appendSlice(&.{
+            x0, y0, c[0], c[1], c[2], c[3],
+            x1, y1, c[0], c[1], c[2], c[3],
+            x2, y2, c[0], c[1], c[2], c[3],
+        }) catch {};
+    }
+    /// Thick line as two triangles (pixel coords).
+    pub fn line(self: *Gpu, x0: f32, y0: f32, x1: f32, y1: f32, thick: f32, color: Color) void {
+        const dx = x1 - x0;
+        const dy = y1 - y0;
+        const len = @max(@sqrt(dx * dx + dy * dy), 0.0001);
+        const nx = -dy / len * thick * 0.5;
+        const ny = dx / len * thick * 0.5;
+        self.tri(x0 + nx, y0 + ny, x1 + nx, y1 + ny, x1 - nx, y1 - ny, color);
+        self.tri(x0 + nx, y0 + ny, x1 - nx, y1 - ny, x0 - nx, y0 - ny, color);
     }
     /// Analytic gaussian drop shadow for a rounded rect. sigma = blur std-dev.
     pub fn shadow(self: *Gpu, x: f32, y: f32, w: f32, h: f32, radius: f32, sigma: f32, color: Color) void {
@@ -436,6 +506,14 @@ pub const Gpu = struct {
             glBufferData(GL_ARRAY_BUFFER, @intCast(self.rects.items.len * @sizeOf(f32)), self.rects.items.ptr, GL_DYNAMIC_DRAW);
             glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, @intCast(self.rects.items.len / RECT_FLOATS));
         }
+        if (self.tris.items.len > 0) {
+            glUseProgram(self.tri_prog);
+            glUniform2f(self.tri_u_res, self.width, self.height);
+            glBindVertexArray(self.tri_vao);
+            glBindBuffer(GL_ARRAY_BUFFER, self.tri_vbo);
+            glBufferData(GL_ARRAY_BUFFER, @intCast(self.tris.items.len * @sizeOf(f32)), self.tris.items.ptr, GL_DYNAMIC_DRAW);
+            glDrawArrays(GL_TRIANGLES, 0, @intCast(self.tris.items.len / TRI_FLOATS));
+        }
         // glyphs last (on top), one instanced draw per font atlas
         var any_glyphs = false;
         for (self.glyph_batches.items) |*b| if (b.data.items.len > 0) {
@@ -460,6 +538,7 @@ pub const Gpu = struct {
     pub fn deinit(self: *Gpu) void {
         self.rects.deinit();
         self.shadows.deinit();
+        self.tris.deinit();
         for (self.glyph_batches.items) |*b| b.data.deinit();
         self.glyph_batches.deinit();
     }

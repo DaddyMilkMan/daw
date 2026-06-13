@@ -71,10 +71,14 @@ pub fn main() !void {
         fd.text(&g, 40, 18, "Zenith GPU", accent);
         fu.text(&g, 760, 26, "SDF shapes  -  analytic shadows", Color.rgb(140, 148, 164));
 
-        // a big glass card with a soft elevation shadow + accent bar
+        // a big glass card with a soft elevation shadow + GRADIENT fill + accent bar
         g.shadow(40, 240, 1020, 360, 18, 28, Color.rgba(0, 0, 0, 160));
-        g.rectBordered(40, 240, 1020, 360, 18, Color.rgb(31, 34, 43), 1, border);
+        g.rectGrad(40, 240, 1020, 360, 18, Color.rgb(37, 40, 51), Color.rgb(27, 29, 38), 1, border);
         g.rect(64, 264, 200, 6, 3, accent);
+        // a transport "glass" pill with a play triangle (tri primitive) + a stop square
+        g.rectGrad(560, 250, 120, 36, 9, Color.rgb(30, 33, 42), Color.rgb(23, 25, 33), 1, border);
+        g.tri(582, 260, 582, 276, 596, 268, accent);
+        g.rect(612, 260, 16, 16, 3, Color.rgb(140, 148, 164));
 
         // nested cards with various accents + labels
         const cols = [_]Color{ Color.rgb(245, 158, 88), Color.rgb(122, 211, 140), accent, Color.rgb(178, 140, 248) };
