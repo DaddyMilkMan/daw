@@ -217,11 +217,12 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    window.linkSystemLibrary("GL");
     window.linkSystemLibrary("X11");
     window.linkLibC();
     b.installArtifact(window);
     const run_window = b.addRunArtifact(window);
-    const window_step = b.step("window", "Open the live Zenith window (X11)");
+    const window_step = b.step("window", "Open the live Zenith window (GPU/GLX)");
     window_step.dependOn(&run_window.step);
 
     // Effects demo (EQ / delay / reverb).

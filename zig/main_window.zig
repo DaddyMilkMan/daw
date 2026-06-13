@@ -6,7 +6,7 @@ const std = @import("std");
 const r2d = @import("render2d.zig");
 const uikit = @import("uikit.zig");
 const ui = @import("ui.zig");
-const win = @import("window_x11.zig");
+const win = @import("window_glx.zig");
 
 fn edgeDir(x: i32, y: i32, w: i32, h: i32) ?c_long {
     const m: i32 = 6;
