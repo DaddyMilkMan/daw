@@ -126,6 +126,27 @@ pub fn build(b: *std.Build) void {
     const arrange_step = b.step("arrange", "Run the arrangement/timeline demo");
     arrange_step.dependOn(&run_arrange.step);
 
+    // M7 — CLAP plugin hosting: a test .clap plugin + the host.
+    const clap_plugin = b.addSharedLibrary(.{
+        .name = "zenith_test_clap",
+        .root_source_file = b.path("clap_test_plugin.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(clap_plugin);
+
+    const clap_host = b.addExecutable(.{
+        .name = "zenith_clap",
+        .root_source_file = b.path("main_clap.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    clap_host.linkLibC();
+    b.installArtifact(clap_host);
+    const run_clap = b.addRunArtifact(clap_host);
+    const clap_step = b.step("clap", "Host a CLAP plugin (defaults to the test plugin)");
+    clap_step.dependOn(&run_clap.step);
+
     // Unit tests.
     const test_step = b.step("test", "Run unit tests");
     for ([_][]const u8{ "midi_alsa.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig" }) |src| {

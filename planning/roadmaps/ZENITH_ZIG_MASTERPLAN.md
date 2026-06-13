@@ -154,7 +154,7 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ Auto-save, crash recovery
 
 ### 4.9 Plugin hosting  *(JUCE: juce_audio_processors)*  — hardest area
-- ❌ **CLAP** host (open, C ABI, Zig-friendliest — **do first**)
+- 🟡 **CLAP** host (`clap_abi.zig`/`main_clap.zig`): load/instantiate/activate/process verified vs a test plugin; ❌ events, extensions, real-plugin testing
 - ❌ Plugin **scan / sandbox (out-of-process) / blacklist**
 - ❌ **VST3** host (Steinberg C++ SDK — bind the interface, don't reinvent the format)
 - ❌ **AU** host (macOS, Obj-C runtime)
@@ -201,7 +201,10 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - 🟡 **M6 — Mixer** (`mixer.zig`): N mono tracks → per-track gain + constant-power pan
   → stereo master. Verified: synth+sampler mixed, channels differ (pan), pan-law unit
   test passes. ❌ buses/sends, mute/solo, metering (later).
-- ❌ **M7 — CLAP plugin hosting** (host third-party instruments/effects)
+- 🟡 **M7 — CLAP plugin hosting** (`clap_abi.zig` + `main_clap.zig` host + `clap_test_plugin.zig`):
+  hand-declared CLAP ABI, dlopen → factory → descriptor → create → activate → process.
+  Verified: hosted plugin generated a 440Hz sine through the host. ❌ MIDI events to
+  plugins, audio/note-port extensions, directory scanning, GUI hosting, real-plugin testing.
 - ❌ **M8 — Real RT audio callback + device selection** (proper RT thread, xrun-robust)
 - 🟡 **M9 — Project model + save/load + undo** (`project.zig`): Project/Track/Note model,
   endian-explicit binary format (`ZNPR`, cross-platform), file save/load, snapshot-based
@@ -280,6 +283,12 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
 - **Arrangement done**: project model → clips (format v2); `arrangement.zig` linear
   multi-track scheduler + record-to-clip. Verified: 2-track song, clips at timeline
   positions, lead enters mid-song (pan visible in stereo), save→reload→play. `zig build arrange`.
-- IN PROGRESS: **M7 — CLAP plugin hosting** (next).
+- **M7 (CLAP host) done (foundation)**: `clap_abi.zig` (hand-declared CLAP ABI),
+  `main_clap.zig` host, `clap_test_plugin.zig` (sine .clap). Verified end-to-end: host
+  dlopens the .clap, instantiates, processes — hosted plugin rendered a 440Hz sine.
+  `zig build clap`. Next for real plugins: events, audio/note-port extensions, scanning.
+- This session shipped M1–M9 + arrangement + CLAP host. **The hardest area (plugin
+  hosting) is now proven feasible.** Remaining big pieces: GUI (long pole), cross-platform
+  backends, real-plugin CLAP/VST3/AU, depth (effects/automation).
 
 *(Add new dated entries as milestones complete.)*
