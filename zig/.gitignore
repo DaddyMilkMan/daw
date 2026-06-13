@@ -1,0 +1,7 @@
+# build artifacts
+ab_harness
+*.a
+*.a.o
+*.o
+zig-cache/
+.zig-cache/

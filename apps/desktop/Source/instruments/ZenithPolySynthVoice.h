@@ -267,7 +267,8 @@ private:
   void updateFrequency();
   void computeModulation();
   float getModulationSourceValue(ModulationSource source);
-  float computeLFOValue(double phase, LFOWaveform waveform, float &shValue);
+  float computeLFOValue(double phase, LFOWaveform waveform);
+  float applyModulationToDestination(ModulationDestination dest, float value);
 
   // Oversampling support
   void renderInnerBlock(juce::AudioBuffer<float> &buffer, int startSample,

@@ -43,7 +43,7 @@ enum class FilterType { Lowpass = 0, Bandpass, Highpass, NumTypes };
 /**
     Filter model types
 */
-enum class FilterModelType { SVF = 0, Ladder };
+enum class FilterModelType { SVF = 0, Ladder, Moog, MS20, SEM, TB303 };
 
 /**
     Quality preset for CPU optimization

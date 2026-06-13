@@ -13,7 +13,7 @@ target_sources(ZenithDAW PRIVATE
     ZenithPolySynthEditor.cpp
     ZenithPresetManager.cpp
     ZenithSampler.cpp
-    ZenithSamplerEditor_Mod.cpp
+    ZenithSamplerEditor.cpp
 )
 
 

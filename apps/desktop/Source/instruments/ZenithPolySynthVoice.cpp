@@ -210,9 +210,9 @@ void ZenithPolySynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
         currentAmplitude_ = std::abs(finalSample);
     }
 
-    // Check if voice has finished
-    if (ampEnvelope_.isActive() && !ampEnvelope_.isNoteActive() &&
-        currentAmplitude_ < 0.0001f) {
+    // Check if voice has finished: the amp envelope reports inactive once its
+    // release stage has fully decayed (noteOff() is driven from noteStopped()).
+    if (!ampEnvelope_.isActive()) {
         isActive_ = false;
         clearCurrentNote();
     }
@@ -302,7 +302,7 @@ float ZenithPolySynthVoice::computeLFOValue(double phase, LFOWaveform waveform) 
 // ENVELOPES
 //==============================================================================
 
-void ZenithPolySynthVoice::setAmpEnv(float attack, float decay, float sustain, float release) {
+void ZenithPolySynthVoice::setAmpEnvelope(float attack, float decay, float sustain, float release) {
     ampEnvParams_.attack = attack;
     ampEnvParams_.decay = decay;
     ampEnvParams_.sustain = sustain;
@@ -310,7 +310,7 @@ void ZenithPolySynthVoice::setAmpEnv(float attack, float decay, float sustain, f
     ampEnvelope_.setParameters(ampEnvParams_);
 }
 
-void ZenithPolySynthVoice::setModEnv(float attack, float decay, float sustain, float release) {
+void ZenithPolySynthVoice::setModEnvelope(float attack, float decay, float sustain, float release) {
     modEnvParams_.attack = attack;
     modEnvParams_.decay = decay;
     modEnvParams_.sustain = sustain;
@@ -344,7 +344,6 @@ void ZenithPolySynthVoice::setModulationSlot(int index, ModulationSource source,
                                           ModulationDestination dest, float amount) {
     if (index >= 0 && index < static_cast<int>(modulationMatrix_.size())) {
         modulationMatrix_[index] = ModulationSlot(source, dest, amount);
-        modulationMatrix_[index].active = (amount != 0.0f);
     }
 }
 

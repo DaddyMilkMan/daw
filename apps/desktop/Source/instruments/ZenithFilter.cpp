@@ -23,33 +23,28 @@
 
 namespace zenith {
 
-//==============================================================================
-// CONSTRUCTOR
-//==============================================================================
-
-ZenithFilter::ZenithFilter() {
-    svf_ = {};
+namespace {
+// Smooth saturating non-linearity used by the drive stage.
+inline float softClip(float x) noexcept {
+  return std::tanh(x);
 }
+
+// Normalised frequency clamp keeps every model stable near Nyquist.
+inline double clampNormFreq(double f) noexcept {
+  return juce::jlimit(0.0001, 0.49, f);
+}
+} // namespace
+
+//==============================================================================
+// STATE
+//==============================================================================
 
 void ZenithFilter::reset() {
-    svf_ = {};
-    oversampler_.reset();
-}
-
-void ZenithFilter::setOversampling(int factor) {
-    factor = juce::jlimit(1, 4, factor);
-    oversamplingFactor_ = factor;
-
-    if (factor >= 2) {
-        oversampler2x_ = std::make_unique<juce::dsp::Oversampling<float>>(
-            2, juce::dsp::Oversampling<float>::filterHalfBandPolyphaseIIR
-        );
-    }
-    if (factor >= 4) {
-        oversampler4x_ = std::make_unique<juce::dsp::Oversampling<float>>(
-            4, juce::dsp::Oversampling<float>::filterHalfBandPolyphaseIIR
-        );
-    }
+  svf_ = {};
+  moog_ = {};
+  tb303_ = {};
+  ms20_ = {};
+  sem_ = {};
 }
 
 //==============================================================================
@@ -57,34 +52,37 @@ void ZenithFilter::setOversampling(int factor) {
 //==============================================================================
 
 float ZenithFilter::processSample(float input, float midiNote) {
-    float adjustedCutoff = calculateCutoffWithKeyTrack(midiNote);
+  // Key-tracking is folded into the working cutoff for this sample.
+  const float trackedCutoff = calculateCutoffWithKeyTrack(midiNote);
+  const float previousCutoff = cutoff_;
+  cutoff_ = trackedCutoff;
 
-    // Apply drive (pre-filter saturation)
-    float driven = applyDrive(input);
+  const float driven = applyDrive(input);
 
-    // Process at base rate
-    float output;
-    switch (model_) {
-        case FilterModelType::SVF:   output = processSVF(driven); break;
-        case FilterModelType::Moog:  output = processMoog(driven); break;
-        case FilterModelType::MS20:  output = processMS20(driven); break;
-        case FilterModelType::SEM:   output = processSEM(driven); break;
-        case FilterModelType::TB303: output = processTB303(driven); break;
-        default: output = processSVF(driven);
-    }
+  float output;
+  switch (model_) {
+    case FilterModelType::Moog:  output = processMoog(driven); break;
+    case FilterModelType::MS20:  output = processMS20(driven); break;
+    case FilterModelType::SEM:   output = processSEM(driven); break;
+    case FilterModelType::TB303: output = processTB303(driven); break;
+    case FilterModelType::SVF:
+    case FilterModelType::Ladder:
+    default:                     output = processSVF(driven); break;
+  }
 
-    return output;
+  cutoff_ = previousCutoff;
+  return output;
 }
 
 float ZenithFilter::calculateCutoffWithKeyTrack(float midiNote) {
-    float offset = (midiNote - 60.0f) * keyTrackAmount_;
-    return juce::jlimit(20.0f, 20000.0f, cutoff_ * std::exp2(offset / 12.0f));
+  const float offset = (midiNote - 60.0f) * keyTrackAmount_;
+  return juce::jlimit(20.0f, 20000.0f, cutoff_ * std::exp2(offset / 12.0f));
 }
 
 float ZenithFilter::applyDrive(float sample) {
-    if (drive_ <= 0.0f) return sample;
-    float gain = 1.0f + drive_ * 9.0f;
-    return softClip(sample * gain) / gain;
+  if (drive_ <= 0.0f) return sample;
+  const float gain = 1.0f + drive_ * 9.0f;
+  return softClip(sample * gain) / gain;
 }
 
 //==============================================================================
@@ -92,164 +90,123 @@ float ZenithFilter::applyDrive(float sample) {
 //==============================================================================
 
 float ZenithFilter::processSVF(float input) {
-    double fs = sampleRate_ * oversamplingFactor_;
-    double f = cutoff_ / fs;
-    double q = resonance_ * 10.0 + 1.0;
-    double r = 1.0 / q;
+  const double fs = sampleRate_ * oversamplingFactor_;
+  const double f = clampNormFreq(cutoff_ / fs);
+  const double q = resonance_ * 10.0 + 1.0;
+  const double r = 1.0 / q;
 
-    double& low = svf_.low;
-    double& high = svf_.high;
-    double& band = svf_.band;
+  const double low1 = svf_.low + f * svf_.band;
+  const double high1 = input - low1 - r * svf_.band;
+  const double band1 = svf_.band + f * high1;
 
-    // Chamberlin SVF (improved)
-    double low1 = low + f * band;
-    double high1 = input - low1 - r * band;
-    double band1 = band + f * high1;
+  svf_.low = low1;
+  svf_.high = high1;
+  svf_.band = band1;
 
-    low = low1;
-    high = high1;
-    band = band1;
-
-    switch (type_) {
-        case FilterType::LowPass:  return static_cast<float>(low);
-        case FilterType::HighPass: return static_cast<float>(high);
-        case FilterType::BandPass: return static_cast<float>(band);
-        case FilterType::Notch:    return static_cast<float>(high + low);
-        default: return static_cast<float>(low);
-    }
+  switch (type_) {
+    case FilterType::Lowpass:  return static_cast<float>(svf_.low);
+    case FilterType::Highpass: return static_cast<float>(svf_.high);
+    case FilterType::Bandpass: return static_cast<float>(svf_.band);
+    default:                   return static_cast<float>(svf_.low);
+  }
 }
 
 //==============================================================================
-// MOOG LADDER - TRANSPARENT LADDER
+// MOOG LADDER - one-pole cascade with non-linear feedback
 //==============================================================================
 
 float ZenithFilter::processMoog(float input) {
-    double fs = sampleRate_ * oversamplingFactor_;
-    double wc = 2.0 * juce::MathConstants<double>::pi * cutoff_;
-    double g = std::tan(wc / (4.0 * fs));
-    double g2 = g * g;
-    double g3 = g2 * g;
-    double g4 = g3 * g;
+  const double fs = sampleRate_ * oversamplingFactor_;
+  const double wc = 2.0 * juce::MathConstants<double>::pi * cutoff_;
+  const double g = std::tan(clampNormFreq(wc / (4.0 * fs)));
 
-    double res = resonance_;
-    double feedback = res * 0.5;
+  const double res = resonance_;
+  const double feedback = res * 4.0;
 
-    struct { double s1 = 0, double s2 = 0, double s3 = 0, double s4 = 0; } st;
+  const double y = input - feedback * moog_.s4;
 
-    double y = input - feedback * st.s4;
+  moog_.s1 += g * (y - moog_.s1);
+  moog_.s2 += g * (moog_.s1 - moog_.s2);
+  moog_.s3 += g * (moog_.s2 - moog_.s3);
+  moog_.s4 += g * (moog_.s3 - moog_.s4);
 
-    double s1_in = y;
-    st.s1 += g * (s1_in - st.s1);
-    double s1_out = st.s1;
+  const double yOut = std::tanh(moog_.s4);
 
-    double s2_in = s1_out;
-    st.s2 += g * (s2_in - st.s2);
-    double s2_out = st.s2;
-
-    double s3_in = s2_out;
-    st.s3 += g * (s3_in - st.s3);
-    double s3_out = st.s3;
-
-    double s4_in = s3_out;
-    st.s4 += g * (s4_in - st.s4);
-    double s4_out = st.s4;
-
-    // Nonlinear feedback
-    double tanh4 = std::tanh(s4_out);
-    double yOut = s4_out + feedback * tanh4;
-
-    switch (type_) {
-        case FilterType::LowPass:  return static_cast<float>(yOut);
-        case FilterType::HighPass: return static_cast<float>(input - yOut);
-        case FilterType::BandPass: return static_cast<float>(s2_out - s4_out);
-        default: return static_cast<float>(yOut);
-    }
+  switch (type_) {
+    case FilterType::Highpass: return static_cast<float>(input - yOut);
+    case FilterType::Bandpass: return static_cast<float>(moog_.s2 - moog_.s4);
+    case FilterType::Lowpass:
+    default:                   return static_cast<float>(yOut);
+  }
 }
 
 //==============================================================================
-// KORG MS-20 - HIGH PASS + LOW PASS
+// KORG MS-20 - high-pass feeding a resonant 2-pole low-pass
 //==============================================================================
 
 float ZenithFilter::processMS20(float input) {
-    double fs = sampleRate_ * oversamplingFactor_;
-    double g = std::tan(juce::MathConstants<double>::pi * cutoff_ / fs);
+  const double fs = sampleRate_ * oversamplingFactor_;
+  const double g = std::tan(clampNormFreq(juce::MathConstants<double>::pi * cutoff_ / fs));
 
-    struct { double hp = 0, double lp1 = 0, double lp2 = 0; } st;
+  const double hp = input - ms20_.hp;
+  ms20_.hp += g * hp;
 
-    // Highpass section
-    double hp = input - st.hp;
-    st.hp += g * hp;
+  ms20_.lp1 += g * (hp - ms20_.lp1);
+  ms20_.lp2 += g * (ms20_.lp1 - ms20_.lp2);
 
-    // Lowpass sections (2-pole)
-    double lp1 = st.lp1 + g * (hp - st.lp1);
-    st.lp1 = lp1;
+  const double res = resonance_ * 0.95;
+  const double output = ms20_.lp2 - res * ms20_.lp2;
 
-    double lp2 = st.lp2 + g * (lp1 - st.lp2);
-    st.lp2 = lp2;
-
-    // Resonance
-    double res = resonance_ * 0.95;
-    double feedback = res * lp2;
-    double output = lp2 - feedback;
-
-    return static_cast<float>(output);
+  return static_cast<float>(output);
 }
 
 //==============================================================================
-// OBERHEIM SEM - STATE VARIABLE
+// OBERHEIM SEM - topology-preserving state-variable filter
 //==============================================================================
 
 float ZenithFilter::processSEM(float input) {
-    double fs = sampleRate_ * oversamplingFactor_;
-    double f = std::tan(juce::MathConstants<double>::pi * cutoff_ / (2.0 * fs));
+  const double fs = sampleRate_ * oversamplingFactor_;
+  const double g = std::tan(clampNormFreq(juce::MathConstants<double>::pi * cutoff_ / fs));
+  const double k = 2.0 - 2.0 * juce::jlimit(0.0, 0.97, static_cast<double>(resonance_)); // damping
 
-    struct { double low = 0, double high = 0; } st;
+  // Zavalishin TPT SVF: s1/s2 are the integrator states.
+  const double hp = (input - (k + g) * sem_.s1 - sem_.s2) / (1.0 + g * (k + g));
+  const double bp = g * hp + sem_.s1;
+  const double lp = g * bp + sem_.s2;
 
-    double lowOut = st.low + f * high;
-    double bandOut = high - f * (high + lowOut - input);
-    st.low = lowOut;
-    st.high = bandOut;
+  sem_.s1 = g * hp + bp;
+  sem_.s2 = g * bp + lp;
 
-    double res = resonance_ * 2.0;
-    double output = lowOut + res * bandOut;
-
-    switch (type_) {
-        case FilterType::LowPass:  return static_cast<float>(output);
-        case FilterType::HighPass: return static_cast<float>(st.high);
-        case FilterType::BandPass: return static_cast<float>(bandOut);
-        default: return static_cast<float>(output);
-    }
+  switch (type_) {
+    case FilterType::Highpass: return static_cast<float>(hp);
+    case FilterType::Bandpass: return static_cast<float>(bp);
+    case FilterType::Lowpass:
+    default:                   return static_cast<float>(lp);
+  }
 }
 
 //==============================================================================
-// ROLAND TB-303 - DIODE LADDER
+// ROLAND TB-303 - diode ladder approximation
 //==============================================================================
 
 float ZenithFilter::processTB303(float input) {
-    double fs = sampleRate_ * oversamplingFactor_;
-    double wc = 2.0 * juce::MathConstants<double>::pi * cutoff_;
-    double g = std::tan(wc / (4.0 * fs));
+  const double fs = sampleRate_ * oversamplingFactor_;
+  const double wc = 2.0 * juce::MathConstants<double>::pi * cutoff_;
+  const double g = std::tan(clampNormFreq(wc / (4.0 * fs)));
 
-    struct { double s1 = 0, double s2 = 0, double s3 = 0, double s4 = 0; } st;
+  const double res = resonance_ * 3.8;
+  const double y = input - res * std::tanh(tb303_.s4);
 
-    double res = resonance_ * 0.99;
+  tb303_.s1 += g * (y - tb303_.s1);
+  tb303_.s2 += g * (tb303_.s1 - tb303_.s2);
+  tb303_.s3 += g * (tb303_.s2 - tb303_.s3);
+  tb303_.s4 += g * (tb303_.s3 - tb303_.s4);
 
-    double y = input;
-    for (int i = 0; i < 4; ++i) {
-        double& si = (i == 0) ? st.s1 : (i == 1) ? st.s2 : (i == 2) ? st.s3 : st.s4;
-        double siIn = si + g * (y - si);
-        si = siIn;
-        y = siIn;
-    }
-
-    double tanhOut = std::tanh(st.s4);
-    double output = (input - res * tanhOut);
-
-    switch (type_) {
-        case FilterType::LowPass:  return static_cast<float>(st.s4);
-        case FilterType::HighPass:  return static_cast<float>(input - st.s4);
-        default: return static_cast<float>(st.s4);
-    }
+  switch (type_) {
+    case FilterType::Highpass: return static_cast<float>(input - tb303_.s4);
+    case FilterType::Lowpass:
+    default:                   return static_cast<float>(tb303_.s4);
+  }
 }
 
 //==============================================================================
@@ -257,15 +214,15 @@ float ZenithFilter::processTB303(float input) {
 //==============================================================================
 
 void ZenithFilter::process(juce::AudioBuffer<float>& buffer, float midiNote) {
-    auto numSamples = buffer.getNumSamples();
-    auto numChannels = buffer.getNumChannels();
+  const auto numSamples = buffer.getNumSamples();
+  const auto numChannels = buffer.getNumChannels();
 
-    for (int ch = 0; ch < numChannels; ++ch) {
-        float* channel = buffer.getWritePointer(ch);
-        for (int i = 0; i < numSamples; ++i) {
-            channel[i] = processSample(channel[i], midiNote);
-        }
+  for (int ch = 0; ch < numChannels; ++ch) {
+    float* channel = buffer.getWritePointer(ch);
+    for (int i = 0; i < numSamples; ++i) {
+      channel[i] = processSample(channel[i], midiNote);
     }
+  }
 }
 
 } // namespace zenith

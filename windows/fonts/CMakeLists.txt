@@ -1,1 +1,0 @@
-target_sources(ZenithDAW PRIVATE PlatformFontUtils_Windows.cpp)
