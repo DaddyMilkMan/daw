@@ -171,6 +171,18 @@ pub fn build(b: *std.Build) void {
     const ui2_step = b.step("ui2", "Render the polished antialiased UI frame");
     ui2_step.dependOn(&run_ui2.step);
 
+    // Widget + layout demo (knobs/toggles via the layout engine).
+    const kit = b.addExecutable(.{
+        .name = "zenith_kit",
+        .root_source_file = b.path("main_kit.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(kit);
+    const run_kit = b.addRunArtifact(kit);
+    const kit_step = b.step("kit", "Render the widget/layout demo");
+    kit_step.dependOn(&run_kit.step);
+
     // Live native window (X11).
     const window = b.addExecutable(.{
         .name = "zenith_window",

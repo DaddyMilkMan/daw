@@ -18,6 +18,7 @@ const Anim = struct {
     used: bool = false,
     hover: f32 = 0,
     press: f32 = 0,
+    extra: f32 = 0, // scratch (e.g. knob drag anchor)
 };
 
 fn lerp(a: Color, b: Color, t: f32) Color {
@@ -142,5 +143,66 @@ pub const Ui = struct {
         const grow: i32 = @intFromFloat(a.hover * 2);
         self.cv.fillRoundedRect(kx - grow, y - 3 - grow, 6 + 2 * grow, h + 6 + 2 * grow, 4, lerp(Color.rgb(120, 170, 200), Color.rgb(96, 210, 235), a.hover));
         return changed;
+    }
+
+    /// Rotary knob, `value` 0..1, vertical drag changes it. Ring-progress style.
+    pub fn knob(self: *Ui, id: u32, cx: i32, cy: i32, radius: i32, value: *f32) bool {
+        const dx = self.in.mx - cx;
+        const dy = self.in.my - cy;
+        const within = (dx * dx + dy * dy) <= (radius + 8) * (radius + 8);
+        if (within) self.hot = id;
+        const a = self.anim(id);
+        if (within and self.pressed) {
+            self.active = id;
+            a.extra = @floatFromInt(self.in.my);
+        }
+        var changed = false;
+        if (self.active == id and self.in.mouse_down) {
+            const d = a.extra - @as(f32, @floatFromInt(self.in.my));
+            const nv = std.math.clamp(value.* + d * 0.006, 0.0, 1.0);
+            if (nv != value.*) {
+                value.* = nv;
+                changed = true;
+            }
+            a.extra = @floatFromInt(self.in.my);
+        }
+        a.hover = ease(a.hover, if (within or self.active == id) 1 else 0, self.dt, 14);
+
+        const r = radius;
+        self.cv.fillRoundedRect(cx - r, cy - r, 2 * r, 2 * r, r, Color.rgb(36, 40, 50));
+        const start = std.math.pi * 0.75;
+        const sweep = std.math.pi * 1.5;
+        var i: usize = 0;
+        const steps: usize = 44;
+        while (i <= steps) : (i += 1) {
+            const t = @as(f32, @floatFromInt(i)) / @as(f32, @floatFromInt(steps));
+            const ang = start + t * sweep;
+            const px = cx + @as(i32, @intFromFloat(@cos(ang) * @as(f32, @floatFromInt(r - 3))));
+            const py = cy + @as(i32, @intFromFloat(@sin(ang) * @as(f32, @floatFromInt(r - 3))));
+            const col = if (t <= value.*) lerp(Color.rgb(96, 210, 235), Color.rgb(210, 245, 255), a.hover * 0.5) else Color.rgb(52, 56, 68);
+            self.cv.fillRoundedRect(px - 2, py - 2, 4, 4, 2, col);
+        }
+        const ang = start + value.* * sweep;
+        const ix = cx + @as(i32, @intFromFloat(@cos(ang) * @as(f32, @floatFromInt(r - 7))));
+        const iy = cy + @as(i32, @intFromFloat(@sin(ang) * @as(f32, @floatFromInt(r - 7))));
+        self.cv.fillRoundedRect(ix - 2, iy - 2, 4, 4, 2, Color.rgb(232, 236, 244));
+        return changed;
+    }
+
+    /// Toggle switch; click flips `on`. The knob slides with easing.
+    pub fn toggle(self: *Ui, id: u32, x: i32, y: i32, w: i32, h: i32, on: *bool) bool {
+        const hov = self.inside(x, y, w, h);
+        if (hov) self.hot = id;
+        if (hov and self.pressed) self.active = id;
+        const clicked = self.active == id and self.released and hov;
+        if (clicked) on.* = !on.*;
+        const a = self.anim(id);
+        a.press = ease(a.press, if (on.*) 1 else 0, self.dt, 16);
+        self.cv.fillRoundedRect(x, y, w, h, @divTrunc(h, 2), lerp(Color.rgb(48, 52, 63), Color.rgb(96, 210, 235), a.press));
+        const kd = h - 6;
+        const kx = x + 3 + @as(i32, @intFromFloat(a.press * @as(f32, @floatFromInt(w - kd - 6))));
+        self.cv.dropShadow(kx, y + 3, kd, kd, @divTrunc(kd, 2), 2);
+        self.cv.fillRoundedRect(kx, y + 3, kd, kd, @divTrunc(kd, 2), Color.rgb(246, 248, 251));
+        return clicked;
     }
 };
