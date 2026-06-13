@@ -324,4 +324,25 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
 - NEXT options: piano-roll/clip editing, mixer FX chains (wire effects.zig per track),
   compressor/limiter, GL-shader rendering, Wayland/cross-platform backends, real-plugin scanning.
 
+**2026-06-13 (session — GPU UI toolkit + web-grade rewrite)**
+- Researched how web UI reaches its quality (cited report `planning/research/web-ui-rendering.md`)
+  then built a from-scratch **GPU 2D renderer** (`gpu2d.zig`) — the GPUI architecture in Zig:
+  per-primitive instanced shaders, one draw call per type, **linear-light sRGB + premultiplied**
+  compositing, 4× MSAA. Primitives: **SDF rounded rects** (+ hairline border, gradient, material
+  depth), **analytic gaussian shadows** (closed-form erf, no blur pass), triangles/lines, **atlas
+  text** (stem-darkened, pixel-snapped), and **dual-Kawase backdrop blur / frosted glass**.
+- Built our own **flexbox layout engine** (`flex.zig`) — declarative `row/col/grow/percent/fit/
+  gap/pad/justify/align`, two-pass measure→arrange, hover/press/click, `rectOf` for overlays.
+  Fixes the "hand-computed pixel coords drift / hard for AI to author" problem.
+- Extracted reusable modules + named them for open-source reuse: `color.zig`, `widgets.zig`
+  (GPU faders/knobs/sliders), `TOOLKIT.md` manifest (per-component dep footprint, AGPL-3.0,
+  "original Zig, techniques borrowed not code").
+- **Consolidated DAW** `daw.zig` + `main_daw.zig` (`zig build daw`, binary **`zenith`**): the
+  ENTIRE DAW (title/browser/arrangement/mixer) laid out by flex, GPU-rendered, interactive,
+  with a design-identity pass (cleaner gradients, crisp hairlines, restrained accent) and a
+  **frosted-glass value tooltip** on fader/knob hover. Decoupled from the CPU `ui.zig`.
+- The CPU path (`render2d.zig`/`ui.zig`/`uikit.zig`/`window_x11.zig`) is now legacy/superseded.
+- NEXT: piano-roll on flex, mixer FX chains, more overlays/menus (glass), Wayland backend,
+  MSDF text (scale-independent), retire the demo executables once `zenith` covers them.
+
 *(Add new dated entries as milestones complete.)*
