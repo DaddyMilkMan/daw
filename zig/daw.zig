@@ -241,6 +241,12 @@ pub const View = struct {
         g.rectGrad(0, 0, W, H, 0, bg_top, bg_bot, 0, bord);
         u.begin(.{ .mx = mx, .my = my, .mouse_down = down }, 0.016);
 
+        // frosted-glass value tooltip shown while hovering a fader/knob
+        var tip_show = false;
+        var tip_val: f32 = 0;
+        var tip_x: f32 = 0;
+        var tip_y: f32 = 0;
+
         const ntr = p.tracks.items.len;
         c.begin(W, H, mx, my, down, 0.016);
         c.open(.{ .dir = .col, .w = px(W), .h = px(H) });
@@ -492,10 +498,34 @@ pub const View = struct {
                     state.solos[ti] = !state.solos[ti];
                 };
                 if (c.rectOf(400 + @as(u64, ti))) |r| _ = u.hSlider(@intCast(400 + ti), r[0], r[1], r[2], r[3], &p.tracks.items[ti].pan, -1.0, 1.0);
-                if (c.rectOf(600 + @as(u64, ti))) |r| _ = u.knob(@intCast(600 + ti), r[0] + r[2] / 2, r[1] + r[3] / 2, 12, &state.sends[ti][0]);
-                if (c.rectOf(700 + @as(u64, ti))) |r| _ = u.knob(@intCast(700 + ti), r[0] + r[2] / 2, r[1] + r[3] / 2, 12, &state.sends[ti][1]);
+                if (c.rectOf(600 + @as(u64, ti))) |r| {
+                    _ = u.knob(@intCast(600 + ti), r[0] + r[2] / 2, r[1] + r[3] / 2, 12, &state.sends[ti][0]);
+                    if (u.hot == 600 + @as(u32, @intCast(ti))) {
+                        tip_show = true;
+                        tip_val = state.sends[ti][0] * 100;
+                        tip_x = r[0] + r[2] / 2;
+                        tip_y = r[1] - 6;
+                    }
+                }
+                if (c.rectOf(700 + @as(u64, ti))) |r| {
+                    _ = u.knob(@intCast(700 + ti), r[0] + r[2] / 2, r[1] + r[3] / 2, 12, &state.sends[ti][1]);
+                    if (u.hot == 700 + @as(u32, @intCast(ti))) {
+                        tip_show = true;
+                        tip_val = state.sends[ti][1] * 100;
+                        tip_x = r[0] + r[2] / 2;
+                        tip_y = r[1] - 6;
+                    }
+                }
             }
-            if (c.rectOf(100 + @as(u64, ti))) |r| _ = u.vFader(@intCast(100 + ti), r[0], r[1], r[2], r[3], gain);
+            if (c.rectOf(100 + @as(u64, ti))) |r| {
+                _ = u.vFader(@intCast(100 + ti), r[0], r[1], r[2], r[3], gain);
+                if (u.hot == 100 + @as(u32, @intCast(ti))) {
+                    tip_show = true;
+                    tip_val = gain.* * 100;
+                    tip_x = r[0] + r[2] / 2;
+                    tip_y = r[1] - 4;
+                }
+            }
             if (c.rectOf(500 + @as(u64, ti))) |r| {
                 g.rect(r[0], r[1], r[2], r[3], 4, Color.rgb(15, 17, 22));
                 const lvl = if (!is_master and state.mutes[ti]) 0.0 else gain.* * 0.92;
@@ -514,6 +544,21 @@ pub const View = struct {
 
         u.end();
         g.flush();
+
+        // frosted-glass value tooltip over the blurred backdrop
+        if (tip_show) {
+            const tw: f32 = 46;
+            const th: f32 = 22;
+            const tx = std.math.clamp(tip_x - tw / 2, 2, W - tw - 2);
+            const ty = @max(tip_y - th - 4, 2);
+            g.captureBlur(@intFromFloat(W), @intFromFloat(H));
+            g.glass(tx, ty, tw, th, 7, Color.rgba(30, 34, 44, 150), Color.rgba(255, 255, 255, 50));
+            var buf: [8]u8 = undefined;
+            const s = std.fmt.bufPrint(&buf, "{d:.0}", .{tip_val}) catch "";
+            const sw = self.fb.textWidth(s);
+            self.fb.text(g, tx + (tw - sw) / 2, ty + (th - 15) / 2, s, txt);
+            g.flush();
+        }
         return state.window_action;
     }
 };
