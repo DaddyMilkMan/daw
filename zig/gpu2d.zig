@@ -487,6 +487,12 @@ pub const Gpu = struct {
         const b = lin(border);
         self.rects.appendSlice(&.{ x, y, w, h, radius, border_w, t[0], t[1], t[2], t[3], b[0], b[1], b[2], b[3], bt[0], bt[1], bt[2], bt[3], elev }) catch {};
     }
+    /// Hairline rounded-rect border only (transparent interior) — overlays an
+    /// existing fill, e.g. a selection ring or rim on top of a card.
+    pub fn stroke(self: *Gpu, x: f32, y: f32, w: f32, h: f32, radius: f32, bw: f32, color: Color) void {
+        const c = lin(color);
+        self.rects.appendSlice(&.{ x, y, w, h, radius, bw, c[0], c[1], c[2], 0, c[0], c[1], c[2], c[3], c[0], c[1], c[2], 0, 0 }) catch {};
+    }
     /// Solid triangle (pixel coords). Use for icons.
     pub fn tri(self: *Gpu, x0: f32, y0: f32, x1: f32, y1: f32, x2: f32, y2: f32, color: Color) void {
         const c = lin(color);

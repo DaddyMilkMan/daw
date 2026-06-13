@@ -240,6 +240,21 @@ pub fn build(b: *std.Build) void {
     const gpu_step = b.step("gpu", "Run the GPU 2D renderer smoke test");
     gpu_step.dependOn(&run_gpu.step);
 
+    // The live DAW, rendered entirely on the GPU toolkit.
+    const gpudaw = b.addExecutable(.{
+        .name = "zenith_gpu_daw",
+        .root_source_file = b.path("main_gpu_daw.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    gpudaw.linkSystemLibrary("GL");
+    gpudaw.linkSystemLibrary("X11");
+    gpudaw.linkLibC();
+    b.installArtifact(gpudaw);
+    const run_gpudaw = b.addRunArtifact(gpudaw);
+    const gpudaw_step = b.step("gpudaw", "Run the live Zenith DAW on the GPU toolkit");
+    gpudaw_step.dependOn(&run_gpudaw.step);
+
     // Effects demo (EQ / delay / reverb).
     const fx = b.addExecutable(.{
         .name = "zenith_fx",
