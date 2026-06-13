@@ -133,7 +133,7 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ **Oversampling** / anti-aliasing helpers
 - 🟡 Resampler — cubic Hermite (Catmull-Rom) point-read done (`resample.zig`); ❌ high-quality sinc/SRC for device-rate conversion
 - ❌ Dither, gain/pan laws, metering (peak/RMS/LUFS), DC blocker
-- ❌ Delay lines, modulation (LFOs, envelope followers)
+- 🟡 Delay lines + reverb (`effects.zig`: feedback delay, Freeverb-style reverb); ❌ modulation (LFOs, env followers), chorus/flanger
 
 ### 4.7 Engine — the DAW core  *(was Zenith's own C++; rebuild in Zig)*
 - 🟡 **Transport / clock / playhead**: tempo + looping playhead done; ❌ stop/record-arm, time signature, metronome, linear (non-loop) mode
@@ -165,7 +165,7 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ✅ ZenithPolySynth (basic) in Zig
 - 🟡 Sampler (`sampler.zig`): load mono sample, pitch per MIDI note, polyphonic + AR env. ❌ multisampling, velocity layers, loop points, stereo
 - ❌ Synth depth: mod matrix, LFOs, sub/noise, unison, more filter models, FM/sync
-- ❌ Stock effects: EQ, compressor, limiter, reverb, delay, distortion, chorus
+- 🟡 Stock effects (`effects.zig`): biquad EQ (LP/HP/peak), feedback delay, reverb done; ❌ compressor, limiter, distortion, chorus + mixer integration (per-track FX chains)
 - ❌ Preset system + content/sample library
 
 ### 4.11 GUI  *(JUCE: gui_basics/graphics/opengl — was ~91K LOC)* — the long pole
@@ -297,6 +297,11 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   backends, real-plugin CLAP/VST3/AU, depth (effects/automation).
 - **GUI foundation done**: pure-Zig software 2D renderer + generated bitmap font + BMP
   output + a real DAW frame (transport/timeline-from-project-data/mixer). `zig build ui`.
-  Next GUI step: live windowing (X11/GLFW) + input, then make a view interactive.
+- **GUI #1 (live windowing) done**: `window_x11.zig` native X11 window + blit + input;
+  verified on screen (250 frames, 1950 events). `zig build window`.
+- **#2 (effects) done**: `effects.zig` — biquad EQ, feedback delay, Freeverb reverb.
+  Verified: delay echoes at exact intervals (0.6ⁿ decay), reverb RT60 tail, biquad tests.
+  `zig build fx`. Next: compressor/limiter + per-track FX chains in the mixer.
+- NEXT (this batch): #3 real-plugin CLAP (events/extensions), #4 interactive UI.
 
 *(Add new dated entries as milestones complete.)*

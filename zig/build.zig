@@ -173,9 +173,21 @@ pub fn build(b: *std.Build) void {
     const window_step = b.step("window", "Open the live Zenith window (X11)");
     window_step.dependOn(&run_window.step);
 
+    // Effects demo (EQ / delay / reverb).
+    const fx = b.addExecutable(.{
+        .name = "zenith_fx",
+        .root_source_file = b.path("main_fx.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(fx);
+    const run_fx = b.addRunArtifact(fx);
+    const fx_step = b.step("fx", "Run the effects demo");
+    fx_step.dependOn(&run_fx.step);
+
     // Unit tests.
     const test_step = b.step("test", "Run unit tests");
-    for ([_][]const u8{ "midi_alsa.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig" }) |src| {
+    for ([_][]const u8{ "midi_alsa.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig", "effects.zig" }) |src| {
         const t = b.addTest(.{ .root_source_file = b.path(src), .target = target, .optimize = optimize });
         t.linkSystemLibrary("asound");
         t.linkLibC();
