@@ -104,3 +104,17 @@ pub const PluginEntry = extern struct {
 
 pub const PLUGIN_FACTORY_ID: [*:0]const u8 = "clap.plugin-factory";
 pub const PROCESS_CONTINUE: i32 = 1;
+
+// Note events (clap_event_note) — how the host drives an instrument plugin.
+pub const CORE_EVENT_SPACE_ID: u16 = 0;
+pub const EVENT_NOTE_ON: u16 = 0;
+pub const EVENT_NOTE_OFF: u16 = 1;
+
+pub const EventNote = extern struct {
+    header: EventHeader,
+    note_id: i32,
+    port_index: i16,
+    channel: i16,
+    key: i16,
+    velocity: f64,
+};

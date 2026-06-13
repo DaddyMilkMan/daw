@@ -154,7 +154,7 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ Auto-save, crash recovery
 
 ### 4.9 Plugin hosting  *(JUCE: juce_audio_processors)*  — hardest area
-- 🟡 **CLAP** host (`clap_abi.zig`/`main_clap.zig`): load/instantiate/activate/process verified vs a test plugin; ❌ events, extensions, real-plugin testing
+- 🟡 **CLAP** host (`clap_abi.zig`/`main_clap.zig`): load/instantiate/activate/process + sample-accurate **note events** to instruments verified (hosted plugin played a scale 8/8); ❌ audio/note-port extensions, param events, real-plugin/dir scanning, GUI
 - ❌ Plugin **scan / sandbox (out-of-process) / blacklist**
 - ❌ **VST3** host (Steinberg C++ SDK — bind the interface, don't reinvent the format)
 - ❌ **AU** host (macOS, Obj-C runtime)
@@ -302,6 +302,9 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
 - **#2 (effects) done**: `effects.zig` — biquad EQ, feedback delay, Freeverb reverb.
   Verified: delay echoes at exact intervals (0.6ⁿ decay), reverb RT60 tail, biquad tests.
   `zig build fx`. Next: compressor/limiter + per-track FX chains in the mixer.
-- NEXT (this batch): #3 real-plugin CLAP (events/extensions), #4 interactive UI.
+- **#3 (CLAP note events) done**: host sends sample-accurate note on/off to a hosted CLAP
+  instrument (`clap_test_plugin.zig` now a poly synth). Verified: scale played 8/8 correct
+  pitches. Real third-party instruments drive the same way. Next: port extensions + scanning.
+- NEXT (this batch): #4 interactive UI.
 
 *(Add new dated entries as milestones complete.)*
