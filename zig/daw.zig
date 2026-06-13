@@ -31,6 +31,7 @@ pub const State = struct {
     },
     mutes: [8]bool = [_]bool{false} ** 8,
     solos: [8]bool = [_]bool{false} ** 8,
+    meters: [8]f32 = [_]f32{0.3} ** 8, // smoothed meter levels (VU ballistics)
 };
 
 // ---- refined palette (design-identity pass) --------------------------------
@@ -652,7 +653,10 @@ pub const View = struct {
             if (c.rectOf(500 + @as(u64, ti))) |r| {
                 g.rect(r[0], r[1], r[2], r[3], 4, Color.rgb(15, 17, 22));
                 const muted = !is_master and state.mutes[ti];
-                const lvl = if (muted) 0.0 else meterLevel(ti, ts, gain.*, state.playing);
+                const target = if (muted) 0.0 else meterLevel(ti, ts, gain.*, state.playing);
+                const k: f32 = if (target > state.meters[ti]) 0.55 else 0.14; // fast attack, slow release
+                state.meters[ti] += (target - state.meters[ti]) * k;
+                const lvl = state.meters[ti];
                 const mh = lvl * r[3];
                 if (mh > 1) g.rectGrad(r[0], r[1] + r[3] - mh, r[2], mh, 4, meter_hi, meter_lo, 0, bord);
                 // peak tick

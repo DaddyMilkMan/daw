@@ -693,7 +693,8 @@ pub const Gpu = struct {
     pub fn rectBordered(self: *Gpu, x: f32, y: f32, w: f32, h: f32, radius: f32, fill: Color, border_w: f32, border: Color) void {
         const f = lin(fill);
         const b = lin(border);
-        self.rects.appendSlice(&.{ x, y, w, h, radius, border_w, f[0], f[1], f[2], f[3], b[0], b[1], b[2], b[3], f[0], f[1], f[2], f[3], 0 }) catch {};
+        const bw: f32 = if (border.a == 0) 0 else border_w; // transparent border = no border
+        self.rects.appendSlice(&.{ x, y, w, h, radius, bw, f[0], f[1], f[2], f[3], b[0], b[1], b[2], b[3], f[0], f[1], f[2], f[3], 0 }) catch {};
     }
     /// Vertically-graded rounded rect (top -> bottom), with optional border. Flat (no material).
     pub fn rectGrad(self: *Gpu, x: f32, y: f32, w: f32, h: f32, radius: f32, top: Color, bot: Color, border_w: f32, border: Color) void {
@@ -708,7 +709,8 @@ pub const Gpu = struct {
         const t = lin(top);
         const bt = lin(bot);
         const b = lin(border);
-        self.rects.appendSlice(&.{ x, y, w, h, radius, border_w, t[0], t[1], t[2], t[3], b[0], b[1], b[2], b[3], bt[0], bt[1], bt[2], bt[3], elev }) catch {};
+        const bw: f32 = if (border.a == 0) 0 else border_w; // transparent border = no border
+        self.rects.appendSlice(&.{ x, y, w, h, radius, bw, t[0], t[1], t[2], t[3], b[0], b[1], b[2], b[3], bt[0], bt[1], bt[2], bt[3], elev }) catch {};
     }
     /// Hairline rounded-rect border only (transparent interior) — overlays an
     /// existing fill, e.g. a selection ring or rim on top of a card.

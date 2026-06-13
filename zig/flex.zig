@@ -375,7 +375,7 @@ pub const Ctx = struct {
         }
         if (bg) |b| {
             const b2 = s.bg2 orelse b;
-            const bw: f32 = if (s.border != null) s.border_w else 0;
+            const bw: f32 = if (s.border != null and s.border.?.a > 0) s.border_w else 0;
             const bc = s.border orelse b;
             self.g.card(nn.x, nn.y, nn.w, nn.h, s.radius, b, b2, bw, bc, s.elev);
         } else if (s.border) |bd| {

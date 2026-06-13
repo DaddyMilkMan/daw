@@ -255,6 +255,21 @@ pub fn build(b: *std.Build) void {
     const daw_step = b.step("daw", "Run the live Zenith DAW (consolidated)");
     daw_step.dependOn(&run_daw.step);
 
+    // UI toolkit showcase (gradients, glass, shadows, all controls, icons).
+    const showcase = b.addExecutable(.{
+        .name = "zenith_showcase",
+        .root_source_file = b.path("zig/main_showcase.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    showcase.linkSystemLibrary("GL");
+    showcase.linkSystemLibrary("X11");
+    showcase.linkLibC();
+    b.installArtifact(showcase);
+    const run_showcase = b.addRunArtifact(showcase);
+    const showcase_step = b.step("showcase", "Run the UI toolkit showcase (all effects)");
+    showcase_step.dependOn(&run_showcase.step);
+
     // Mixer laid out by the flex engine + GPU widgets.
     const flexmix = b.addExecutable(.{
         .name = "zenith_flexmix",
