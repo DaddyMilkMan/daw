@@ -313,6 +313,10 @@ pub const View = struct {
     fu: *const Font, // title 16
     fd: *const Font, // display 28
     tc_buf: [16]u8 = undefined, // live timecode string
+    cm_open: bool = false, // context menu
+    cm_x: f32 = 0,
+    cm_y: f32 = 0,
+    cm_anim: f32 = 0,
 
     pub fn init(g: *Gpu, fc: *const Font, fb: *const Font, fu: *const Font, fd: *const Font) View {
         return .{ .g = g, .c = flex.Ctx.init(g, fb, fu, fd), .u = widgets.Ui.init(g), .fc = fc, .fb = fb, .fu = fu, .fd = fd };
@@ -323,7 +327,7 @@ pub const View = struct {
         self.c.label(s, self.fc, label_col, .{ .h = px(h), .tracking = 1.4 });
     }
 
-    pub fn frame(self: *View, p: *project.Project, bar: u64, state: *State, W: f32, H: f32, mx: f32, my: f32, down: bool) WinAction {
+    pub fn frame(self: *View, p: *project.Project, bar: u64, state: *State, W: f32, H: f32, mx: f32, my: f32, down: bool, rclick: bool) WinAction {
         const g = self.g;
         const c = &self.c;
         const u = &self.u;
@@ -681,6 +685,46 @@ pub const View = struct {
             const sw = self.fb.textWidth(s);
             self.fb.textNum(g, tx + (tw - sw) / 2, ty + (th - 15) / 2, s, txt);
             g.flush();
+        }
+
+        // right-click context menu — frosted Liquid Glass over the content
+        if (rclick) {
+            self.cm_open = true;
+            self.cm_x = mx;
+            self.cm_y = my;
+        }
+        const cmt: f32 = if (self.cm_open) 1.0 else 0.0;
+        self.cm_anim += (cmt - self.cm_anim) * 0.30;
+        if (self.cm_anim > 0.01) {
+            const items = [_][]const u8{ "Rename", "Duplicate", "Split", "Delete" };
+            const iw: f32 = 172;
+            const ih: f32 = 32;
+            const fullh: f32 = ih * items.len + 12;
+            const eased = self.cm_anim * self.cm_anim * (3.0 - 2.0 * self.cm_anim);
+            const hh = fullh * eased;
+            const cmx = std.math.clamp(self.cm_x, 4, W - iw - 4);
+            const cmy = std.math.clamp(self.cm_y, 4, H - hh - 4);
+            g.shadow(cmx, cmy, iw, hh, 12, 22, Color.rgba(0, 0, 0, @intFromFloat(170 * eased)));
+            g.flush();
+            g.captureBlur(@intFromFloat(W), @intFromFloat(H));
+            g.glass(cmx, cmy, iw, hh, 12, Color.rgba(84, 92, 114, 76), Color.rgba(255, 255, 255, 220));
+            var hit: i32 = -1;
+            for (items, 0..) |it, i| {
+                const iy = cmy + 6 + @as(f32, @floatFromInt(i)) * ih;
+                if (iy + ih > cmy + hh - 2) continue;
+                const hov = mx >= cmx + 6 and mx < cmx + iw - 6 and my >= iy and my < iy + ih;
+                if (hov) {
+                    hit = @intCast(i);
+                    g.rect(cmx + 6, iy, iw - 12, ih, 7, Color.rgba(108, 147, 244, 60));
+                }
+                const ic = if (i == items.len - 1) red else txt;
+                self.fb.text(g, cmx + 16, iy + (ih - 15) / 2, it, if (hov) ic else dim);
+            }
+            g.flush();
+            if (u.pressed) {
+                const inside = mx >= cmx and mx < cmx + iw and my >= cmy and my < cmy + hh;
+                if (!inside or hit >= 0) self.cm_open = false;
+            }
         }
         return state.window_action;
     }

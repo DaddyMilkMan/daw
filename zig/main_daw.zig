@@ -62,6 +62,7 @@ pub fn main() !void {
     var mx: i32 = -1;
     var my: i32 = -1;
     var down = false;
+    var rclick = false;
     var lrx: i32 = 0;
     var lry: i32 = 0;
     var elapsed: f64 = 0;
@@ -87,11 +88,13 @@ pub fn main() !void {
                 .mouse_down => |m| {
                     lrx = m.x_root;
                     lry = m.y_root;
-                    if (edgeDir(m.x, m.y, @intCast(W), @intCast(H))) |dir| {
+                    mx = m.x;
+                    my = m.y;
+                    if (m.button == 3) {
+                        rclick = true; // right-click → context menu
+                    } else if (edgeDir(m.x, m.y, @intCast(W), @intCast(H))) |dir| {
                         window.startMoveResize(dir, m.x_root, m.y_root);
                     } else {
-                        mx = m.x;
-                        my = m.y;
                         down = true;
                     }
                 },
@@ -103,7 +106,8 @@ pub fn main() !void {
             }
         }
 
-        const action = view.frame(&p, bar, &state, @floatFromInt(W), @floatFromInt(H), @floatFromInt(mx), @floatFromInt(my), down);
+        const action = view.frame(&p, bar, &state, @floatFromInt(W), @floatFromInt(H), @floatFromInt(mx), @floatFromInt(my), down, rclick);
+        rclick = false;
         switch (action) {
             .none => {},
             .close => elapsed = secs,
