@@ -1,8 +1,9 @@
-//! main_ui.zig — render the Zenith UI frame to a BMP (headless-friendly).
+//! main_ui.zig — render one Zenith UI frame to a BMP (no input).
 
 const std = @import("std");
 const r2d = @import("render2d.zig");
 const bmp = @import("bmp.zig");
+const uikit = @import("uikit.zig");
 const ui = @import("ui.zig");
 
 pub fn main() !void {
@@ -16,7 +17,11 @@ pub fn main() !void {
     var p = try ui.buildDemoProject(a, bar);
     defer p.deinit();
 
-    ui.drawFrame(&cv, &p, bar, -1, -1, false);
+    var u = uikit.Ui.init(&cv);
+    var state = ui.State{};
+    u.begin(.{});
+    ui.frame(&u, &p, bar, &state);
+    u.end();
 
     try bmp.write("zenith_ui.bmp", cv.pixels, W, H);
     std.debug.print("rendered Zenith UI frame -> zenith_ui.bmp ({d}x{d})\n", .{ W, H });

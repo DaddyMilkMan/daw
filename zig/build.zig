@@ -185,6 +185,18 @@ pub fn build(b: *std.Build) void {
     const fx_step = b.step("fx", "Run the effects demo");
     fx_step.dependOn(&run_fx.step);
 
+    // Headless interactive-UI test.
+    const uitest = b.addExecutable(.{
+        .name = "zenith_uitest",
+        .root_source_file = b.path("main_uitest.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(uitest);
+    const run_uitest = b.addRunArtifact(uitest);
+    const uitest_step = b.step("uitest", "Run the headless interactive-UI test");
+    uitest_step.dependOn(&run_uitest.step);
+
     // Unit tests.
     const test_step = b.step("test", "Run unit tests");
     for ([_][]const u8{ "midi_alsa.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig", "effects.zig" }) |src| {

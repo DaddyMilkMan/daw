@@ -171,8 +171,8 @@ Status: ✅ done · 🟡 partial · ❌ not started
 ### 4.11 GUI  *(JUCE: gui_basics/graphics/opengl — was ~91K LOC)* — the long pole
 - 🟡 **Renderer**: pure-Zig software 2D renderer started (`render2d.zig` + bitmap font); ❌ GPU acceleration (OpenGL/Vulkan) decision later
 - 🟡 Window + input layer: X11 native window + blit + mouse/keyboard done (`window_x11.zig`/`main_window.zig`); ❌ Wayland/Win32/Cocoa, scroll/drag
-- ❌ Widget/component framework + layout (immediate-mode planned)
-- 🟡 DAW views: static transport + timeline + mixer **rendered** (`main_ui.zig`); ❌ interactive arranger/piano-roll/mixer, browser, sample editor
+- 🟡 Widget/component framework: immediate-mode toolkit done (`uikit.zig`: button/vFader/hSlider, hot/active model); ❌ layout system, more widgets
+- 🟡 DAW views: transport + timeline + **interactive mixer** (play toggles, faders/pans drag → state) wired to the live window; ❌ arranger/piano-roll editing, browser, sample editor
 - 🟡 Theming + meters/faders drawn; ❌ waveform drawing, scopes, full design system
 - ❌ Accessibility, keyboard shortcuts
 
@@ -305,6 +305,12 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
 - **#3 (CLAP note events) done**: host sends sample-accurate note on/off to a hosted CLAP
   instrument (`clap_test_plugin.zig` now a poly synth). Verified: scale played 8/8 correct
   pitches. Real third-party instruments drive the same way. Next: port extensions + scanning.
-- NEXT (this batch): #4 interactive UI.
+- **#4 (interactive UI) done**: `uikit.zig` immediate-mode toolkit; mixer faders/pans
+  draggable + play button toggles, wired into the live X11 window. Verified headlessly
+  (scripted input: play toggled, fader 0.85→0.04). `zig build uitest` / `zig build window`.
+- **BATCH COMPLETE (#1-#4):** live windowing, effects, real-plugin CLAP (note events),
+  interactive UI — all done + verified.
+- NEXT options: piano-roll/clip editing in the UI, mixer FX chains (wire effects.zig per
+  track), compressor/limiter, Wayland/cross-platform window backends, real-plugin scanning.
 
 *(Add new dated entries as milestones complete.)*

@@ -1,17 +1,20 @@
-//! ui.zig — the Zenith DAW view: draws transport + clip timeline + mixer from a
-//! project into a Canvas. Shared by the BMP renderer and the live window.
+//! ui.zig — the Zenith DAW view. Draws transport + clip timeline + mixer from a
+//! project, with interactive widgets (play button, faders, pans) via uikit.
+//! Used by the BMP renderer, the live window, and the headless UI test.
 
 const std = @import("std");
 const r2d = @import("render2d.zig");
 const project = @import("project.zig");
+const uikit = @import("uikit.zig");
 const Color = r2d.Color;
-const Canvas = r2d.Canvas;
+
+pub const State = struct { playing: bool = false };
 
 pub const palette = [_]Color{
-    .{ .r = 240, .g = 150, .b = 70 }, // orange
-    .{ .r = 110, .g = 200, .b = 120 }, // green
-    .{ .r = 90, .g = 200, .b = 240 }, // cyan
-    .{ .r = 180, .g = 130, .b = 245 }, // purple
+    .{ .r = 240, .g = 150, .b = 70 },
+    .{ .r = 110, .g = 200, .b = 120 },
+    .{ .r = 90, .g = 200, .b = 240 },
+    .{ .r = 180, .g = 130, .b = 245 },
 };
 
 pub fn buildDemoProject(a: std.mem.Allocator, bar: u64) !project.Project {
@@ -48,15 +51,14 @@ pub fn buildDemoProject(a: std.mem.Allocator, bar: u64) !project.Project {
     return p;
 }
 
-/// Draw the full DAW frame. `mx,my` is the cursor (negative = none); `playing`
-/// tints the transport.
-pub fn drawFrame(cv: *Canvas, p: *project.Project, bar: u64, mx: i32, my: i32, playing: bool) void {
+/// Draw + handle one interactive frame.
+pub fn frame(ui: *uikit.Ui, p: *project.Project, bar: u64, state: *State) void {
+    const cv = ui.cv;
     const W: i32 = @intCast(cv.width);
     const H: i32 = @intCast(cv.height);
 
     const bg = Color.rgb(24, 26, 32);
     const panel = Color.rgb(32, 35, 43);
-    const panel2 = Color.rgb(40, 44, 54);
     const accent = Color.rgb(90, 210, 230);
     const text_dim = Color.rgb(150, 158, 172);
     const text_hi = Color.rgb(232, 236, 244);
@@ -67,18 +69,18 @@ pub fn drawFrame(cv: *Canvas, p: *project.Project, bar: u64, mx: i32, my: i32, p
     cv.vGradient(0, 0, W, 46, Color.rgb(44, 48, 60), Color.rgb(30, 33, 41));
     cv.fillRect(0, 46, W, 2, Color.rgb(14, 15, 19));
     cv.text(16, 14, "ZENITH", accent, 2);
-    cv.fillRect(170, 12, 26, 22, if (playing) accent else panel2);
-    cv.text(178, 15, ">", if (playing) Color.rgb(20, 22, 27) else text_hi, 2);
-    cv.fillRect(202, 12, 26, 22, panel2);
+    if (ui.button(1, 170, 12, 26, 22, ">", state.playing)) state.playing = !state.playing;
+    cv.fillRect(202, 12, 26, 22, Color.rgb(40, 44, 54));
     cv.fillRect(210, 18, 10, 10, text_dim);
-    cv.fillRect(234, 12, 26, 22, panel2);
+    cv.fillRect(234, 12, 26, 22, Color.rgb(40, 44, 54));
     cv.fillRect(244, 17, 7, 7, Color.rgb(235, 80, 80));
     cv.text(300, 15, "120 BPM", text_hi, 1);
     cv.text(300, 28, "4/4", text_dim, 1);
     cv.text(440, 15, "00:00:04", text_hi, 2);
-    cv.text(760, 15, if (playing) "PLAYING" else "STOPPED", if (playing) accent else text_dim, 1);
+    cv.text(760, 15, if (state.playing) "PLAYING" else "STOPPED", if (state.playing) accent else text_dim, 1);
     cv.text(760, 28, "ZIG / CLAP", text_dim, 1);
 
+    // timeline (static)
     const total: f64 = @floatFromInt(4 * bar);
     const tl_x: i32 = 150;
     const tl_y: i32 = 64;
@@ -111,14 +113,14 @@ pub fn drawFrame(cv: *Canvas, p: *project.Project, bar: u64, mx: i32, my: i32, p
         }
     }
 
-    // mixer
+    // mixer (interactive)
     const mx_y: i32 = 250;
     cv.fillRect(0, mx_y - 8, W, 2, Color.rgb(14, 15, 19));
-    cv.text(16, mx_y, "MIXER", text_dim, 1);
+    cv.text(16, mx_y, "MIXER  (drag faders / pans)", text_dim, 1);
     const strip_w: i32 = 84;
     const strip_h: i32 = 250;
-    const fader_h: i32 = 170;
-    for (p.tracks.items, 0..) |t, ti| {
+    const fader_h: i32 = 160;
+    for (p.tracks.items, 0..) |*t, ti| {
         const sx = 16 + @as(i32, @intCast(ti)) * (strip_w + 12);
         const sy = mx_y + 18;
         const col = palette[ti % palette.len];
@@ -126,25 +128,19 @@ pub fn drawFrame(cv: *Canvas, p: *project.Project, bar: u64, mx: i32, my: i32, p
         cv.fillRect(sx, sy, strip_w, 3, col);
         cv.text(sx + 8, sy + 8, t.name.items, text_hi, 1);
         cv.text(sx + 8, sy + 24, "PAN", text_dim, 1);
-        const pan_cx = sx + strip_w / 2 + @as(i32, @intFromFloat(t.pan * @as(f32, @floatFromInt(strip_w / 2 - 8))));
-        cv.fillRect(sx + 6, sy + 38, strip_w - 12, 4, panel2);
-        cv.fillRect(pan_cx - 2, sy + 36, 5, 8, accent);
-        const fx = sx + strip_w / 2 - 3;
-        const fy = sy + 52;
-        cv.fillRect(fx, fy, 6, fader_h, panel2);
-        const knob_y = fy + fader_h - @as(i32, @intFromFloat(t.gain * @as(f32, @floatFromInt(fader_h - 14)))) - 14;
-        cv.fillRect(fx - 10, knob_y, 26, 14, Color.rgb(70, 76, 90));
-        cv.fillRect(fx - 10, knob_y + 6, 26, 2, accent);
+        _ = ui.hSlider(@intCast(200 + ti), sx + 6, sy + 38, strip_w - 12, 6, &t.pan, -1.0, 1.0);
+        _ = ui.vFader(@intCast(100 + ti), sx + strip_w / 2 - 3, sy + 56, 6, fader_h, &t.gain);
+        // level meter mirrors gain
         const meter_h: i32 = @intFromFloat(t.gain * @as(f32, @floatFromInt(fader_h)));
-        cv.fillRect(sx + strip_w - 14, fy, 8, fader_h, Color.rgb(20, 22, 27));
-        cv.fillRect(sx + strip_w - 14, fy + fader_h - meter_h, 8, meter_h, .{ .r = col.r, .g = col.g, .b = col.b, .a = 200 });
+        cv.fillRect(sx + strip_w - 14, sy + 56, 8, fader_h, Color.rgb(20, 22, 27));
+        cv.fillRect(sx + strip_w - 14, sy + 56 + fader_h - meter_h, 8, meter_h, .{ .r = col.r, .g = col.g, .b = col.b, .a = 200 });
     }
 
     cv.text(16, H - 16, "zenith - 100% zig daw", text_dim, 1);
 
-    // cursor (proves live input)
-    if (mx >= 0 and my >= 0) {
-        cv.fillRect(mx - 6, my, 13, 1, accent);
-        cv.fillRect(mx, my - 6, 1, 13, accent);
+    // cursor
+    if (ui.in.mx >= 0 and ui.in.my >= 0) {
+        cv.fillRect(ui.in.mx - 6, ui.in.my, 13, 1, accent);
+        cv.fillRect(ui.in.mx, ui.in.my - 6, 1, 13, accent);
     }
 }
