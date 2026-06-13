@@ -11,6 +11,11 @@ Append to the Progress Log. Keep it honest — no "done" that isn't verified.
 - **Endgame:** A DAW whose engine, DSP, data model, instruments, and platform layer
   are 100% owned Zig. The only third-party code linked is unavoidable vendor
   *interfaces* (VST3 SDK headers, CLAP header, OS audio/MIDI syscalls).
+- **CROSS-PLATFORM is a standing goal for everything** (Linux + Windows + macOS).
+  Engine/DSP/data-model = portable Zig (endian-explicit formats, `std.fs`). ALL
+  platform code (audio/MIDI/window/dialogs) sits behind a clean interface/seam so
+  per-OS backends slot in later without touching the engine. Linux-first today;
+  never bake Linux-only assumptions into engine-level code.
 
 ---
 
@@ -142,9 +147,9 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ Quantize / groove, comping (take folders)
 
 ### 4.8 Data model & persistence  *(JUCE: juce_data_structures — ValueTree/UndoManager)*
-- ❌ **Document/project model** (tracks/clips/params/routing) — the backbone (was 656 ValueTree refs)
-- ❌ **Undo/redo** (command pattern)
-- ❌ **Save/load** project files (format + versioning/migration)
+- 🟡 **Document/project model** (`project.zig`: Project/Track/Note, gain/pan/instrument): basics done; ❌ clips/regions, routing, plugin state
+- ✅ **Undo/redo** (snapshot-based `History`)
+- ✅ **Save/load** project files (`ZNPR` endian-explicit binary); ❌ versioning/migration beyond v1
 - ❌ Change-notification / observable model for UI binding
 - ❌ Auto-save, crash recovery
 
@@ -196,7 +201,10 @@ Status: ✅ done · 🟡 partial · ❌ not started
   test passes. ❌ buses/sends, mute/solo, metering (later).
 - ❌ **M7 — CLAP plugin hosting** (host third-party instruments/effects)
 - ❌ **M8 — Real RT audio callback + device selection** (proper RT thread, xrun-robust)
-- ❌ **M9 — Project save/load + undo** (the data model)
+- 🟡 **M9 — Project model + save/load + undo** (`project.zig`): Project/Track/Note model,
+  endian-explicit binary format (`ZNPR`, cross-platform), file save/load, snapshot-based
+  undo (`History`). Verified: save→reload→play melody; round-trip + undo unit tests.
+  ❌ change-notification/observable, auto-save, format migration.
 - ❌ **M10 — GUI** (the long pole; renderer decision first)
 - ❌ **M11 — VST3/AU hosting** (hardest; possibly last)
 - ❌ **M12 — Cross-platform** (Windows/macOS audio+MIDI+window backends)
@@ -262,8 +270,10 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   round-trip + interp unit tests. `zig build sampler`.
 - **M6 (basic) done**: `mixer.zig` — N tracks → gain/pan → stereo master. Synth+sampler
   mixed; pan verified (|L-R| rms 3250); pan-law unit test. `zig build mixer`.
-- NEXT: **M5 — audio recording** (ALSA capture / audio input — the one missing platform
-  I/O direction), or **M9 — project save/load + undo** (the data model), or deepen M6
-  (buses/sends) / M7 (CLAP host).
+- Added **cross-platform** as a standing goal (vision §); platform code behind seams.
+- **M9 done**: `project.zig` — Project/Track/Note model, `ZNPR` endian-explicit save/load,
+  snapshot undo (`History`). Verified save→reload→play + round-trip/undo tests. `zig build project`.
+- NEXT: **M5 — audio recording** (ALSA capture — the missing I/O direction; structure it
+  behind a capture interface for cross-platform).
 
 *(Add new dated entries as milestones complete.)*
