@@ -40,6 +40,12 @@ const GL_TEXTURE_WRAP_S: u32 = 0x2802;
 const GL_TEXTURE_WRAP_T: u32 = 0x2803;
 const GL_CLAMP_TO_EDGE: i32 = 0x812F;
 const GL_UNPACK_ALIGNMENT: u32 = 0x0CF5;
+const GL_RGB: u32 = 0x1907;
+const GL_RGBA: u32 = 0x1908;
+const GL_RGB8: i32 = 0x8051;
+const GL_FRAMEBUFFER: u32 = 0x8D40;
+const GL_COLOR_ATTACHMENT0: u32 = 0x8CE0;
+const GL_FRAMEBUFFER_COMPLETE: u32 = 0x8CD5;
 
 // ---- core GL (linked) ------------------------------------------------------
 extern fn glViewport(x: c_int, y: c_int, w: c_int, h: c_int) void;
@@ -54,6 +60,7 @@ extern fn glTexImage2D(target: c_uint, level: c_int, internal: c_int, w: c_int, 
 extern fn glTexParameteri(target: c_uint, pname: c_uint, param: c_int) void;
 extern fn glPixelStorei(pname: c_uint, param: c_int) void;
 extern fn glDrawArrays(mode: c_uint, first: c_int, count: c_int) void;
+extern fn glCopyTexImage2D(target: c_uint, level: c_int, internal: c_uint, x: c_int, y: c_int, w: c_int, h: c_int, border: c_int) void;
 
 // ---- modern GL (loaded via glXGetProcAddress) ------------------------------
 var glCreateShader: *const fn (c_uint) callconv(.c) c_uint = undefined;
@@ -68,6 +75,8 @@ var glGetProgramiv: *const fn (c_uint, c_uint, *c_int) callconv(.c) void = undef
 var glUseProgram: *const fn (c_uint) callconv(.c) void = undefined;
 var glGetUniformLocation: *const fn (c_uint, [*:0]const u8) callconv(.c) c_int = undefined;
 var glUniform2f: *const fn (c_int, f32, f32) callconv(.c) void = undefined;
+var glUniform1f: *const fn (c_int, f32) callconv(.c) void = undefined;
+var glUniform4f: *const fn (c_int, f32, f32, f32, f32) callconv(.c) void = undefined;
 var glUniform1i: *const fn (c_int, c_int) callconv(.c) void = undefined;
 var glActiveTexture: *const fn (c_uint) callconv(.c) void = undefined;
 var glGenVertexArrays: *const fn (c_int, *c_uint) callconv(.c) void = undefined;
@@ -79,6 +88,9 @@ var glEnableVertexAttribArray: *const fn (c_uint) callconv(.c) void = undefined;
 var glVertexAttribPointer: *const fn (c_uint, c_int, c_uint, u8, c_int, usize) callconv(.c) void = undefined;
 var glVertexAttribDivisor: *const fn (c_uint, c_uint) callconv(.c) void = undefined;
 var glDrawArraysInstanced: *const fn (c_uint, c_int, c_int, c_int) callconv(.c) void = undefined;
+var glGenFramebuffers: *const fn (c_int, *c_uint) callconv(.c) void = undefined;
+var glBindFramebuffer: *const fn (c_uint, c_uint) callconv(.c) void = undefined;
+var glFramebufferTexture2D: *const fn (c_uint, c_uint, c_uint, c_uint, c_int) callconv(.c) void = undefined;
 
 const GetProc = *const fn (name: [*:0]const u8) ?*const anyopaque;
 
@@ -102,6 +114,8 @@ fn loadAll(get: GetProc) !void {
     glUseProgram = try load(get, @TypeOf(glUseProgram), "glUseProgram");
     glGetUniformLocation = try load(get, @TypeOf(glGetUniformLocation), "glGetUniformLocation");
     glUniform2f = try load(get, @TypeOf(glUniform2f), "glUniform2f");
+    glUniform1f = try load(get, @TypeOf(glUniform1f), "glUniform1f");
+    glUniform4f = try load(get, @TypeOf(glUniform4f), "glUniform4f");
     glUniform1i = try load(get, @TypeOf(glUniform1i), "glUniform1i");
     glActiveTexture = try load(get, @TypeOf(glActiveTexture), "glActiveTexture");
     glGenVertexArrays = try load(get, @TypeOf(glGenVertexArrays), "glGenVertexArrays");
@@ -113,6 +127,9 @@ fn loadAll(get: GetProc) !void {
     glVertexAttribPointer = try load(get, @TypeOf(glVertexAttribPointer), "glVertexAttribPointer");
     glVertexAttribDivisor = try load(get, @TypeOf(glVertexAttribDivisor), "glVertexAttribDivisor");
     glDrawArraysInstanced = try load(get, @TypeOf(glDrawArraysInstanced), "glDrawArraysInstanced");
+    glGenFramebuffers = try load(get, @TypeOf(glGenFramebuffers), "glGenFramebuffers");
+    glBindFramebuffer = try load(get, @TypeOf(glBindFramebuffer), "glBindFramebuffer");
+    glFramebufferTexture2D = try load(get, @TypeOf(glFramebufferTexture2D), "glFramebufferTexture2D");
 }
 
 fn compile(kind: u32, src: [*:0]const u8) !c_uint {
@@ -214,6 +231,77 @@ const tri_fs: [*:0]const u8 =
     \\#version 330 core
     \\in vec4 vColor; out vec4 frag;
     \\void main(){ frag = vec4(vColor.rgb*vColor.a, vColor.a); }
+;
+// dual-Kawase backdrop blur (down/up) + frosted-glass composite
+const blur_vs: [*:0]const u8 =
+    \\#version 330 core
+    \\layout(location=0) in vec2 quad;
+    \\out vec2 vUv;
+    \\void main(){ vUv = quad; gl_Position = vec4(quad*2.0-1.0, 0.0, 1.0); }
+;
+const down_fs: [*:0]const u8 =
+    \\#version 330 core
+    \\in vec2 vUv; out vec4 frag; uniform sampler2D tex; uniform vec2 hp;
+    \\void main(){
+    \\  vec4 s = texture(tex, vUv) * 4.0;
+    \\  s += texture(tex, vUv - hp);
+    \\  s += texture(tex, vUv + hp);
+    \\  s += texture(tex, vUv + vec2(hp.x, -hp.y));
+    \\  s += texture(tex, vUv - vec2(hp.x, -hp.y));
+    \\  frag = s / 8.0;
+    \\}
+;
+const up_fs: [*:0]const u8 =
+    \\#version 330 core
+    \\in vec2 vUv; out vec4 frag; uniform sampler2D tex; uniform vec2 hp;
+    \\void main(){
+    \\  vec4 s = texture(tex, vUv + vec2(-hp.x*2.0, 0.0));
+    \\  s += texture(tex, vUv + vec2(-hp.x, hp.y)) * 2.0;
+    \\  s += texture(tex, vUv + vec2(0.0, hp.y*2.0));
+    \\  s += texture(tex, vUv + vec2(hp.x, hp.y)) * 2.0;
+    \\  s += texture(tex, vUv + vec2(hp.x*2.0, 0.0));
+    \\  s += texture(tex, vUv + vec2(hp.x, -hp.y)) * 2.0;
+    \\  s += texture(tex, vUv + vec2(0.0, -hp.y*2.0));
+    \\  s += texture(tex, vUv + vec2(-hp.x, -hp.y)) * 2.0;
+    \\  frag = s / 12.0;
+    \\}
+;
+const glass_vs: [*:0]const u8 =
+    \\#version 330 core
+    \\layout(location=0) in vec2 quad;
+    \\uniform vec2 uRes; uniform vec4 uRect;
+    \\out vec2 vScreen;
+    \\void main(){
+    \\  vec2 px = uRect.xy + quad * uRect.zw;
+    \\  vScreen = px;
+    \\  vec2 clip = (px / uRes) * 2.0 - 1.0;
+    \\  gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
+    \\}
+;
+const glass_fs: [*:0]const u8 =
+    \\#version 330 core
+    \\in vec2 vScreen; out vec4 frag;
+    \\uniform sampler2D blurTex; uniform vec2 uRes; uniform vec4 uRect; uniform float uRadius;
+    \\uniform vec4 uTint; uniform vec4 uBorder;
+    \\float sdRound(vec2 p, vec2 b, float r){ vec2 q=abs(p)-b+r; return min(max(q.x,q.y),0.0)+length(max(q,vec2(0.0)))-r; }
+    \\vec3 toLin(vec3 c){ return pow(c, vec3(2.2)); }
+    \\void main(){
+    \\  vec2 center = uRect.xy + uRect.zw*0.5;
+    \\  vec2 hs = uRect.zw*0.5;
+    \\  float d = sdRound(vScreen - center, hs, uRadius);
+    \\  float aOuter = clamp(0.5 - d, 0.0, 1.0);
+    \\  if (aOuter <= 0.0) discard;
+    \\  vec2 uv = vec2(vScreen.x/uRes.x, 1.0 - vScreen.y/uRes.y);
+    \\  vec3 blur = toLin(texture(blurTex, uv).rgb);
+    \\  vec3 col = mix(blur, toLin(uTint.rgb), uTint.a);
+    \\  // hairline border + top specular for the glass edge
+    \\  float aInner = clamp(0.5 - (d + 1.5), 0.0, 1.0);
+    \\  float ring = clamp(aOuter - aInner, 0.0, 1.0);
+    \\  col = mix(col, toLin(uBorder.rgb), ring * uBorder.a);
+    \\  float distTop = vScreen.y - uRect.y;
+    \\  col += exp(-distTop/4.0) * 0.06 * aInner;
+    \\  frag = vec4(col * aOuter, aOuter);
+    \\}
 ;
 const shadow_vs: [*:0]const u8 =
     \\#version 330 core
@@ -322,6 +410,18 @@ pub const Gpu = struct {
     glyph_ivbo: c_uint,
     tri_vao: c_uint,
     tri_vbo: c_uint,
+    // backdrop blur / glass
+    blur_vao: c_uint = 0,
+    down_prog: c_uint = 0,
+    up_prog: c_uint = 0,
+    glass_prog: c_uint = 0,
+    tex_full: c_uint = 0,
+    half_fbo: c_uint = 0,
+    half_tex: c_uint = 0,
+    quarter_fbo: c_uint = 0,
+    quarter_tex: c_uint = 0,
+    gfx_w: usize = 0,
+    gfx_h: usize = 0,
     rects: std.ArrayList(f32),
     shadows: std.ArrayList(f32),
     tris: std.ArrayList(f32),
@@ -372,7 +472,109 @@ pub const Gpu = struct {
         g.setupShadowVao();
         g.setupGlyphVao();
         g.setupTriVao();
+        // blur/glass programs + a fullscreen-quad VAO (reuses the unit quad)
+        g.down_prog = try linkProgram(blur_vs, down_fs);
+        g.up_prog = try linkProgram(blur_vs, up_fs);
+        g.glass_prog = try linkProgram(glass_vs, glass_fs);
+        glGenVertexArrays(1, &g.blur_vao);
+        glBindVertexArray(g.blur_vao);
+        glBindBuffer(GL_ARRAY_BUFFER, g.quad_vbo);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * @sizeOf(f32), 0);
+        glVertexAttribDivisor(0, 0);
         return g;
+    }
+
+    fn newTex(w: usize, h: usize) c_uint {
+        var t: c_uint = 0;
+        glGenTextures(1, &t);
+        glBindTexture(GL_TEXTURE_2D, t);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, @intCast(w), @intCast(h), 0, GL_RGB, GL_UNSIGNED_BYTE, null);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        return t;
+    }
+    fn ensureGlass(self: *Gpu, w: usize, h: usize) void {
+        if (self.gfx_w == w and self.gfx_h == h and self.tex_full != 0) return;
+        self.gfx_w = w;
+        self.gfx_h = h;
+        if (self.tex_full == 0) {
+            self.tex_full = newTex(w, h);
+            self.half_tex = newTex(@max(w / 2, 1), @max(h / 2, 1));
+            self.quarter_tex = newTex(@max(w / 4, 1), @max(h / 4, 1));
+            glGenFramebuffers(1, &self.half_fbo);
+            glGenFramebuffers(1, &self.quarter_fbo);
+        } else {
+            glBindTexture(GL_TEXTURE_2D, self.tex_full);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, @intCast(w), @intCast(h), 0, GL_RGB, GL_UNSIGNED_BYTE, null);
+            glBindTexture(GL_TEXTURE_2D, self.half_tex);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, @intCast(@max(w / 2, 1)), @intCast(@max(h / 2, 1)), 0, GL_RGB, GL_UNSIGNED_BYTE, null);
+            glBindTexture(GL_TEXTURE_2D, self.quarter_tex);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, @intCast(@max(w / 4, 1)), @intCast(@max(h / 4, 1)), 0, GL_RGB, GL_UNSIGNED_BYTE, null);
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, self.half_fbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self.half_tex, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, self.quarter_fbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self.quarter_tex, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    /// Capture the current framebuffer and dual-Kawase blur it into half_tex.
+    /// Call after drawing the backdrop (a flush), before drawing glass panels.
+    pub fn captureBlur(self: *Gpu, w: usize, h: usize) void {
+        self.ensureGlass(w, h);
+        const wf: f32 = @floatFromInt(w);
+        const hf: f32 = @floatFromInt(h);
+        glDisable(GL_BLEND);
+        // capture default framebuffer -> tex_full
+        glBindTexture(GL_TEXTURE_2D, self.tex_full);
+        glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, @intCast(w), @intCast(h), 0);
+        glBindVertexArray(self.blur_vao);
+        glActiveTexture(GL_TEXTURE0);
+        // down: full -> half
+        glBindFramebuffer(GL_FRAMEBUFFER, self.half_fbo);
+        glViewport(0, 0, @intCast(@max(w / 2, 1)), @intCast(@max(h / 2, 1)));
+        glUseProgram(self.down_prog);
+        glUniform1i(glGetUniformLocation(self.down_prog, "tex"), 0);
+        glUniform2f(glGetUniformLocation(self.down_prog, "hp"), 0.5 / wf, 0.5 / hf);
+        glBindTexture(GL_TEXTURE_2D, self.tex_full);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        // down: half -> quarter
+        glBindFramebuffer(GL_FRAMEBUFFER, self.quarter_fbo);
+        glViewport(0, 0, @intCast(@max(w / 4, 1)), @intCast(@max(h / 4, 1)));
+        glUniform2f(glGetUniformLocation(self.down_prog, "hp"), 1.0 / wf, 1.0 / hf);
+        glBindTexture(GL_TEXTURE_2D, self.half_tex);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        // up: quarter -> half
+        glBindFramebuffer(GL_FRAMEBUFFER, self.half_fbo);
+        glViewport(0, 0, @intCast(@max(w / 2, 1)), @intCast(@max(h / 2, 1)));
+        glUseProgram(self.up_prog);
+        glUniform1i(glGetUniformLocation(self.up_prog, "tex"), 0);
+        glUniform2f(glGetUniformLocation(self.up_prog, "hp"), 1.0 / wf, 1.0 / hf);
+        glBindTexture(GL_TEXTURE_2D, self.quarter_tex);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        // restore
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, @intCast(w), @intCast(h));
+        glEnable(GL_BLEND);
+    }
+
+    /// Draw a frosted-glass rounded panel sampling the blurred backdrop.
+    /// tint: panel color + opacity (a = how much tint vs blurred backdrop).
+    pub fn glass(self: *Gpu, x: f32, y: f32, w: f32, h: f32, radius: f32, tint: Color, border: Color) void {
+        glUseProgram(self.glass_prog);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, self.half_tex);
+        glUniform1i(glGetUniformLocation(self.glass_prog, "blurTex"), 0);
+        glUniform2f(glGetUniformLocation(self.glass_prog, "uRes"), self.width, self.height);
+        glUniform4f(glGetUniformLocation(self.glass_prog, "uRect"), x, y, w, h);
+        glUniform1f(glGetUniformLocation(self.glass_prog, "uRadius"), radius);
+        glUniform4f(glGetUniformLocation(self.glass_prog, "uTint"), @as(f32, @floatFromInt(tint.r)) / 255.0, @as(f32, @floatFromInt(tint.g)) / 255.0, @as(f32, @floatFromInt(tint.b)) / 255.0, @as(f32, @floatFromInt(tint.a)) / 255.0);
+        glUniform4f(glGetUniformLocation(self.glass_prog, "uBorder"), @as(f32, @floatFromInt(border.r)) / 255.0, @as(f32, @floatFromInt(border.g)) / 255.0, @as(f32, @floatFromInt(border.b)) / 255.0, @as(f32, @floatFromInt(border.a)) / 255.0);
+        glBindVertexArray(self.blur_vao);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     }
 
     fn attribQuad(self: *Gpu) void {
@@ -565,6 +767,12 @@ pub const Gpu = struct {
                 glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, @intCast(b.data.items.len / GLYPH_FLOATS));
             }
         }
+        // clear batches so a subsequent flush() draws only newly-pushed primitives
+        // (enables layered rendering, e.g. backdrop -> captureBlur -> glass overlay)
+        self.rects.clearRetainingCapacity();
+        self.shadows.clearRetainingCapacity();
+        self.tris.clearRetainingCapacity();
+        for (self.glyph_batches.items) |*b| b.data.clearRetainingCapacity();
     }
 
     pub fn deinit(self: *Gpu) void {

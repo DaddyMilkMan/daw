@@ -149,8 +149,9 @@ pub fn main() !void {
         c.close();
 
         c.end();
+        g.flush(); // draw the backdrop (the flex chrome) to the framebuffer
 
-        // ---- animated dropdown overlay (drawn on top of the layout) --------
+        // ---- animated FROSTED-GLASS dropdown overlay -----------------------
         if (c.click == 13) menu_open = !menu_open;
         const target: f32 = if (menu_open) 1.0 else 0.0;
         menu_anim += (target - menu_anim) * 0.28;
@@ -159,34 +160,39 @@ pub fn main() !void {
         if (menu_anim > 0.01) {
             if (c.rectOf(13)) |r| {
                 const items = [_][]const u8{ "Arrangement", "Mixer", "Piano Roll", "Settings" };
-                const iw: f32 = 180;
-                const ih: f32 = 36;
+                const iw: f32 = 190;
+                const ih: f32 = 38;
                 const full_h: f32 = ih * items.len + 12;
-                const ease = menu_anim * menu_anim * (3.0 - 2.0 * menu_anim); // smoothstep
-                const hh = full_h * ease;
+                const eased = menu_anim * menu_anim * (3.0 - 2.0 * menu_anim);
+                const hh = full_h * eased;
                 const mxp = r[0];
                 const myp = r[1] + r[3] + 6;
-                g.shadow(mxp, myp, iw, hh, 12, 20, Color.rgba(0, 0, 0, @intFromFloat(180 * ease)));
-                g.card(mxp, myp, iw, hh, 12, panel_t, panel_b, 1, border, 1.0);
+                // shadow stays sharp on the framebuffer around the panel
+                g.shadow(mxp, myp, iw, hh, 14, 22, Color.rgba(0, 0, 0, @intFromFloat(170 * eased)));
+                g.flush();
+                // blur the backdrop behind the panel, then composite frosted glass
+                g.captureBlur(W, H);
+                g.glass(mxp, myp, iw, hh, 14, Color.rgba(36, 40, 52, 150), Color.rgba(255, 255, 255, 46));
+                // foreground items
                 menu_hot = -1;
+                const fmx: f32 = @floatFromInt(mx);
+                const fmy: f32 = @floatFromInt(my);
                 for (items, 0..) |it, i| {
                     const iy = myp + 6 + @as(f32, @floatFromInt(i)) * ih;
                     if (iy + ih > myp + hh - 2) continue;
-                    const fmx: f32 = @floatFromInt(mx);
-                    const fmy: f32 = @floatFromInt(my);
                     const hov = fmx >= mxp + 6 and fmx < mxp + iw - 6 and fmy >= iy and fmy < iy + ih;
                     if (hov) {
                         menu_hot = @intCast(i);
-                        g.rect(mxp + 6, iy, iw - 12, ih, 7, Color.rgba(96, 210, 235, 36));
-                        g.rect(mxp + 6, iy + 7, 3, ih - 14, 1, accent);
+                        g.rect(mxp + 6, iy, iw - 12, ih, 8, Color.rgba(96, 210, 235, 40));
+                        g.rect(mxp + 6, iy + 8, 3, ih - 16, 1, accent);
                         if (released) menu_open = false;
                     }
                     fb.text(&g, mxp + 18, iy + (ih - 15) / 2, it, if (hov) txt else dim);
                 }
+                g.flush();
             }
         }
 
-        g.flush();
         window.swapBuffers();
         std.time.sleep(16 * std.time.ns_per_ms);
         elapsed += 0.016;
