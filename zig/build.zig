@@ -240,6 +240,21 @@ pub fn build(b: *std.Build) void {
     const gpu_step = b.step("gpu", "Run the GPU 2D renderer smoke test");
     gpu_step.dependOn(&run_gpu.step);
 
+    // The consolidated live Zenith DAW (flex + glass + GPU toolkit).
+    const dawexe = b.addExecutable(.{
+        .name = "zenith",
+        .root_source_file = b.path("main_daw.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    dawexe.linkSystemLibrary("GL");
+    dawexe.linkSystemLibrary("X11");
+    dawexe.linkLibC();
+    b.installArtifact(dawexe);
+    const run_daw = b.addRunArtifact(dawexe);
+    const daw_step = b.step("daw", "Run the live Zenith DAW (consolidated)");
+    daw_step.dependOn(&run_daw.step);
+
     // Mixer laid out by the flex engine + GPU widgets.
     const flexmix = b.addExecutable(.{
         .name = "zenith_flexmix",
