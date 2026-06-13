@@ -159,6 +159,18 @@ pub fn build(b: *std.Build) void {
     const ui_step = b.step("ui", "Render the Zenith UI frame to a BMP");
     ui_step.dependOn(&run_ui.step);
 
+    // Polished (antialiased) UI frame.
+    const ui2 = b.addExecutable(.{
+        .name = "zenith_ui_pretty",
+        .root_source_file = b.path("main_ui_pretty.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(ui2);
+    const run_ui2 = b.addRunArtifact(ui2);
+    const ui2_step = b.step("ui2", "Render the polished antialiased UI frame");
+    ui2_step.dependOn(&run_ui2.step);
+
     // Live native window (X11).
     const window = b.addExecutable(.{
         .name = "zenith_window",

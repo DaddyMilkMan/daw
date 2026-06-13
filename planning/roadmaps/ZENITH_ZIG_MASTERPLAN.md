@@ -169,7 +169,7 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ Preset system + content/sample library
 
 ### 4.11 GUI  *(JUCE: gui_basics/graphics/opengl — was ~91K LOC)* — the long pole
-- 🟡 **Renderer**: pure-Zig software 2D renderer started (`render2d.zig` + bitmap font); ❌ GPU acceleration (OpenGL/Vulkan) decision later
+- 🟡 **Renderer**: pure-Zig software 2D renderer with **antialiasing** — grayscale vector text (`font_body/display.zig`), AA rounded rects, soft shadows, gradients (`render2d.zig` `textAA`/`fillRoundedRect`/`dropShadow`). Looks web-grade statically. ❌ GPU acceleration (for blur/animation/transitions), hover/press animation
 - 🟡 Window + input layer: X11 native window + blit + mouse/keyboard done (`window_x11.zig`/`main_window.zig`); ❌ Wayland/Win32/Cocoa, scroll/drag
 - 🟡 Widget/component framework: immediate-mode toolkit done (`uikit.zig`: button/vFader/hSlider, hot/active model); ❌ layout system, more widgets
 - 🟡 DAW views: transport + timeline + **interactive mixer** (play toggles, faders/pans drag → state) wired to the live window; ❌ arranger/piano-roll editing, browser, sample editor

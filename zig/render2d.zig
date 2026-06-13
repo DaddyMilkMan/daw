@@ -4,6 +4,7 @@
 
 const std = @import("std");
 const font = @import("font_data.zig");
+const FontT = @import("font.zig").Font;
 
 pub const Color = struct {
     r: u8,
@@ -105,4 +106,79 @@ pub const Canvas = struct {
             cx += @as(i32, @intCast(font.glyph_w)) * scale;
         }
     }
+
+    /// Antialiased proportional text (grayscale-coverage vector font).
+    pub fn textAA(self: *Canvas, x: i32, y: i32, s: []const u8, c: Color, f: *const FontT) void {
+        var pen = x;
+        for (s) |ch| {
+            const code: usize = ch;
+            if (code < f.first or code >= f.first + f.advance.len) {
+                pen += 6;
+                continue;
+            }
+            const gi = code - f.first;
+            const w = f.width[gi];
+            const off = f.offset[gi];
+            var gy: usize = 0;
+            while (gy < f.cell_h) : (gy += 1) {
+                var gx: usize = 0;
+                while (gx < w) : (gx += 1) {
+                    const cov = f.data[off + gy * w + gx];
+                    if (cov == 0) continue;
+                    const aa: u32 = (@as(u32, cov) * @as(u32, c.a)) / 255;
+                    self.pset(pen + @as(i32, @intCast(gx)), y + @as(i32, @intCast(gy)), .{ .r = c.r, .g = c.g, .b = c.b, .a = @intCast(aa) });
+                }
+            }
+            pen += f.advance[gi];
+        }
+    }
+
+    /// Width in pixels of `s` in font `f`.
+    pub fn textWidth(s: []const u8, f: *const FontT) i32 {
+        var wsum: i32 = 0;
+        for (s) |ch| {
+            const code: usize = ch;
+            wsum += if (code >= f.first and code < f.first + f.advance.len) @as(i32, f.advance[code - f.first]) else 6;
+        }
+        return wsum;
+    }
+
+    /// Antialiased filled rounded rectangle.
+    pub fn fillRoundedRect(self: *Canvas, x: i32, y: i32, w: i32, h: i32, radius: i32, c: Color) void {
+        const r: f32 = @floatFromInt(@min(radius, @min(@divTrunc(w, 2), @divTrunc(h, 2))));
+        const wf: f32 = @floatFromInt(w);
+        const hf: f32 = @floatFromInt(h);
+        var yy: i32 = 0;
+        while (yy < h) : (yy += 1) {
+            var xx: i32 = 0;
+            while (xx < w) : (xx += 1) {
+                const cov = roundedCoverage(@floatFromInt(xx), @floatFromInt(yy), wf, hf, r);
+                if (cov <= 0.003) continue;
+                const a: u32 = @intFromFloat(cov * @as(f32, @floatFromInt(c.a)));
+                self.pset(x + xx, y + yy, .{ .r = c.r, .g = c.g, .b = c.b, .a = @intCast(@min(a, 255)) });
+            }
+        }
+    }
+
+    /// Soft drop shadow behind a rounded rect (draw before the element).
+    pub fn dropShadow(self: *Canvas, x: i32, y: i32, w: i32, h: i32, radius: i32, spread: i32) void {
+        var s: i32 = spread;
+        while (s >= 1) : (s -= 1) {
+            const a: u8 = @intCast(@as(u32, 26) * @as(u32, @intCast(spread - s + 1)) / @as(u32, @intCast(spread)));
+            self.fillRoundedRect(x - s, y - s + 4, w + 2 * s, h + 2 * s, radius + s, .{ .r = 0, .g = 0, .b = 0, .a = a });
+        }
+    }
 };
+
+fn roundedCoverage(px: f32, py: f32, w: f32, h: f32, r: f32) f32 {
+    if (r <= 0) return 1.0;
+    const corner_x = px < r or px > w - 1 - r;
+    const corner_y = py < r or py > h - 1 - r;
+    if (!(corner_x and corner_y)) return 1.0;
+    const cx = if (px < r) r else w - 1 - r;
+    const cy = if (py < r) r else h - 1 - r;
+    const dx = px - cx;
+    const dy = py - cy;
+    const d = @sqrt(dx * dx + dy * dy);
+    return std.math.clamp(r - d + 0.5, 0.0, 1.0);
+}
