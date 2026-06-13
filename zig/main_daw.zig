@@ -38,6 +38,8 @@ pub fn main() !void {
         return e;
     };
     defer g.deinit();
+    var fc = try gpu2d.GpuFont.init(a, &@import("font_caption.zig").font);
+    defer fc.deinit();
     var fb = try gpu2d.GpuFont.init(a, &@import("font_body.zig").font);
     defer fb.deinit();
     var fu = try gpu2d.GpuFont.init(a, &@import("font_ui.zig").font);
@@ -47,7 +49,7 @@ pub fn main() !void {
 
     var p = try daw.buildDemoProject(a, bar);
     defer p.deinit();
-    var view = daw.View.init(&g, &fb, &fu, &fd);
+    var view = daw.View.init(&g, &fc, &fb, &fu, &fd);
     var state = daw.State{};
     std.debug.print("Zenith DAW — flex + glass + GPU toolkit\n", .{});
 

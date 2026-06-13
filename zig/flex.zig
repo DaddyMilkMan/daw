@@ -66,6 +66,7 @@ pub const Style = struct {
     border_w: f32 = 1,
     elev: f32 = 0, // material depth on the bg
     shadow: f32 = 0, // shadow sigma (0 = none)
+    tracking: f32 = 0, // letter-spacing for text nodes
     // interaction
     id: u64 = 0, // nonzero = interactive (hover/press/click)
     hover_bg: ?Color = null, // bg lerps toward this on hover
@@ -232,7 +233,7 @@ pub const Ctx = struct {
         while (c >= 0) : (c = self.nodes[@intCast(c)].next) self.measure(c);
         if (nn.text) |t| {
             if (nn.font) |f| {
-                nn.mw = f.textWidth(t);
+                nn.mw = f.textWidth(t) + nn.style.tracking * @as(f32, @floatFromInt(t.len));
                 nn.mh = f.cell_h;
             }
             return;
@@ -375,7 +376,7 @@ pub const Ctx = struct {
             self.g.stroke(nn.x, nn.y, nn.w, nn.h, s.radius, s.border_w, bd);
         }
         if (nn.text) |t| {
-            if (nn.font) |f| f.text(self.g, nn.x, nn.y, t, nn.text_col);
+            if (nn.font) |f| f.textTracked(self.g, nn.x, nn.y, t, nn.text_col, s.tracking);
         }
         var c = nn.first;
         while (c >= 0) : (c = self.nodes[@intCast(c)].next) self.render(c);

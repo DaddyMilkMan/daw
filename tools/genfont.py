@@ -52,10 +52,13 @@ def emit(path, cell_h, adv, wid, off, data, label):
 
 
 FIRA = "/usr/share/fonts/opentype/fira/"
+# A real type scale: caption 12 / body 14 / title 16 / display 28, with weight
+# climbing alongside size (Medium for small UI labels, SemiBold for display).
 JOBS = [
+    ("zig/font_caption.zig", FIRA + "FiraSans-Medium.otf", 12, "Fira Sans Medium 12"),
     ("zig/font_body.zig", FIRA + "FiraSans-Regular.otf", 14, "Fira Sans Regular 14"),
     ("zig/font_ui.zig", FIRA + "FiraSans-Medium.otf", 16, "Fira Sans Medium 16"),
-    ("zig/font_display.zig", FIRA + "FiraSans-SemiBold.otf", 24, "Fira Sans SemiBold 24"),
+    ("zig/font_display.zig", FIRA + "FiraSans-SemiBold.otf", 28, "Fira Sans SemiBold 28"),
 ]
 for path, otf, size, label in JOBS:
     ch, a, w, o, d = gen(otf, size)

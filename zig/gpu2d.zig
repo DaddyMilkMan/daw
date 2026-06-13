@@ -878,18 +878,22 @@ pub const GpuFont = struct {
         return w;
     }
     pub fn text(self: *const GpuFont, g: *Gpu, x: f32, y: f32, s: []const u8, color: Color) void {
+        self.textTracked(g, x, y, s, color, 0);
+    }
+    /// Text with extra letter-spacing (px between glyphs) — for small-caps labels.
+    pub fn textTracked(self: *const GpuFont, g: *Gpu, x: f32, y: f32, s: []const u8, color: Color, tracking: f32) void {
         var pen = x;
         const ry = @round(y); // pixel-snap the baseline so atlas sampling stays 1:1 crisp
         for (s) |ch| {
             if (ch < self.first or ch >= self.first + self.n) {
-                pen += 6;
+                pen += 6 + tracking;
                 continue;
             }
             const gi = ch - self.first;
             const gw: f32 = @floatFromInt(self.width[gi]);
             const u = self.uv[gi];
             g.pushGlyph(self.tex, @round(pen), ry, gw, self.cell_h, u[0], u[1], u[2], u[3], color);
-            pen += @floatFromInt(self.advance[gi]);
+            pen += @as(f32, @floatFromInt(self.advance[gi])) + tracking;
         }
     }
     pub fn deinit(self: *GpuFont) void {

@@ -73,8 +73,8 @@ const bg_top = Color.rgb(18, 19, 25);
 const bg_bot = Color.rgb(11, 12, 16);
 const panel_t = Color.rgb(24, 26, 33);
 const panel_b = Color.rgb(19, 21, 27);
-const card_t = Color.rgb(34, 37, 46);
-const card_b = Color.rgb(29, 31, 39);
+const card_t = Color.rgb(37, 40, 50);
+const card_b = Color.rgb(31, 34, 43);
 const lane = Color.rgb(14, 15, 20);
 const lane2 = Color.rgb(16, 18, 23);
 const titlebar_t = Color.rgb(25, 27, 34);
@@ -83,9 +83,11 @@ const titlebar_b = Color.rgb(18, 19, 25);
 const bord = Color.rgba(255, 255, 255, 0);
 const rim = Color.rgba(255, 255, 255, 20);
 const grid = Color.rgba(255, 255, 255, 7);
-const txt = Color.rgb(236, 239, 246);
-const dim = Color.rgb(132, 140, 156);
-const faint = Color.rgb(84, 91, 106);
+// text — bumped contrast for APCA legibility (muted labels were too dark)
+const txt = Color.rgb(237, 240, 247);
+const dim = Color.rgb(160, 167, 182); // secondary content (APCA Lc ~60)
+const faint = Color.rgb(124, 132, 147); // most-muted, still legible (Lc ~45)
+const label_col = Color.rgb(150, 158, 173); // small-caps section labels
 const amber = Color.rgb(238, 176, 80);
 const green = Color.rgb(120, 208, 140);
 const red = Color.rgb(236, 100, 100);
@@ -229,12 +231,18 @@ pub const View = struct {
     g: *Gpu,
     c: flex.Ctx,
     u: widgets.Ui,
-    fb: *const Font,
-    fu: *const Font,
-    fd: *const Font,
+    fc: *const Font, // caption 12 (labels)
+    fb: *const Font, // body 14
+    fu: *const Font, // title 16
+    fd: *const Font, // display 28
 
-    pub fn init(g: *Gpu, fb: *const Font, fu: *const Font, fd: *const Font) View {
-        return .{ .g = g, .c = flex.Ctx.init(g, fb, fu, fd), .u = widgets.Ui.init(g), .fb = fb, .fu = fu, .fd = fd };
+    pub fn init(g: *Gpu, fc: *const Font, fb: *const Font, fu: *const Font, fd: *const Font) View {
+        return .{ .g = g, .c = flex.Ctx.init(g, fb, fu, fd), .u = widgets.Ui.init(g), .fc = fc, .fb = fb, .fu = fu, .fd = fd };
+    }
+    /// A small-caps section label (caption font, letter-spaced) — a core modern
+    /// pattern. Caller already uppercases the string.
+    fn secLabel(self: *View, s: []const u8, h: f32) void {
+        self.c.label(s, self.fc, label_col, .{ .h = px(h), .tracking = 1.4 });
     }
 
     pub fn frame(self: *View, p: *project.Project, bar: u64, state: *State, W: f32, H: f32, mx: f32, my: f32, down: bool) WinAction {
@@ -257,7 +265,7 @@ pub const View = struct {
         c.open(.{ .dir = .col, .w = px(W), .h = px(H) });
         {
             // ---- TITLE BAR ----
-            c.open(.{ .dir = .row, .w = grow(), .h = px(56), .pad = 12, .gap = 14, .aligni = .center, .bg = titlebar_t, .bg2 = titlebar_b, .border = bord });
+            c.open(.{ .dir = .row, .w = grow(), .h = px(58), .pad = 16, .gap = 16, .aligni = .center, .bg = titlebar_t, .bg2 = titlebar_b, .border = bord });
             {
                 c.label("Zenith", self.fd, accent, .{});
                 c.open(.{ .dir = .row, .h = px(34), .gap = 2, .pad = 3, .radius = 9, .bg = Color.rgb(28, 31, 40), .bg2 = Color.rgb(22, 24, 32), .border = bord, .aligni = .center });
@@ -269,8 +277,8 @@ pub const View = struct {
                 c.close();
                 c.open(.{ .dir = .col, .gap = 1 });
                 {
-                    c.label("120", self.fd, txt, .{ .h = px(30) });
-                    c.label("BPM  4 / 4", self.fb, dim, .{});
+                    c.label("120", self.fd, txt, .{});
+                    c.label("BPM  4 / 4", self.fc, faint, .{ .tracking = 0.6 });
                 }
                 c.close();
                 c.box(.{ .w = grow() });
@@ -279,7 +287,7 @@ pub const View = struct {
                 c.open(.{ .dir = .col, .gap = 1, .aligni = .end });
                 {
                     c.label(if (state.playing) "Playing" else "Stopped", self.fu, if (state.playing) accent else dim, .{});
-                    c.label("100% Zig", self.fb, faint, .{});
+                    c.label("100% Zig", self.fc, faint, .{ .tracking = 0.4 });
                 }
                 c.close();
                 c.box(.{ .w = px(8) });
@@ -295,7 +303,7 @@ pub const View = struct {
                 // BROWSER
                 c.open(.{ .dir = .col, .w = px(224), .h = grow(), .pad = 12, .gap = 4, .aligni = .stretch, .bg = panel_t, .bg2 = panel_b, .border = bord });
                 {
-                    c.label("BROWSER", self.fb, faint, .{ .h = px(22) });
+                    self.secLabel("BROWSER", 24);
                     const navs = [_]struct { n: []const u8, col: Color }{
                         .{ .n = "Sounds", .col = accent },     .{ .n = "Drums", .col = pal[0] },
                         .{ .n = "Instruments", .col = pal[3] }, .{ .n = "Audio FX", .col = pal[1] },
@@ -312,7 +320,7 @@ pub const View = struct {
                     }
                     c.box(.{ .w = grow(), .h = px(10) });
                     c.box(.{ .w = grow(), .h = px(1), .bg = bord });
-                    c.label("DEVICES", self.fb, faint, .{ .h = px(28) });
+                    self.secLabel("DEVICES", 28);
                     const devs = [_]struct { n: []const u8, t: []const u8, col: Color }{
                         .{ .n = "Operator", .t = "INST", .col = pal[3] }, .{ .n = "Analog", .t = "INST", .col = pal[3] },
                         .{ .n = "Reverb", .t = "FX", .col = pal[1] },     .{ .n = "EQ Eight", .t = "FX", .col = pal[1] },
@@ -339,8 +347,8 @@ pub const View = struct {
                     // ARRANGEMENT
                     c.open(.{ .dir = .col, .w = grow(), .h = grow(), .pad = 8, .gap = 5 });
                     {
-                        c.label("ARRANGEMENT", self.fb, faint, .{ .h = px(18) });
-                        c.open(.{ .dir = .col, .w = grow(), .h = grow(), .radius = 12, .pad = 10, .gap = 5, .bg = panel_t, .bg2 = panel_b, .border = bord, .elev = 0.5, .shadow = 14 });
+                        self.secLabel("ARRANGEMENT", 20);
+                        c.open(.{ .dir = .col, .w = grow(), .h = grow(), .radius = 14, .pad = 12, .gap = 8, .bg = panel_t, .bg2 = panel_b, .border = bord, .elev = 0.5, .shadow = 18 });
                         {
                             // ruler row
                             c.open(.{ .dir = .row, .w = grow(), .h = px(24), .gap = 8 });
@@ -356,7 +364,7 @@ pub const View = struct {
                                 c.open(.{ .dir = .row, .w = grow(), .h = grow(), .gap = 8 });
                                 {
                                     // header
-                                    c.open(.{ .dir = .row, .w = px(180), .h = grow(), .radius = 9, .pad = 9, .gap = 9, .aligni = .center, .bg = card_t, .bg2 = card_b, .border = bord, .elev = 1 });
+                                    c.open(.{ .dir = .row, .w = px(184), .h = grow(), .radius = 10, .pad = 10, .gap = 10, .aligni = .center, .bg = card_t, .bg2 = card_b, .border = bord, .elev = 1 });
                                     {
                                         c.box(.{ .w = px(4), .h = grow(), .radius = 2, .bg = tcol });
                                         c.open(.{ .dir = .col, .w = grow(), .gap = 2 });
@@ -387,14 +395,14 @@ pub const View = struct {
                     const mix_h = std.math.clamp(H * 42 / 100, 210, 380);
                     c.open(.{ .dir = .col, .w = grow(), .h = px(mix_h), .pad = 8, .gap = 5 });
                     {
-                        c.label("MIXER", self.fb, faint, .{ .h = px(18) });
-                        c.open(.{ .dir = .row, .w = grow(), .h = grow(), .radius = 12, .pad = 10, .gap = 9, .bg = panel_t, .bg2 = panel_b, .border = bord, .elev = 0.5, .shadow = 14 });
+                        self.secLabel("MIXER", 20);
+                        c.open(.{ .dir = .row, .w = grow(), .h = grow(), .radius = 14, .pad = 12, .gap = 8, .bg = panel_t, .bg2 = panel_b, .border = bord, .elev = 0.5, .shadow = 18 });
                         {
                             var ti: usize = 0;
                             while (ti <= ntr) : (ti += 1) {
                                 const is_master = ti == ntr;
                                 const scol = if (is_master) accent else pal[ti % pal.len];
-                                c.open(.{ .dir = .col, .w = grow(), .h = grow(), .radius = 10, .pad = 9, .gap = 6, .bg = card_t, .bg2 = card_b, .border = bord, .elev = 1 });
+                                c.open(.{ .dir = .col, .w = grow(), .h = grow(), .radius = 12, .pad = 10, .gap = 8, .bg = card_t, .bg2 = card_b, .border = bord, .elev = 1 });
                                 {
                                     c.box(.{ .w = grow(), .h = px(4), .radius = 2, .bg = scol });
                                     c.label(if (is_master) "Master" else p.tracks.items[ti].name.items, self.fu, txt, .{ .h = px(21) });
@@ -404,7 +412,7 @@ pub const View = struct {
                                             c.box(.{ .w = px(22), .h = px(16), .id = 300 + @as(u64, ti) });
                                             c.box(.{ .w = px(22), .h = px(16), .id = 320 + @as(u64, ti) });
                                             c.box(.{ .w = grow() });
-                                            c.label("PAN", self.fb, faint, .{});
+                                            c.label("PAN", self.fc, faint, .{ .tracking = 0.8 });
                                         }
                                         c.close();
                                         c.box(.{ .w = grow(), .h = px(6), .id = 400 + @as(u64, ti) });
@@ -412,11 +420,11 @@ pub const View = struct {
                                         {
                                             c.open(.{ .dir = .col, .w = px(40), .aligni = .center, .gap = 2 });
                                             c.box(.{ .w = px(26), .h = px(26), .id = 600 + @as(u64, ti) });
-                                            c.label("A", self.fb, faint, .{});
+                                            c.label("A", self.fc, faint, .{});
                                             c.close();
                                             c.open(.{ .dir = .col, .w = px(40), .aligni = .center, .gap = 2 });
                                             c.box(.{ .w = px(26), .h = px(26), .id = 700 + @as(u64, ti) });
-                                            c.label("B", self.fb, faint, .{});
+                                            c.label("B", self.fc, faint, .{});
                                             c.close();
                                         }
                                         c.close();
