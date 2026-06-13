@@ -10,7 +10,7 @@ pub fn build(b: *std.Build) void {
 
     const render = b.addExecutable(.{
         .name = "zenith_render",
-        .root_source_file = b.path("main_render.zig"),
+        .root_source_file = b.path("zig/main_render.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -18,7 +18,7 @@ pub fn build(b: *std.Build) void {
 
     const play = b.addExecutable(.{
         .name = "zenith_play",
-        .root_source_file = b.path("main_play.zig"),
+        .root_source_file = b.path("zig/main_play.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -37,7 +37,7 @@ pub fn build(b: *std.Build) void {
     // Real-time, MIDI-driven engine.
     const live = b.addExecutable(.{
         .name = "zenith_live",
-        .root_source_file = b.path("main_live.zig"),
+        .root_source_file = b.path("zig/main_live.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -52,7 +52,7 @@ pub fn build(b: *std.Build) void {
     // Looping recorder (M3).
     const loop = b.addExecutable(.{
         .name = "zenith_loop",
-        .root_source_file = b.path("main_loop.zig"),
+        .root_source_file = b.path("zig/main_loop.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -67,7 +67,7 @@ pub fn build(b: *std.Build) void {
     // Sampler demo (M4): generate -> write -> read -> play pitched.
     const sampler = b.addExecutable(.{
         .name = "zenith_sampler",
-        .root_source_file = b.path("main_sampler.zig"),
+        .root_source_file = b.path("zig/main_sampler.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -79,7 +79,7 @@ pub fn build(b: *std.Build) void {
     // Mixer demo (M6): synth + sampler -> stereo master.
     const mixer = b.addExecutable(.{
         .name = "zenith_mixer",
-        .root_source_file = b.path("main_mixer.zig"),
+        .root_source_file = b.path("zig/main_mixer.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -91,7 +91,7 @@ pub fn build(b: *std.Build) void {
     // Project model demo (M9): build -> save -> reload -> play.
     const project = b.addExecutable(.{
         .name = "zenith_project",
-        .root_source_file = b.path("main_project.zig"),
+        .root_source_file = b.path("zig/main_project.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -103,7 +103,7 @@ pub fn build(b: *std.Build) void {
     // Audio recorder (M5).
     const record = b.addExecutable(.{
         .name = "zenith_record",
-        .root_source_file = b.path("main_record.zig"),
+        .root_source_file = b.path("zig/main_record.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -117,7 +117,7 @@ pub fn build(b: *std.Build) void {
     // Arrangement demo (timeline of clips).
     const arrange_exe = b.addExecutable(.{
         .name = "zenith_arrange",
-        .root_source_file = b.path("main_arrange.zig"),
+        .root_source_file = b.path("zig/main_arrange.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -129,7 +129,7 @@ pub fn build(b: *std.Build) void {
     // M7 — CLAP plugin hosting: a test .clap plugin + the host.
     const clap_plugin = b.addSharedLibrary(.{
         .name = "zenith_test_clap",
-        .root_source_file = b.path("clap_test_plugin.zig"),
+        .root_source_file = b.path("zig/clap_test_plugin.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -137,7 +137,7 @@ pub fn build(b: *std.Build) void {
 
     const clap_host = b.addExecutable(.{
         .name = "zenith_clap",
-        .root_source_file = b.path("main_clap.zig"),
+        .root_source_file = b.path("zig/main_clap.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -150,7 +150,7 @@ pub fn build(b: *std.Build) void {
     // GUI foundation: render a DAW frame to an image.
     const ui = b.addExecutable(.{
         .name = "zenith_ui",
-        .root_source_file = b.path("main_ui.zig"),
+        .root_source_file = b.path("zig/main_ui.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -162,7 +162,7 @@ pub fn build(b: *std.Build) void {
     // Polished (antialiased) UI frame.
     const ui2 = b.addExecutable(.{
         .name = "zenith_ui_pretty",
-        .root_source_file = b.path("main_ui_pretty.zig"),
+        .root_source_file = b.path("zig/main_ui_pretty.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -174,7 +174,7 @@ pub fn build(b: *std.Build) void {
     // Widget + layout demo (knobs/toggles via the layout engine).
     const kit = b.addExecutable(.{
         .name = "zenith_kit",
-        .root_source_file = b.path("main_kit.zig"),
+        .root_source_file = b.path("zig/main_kit.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -186,7 +186,7 @@ pub fn build(b: *std.Build) void {
     // Glassmorphism demo (software blur).
     const glass = b.addExecutable(.{
         .name = "zenith_glass",
-        .root_source_file = b.path("main_glass.zig"),
+        .root_source_file = b.path("zig/main_glass.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -198,7 +198,7 @@ pub fn build(b: *std.Build) void {
     // OpenGL (GLX) window — GPU present backend.
     const glwin = b.addExecutable(.{
         .name = "zenith_glwin",
-        .root_source_file = b.path("main_glwin.zig"),
+        .root_source_file = b.path("zig/main_glwin.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -213,7 +213,7 @@ pub fn build(b: *std.Build) void {
     // Live native window (X11).
     const window = b.addExecutable(.{
         .name = "zenith_window",
-        .root_source_file = b.path("main_window.zig"),
+        .root_source_file = b.path("zig/main_window.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -228,7 +228,7 @@ pub fn build(b: *std.Build) void {
     // GPU 2D renderer smoke test (SDF shapes + analytic shadows).
     const gpu = b.addExecutable(.{
         .name = "zenith_gpu",
-        .root_source_file = b.path("main_gpu.zig"),
+        .root_source_file = b.path("zig/main_gpu.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -243,7 +243,7 @@ pub fn build(b: *std.Build) void {
     // The consolidated live Zenith DAW (flex + glass + GPU toolkit).
     const dawexe = b.addExecutable(.{
         .name = "zenith",
-        .root_source_file = b.path("main_daw.zig"),
+        .root_source_file = b.path("zig/main_daw.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -258,7 +258,7 @@ pub fn build(b: *std.Build) void {
     // Mixer laid out by the flex engine + GPU widgets.
     const flexmix = b.addExecutable(.{
         .name = "zenith_flexmix",
-        .root_source_file = b.path("main_flexmix.zig"),
+        .root_source_file = b.path("zig/main_flexmix.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -273,7 +273,7 @@ pub fn build(b: *std.Build) void {
     // Flexbox layout engine demo.
     const flex = b.addExecutable(.{
         .name = "zenith_flex",
-        .root_source_file = b.path("main_flex.zig"),
+        .root_source_file = b.path("zig/main_flex.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -288,7 +288,7 @@ pub fn build(b: *std.Build) void {
     // The live DAW, rendered entirely on the GPU toolkit.
     const gpudaw = b.addExecutable(.{
         .name = "zenith_gpu_daw",
-        .root_source_file = b.path("main_gpu_daw.zig"),
+        .root_source_file = b.path("zig/main_gpu_daw.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -303,7 +303,7 @@ pub fn build(b: *std.Build) void {
     // Effects demo (EQ / delay / reverb).
     const fx = b.addExecutable(.{
         .name = "zenith_fx",
-        .root_source_file = b.path("main_fx.zig"),
+        .root_source_file = b.path("zig/main_fx.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -315,7 +315,7 @@ pub fn build(b: *std.Build) void {
     // Headless interactive-UI test.
     const uitest = b.addExecutable(.{
         .name = "zenith_uitest",
-        .root_source_file = b.path("main_uitest.zig"),
+        .root_source_file = b.path("zig/main_uitest.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -327,7 +327,7 @@ pub fn build(b: *std.Build) void {
     // Animation/micro-interaction capture.
     const anim = b.addExecutable(.{
         .name = "zenith_anim",
-        .root_source_file = b.path("main_anim.zig"),
+        .root_source_file = b.path("zig/main_anim.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -339,7 +339,7 @@ pub fn build(b: *std.Build) void {
     // Unit tests.
     const test_step = b.step("test", "Run unit tests");
     for ([_][]const u8{ "midi_alsa.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig", "effects.zig" }) |src| {
-        const t = b.addTest(.{ .root_source_file = b.path(src), .target = target, .optimize = optimize });
+        const t = b.addTest(.{ .root_source_file = b.path(b.fmt("zig/{s}", .{src})), .target = target, .optimize = optimize });
         t.linkSystemLibrary("asound");
         t.linkLibC();
         test_step.dependOn(&b.addRunArtifact(t).step);

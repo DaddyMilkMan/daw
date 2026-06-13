@@ -184,3 +184,8 @@ CompleteVoiceBenchmark
 PluginScanner
 SynthPerformanceBenchmark
 ZenithTests
+*_artefacts/
+
+# Zig build artifacts
+.zig-cache/
+zig-out/

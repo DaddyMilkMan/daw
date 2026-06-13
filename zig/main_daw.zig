@@ -53,11 +53,13 @@ pub fn main() !void {
     var state = daw.State{};
     std.debug.print("Zenith DAW — flex + glass + GPU toolkit\n", .{});
 
+    // Run until the user closes the window (or presses Esc). ZENITH_WINDOW_SECONDS
+    // caps the runtime (used by automated screenshots); unset = run indefinitely.
     const secs: f64 = blk: {
         if (std.process.getEnvVarOwned(a, "ZENITH_WINDOW_SECONDS")) |v| {
             defer a.free(v);
-            break :blk std.fmt.parseFloat(f64, v) catch 8.0;
-        } else |_| break :blk 8.0;
+            break :blk std.fmt.parseFloat(f64, v) catch 1.0e12;
+        } else |_| break :blk 1.0e12;
     };
     var mx: i32 = -1;
     var my: i32 = -1;
