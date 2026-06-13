@@ -33,4 +33,26 @@ pub fn build(b: *std.Build) void {
     const run_play = b.addRunArtifact(play);
     const play_step = b.step("play", "Play the demo phrase via ALSA");
     play_step.dependOn(&run_play.step);
+
+    // Real-time, MIDI-driven engine.
+    const live = b.addExecutable(.{
+        .name = "zenith_live",
+        .root_source_file = b.path("main_live.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    live.linkSystemLibrary("asound");
+    live.linkLibC();
+    b.installArtifact(live);
+
+    const run_live = b.addRunArtifact(live);
+    const live_step = b.step("live", "Run the real-time MIDI engine (connect a keyboard via aconnect)");
+    live_step.dependOn(&run_live.step);
+
+    // Unit tests (MIDI event struct layout, etc.)
+    const tests = b.addTest(.{ .root_source_file = b.path("midi_alsa.zig"), .target = target, .optimize = optimize });
+    tests.linkSystemLibrary("asound");
+    tests.linkLibC();
+    const test_step = b.step("test", "Run unit tests");
+    test_step.dependOn(&b.addRunArtifact(tests).step);
 }

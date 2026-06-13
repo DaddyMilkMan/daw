@@ -205,7 +205,14 @@ content library first); do not chase breadth.
 - WAV writer (`wav.zig`) + ALSA device backend over libasound (`audio_alsa.zig`).
 - `zig build render` -> `zenith_hello.wav` (verified: peak 95% FS, musical structure = arpeggio C-E-G-C then held C-major chord). `zig build play` -> live ALSA playback ran clean (open/set_params/writei/drain/close).
 - `build.zig` drives it. This is the seed of the real engine — all forward effort now lands here, not on the throwaway C++.
-- NEXT: real-time audio callback loop (synthesize on the fly, low latency) instead of pre-render-then-play; then MIDI input ("play Zenith live from a keyboard, in Zig"); then formalize the device side of `zenith_platform.h`.
+
+**MILESTONE "play Zenith live from MIDI" — DONE (2026-06-12):**
+- `midi_alsa.zig`: ALSA sequencer input — creates a system-visible "Zenith MIDI In" port (hand-declared libasound seq symbols + `snd_seq_event_t` layout, no @cImport; layout unit-tested = 32 bytes, data@16).
+- `audio_alsa.zig` `StreamOut`: real-time streaming block output.
+- `main_live.zig`: real-time loop (poll MIDI -> synth -> stream), plus a deterministic `ZENITH_SELFTEST` render-to-WAV mode. `zig build live` / `zig build test`.
+- VERIFIED END-TO-END: `aplaymidi` -> Zenith seq port -> synth -> recorded WAV had the notes at the right times. (Found+fixed a real bug doing so: `SND_SEQ_PORT_CAP_SUBS_WRITE` was 1<<5 (=SUBS_READ) instead of 1<<6 — port wouldn't accept input until fixed.)
+- On the user's machine: `aconnect <keyboard> 128:0` then play.
+- NEXT: formalize `zenith_platform.h` device/MIDI seam; add a transport/clock + track model; grow toward a minimal arrangement engine. (Audio callback is currently a blocking write loop — fine for now; revisit for lower latency.)
 
 **1.3 First Zig kernel — DONE as a spike (`zig/`, builds + runs with zig 0.14.1, no JUCE):**
 - `zig/zenith_dsp.zig` — native Zig SVF filter over a flat C ABI (`zig/zenith_dsp.h`, first slice of `zenith_platform.h`).

@@ -75,3 +75,51 @@ pub fn playInterleavedS16(device: [*:0]const u8, samples: []const i16, rate: u32
 
     _ = snd_pcm_drain(pcm);
 }
+
+/// Streaming output: open once, write small blocks continuously. This is the
+/// real-time path the live engine uses.
+pub const StreamOut = struct {
+    pcm: *snd_pcm_t,
+    channels: u16,
+
+    pub fn open(device: [*:0]const u8, rate: u32, channels: u16, latency_us: u32) AlsaError!StreamOut {
+        var handle: ?*snd_pcm_t = null;
+        if (snd_pcm_open(&handle, device, SND_PCM_STREAM_PLAYBACK, 0) < 0)
+            return AlsaError.OpenFailed;
+        const pcm = handle.?;
+        const rc = snd_pcm_set_params(
+            pcm,
+            SND_PCM_FORMAT_S16_LE,
+            SND_PCM_ACCESS_RW_INTERLEAVED,
+            @intCast(channels),
+            rate,
+            1,
+            latency_us,
+        );
+        if (rc < 0) {
+            _ = snd_pcm_close(pcm);
+            return AlsaError.SetParamsFailed;
+        }
+        return .{ .pcm = pcm, .channels = channels };
+    }
+
+    /// Write one interleaved block; recovers from underruns.
+    pub fn writeBlock(self: *StreamOut, samples: []const i16) AlsaError!void {
+        const frames_total: usize = samples.len / self.channels;
+        var offset: usize = 0;
+        while (offset < frames_total) {
+            const remaining = frames_total - offset;
+            const written = snd_pcm_writei(self.pcm, &samples[offset * self.channels], @intCast(remaining));
+            if (written < 0) {
+                if (snd_pcm_recover(self.pcm, @intCast(written), 1) < 0) return AlsaError.WriteFailed;
+                continue;
+            }
+            offset += @intCast(written);
+        }
+    }
+
+    pub fn close(self: *StreamOut) void {
+        _ = snd_pcm_drain(self.pcm);
+        _ = snd_pcm_close(self.pcm);
+    }
+};

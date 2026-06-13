@@ -10,5 +10,7 @@ zig-cache/
 .zig-cache/
 zig-out/
 
-# rendered audio
+# rendered audio / test artifacts
 *.wav
+*.mid
+live.log
