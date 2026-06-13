@@ -195,6 +195,21 @@ pub fn build(b: *std.Build) void {
     const glass_step = b.step("glass", "Render the glassmorphism demo");
     glass_step.dependOn(&run_glass.step);
 
+    // OpenGL (GLX) window — GPU present backend.
+    const glwin = b.addExecutable(.{
+        .name = "zenith_glwin",
+        .root_source_file = b.path("main_glwin.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    glwin.linkSystemLibrary("GL");
+    glwin.linkSystemLibrary("X11");
+    glwin.linkLibC();
+    b.installArtifact(glwin);
+    const run_glwin = b.addRunArtifact(glwin);
+    const glwin_step = b.step("glwin", "Open the OpenGL (GPU) window");
+    glwin_step.dependOn(&run_glwin.step);
+
     // Live native window (X11).
     const window = b.addExecutable(.{
         .name = "zenith_window",

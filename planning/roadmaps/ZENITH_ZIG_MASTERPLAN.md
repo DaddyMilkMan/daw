@@ -169,7 +169,10 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ Preset system + content/sample library
 
 ### 4.11 GUI  *(JUCE: gui_basics/graphics/opengl — was ~91K LOC)* — the long pole
-- 🟡 **Renderer**: pure-Zig software 2D renderer with **antialiasing** — grayscale vector text (`font_body/display.zig`), AA rounded rects, soft shadows, gradients (`render2d.zig` `textAA`/`fillRoundedRect`/`dropShadow`). Looks web-grade statically. ❌ GPU acceleration (for blur/animation/transitions), hover/press animation
+- 🟡 **Renderer**: pure-Zig 2D renderer — **subpixel/AA vector text**, AA rounded rects,
+  shadows, gradients, **box blur (glassmorphism)** (`render2d.zig`). **OpenGL (GLX) present
+  backend** (`window_gl.zig`) uploads the framebuffer as a GPU texture (verified, 313 frames).
+  ❌ blur/draw IN a GL shader (currently CPU-blur then GPU-present), Vulkan/Metal
 - 🟡 Window + input layer: X11 native window + blit + mouse/keyboard done (`window_x11.zig`/`main_window.zig`); ❌ Wayland/Win32/Cocoa, scroll/drag
 - 🟡 Widget/component framework: immediate-mode toolkit done (`uikit.zig`: button/vFader/hSlider, hot/active model); ❌ layout system, more widgets
 - 🟡 DAW views: transport + timeline + **interactive mixer** (play toggles, faders/pans drag → state) wired to the live window; ❌ arranger/piano-roll editing, browser, sample editor
@@ -310,7 +313,11 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   (scripted input: play toggled, fader 0.85→0.04). `zig build uitest` / `zig build window`.
 - **BATCH COMPLETE (#1-#4):** live windowing, effects, real-plugin CLAP (note events),
   interactive UI — all done + verified.
-- NEXT options: piano-roll/clip editing in the UI, mixer FX chains (wire effects.zig per
-  track), compressor/limiter, Wayland/cross-platform window backends, real-plugin scanning.
+- **UI quality batch done (4/4):** subpixel text, eased hover/press animation, layout
+  engine + knob/toggle widgets, glassmorphism blur + **OpenGL (GLX) GPU present backend**.
+  The renderer now looks web-grade (AA/subpixel text, rounded, shadows, frosted glass) and
+  presents on the GPU. Remaining visual: blur/draw in a GL *shader* (now CPU-blur→GPU-present).
+- NEXT options: piano-roll/clip editing, mixer FX chains (wire effects.zig per track),
+  compressor/limiter, GL-shader rendering, Wayland/cross-platform backends, real-plugin scanning.
 
 *(Add new dated entries as milestones complete.)*
