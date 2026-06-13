@@ -150,21 +150,29 @@ pub const Ui = struct {
         }
         a.hover = ease(a.hover, if (within or self.active == id) 1 else 0, self.dt, 14);
         const r = radius;
-        self.g.card(cx - r, cy - r, 2 * r, 2 * r, r, Color.rgb(42, 46, 58), Color.rgb(30, 33, 42), 1, border, 1.0);
+        self.g.card(cx - r, cy - r, 2 * r, 2 * r, r, Color.rgb(38, 42, 52), Color.rgb(28, 31, 39), 1, border, 0.6);
+        // solid arc (modern) — connected segments, track + accent progress
         const start = std.math.pi * 0.75;
         const sweep = std.math.pi * 1.5;
-        var i: usize = 0;
-        const steps: usize = 36;
+        const ar = r - 2.5;
+        const steps: usize = 30;
+        var prevx: f32 = cx + @cos(start) * ar;
+        var prevy: f32 = cy + @sin(start) * ar;
+        var i: usize = 1;
         while (i <= steps) : (i += 1) {
             const t = @as(f32, @floatFromInt(i)) / @as(f32, @floatFromInt(steps));
             const ang = start + t * sweep;
-            const pxk = cx + @cos(ang) * (r - 3);
-            const pyk = cy + @sin(ang) * (r - 3);
-            const col = if (t <= value.*) lerp(accent, Color.rgb(210, 245, 255), a.hover * 0.5) else Color.rgb(52, 56, 68);
-            self.g.rect(pxk - 1.6, pyk - 1.6, 3.2, 3.2, 1.6, col);
+            const cxp = cx + @cos(ang) * ar;
+            const cyp = cy + @sin(ang) * ar;
+            const on = t <= value.*;
+            const col = if (on) lerp(accent, Color.rgb(200, 240, 255), a.hover * 0.5) else Color.rgb(46, 50, 60);
+            self.g.line(prevx, prevy, cxp, cyp, 2.6, col);
+            prevx = cxp;
+            prevy = cyp;
         }
+        // indicator
         const ang = start + value.* * sweep;
-        self.g.rect(cx + @cos(ang) * (r - 7) - 1.6, cy + @sin(ang) * (r - 7) - 1.6, 3.2, 3.2, 1.6, Color.rgb(236, 239, 246));
+        self.g.line(cx + @cos(ang) * (ar - 6), cy + @sin(ang) * (ar - 6), cx + @cos(ang) * ar, cy + @sin(ang) * ar, 2.4, Color.rgb(240, 243, 250));
         return changed;
     }
 };

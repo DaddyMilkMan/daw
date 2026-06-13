@@ -67,26 +67,28 @@ const C: Cols = blk: {
 const pal = C.pal;
 const accent = C.accent;
 
-// neutral surfaces — flatter gradients, crisp hairlines, strict rhythm
-const bg_top = Color.rgb(23, 25, 32);
-const bg_bot = Color.rgb(14, 15, 20);
-const panel_t = Color.rgb(31, 34, 43);
-const panel_b = Color.rgb(26, 28, 36);
-const card_t = Color.rgb(42, 46, 57);
-const card_b = Color.rgb(35, 38, 48);
-const lane = Color.rgb(20, 22, 28);
-const lane2 = Color.rgb(23, 25, 32);
-const titlebar_t = Color.rgb(32, 35, 45);
-const titlebar_b = Color.rgb(24, 26, 34);
-const bord = Color.rgba(255, 255, 255, 14);
-const rim = Color.rgba(255, 255, 255, 26);
-const grid = Color.rgba(255, 255, 255, 9);
-const txt = Color.rgb(232, 236, 243);
-const dim = Color.rgb(138, 146, 162);
-const faint = Color.rgb(92, 99, 115);
+// modern dark surfaces — near-black, flat, near-invisible hairlines, restraint
+const bg_top = Color.rgb(16, 17, 22);
+const bg_bot = Color.rgb(9, 10, 13);
+const panel_t = Color.rgb(21, 23, 29);
+const panel_b = Color.rgb(17, 18, 23);
+const card_t = Color.rgb(30, 33, 41);
+const card_b = Color.rgb(26, 28, 35);
+const lane = Color.rgb(13, 14, 18);
+const lane2 = Color.rgb(15, 16, 21);
+const titlebar_t = Color.rgb(23, 25, 31);
+const titlebar_b = Color.rgb(16, 17, 22);
+const bord = Color.rgba(255, 255, 255, 9);
+const rim = Color.rgba(255, 255, 255, 18);
+const grid = Color.rgba(255, 255, 255, 7);
+const txt = Color.rgb(235, 238, 245);
+const dim = Color.rgb(130, 138, 154);
+const faint = Color.rgb(82, 89, 103);
 const amber = Color.rgb(238, 176, 80);
 const green = Color.rgb(120, 208, 140);
 const red = Color.rgb(236, 100, 100);
+const meter_hi = Color.rgb(224, 158, 98); // calmer meter gradient (amber -> green)
+const meter_lo = Color.rgb(104, 186, 132);
 
 fn mix(a: Color, b: Color, t: f32) Color {
     const tc = std.math.clamp(t, 0.0, 1.0);
@@ -264,7 +266,7 @@ pub const View = struct {
                 c.close();
                 c.open(.{ .dir = .col, .gap = 1 });
                 {
-                    c.label("120", self.fd, txt, .{ .h = px(28) });
+                    c.label("120", self.fd, txt, .{ .h = px(30) });
                     c.label("BPM  4 / 4", self.fb, dim, .{});
                 }
                 c.close();
@@ -530,7 +532,7 @@ pub const View = struct {
                 g.rect(r[0], r[1], r[2], r[3], 4, Color.rgb(15, 17, 22));
                 const lvl = if (!is_master and state.mutes[ti]) 0.0 else gain.* * 0.92;
                 const mh = lvl * r[3];
-                if (mh > 1) g.rectGrad(r[0], r[1] + r[3] - mh, r[2], mh, 4, red, green, 0, bord);
+                if (mh > 1) g.rectGrad(r[0], r[1] + r[3] - mh, r[2], mh, 4, meter_hi, meter_lo, 0, bord);
             }
             if (c.rectOf(100 + @as(u64, ti))) |r| {
                 var vbuf: [8]u8 = undefined;
