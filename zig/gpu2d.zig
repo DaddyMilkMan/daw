@@ -23,6 +23,7 @@ const GL_ONE: u32 = 1;
 const GL_ONE_MINUS_SRC_ALPHA: u32 = 0x0303;
 const GL_FUNC_ADD: u32 = 0x8006;
 const GL_FRAMEBUFFER_SRGB: u32 = 0x8DB9;
+const GL_MULTISAMPLE: u32 = 0x809D;
 const GL_VERTEX_SHADER: u32 = 0x8B31;
 const GL_FRAGMENT_SHADER: u32 = 0x8B30;
 const GL_COMPILE_STATUS: u32 = 0x8B81;
@@ -456,6 +457,7 @@ pub const Gpu = struct {
         for (self.glyph_batches.items) |*b| b.data.clearRetainingCapacity();
         glViewport(0, 0, @intCast(w), @intCast(h));
         glEnable(GL_FRAMEBUFFER_SRGB); // shaders output linear; GPU encodes to sRGB
+        glEnable(GL_MULTISAMPLE); // MSAA AAs the geometry icons (tri/line)
         glEnable(GL_BLEND);
         glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA); // premultiplied over
         const bl = lin(bg);

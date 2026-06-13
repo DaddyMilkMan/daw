@@ -156,8 +156,13 @@ pub const NativeWindow = struct {
         const display = XOpenDisplay(null) orelse return WindowError.NoDisplay;
         const screen = XDefaultScreen(display);
         const root = XRootWindow(display, screen);
+        const GLX_SAMPLE_BUFFERS: c_int = 0x186a0;
+        const GLX_SAMPLES: c_int = 0x186a1;
+        var attribs_ms = [_]c_int{ GLX_RGBA, GLX_DOUBLEBUFFER, GLX_RED_SIZE, 8, GLX_GREEN_SIZE, 8, GLX_BLUE_SIZE, 8, GLX_DEPTH_SIZE, 24, GLX_SAMPLE_BUFFERS, 1, GLX_SAMPLES, 4, 0 };
         var attribs = [_]c_int{ GLX_RGBA, GLX_DOUBLEBUFFER, GLX_RED_SIZE, 8, GLX_GREEN_SIZE, 8, GLX_BLUE_SIZE, 8, GLX_DEPTH_SIZE, 24, 0 };
-        const vi = glXChooseVisual(display, screen, &attribs) orelse return WindowError.NoVisual;
+        // Prefer a 4x MSAA visual (AAs geometry icons); fall back if unavailable.
+        const vi = glXChooseVisual(display, screen, &attribs_ms) orelse
+            glXChooseVisual(display, screen, &attribs) orelse return WindowError.NoVisual;
         const cmap = XCreateColormap(display, root, vi.visual.?, AllocNone);
         var swa = XSetWindowAttributes{ .colormap = cmap, .border_pixel = 0, .event_mask = ExposureMask | KeyPressMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask };
         const win = XCreateWindow(display, root, 0, 0, @intCast(w), @intCast(h), 0, vi.depth, InputOutput, vi.visual.?, CWBorderPixel | CWColormap | CWEventMask, &swa);
