@@ -298,9 +298,14 @@ const glass_fs: [*:0]const u8 =
     \\  // content magnifies/curves at the glass edge instead of just blurring.
     \\  vec2 n = normalize(vec2(dFdx(d), dFdy(d)) + vec2(1e-6));
     \\  float edge = 1.0 - smoothstep(0.0, 16.0, -d);          // 1 at rim -> 0 ~16px in
-    \\  vec2 refr = n * pow(edge, 2.4) * 10.0;                  // up to ~10px outward bend
-    \\  vec2 uv = vec2((vScreen.x + refr.x)/uRes.x, 1.0 - (vScreen.y + refr.y)/uRes.y);
-    \\  vec3 back = toLin(texture(blurTex, clamp(uv, vec2(0.0), vec2(1.0))).rgb);
+    \\  float k = pow(edge, 2.4) * 11.0;                       // outward bend (px) at the rim
+    \\  // chromatic dispersion: R/G/B refract by slightly different amounts -> a
+    \\  // prismatic rim, like real glass / Apple's Liquid Glass.
+    \\  vec3 back;
+    \\  back.r = texture(blurTex, vec2((vScreen.x+n.x*k*1.12)/uRes.x, 1.0-(vScreen.y+n.y*k*1.12)/uRes.y)).r;
+    \\  back.g = texture(blurTex, vec2((vScreen.x+n.x*k     )/uRes.x, 1.0-(vScreen.y+n.y*k     )/uRes.y)).g;
+    \\  back.b = texture(blurTex, vec2((vScreen.x+n.x*k*0.88)/uRes.x, 1.0-(vScreen.y+n.y*k*0.88)/uRes.y)).b;
+    \\  back = toLin(back);
     \\  // bright translucency: lift the lensed backdrop, then a light tint wash
     \\  vec3 glass = back * 1.14 + 0.016;
     \\  glass = mix(glass, toLin(uTint.rgb), uTint.a);
