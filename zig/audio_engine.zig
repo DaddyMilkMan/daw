@@ -11,6 +11,7 @@
 const std = @import("std");
 const alsa = @import("audio_alsa.zig");
 const synth = @import("synth.zig");
+const audio_track = @import("audio_track.zig");
 
 const RING = 512; // note-event queue capacity (power-of-two not required)
 const NoteEv = struct { on: bool, freq: f32 };
@@ -37,10 +38,12 @@ fn openIn(preferred: [*:0]const u8, rate: u32) ?alsa.StreamIn {
 
 pub const Engine = struct {
     samples: []const f32, // mono source loop (read-only once started)
+    audio_tracks: []const audio_track.AudioTrack = &.{}, // linear-timeline audio clips
     rate: u32 = 48000,
     channels: u16 = 2,
     device: [*:0]const u8 = "default",
     capture: bool = true, // also open the input device and meter it
+    tl_pos: u64 = 0, // linear timeline playhead (frames) for audio tracks
 
     // --- shared, accessed via atomics from both threads ---
     playing: bool = false,
@@ -153,23 +156,35 @@ pub const Engine = struct {
             self.synth.renderBlock(sb[0..N]); // MIDI-driven voices
             const playing = @atomicLoad(bool, &self.playing, .monotonic);
             const gain: f32 = @bitCast(@atomicLoad(u32, &self.gain_bits, .monotonic));
+
+            // mix the linear-timeline audio tracks (stereo) for this block
+            var aL: [N]f32 = [_]f32{0} ** N;
+            var aR: [N]f32 = [_]f32{0} ** N;
+            if (playing and self.audio_tracks.len > 0) {
+                audio_track.mixTracks(self.audio_tracks, aL[0..N], aR[0..N], self.tl_pos);
+            }
+
             var pk: f32 = 0;
             var f: usize = 0;
             while (f < N) : (f += 1) {
-                var s: f32 = sb[f]; // synth always sounds (it's note-gated)
+                const syn = sb[f]; // synth always sounds (it's note-gated)
+                var l: f32 = syn + aL[f];
+                var r: f32 = syn + aR[f];
                 if (playing and n > 0) {
-                    s += self.samples[pos] * gain;
+                    const lp = self.samples[pos] * gain;
+                    l += lp;
+                    r += lp;
                     pos += 1;
                     if (pos >= n) pos = 0;
                 }
-                s = std.math.clamp(s, -1.0, 1.0);
-                const a = @abs(s);
-                if (a > pk) pk = a;
-                const v: i16 = @intFromFloat(s * 32767.0);
-                buf[f * 2] = v;
-                buf[f * 2 + 1] = v;
+                l = std.math.clamp(l, -1.0, 1.0);
+                r = std.math.clamp(r, -1.0, 1.0);
+                pk = @max(pk, @max(@abs(l), @abs(r)));
+                buf[f * 2] = @intFromFloat(l * 32767.0);
+                buf[f * 2 + 1] = @intFromFloat(r * 32767.0);
             }
             out.writeBlock(&buf) catch {};
+            if (playing) self.tl_pos += N; // advance the timeline playhead
             @atomicStore(u64, &self.pos, pos, .monotonic);
             const prev: f32 = @bitCast(@atomicLoad(u32, &self.peak_bits, .monotonic));
             const nx = if (pk > prev) pk else prev * 0.82 + pk * 0.18;

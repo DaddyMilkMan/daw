@@ -8,7 +8,7 @@
 const std = @import("std");
 
 pub const MAGIC = "ZNPR";
-pub const VERSION: u32 = 2; // v2: clips
+pub const VERSION: u32 = 3; // v2: MIDI clips; v3: audio clips (file-referenced)
 
 pub const InstrumentKind = enum(u8) { synth = 0, sampler = 1 };
 
@@ -36,10 +36,27 @@ pub const Clip = struct {
     }
 };
 
+/// An audio clip on a track: references an audio file (WAV/AIFF) and places a
+/// span of it on the timeline. Raw samples live on disk, not in the project file.
+pub const AudioClipRef = struct {
+    path: std.ArrayList(u8), // source audio file
+    start: u64 = 0, // timeline frame where the clip begins
+    source_offset: u64 = 0, // frame offset into the source file
+    length: u64 = 0, // frames to play (0 = to end of file)
+
+    pub fn init(a: std.mem.Allocator) AudioClipRef {
+        return .{ .path = std.ArrayList(u8).init(a) };
+    }
+    pub fn deinit(self: *AudioClipRef) void {
+        self.path.deinit();
+    }
+};
+
 pub const Track = struct {
     name: std.ArrayList(u8),
     sample_path: std.ArrayList(u8), // empty = none (for sampler tracks)
-    clips: std.ArrayList(Clip),
+    clips: std.ArrayList(Clip), // MIDI clips
+    audio_clips: std.ArrayList(AudioClipRef), // audio clips (v3+)
     instrument: InstrumentKind = .synth,
     gain: f32 = 0.8,
     pan: f32 = 0.0,
@@ -50,6 +67,7 @@ pub const Track = struct {
             .name = std.ArrayList(u8).init(a),
             .sample_path = std.ArrayList(u8).init(a),
             .clips = std.ArrayList(Clip).init(a),
+            .audio_clips = std.ArrayList(AudioClipRef).init(a),
         };
     }
     pub fn deinit(self: *Track) void {
@@ -57,6 +75,8 @@ pub const Track = struct {
         self.sample_path.deinit();
         for (self.clips.items) |*c| c.deinit();
         self.clips.deinit();
+        for (self.audio_clips.items) |*ac| ac.deinit();
+        self.audio_clips.deinit();
     }
     pub fn addClip(self: *Track, name: []const u8, start: u64) !*Clip {
         var c = Clip.init(self.clips.allocator);
@@ -64,6 +84,17 @@ pub const Track = struct {
         try c.name.appendSlice(name);
         try self.clips.append(c);
         return &self.clips.items[self.clips.items.len - 1];
+    }
+    /// Reference an audio file as a clip at timeline frame `start`.
+    pub fn addAudioClip(self: *Track, path: []const u8, start: u64) !*AudioClipRef {
+        var ac = AudioClipRef.init(self.audio_clips.allocator);
+        ac.start = start;
+        try ac.path.appendSlice(path);
+        try self.audio_clips.append(ac);
+        return &self.audio_clips.items[self.audio_clips.items.len - 1];
+    }
+    pub fn isAudio(self: Track) bool {
+        return self.audio_clips.items.len > 0;
     }
 };
 
@@ -127,6 +158,14 @@ pub const Project = struct {
                     try w.writeInt(u8, nt.velocity, .little);
                 }
             }
+            // v3: audio clips (file-referenced)
+            try w.writeInt(u32, @intCast(t.audio_clips.items.len), .little);
+            for (t.audio_clips.items) |ac| {
+                try writeStr(w, ac.path.items);
+                try w.writeInt(u64, ac.start, .little);
+                try w.writeInt(u64, ac.source_offset, .little);
+                try w.writeInt(u64, ac.length, .little);
+            }
         }
     }
 
@@ -134,7 +173,7 @@ pub const Project = struct {
         var magic: [4]u8 = undefined;
         try r.readNoEof(&magic);
         if (!std.mem.eql(u8, &magic, MAGIC)) return error.BadMagic;
-        _ = try r.readInt(u32, .little); // version
+        const version = try r.readInt(u32, .little);
 
         var p = Project.init(allocator);
         errdefer p.deinit();
@@ -171,6 +210,20 @@ pub const Project = struct {
                     });
                 }
                 try t.clips.append(c);
+            }
+            // v3+: audio clips
+            if (version >= 3) {
+                const account = try r.readInt(u32, .little);
+                var ai: u32 = 0;
+                while (ai < account) : (ai += 1) {
+                    var ac = AudioClipRef.init(allocator);
+                    errdefer ac.deinit();
+                    try readStrInto(r, &ac.path);
+                    ac.start = try r.readInt(u64, .little);
+                    ac.source_offset = try r.readInt(u64, .little);
+                    ac.length = try r.readInt(u64, .little);
+                    try t.audio_clips.append(ac);
+                }
             }
             try p.tracks.append(t);
         }
@@ -254,6 +307,31 @@ test "project save/load round-trip (clips)" {
     try std.testing.expectEqualStrings("verse", q.tracks.items[0].clips.items[0].name.items);
     try std.testing.expectEqual(@as(u8, 64), q.tracks.items[0].clips.items[0].notes.items[1].pitch);
     try std.testing.expectApproxEqAbs(@as(f32, -0.3), q.tracks.items[0].pan, 1e-6);
+}
+
+test "audio clips persist across save/load (v3)" {
+    const a = std.testing.allocator;
+    var p = Project.init(a);
+    defer p.deinit();
+    const t = try p.addTrack("Vocals", .synth);
+    const ac = try t.addAudioClip("audio/take1.wav", 96000);
+    ac.length = 48000;
+    ac.source_offset = 1000;
+    _ = try t.addAudioClip("audio/take2.wav", 200000);
+
+    try p.save("test_audio_proj.zpr");
+    defer std.fs.cwd().deleteFile("test_audio_proj.zpr") catch {};
+    var q = try Project.load(a, "test_audio_proj.zpr");
+    defer q.deinit();
+
+    const qt = q.tracks.items[0];
+    try std.testing.expect(qt.isAudio());
+    try std.testing.expectEqual(@as(usize, 2), qt.audio_clips.items.len);
+    try std.testing.expectEqualStrings("audio/take1.wav", qt.audio_clips.items[0].path.items);
+    try std.testing.expectEqual(@as(u64, 96000), qt.audio_clips.items[0].start);
+    try std.testing.expectEqual(@as(u64, 48000), qt.audio_clips.items[0].length);
+    try std.testing.expectEqual(@as(u64, 1000), qt.audio_clips.items[0].source_offset);
+    try std.testing.expectEqualStrings("audio/take2.wav", qt.audio_clips.items[1].path.items);
 }
 
 test "undo restores prior state" {

@@ -9,6 +9,7 @@
 const std = @import("std");
 const dsp = @import("dsp.zig");
 const wav = @import("wav.zig");
+const project = @import("project.zig");
 
 /// Audio material placed at `start` (timeline frames). Interleaved f32 samples.
 pub const AudioClip = struct {
@@ -116,6 +117,44 @@ pub fn mixTracks(tracks: []const AudioTrack, out_l: []f32, out_r: []f32, playhea
         if (any_solo and !t.solo) continue;
         t.render(out_l, out_r, playhead);
     }
+}
+
+/// Load a project's audio tracks (the file-referenced `AudioClipRef`s) into
+/// renderable AudioTracks, honoring each clip's source_offset/length. Caller
+/// deinits each track. Tracks with no audio clips are skipped.
+pub fn fromProject(a: std.mem.Allocator, p: *const project.Project) !std.ArrayList(AudioTrack) {
+    var tracks = std.ArrayList(AudioTrack).init(a);
+    errdefer {
+        for (tracks.items) |*t| t.deinit();
+        tracks.deinit();
+    }
+    for (p.tracks.items) |pt| {
+        if (!pt.isAudio()) continue;
+        var track = AudioTrack.init(a);
+        errdefer track.deinit();
+        try track.name.appendSlice(pt.name.items);
+        track.gain = pt.gain;
+        track.pan = pt.pan;
+        track.mute = pt.mute;
+        for (pt.audio_clips.items) |ac| {
+            var clip = try AudioClip.loadWav(a, ac.path.items, ac.start);
+            // trim to [source_offset, source_offset+length) if requested
+            const ch = clip.channels;
+            const total = clip.frames();
+            const off = @min(ac.source_offset, total);
+            const len = if (ac.length == 0) total - off else @min(ac.length, total - off);
+            if (off != 0 or len != total) {
+                const sr = clip.sample_rate;
+                const sub = try a.alloc(f32, @intCast(len * ch));
+                @memcpy(sub, clip.samples[@intCast(off * ch)..][0..@intCast(len * ch)]);
+                clip.deinit();
+                clip = AudioClip.fromOwned(a, sub, ch, ac.start, sr);
+            }
+            try track.addClip(clip);
+        }
+        try tracks.append(track);
+    }
+    return tracks;
 }
 
 /// Captures input frames during recording, then yields a clip on the timeline.
@@ -242,6 +281,89 @@ test "recorder captures frames into a clip at the record position" {
     try std.testing.expectEqual(@as(u64, 1000), clip.start);
     try std.testing.expectEqual(@as(u64, 5), clip.frames());
     try expectApproxEqAbs(@as(f32, 0.3), clip.samples[2], 1e-6);
+}
+
+test "fromProject loads + places a referenced audio clip from the saved model" {
+    const a = std.testing.allocator;
+    // write a tone file the project will reference
+    var nb: [64]u8 = undefined;
+    const path = std.fmt.bufPrint(&nb, "test_fp.{d}.wav", .{std.os.linux.getpid()}) catch "test_fp.wav";
+    var src = try toneClip(a, 440, 480, 0, 48000);
+    defer src.deinit();
+    try src.saveWav(path);
+    defer std.fs.cwd().deleteFile(path) catch {};
+
+    // a project with one audio track referencing it at frame 1000
+    var p = project.Project.init(a);
+    defer p.deinit();
+    const t = try p.addTrack("Aud", .synth);
+    t.gain = 1.0;
+    _ = try t.addAudioClip(path, 1000);
+
+    var tracks = try fromProject(a, &p);
+    defer {
+        for (tracks.items) |*tr| tr.deinit();
+        tracks.deinit();
+    }
+    try std.testing.expectEqual(@as(usize, 1), tracks.items.len);
+    try std.testing.expectEqual(@as(u64, 1000), tracks.items[0].clips.items[0].start);
+
+    // render: silent before frame 1000, audible at/after
+    var l = [_]f32{0} ** 1100;
+    var r = [_]f32{0} ** 1100;
+    mixTracks(tracks.items, &l, &r, 0);
+    try expectApproxEqAbs(@as(f32, 0), l[500], 1e-6); // before the clip
+    var post: f32 = 0;
+    for (l[1001..]) |s| post = @max(post, @abs(s));
+    try expect(post > 0.1); // clip plays after frame 1000
+}
+
+test "full pipeline: record -> WAV -> project -> reload -> timeline render" {
+    const a = std.testing.allocator;
+    const pid = std.os.linux.getpid();
+    var wbuf: [64]u8 = undefined;
+    var pbuf: [64]u8 = undefined;
+    const wpath = std.fmt.bufPrint(&wbuf, "test_rec.{d}.wav", .{pid}) catch "test_rec.wav";
+    const ppath = std.fmt.bufPrint(&pbuf, "test_rec.{d}.zpr", .{pid}) catch "test_rec.zpr";
+    defer std.fs.cwd().deleteFile(wpath) catch {};
+    defer std.fs.cwd().deleteFile(ppath) catch {};
+
+    // 1) record a take (simulate captured input)
+    var rec = Recorder.init(a, 1, 48000);
+    defer rec.deinit();
+    rec.start_at(2000);
+    var blk: [256]f32 = undefined;
+    for (0..2) |b| {
+        for (&blk, 0..) |*v, i| v.* = if ((b * 256 + i) % 2 == 0) @as(f32, 0.5) else -0.5; // loud signal
+        try rec.feed(&blk);
+    }
+    var clip = try rec.finish();
+    try clip.saveWav(wpath); // 2) recorded take lands on disk
+    clip.deinit();
+
+    // 3) reference it in a project and persist the project
+    var p = project.Project.init(a);
+    defer p.deinit();
+    const t = try p.addTrack("Rec", .synth);
+    t.gain = 1.0;
+    _ = try t.addAudioClip(wpath, 2000);
+    try p.save(ppath);
+
+    // 4) reload the project and render its audio onto the timeline
+    var q = try project.Project.load(a, ppath);
+    defer q.deinit();
+    var tracks = try fromProject(a, &q);
+    defer {
+        for (tracks.items) |*tr| tr.deinit();
+        tracks.deinit();
+    }
+    var l = [_]f32{0} ** 2300;
+    var r = [_]f32{0} ** 2300;
+    mixTracks(tracks.items, &l, &r, 0);
+    try expectApproxEqAbs(@as(f32, 0), l[1000], 1e-6); // silent before the take
+    var post: f32 = 0;
+    for (l[2001..]) |s| post = @max(post, @abs(s));
+    try expect(post > 0.1); // the recorded take plays at frame 2000
 }
 
 test "clip survives a WAV round-trip (record -> disk -> reload at a new position)" {

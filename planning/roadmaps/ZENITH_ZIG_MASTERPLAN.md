@@ -153,9 +153,9 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ Quantize / groove, comping (take folders)
 
 ### 4.8 Data model & persistence  *(JUCE: juce_data_structures — ValueTree/UndoManager)*
-- 🟡 **Document/project model** (`project.zig`: Project/Track/Note, gain/pan/instrument): basics done; ❌ clips/regions, routing, plugin state
+- 🟡 **Document/project model** (`project.zig`: Project/Track/Note/Clip + **audio clips** (`AudioClipRef`: file path + timeline start + source offset/length), gain/pan/instrument): MIDI + audio material; ❌ routing, plugin state in the project
 - ✅ **Undo/redo** (snapshot-based `History`)
-- ✅ **Save/load** project files (`ZNPR` endian-explicit binary); ❌ versioning/migration beyond v1
+- ✅ **Save/load** project files (`ZNPR` endian-explicit binary, **v3** = audio clips; version-gated deserialize reads older v2); ❌ migration tooling beyond version-gating
 - ❌ Change-notification / observable model for UI binding
 - ❌ Auto-save, crash recovery
 
@@ -469,8 +469,14 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   `mixTracks` (mute/solo-aware), `Recorder` (feed captured blocks → finalize a clip at the
   record position). 5 unit tests + `zig build audiotrack` (2-track timeline placement + a
   660 Hz recording round-trip, FFT-verified).
-- NEXT in campaign (ordered): wire audio tracks into the saved project format + the live
-  `zenith` engine/UI (record-arm button → capture → clip) → FLAC/Ogg/MP3 decode + streaming →
+- **Audio tracks wired into the project + engine**: project format **v3** persists audio clips
+  (`AudioClipRef`, file-referenced; round-trip verified, version-gated deserialize); `audio_track.fromProject`
+  loads them into renderable tracks (honoring source-offset/length); the live `audio_engine`
+  now mixes audio tracks (stereo) at a linear timeline playhead alongside the synth/loop
+  (`zenith` builds clean). **Full pipeline verified offline**: record → WAV → project → reload →
+  timeline render (the recorded take plays at its frame).
+- NEXT in campaign (ordered): the **GUI record-arm button + RT-safe live capture-to-clip** in
+  `daw.zig`/`main_daw.zig` (needs the running app to verify) → FLAC/Ogg/MP3 decode + streaming →
   plugin param *automation* events + VST3 IEditController. (Real third-party plugin testing
   needs plugins installed — none yet.)
 
