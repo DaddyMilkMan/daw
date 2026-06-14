@@ -8,6 +8,7 @@ const gpu2d = @import("gpu2d.zig");
 const flex = @import("flex.zig");
 const widgets = @import("widgets.zig");
 const image = @import("image.zig");
+const svg = @import("svg.zig");
 const ttf = @import("ttf.zig");
 const FontData = @import("font.zig").Font;
 const Color = gpu2d.Color;
@@ -264,6 +265,15 @@ pub fn main() !void {
     } else |e| std.debug.print("png decode failed: {any}\n", .{e});
     defer if (sample_img) |*im| im.deinit();
 
+    // vector import — rasterize an embedded SVG (our own rasterizer) to a texture
+    var svg_img: ?gpu2d.GpuImage = null;
+    if (svg.rasterize(a, @embedFile("assets/sample.svg"), 256, 256)) |decoded| {
+        var d = decoded;
+        svg_img = gpu2d.GpuImage.init(d.pixels, d.w, d.h);
+        d.deinit();
+    } else |e| std.debug.print("svg raster failed: {any}\n", .{e});
+    defer if (svg_img) |*im| im.deinit();
+
     std.debug.print("Zenith toolkit showcase\n", .{});
 
     const secs: f64 = blk: {
@@ -412,18 +422,18 @@ pub fn main() !void {
             c.label("RENDERED TABLE  ( click a row )", &fc, faint, .{ .h = px(20), .tracking = 1.4 });
             c.box(.{ .w = grow(), .h = px(238), .id = 960 });
 
-            // image import (PNG decoded by our own decoder)
-            c.label("IMAGE IMPORT  ( PNG - real decode, alpha )", &fc, faint, .{ .h = px(20), .tracking = 1.4 });
+            // image import (PNG raster decode + SVG vector rasterize, both ours)
+            c.label("IMAGE IMPORT  ( PNG raster + SVG vector — alpha )", &fc, faint, .{ .h = px(20), .tracking = 1.4 });
             c.open(.{ .dir = .row, .w = grow(), .h = px(184), .gap = 14 });
             {
                 c.box(.{ .w = px(296), .h = grow(), .radius = 14, .bg = card_t, .bg2 = card_b, .elev = 1, .shadow = 16, .id = 970 });
                 c.box(.{ .w = px(296), .h = grow(), .radius = 14, .bg = card_t, .bg2 = card_b, .elev = 1, .shadow = 16, .id = 971 });
                 c.open(.{ .dir = .col, .w = grow(), .h = grow(), .radius = 14, .pad = 18, .gap = 8, .justify = .center, .bg = card_t, .bg2 = card_b, .elev = 1, .shadow = 16 });
                 {
-                    c.label("Raster pipeline", &fu, txt, .{});
-                    c.label("PNG -> RGBA8 -> sRGB texture", &fb, dim, .{});
-                    c.label("8-bit gray / RGB / palette / RGBA", &fc, faint, .{});
-                    c.label("all 5 scanline filters, tRNS alpha", &fc, faint, .{});
+                    c.label("Image pipeline", &fu, txt, .{});
+                    c.label("PNG raster + SVG vector -> sRGB texture", &fb, dim, .{});
+                    c.label("PNG: gray/RGB/palette/RGBA, all filters", &fc, faint, .{});
+                    c.label("SVG: paths, shapes, fills, AA", &fc, faint, .{});
                     c.label("tint + opacity, premultiplied", &fc, faint, .{});
                 }
                 c.close();
@@ -497,25 +507,23 @@ pub fn main() !void {
         if (c.rectOf(960)) |r| {
             _ = u.table(960, r[0], r[1], &TCOLS, &TROWS, &v.trow, &fc, &fb);
         }
-        // imported PNG — fit (contain) inside the slot, preserving aspect
-        if (sample_img) |*im| {
-            const imw: f32 = @floatFromInt(im.w);
-            const imh: f32 = @floatFromInt(im.h);
-            const slots = [_]struct { id: u64, tint: Color }{
-                .{ .id = 970, .tint = Color.white }, // natural
-                .{ .id = 971, .tint = Color.rgb(150, 180, 255) }, // tinted
-            };
-            for (slots) |sl| if (c.rectOf(sl.id)) |r| {
+        // imported images — fit (contain) inside the slot, preserving aspect:
+        // slot 970 = decoded PNG (raster), slot 971 = rasterized SVG (vector).
+        const drawn = [_]struct { id: u64, im: ?*gpu2d.GpuImage }{
+            .{ .id = 970, .im = if (sample_img) |*p| p else null },
+            .{ .id = 971, .im = if (svg_img) |*p| p else null },
+        };
+        for (drawn) |dd| {
+            const im = dd.im orelse continue;
+            if (c.rectOf(dd.id)) |r| {
+                const imw: f32 = @floatFromInt(im.w);
+                const imh: f32 = @floatFromInt(im.h);
                 const pad: f32 = 14;
-                const aw = r[2] - 2 * pad;
-                const ah = r[3] - 2 * pad;
-                const s = @min(aw / imw, ah / imh);
+                const s = @min((r[2] - 2 * pad) / imw, (r[3] - 2 * pad) / imh);
                 const dw = imw * s;
                 const dh = imh * s;
-                const dx = r[0] + (r[2] - dw) / 2;
-                const dy = r[1] + (r[3] - dh) / 2;
-                g.image(im, dx, dy, dw, dh, sl.tint);
-            };
+                g.image(im, r[0] + (r[2] - dw) / 2, r[1] + (r[3] - dh) / 2, dw, dh, Color.white);
+            }
         }
         // typeface variety — one sample line per face, 2 columns x 3 rows.
         // left column = baked fonts, right column = runtime-rasterized .ttf.
