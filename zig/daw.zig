@@ -611,10 +611,13 @@ pub const View = struct {
         // title-bar drag region (avoid the interactive clusters)
         if (state.window_action == .none and u.pressed and my < TBH and (mx < 150 or (mx > 300 and mx < W - 360))) state.window_action = .move;
 
-        // ---- GLASS TITLE BAR: blur the body behind it, composite glass, controls on top
-        g.flush(); // render the body
-        g.captureBlur(@intFromFloat(W), @intFromFloat(H));
-        g.glass(0, 0, W, TBH, 0, Color.rgba(40, 44, 56, 64), Color.rgba(255, 255, 255, 130));
+        // ---- TRANSPORT BAR: a CLEAN flat bar (modern chrome). Liquid Glass is
+        // reserved for floating overlays (menus/tooltips), not forced onto the main
+        // bar — a glass strip with a bright border reads as dated '90s bevel.
+        g.flush(); // render the body, then the chrome on top
+        g.rectGrad(0, 0, W, TBH, 0, titlebar_t, titlebar_b, 0, bord);
+        g.shadow(0, TBH - 6, W, 8, 0, 6, Color.rgba(0, 0, 0, 60)); // soft separation from the body
+        g.rect(0, TBH - 1, W, 1, 0, Color.rgba(255, 255, 255, 12)); // crisp bottom hairline
         self.fd.text(g, 22, 15, "Zenith", accent);
         const tyy: f32 = 15;
         if (state.playing) glow(g, 170, tyy + 14, 22, Color.rgba(108, 147, 244, 150));
