@@ -9,9 +9,13 @@ const Color = gpu2d.Color;
 const Gpu = gpu2d.Gpu;
 const Font = gpu2d.GpuFont;
 
-const accent = Color.rgb(108, 147, 244); // electric indigo
+const accent = Color.rgb(108, 147, 244); // electric indigo — RATIONED to selection/focus/primary
 const accent_hi = Color.rgb(190, 205, 255);
 const accent_lo = Color.rgb(82, 116, 210);
+// muted slate-indigo for the PERVASIVE control fills (faders/sliders) so the UI
+// is quiet and the bright accent stays meaningful (the Linear/Geist principle).
+const fill_lo = Color.rgb(72, 82, 112);
+const fill_hi = Color.rgb(104, 120, 162);
 const border = Color.rgba(255, 255, 255, 0); // no border lines on widgets
 const track_bg = Color.rgb(24, 26, 33);
 const c_on = Color.rgb(236, 239, 246);
@@ -125,7 +129,7 @@ pub const Ui = struct {
         a.hover = ease(a.hover, if (hov or self.active == id) 1 else 0, self.dt, 14);
         self.g.rect(x, y, w, h, w / 2, track_bg);
         const fill = value.* * h;
-        self.g.rect(x, y + h - fill, w, fill, w / 2, lerp(Color.rgb(66, 84, 150), accent, a.hover));
+        self.g.rect(x, y + h - fill, w, fill, w / 2, lerp(fill_lo, fill_hi, a.hover));
         const grow = a.hover * 3;
         const kw = 24 + 2 * grow; // thumb width
         const kx = x + w * 0.5 - kw * 0.5; // centered on the track (balanced)
@@ -162,7 +166,7 @@ pub const Ui = struct {
         const cy = y + h * 0.5;
         const t = (value.* - lo) / (hi - lo);
         const thx = x + tr + t * (w - 2 * tr); // thumb center — balanced
-        const fill = lerp(Color.rgb(96, 120, 200), accent, a.hover);
+        const fill = lerp(fill_lo, fill_hi, a.hover);
         // track
         self.g.rect(x, y, w, h, h * 0.5, track_bg);
         if (bipolar) {
@@ -222,7 +226,8 @@ pub const Ui = struct {
         }
         a.hover = ease(a.hover, if (within or self.active == id) 1 else 0, self.dt, 14);
         const r = radius;
-        self.g.card(cx - r, cy - r, 2 * r, 2 * r, r, Color.rgb(38, 42, 52), Color.rgb(28, 31, 39), 0, border, 0.6);
+        // flatter dial body (modern, not a glossy skeuomorphic sphere)
+        self.g.card(cx - r, cy - r, 2 * r, 2 * r, r, Color.rgb(43, 47, 58), Color.rgb(37, 40, 50), 0, border, 0.28);
         // solid arc (modern) — connected segments, track + accent progress
         const start = std.math.pi * 0.75;
         const sweep = std.math.pi * 1.5;
@@ -237,7 +242,7 @@ pub const Ui = struct {
             const cxp = cx + @cos(ang) * ar;
             const cyp = cy + @sin(ang) * ar;
             const on = t <= value.*;
-            const col = if (on) lerp(accent, accent_hi, a.hover * 0.5) else Color.rgb(44, 48, 58);
+            const col = if (on) lerp(fill_hi, accent, a.hover * 0.45) else Color.rgb(44, 48, 58);
             self.g.line(prevx, prevy, cxp, cyp, 2.6, col);
             prevx = cxp;
             prevy = cyp;

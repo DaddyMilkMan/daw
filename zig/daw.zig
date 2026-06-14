@@ -413,7 +413,10 @@ pub const View = struct {
                     };
                     for (navs, 0..) |nv, i| {
                         const sel = state.nav_sel == @as(i32, @intCast(i));
-                        c.open(.{ .dir = .row, .h = px(32), .pad = 8, .gap = 9, .radius = 7, .aligni = .center, .id = 1000 + @as(u64, i), .bg = if (sel) Color.rgb(40, 52, 60) else panel_t, .bg2 = if (sel) Color.rgb(33, 43, 51) else panel_b, .hover_bg = Color.rgb(44, 49, 60), .border = if (sel) bord else null });
+                        // quiet, neutral active state (Linear-style): a subtly lifted
+                        // surface; the accent is carried by text/icon contrast, not a
+                        // saturated fill. Subtle hover.
+                        c.open(.{ .dir = .row, .h = px(32), .pad = 8, .gap = 9, .radius = 6, .aligni = .center, .id = 1000 + @as(u64, i), .bg = if (sel) Color.rgb(37, 40, 50) else panel_t, .bg2 = if (sel) Color.rgb(31, 34, 43) else panel_b, .hover_bg = Color.rgb(32, 35, 44), .border = null });
                         {
                             c.box(.{ .w = px(15), .h = px(15), .id = 1100 + @as(u64, i) });
                             c.label(nv.n, self.fb, if (sel) txt else dim, .{});
