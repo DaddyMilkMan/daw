@@ -150,7 +150,7 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - 🟡 **Sequencer/playback**: MIDI timeline (`arrangement.zig`) + **sample-accurate audio-clip playback** (`AudioTrack.render`); ❌ advanced (swing, latency-comp scheduling)
 - 🟡 **Recording**: MIDI loop capture + overdub + **audio capture-to-timeline** (`audio_track.Recorder`: feed captured frames → finalize into a clip at the record position; WAV round-trip); ❌ punch in/out, quantize, monitoring
 - ✅ **Automation** (`automation.zig`): breakpoint lanes, hold/linear interpolation, binary-search `valueAt`, sample-accurate `render` over a block (verified driving a gain ramp). ❌ wiring lanes to track/plugin params in the live engine; bezier curves
-- 🟡 Audio-clip **streaming** (`wav.WavStream`/`StreamClip` — done for WAV); ❌ **warp / time-stretch**, pitch-shift
+- 🟡 Audio-clip **streaming** (`wav.WavStream`/`StreamClip` — done for WAV); ✅ **warp / time-stretch** (`timestretch.zig`: WSOLA, pitch-preserving) + **pitch-shift** (stretch+resample, length-preserving) — FFT-verified. ❌ formant-correct pitch, transient preservation
 - ❌ Quantize / groove, comping (take folders)
 
 ### 4.8 Data model & persistence  *(JUCE: juce_data_structures — ValueTree/UndoManager)*

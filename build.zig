@@ -442,7 +442,7 @@ pub fn build(b: *std.Build) void {
 
     // Unit tests.
     const test_step = b.step("test", "Run unit tests");
-    for ([_][]const u8{ "midi_alsa.zig", "midi2.zig", "audio_devices.zig", "ttf.zig", "image.zig", "svg.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig", "effects.zig", "dsp.zig", "aiff.zig", "vst3_abi.zig", "vst2_abi.zig", "audio_track.zig", "automation.zig", "mix_graph.zig" }) |src| {
+    for ([_][]const u8{ "midi_alsa.zig", "midi2.zig", "audio_devices.zig", "ttf.zig", "image.zig", "svg.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig", "effects.zig", "dsp.zig", "aiff.zig", "vst3_abi.zig", "vst2_abi.zig", "audio_track.zig", "automation.zig", "mix_graph.zig", "timestretch.zig" }) |src| {
         const t = b.addTest(.{ .root_source_file = b.path(b.fmt("zig/{s}", .{src})), .target = target, .optimize = optimize });
         t.linkSystemLibrary("asound");
         t.linkLibC();
