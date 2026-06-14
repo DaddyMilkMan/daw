@@ -160,9 +160,10 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ Auto-save, crash recovery
 
 ### 4.9 Plugin hosting  *(JUCE: juce_audio_processors)*  — hardest area
-- 🟡 **CLAP** host (`clap_abi.zig`/`main_clap.zig`): load/instantiate/activate/process + sample-accurate **note events** to instruments verified (hosted plugin played a scale 8/8); ❌ audio/note-port extensions, param events, real-plugin/dir scanning, GUI
-- ❌ Plugin **scan / sandbox (out-of-process) / blacklist**
-- ❌ **VST3** host (Steinberg C++ SDK — bind the interface, don't reinvent the format)
+- 🟡 **CLAP** host (`clap_abi.zig`/`main_clap.zig`/`clap_host.zig`): load/instantiate/activate/process + sample-accurate **note events** (scale 8/8) + **audio-ports/note-ports/params extensions** (exact clap.h layouts) + **real-plugin directory scanning** (`findClapFiles` over ~/.clap, /usr/lib/clap, /usr/local/lib/clap, $CLAP_PATH). Verified: `zig build clapscan` reads descriptors → instantiates → reports ports (audio 0in/1out, note 1in) + params (Gain/Brightness ranges+values). ❌ param *events* (host→plugin automation), state save/load, GUI hosting, out-of-process sandbox
+- 🟡 Plugin **scan** (CLAP dir scan done); ❌ sandbox (out-of-process), blacklist
+- ❌ **VST3** host (vendored SDK headers at `build/_deps/juce-src/.../VST3_SDK/pluginterfaces` — declare the COM ABI in Zig, don't reinvent the format)
+- ❌ **VST2** host (clean-room AEffect struct + dispatcher opcodes)
 - ❌ **AU** host (macOS, Obj-C runtime)
 - ❌ Plugin **parameter automation**, preset/state save-load
 - ❌ Hosting plugin **editor windows** (embed the plugin's own UI)
@@ -425,8 +426,16 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   LFO + envelope follower, gain/pan laws, DC blocker. Extended `effects.zig` Biquad with the
   full RBJ set (bandpass/notch/allpass/low+high shelf). **17 dsp + 5 effects tests pass**
   (`zig build test`). §4.6 now mostly ✅.
-- NEXT in campaign (ordered): file formats (24/float WAV + AIFF, then FLAC/Ogg/MP3) →
-  audio tracks + recording-to-timeline → real CLAP scanning/params/ports → VST3 host
-  (COM ABI from vendored SDK headers) → VST2 host (clean-room AEffect).
+- **File formats**: WAV 24-bit + float32 write (`wav.zig`), clean-room **AIFF** read/write
+  (`aiff.zig`, incl. 80-bit extended sample-rate codec). 6 round-trip tests. §4.3 mostly ✅;
+  FLAC/Ogg/MP3 still pending.
+- **CLAP real-plugin hosting**: extension ABI (audio-ports/note-ports/params, exact clap.h
+  layouts) in `clap_abi.zig`; test plugin now declares 1 stereo out / 1 note in / 2 params;
+  `clap_host.zig` scanner (`findClapFiles` + `scanFile` + `queryPorts`/`paramsExt`);
+  `zig build clapscan` verifies end-to-end. (No third-party .clap installed on this box —
+  path proven against our real .clap.)
+- NEXT in campaign (ordered): FLAC/Ogg/MP3 decode + streaming → audio tracks +
+  recording-to-timeline → CLAP param *events*/state → **VST3 host** (COM ABI from vendored
+  SDK headers + build a minimal VST3 test plugin) → **VST2 host** (clean-room AEffect).
 
 *(Add new dated entries as milestones complete.)*

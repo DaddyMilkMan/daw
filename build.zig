@@ -161,6 +161,21 @@ pub fn build(b: *std.Build) void {
     const clap_step = b.step("clap", "Host a CLAP plugin (defaults to the test plugin)");
     clap_step.dependOn(&run_clap.step);
 
+    // CLAP scanner/inspector: reads descriptors + ports + params from a .clap.
+    const clapscan = b.addExecutable(.{
+        .name = "zenith_clapscan",
+        .root_source_file = b.path("zig/main_clapscan.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    clapscan.linkLibC();
+    b.installArtifact(clapscan);
+    const run_clapscan = b.addRunArtifact(clapscan);
+    run_clapscan.step.dependOn(b.getInstallStep()); // ensure the test .clap is built+installed first
+    if (b.args) |a| run_clapscan.addArgs(a);
+    const clapscan_step = b.step("clapscan", "Scan + inspect a CLAP plugin (ports, params)");
+    clapscan_step.dependOn(&run_clapscan.step);
+
     // GUI foundation: render a DAW frame to an image.
     const ui = b.addExecutable(.{
         .name = "zenith_ui",
