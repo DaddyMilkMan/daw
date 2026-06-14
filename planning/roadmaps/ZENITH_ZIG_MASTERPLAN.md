@@ -388,10 +388,16 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   `main_daw` opens an ALSA-seq port, up-converts incoming events to UMP (MIDI 2.0) and plays them on
   the synth. Verified live: `aplaymidi`→ Zenith seq client 128 → UMP → synth → sustained chord in the
   recorded output (gap-floor RMS 0.011→0.225).
-- HONEST: native UMP *transport* (kernel rawmidi `/dev/snd/umpC*`) not wired — none present on this
-  box; incoming MIDI is 1.0 up-converted to UMP internally. PipeWire seq clients here ARE tagged
-  `[User UMP MIDI2]`, so a native path exists to wire later.
-- NEXT: tempo-sync the loop to the UI BPM; record-arm (capture → disk via wav.zig); native PipeWire
-  UMP transport; rounded-rect-clip + full stroke geometry for SVG; Windows/macOS audio backends.
+- **NATIVE MIDI 2.0 now live** (`midi2_alsa.zig`): registers Zenith as a real UMP MIDI 2.0 endpoint
+  via ALSA's native UMP seq API (`snd_seq_set_client_midi_version(UMP_MIDI_2_0)` +
+  `snd_seq_ump_event_input`), reading raw 32-bit UMP words into `midi2.Ump`. The kernel delivers
+  genuine UMP and translates legacy 1.0 senders to MIDI 2.0 for us. Verified (alsa-lib 1.2.11, kernel
+  7.0): client shows `[User UMP MIDI2]`; a legacy note vel=100 arrived as native UMP MT=4
+  w0=0x40903C00 w1=0xC9240000 → 16-bit vel 0xC924 (the kernel's 2.0 xlate, matching our
+  `scaleUp(100,7,16)`). End-to-end: external MIDI → kernel UMP → synth → recorded sound. `main_daw`
+  prefers native; legacy 1.0+our-up-convert is the fallback.
+- NEXT: tempo-sync the loop to the UI BPM; record-arm (capture → disk via wav.zig); UMP *output* +
+  high-res 32-bit controllers driving synth params; native rawmidi UMP for hardware; SVG stroke
+  geometry; Windows/macOS audio+MIDI backends.
 
 *(Add new dated entries as milestones complete.)*
