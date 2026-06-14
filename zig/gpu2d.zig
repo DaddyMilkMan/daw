@@ -242,6 +242,23 @@ const blur_vs: [*:0]const u8 =
     \\out vec2 vUv;
     \\void main(){ vUv = quad; gl_Position = vec4(quad*2.0-1.0, 0.0, 1.0); }
 ;
+// Film grain — a subtle per-pixel noise the whole frame is dusted with. This is
+// the "premium / dreamy" finish modern UIs (Stripe, Linear, Vercel) use: it kills
+// gradient banding and gives surfaces a soft texture instead of flat plastic.
+// Luminance-weighted so it's strongest in the mids and gentle in pure black/white.
+const grain_fs: [*:0]const u8 =
+    \\#version 330 core
+    \\in vec2 vUv; out vec4 frag;
+    \\uniform sampler2D tex; uniform vec2 uRes; uniform float uAmt; uniform float uSeed;
+    \\float hash(vec2 p){ p = fract(p*vec2(123.34, 456.21)); p += dot(p, p+45.32); return fract(p.x*p.y); }
+    \\void main(){
+    \\  vec3 base = texture(tex, vUv).rgb;
+    \\  float n = hash(vUv*uRes + uSeed) - 0.5;
+    \\  float lum = dot(base, vec3(0.299,0.587,0.114));
+    \\  float w = uAmt * (0.35 + 2.6*lum*(1.0-lum));
+    \\  frag = vec4(base + n*w, 1.0);
+    \\}
+;
 const down_fs: [*:0]const u8 =
     \\#version 330 core
     \\in vec2 vUv; out vec4 frag; uniform sampler2D tex; uniform vec2 hp;
@@ -456,6 +473,7 @@ pub const Gpu = struct {
     down_prog: c_uint = 0,
     up_prog: c_uint = 0,
     glass_prog: c_uint = 0,
+    grain_prog: c_uint = 0,
     tex_full: c_uint = 0,
     half_fbo: c_uint = 0,
     half_tex: c_uint = 0,
@@ -526,6 +544,7 @@ pub const Gpu = struct {
         g.down_prog = try linkProgram(blur_vs, down_fs);
         g.up_prog = try linkProgram(blur_vs, up_fs);
         g.glass_prog = try linkProgram(glass_vs, glass_fs);
+        g.grain_prog = try linkProgram(blur_vs, grain_fs);
         glGenVertexArrays(1, &g.blur_vao);
         glBindVertexArray(g.blur_vao);
         glBindBuffer(GL_ARRAY_BUFFER, g.quad_vbo);
@@ -609,6 +628,31 @@ pub const Gpu = struct {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glViewport(0, 0, @intCast(w), @intCast(h));
         glEnable(GL_BLEND);
+    }
+
+    /// Film-grain post-process. Call LAST (after all flush/glass) to dust the
+    /// finished frame with a subtle noise — the modern "premium" finish that kills
+    /// banding and softens flat fills. `amount` ~0.01–0.02 is tasteful.
+    pub fn grain(self: *Gpu, w: usize, h: usize, amount: f32) void {
+        self.ensureGlass(w, h); // guarantees tex_full at this size
+        const wf: f32 = @floatFromInt(w);
+        const hf: f32 = @floatFromInt(h);
+        glDisable(GL_BLEND);
+        glDisable(GL_FRAMEBUFFER_SRGB); // sample + write sRGB bytes as-is (no re-encode)
+        // snapshot the finished frame
+        glBindTexture(GL_TEXTURE_2D, self.tex_full);
+        glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 0, 0, @intCast(w), @intCast(h), 0);
+        glViewport(0, 0, @intCast(w), @intCast(h));
+        glBindVertexArray(self.blur_vao);
+        glUseProgram(self.grain_prog);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, self.tex_full);
+        glUniform1i(glGetUniformLocation(self.grain_prog, "tex"), 0);
+        glUniform2f(glGetUniformLocation(self.grain_prog, "uRes"), wf, hf);
+        glUniform1f(glGetUniformLocation(self.grain_prog, "uAmt"), amount);
+        glUniform1f(glGetUniformLocation(self.grain_prog, "uSeed"), 0.0);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glEnable(GL_BLEND); // GL_FRAMEBUFFER_SRGB re-enabled by next begin()
     }
 
     /// Draw a frosted-glass rounded panel sampling the blurred backdrop.

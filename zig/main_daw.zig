@@ -226,6 +226,7 @@ pub fn main() !void {
         };
         window.setCursor(cshape);
 
+        g.grain(W, H, 0.014); // subtle film grain — modern premium finish, kills banding
         window.swapBuffers();
         std.time.sleep(16 * std.time.ns_per_ms);
         elapsed += 0.016;

@@ -625,6 +625,7 @@ pub fn main() !void {
         // custom cursors: grabbing while dragging, hand when hovering a control/chip
         window.setCursor(if (v.dragging or u.active != 0) .grabbing else if (chip_hover or u.hot != 0) .hand else .default);
 
+        g.grain(W, H, 0.014); // subtle film grain finish
         window.swapBuffers();
         std.time.sleep(16 * std.time.ns_per_ms);
         elapsed += 0.016;

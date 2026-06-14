@@ -24,6 +24,43 @@ pub const Color = gpu2d.Color;
 const Gpu = gpu2d.Gpu;
 const Font = gpu2d.GpuFont;
 
+// ---- design tokens (Geist-style 4px grid) -----------------------------------
+// Use these named tokens for spacing/radii instead of ad-hoc pixel values, so
+// density stays consistent (the thing that makes modern UIs feel coherent).
+pub const sp = struct {
+    pub const @"1": f32 = 4;
+    pub const @"2": f32 = 8;
+    pub const @"3": f32 = 12;
+    pub const @"4": f32 = 16;
+    pub const @"5": f32 = 20;
+    pub const @"6": f32 = 24;
+    pub const @"8": f32 = 32;
+    pub const @"10": f32 = 40;
+};
+pub const radius = struct {
+    pub const xs: f32 = 4;
+    pub const sm: f32 = 6;
+    pub const md: f32 = 8;
+    pub const lg: f32 = 10;
+    pub const xl: f32 = 14;
+    pub const pill: f32 = 9999;
+};
+// ---- easing (motion) — modern UIs animate state changes on a short ease-out --
+pub fn easeOutCubic(t: f32) f32 {
+    const u = 1.0 - std.math.clamp(t, 0.0, 1.0);
+    return 1.0 - u * u * u;
+}
+pub fn easeInOut(t: f32) f32 {
+    const x = std.math.clamp(t, 0.0, 1.0);
+    return if (x < 0.5) 4.0 * x * x * x else 1.0 - std.math.pow(f32, -2.0 * x + 2.0, 3.0) / 2.0;
+}
+/// Frame-rate-independent critically-damped approach toward `target` (a smooth
+/// spring without overshoot). `speed` ~10–20 = snappy-but-soft. Use for hover/
+/// press/selection so transitions read as eased, not linear.
+pub fn approach(cur: f32, target: f32, dt: f32, speed: f32) f32 {
+    return cur + (target - cur) * (1.0 - std.math.exp(-speed * dt));
+}
+
 // ---- sizing (like CSS: fixed px, flex-grow, percent, fit-content) -----------
 pub const Size = union(enum) { fix: f32, grow: f32, pct: f32, fit: void };
 pub fn px(v: f32) Size {
@@ -101,7 +138,7 @@ fn lerp(a: Color, b: Color, t: f32) Color {
     };
 }
 fn ease(cur: f32, target: f32, dt: f32, speed: f32) f32 {
-    return cur + (target - cur) * @min(1.0, dt * speed);
+    return approach(cur, target, dt, speed); // smooth, frame-rate-independent
 }
 
 pub const Ctx = struct {
