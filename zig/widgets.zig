@@ -160,7 +160,7 @@ pub const Ui = struct {
         const kx = x + w * 0.5 - kw * 0.5; // centered on the track (balanced)
         const knob_y = y + h - value.* * (h - 16) - 16;
         self.g.shadow(kx, knob_y + 1, kw, 16, 6, 5, Color.rgba(0, 0, 0, 150));
-        self.g.card(kx, knob_y, kw, 16, 6, lerp(Color.rgb(220, 225, 234), Color.rgb(255, 255, 255), a.hover), Color.rgb(196, 202, 214), 0, border, 1.0);
+        self.g.card(kx, knob_y, kw, 16, 6, lerp(Color.rgb(224, 228, 236), Color.rgb(248, 250, 253), a.hover), Color.rgb(206, 211, 221), 0, border, 0.0); // flat (no specular gloss); the shadow above gives the lift
         return changed;
     }
 
@@ -205,7 +205,7 @@ pub const Ui = struct {
         // round thumb (the balanced dial), centered on the value
         const rr = tr + a.hover * 2;
         self.g.shadow(thx - rr, cy - rr + 2, 2 * rr, 2 * rr, rr, 4, Color.rgba(0, 0, 0, 130));
-        self.g.card(thx - rr, cy - rr, 2 * rr, 2 * rr, rr, lerp(Color.rgb(244, 246, 250), Color.rgb(255, 255, 255), a.hover), Color.rgb(214, 219, 228), 0, border, 1.0);
+        self.g.card(thx - rr, cy - rr, 2 * rr, 2 * rr, rr, lerp(Color.rgb(236, 240, 246), Color.rgb(250, 251, 254), a.hover), Color.rgb(214, 219, 228), 0, border, 0.0); // flat dial, soft shadow only
         return changed;
     }
 
@@ -225,7 +225,7 @@ pub const Ui = struct {
         const kd = h - 6; // knob diameter
         const kx = x + 3 + a.press * (w - kd - 6);
         self.g.shadow(kx, y + 3 + 1, kd, kd, kd * 0.5, 3, Color.rgba(0, 0, 0, 120));
-        self.g.card(kx, y + 3, kd, kd, kd * 0.5, Color.rgb(252, 253, 255), Color.rgb(228, 232, 240), 0, border, 1.0);
+        self.g.card(kx, y + 3, kd, kd, kd * 0.5, Color.rgb(248, 250, 253), Color.rgb(232, 236, 242), 0, border, 0.0); // flat toggle knob (no gloss), soft shadow only
         return clicked;
     }
 
