@@ -12,6 +12,7 @@ const v = @import("vst3_abi.zig");
 const class_cid = v.uid(0x5A454E49, 0x54485633, 0x54455354, 0x504C5547); // "ZENI THV3 TEST PLUG"
 
 var g_sr: f64 = 48000.0;
+var g_gain: f64 = 0.8; // a persisted parameter (saved/restored via IBStream)
 
 // --- tiny poly sine synth driven by note events ---
 const NVOICES = 16;
@@ -119,10 +120,22 @@ fn cActivateBus(_: *anyopaque, _: i32, _: i32, _: i32, _: u8) callconv(.c) v.tre
 fn cSetActive(_: *anyopaque, _: u8) callconv(.c) v.tresult {
     return v.kResultOk;
 }
-fn cSetState(_: *anyopaque, _: ?*anyopaque) callconv(.c) v.tresult {
+fn cSetState(_: *anyopaque, stream: ?*anyopaque) callconv(.c) v.tresult {
+    const raw = stream orelse return v.kInvalidArgument;
+    const s: *v.BStream = @ptrCast(@alignCast(raw));
+    var buf: [8]u8 = undefined;
+    var read: i32 = 0;
+    if (s.vtbl.read(s, &buf, 8, &read) != v.kResultOk or read != 8) return v.kInvalidArgument;
+    g_gain = @bitCast(std.mem.readInt(u64, &buf, .little));
     return v.kResultOk;
 }
-fn cGetState(_: *anyopaque, _: ?*anyopaque) callconv(.c) v.tresult {
+fn cGetState(_: *anyopaque, stream: ?*anyopaque) callconv(.c) v.tresult {
+    const raw = stream orelse return v.kInvalidArgument;
+    const s: *v.BStream = @ptrCast(@alignCast(raw));
+    var buf: [8]u8 = undefined;
+    std.mem.writeInt(u64, &buf, @bitCast(g_gain), .little);
+    var written: i32 = 0;
+    if (s.vtbl.write(s, &buf, 8, &written) != v.kResultOk or written != 8) return v.kInternalError;
     return v.kResultOk;
 }
 

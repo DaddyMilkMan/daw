@@ -8,6 +8,7 @@ const v = @import("vst2_abi.zig");
 var g_host: ?v.HostCallback = null;
 var g_sr: f64 = 48000.0;
 var g_gain: f32 = 0.5;
+var g_chunk: [4]u8 = undefined; // backing store for effGetChunk state
 
 // poly sine synth driven by MIDI note events
 const NVOICES = 16;
@@ -44,9 +45,10 @@ fn renderSample() f32 {
     return s * g_gain;
 }
 
-fn dispatcher(_: *v.AEffect, opcode: i32, _: i32, _: isize, ptr: ?*anyopaque, opt: f32) callconv(.c) isize {
+fn dispatcher(_: *v.AEffect, opcode: i32, _: i32, value: isize, ptr: ?*anyopaque, opt: f32) callconv(.c) isize {
     switch (opcode) {
         v.effOpen, v.effClose, v.effMainsChanged => return 0,
+        v.effSetChunk => return setChunk(value, ptr),
         v.effSetSampleRate => {
             g_sr = opt;
             g_voices = [_]Voice{.{}} ** NVOICES;
@@ -87,9 +89,26 @@ fn dispatcher(_: *v.AEffect, opcode: i32, _: i32, _: isize, ptr: ?*anyopaque, op
             }
             return 1;
         },
+        v.effGetChunk => {
+            // serialize state (the gain) and hand the host a pointer to it
+            std.mem.writeInt(u32, &g_chunk, @bitCast(g_gain), .little);
+            if (ptr) |p| {
+                const pp: *?*anyopaque = @ptrCast(@alignCast(p));
+                pp.* = &g_chunk;
+            }
+            return g_chunk.len;
+        },
         v.effGetVstVersion => return 2400,
         else => return 0,
     }
+}
+
+fn setChunk(byte_size: isize, ptr: ?*anyopaque) isize {
+    const p = ptr orelse return 0;
+    if (byte_size < 4) return 0;
+    const src: [*]const u8 = @ptrCast(p);
+    g_gain = @bitCast(std.mem.readInt(u32, src[0..4], .little));
+    return 1;
 }
 
 fn setParameter(_: *v.AEffect, index: i32, value: f32) callconv(.c) void {
@@ -120,7 +139,7 @@ var g_effect = v.AEffect{
     .numParams = 1,
     .numInputs = 0,
     .numOutputs = 2,
-    .flags = v.effFlagsCanReplacing | v.effFlagsIsSynth,
+    .flags = v.effFlagsCanReplacing | v.effFlagsIsSynth | v.effFlagsProgramChunks,
     .resvd1 = 0,
     .resvd2 = 0,
     .initialDelay = 0,

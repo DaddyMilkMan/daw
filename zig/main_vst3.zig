@@ -139,9 +139,90 @@ pub fn main() !void {
     for (rec.items) |s| peak = @max(peak, @abs(s));
     std.debug.print("instrument played MIDI 69 -> dominant {d:.1} Hz (peak {d:.3}) -> vst3_demo.wav\n", .{ freq, peak });
 
+    // State round-trip via host IBStream: setState(gain=0.33) then getState -> confirm.
+    {
+        var blob: [8]u8 = undefined;
+        std.mem.writeInt(u64, &blob, @bitCast(@as(f64, 0.33)), .little);
+        var in_ctx = StreamCtx{ .buf = std.ArrayList(u8).init(a) };
+        defer in_ctx.buf.deinit();
+        try in_ctx.buf.appendSlice(&blob);
+        var in_stream = MemStream{ .ctx = &in_ctx };
+        if (component.vtbl.setState(component, @ptrCast(&in_stream)) != v.kResultOk) return error.SetStateFailed;
+
+        var out_ctx = StreamCtx{ .buf = std.ArrayList(u8).init(a) };
+        defer out_ctx.buf.deinit();
+        var out_stream = MemStream{ .ctx = &out_ctx };
+        if (component.vtbl.getState(component, @ptrCast(&out_stream)) != v.kResultOk) return error.GetStateFailed;
+        const restored: f64 = @bitCast(std.mem.readInt(u64, out_ctx.buf.items[0..8], .little));
+        std.debug.print("state: setState(gain=0.33) -> getState read back {d:.2}\n", .{restored});
+        if (@abs(restored - 0.33) > 1e-9) return error.StateRoundTripFailed;
+    }
+
     if (peak < 0.1) return error.SilentOutput;
     if (@abs(freq - 440.0) > 15.0) return error.WrongPitch;
-    std.debug.print("OK: VST3 instrument hosted — note event delivered, synthesized 440 Hz.\n", .{});
+    std.debug.print("OK: VST3 instrument hosted — note event delivered, synthesized 440 Hz, state round-trips.\n", .{});
+}
+
+// A host-side IBStream backed by a growable byte buffer. The COM object is an
+// extern struct (vtbl ptr first); the buffer lives in a side context.
+const StreamCtx = struct { buf: std.ArrayList(u8), pos: usize = 0 };
+const MemStream = extern struct {
+    vtbl: *const v.BStreamVtbl = &stream_vtbl,
+    ctx: *StreamCtx,
+};
+const stream_vtbl = v.BStreamVtbl{
+    .queryInterface = msQI,
+    .addRef = msRef,
+    .release = msRef,
+    .read = msRead,
+    .write = msWrite,
+    .seek = msSeek,
+    .tell = msTell,
+};
+fn msQI(self: *anyopaque, iid: [*]const u8, obj: *?*anyopaque) callconv(.c) v.tresult {
+    if (std.mem.eql(u8, iid[0..16], &v.IBStream_iid) or std.mem.eql(u8, iid[0..16], &v.FUnknown_iid)) {
+        obj.* = self;
+        return v.kResultOk;
+    }
+    obj.* = null;
+    return v.kNoInterface;
+}
+fn msRef(_: *anyopaque) callconv(.c) u32 {
+    return 1;
+}
+fn msRead(self: *anyopaque, buffer: *anyopaque, num: i32, out: ?*i32) callconv(.c) v.tresult {
+    const ms: *MemStream = @ptrCast(@alignCast(self));
+    const want: usize = @intCast(num);
+    const n = @min(want, ms.ctx.buf.items.len - ms.ctx.pos);
+    const dst: [*]u8 = @ptrCast(buffer);
+    @memcpy(dst[0..n], ms.ctx.buf.items[ms.ctx.pos .. ms.ctx.pos + n]);
+    ms.ctx.pos += n;
+    if (out) |o| o.* = @intCast(n);
+    return v.kResultOk;
+}
+fn msWrite(self: *anyopaque, buffer: *anyopaque, num: i32, out: ?*i32) callconv(.c) v.tresult {
+    const ms: *MemStream = @ptrCast(@alignCast(self));
+    const n: usize = @intCast(num);
+    const src: [*]const u8 = @ptrCast(buffer);
+    ms.ctx.buf.appendSlice(src[0..n]) catch return v.kInternalError;
+    if (out) |o| o.* = num;
+    return v.kResultOk;
+}
+fn msSeek(self: *anyopaque, pos: i64, mode: i32, result: ?*i64) callconv(.c) v.tresult {
+    const ms: *MemStream = @ptrCast(@alignCast(self));
+    ms.ctx.pos = switch (mode) {
+        v.kIBSeekSet => @intCast(pos),
+        v.kIBSeekCur => ms.ctx.pos + @as(usize, @intCast(pos)),
+        v.kIBSeekEnd => ms.ctx.buf.items.len,
+        else => ms.ctx.pos,
+    };
+    if (result) |r| r.* = @intCast(ms.ctx.pos);
+    return v.kResultOk;
+}
+fn msTell(self: *anyopaque, pos: *i64) callconv(.c) v.tresult {
+    const ms: *MemStream = @ptrCast(@alignCast(self));
+    pos.* = @intCast(ms.ctx.pos);
+    return v.kResultOk;
 }
 
 /// Hann-windowed FFT peak -> dominant frequency, from a steady-state slice.

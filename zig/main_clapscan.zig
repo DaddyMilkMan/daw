@@ -69,9 +69,53 @@ pub fn main() !void {
     std.debug.print("installed .clap files in standard dirs: {d}\n", .{found.len});
     for (found) |p| std.debug.print("  {s}\n", .{p});
 
-    // 4) Assert what the test plugin must expose (host verification).
+    // 4) State save/load round-trip through host-provided streams.
+    if (plugin.get_extension.?(plugin, abi.EXT_STATE)) |raw| {
+        const st: *const abi.PluginState = @ptrCast(@alignCast(raw));
+        const pe = host.paramsExt(plugin).?;
+
+        // save current state
+        var saved = std.ArrayList(u8).init(a);
+        defer saved.deinit();
+        var ostream = abi.OStream{ .ctx = &saved, .write = ostreamWrite };
+        if (!st.save.?(plugin, &ostream)) return error.SaveFailed;
+
+        // load a crafted state (Gain=0.25, Brightness=0.75) and confirm it took
+        var blob: [16]u8 = undefined;
+        std.mem.writeInt(u64, blob[0..8], @bitCast(@as(f64, 0.25)), .little);
+        std.mem.writeInt(u64, blob[8..16], @bitCast(@as(f64, 0.75)), .little);
+        var rd = ReadCtx{ .data = &blob };
+        var istream = abi.IStream{ .ctx = &rd, .read = istreamRead };
+        if (!st.load.?(plugin, &istream)) return error.LoadFailed;
+
+        var g: f64 = 0;
+        var br: f64 = 0;
+        _ = pe.get_value.?(plugin, 0, &g);
+        _ = pe.get_value.?(plugin, 1, &br);
+        std.debug.print("state: saved {d} bytes; after load -> Gain={d:.2} Brightness={d:.2}\n", .{ saved.items.len, g, br });
+        std.debug.assert(@abs(g - 0.25) < 1e-9 and @abs(br - 0.75) < 1e-9);
+    }
+
+    // 5) Assert what the test plugin must expose (host verification).
     std.debug.assert(ports.audio_out == 1 and ports.audio_in == 0);
     std.debug.assert(ports.note_in == 1);
     std.debug.assert(pcount == 2);
-    std.debug.print("OK: host scanned, instantiated, and read ports + params.\n", .{});
+    std.debug.print("OK: host scanned, instantiated, read ports + params, and round-tripped state.\n", .{});
+}
+
+const ReadCtx = struct { data: []const u8, pos: usize = 0 };
+
+fn ostreamWrite(stream: *const abi.OStream, buffer: *const anyopaque, size: u64) callconv(.c) i64 {
+    const list: *std.ArrayList(u8) = @ptrCast(@alignCast(stream.ctx.?));
+    const bytes: [*]const u8 = @ptrCast(buffer);
+    list.appendSlice(bytes[0..@intCast(size)]) catch return -1;
+    return @intCast(size);
+}
+fn istreamRead(stream: *const abi.IStream, buffer: *anyopaque, size: u64) callconv(.c) i64 {
+    const ctx: *ReadCtx = @ptrCast(@alignCast(stream.ctx.?));
+    const n = @min(@as(usize, @intCast(size)), ctx.data.len - ctx.pos);
+    const dst: [*]u8 = @ptrCast(buffer);
+    @memcpy(dst[0..n], ctx.data[ctx.pos .. ctx.pos + n]);
+    ctx.pos += n;
+    return @intCast(n);
 }

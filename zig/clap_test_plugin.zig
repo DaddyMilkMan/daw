@@ -188,10 +188,25 @@ const params_ext = abi.PluginParams{
     .flush = pFlush,
 };
 
+// --- state: serialize the param values to/from the host stream ---
+fn stSave(_: *const abi.Plugin, stream: *const abi.OStream) callconv(.c) bool {
+    var buf: [params_list.len * 8]u8 = undefined;
+    for (g_param_values, 0..) |val, i| std.mem.writeInt(u64, buf[i * 8 ..][0..8], @bitCast(val), .little);
+    return stream.write.?(stream, &buf, buf.len) == buf.len;
+}
+fn stLoad(_: *const abi.Plugin, stream: *const abi.IStream) callconv(.c) bool {
+    var buf: [params_list.len * 8]u8 = undefined;
+    if (stream.read.?(stream, &buf, buf.len) != buf.len) return false;
+    for (&g_param_values, 0..) |*val, i| val.* = @bitCast(std.mem.readInt(u64, buf[i * 8 ..][0..8], .little));
+    return true;
+}
+const state_ext = abi.PluginState{ .save = stSave, .load = stLoad };
+
 fn plugGetExt(_: *const abi.Plugin, id: [*:0]const u8) callconv(.c) ?*const anyopaque {
     if (std.mem.orderZ(u8, id, abi.EXT_AUDIO_PORTS) == .eq) return &audio_ports;
     if (std.mem.orderZ(u8, id, abi.EXT_NOTE_PORTS) == .eq) return &note_ports;
     if (std.mem.orderZ(u8, id, abi.EXT_PARAMS) == .eq) return &params_ext;
+    if (std.mem.orderZ(u8, id, abi.EXT_STATE) == .eq) return &state_ext;
     return null;
 }
 fn plugOnMain(_: *const abi.Plugin) callconv(.c) void {}

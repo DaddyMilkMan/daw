@@ -128,6 +128,21 @@ pub const PATH_SIZE = 1024;
 pub const EXT_AUDIO_PORTS: [*:0]const u8 = "clap.audio-ports";
 pub const EXT_NOTE_PORTS: [*:0]const u8 = "clap.note-ports";
 pub const EXT_PARAMS: [*:0]const u8 = "clap.params";
+pub const EXT_STATE: [*:0]const u8 = "clap.state";
+
+// state streams (clap/stream.h): read/write return bytes moved, -1 on error.
+pub const IStream = extern struct {
+    ctx: ?*anyopaque,
+    read: ?*const fn (*const IStream, *anyopaque, u64) callconv(.c) i64,
+};
+pub const OStream = extern struct {
+    ctx: ?*anyopaque,
+    write: ?*const fn (*const OStream, *const anyopaque, u64) callconv(.c) i64,
+};
+pub const PluginState = extern struct {
+    save: ?*const fn (*const Plugin, *const OStream) callconv(.c) bool,
+    load: ?*const fn (*const Plugin, *const IStream) callconv(.c) bool,
+};
 
 // audio-ports
 pub const AUDIO_PORT_IS_MAIN: u32 = 1 << 0;

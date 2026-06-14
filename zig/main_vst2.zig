@@ -78,9 +78,20 @@ pub fn main() !void {
     for (rec.items) |s| peak = @max(peak, @abs(s));
     std.debug.print("instrument played MIDI 69 -> dominant {d:.1} Hz (peak {d:.3}) -> vst2_demo.wav\n", .{ freq, peak });
 
+    // State round-trip via chunks: setChunk(gain=0.42) then getChunk -> confirm.
+    {
+        var blob: [4]u8 = undefined;
+        std.mem.writeInt(u32, &blob, @bitCast(@as(f32, 0.42)), .little);
+        plug.setChunk(&blob);
+        const got = plug.getChunk();
+        const restored: f32 = @bitCast(std.mem.readInt(u32, got[0..4], .little));
+        std.debug.print("state: setChunk(gain=0.42) -> getChunk read back {d:.2}\n", .{restored});
+        if (@abs(restored - 0.42) > 1e-6) return error.StateRoundTripFailed;
+    }
+
     if (peak < 0.1) return error.SilentOutput;
     if (@abs(freq - 440.0) > 15.0) return error.WrongPitch;
-    std.debug.print("OK: VST2 instrument hosted — MIDI note delivered, synthesized 440 Hz.\n", .{});
+    std.debug.print("OK: VST2 instrument hosted — MIDI note delivered, synthesized 440 Hz, state round-trips.\n", .{});
 }
 
 /// Hann-windowed FFT peak -> dominant frequency, from a steady-state slice.

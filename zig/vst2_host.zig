@@ -51,6 +51,18 @@ pub const Plugin = struct {
     pub fn sendEvents(self: *Plugin, events: *v.VstEvents) void {
         _ = self.dispatch(v.effProcessEvents, 0, 0, @ptrCast(events), 0);
     }
+    /// State save: returns the plugin's chunk bytes (borrowed, valid until next call).
+    pub fn getChunk(self: *Plugin) []const u8 {
+        var ptr: ?*anyopaque = null;
+        const size = self.dispatch(v.effGetChunk, 0, 0, @ptrCast(&ptr), 0);
+        if (size <= 0 or ptr == null) return &.{};
+        const bytes: [*]const u8 = @ptrCast(ptr.?);
+        return bytes[0..@intCast(size)];
+    }
+    /// State load: hand the plugin a chunk to restore from.
+    pub fn setChunk(self: *Plugin, data: []const u8) void {
+        _ = self.dispatch(v.effSetChunk, 0, @intCast(data.len), @constCast(@ptrCast(data.ptr)), 0);
+    }
     pub fn process(self: *Plugin, inputs: [*]const [*]f32, outputs: [*]const [*]f32, frames: i32) void {
         self.effect.processReplacing.?(self.effect, inputs, outputs, frames);
     }

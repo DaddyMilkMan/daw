@@ -160,10 +160,10 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ Auto-save, crash recovery
 
 ### 4.9 Plugin hosting  *(JUCE: juce_audio_processors)*  — hardest area
-- 🟡 **CLAP** host (`clap_abi.zig`/`main_clap.zig`/`clap_host.zig`): load/instantiate/activate/process + sample-accurate **note events** (scale 8/8) + **audio-ports/note-ports/params extensions** (exact clap.h layouts) + **real-plugin directory scanning** (`findClapFiles` over ~/.clap, /usr/lib/clap, /usr/local/lib/clap, $CLAP_PATH). Verified: `zig build clapscan` reads descriptors → instantiates → reports ports (audio 0in/1out, note 1in) + params (Gain/Brightness ranges+values). ❌ param *events* (host→plugin automation), state save/load, GUI hosting, out-of-process sandbox
+- 🟡 **CLAP** host (`clap_abi.zig`/`main_clap.zig`/`clap_host.zig`): load/instantiate/activate/process + sample-accurate **note events** (scale 8/8) + **audio-ports/note-ports/params extensions** (exact clap.h layouts) + **real-plugin directory scanning** (`findClapFiles`) + **state save/load** (`clap.state` ext + host streams; round-trip verified). Verified: `zig build clapscan` reads descriptors → instantiates → reports ports + params → saves/loads state (Gain/Brightness restored). ❌ param *events* (host→plugin automation), GUI hosting, out-of-process sandbox
 - 🟡 Plugin **scan** (CLAP dir scan done); ❌ sandbox (out-of-process), blacklist
-- 🟡 **VST3** host (`vst3_abi.zig`/`vst3_host.zig`): clean-room COM ABI from the SDK headers — TUID encoding (non-COM big-endian), `IPluginFactory`/`IComponent`/`IAudioProcessor`/**`IEventList`** vtables, `ProcessData`/`ProcessSetup`/`AudioBusBuffers`/`BusInfo`/**`Event` (48-byte, union @24)** layouts. Loads a module → factory → "Audio Module Class" → createInstance(IComponent) → initialize → queryInterface(IAudioProcessor) → setupProcessing → activateBus (audio+**event**) → setActive → **process() with host IEventList**. Verified: `zig build vst3` hosts an *instrument* — host delivers a note event, plugin synthesizes, **FFT confirms 439.5 Hz** (A4). ❌ IEditController/params, IBStream state, real IHostApplication context, real third-party .vst3 testing, plugin editor
-- 🟡 **VST2** host (`vst2_abi.zig`/`vst2_host.zig`): clean-room AEffect (no SDK — Steinberg withdrew it) + dispatcher opcodes + host callback + **VstEvents/VstMidiEvent + effProcessEvents**. Loads a .so → `VSTPluginMain` → AEffect (magic-checked) → open/setSampleRate/setBlockSize/resume → **MIDI note via effProcessEvents** → processReplacing(). Verified: `zig build vst2` hosts an *instrument* — **FFT confirms 439.5 Hz** (A4). ❌ params/programs UI, chunks (effGetChunk/effSetChunk), real third-party .so testing
+- 🟡 **VST3** host (`vst3_abi.zig`/`vst3_host.zig`): clean-room COM ABI from the SDK headers — TUID encoding (non-COM big-endian), `IPluginFactory`/`IComponent`/`IAudioProcessor`/**`IEventList`** vtables, `ProcessData`/`ProcessSetup`/`AudioBusBuffers`/`BusInfo`/**`Event` (48-byte, union @24)** layouts. Loads a module → factory → "Audio Module Class" → createInstance(IComponent) → initialize → queryInterface(IAudioProcessor) → setupProcessing → activateBus (audio+**event**) → setActive → **process() with host IEventList**. Verified: `zig build vst3` hosts an *instrument* — host delivers a note event, plugin synthesizes, **FFT confirms 439.5 Hz** (A4), and **state round-trips** via a host `IBStream` (getState/setState). ❌ IEditController (param display/automation), real IHostApplication context, real third-party .vst3 testing, plugin editor
+- 🟡 **VST2** host (`vst2_abi.zig`/`vst2_host.zig`): clean-room AEffect (no SDK — Steinberg withdrew it) + dispatcher opcodes + host callback + **VstEvents/VstMidiEvent + effProcessEvents**. Loads a .so → `VSTPluginMain` → AEffect (magic-checked) → open/setSampleRate/setBlockSize/resume → **MIDI note via effProcessEvents** → processReplacing(). Verified: `zig build vst2` hosts an *instrument* — **FFT confirms 439.5 Hz** (A4), and **state round-trips** via **chunks** (effGetChunk/effSetChunk). ❌ params/programs UI, real third-party .so testing
 - ❌ **AU** host (macOS, Obj-C runtime)
 - ❌ Plugin **parameter automation**, preset/state save-load
 - ❌ Hosting plugin **editor windows** (embed the plugin's own UI)
@@ -457,9 +457,12 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   - VST2: added `VstEvents`/`VstMidiEvent` + `effProcessEvents` to `vst2_abi.zig`; host sends
     a MIDI note; plugin synth. `zig build vst2` → 439.5 Hz.
   - CLAP: already routed note events (`zig build clap`, scale 8/8) — trio now consistent.
+- **Plugin state save/load — all 3 formats** (so projects can persist plugin settings):
+  CLAP `clap.state` ext + host streams (`IStream`/`OStream`); VST3 `IComponent` getState/setState
+  over a host-implemented `IBStream` (memory buffer); VST2 `effGetChunk`/`effSetChunk` + the
+  `effFlagsProgramChunks` flag. Each verified by a state round-trip in its `zig build` driver.
 - NEXT in campaign (ordered): **audio tracks + recording-to-timeline** (the other headline
-  must-do) → plugin **params + state save/load** (CLAP state ext / VST3 IEditController+IBStream
-  / VST2 chunks) → FLAC/Ogg/MP3 decode + streaming. (Real third-party plugin testing needs
-  plugins installed — none on this box yet.)
+  must-do) → FLAC/Ogg/MP3 decode + streaming → plugin param *automation* events + VST3
+  IEditController. (Real third-party plugin testing needs plugins installed — none yet.)
 
 *(Add new dated entries as milestones complete.)*

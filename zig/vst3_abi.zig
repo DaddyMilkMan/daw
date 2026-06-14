@@ -17,6 +17,7 @@ pub const kResultFalse: tresult = 1;
 pub const kNoInterface: tresult = @bitCast(@as(u32, 0x80004002));
 pub const kInvalidArgument: tresult = @bitCast(@as(u32, 0x80070057));
 pub const kNotImplemented: tresult = @bitCast(@as(u32, 0x80004001));
+pub const kInternalError: tresult = @bitCast(@as(u32, 0x80004005));
 
 pub const TUID = [16]u8;
 
@@ -36,6 +37,11 @@ pub const IPluginFactory_iid = uid(0x7A4D811C, 0x52114A1F, 0xAED9D2EE, 0x0B43BF9
 pub const IComponent_iid = uid(0xE831FF31, 0xF2D54301, 0x928EBBEE, 0x25697802);
 pub const IAudioProcessor_iid = uid(0x42043F99, 0xB7DA453C, 0xA569E79D, 0x9AAEC33D);
 pub const IEventList_iid = uid(0x3A2C4214, 0x346349FE, 0xB2C4F397, 0xB9695A44);
+pub const IBStream_iid = uid(0xC3BF6EA2, 0x30994752, 0x9B6BF990, 0x1EE33E9B);
+
+pub const kIBSeekSet: i32 = 0;
+pub const kIBSeekCur: i32 = 1;
+pub const kIBSeekEnd: i32 = 2;
 
 // Enums (all int32 in the ABI).
 pub const kAudio: i32 = 0;
@@ -145,6 +151,18 @@ pub const EventListVtbl = extern struct {
     addEvent: *const fn (*anyopaque, *Event) callconv(.c) tresult,
 };
 pub const EventList = extern struct { vtbl: *const EventListVtbl };
+
+// IBStream — the host's state container; the plugin reads/writes its state here.
+pub const BStreamVtbl = extern struct {
+    queryInterface: *const fn (*anyopaque, [*]const u8, *?*anyopaque) callconv(.c) tresult,
+    addRef: *const fn (*anyopaque) callconv(.c) u32,
+    release: *const fn (*anyopaque) callconv(.c) u32,
+    read: *const fn (*anyopaque, *anyopaque, i32, ?*i32) callconv(.c) tresult,
+    write: *const fn (*anyopaque, *anyopaque, i32, ?*i32) callconv(.c) tresult,
+    seek: *const fn (*anyopaque, i64, i32, ?*i64) callconv(.c) tresult,
+    tell: *const fn (*anyopaque, *i64) callconv(.c) tresult,
+};
+pub const BStream = extern struct { vtbl: *const BStreamVtbl };
 
 comptime {
     std.debug.assert(@sizeOf(Event) == 48);
