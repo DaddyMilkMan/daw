@@ -118,6 +118,7 @@ pub fn main() !void {
             switch (e.kind) {
                 .note_on => s.noteOn(f, 1.0),
                 .note_off => s.noteOff(f),
+                else => {},
             }
             seq.record(loop_pos, loop_idx, e) catch {};
         }
@@ -129,6 +130,7 @@ pub fn main() !void {
             switch (te.event.kind) {
                 .note_on => s.noteOn(f, 1.0),
                 .note_off => s.noteOff(f),
+                else => {},
             }
         }
 

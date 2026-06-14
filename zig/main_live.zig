@@ -105,6 +105,7 @@ pub fn main() !void {
             switch (e.kind) {
                 .note_on => s.noteOn(f, 1.0),
                 .note_off => s.noteOff(f),
+                else => {},
             }
         }
         s.renderBlock(&fbuf);

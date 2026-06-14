@@ -24,9 +24,14 @@ const SND_SEQ_PORT_CAP_NO_EXPORT: c_uint = 1 << 7;
 const SND_SEQ_PORT_TYPE_MIDI_GENERIC: c_uint = 1 << 1;
 const SND_SEQ_PORT_TYPE_APPLICATION: c_uint = 1 << 20;
 
-// event types we care about
+// event types we care about (alsa/seq_event.h)
 const SND_SEQ_EVENT_NOTEON: u8 = 6;
 const SND_SEQ_EVENT_NOTEOFF: u8 = 7;
+const SND_SEQ_EVENT_KEYPRESS: u8 = 8; // polyphonic aftertouch (uses the note struct)
+const SND_SEQ_EVENT_CONTROLLER: u8 = 10; // control change
+const SND_SEQ_EVENT_PGMCHANGE: u8 = 11; // program change
+const SND_SEQ_EVENT_CHANPRESS: u8 = 12; // channel aftertouch
+const SND_SEQ_EVENT_PITCHBEND: u8 = 13; // pitch bend (value -8192..8191)
 const EV_CLIENT_START: u8 = 60; // 60..65 = announce topology changes (hot-plug)
 const EV_PORT_CHANGE: u8 = 65;
 
@@ -47,6 +52,12 @@ const SeqEvent = extern struct {
             velocity: u8,
             off_velocity: u8,
             duration: u32,
+        },
+        control: extern struct { // snd_seq_ev_ctrl_t: CC / pgm / chanpress / bend
+            channel: u8,
+            unused: [3]u8,
+            param: u32, // controller number (CC) or unused
+            value: i32, // CC value 0..127, program, pressure, or bend -8192..8191
         },
         ext: extern struct { len: u32, ptr: ?*anyopaque }, // forces 16-byte, 8-aligned union
         raw: [16]u8,
@@ -74,19 +85,36 @@ extern fn snd_seq_port_info_get_capability(p: *const snd_seq_port_info_t) c_uint
 extern fn snd_seq_query_next_port(seq: *snd_seq_t, p: *snd_seq_port_info_t) c_int;
 
 pub const MidiEvent = struct {
-    pub const Kind = enum { note_on, note_off };
+    pub const Kind = enum {
+        note_on,
+        note_off,
+        control_change,
+        pitch_bend,
+        channel_pressure,
+        poly_pressure,
+        program_change,
+    };
     kind: Kind,
-    note: u8,
-    velocity: u8,
+    note: u8 = 0, // note number (notes, poly aftertouch)
+    velocity: u8 = 0, // velocity (notes)
+    channel: u4 = 0,
+    controller: u8 = 0, // CC number (control_change) / program (program_change)
+    value: u16 = 0, // CC/pressure 0..127, or 14-bit pitch bend 0..16383 (8192 = center)
 
-    /// Up-convert this 7-bit MIDI 1.0 event to a MIDI 2.0 UMP (16-bit velocity,
-    /// scaled per the spec). `group` selects one of the 16 UMP groups.
+    /// Up-convert this 7-bit MIDI 1.0 event to a MIDI 2.0 UMP (resolutions scaled
+    /// per the spec, via the shared `fromMidi1`). `group` selects a UMP group.
     pub fn toUmp(self: MidiEvent, group: u4) midi2.Ump {
-        const status: u8 = switch (self.kind) {
-            .note_on => 0x90,
-            .note_off => 0x80,
+        const ch: u8 = self.channel;
+        const status: u8, const d1: u8, const d2: u8 = switch (self.kind) {
+            .note_on => .{ 0x90 | ch, self.note, self.velocity },
+            .note_off => .{ 0x80 | ch, self.note, self.velocity },
+            .control_change => .{ 0xB0 | ch, self.controller, @intCast(self.value & 0x7F) },
+            .program_change => .{ 0xC0 | ch, self.controller, 0 },
+            .channel_pressure => .{ 0xD0 | ch, @intCast(self.value & 0x7F), 0 },
+            .poly_pressure => .{ 0xA0 | ch, self.note, @intCast(self.value & 0x7F) },
+            .pitch_bend => .{ 0xE0 | ch, @intCast(self.value & 0x7F), @intCast((self.value >> 7) & 0x7F) },
         };
-        return midi2.fromMidi1(group, status, self.note, self.velocity).?;
+        return midi2.fromMidi1(group, status, d1, d2).?;
     }
 };
 
@@ -163,18 +191,44 @@ pub const MidiInput = struct {
                 SND_SEQ_EVENT_NOTEON => {
                     const n = e.data.note;
                     if (n.velocity > 0) {
-                        out[count] = .{ .kind = .note_on, .note = n.note, .velocity = n.velocity };
+                        out[count] = .{ .kind = .note_on, .note = n.note, .velocity = n.velocity, .channel = @intCast(n.channel & 0x0F) };
                     } else {
-                        out[count] = .{ .kind = .note_off, .note = n.note, .velocity = 0 };
+                        out[count] = .{ .kind = .note_off, .note = n.note, .velocity = 0, .channel = @intCast(n.channel & 0x0F) };
                     }
                     count += 1;
                 },
                 SND_SEQ_EVENT_NOTEOFF => {
                     const n = e.data.note;
-                    out[count] = .{ .kind = .note_off, .note = n.note, .velocity = n.off_velocity };
+                    out[count] = .{ .kind = .note_off, .note = n.note, .velocity = n.off_velocity, .channel = @intCast(n.channel & 0x0F) };
                     count += 1;
                 },
-                else => {}, // ignore CC/pitchbend/etc. for now
+                SND_SEQ_EVENT_KEYPRESS => { // poly aftertouch (note struct, velocity = pressure)
+                    const n = e.data.note;
+                    out[count] = .{ .kind = .poly_pressure, .note = n.note, .value = n.velocity, .channel = @intCast(n.channel & 0x0F) };
+                    count += 1;
+                },
+                SND_SEQ_EVENT_CONTROLLER => {
+                    const c = e.data.control;
+                    out[count] = .{ .kind = .control_change, .controller = @intCast(c.param & 0x7F), .value = @intCast(@as(u32, @bitCast(c.value)) & 0x7F), .channel = @intCast(c.channel & 0x0F) };
+                    count += 1;
+                },
+                SND_SEQ_EVENT_PGMCHANGE => {
+                    const c = e.data.control;
+                    out[count] = .{ .kind = .program_change, .controller = @intCast(@as(u32, @bitCast(c.value)) & 0x7F), .channel = @intCast(c.channel & 0x0F) };
+                    count += 1;
+                },
+                SND_SEQ_EVENT_CHANPRESS => {
+                    const c = e.data.control;
+                    out[count] = .{ .kind = .channel_pressure, .value = @intCast(@as(u32, @bitCast(c.value)) & 0x7F), .channel = @intCast(c.channel & 0x0F) };
+                    count += 1;
+                },
+                SND_SEQ_EVENT_PITCHBEND => { // ALSA value -8192..8191 -> 14-bit 0..16383
+                    const c = e.data.control;
+                    const v14: i32 = std.math.clamp(c.value + 8192, 0, 16383);
+                    out[count] = .{ .kind = .pitch_bend, .value = @intCast(v14), .channel = @intCast(c.channel & 0x0F) };
+                    count += 1;
+                },
+                else => {}, // SysEx, clock/transport, etc. not yet surfaced
             }
         }
         if (rescan) _ = self.connectAllSources();
@@ -189,4 +243,23 @@ pub const MidiInput = struct {
 test "SeqEvent layout matches C ABI" {
     try std.testing.expectEqual(@as(usize, 32), @sizeOf(SeqEvent));
     try std.testing.expectEqual(@as(usize, 16), @offsetOf(SeqEvent, "data"));
+}
+
+test "non-note events up-convert to the right UMP" {
+    // control change CC74 = 64
+    const cc = (MidiEvent{ .kind = .control_change, .controller = 74, .value = 64, .channel = 1 }).toUmp(0);
+    const mcc = midi2.decode(cc);
+    try std.testing.expect(mcc == .control_change);
+    try std.testing.expectEqual(@as(u8, 74), mcc.control_change.index);
+    try std.testing.expectEqual(@as(u4, 1), mcc.control_change.channel);
+
+    // pitch bend centered (8192) -> 32-bit center 0x8000_0000
+    const pb = (MidiEvent{ .kind = .pitch_bend, .value = 8192 }).toUmp(0);
+    const mpb = midi2.decode(pb);
+    try std.testing.expect(mpb == .pitch_bend);
+    try std.testing.expectEqual(@as(u32, 0x8000_0000), mpb.pitch_bend.value);
+
+    // channel pressure
+    const cp = (MidiEvent{ .kind = .channel_pressure, .value = 100 }).toUmp(0);
+    try std.testing.expect(midi2.decode(cp) == .channel_pressure);
 }
