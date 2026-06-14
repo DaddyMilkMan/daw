@@ -95,11 +95,11 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ Sample-rate conversion at the device boundary
 
 ### 4.2 Platform — MIDI  *(JUCE: juce_audio_devices MIDI + MidiMessage)*
-- 🟡 ALSA seq **input**, note on/off only
-- ❌ Full MIDI **message parsing**: CC, pitchbend, aftertouch (poly+channel), program change, SysEx, MIDI clock/transport, **MPE**
-- ❌ MIDI **output** (to hardware / other apps)
-- ❌ MIDI device **enumeration/selection**
-- ❌ Sample-accurate **timestamping** (events placed at frame offsets in the block)
+- ✅ ALSA seq **input** (auto-connect every source + hot-plug), MIDI 2.0 **UMP** input (`midi2_alsa.zig`) with MIDI-1.0 fallback (`midi_alsa.zig`)
+- ✅ **Message parsing — notes + CC + pitch bend + channel & poly aftertouch + program change** on BOTH paths (the MIDI-1.0 fallback rebuilds canonical bytes → shared `midi2.fromMidi1`, so it decodes to the same Messages as the UMP path). **Velocity reaches the synth** (scales amplitude + brightness); mod wheel→vibrato, CC7/CC11→expression gain, **CC64 sustain pedal**, CC71→resonance, CC74→cutoff, bend→pitch, aftertouch→brightness, all routed live (`routeMidi`). ❌ SysEx, MIDI clock/transport sync, **MPE** (per-note controllers decode but aren't voiced per-note yet)
+- 🟡 MIDI **output** — UMP out via `midi2_alsa.Midi2Output` (the DAW echoes input to its own out port); ❌ routing MIDI tracks/clips to hardware, dedicated out device picker
+- ❌ MIDI device **enumeration/selection** (auto-connects all; no UI picker)
+- 🟡 Sample-accurate **timestamping**: clip-note onsets are sample-accurate (`renderSegmented`/`offsetInBlock` split the synth render at exact frame offsets); ❌ sub-block offsets for *live* input (applied at block start — no input timestamp)
 - ❌ Cross-platform MIDI (Windows/macOS)
 
 ### 4.3 Platform — Audio file formats  *(JUCE: juce_audio_formats)*
@@ -147,7 +147,7 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - 🟡 **Track model**: MIDI/instrument tracks (`project.zig`) + **audio tracks** (`audio_track.zig`: `AudioTrack` with gain/pan/mute/solo/record-arm); ❌ unify audio tracks into the saved project format, track folders/groups
 - 🟡 **Clip / region model** + **arrangement timeline**: MIDI clips (`arrangement.zig`) + **audio clips** (`audio_track.zig`: `AudioClip` — sample buffer at a timeline frame, file-backed via WAV); **MIDI clip editing** done (`pianoroll.zig`: add/remove/move/resize notes + velocity, live in the DAW). ❌ loop regions, audio-clip trim/fades
 - 🟡 **Mixer / routing graph**: design `mix_graph.zig` (channels/buses/sends/metering); **LIVE in the DAW** (`audio_engine.zig`): per-track stems → **FX chain (high-pass + compressor)** → gain/pan/**mute/solo** (`mixBlocks`) → master, with a **post-fader reverb send** per channel into a shared `effects.Reverb` bus. The mixer faders/mute/solo/sends drive the real audio; per-track + reverb-bus levels published to the meters + audio monitor. Verified live (solo isolates; send knob 0.28→1.0 raised the reverb bus 0.20→0.40). ❌ PDC, LUFS at master, more FX slots, fader automation wiring
-- 🟡 **Sequencer/playback**: MIDI timeline (`arrangement.zig`) + **sample-accurate audio-clip playback** (`AudioTrack.render`); ❌ advanced (swing, latency-comp scheduling)
+- 🟡 **Sequencer/playback**: MIDI timeline (`arrangement.zig`) + **sample-accurate audio-clip playback** (`AudioTrack.render`) + **sample-accurate synth-clip onsets** (`audio_engine.renderSegmented` splits the block at exact note frames — was quantized to the 256-sample block); ❌ advanced (swing, latency-comp scheduling)
 - 🟡 **Recording**: MIDI loop capture + overdub + **audio capture-to-timeline** (`audio_track.Recorder`: feed captured frames → finalize into a clip at the record position; WAV round-trip); ❌ punch in/out, quantize, monitoring
 - ✅ **Automation** (`automation.zig`): breakpoint lanes, hold/linear interpolation, binary-search `valueAt`, sample-accurate `render` over a block (verified driving a gain ramp). ❌ wiring lanes to track/plugin params in the live engine; bezier curves
 - 🟡 Audio-clip **streaming** (`wav.WavStream`/`StreamClip` — done for WAV); ✅ **warp / time-stretch** (`timestretch.zig`: WSOLA, pitch-preserving) + **pitch-shift** (stretch+resample, length-preserving) — FFT-verified. ❌ formant-correct pitch, transient preservation
@@ -170,9 +170,9 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ Hosting plugin **editor windows** (embed the plugin's own UI)
 
 ### 4.10 Instruments & effects
-- ✅ ZenithPolySynth (basic) in Zig
+- 🟡 `synth.zig` — 16-voice subtractive (polyBLEP saw → ADSR → SVF lowpass), now **velocity-sensitive** (amplitude + filter brightness), **sustain pedal**, and a mod-wheel/aftertouch **vibrato LFO** + CC7/CC11 expression gain. Still a single saw osc — **not a pro instrument yet**.
 - 🟡 Sampler (`sampler.zig`): load mono sample, pitch per MIDI note, polyphonic + AR env. ❌ multisampling, velocity layers, loop points, stereo
-- ❌ Synth depth: mod matrix, LFOs, sub/noise, unison, more filter models, FM/sync
+- ❌ Synth depth: **multiple oscillators/waveforms + wavetable**, mod matrix, more LFOs, sub/noise, unison/detune, glide, more filter models, FM/sync, per-voice filter envelope
 - 🟡 Stock effects (`effects.zig`): biquad EQ (LP/HP/peak), feedback delay, reverb done; ❌ compressor, limiter, distortion, chorus + mixer integration (per-track FX chains)
 - ❌ Preset system + content/sample library
 
@@ -520,5 +520,29 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
     `window_glx.zig`); `tools/control/` → `tools/talkback/` (scripts, README, `.gitignore`,
     docs paths all updated). Same observe-and-drive triad (console + DOM + screenshots).
   - Full `zig build test` green after both renames.
+
+**2026-06-14 (session 4 — production-grade MIDI + velocity)**
+- **Velocity end-to-end** (it was being dropped at every layer — every note played
+  at one loudness). `synth.zig`: voices carry normalized velocity → scales amplitude
+  AND opens the filter (soft = darker). Engine `NoteEv`/`pushNote` carry velocity;
+  the clip sequencer plays each note at its real velocity. `vel7`/`vel16` helpers.
+  Tests: velocity scales output; sustain holds a released note.
+- **Expression controllers**: mod wheel (CC1) → 5.5 Hz vibrato LFO, CC7/CC11 →
+  expression gain, **CC64 sustain pedal** (note-off defers while pedal down; pedal-up
+  frees lifted keys, edge-detected on the RT thread), plus the existing CC71/CC74/
+  bend/aftertouch — all routed in `routeMidi`.
+- **Sample-accurate clip-note onsets**: was quantized to the 256-sample block (~5.3 ms);
+  now `renderSegmented`/`offsetInBlock` split the synth render at exact note frames.
+  Tests on the wrap math + silence-before-onset.
+- **Full MIDI parsing in the MIDI-1.0 ALSA fallback** (`midi_alsa.zig`): added the
+  `control` event variant + parsing for CC / program change / channel & poly aftertouch /
+  pitch bend; `MidiEvent.toUmp` rebuilds canonical bytes → shared `midi2.fromMidi1`, so
+  the fallback decodes to the SAME Messages as the UMP path. (The MIDI 2.0 UMP path
+  already routed CC74/bend/pressure + has UMP output.)
+- Verified live via Talkback: opened the editor on a clip in the running `zenith`, the
+  sequencer drove the synth (audio monitor showed synth level rise, transport PLAYING).
+  Full `zig build test` green. **Honest scope:** the *instrument* is still a single-saw
+  subtractive seed — expression now reaches it, but synth depth (multi-osc/wavetable/mod
+  matrix) is the next lever; MPE per-note voicing, SysEx, and MIDI-clock sync remain.
 
 *(Add new dated entries as milestones complete.)*
