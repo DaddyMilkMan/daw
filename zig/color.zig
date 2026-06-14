@@ -13,4 +13,6 @@ pub const Color = struct {
     pub fn rgba(r: u8, g: u8, b: u8, a: u8) Color {
         return .{ .r = r, .g = g, .b = b, .a = a };
     }
+    /// Untinted white (use as the default tint when drawing images).
+    pub const white = Color{ .r = 255, .g = 255, .b = 255, .a = 255 };
 };

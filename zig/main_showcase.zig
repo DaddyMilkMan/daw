@@ -7,6 +7,7 @@ const win = @import("window_glx.zig");
 const gpu2d = @import("gpu2d.zig");
 const flex = @import("flex.zig");
 const widgets = @import("widgets.zig");
+const image = @import("image.zig");
 const Color = gpu2d.Color;
 const Gpu = gpu2d.Gpu;
 const px = flex.px;
@@ -173,7 +174,7 @@ fn frac(x: f32) f32 {
 pub fn main() !void {
     const a = std.heap.page_allocator;
     var W: usize = 1200;
-    var H: usize = 1124;
+    var H: usize = 1356;
 
     var window = try win.NativeWindow.open(a, W, H, "Zenith Toolkit");
     defer window.close();
@@ -207,6 +208,16 @@ pub fn main() !void {
     var c = flex.Ctx.init(&g, &fb, &fu, &fd);
     var u = widgets.Ui.init(&g);
     var v = Vals{};
+
+    // image import — decode an embedded PNG (our own decoder) and upload it
+    var sample_img: ?gpu2d.GpuImage = null;
+    if (image.decodePng(a, @embedFile("assets/sample.png"))) |decoded| {
+        var d = decoded;
+        sample_img = gpu2d.GpuImage.init(d.pixels, d.w, d.h);
+        d.deinit(); // texture now owns the pixels GPU-side
+    } else |e| std.debug.print("png decode failed: {any}\n", .{e});
+    defer if (sample_img) |*im| im.deinit();
+
     std.debug.print("Zenith toolkit showcase\n", .{});
 
     const secs: f64 = blk: {
@@ -355,6 +366,24 @@ pub fn main() !void {
             c.label("RENDERED TABLE  ( click a row )", &fc, faint, .{ .h = px(20), .tracking = 1.4 });
             c.box(.{ .w = grow(), .h = px(238), .id = 960 });
 
+            // image import (PNG decoded by our own decoder)
+            c.label("IMAGE IMPORT  ( PNG - real decode, alpha )", &fc, faint, .{ .h = px(20), .tracking = 1.4 });
+            c.open(.{ .dir = .row, .w = grow(), .h = px(184), .gap = 14 });
+            {
+                c.box(.{ .w = px(296), .h = grow(), .radius = 14, .bg = card_t, .bg2 = card_b, .elev = 1, .shadow = 16, .id = 970 });
+                c.box(.{ .w = px(296), .h = grow(), .radius = 14, .bg = card_t, .bg2 = card_b, .elev = 1, .shadow = 16, .id = 971 });
+                c.open(.{ .dir = .col, .w = grow(), .h = grow(), .radius = 14, .pad = 18, .gap = 8, .justify = .center, .bg = card_t, .bg2 = card_b, .elev = 1, .shadow = 16 });
+                {
+                    c.label("Raster pipeline", &fu, txt, .{});
+                    c.label("PNG -> RGBA8 -> sRGB texture", &fb, dim, .{});
+                    c.label("8-bit gray / RGB / palette / RGBA", &fc, faint, .{});
+                    c.label("all 5 scanline filters, tRNS alpha", &fc, faint, .{});
+                    c.label("tint + opacity, premultiplied", &fc, faint, .{});
+                }
+                c.close();
+            }
+            c.close();
+
             // shadows / elevation + icons
             c.open(.{ .dir = .row, .w = grow(), .h = grow(), .gap = 14 });
             {
@@ -421,6 +450,26 @@ pub fn main() !void {
         // rendered data table
         if (c.rectOf(960)) |r| {
             _ = u.table(960, r[0], r[1], &TCOLS, &TROWS, &v.trow, &fc, &fb);
+        }
+        // imported PNG — fit (contain) inside the slot, preserving aspect
+        if (sample_img) |*im| {
+            const imw: f32 = @floatFromInt(im.w);
+            const imh: f32 = @floatFromInt(im.h);
+            const slots = [_]struct { id: u64, tint: Color }{
+                .{ .id = 970, .tint = Color.white }, // natural
+                .{ .id = 971, .tint = Color.rgb(150, 180, 255) }, // tinted
+            };
+            for (slots) |sl| if (c.rectOf(sl.id)) |r| {
+                const pad: f32 = 14;
+                const aw = r[2] - 2 * pad;
+                const ah = r[3] - 2 * pad;
+                const s = @min(aw / imw, ah / imh);
+                const dw = imw * s;
+                const dh = imh * s;
+                const dx = r[0] + (r[2] - dw) / 2;
+                const dy = r[1] + (r[3] - dh) / 2;
+                g.image(im, dx, dy, dw, dh, sl.tint);
+            };
         }
         // typeface variety — one sample line per face, 2 columns x 3 rows
         if (c.rectOf(950)) |r| {

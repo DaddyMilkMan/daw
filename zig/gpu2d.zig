@@ -42,6 +42,7 @@ const GL_UNPACK_ALIGNMENT: u32 = 0x0CF5;
 const GL_RGB: u32 = 0x1907;
 const GL_RGBA: u32 = 0x1908;
 const GL_RGB8: i32 = 0x8051;
+const GL_SRGB8_ALPHA8: i32 = 0x8C43;
 const GL_FRAMEBUFFER: u32 = 0x8D40;
 const GL_COLOR_ATTACHMENT0: u32 = 0x8CE0;
 const GL_FRAMEBUFFER_COMPLETE: u32 = 0x8CD5;
@@ -54,6 +55,7 @@ extern fn glEnable(cap: c_uint) void;
 extern fn glDisable(cap: c_uint) void;
 extern fn glBlendFunc(s: c_uint, d: c_uint) void;
 extern fn glGenTextures(n: c_int, t: *c_uint) void;
+extern fn glDeleteTextures(n: c_int, t: *const c_uint) void;
 extern fn glBindTexture(target: c_uint, t: c_uint) void;
 extern fn glTexImage2D(target: c_uint, level: c_int, internal: c_int, w: c_int, h: c_int, border: c_int, fmt: c_uint, ty: c_uint, data: ?*const anyopaque) void;
 extern fn glTexParameteri(target: c_uint, pname: c_uint, param: c_int) void;
@@ -399,6 +401,21 @@ const glyph_fs: [*:0]const u8 =
     \\}
 ;
 
+// Image quads reuse the glyph vertex shader (same dst4/uv4/color4 instance
+// layout); the fragment samples full RGBA. The texture is uploaded as
+// SRGB8_ALPHA8 so the sampler returns linear RGB — correct for the linear-light
+// framebuffer. vColor is a straight-alpha tint (white = untinted); we premultiply.
+const image_fs: [*:0]const u8 =
+    \\#version 330 core
+    \\in vec2 vUv; in vec4 vColor; out vec4 frag;
+    \\uniform sampler2D uTex;
+    \\void main(){
+    \\  vec4 t = texture(uTex, vUv);
+    \\  vec4 c = t * vColor;
+    \\  frag = vec4(c.rgb * c.a, c.a);
+    \\}
+;
+
 const RECT_FLOATS = 19; // min2 size2 radius border fill4 border4 fill2_4 elev
 const SHADOW_FLOATS = 10; // lower2 upper2 sigma corner color4
 const GLYPH_FLOATS = 12; // dst4 uv4 color4
@@ -414,11 +431,14 @@ pub const Gpu = struct {
     rect_prog: c_uint,
     shadow_prog: c_uint,
     glyph_prog: c_uint,
+    image_prog: c_uint,
     tri_prog: c_uint,
     rect_u_res: c_int,
     shadow_u_res: c_int,
     glyph_u_res: c_int,
     glyph_u_atlas: c_int,
+    image_u_res: c_int,
+    image_u_tex: c_int,
     tri_u_res: c_int,
     quad_vbo: c_uint,
     rect_vao: c_uint,
@@ -427,6 +447,8 @@ pub const Gpu = struct {
     shadow_ivbo: c_uint,
     glyph_vao: c_uint,
     glyph_ivbo: c_uint,
+    image_vao: c_uint,
+    image_ivbo: c_uint,
     tri_vao: c_uint,
     tri_vbo: c_uint,
     // backdrop blur / glass
@@ -445,6 +467,7 @@ pub const Gpu = struct {
     shadows: std.ArrayList(f32),
     tris: std.ArrayList(f32),
     glyph_batches: std.ArrayList(GlyphBatch),
+    image_batches: std.ArrayList(GlyphBatch),
     width: f32 = 0,
     height: f32 = 0,
 
@@ -453,6 +476,7 @@ pub const Gpu = struct {
         const rect_prog = try linkProgram(rect_vs, rect_fs);
         const shadow_prog = try linkProgram(shadow_vs, shadow_fs);
         const glyph_prog = try linkProgram(glyph_vs, glyph_fs);
+        const image_prog = try linkProgram(glyph_vs, image_fs);
         const tri_prog = try linkProgram(tri_vs, tri_fs);
 
         // unit quad (triangle strip): (0,0)(1,0)(0,1)(1,1)
@@ -467,11 +491,14 @@ pub const Gpu = struct {
             .rect_prog = rect_prog,
             .shadow_prog = shadow_prog,
             .glyph_prog = glyph_prog,
+            .image_prog = image_prog,
             .tri_prog = tri_prog,
             .rect_u_res = glGetUniformLocation(rect_prog, "uRes"),
             .shadow_u_res = glGetUniformLocation(shadow_prog, "uRes"),
             .glyph_u_res = glGetUniformLocation(glyph_prog, "uRes"),
             .glyph_u_atlas = glGetUniformLocation(glyph_prog, "uAtlas"),
+            .image_u_res = glGetUniformLocation(image_prog, "uRes"),
+            .image_u_tex = glGetUniformLocation(image_prog, "uTex"),
             .tri_u_res = glGetUniformLocation(tri_prog, "uRes"),
             .quad_vbo = quad_vbo,
             .rect_vao = 0,
@@ -480,16 +507,20 @@ pub const Gpu = struct {
             .shadow_ivbo = 0,
             .glyph_vao = 0,
             .glyph_ivbo = 0,
+            .image_vao = 0,
+            .image_ivbo = 0,
             .tri_vao = 0,
             .tri_vbo = 0,
             .rects = std.ArrayList(f32).init(a),
             .shadows = std.ArrayList(f32).init(a),
             .tris = std.ArrayList(f32).init(a),
             .glyph_batches = std.ArrayList(GlyphBatch).init(a),
+            .image_batches = std.ArrayList(GlyphBatch).init(a),
         };
         g.setupRectVao();
         g.setupShadowVao();
         g.setupGlyphVao();
+        g.setupImageVao();
         g.setupTriVao();
         // blur/glass programs + a fullscreen-quad VAO (reuses the unit quad)
         g.down_prog = try linkProgram(blur_vs, down_fs);
@@ -645,6 +676,20 @@ pub const Gpu = struct {
             glVertexAttribDivisor(s[0], 1);
         }
     }
+    fn setupImageVao(self: *Gpu) void {
+        glGenVertexArrays(1, &self.image_vao);
+        glBindVertexArray(self.image_vao);
+        self.attribQuad();
+        glGenBuffers(1, &self.image_ivbo);
+        glBindBuffer(GL_ARRAY_BUFFER, self.image_ivbo);
+        const stride: c_int = GLYPH_FLOATS * @sizeOf(f32);
+        const specs = [_][3]u32{ .{ 1, 4, 0 }, .{ 2, 4, 4 }, .{ 3, 4, 8 } };
+        inline for (specs) |s| {
+            glEnableVertexAttribArray(s[0]);
+            glVertexAttribPointer(s[0], @intCast(s[1]), GL_FLOAT, GL_FALSE, stride, s[2] * @sizeOf(f32));
+            glVertexAttribDivisor(s[0], 1);
+        }
+    }
     fn setupTriVao(self: *Gpu) void {
         glGenVertexArrays(1, &self.tri_vao);
         glBindVertexArray(self.tri_vao);
@@ -669,6 +714,22 @@ pub const Gpu = struct {
         b.data.appendSlice(&.{ dx, dy, dw, dh, ux, uy, uw, uh, c[0], c[1], c[2], c[3] }) catch {};
     }
 
+    fn imageBatch(self: *Gpu, tex: c_uint) *GlyphBatch {
+        for (self.image_batches.items) |*b| if (b.tex == tex) return b;
+        self.image_batches.append(.{ .tex = tex, .data = std.ArrayList(f32).init(self.allocator) }) catch {};
+        return &self.image_batches.items[self.image_batches.items.len - 1];
+    }
+    /// Draw a textured image quad (sub-region uv) with a straight-alpha tint.
+    pub fn imageUv(self: *Gpu, tex: c_uint, x: f32, y: f32, w: f32, h: f32, su: f32, sv: f32, eu: f32, ev: f32, tint: Color) void {
+        const c = lin(tint);
+        const b = self.imageBatch(tex);
+        b.data.appendSlice(&.{ x, y, w, h, su, sv, eu - su, ev - sv, c[0], c[1], c[2], c[3] }) catch {};
+    }
+    /// Draw a whole GpuImage at (x,y) sized w×h. Pass Color.white for no tint.
+    pub fn image(self: *Gpu, img: *const GpuImage, x: f32, y: f32, w: f32, h: f32, tint: Color) void {
+        self.imageUv(img.tex, x, y, w, h, 0, 0, 1, 1, tint);
+    }
+
     pub fn begin(self: *Gpu, w: usize, h: usize, bg: Color) void {
         self.width = @floatFromInt(w);
         self.height = @floatFromInt(h);
@@ -676,6 +737,7 @@ pub const Gpu = struct {
         self.shadows.clearRetainingCapacity();
         self.tris.clearRetainingCapacity();
         for (self.glyph_batches.items) |*b| b.data.clearRetainingCapacity();
+        for (self.image_batches.items) |*b| b.data.clearRetainingCapacity();
         glViewport(0, 0, @intCast(w), @intCast(h));
         glEnable(GL_FRAMEBUFFER_SRGB); // shaders output linear; GPU encodes to sRGB
         glEnable(GL_MULTISAMPLE); // MSAA AAs the geometry icons (tri/line)
@@ -769,6 +831,25 @@ pub const Gpu = struct {
             glBufferData(GL_ARRAY_BUFFER, @intCast(self.tris.items.len * @sizeOf(f32)), self.tris.items.ptr, GL_DYNAMIC_DRAW);
             glDrawArrays(GL_TRIANGLES, 0, @intCast(self.tris.items.len / TRI_FLOATS));
         }
+        // images (between geometry and text), one instanced draw per texture
+        var any_images = false;
+        for (self.image_batches.items) |*b| if (b.data.items.len > 0) {
+            any_images = true;
+        };
+        if (any_images) {
+            glUseProgram(self.image_prog);
+            glUniform2f(self.image_u_res, self.width, self.height);
+            glUniform1i(self.image_u_tex, 0);
+            glBindVertexArray(self.image_vao);
+            glActiveTexture(GL_TEXTURE0);
+            for (self.image_batches.items) |*b| {
+                if (b.data.items.len == 0) continue;
+                glBindTexture(GL_TEXTURE_2D, b.tex);
+                glBindBuffer(GL_ARRAY_BUFFER, self.image_ivbo);
+                glBufferData(GL_ARRAY_BUFFER, @intCast(b.data.items.len * @sizeOf(f32)), b.data.items.ptr, GL_DYNAMIC_DRAW);
+                glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, @intCast(b.data.items.len / GLYPH_FLOATS));
+            }
+        }
         // glyphs last (on top), one instanced draw per font atlas
         var any_glyphs = false;
         for (self.glyph_batches.items) |*b| if (b.data.items.len > 0) {
@@ -794,6 +875,7 @@ pub const Gpu = struct {
         self.shadows.clearRetainingCapacity();
         self.tris.clearRetainingCapacity();
         for (self.glyph_batches.items) |*b| b.data.clearRetainingCapacity();
+        for (self.image_batches.items) |*b| b.data.clearRetainingCapacity();
     }
 
     pub fn deinit(self: *Gpu) void {
@@ -802,6 +884,34 @@ pub const Gpu = struct {
         self.tris.deinit();
         for (self.glyph_batches.items) |*b| b.data.deinit();
         self.glyph_batches.deinit();
+        for (self.image_batches.items) |*b| b.data.deinit();
+        self.image_batches.deinit();
+    }
+};
+
+/// A GPU image: an sRGB8 RGBA texture you can draw with `Gpu.image`. Decode the
+/// bytes with `image.zig` (PNG) first, then upload here. Straight-alpha pixels.
+pub const GpuImage = struct {
+    tex: c_uint,
+    w: usize,
+    h: usize,
+
+    /// Upload RGBA8 pixels (row-major, top-left origin). Stored as SRGB8_ALPHA8
+    /// so sampling returns linear color for the linear-light framebuffer.
+    pub fn init(pixels: []const u8, w: usize, h: usize) GpuImage {
+        var t: c_uint = 0;
+        glGenTextures(1, &t);
+        glBindTexture(GL_TEXTURE_2D, t);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // tightly packed rows
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, @intCast(w), @intCast(h), 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.ptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        return .{ .tex = t, .w = w, .h = h };
+    }
+    pub fn deinit(self: *GpuImage) void {
+        glDeleteTextures(1, &self.tex);
     }
 };
 
