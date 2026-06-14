@@ -18,6 +18,7 @@ const midi = @import("midi_alsa.zig");
 const midi2 = @import("midi2.zig");
 const midi2_alsa = @import("midi2_alsa.zig");
 const midi_clock = @import("midi_clock.zig");
+const sysex = @import("sysex.zig");
 
 /// Route a decoded MIDI 2.0 message into the engine: notes -> synth voices, and
 /// the high-resolution (32-bit) controllers -> synth parameters. CC74 (the de
@@ -54,6 +55,23 @@ fn routeMidi(engine: *audio.Engine, msg: midi2.Message, clock: *midi_clock.Clock
         else => {},
     }
     return null;
+}
+
+/// Classify a received SysEx message and, for an Identity Request, reply with
+/// Zenith's MIDI Identity (so a host's device-inquiry scan finds us).
+fn handleSysex(bytes: []const u8, out: ?*midi2_alsa.Midi2Output) void {
+    const msg = sysex.parse(bytes);
+    elog.info("midi sysex: {s} ({d} bytes)", .{ @tagName(msg.kind), bytes.len });
+    if (msg.kind == .identity_request) {
+        if (out) |o| {
+            var rbuf: [32]u8 = undefined;
+            const reply = sysex.identityReply(&rbuf, msg.device);
+            var pkts: [8]midi2.Ump = undefined;
+            const n = sysex.toSysex7(0, reply[1 .. reply.len - 1], &pkts); // strip F0/F7 for UMP
+            for (pkts[0..n]) |u| o.send(u);
+            elog.info("midi sysex: sent Identity reply ({d} packet(s))", .{n});
+        }
+    }
 }
 
 fn edgeDir(x: i32, y: i32, w: i32, h: i32) ?c_long {
@@ -145,6 +163,7 @@ pub fn main() !void {
     var ump_buf: [64]midi2.Ump = undefined;
     var midi_evs: [64]midi.MidiEvent = undefined;
     var clock = midi_clock.ClockSync{}; // external MIDI beat-clock + transport follower
+    var sx = sysex.Sysex7Assembler{}; // reassembles multi-packet SysEx7 on the UMP path
     if (midi2_in) |*m| {
         const n = m.connectAllSources();
         elog.info("MIDI 2.0 (native UMP): auto-connected {d} source(s); hot-plug on", .{n});
@@ -232,6 +251,10 @@ pub fn main() !void {
         if (midi2_in) |*m| {
             const n = m.poll(&ump_buf);
             for (ump_buf[0..n]) |ump| {
+                if (ump.messageType() == .data_64) { // SysEx7 fragment
+                    if (sx.feed(ump)) |bytes| handleSysex(bytes, if (midi_out) |*o| o else null);
+                    continue;
+                }
                 if (routeMidi(&engine, midi2.decode(ump), &clock)) |t| state.playing = (t == .running);
                 if (midi_out) |*o| o.send(ump);
             }
@@ -242,6 +265,7 @@ pub fn main() !void {
                 if (routeMidi(&engine, midi2.decode(ump), &clock)) |t| state.playing = (t == .running);
                 if (midi_out) |*o| o.send(ump);
             }
+            if (m.takeSysex()) |bytes| handleSysex(bytes, if (midi_out) |*o| o else null);
         }
 
         // pull live audio state into the UI before drawing (playhead follows the

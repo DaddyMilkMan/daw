@@ -36,6 +36,7 @@ const SND_SEQ_EVENT_START: u8 = 30; // transport start
 const SND_SEQ_EVENT_CONTINUE: u8 = 31; // transport continue
 const SND_SEQ_EVENT_STOP: u8 = 32; // transport stop
 const SND_SEQ_EVENT_CLOCK: u8 = 36; // 24-ppqn beat clock
+const SND_SEQ_EVENT_SYSEX: u8 = 130; // variable-length System Exclusive (ext data)
 const EV_CLIENT_START: u8 = 60; // 60..65 = announce topology changes (hot-plug)
 const EV_PORT_CHANGE: u8 = 65;
 
@@ -136,6 +137,16 @@ pub const MidiInput = struct {
     seq: *snd_seq_t,
     client: c_int,
     port: c_int,
+    sysex_buf: [512]u8 = undefined, // last received SysEx (incl. F0..F7)
+    sysex_len: usize = 0,
+
+    /// Return the last received SysEx message (F0..F7) and clear it, or null.
+    pub fn takeSysex(self: *MidiInput) ?[]const u8 {
+        if (self.sysex_len == 0) return null;
+        const s = self.sysex_buf[0..self.sysex_len];
+        self.sysex_len = 0;
+        return s;
+    }
 
     pub fn open(client_name: [*:0]const u8, port_name: [*:0]const u8) MidiError!MidiInput {
         var handle: ?*snd_seq_t = null;
@@ -256,7 +267,15 @@ pub const MidiInput = struct {
                     out[count] = .{ .kind = .stop };
                     count += 1;
                 },
-                else => {}, // SysEx etc. handled separately (see pollSysex)
+                SND_SEQ_EVENT_SYSEX => { // variable-length; bytes live in the ext buffer
+                    const len = @min(@as(usize, e.data.ext.len), self.sysex_buf.len);
+                    if (e.data.ext.ptr) |p| {
+                        const src: [*]const u8 = @ptrCast(p);
+                        @memcpy(self.sysex_buf[0..len], src[0..len]);
+                        self.sysex_len = len;
+                    }
+                },
+                else => {}, // active sensing, etc.
             }
         }
         if (rescan) _ = self.connectAllSources();
