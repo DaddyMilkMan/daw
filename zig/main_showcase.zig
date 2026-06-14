@@ -184,7 +184,7 @@ fn frac(x: f32) f32 {
 pub fn main() !void {
     const a = std.heap.page_allocator;
     var W: usize = 1200;
-    var H: usize = 1356;
+    var H: usize = 1404;
 
     var window = try win.NativeWindow.open(a, W, H, "Zenith Toolkit");
     defer window.close();
@@ -255,6 +255,16 @@ pub fn main() !void {
     var c = flex.Ctx.init(&g, &fb, &fu, &fd);
     var u = widgets.Ui.init(&g);
     var v = Vals{};
+
+    // a procedural demo waveform (4 decaying hits) for the widgets.waveform demo
+    var wavebuf: [2400]f32 = undefined;
+    for (&wavebuf, 0..) |*s, i| {
+        const t = @as(f32, @floatFromInt(i)) / wavebuf.len;
+        const hit = @mod(t * 4.0, 1.0);
+        const env = @exp(-hit * 7.0);
+        const tone = @sin(t * 2400.0) * 0.7 + @sin(t * 5200.0) * 0.3;
+        s.* = tone * env;
+    }
 
     // image import — decode an embedded PNG (our own decoder) and upload it
     var sample_img: ?gpu2d.GpuImage = null;
@@ -329,7 +339,7 @@ pub fn main() !void {
         u.begin(.{ .mx = fmx, .my = fmy, .mouse_down = down }, 0.016);
 
         c.begin(Wf, Hf, fmx, fmy, down, 0.016);
-        c.open(.{ .dir = .col, .w = px(Wf), .h = px(Hf), .pad = 28, .gap = 18 });
+        c.open(.{ .dir = .col, .w = px(Wf), .h = px(Hf), .pad = 22, .gap = 12 });
         {
             // header
             c.open(.{ .dir = .row, .w = grow(), .aligni = .center, .gap = 12 });
@@ -343,7 +353,7 @@ pub fn main() !void {
 
             // typeface variety
             c.label("TYPEFACES  ( baked + runtime .ttf loader — 563 installed )", &fc, faint, .{ .h = px(20), .tracking = 1.4 });
-            c.box(.{ .w = grow(), .h = px(118), .radius = 14, .bg = card_t, .bg2 = card_b, .elev = 1, .shadow = 14, .id = 950 });
+            c.box(.{ .w = grow(), .h = px(102), .radius = 14, .bg = card_t, .bg2 = card_b, .elev = 1, .shadow = 14, .id = 950 });
 
             // gradients / color blends row
             c.label("GRADIENTS & COLOR BLENDS", &fc, faint, .{ .h = px(20), .tracking = 1.4 });
@@ -424,7 +434,7 @@ pub fn main() !void {
 
             // image import (PNG raster decode + SVG vector rasterize, both ours)
             c.label("IMAGE IMPORT  ( PNG raster + SVG vector — alpha )", &fc, faint, .{ .h = px(20), .tracking = 1.4 });
-            c.open(.{ .dir = .row, .w = grow(), .h = px(184), .gap = 14 });
+            c.open(.{ .dir = .row, .w = grow(), .h = px(150), .gap = 14 });
             {
                 c.box(.{ .w = px(296), .h = grow(), .radius = 14, .bg = card_t, .bg2 = card_b, .elev = 1, .shadow = 16, .id = 970 });
                 c.box(.{ .w = px(296), .h = grow(), .radius = 14, .bg = card_t, .bg2 = card_b, .elev = 1, .shadow = 16, .id = 971 });
@@ -440,18 +450,32 @@ pub fn main() !void {
             }
             c.close();
 
+            // signal — VU meters (ballistics) + a real audio waveform (toolkit widgets)
+            c.label("SIGNAL  ( meter ballistics + waveform )", &fc, faint, .{ .h = px(20), .tracking = 1.4 });
+            c.open(.{ .dir = .row, .w = grow(), .h = px(116), .gap = 14 });
+            {
+                c.open(.{ .dir = .row, .w = px(212), .h = grow(), .radius = 14, .pad = 16, .gap = 9, .justify = .center, .aligni = .center, .bg = card_t, .bg2 = card_b, .elev = 1, .shadow = 14 });
+                {
+                    for (0..6) |i| c.box(.{ .w = px(11), .h = grow(), .id = 990 + @as(u64, i) });
+                }
+                c.close();
+                c.box(.{ .w = grow(), .h = grow(), .radius = 14, .bg = card_t, .bg2 = card_b, .elev = 1, .shadow = 14, .id = 996 });
+            }
+            c.close();
+
             // shadows / elevation + icons
             c.open(.{ .dir = .row, .w = grow(), .h = grow(), .gap = 14 });
             {
-                // elevation card
+                // elevation card — demonstrates g.elevate() presets + g.glow()
                 c.open(.{ .dir = .col, .w = grow(), .h = grow(), .gap = 8 });
                 {
-                    c.label("ELEVATION", &fc, faint, .{ .h = px(20), .tracking = 1.4 });
+                    c.label("ELEVATION  ( presets + glow )", &fc, faint, .{ .h = px(20), .tracking = 1.4 });
                     c.open(.{ .dir = .row, .w = grow(), .h = grow(), .gap = 14, .aligni = .center, .justify = .center });
                     {
-                        c.box(.{ .w = px(64), .h = px(64), .radius = 14, .bg = card_t, .bg2 = card_b, .elev = 1, .shadow = 6 });
-                        c.box(.{ .w = px(64), .h = px(64), .radius = 14, .bg = card_t, .bg2 = card_b, .elev = 1, .shadow = 14 });
-                        c.box(.{ .w = px(64), .h = px(64), .radius = 14, .bg = card_t, .bg2 = card_b, .elev = 1, .shadow = 24 });
+                        c.box(.{ .w = px(58), .h = px(58), .radius = 12, .id = 980 });
+                        c.box(.{ .w = px(58), .h = px(58), .radius = 12, .id = 981 });
+                        c.box(.{ .w = px(58), .h = px(58), .radius = 12, .id = 982 });
+                        c.box(.{ .w = px(58), .h = px(58), .radius = 12, .id = 983 });
                     }
                     c.close();
                 }
@@ -503,6 +527,24 @@ pub fn main() !void {
             if (hov) g.rect(r[0], r[1], r[2], r[3], 7, Color.rgba(108, 147, 244, 50));
             icn.f(&g, r[0] + r[2] / 2, r[1] + r[3] / 2, 16, if (hov) txt else dim);
         };
+        // SIGNAL: animated VU meters (toolkit ballistics) + a real waveform
+        const tsec: f32 = @floatCast(elapsed);
+        for (0..6) |i| if (c.rectOf(990 + @as(u64, i))) |r| {
+            const ph = tsec * 2.4 + @as(f32, @floatFromInt(i)) * 0.85;
+            const lvl = 0.22 + 0.6 * @abs(@sin(ph)) * (0.6 + 0.4 * @abs(@sin(ph * 0.37)));
+            _ = u.meter(@intCast(990 + i), r[0], r[1], r[2], r[3], std.math.clamp(lvl, 0, 1));
+        };
+        if (c.rectOf(996)) |r| widgets.waveform(&g, r[0] + 16, r[1] + 12, r[2] - 32, r[3] - 24, wavebuf[0..], Color.rgb(118, 168, 232));
+        // ELEVATION: g.elevate() presets + g.glow()
+        const elevs = [_]Gpu.Elevation{ .e1, .e2, .e3 };
+        for (elevs, 0..) |el, i| if (c.rectOf(980 + @as(u64, i))) |r| {
+            g.elevate(r[0], r[1], r[2], r[3], 12, el);
+            g.card(r[0], r[1], r[2], r[3], 12, card_t, card_b, 0, clear, 0.7);
+        };
+        if (c.rectOf(983)) |r| {
+            g.glow(r[0] + r[2] / 2, r[1] + r[3] / 2, r[2] / 2, Color.rgba(108, 147, 244, 150));
+            g.card(r[0], r[1], r[2], r[3], 12, Color.rgb(46, 54, 76), Color.rgb(36, 42, 60), 0, clear, 0.7);
+        }
         // rendered data table
         if (c.rectOf(960)) |r| {
             _ = u.table(960, r[0], r[1], &TCOLS, &TROWS, &v.trow, &fc, &fb);
@@ -551,7 +593,7 @@ pub fn main() !void {
                 const gx = (r0[0] + r5[0] + r5[2]) / 2 - gw / 2;
                 const gy = r0[1] - 4;
                 g.captureBlur(W, H);
-                g.glass(gx, gy, gw, gh, 14, Color.rgba(84, 92, 114, 70), Color.rgba(255, 255, 255, 150));
+                g.glass(gx, gy, gw, gh, 16, Color.rgba(78, 86, 108, 64), Color.rgba(255, 255, 255, 104));
                 fu.text(&g, gx + 18, gy + (gh - 16) / 2, "Liquid Glass", txt);
                 g.flush();
             }
@@ -572,7 +614,7 @@ pub fn main() !void {
             g.shadow(mxp, myp, iw, hh, 14, 22, Color.rgba(0, 0, 0, @intFromFloat(150 * eased)));
             g.flush();
             g.captureBlur(W, H);
-            g.glass(mxp, myp, iw, hh, 14, Color.rgba(84, 92, 114, 76), Color.rgba(255, 255, 255, 150));
+            g.glass(mxp, myp, iw, hh, 16, Color.rgba(78, 86, 108, 70), Color.rgba(255, 255, 255, 104));
             for (items, 0..) |it, i| {
                 const iy = myp + 6 + @as(f32, @floatFromInt(i)) * ih;
                 if (iy + ih > myp + hh - 2) continue;
