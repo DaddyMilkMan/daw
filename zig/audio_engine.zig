@@ -18,7 +18,16 @@ const project = @import("project.zig");
 const alog = std.log.scoped(.audio);
 
 const RING = 512; // note-event queue capacity (power-of-two not required)
-const NoteEv = struct { on: bool, freq: f32, vel: f32 = 1.0 };
+// A lock-free engine event: notes + ordered per-channel/per-note (MPE) expression.
+const EvKind = enum(u8) { note_on, note_off, ch_bend, ch_press, ch_timbre, note_bend, note_press };
+const Ev = struct {
+    kind: EvKind,
+    channel: u4 = 0,
+    note: u8 = 0,
+    freq: f32 = 0,
+    vel: f32 = 0,
+    value: f32 = 0, // bend ratio / pressure 0..1 / timbre -1..1
+};
 pub const MAXTRACKS = 8;
 
 /// Normalize a 7-bit MIDI 1.0 velocity (0..127) to 0..1.
@@ -244,7 +253,7 @@ pub const Engine = struct {
     prev_sustain: bool = false, // audio-thread edge detector for the pedal
 
     // --- SPSC note queue: UI/MIDI thread produces, audio thread consumes ---
-    events: [RING]NoteEv = undefined,
+    events: [RING]Ev = undefined,
     ev_head: usize = 0, // producer (next write)
     ev_tail: usize = 0, // consumer (next read)
 
@@ -349,14 +358,38 @@ pub const Engine = struct {
         @atomicStore(bool, &self.ctl_sustain, on, .monotonic);
     }
 
-    /// Queue a note on/off with velocity (0..1). Called from the UI/MIDI thread;
-    /// lock-free, drops if the ring is full. Velocity is ignored for note-offs.
-    pub fn pushNote(self: *Engine, on: bool, freq: f32, vel: f32) void {
+    /// Push one event onto the lock-free ring (UI/MIDI thread -> audio thread).
+    fn pushEv(self: *Engine, ev: Ev) void {
         const h = @atomicLoad(usize, &self.ev_head, .monotonic);
         const next = (h + 1) % RING;
         if (next == @atomicLoad(usize, &self.ev_tail, .acquire)) return; // full
-        self.events[h] = .{ .on = on, .freq = freq, .vel = vel };
+        self.events[h] = ev;
         @atomicStore(usize, &self.ev_head, next, .release);
+    }
+    /// Queue a note on/off with velocity (0..1) on channel 0. Velocity is ignored
+    /// for note-offs.
+    pub fn pushNote(self: *Engine, on: bool, freq: f32, vel: f32) void {
+        self.pushNoteCh(on, freq, vel, 0);
+    }
+    /// Queue a note on a specific MIDI channel (MPE: one note per channel).
+    pub fn pushNoteCh(self: *Engine, on: bool, freq: f32, vel: f32, channel: u4) void {
+        self.pushEv(.{ .kind = if (on) .note_on else .note_off, .freq = freq, .vel = vel, .channel = channel });
+    }
+    // --- MPE expression (ordered with notes through the same queue) ---
+    pub fn chanBend(self: *Engine, channel: u4, ratio: f32) void {
+        self.pushEv(.{ .kind = .ch_bend, .channel = channel, .value = ratio });
+    }
+    pub fn chanPressure(self: *Engine, channel: u4, v: f32) void {
+        self.pushEv(.{ .kind = .ch_press, .channel = channel, .value = v });
+    }
+    pub fn chanTimbre(self: *Engine, channel: u4, v: f32) void {
+        self.pushEv(.{ .kind = .ch_timbre, .channel = channel, .value = v });
+    }
+    pub fn noteBend(self: *Engine, note: u8, ratio: f32) void {
+        self.pushEv(.{ .kind = .note_bend, .note = note, .value = ratio });
+    }
+    pub fn notePressure(self: *Engine, note: u8, v: f32) void {
+        self.pushEv(.{ .kind = .note_press, .note = note, .value = v });
     }
     fn drainNotes(self: *Engine) void {
         while (true) {
@@ -364,7 +397,15 @@ pub const Engine = struct {
             if (t == @atomicLoad(usize, &self.ev_head, .acquire)) break;
             const ev = self.events[t];
             @atomicStore(usize, &self.ev_tail, (t + 1) % RING, .release);
-            if (ev.on) self.synth.noteOn(ev.freq, ev.vel) else self.synth.noteOff(ev.freq);
+            switch (ev.kind) {
+                .note_on => self.synth.noteOnMpe(ev.freq, ev.vel, ev.channel),
+                .note_off => self.synth.noteOff(ev.freq),
+                .ch_bend => self.synth.setChannelBend(ev.channel, ev.value),
+                .ch_press => self.synth.setChannelPressure(ev.channel, ev.value),
+                .ch_timbre => self.synth.setChannelTimbre(ev.channel, ev.value),
+                .note_bend => self.synth.setNoteBend(ev.note, ev.value),
+                .note_press => self.synth.setNotePressure(ev.note, ev.value),
+            }
         }
     }
 
@@ -390,13 +431,14 @@ pub const Engine = struct {
             // (latest-value-wins atomics). Sustain is edge-detected so pedal-up
             // releases held voices exactly once, and is applied BEFORE draining the
             // note queue so a queued note-off correctly defers while the pedal is down.
+            // Channel-wide (non-MPE) controllers are latest-value-wins atomics; the
+            // per-channel/per-note (MPE) expression arrives in-order via the queue.
             const base_cut: f32 = @bitCast(@atomicLoad(u32, &self.ctl_cutoff_bits, .monotonic));
-            const press: f32 = @bitCast(@atomicLoad(u32, &self.ctl_press_bits, .monotonic));
-            self.synth.cutoff = std.math.clamp(base_cut * (1.0 + press * 2.0), 100.0, 16000.0);
+            self.synth.cutoff = std.math.clamp(base_cut, 40.0, 18000.0);
             self.synth.resonance = @bitCast(@atomicLoad(u32, &self.ctl_res_bits, .monotonic));
             self.synth.bend = @bitCast(@atomicLoad(u32, &self.ctl_bend_bits, .monotonic));
             self.synth.mod = @bitCast(@atomicLoad(u32, &self.ctl_mod_bits, .monotonic));
-            self.synth.pressure = press;
+            self.synth.pressure = @bitCast(@atomicLoad(u32, &self.ctl_press_bits, .monotonic));
             self.synth.expression = @bitCast(@atomicLoad(u32, &self.ctl_expr_bits, .monotonic));
             const sus = @atomicLoad(bool, &self.ctl_sustain, .monotonic);
             if (sus != self.prev_sustain) {
@@ -615,6 +657,27 @@ test "TrackFx: high-pass removes DC, compressor tames a loud signal" {
     try std.testing.expect(peak < 0.8); // gain reduction applied (input was 0.9)
 }
 
+test "MPE events route through the queue to the synth voices" {
+    var e = Engine{ .samples = &.{} };
+    e.synth.sample_rate = 48000;
+    // two notes on two channels, each with its own bend (MPE)
+    e.pushNoteCh(true, noteToFreq(60), 1.0, 0);
+    e.pushNoteCh(true, noteToFreq(64), 1.0, 1);
+    e.chanBend(1, 1.05); // bend only channel 1
+    e.notePressure(64, 0.5); // per-note pressure on note 64
+    e.drainNotes();
+    // a voice on each channel
+    var ch0 = false;
+    var ch1 = false;
+    for (e.synth.voices) |v| {
+        if (v.in_use and v.channel == 0) ch0 = true;
+        if (v.in_use and v.channel == 1) ch1 = true;
+    }
+    try std.testing.expect(ch0 and ch1);
+    try std.testing.expectEqual(@as(f32, 1.0), e.synth.chan_bend[0]); // channel 0 unbent
+    try std.testing.expectEqual(@as(f32, 1.05), e.synth.chan_bend[1]); // channel 1 bent only
+}
+
 /// MIDI note number -> frequency (A4 = 69 = 440 Hz).
 pub fn noteToFreq(note: u7) f32 {
     return 440.0 * std.math.pow(f32, 2.0, (@as(f32, @floatFromInt(note)) - 69.0) / 12.0);
@@ -631,6 +694,10 @@ pub fn ccToCutoff(v: u32) f32 {
 /// CC 32-bit value -> 0..1 (resonance, etc.).
 pub fn ccToUnit(v: u32) f32 {
     return unit32(v);
+}
+/// CC 32-bit value -> -1..1 (bipolar, e.g. MPE timbre around center).
+pub fn ccToBipolar(v: u32) f32 {
+    return unit32(v) * 2.0 - 1.0;
 }
 /// 32-bit pitch bend (center 0x8000_0000) -> frequency multiplier (±`semis`).
 pub fn bendToRatio(v: u32, semis: f32) f32 {

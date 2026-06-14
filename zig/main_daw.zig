@@ -29,23 +29,24 @@ fn routeMidi(engine: *audio.Engine, msg: midi2.Message, clock: *midi_clock.Clock
     switch (msg) {
         .note_on => |no| {
             const on = no.velocity > 0;
-            engine.pushNote(on, audio.noteToFreq(no.note), audio.vel16(no.velocity));
-            elog.debug("midi note {s} {d} vel {d}", .{ if (on) "ON" else "OFF", no.note, no.velocity });
+            engine.pushNoteCh(on, audio.noteToFreq(no.note), audio.vel16(no.velocity), no.channel);
+            elog.debug("midi note {s} {d} ch{d} vel {d}", .{ if (on) "ON" else "OFF", no.note, no.channel, no.velocity });
         },
-        .note_off => |no| {
-            engine.pushNote(false, audio.noteToFreq(no.note), 0);
-            elog.debug("midi note OFF {d}", .{no.note});
-        },
+        .note_off => |no| engine.pushNoteCh(false, audio.noteToFreq(no.note), 0, no.channel),
         .control_change => |cc| switch (cc.index) {
             1 => engine.setMod(audio.ccToUnit(cc.value)), // mod wheel -> vibrato
             7, 11 => engine.setExpression(audio.ccToUnit(cc.value)), // volume / expression
             64 => engine.setSustain(cc.value >= 0x4000_0000), // sustain pedal (>=64)
             71 => engine.setResonance(audio.ccToUnit(cc.value)),
-            74 => engine.setCutoff(audio.ccToCutoff(cc.value)),
+            74 => engine.chanTimbre(cc.channel, audio.ccToBipolar(cc.value)), // MPE timbre
             else => elog.debug("midi cc {d} = {d}", .{ cc.index, cc.value }),
         },
-        .pitch_bend => |pb| engine.setBend(audio.bendToRatio(pb.value, 2.0)),
-        .channel_pressure => |cp| engine.setPressure(audio.ccToUnit(cp.value)),
+        // MPE: bend/pressure/timbre are PER CHANNEL (each note lives on its own channel)
+        .pitch_bend => |pb| engine.chanBend(pb.channel, audio.bendToRatio(pb.value, 2.0)),
+        .channel_pressure => |cp| engine.chanPressure(cp.channel, audio.ccToUnit(cp.value)),
+        // MIDI 2.0 native per-note expression
+        .per_note_pitch_bend => |pb| engine.noteBend(pb.note, audio.bendToRatio(pb.value, 48.0)),
+        .poly_pressure => |pp| engine.notePressure(pp.note, audio.ccToUnit(pp.value)),
         .program_change => |pc| elog.debug("midi program change -> {d}", .{pc.program}),
         .system => |sys| {
             const tr = clock.onSystem(sys.status, std.time.nanoTimestamp());
