@@ -9,6 +9,7 @@
 
 const std = @import("std");
 const filter = @import("filter.zig");
+const effects = @import("effects.zig");
 
 pub const default_sample_rate: f32 = 48000.0;
 
@@ -247,6 +248,8 @@ pub const Synth = struct {
     chan_timbre: [16]f32 = [_]f32{0.0} ** 16,
     lfo1_phase: f32 = 0.0,
     lfo2_phase: f32 = 0.0,
+    oversample: u8 = 2, // 1 / 2 / 4 — anti-alias the saturating filter path
+    decim: Decimator = .{},
 
     pub fn setPatch(self: *Synth, p: Patch) void {
         self.patch = p;
@@ -324,8 +327,7 @@ pub const Synth = struct {
         };
     }
 
-    pub fn renderBlock(self: *Synth, out: []f32) void {
-        const sr = self.sample_rate;
+    fn renderInner(self: *Synth, out: []f32, sr: f32) void {
         const p = &self.patch;
         const lfo1_inc = p.lfo1_rate / sr;
         const lfo2_inc = p.lfo2_rate / sr;
@@ -385,6 +387,7 @@ pub const Synth = struct {
                     cut *= std.math.pow(f32, 2.0, p.lfo2_cutoff * lfo2);
                     cut *= std.math.pow(f32, 2.0, (v.note_timbre + self.chan_timbre[v.channel]) * 2.0);
                     cut = std.math.clamp(cut, 40.0, 18000.0);
+                    v.filt.sr = sr; // honor the (possibly oversampled) render rate
                     v.filt.set(cut, res, p.drive);
                 }
                 const base = v.cur_freq * self.bend * self.chan_bend[v.channel] * v.note_bend * v.cur_vib;
@@ -408,6 +411,53 @@ pub const Synth = struct {
             }
             sample.* = std.math.clamp(acc * p.level * self.gain * self.expression, -1.0, 1.0);
         }
+    }
+
+    /// Render a block. When `oversample` > 1 the whole voice render (oscillators +
+    /// the SATURATING filter) runs at N× the rate into a scratch buffer, then a
+    /// steep decimator removes the aliases the nonlinearities create before folding
+    /// back to the base rate — the difference between "harsh digital" and "silky".
+    pub fn renderBlock(self: *Synth, out: []f32) void {
+        const os: usize = switch (self.oversample) {
+            2 => 2,
+            4 => 4,
+            else => 1,
+        };
+        if (os == 1) return self.renderInner(out, self.sample_rate);
+        const os_sr = self.sample_rate * @as(f32, @floatFromInt(os));
+        self.decim.configure(os_sr, self.sample_rate);
+        var scratch: [256 * 4]f32 = undefined;
+        var off: usize = 0;
+        while (off < out.len) {
+            const chunk = @min(@as(usize, 256), out.len - off);
+            self.renderInner(scratch[0 .. chunk * os], os_sr);
+            for (0..chunk) |i| {
+                var y: f32 = 0;
+                for (0..os) |k| y = self.decim.process(scratch[i * os + k]); // filter every os sample, keep the last
+                out[off + i] = y;
+            }
+            off += chunk;
+        }
+    }
+};
+
+/// Anti-aliasing decimator: a 6-pole Butterworth low-pass (3 cascaded biquads) at
+/// ~0.45×base-Nyquist, run at the oversampled rate; downsampling just keeps 1-of-N.
+const Decimator = struct {
+    stages: [3]effects.Biquad = .{ .{}, .{}, .{} },
+    cfg_sr: f32 = 0,
+
+    pub fn configure(self: *Decimator, os_sr: f32, base_sr: f32) void {
+        if (self.cfg_sr == os_sr) return; // already set up for this rate
+        const fc = base_sr * 0.45;
+        const q = [3]f32{ 0.51763809, 0.70710678, 1.9318517 }; // 6th-order Butterworth Qs
+        for (&self.stages, 0..) |*s, i| s.* = effects.Biquad.lowpass(os_sr, fc, q[i]);
+        self.cfg_sr = os_sr;
+    }
+    pub fn process(self: *Decimator, x: f32) f32 {
+        var y = x;
+        for (&self.stages) |*s| y = s.process(y);
+        return y;
     }
 };
 
@@ -472,6 +522,32 @@ test "MPE per-note bend detunes only its own voice" {
     s.setNoteBend(64, 1.05); // bend only note 64
     try std.testing.expectEqual(@as(f32, 1.0), s.voices[0].note_bend);
     try std.testing.expectEqual(@as(f32, 1.05), s.voices[1].note_bend);
+}
+
+fn aliasEnergy2(patch: Patch, os: u8, hz: f32, fund: f32) f32 {
+    var s = Synth{ .oversample = os };
+    s.setPatch(patch);
+    s.cutoff = 18000; // filter wide open so saturation harmonics pass
+    s.noteOn(fund, 1.0);
+    var buf: [8192]f32 = undefined;
+    s.renderBlock(&buf); // settle
+    s.renderBlock(&buf);
+    var bp = effects.Biquad.bandpass(48000, hz, 8.0);
+    var acc: f32 = 0;
+    for (buf) |x| {
+        const y = bp.process(x);
+        acc += y * y;
+    }
+    return @sqrt(acc / @as(f32, @floatFromInt(buf.len)));
+}
+
+test "oversampling reduces aliasing from filter saturation" {
+    // a saturated sine at 11 kHz: its strong 3rd harmonic (33 kHz) folds to 15 kHz
+    // at the base rate. Oversampling renders/decimates it away; 1x leaves the alias.
+    const patch = Patch{ .osc_a = .sine, .osc_mix = 0.0, .filter_model = .ladder, .drive = 4.0, .resonance = 0.1 };
+    const at_1x = aliasEnergy2(patch, 1, 15000.0, 11000.0);
+    const at_4x = aliasEnergy2(patch, 4, 15000.0, 11000.0);
+    try std.testing.expect(at_4x < at_1x * 0.6); // 4x oversampling cuts the alias
 }
 
 test "presets render without NaN or runaway" {
