@@ -38,6 +38,7 @@ pub fn main() !void {
     try clip.notes.append(.{ .start = 6 * cf, .len = 3 * cf, .pitch = 72, .velocity = 100 });
 
     var pr = PianoRoll{ .bar_frames = 48000 };
+    pr.audition = auditionLog;
     plog.info("piano roll opened with {d} seed notes", .{clip.notes.items.len});
 
     const secs: f64 = blk: {
@@ -48,10 +49,11 @@ pub fn main() !void {
     };
     var mx: i32 = -1;
     var my: i32 = -1;
+    var down = false;
+    var prev_down = false;
     var elapsed: f64 = 0;
 
     while (elapsed < secs) {
-        var clicked = false;
         while (true) {
             switch (window.poll()) {
                 .none => break,
@@ -71,26 +73,36 @@ pub fn main() !void {
                 .mouse_down => |m| {
                     mx = m.x;
                     my = m.y;
-                    clicked = true;
+                    down = true;
                 },
+                .mouse_up => down = false,
                 .key => |k| if (k == 9) {
                     elapsed = secs;
                 },
                 else => {},
             }
         }
+        const pressed = down and !prev_down;
+        const released = !down and prev_down;
 
         const Wf: f32 = @floatFromInt(W);
         const Hf: f32 = @floatFromInt(H);
         g.begin(W, H, Color.rgb(16, 17, 21));
         fd.text(&g, 20, 13, "Piano Roll", Color.rgb(108, 147, 244));
-        var nb: [48]u8 = undefined;
-        const ns = std.fmt.bufPrint(&nb, "{d} notes  -  click a cell to add / remove", .{clip.notes.items.len}) catch "";
+        var nb: [80]u8 = undefined;
+        const ns = std.fmt.bufPrint(&nb, "{d} notes  -  click add/remove, drag move, edge resize, lane = velocity", .{clip.notes.items.len}) catch "";
         fb.text(&g, 150, 17, ns, Color.rgb(150, 158, 173));
 
-        pr.render(&g, &fb, .{ 0, 44, Wf, Hf - 44 }, &clip, @floatFromInt(mx), @floatFromInt(my), clicked);
-        if (pr.last_edit == .added) plog.info("note ADDED -> {d} notes", .{clip.notes.items.len});
-        if (pr.last_edit == .deleted) plog.info("note DELETED -> {d} notes", .{clip.notes.items.len});
+        pr.update(&g, &fb, .{ 0, 44, Wf, Hf - 44 }, &clip, @floatFromInt(mx), @floatFromInt(my), pressed, down, released);
+        switch (pr.last_edit) {
+            .added => plog.info("note ADDED -> {d} notes", .{clip.notes.items.len}),
+            .deleted => plog.info("note DELETED -> {d} notes", .{clip.notes.items.len}),
+            .moved => plog.debug("note MOVED", .{}),
+            .resized => plog.debug("note RESIZED", .{}),
+            .velocity => plog.debug("velocity edit", .{}),
+            .none => {},
+        }
+        prev_down = down;
 
         g.flush();
         window.swapBuffers();
@@ -98,4 +110,9 @@ pub fn main() !void {
         elapsed += 0.016;
     }
     plog.info("piano roll closed with {d} notes", .{clip.notes.items.len});
+}
+
+/// Audition hook — logs note previews (in the DAW this drives the engine synth).
+fn auditionLog(_: ?*anyopaque, pitch: u8, on: bool) void {
+    plog.debug("preview note {d} {s}", .{ pitch, if (on) "ON" else "OFF" });
 }
