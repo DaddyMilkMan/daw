@@ -71,6 +71,21 @@ fn renderSegmented(s: *synth.Synth, out: []f32, evs: []const SeqEvt) void {
     if (cur < out.len) s.renderBlock(out[cur..]);
 }
 
+/// Stereo variant of renderSegmented — the synth renders L/R with sample-accurate
+/// onsets, so the live engine gets the synth's stereo image.
+fn renderSegmentedStereo(s: *synth.Synth, outL: []f32, outR: []f32, evs: []const SeqEvt) void {
+    var cur: usize = 0;
+    for (evs) |e| {
+        const off = @min(@as(usize, e.off), outL.len);
+        if (off > cur) {
+            s.renderStereo(outL[cur..off], outR[cur..off]);
+            cur = off;
+        }
+        if (e.on) s.noteOn(e.freq, e.vel) else s.noteOff(e.freq);
+    }
+    if (cur < outL.len) s.renderStereo(outL[cur..], outR[cur..]);
+}
+
 test "offsetInBlock handles the loop wrap" {
     try std.testing.expectEqual(@as(?u32, 0), offsetInBlock(100, 100, 256, 48000));
     try std.testing.expectEqual(@as(?u32, 56), offsetInBlock(156, 100, 256, 48000));
@@ -426,7 +441,8 @@ pub const Engine = struct {
 
         const N = 256;
         var buf: [N * 2]i16 = undefined;
-        var sb: [N]f32 = undefined;
+        var sbL: [N]f32 = undefined; // synth stereo output (L/R)
+        var sbR: [N]f32 = undefined;
         var pos: usize = 0;
         const n = self.samples.len;
 
@@ -480,9 +496,9 @@ pub const Engine = struct {
                     segev[j] = key;
                 }
             }
-            renderSegmented(&self.synth, sb[0..N], segev[0..nseg]); // MIDI- + sequence-driven voices
+            renderSegmentedStereo(&self.synth, sbL[0..N], sbR[0..N], segev[0..nseg]); // MIDI- + sequence-driven voices
             var spk: f32 = 0;
-            for (sb[0..N]) |s| spk = @max(spk, @abs(s));
+            for (0..N) |i| spk = @max(spk, @max(@abs(sbL[i]), @abs(sbR[i])));
             @atomicStore(u32, &self.slevel_bits, @bitCast(spk), .monotonic);
             const gain: f32 = @bitCast(@atomicLoad(u32, &self.gain_bits, .monotonic));
 
@@ -554,8 +570,8 @@ pub const Engine = struct {
             var pk: f32 = 0;
             var f: usize = 0;
             while (f < N) : (f += 1) {
-                var l = sb[f] + aL[f] + pL[f]; // synth is note-gated
-                var r = sb[f] + aR[f] + pR[f];
+                var l = sbL[f] + aL[f] + pL[f]; // synth is stereo + note-gated
+                var r = sbR[f] + aR[f] + pR[f];
                 self.master_lim.process(&l, &r);
                 pk = @max(pk, @max(@abs(l), @abs(r)));
                 buf[f * 2] = @intFromFloat(l * 32767.0);

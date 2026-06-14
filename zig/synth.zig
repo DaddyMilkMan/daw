@@ -127,6 +127,7 @@ pub const Patch = struct {
     // analog imperfection — what makes it sound alive instead of static
     drift: f32 = 4.0, // peak cents of slow per-oscillator pitch drift (free-running VCOs)
     tune_spread: f32 = 2.0, // peak cents of fixed per-voice detune (component tolerance)
+    stereo: f32 = 0.6, // unison stereo spread width (0 = mono, 1 = full)
     // filter (zero-delay: svf = clean/stable multimode, ladder = analog growl)
     filter_model: filter.Model = .ladder,
     filter_mode: filter.Mode = .lowpass,
@@ -272,7 +273,8 @@ pub const Synth = struct {
     lfo1_phase: f32 = 0.0,
     lfo2_phase: f32 = 0.0,
     oversample: u8 = 2, // 1 / 2 / 4 — anti-alias the saturating filter path
-    decim: Decimator = .{},
+    decimL: Decimator = .{},
+    decimR: Decimator = .{},
 
     pub fn setPatch(self: *Synth, p: Patch) void {
         self.patch = p;
@@ -350,7 +352,7 @@ pub const Synth = struct {
         };
     }
 
-    fn renderInner(self: *Synth, out: []f32, sr: f32) void {
+    fn renderInner(self: *Synth, outL: []f32, outR: []f32, sr: f32) void {
         const p = &self.patch;
         const lfo1_inc = p.lfo1_rate / sr;
         const lfo2_inc = p.lfo2_rate / sr;
@@ -360,15 +362,22 @@ pub const Synth = struct {
         // per-block constants (hoisted out of the hot loop): oscB ratio + unison detunes
         const b_ratio = std.math.pow(f32, 2.0, (p.osc_b_semi + p.osc_b_fine / 100.0) / 12.0);
         var det_ratio: [MAX_UNISON]f32 = undefined;
+        var pan_l: [MAX_UNISON]f32 = undefined;
+        var pan_r: [MAX_UNISON]f32 = undefined;
         for (0..un) |ui| {
             const spread: f32 = if (un > 1)
                 (@as(f32, @floatFromInt(ui)) / @as(f32, @floatFromInt(un - 1)) - 0.5) * 2.0
             else
                 0.0;
             det_ratio[ui] = std.math.pow(f32, 2.0, (spread * p.unison_detune) / 1200.0);
+            // stereo: spread the unison voices across the field (constant-power,
+            // ×√2 so a centered voice is unity — keeps the mono sum level-matched)
+            const ang = (spread * p.stereo * 0.5 + 0.5) * (std.math.pi / 2.0);
+            pan_l[ui] = @cos(ang) * 1.4142135;
+            pan_r[ui] = @sin(ang) * 1.4142135;
         }
 
-        for (out, 0..) |*sample, si| {
+        for (0..outL.len) |si| {
             const lfo1 = @sin(self.lfo1_phase * std.math.tau);
             const lfo2 = @sin(self.lfo2_phase * std.math.tau);
             self.lfo1_phase += lfo1_inc;
@@ -382,7 +391,8 @@ pub const Synth = struct {
             const ctl = (si & (CTL - 1)) == 0;
             const res = std.math.clamp(p.resonance + (self.resonance - 0.25), 0.0, 1.0);
 
-            var acc: f32 = 0.0;
+            var accL: f32 = 0.0;
+            var accR: f32 = 0.0;
             for (&self.voices) |*v| {
                 if (!v.in_use) continue;
                 const amp = v.amp_env.process(sr);
@@ -435,49 +445,85 @@ pub const Synth = struct {
                 }
                 const base = v.cur_freq * self.bend * self.chan_bend[v.channel] * v.note_bend * v.cur_vib * v.tune;
 
-                // two oscillators (unison detune + drift baked into ra/rb), per sample
-                var oa: f32 = 0;
-                var ob: f32 = 0;
+                // two oscillators (unison detune + drift baked into ra/rb), each unison
+                // voice panned across the stereo field, per sample
+                var sL: f32 = 0;
+                var sR: f32 = 0;
                 var ui: usize = 0;
                 while (ui < un) : (ui += 1) {
-                    oa += v.osc_a[ui].next(p.osc_a, (base * v.ra[ui]) / sr, p.pulse_width);
-                    ob += v.osc_b[ui].next(p.osc_b, (base * v.rb[ui] * b_ratio) / sr, p.pulse_width);
+                    const oa = v.osc_a[ui].next(p.osc_a, (base * v.ra[ui]) / sr, p.pulse_width);
+                    const ob = v.osc_b[ui].next(p.osc_b, (base * v.rb[ui] * b_ratio) / sr, p.pulse_width);
+                    const s = oa * (1.0 - p.osc_mix) + ob * p.osc_mix;
+                    sL += s * pan_l[ui];
+                    sR += s * pan_r[ui];
                 }
-                oa *= un_norm;
-                ob *= un_norm;
-                var sig = oa * (1.0 - p.osc_mix) + ob * p.osc_mix;
-                if (p.sub_level > 0.0) sig += v.sub.next(.square, (base * 0.5) / sr, 0.5) * p.sub_level;
-                if (p.noise_level > 0.0) sig += v.noise() * p.noise_level;
+                sL *= un_norm;
+                sR *= un_norm;
+                var center: f32 = 0;
+                if (p.sub_level > 0.0) center += v.sub.next(.square, (base * 0.5) / sr, 0.5) * p.sub_level;
+                if (p.noise_level > 0.0) center += v.noise() * p.noise_level;
+                sL += center;
+                sR += center;
 
-                acc += v.filt.process(sig) * amp * v.vel;
+                // mid/side: filter the mono mid (one filter per voice), keep the side
+                // for stereo width — the high-frequency unison detune shimmer.
+                const mid = (sL + sR) * 0.5;
+                const side = (sL - sR) * 0.5;
+                const fmid = v.filt.process(mid);
+                const g = amp * v.vel;
+                accL += (fmid + side) * g;
+                accR += (fmid - side) * g;
             }
-            sample.* = std.math.clamp(acc * p.level * self.gain * self.expression, -1.0, 1.0);
+            const lvl = p.level * self.gain * self.expression;
+            outL[si] = std.math.clamp(accL * lvl, -1.0, 1.0);
+            outR[si] = std.math.clamp(accR * lvl, -1.0, 1.0);
         }
     }
 
-    /// Render a block. When `oversample` > 1 the whole voice render (oscillators +
-    /// the SATURATING filter) runs at N× the rate into a scratch buffer, then a
-    /// steep decimator removes the aliases the nonlinearities create before folding
-    /// back to the base rate — the difference between "harsh digital" and "silky".
-    pub fn renderBlock(self: *Synth, out: []f32) void {
+    /// Render a STEREO block. When `oversample` > 1 the whole voice render
+    /// (oscillators + the SATURATING filter) runs at N× the rate into scratch
+    /// buffers, then steep decimators remove the aliases the nonlinearities create
+    /// before folding back — the difference between "harsh digital" and "silky".
+    pub fn renderStereo(self: *Synth, outL: []f32, outR: []f32) void {
         const os: usize = switch (self.oversample) {
             2 => 2,
             4 => 4,
             else => 1,
         };
-        if (os == 1) return self.renderInner(out, self.sample_rate);
+        if (os == 1) return self.renderInner(outL, outR, self.sample_rate);
         const os_sr = self.sample_rate * @as(f32, @floatFromInt(os));
-        self.decim.configure(os_sr, self.sample_rate);
-        var scratch: [256 * 4]f32 = undefined;
+        self.decimL.configure(os_sr, self.sample_rate);
+        self.decimR.configure(os_sr, self.sample_rate);
+        var scratchL: [256 * 4]f32 = undefined;
+        var scratchR: [256 * 4]f32 = undefined;
+        var off: usize = 0;
+        while (off < outL.len) {
+            const chunk = @min(@as(usize, 256), outL.len - off);
+            self.renderInner(scratchL[0 .. chunk * os], scratchR[0 .. chunk * os], os_sr);
+            for (0..chunk) |i| {
+                var yl: f32 = 0;
+                var yr: f32 = 0;
+                for (0..os) |k| { // filter every os sample, keep the last (decimate)
+                    yl = self.decimL.process(scratchL[i * os + k]);
+                    yr = self.decimR.process(scratchR[i * os + k]);
+                }
+                outL[off + i] = yl;
+                outR[off + i] = yr;
+            }
+            off += chunk;
+        }
+    }
+
+    /// Render a MONO block (the stereo render summed to center). Kept for callers
+    /// (and tests) that don't need stereo.
+    pub fn renderBlock(self: *Synth, out: []f32) void {
         var off: usize = 0;
         while (off < out.len) {
             const chunk = @min(@as(usize, 256), out.len - off);
-            self.renderInner(scratch[0 .. chunk * os], os_sr);
-            for (0..chunk) |i| {
-                var y: f32 = 0;
-                for (0..os) |k| y = self.decim.process(scratch[i * os + k]); // filter every os sample, keep the last
-                out[off + i] = y;
-            }
+            var tL: [256]f32 = undefined;
+            var tR: [256]f32 = undefined;
+            self.renderStereo(tL[0..chunk], tR[0..chunk]);
+            for (0..chunk) |i| out[off + i] = (tL[i] + tR[i]) * 0.5;
             off += chunk;
         }
     }
@@ -604,6 +650,28 @@ test "analog drift moves pitch + voices detune individually" {
     try std.testing.expect(s.voices[0].tune != s.voices[1].tune);
     // drift walked the oscillator ratio off its nominal 1.0 (unison = 1 -> detune 1)
     try std.testing.expect(@abs(s.voices[0].ra[0] - 1.0) > 1.0e-5);
+}
+
+test "unison produces a stereo image; a single oscillator stays mono" {
+    var wide = Synth{ .oversample = 1 };
+    wide.setPatch(.{ .unison = 7, .unison_detune = 14, .stereo = 1.0 });
+    wide.noteOn(noteToFreq(57), 1.0);
+    var lw: [2400]f32 = undefined;
+    var rw: [2400]f32 = undefined;
+    wide.renderStereo(&lw, &rw);
+    var diff: f32 = 0;
+    for (lw, rw) |l, r| diff += (l - r) * (l - r);
+    try std.testing.expect(diff > 0.001); // L and R decorrelate -> stereo width
+
+    var mono = Synth{ .oversample = 1 };
+    mono.setPatch(.{ .unison = 1, .stereo = 1.0 });
+    mono.noteOn(noteToFreq(57), 1.0);
+    var lm: [2400]f32 = undefined;
+    var rm: [2400]f32 = undefined;
+    mono.renderStereo(&lm, &rm);
+    var d2: f32 = 0;
+    for (lm, rm) |l, r| d2 += @abs(l - r);
+    try std.testing.expect(d2 < 1.0e-4); // single osc -> identical channels (centered)
 }
 
 test "presets render without NaN or runaway" {
