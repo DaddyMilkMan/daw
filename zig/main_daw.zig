@@ -104,10 +104,14 @@ pub fn main() !void {
     // analyze each stem once (dominant frequency) for the "what's playing" monitor
     var stem_hz: [audio.MAXTRACKS]f32 = [_]f32{0} ** audio.MAXTRACKS;
     for (0..ntr) |ti| stem_hz[ti] = ainspect.analyze(a, stems[ti], 48000).dominant_hz;
-    // shared aux reverb fed by each channel's send knob (per-track FX chains)
-    var reverb = effects.Reverb.init(a, 0.62, 0.4) catch undefined;
-    reverb.mix = 1.0; // it's a 100%-wet send return; the dry path bypasses it
-    engine.reverb = &reverb;
+    // shared aux reverb fed by each channel's send knob (per-track FX chains).
+    // Robust: if init fails the engine just runs without the send return (null-safe).
+    var reverb_opt: ?effects.Reverb = effects.Reverb.init(a, 0.62, 0.4) catch null;
+    if (reverb_opt) |*rv| {
+        rv.mix = 1.0; // 100%-wet send return; the dry path bypasses it
+        engine.reverb = rv;
+    }
+    defer if (reverb_opt) |*rv| rv.deinit();
     engine.start();
     defer engine.stop();
     engine.setPlaying(state.playing);
@@ -286,7 +290,7 @@ pub fn main() !void {
             }
             const mp = engine.getPeak();
             const rl = engine.getReverbLevel();
-            elog.info("audio: device '{s}' @ {d}Hz {d}ch | transport {s} | master {d:.0}% ({d:.1}dB) peak {d:.3} | reverb-bus {d:.3} ({d:.1}dB)", .{ engine.device_opened, engine.rate, engine.channels, if (state.playing) "PLAYING" else "STOPPED", state.master_gain * 100, ainspect.dbFromLinear(state.master_gain), mp, rl, ainspect.dbFromLinear(rl) });
+            elog.info("audio: device '{s}' @ {d}Hz {d}ch | transport {s} | master {d:.0}% ({d:.1}dB) peak {d:.3} | limiter GR {d:.1}dB | reverb-bus {d:.3} ({d:.1}dB)", .{ engine.device_opened, engine.rate, engine.channels, if (state.playing) "PLAYING" else "STOPPED", state.master_gain * 100, ainspect.dbFromLinear(state.master_gain), mp, engine.getLimiterGrDb(), rl, ainspect.dbFromLinear(rl) });
             for (0..ntr) |ti| {
                 const gn = p.tracks.items[ti].gain;
                 const lvl = state.track_levels[ti];

@@ -82,6 +82,31 @@ pub const TrackFx = struct {
     }
 };
 
+/// Stereo-linked brickwall master limiter: instant attack (so output never exceeds
+/// `ceiling`), smooth ~80 ms release. A final clamp is the absolute safety.
+pub const MasterLimiter = struct {
+    ceiling: f32 = 0.98,
+    rel: f32 = 0.99974, // per-sample release coefficient
+    gain: f32 = 1,
+
+    pub fn init(sr: f32) MasterLimiter {
+        return .{ .rel = @exp(-1.0 / (0.08 * sr)) };
+    }
+    pub fn process(self: *MasterLimiter, l: *f32, r: *f32) void {
+        const m = @max(@abs(l.*), @abs(r.*));
+        // release toward unity first, then clamp the gain to what THIS sample needs
+        // (instant attack) — so the output is always <= ceiling.
+        self.gain += (1.0 - self.gain) * (1.0 - self.rel);
+        const tgt: f32 = if (m > self.ceiling) self.ceiling / m else 1.0;
+        if (tgt < self.gain) self.gain = tgt;
+        l.* = std.math.clamp(l.* * self.gain, -1.0, 1.0);
+        r.* = std.math.clamp(r.* * self.gain, -1.0, 1.0);
+    }
+    pub fn grDb(self: MasterLimiter) f32 {
+        return 20.0 * std.math.log10(@max(self.gain, 1e-4));
+    }
+};
+
 // Try these output/input devices in order, so audio works on any system — a
 // PipeWire/Pulse desktop or bare ALSA hardware of any age. `default` first
 // (whatever the user's chosen device is), then explicit servers, then raw HW.
@@ -119,6 +144,8 @@ pub const Engine = struct {
     reverb: ?*effects.Reverb = null, // shared aux reverb (allocated by the host)
     rsend_bits: [MAXTRACKS]u32 = [_]u32{0} ** MAXTRACKS, // per-track reverb send
     rlevel_bits: u32 = 0, // published reverb-bus output level
+    master_lim: MasterLimiter = .{}, // master brickwall limiter (audio-thread only)
+    grdb_bits: u32 = 0, // published master limiter gain-reduction (dB, <=0)
     rate: u32 = 48000,
     channels: u16 = 2,
     device: [*:0]const u8 = "default",
@@ -152,6 +179,7 @@ pub const Engine = struct {
     pub fn start(self: *Engine) void {
         self.synth.sample_rate = @floatFromInt(self.rate);
         for (&self.track_fx) |*fx| fx.* = TrackFx.init(@floatFromInt(self.rate));
+        self.master_lim = MasterLimiter.init(@floatFromInt(self.rate));
         self.out_thread = std.Thread.spawn(.{}, runOut, .{self}) catch null;
         if (self.capture) self.in_thread = std.Thread.spawn(.{}, runIn, .{self}) catch null;
     }
@@ -190,6 +218,9 @@ pub const Engine = struct {
     }
     pub fn getReverbLevel(self: *Engine) f32 {
         return @bitCast(@atomicLoad(u32, &self.rlevel_bits, .monotonic));
+    }
+    pub fn getLimiterGrDb(self: *Engine) f32 { // master limiter gain reduction (dB, <=0)
+        return @bitCast(@atomicLoad(u32, &self.grdb_bits, .monotonic));
     }
     pub fn isLive(self: *Engine) bool {
         return @atomicLoad(bool, &self.started, .monotonic);
@@ -331,15 +362,18 @@ pub const Engine = struct {
                 for (0..self.ntracks) |ti| @atomicStore(u32, &self.tlevel_bits[ti], @bitCast(@as(f32, 0)), .monotonic);
             }
 
+            // master bus: a stereo-linked brickwall limiter prevents harsh clipping
             var pk: f32 = 0;
             var f: usize = 0;
             while (f < N) : (f += 1) {
-                const l = std.math.clamp(sb[f] + aL[f] + pL[f], -1.0, 1.0); // synth is note-gated
-                const r = std.math.clamp(sb[f] + aR[f] + pR[f], -1.0, 1.0);
+                var l = sb[f] + aL[f] + pL[f]; // synth is note-gated
+                var r = sb[f] + aR[f] + pR[f];
+                self.master_lim.process(&l, &r);
                 pk = @max(pk, @max(@abs(l), @abs(r)));
                 buf[f * 2] = @intFromFloat(l * 32767.0);
                 buf[f * 2 + 1] = @intFromFloat(r * 32767.0);
             }
+            @atomicStore(u32, &self.grdb_bits, @bitCast(self.master_lim.grDb()), .monotonic);
             out.writeBlock(&buf) catch {};
             if (playing) self.tl_pos += N; // advance the timeline playhead
             @atomicStore(u64, &self.pos, pos, .monotonic);
@@ -402,6 +436,21 @@ test "mixBlocks: fader/mute/solo/pan + reverb send" {
     // reverb send: track 0 gain 1, send 0.5 -> send bus = 0.5
     mixBlocks(&blocks, 2, 1, &.{ 1, 1 }, &.{ 0, 0 }, &.{ false, true }, &.{ false, false }, &.{ 0.5, 0 }, &l, &r, &sb, &pk);
     try expectApprox(@as(f32, 0.5), sb[0], 1e-6);
+}
+
+test "MasterLimiter never exceeds the ceiling on a hot signal" {
+    var lim = MasterLimiter.init(48000);
+    var prng = std.Random.DefaultPrng.init(7);
+    const rnd = prng.random();
+    var max_out: f32 = 0;
+    for (0..20000) |_| {
+        var l = (rnd.float(f32) * 2.0 - 1.0) * 3.0; // up to +/-3.0 (way over)
+        var r = (rnd.float(f32) * 2.0 - 1.0) * 3.0;
+        lim.process(&l, &r);
+        max_out = @max(max_out, @max(@abs(l), @abs(r)));
+    }
+    try std.testing.expect(max_out <= 0.98 + 1e-4); // capped at the ceiling
+    try std.testing.expect(lim.grDb() < 0); // gain reduction is active
 }
 
 test "TrackFx: high-pass removes DC, compressor tames a loud signal" {
