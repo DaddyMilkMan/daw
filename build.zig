@@ -64,6 +64,20 @@ pub fn build(b: *std.Build) void {
     const loop_step = b.step("loop", "Run the live looper (connect a keyboard via aconnect)");
     loop_step.dependOn(&run_loop.step);
 
+    // Audio input + device/channel enumeration (`zig build audioin`).
+    const audioin = b.addExecutable(.{
+        .name = "zenith_audioin",
+        .root_source_file = b.path("zig/main_audioin.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    audioin.linkSystemLibrary("asound");
+    audioin.linkLibC();
+    b.installArtifact(audioin);
+    const run_audioin = b.addRunArtifact(audioin);
+    const audioin_step = b.step("audioin", "List all audio devices/channels + meter live input");
+    audioin_step.dependOn(&run_audioin.step);
+
     // Sampler demo (M4): generate -> write -> read -> play pitched.
     const sampler = b.addExecutable(.{
         .name = "zenith_sampler",
@@ -353,7 +367,7 @@ pub fn build(b: *std.Build) void {
 
     // Unit tests.
     const test_step = b.step("test", "Run unit tests");
-    for ([_][]const u8{ "midi_alsa.zig", "midi2.zig", "ttf.zig", "image.zig", "svg.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig", "effects.zig" }) |src| {
+    for ([_][]const u8{ "midi_alsa.zig", "midi2.zig", "audio_devices.zig", "ttf.zig", "image.zig", "svg.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig", "effects.zig" }) |src| {
         const t = b.addTest(.{ .root_source_file = b.path(b.fmt("zig/{s}", .{src})), .target = target, .optimize = optimize });
         t.linkSystemLibrary("asound");
         t.linkLibC();
