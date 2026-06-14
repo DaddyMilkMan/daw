@@ -146,11 +146,11 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - 🟡 **Transport / clock / playhead**: tempo + looping playhead done; ❌ stop/record-arm, time signature, metronome, linear (non-loop) mode
 - 🟡 **Track model**: MIDI/instrument tracks (`project.zig`) + **audio tracks** (`audio_track.zig`: `AudioTrack` with gain/pan/mute/solo/record-arm); ❌ unify audio tracks into the saved project format, track folders/groups
 - 🟡 **Clip / region model** + **arrangement timeline**: MIDI clips (`arrangement.zig`) + **audio clips** (`audio_track.zig`: `AudioClip` — sample buffer at a timeline frame, file-backed via WAV); ❌ loop regions, clip editing/trim/fades
-- 🟡 **Mixer / routing graph**: per-track gain/pan → stereo master (`mixer.zig`); audio-track mix honors **mute/solo** (`mixTracks`); ❌ sends, buses, metering, PDC
+- 🟡 **Mixer / routing graph** (`mix_graph.zig`): channels (gain/pan/**mute/solo**) → master **or a bus**, **post-fader aux sends**, buses fold into master, **peak/RMS metering** at every node. (`mixer.zig` remains the single-stage seed.) ❌ PDC (plugin delay compensation), LUFS at the master, fader automation wiring
 - 🟡 **Sequencer/playback**: MIDI timeline (`arrangement.zig`) + **sample-accurate audio-clip playback** (`AudioTrack.render`); ❌ advanced (swing, latency-comp scheduling)
 - 🟡 **Recording**: MIDI loop capture + overdub + **audio capture-to-timeline** (`audio_track.Recorder`: feed captured frames → finalize into a clip at the record position; WAV round-trip); ❌ punch in/out, quantize, monitoring
-- ❌ **Automation**: lanes, curves, sample-accurate application
-- ❌ Audio-clip **streaming**, **warp / time-stretch**, pitch-shift
+- ✅ **Automation** (`automation.zig`): breakpoint lanes, hold/linear interpolation, binary-search `valueAt`, sample-accurate `render` over a block (verified driving a gain ramp). ❌ wiring lanes to track/plugin params in the live engine; bezier curves
+- 🟡 Audio-clip **streaming** (`wav.WavStream`/`StreamClip` — done for WAV); ❌ **warp / time-stretch**, pitch-shift
 - ❌ Quantize / groove, comping (take folders)
 
 ### 4.8 Data model & persistence  *(JUCE: juce_data_structures — ValueTree/UndoManager)*
@@ -486,9 +486,13 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   `StreamClip` renders its overlapping window per block straight from disk — verified bit-equal
   to the in-memory render, block-by-block. §4.3 file formats now essentially complete (compressed
   streaming + sample metadata remain).
+- **Mixer depth + automation lanes** (both headless-verified, 5+5 tests):
+  `mix_graph.zig` — channels→bus/master routing, post-fader aux sends, mute/solo, peak/RMS
+  metering at every node. `automation.zig` — breakpoint lanes (hold/linear, binary-search
+  `valueAt`, sample-accurate `render`), verified driving a gain ramp.
 - NEXT in campaign (ordered): the **GUI record-arm button + RT-safe live capture-to-clip** in
-  `daw.zig`/`main_daw.zig` (needs the running app to verify) → plugin param *automation* events +
-  VST3 IEditController → real third-party plugin testing (needs plugins installed — none yet) →
-  mixer depth (sends/buses/metering) / automation lanes.
+  `daw.zig`/`main_daw.zig` (needs the running app to verify) → **wire mix_graph + automation
+  lanes into the live engine/project** (fader automation, send routing in the saved model) →
+  plugin param *automation* events + VST3 IEditController → real third-party plugin testing.
 
 *(Add new dated entries as milestones complete.)*
