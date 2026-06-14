@@ -85,7 +85,7 @@ Status: ✅ done · 🟡 partial · ❌ not started
 ### 4.1 Platform — Audio device I/O  *(JUCE: juce_audio_devices)*
 - 🟡 ALSA **output** (one device, blocking) — `StreamOut`
 - ❌ Real **RT audio callback** (dedicated high-priority thread, lock-free handoff, xrun-robust)
-- ✅ Audio **input / capture** (`StreamIn`, ALSA; verified capturing a tone) — ❌ to-timeline, duplex
+- ✅ Audio **input / capture** (`StreamIn`, ALSA) — ✅ **to-timeline** (`audio_track.Recorder` → `AudioClip`); ❌ duplex
 - ❌ **Duplex** (simultaneous in+out for monitoring)
 - ❌ Device **enumeration & selection** (list devices, sample rate, buffer size)
 - ❌ **PipeWire-native** backend (Linux modern)
@@ -143,11 +143,11 @@ Status: ✅ done · 🟡 partial · ❌ not started
 
 ### 4.7 Engine — the DAW core  *(was Zenith's own C++; rebuild in Zig)*
 - 🟡 **Transport / clock / playhead**: tempo + looping playhead done; ❌ stop/record-arm, time signature, metronome, linear (non-loop) mode
-- 🟡 **Track model** (`project.zig`: instrument/gain/pan/clips per track); ❌ audio tracks, track types
-- 🟡 **Clip / region model** + **arrangement timeline** (`arrangement.zig`: clips at frame positions, linear multi-track scheduler, record-to-clip); ❌ audio clips, loop regions, clip editing
-- 🟡 **Mixer / routing graph**: per-track gain/pan → stereo master done (`mixer.zig`); ❌ sends, buses, mute/solo, metering, PDC (plugin delay compensation)
-- 🟡 **Sequencer/playback**: loop-based + linear timeline scheduling done (`arrangement.zig`); ❌ advanced (swing, latency-comp scheduling)
-- 🟡 **Recording**: MIDI loop capture + overdub done; ❌ audio capture, punch in/out, quantize
+- 🟡 **Track model**: MIDI/instrument tracks (`project.zig`) + **audio tracks** (`audio_track.zig`: `AudioTrack` with gain/pan/mute/solo/record-arm); ❌ unify audio tracks into the saved project format, track folders/groups
+- 🟡 **Clip / region model** + **arrangement timeline**: MIDI clips (`arrangement.zig`) + **audio clips** (`audio_track.zig`: `AudioClip` — sample buffer at a timeline frame, file-backed via WAV); ❌ loop regions, clip editing/trim/fades
+- 🟡 **Mixer / routing graph**: per-track gain/pan → stereo master (`mixer.zig`); audio-track mix honors **mute/solo** (`mixTracks`); ❌ sends, buses, metering, PDC
+- 🟡 **Sequencer/playback**: MIDI timeline (`arrangement.zig`) + **sample-accurate audio-clip playback** (`AudioTrack.render`); ❌ advanced (swing, latency-comp scheduling)
+- 🟡 **Recording**: MIDI loop capture + overdub + **audio capture-to-timeline** (`audio_track.Recorder`: feed captured frames → finalize into a clip at the record position; WAV round-trip); ❌ punch in/out, quantize, monitoring
 - ❌ **Automation**: lanes, curves, sample-accurate application
 - ❌ Audio-clip **streaming**, **warp / time-stretch**, pitch-shift
 - ❌ Quantize / groove, comping (take folders)
@@ -207,9 +207,10 @@ Status: ✅ done · 🟡 partial · ❌ not started
   cubic-Hermite resampler (`resample.zig`), polyphonic `sampler.zig`. Verified: one A3
   sample pitched across MIDI notes to within 0.4% of target frequency; WAV round-trip +
   interp unit-tested. `zig build sampler`.
-- 🟡 **M5 — Audio recording** (`audio_alsa.zig` `StreamIn` + `main_record.zig`): ALSA
-  capture → WAV. Verified end-to-end (recorded a 440Hz tone, measured 440.4Hz). ❌ capture
-  to the timeline/clips, duplex monitoring, punch in/out.
+- 🟡 **M5 — Audio recording** (`audio_alsa.zig` `StreamIn` + `main_record.zig` + `audio_track.zig`):
+  ALSA capture → WAV, and **capture → timeline clip** (`Recorder` feeds blocks → finalizes an
+  `AudioClip` at the record position; verified `zig build audiotrack` → 662 Hz round-trip).
+  ❌ duplex monitoring, punch in/out.
 - 🟡 **M6 — Mixer** (`mixer.zig`): N mono tracks → per-track gain + constant-power pan
   → stereo master. Verified: synth+sampler mixed, channels differ (pan), pan-law unit
   test passes. ❌ buses/sends, mute/solo, metering (later).
@@ -461,8 +462,16 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   CLAP `clap.state` ext + host streams (`IStream`/`OStream`); VST3 `IComponent` getState/setState
   over a host-implemented `IBStream` (memory buffer); VST2 `effGetChunk`/`effSetChunk` + the
   `effFlagsProgramChunks` flag. Each verified by a state round-trip in its `zig build` driver.
-- NEXT in campaign (ordered): **audio tracks + recording-to-timeline** (the other headline
-  must-do) → FLAC/Ogg/MP3 decode + streaming → plugin param *automation* events + VST3
-  IEditController. (Real third-party plugin testing needs plugins installed — none yet.)
+- **Plugin state save/load — all 3 formats** (CLAP `clap.state`+streams, VST3 `IBStream`
+  getState/setState, VST2 chunks); each round-trip-verified in its build driver.
+- **Audio tracks + recording-to-timeline** (`audio_track.zig`): `AudioClip` (sample buffer at
+  a timeline frame, WAV-backed), `AudioTrack` (gain/pan/mute/solo, sample-accurate `render`),
+  `mixTracks` (mute/solo-aware), `Recorder` (feed captured blocks → finalize a clip at the
+  record position). 5 unit tests + `zig build audiotrack` (2-track timeline placement + a
+  660 Hz recording round-trip, FFT-verified).
+- NEXT in campaign (ordered): wire audio tracks into the saved project format + the live
+  `zenith` engine/UI (record-arm button → capture → clip) → FLAC/Ogg/MP3 decode + streaming →
+  plugin param *automation* events + VST3 IEditController. (Real third-party plugin testing
+  needs plugins installed — none yet.)
 
 *(Add new dated entries as milestones complete.)*
