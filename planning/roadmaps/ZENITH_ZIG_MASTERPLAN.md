@@ -127,16 +127,18 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ Thread pool / async task system
 - ❌ Logging, settings/config persistence
 
-### 4.6 DSP toolkit  *(JUCE: juce_dsp)*
+### 4.6 DSP toolkit  *(JUCE: juce_dsp)* — `dsp.zig` toolkit landed (17 tests)
 - ✅ SVF filter
 - ✅ polyBLEP oscillator, ADSR *(in synth)*
-- ❌ Broader filters (biquad/RBJ set, ladder/analog models — port the C++ ones we fixed)
-- ❌ **FFT** (own radix-2/4 or KISS-style)
-- ❌ **Convolution** (reverb / cab / IR)
-- ❌ **Oversampling** / anti-aliasing helpers
+- ✅ Broader filters: full RBJ biquad set (`effects.zig`: LP/HP/peak/**bandpass/notch/allpass/low+high shelf**) + **Moog 4-pole ladder** (`dsp.Ladder`)
+- ✅ **FFT** (in-place iterative radix-2, fwd/inv, windows: Hann/Hamming/Blackman-Harris) — `dsp.fft`
+- ✅ **Convolution**: FFT offline (`dsp.convolveFft`) + streaming time-domain FIR (`dsp.FirConvolver`)
+- 🟡 **Oversampling**: 2× linear-phase windowed-sinc up/down (`dsp.Oversampler2x`); ❌ 4×/8×, polyphase
 - 🟡 Resampler — cubic Hermite (Catmull-Rom) point-read done (`resample.zig`); ❌ high-quality sinc/SRC for device-rate conversion
-- ❌ Dither, gain/pan laws, metering (peak/RMS/LUFS), DC blocker
-- 🟡 Delay lines + reverb (`effects.zig`: feedback delay, Freeverb-style reverb); ❌ modulation (LFOs, env followers), chorus/flanger
+- ✅ gain/pan laws (`dsp.dbToGain`/`panConstantPower`), metering (`dsp.PeakMeter`/`RmsMeter`/**`LoudnessMeter` LUFS per BS.1770**), DC blocker (`dsp.DcBlocker`); ❌ dither
+- ✅ Dynamics: **compressor** (soft-knee, attack/release), **lookahead brickwall limiter**, **noise gate** (`dsp.Compressor`/`Limiter`/`Gate`)
+- ✅ Saturation/waveshaping (`dsp.softClip`/`hardClip`/`Saturator`)
+- 🟡 Delay lines + reverb (`effects.zig`); ✅ modulation: LFO (sine/tri/saw/square) + envelope follower (`dsp.Lfo`/`EnvelopeFollower`); ❌ chorus/flanger
 
 ### 4.7 Engine — the DAW core  *(was Zenith's own C++; rebuild in Zig)*
 - 🟡 **Transport / clock / playhead**: tempo + looping playhead done; ❌ stop/record-arm, time signature, metronome, linear (non-loop) mode
@@ -409,5 +411,21 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
 - NEXT: tempo-sync the loop to the UI BPM; record-arm (capture → disk via wav.zig); per-note (MPE-
   style) controllers → per-voice; native rawmidi UMP for hardware; SVG stroke geometry; Win/mac
   audio+MIDI backends.
+
+**2026-06-14 (session — backend depth campaign: DSP toolkit)**
+- User directive: build out the backend ("the backend logic of JUCE") — real plugin
+  hosting (VST3/VST2/CLAP), full audio tracks + recording, deeper DSP toolkit (§4.6),
+  complete file formats (§4.3). Recon: `external/JUCE` is the reference oracle; VST3 SDK
+  headers vendored under `build/_deps/juce-src/.../VST3_SDK/pluginterfaces`; no third-party
+  plugins installed (verify hosting against test plugins we build).
+- **DSP toolkit landed** (`dsp.zig`, clean-room vs juce_dsp): FFT (radix-2 fwd/inv +
+  windows), convolution (FFT offline + streaming FIR), 2× oversampler, dynamics
+  (compressor/limiter/gate), metering (peak/RMS/**LUFS** BS.1770), Moog ladder, saturation,
+  LFO + envelope follower, gain/pan laws, DC blocker. Extended `effects.zig` Biquad with the
+  full RBJ set (bandpass/notch/allpass/low+high shelf). **17 dsp + 5 effects tests pass**
+  (`zig build test`). §4.6 now mostly ✅.
+- NEXT in campaign (ordered): file formats (24/float WAV + AIFF, then FLAC/Ogg/MP3) →
+  audio tracks + recording-to-timeline → real CLAP scanning/params/ports → VST3 host
+  (COM ABI from vendored SDK headers) → VST2 host (clean-room AEffect).
 
 *(Add new dated entries as milestones complete.)*
