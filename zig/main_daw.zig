@@ -13,6 +13,7 @@ const gpu2d = @import("gpu2d.zig");
 const daw = @import("daw.zig");
 const audio = @import("audio_engine.zig");
 const ainspect = @import("audio_inspect.zig");
+const effects = @import("effects.zig");
 const midi = @import("midi_alsa.zig");
 const midi2 = @import("midi2.zig");
 const midi2_alsa = @import("midi2_alsa.zig");
@@ -103,6 +104,10 @@ pub fn main() !void {
     // analyze each stem once (dominant frequency) for the "what's playing" monitor
     var stem_hz: [audio.MAXTRACKS]f32 = [_]f32{0} ** audio.MAXTRACKS;
     for (0..ntr) |ti| stem_hz[ti] = ainspect.analyze(a, stems[ti], 48000).dominant_hz;
+    // shared aux reverb fed by each channel's send knob (per-track FX chains)
+    var reverb = effects.Reverb.init(a, 0.62, 0.4) catch undefined;
+    reverb.mix = 1.0; // it's a 100%-wet send return; the dry path bypasses it
+    engine.reverb = &reverb;
     engine.start();
     defer engine.stop();
     engine.setPlaying(state.playing);
@@ -227,6 +232,7 @@ pub fn main() !void {
             engine.setTrackPan(ti, p.tracks.items[ti].pan);
             engine.setTrackMute(ti, state.mutes[ti]);
             engine.setTrackSolo(ti, state.solos[ti]);
+            engine.setTrackSend(ti, state.sends[ti][0]); // send-A knob -> reverb bus
         }
         rclick = false;
 
@@ -279,13 +285,14 @@ pub fn main() !void {
                 if (state.solos[ti]) any_solo = true;
             }
             const mp = engine.getPeak();
-            elog.info("audio: device '{s}' @ {d}Hz {d}ch | transport {s} | master {d:.0}% ({d:.1}dB) peak {d:.3} ({d:.1}dB)", .{ engine.device_opened, engine.rate, engine.channels, if (state.playing) "PLAYING" else "STOPPED", state.master_gain * 100, ainspect.dbFromLinear(state.master_gain), mp, ainspect.dbFromLinear(mp) });
+            const rl = engine.getReverbLevel();
+            elog.info("audio: device '{s}' @ {d}Hz {d}ch | transport {s} | master {d:.0}% ({d:.1}dB) peak {d:.3} | reverb-bus {d:.3} ({d:.1}dB)", .{ engine.device_opened, engine.rate, engine.channels, if (state.playing) "PLAYING" else "STOPPED", state.master_gain * 100, ainspect.dbFromLinear(state.master_gain), mp, rl, ainspect.dbFromLinear(rl) });
             for (0..ntr) |ti| {
                 const gn = p.tracks.items[ti].gain;
                 const lvl = state.track_levels[ti];
                 const active = !state.mutes[ti] and (!any_solo or state.solos[ti]);
                 const status = if (active) "PLAYING" else if (state.mutes[ti]) "muted" else "(silenced by solo)";
-                elog.info("  src[{d}] {s}: vol {d:.2} ({d:.1}dB) pan {d:.2} | live {d:.3} ({d:.1}dB) | ~{d:.0}Hz | {s}", .{ ti, p.tracks.items[ti].name.items, gn, ainspect.dbFromLinear(gn), p.tracks.items[ti].pan, lvl, ainspect.dbFromLinear(lvl), stem_hz[ti], status });
+                elog.info("  src[{d}] {s}: vol {d:.2} ({d:.1}dB) pan {d:.2} send {d:.2} | FX[hp+comp] live {d:.3} ({d:.1}dB) | ~{d:.0}Hz | {s}", .{ ti, p.tracks.items[ti].name.items, gn, ainspect.dbFromLinear(gn), p.tracks.items[ti].pan, state.sends[ti][0], lvl, ainspect.dbFromLinear(lvl), stem_hz[ti], status });
             }
         }
         std.time.sleep(16 * std.time.ns_per_ms);

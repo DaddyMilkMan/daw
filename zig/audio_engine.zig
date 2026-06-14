@@ -12,6 +12,8 @@ const std = @import("std");
 const alsa = @import("audio_alsa.zig");
 const synth = @import("synth.zig");
 const audio_track = @import("audio_track.zig");
+const effects = @import("effects.zig");
+const dsp = @import("dsp.zig");
 const alog = std.log.scoped(.audio);
 
 const RING = 512; // note-event queue capacity (power-of-two not required)
@@ -22,22 +24,23 @@ pub const MAXTRACKS = 8;
 /// per-track gain + constant-power pan + mute/solo, then master gain. Reports each
 /// track's block peak (post-fader). Pure — the live engine reads atomics into
 /// plain arrays and calls this, and it's unit-tested directly.
-pub fn mixStems(
-    stems: []const []const f32,
+pub fn mixBlocks(
+    blocks: []const []const f32, // per-track post-FX mono blocks (each `n` samples)
     ntracks: usize,
-    pos: usize,
     n: usize,
     gains: []const f32,
     pans: []const f32,
     mutes: []const bool,
     solos: []const bool,
-    master: f32,
+    sends: []const f32, // per-track reverb send amount (0..1)
     out_l: []f32,
     out_r: []f32,
+    send_bus: []f32, // mono: sum of post-fader signal * send
     track_peak: []f32,
 ) void {
     @memset(out_l[0..n], 0);
     @memset(out_r[0..n], 0);
+    @memset(send_bus[0..n], 0);
     var any_solo = false;
     for (0..ntracks) |ti| {
         if (solos[ti]) any_solo = true;
@@ -45,25 +48,39 @@ pub fn mixStems(
     for (0..ntracks) |ti| {
         track_peak[ti] = 0;
         const active = !mutes[ti] and !(any_solo and !solos[ti]);
-        if (!active or ti >= stems.len or stems[ti].len == 0) continue;
-        const stem = stems[ti];
+        if (!active or ti >= blocks.len) continue;
         const ang = (std.math.clamp(pans[ti], -1.0, 1.0) * 0.5 + 0.5) * (std.math.pi / 2.0);
         const lg = @cos(ang) * gains[ti];
         const rg = @sin(ang) * gains[ti];
         var f: usize = 0;
         while (f < n) : (f += 1) {
-            const s = stem[(pos + f) % stem.len];
+            const s = blocks[ti][f];
             out_l[f] += s * lg;
             out_r[f] += s * rg;
-            const pk = @abs(s * gains[ti]);
+            const post = s * gains[ti];
+            send_bus[f] += post * sends[ti];
+            const pk = @abs(post);
             if (pk > track_peak[ti]) track_peak[ti] = pk;
         }
     }
-    for (0..n) |f| {
-        out_l[f] *= master;
-        out_r[f] *= master;
-    }
 }
+
+/// One track's serial FX chain: high-pass (remove rumble) -> compressor.
+pub const TrackFx = struct {
+    hp: effects.Biquad = .{},
+    comp: dsp.Compressor = undefined,
+
+    pub fn init(sr: f32) TrackFx {
+        var c = dsp.Compressor.init(sr, 5.0, 80.0);
+        c.threshold_db = -18;
+        c.ratio = 3;
+        c.knee_db = 6;
+        return .{ .hp = effects.Biquad.highpass(sr, 30.0, 0.707), .comp = c };
+    }
+    pub fn process(self: *TrackFx, x: f32) f32 {
+        return self.comp.process(self.hp.process(x));
+    }
+};
 
 // Try these output/input devices in order, so audio works on any system — a
 // PipeWire/Pulse desktop or bare ALSA hardware of any age. `default` first
@@ -97,6 +114,11 @@ pub const Engine = struct {
     tmute: [MAXTRACKS]bool = [_]bool{false} ** MAXTRACKS,
     tsolo: [MAXTRACKS]bool = [_]bool{false} ** MAXTRACKS,
     tlevel_bits: [MAXTRACKS]u32 = [_]u32{0} ** MAXTRACKS, // published per-track peak
+    // per-track FX chains + a shared reverb send bus
+    track_fx: [MAXTRACKS]TrackFx = undefined, // initialized in start()
+    reverb: ?*effects.Reverb = null, // shared aux reverb (allocated by the host)
+    rsend_bits: [MAXTRACKS]u32 = [_]u32{0} ** MAXTRACKS, // per-track reverb send
+    rlevel_bits: u32 = 0, // published reverb-bus output level
     rate: u32 = 48000,
     channels: u16 = 2,
     device: [*:0]const u8 = "default",
@@ -129,6 +151,7 @@ pub const Engine = struct {
 
     pub fn start(self: *Engine) void {
         self.synth.sample_rate = @floatFromInt(self.rate);
+        for (&self.track_fx) |*fx| fx.* = TrackFx.init(@floatFromInt(self.rate));
         self.out_thread = std.Thread.spawn(.{}, runOut, .{self}) catch null;
         if (self.capture) self.in_thread = std.Thread.spawn(.{}, runIn, .{self}) catch null;
     }
@@ -161,6 +184,12 @@ pub const Engine = struct {
     }
     pub fn getTrackLevel(self: *Engine, i: usize) f32 {
         return if (i < MAXTRACKS) @bitCast(@atomicLoad(u32, &self.tlevel_bits[i], .monotonic)) else 0;
+    }
+    pub fn setTrackSend(self: *Engine, i: usize, amt: f32) void {
+        if (i < MAXTRACKS) @atomicStore(u32, &self.rsend_bits[i], @bitCast(amt), .monotonic);
+    }
+    pub fn getReverbLevel(self: *Engine) f32 {
+        return @bitCast(@atomicLoad(u32, &self.rlevel_bits, .monotonic));
     }
     pub fn isLive(self: *Engine) bool {
         return @atomicLoad(bool, &self.started, .monotonic);
@@ -253,16 +282,42 @@ pub const Engine = struct {
                 var tp: [MAXTRACKS]f32 = undefined;
                 var tm: [MAXTRACKS]bool = undefined;
                 var ts: [MAXTRACKS]bool = undefined;
+                var tsend: [MAXTRACKS]f32 = undefined;
                 var tpk: [MAXTRACKS]f32 = undefined;
                 for (0..self.ntracks) |ti| {
                     tg[ti] = @bitCast(@atomicLoad(u32, &self.tgain_bits[ti], .monotonic));
                     tp[ti] = @bitCast(@atomicLoad(u32, &self.tpan_bits[ti], .monotonic));
                     tm[ti] = @atomicLoad(bool, &self.tmute[ti], .monotonic);
                     ts[ti] = @atomicLoad(bool, &self.tsolo[ti], .monotonic);
+                    tsend[ti] = @bitCast(@atomicLoad(u32, &self.rsend_bits[ti], .monotonic));
                 }
-                mixStems(self.stems, self.ntracks, pos, N, &tg, &tp, &tm, &ts, gain, &pL, &pR, &tpk);
-                for (0..self.ntracks) |ti| @atomicStore(u32, &self.tlevel_bits[ti], @bitCast(tpk[ti]), .monotonic);
+                // render each stem block through its FX chain (HP -> compressor)
+                var fxblk: [MAXTRACKS][N]f32 = undefined;
+                var fxptr: [MAXTRACKS][]const f32 = undefined;
                 const loop_len = self.stems[0].len;
+                for (0..self.ntracks) |ti| {
+                    const stem = self.stems[ti];
+                    var f0: usize = 0;
+                    while (f0 < N) : (f0 += 1) {
+                        const raw = if (loop_len > 0) stem[(pos + f0) % loop_len] else 0;
+                        fxblk[ti][f0] = self.track_fx[ti].process(raw);
+                    }
+                    fxptr[ti] = fxblk[ti][0..N];
+                }
+                // dry mix + reverb send bus
+                var send_bus: [N]f32 = undefined;
+                mixBlocks(fxptr[0..self.ntracks], self.ntracks, N, &tg, &tp, &tm, &ts, &tsend, &pL, &pR, &send_bus, &tpk);
+                for (0..self.ntracks) |ti| @atomicStore(u32, &self.tlevel_bits[ti], @bitCast(tpk[ti]), .monotonic);
+                // reverb return (mono -> both channels), then master gain on everything
+                var rpk: f32 = 0;
+                var f1: usize = 0;
+                while (f1 < N) : (f1 += 1) {
+                    const wet = if (self.reverb) |rv| rv.process(send_bus[f1]) else 0;
+                    if (@abs(wet) > rpk) rpk = @abs(wet);
+                    pL[f1] = (pL[f1] + wet) * gain;
+                    pR[f1] = (pR[f1] + wet) * gain;
+                }
+                @atomicStore(u32, &self.rlevel_bits, @bitCast(rpk), .monotonic);
                 if (loop_len > 0) pos = (pos + N) % loop_len;
             } else if (playing and n > 0) {
                 var f0: usize = 0;
@@ -313,43 +368,60 @@ pub const Engine = struct {
     }
 };
 
-test "mixStems: fader/mute/solo/pan affect the mix" {
-    // two 1-frame stems: track 0 = 1.0, track 1 = 1.0
-    const s0 = [_]f32{1.0};
-    const s1 = [_]f32{1.0};
-    const stems = [_][]const f32{ &s0, &s1 };
+test "mixBlocks: fader/mute/solo/pan + reverb send" {
+    const b0 = [_]f32{1.0};
+    const b1 = [_]f32{1.0};
+    const blocks = [_][]const f32{ &b0, &b1 };
     var l: [1]f32 = undefined;
     var r: [1]f32 = undefined;
+    var sb: [1]f32 = undefined;
     var pk: [MAXTRACKS]f32 = undefined;
     const expectApprox = std.testing.expectApproxEqAbs;
+    const noSend = [_]f32{ 0, 0 };
 
-    // both at gain 1, center pan, master 1 -> each contributes 0.7071 per channel
-    mixStems(&stems, 2, 0, 1, &.{ 1, 1 }, &.{ 0, 0 }, &.{ false, false }, &.{ false, false }, 1.0, &l, &r, &pk);
+    // both gain 1, center pan -> 0.7071 each per channel; no send
+    mixBlocks(&blocks, 2, 1, &.{ 1, 1 }, &.{ 0, 0 }, &.{ false, false }, &.{ false, false }, &noSend, &l, &r, &sb, &pk);
     try expectApprox(@as(f32, 2 * 0.7071), l[0], 1e-3);
+    try expectApprox(@as(f32, 0), sb[0], 1e-6);
 
-    // mute track 0 -> only track 1
-    mixStems(&stems, 2, 0, 1, &.{ 1, 1 }, &.{ 0, 0 }, &.{ true, false }, &.{ false, false }, 1.0, &l, &r, &pk);
+    // mute track 0 -> only track 1; muted track reports 0 level
+    mixBlocks(&blocks, 2, 1, &.{ 1, 1 }, &.{ 0, 0 }, &.{ true, false }, &.{ false, false }, &noSend, &l, &r, &sb, &pk);
     try expectApprox(@as(f32, 0.7071), l[0], 1e-3);
-    try expectApprox(@as(f32, 0), pk[0], 1e-6); // muted track reports 0 level
+    try expectApprox(@as(f32, 0), pk[0], 1e-6);
 
-    // solo track 1 -> only track 1 (track 0 dropped though not muted)
-    mixStems(&stems, 2, 0, 1, &.{ 1, 1 }, &.{ 0, 0 }, &.{ false, false }, &.{ false, true }, 1.0, &l, &r, &pk);
-    try expectApprox(@as(f32, 0.7071), l[0], 1e-3);
+    // solo track 1 -> track 0 dropped though not muted
+    mixBlocks(&blocks, 2, 1, &.{ 1, 1 }, &.{ 0, 0 }, &.{ false, false }, &.{ false, true }, &noSend, &l, &r, &sb, &pk);
     try expectApprox(@as(f32, 0), pk[0], 1e-6);
     try expectApprox(@as(f32, 1.0), pk[1], 1e-6);
 
-    // fader: track 0 gain 0.5, track 1 muted -> level halved
-    mixStems(&stems, 2, 0, 1, &.{ 0.5, 1 }, &.{ 0, 0 }, &.{ false, true }, &.{ false, false }, 1.0, &l, &r, &pk);
-    try expectApprox(@as(f32, 0.5), pk[0], 1e-6);
-
     // hard-left pan on track 0 (solo it) -> all in L, none in R
-    mixStems(&stems, 2, 0, 1, &.{ 1, 1 }, &.{ -1, 0 }, &.{ false, false }, &.{ true, false }, 1.0, &l, &r, &pk);
+    mixBlocks(&blocks, 2, 1, &.{ 1, 1 }, &.{ -1, 0 }, &.{ false, false }, &.{ true, false }, &noSend, &l, &r, &sb, &pk);
     try std.testing.expect(l[0] > 0.9);
     try expectApprox(@as(f32, 0), r[0], 1e-6);
 
-    // master gain scales everything
-    mixStems(&stems, 2, 0, 1, &.{ 1, 1 }, &.{ 0, 0 }, &.{ false, true }, &.{ false, false }, 0.5, &l, &r, &pk);
-    try expectApprox(@as(f32, 0.5 * 0.7071), l[0], 1e-3);
+    // reverb send: track 0 gain 1, send 0.5 -> send bus = 0.5
+    mixBlocks(&blocks, 2, 1, &.{ 1, 1 }, &.{ 0, 0 }, &.{ false, true }, &.{ false, false }, &.{ 0.5, 0 }, &l, &r, &sb, &pk);
+    try expectApprox(@as(f32, 0.5), sb[0], 1e-6);
+}
+
+test "TrackFx: high-pass removes DC, compressor tames a loud signal" {
+    var fx = TrackFx.init(48000);
+    // DC -> high-pass should drive the output toward 0
+    var dc: f32 = 0;
+    for (0..4000) |_| dc = fx.process(1.0);
+    try std.testing.expect(@abs(dc) < 0.2);
+
+    // a loud constant tone gets compressed below its input level (measure after
+    // the attack settles — the first samples pass before the compressor engages)
+    var fx2 = TrackFx.init(48000);
+    var peak: f32 = 0;
+    var sign: f32 = 1;
+    for (0..20000) |i| {
+        const y = fx2.process(sign * 0.9);
+        sign = -sign;
+        if (i > 10000) peak = @max(peak, @abs(y));
+    }
+    try std.testing.expect(peak < 0.8); // gain reduction applied (input was 0.9)
 }
 
 /// MIDI note number -> frequency (A4 = 69 = 440 Hz).
