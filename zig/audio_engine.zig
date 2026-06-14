@@ -17,13 +17,6 @@ const dsp = @import("dsp.zig");
 const project = @import("project.zig");
 const alog = std.log.scoped(.audio);
 
-/// True if `f` falls in the block [start, start+n) over a wrapping loop of `len`.
-fn frameInBlock(f: u64, start: u64, n: u64, len: u64) bool {
-    const end = start + n;
-    if (end <= len) return f >= start and f < end;
-    return f >= start or f < (end - len); // block wraps the loop boundary
-}
-
 const RING = 512; // note-event queue capacity (power-of-two not required)
 const NoteEv = struct { on: bool, freq: f32, vel: f32 = 1.0 };
 pub const MAXTRACKS = 8;
@@ -35,6 +28,61 @@ pub fn vel7(v: u8) f32 {
 /// Normalize a 16-bit MIDI 2.0 velocity (0..65535) to 0..1.
 pub fn vel16(v: u32) f32 {
     return @as(f32, @floatFromInt(@min(v, 65535))) / 65535.0;
+}
+
+/// One scheduled synth event placed at a sample offset within the current block.
+const SeqEvt = struct { off: u32, on: bool, freq: f32, vel: f32 };
+
+/// If loop-frame `f` falls in the block [start, start+n) over a wrapping loop of
+/// `len`, return its offset within the block (0..n); otherwise null.
+fn offsetInBlock(f: u64, start: u64, n: u64, len: u64) ?u32 {
+    const end = start + n;
+    if (end <= len) {
+        if (f >= start and f < end) return @intCast(f - start);
+        return null;
+    }
+    if (f >= start) return @intCast(f - start); // [start, len)
+    if (f < end - len) return @intCast(f + len - start); // [0, end-len) (wrapped)
+    return null;
+}
+
+/// Render `out` while applying `evs` (sorted by offset) at their exact sample
+/// offsets — so note onsets land sample-accurately, not quantized to the block.
+/// Live note events already applied at offset 0 by the caller (drainNotes).
+fn renderSegmented(s: *synth.Synth, out: []f32, evs: []const SeqEvt) void {
+    var cur: usize = 0;
+    for (evs) |e| {
+        const off = @min(@as(usize, e.off), out.len);
+        if (off > cur) {
+            s.renderBlock(out[cur..off]);
+            cur = off;
+        }
+        if (e.on) s.noteOn(e.freq, e.vel) else s.noteOff(e.freq);
+    }
+    if (cur < out.len) s.renderBlock(out[cur..]);
+}
+
+test "offsetInBlock handles the loop wrap" {
+    try std.testing.expectEqual(@as(?u32, 0), offsetInBlock(100, 100, 256, 48000));
+    try std.testing.expectEqual(@as(?u32, 56), offsetInBlock(156, 100, 256, 48000));
+    try std.testing.expectEqual(@as(?u32, null), offsetInBlock(356, 100, 256, 48000));
+    // block straddles the loop end: frames 990..1000 and 0..245 are in-block
+    try std.testing.expectEqual(@as(?u32, 5), offsetInBlock(995, 990, 256, 1000));
+    try std.testing.expectEqual(@as(?u32, 20), offsetInBlock(10, 990, 256, 1000));
+    try std.testing.expectEqual(@as(?u32, null), offsetInBlock(500, 990, 256, 1000));
+}
+
+test "renderSegmented places an onset sample-accurately" {
+    var s = synth.Synth{};
+    var buf: [256]f32 = [_]f32{0} ** 256;
+    const evs = [_]SeqEvt{.{ .off = 128, .on = true, .freq = 440.0, .vel = 1.0 }};
+    renderSegmented(&s, &buf, &evs);
+    var pre: f32 = 0;
+    for (buf[0..128]) |x| pre = @max(pre, @abs(x));
+    var post: f32 = 0;
+    for (buf[128..]) |x| post = @max(post, @abs(x));
+    try std.testing.expectEqual(@as(f32, 0), pre); // silent before the onset
+    try std.testing.expect(post > 0.001); // sounding after
 }
 
 /// Mix `ntracks` mono stems at loop frame `pos` into a stereo block, applying
@@ -355,20 +403,38 @@ pub const Engine = struct {
                 self.synth.setSustain(sus);
                 self.prev_sustain = sus;
             }
-            self.drainNotes();
+            self.drainNotes(); // live MIDI notes apply at the block start (offset 0)
             const playing = @atomicLoad(bool, &self.playing, .monotonic);
-            // sequence the clip's notes into the synth (note-on/off at frame crossings)
+            // Collect the clip's note on/offs that fall in THIS block, each at its
+            // exact sample offset, so onsets are sample-accurate (not quantized to N).
+            var segev: [512]SeqEvt = undefined;
+            var nseg: usize = 0;
             if (playing and self.seq_len > 0) {
                 const ai = @atomicLoad(u32, &self.seq_active, .acquire);
                 const sn = self.seq_bufs[ai][0..self.seq_counts[ai]];
                 for (sn) |note| {
+                    if (nseg + 2 > segev.len) break;
                     const freq = noteToFreq(@intCast(note.pitch));
-                    if (frameInBlock(note.start % self.seq_len, self.seq_pos, N, self.seq_len)) self.synth.noteOn(freq, vel7(@intCast(note.velocity)));
-                    if (frameInBlock((note.start + note.len) % self.seq_len, self.seq_pos, N, self.seq_len)) self.synth.noteOff(freq);
+                    if (offsetInBlock(note.start % self.seq_len, self.seq_pos, N, self.seq_len)) |off| {
+                        segev[nseg] = .{ .off = off, .on = true, .freq = freq, .vel = vel7(@intCast(note.velocity)) };
+                        nseg += 1;
+                    }
+                    if (offsetInBlock((note.start + note.len) % self.seq_len, self.seq_pos, N, self.seq_len)) |off| {
+                        segev[nseg] = .{ .off = off, .on = false, .freq = freq, .vel = 0 };
+                        nseg += 1;
+                    }
                 }
                 self.seq_pos = (self.seq_pos + N) % self.seq_len;
+                // insertion sort by offset (tiny n; allocation-free on the RT path)
+                var i: usize = 1;
+                while (i < nseg) : (i += 1) {
+                    const key = segev[i];
+                    var j = i;
+                    while (j > 0 and segev[j - 1].off > key.off) : (j -= 1) segev[j] = segev[j - 1];
+                    segev[j] = key;
+                }
             }
-            self.synth.renderBlock(sb[0..N]); // MIDI- + sequence-driven voices
+            renderSegmented(&self.synth, sb[0..N], segev[0..nseg]); // MIDI- + sequence-driven voices
             var spk: f32 = 0;
             for (sb[0..N]) |s| spk = @max(spk, @abs(s));
             @atomicStore(u32, &self.slevel_bits, @bitCast(spk), .monotonic);
