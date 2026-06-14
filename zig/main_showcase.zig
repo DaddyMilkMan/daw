@@ -143,7 +143,13 @@ const Vals = struct {
     slider: [2]f32 = .{ 0.6, 0.0 }, // standard (60%) + bipolar (centered/balanced)
     toggle: [2]bool = .{ true, false },
     meter: [4]f32 = .{ 0.3, 0.5, 0.7, 0.4 },
+    check: [2]bool = .{ true, false },
+    seg: usize = 0,
+    prog: f32 = 0.35,
 };
+fn frac(x: f32) f32 {
+    return x - @floor(x);
+}
 
 pub fn main() !void {
     const a = std.heap.page_allocator;
@@ -277,6 +283,35 @@ pub fn main() !void {
             }
             c.close();
 
+            // components row (checkbox, tabs/segmented, progress)
+            c.label("COMPONENTS", &fc, faint, .{ .h = px(20), .tracking = 1.4 });
+            c.open(.{ .dir = .row, .w = grow(), .h = px(86), .gap = 14 });
+            {
+                c.open(.{ .dir = .col, .w = grow(), .h = grow(), .radius = 14, .pad = 16, .gap = 12, .justify = .center, .bg = card_t, .bg2 = card_b, .elev = 1, .shadow = 16 });
+                {
+                    c.open(.{ .dir = .row, .gap = 12, .aligni = .center });
+                    {
+                        c.box(.{ .w = px(20), .h = px(20), .id = 140 });
+                        c.label("Reverb send", &fb, txt, .{});
+                    }
+                    c.close();
+                    c.open(.{ .dir = .row, .gap = 12, .aligni = .center });
+                    {
+                        c.box(.{ .w = px(20), .h = px(20), .id = 141 });
+                        c.label("Sidechain", &fb, dim, .{});
+                    }
+                    c.close();
+                }
+                c.close();
+                c.open(.{ .dir = .col, .w = groww(2), .h = grow(), .radius = 14, .pad = 16, .gap = 16, .justify = .center, .bg = card_t, .bg2 = card_b, .elev = 1, .shadow = 16 });
+                {
+                    c.box(.{ .w = grow(), .h = px(34), .id = 150 }); // segmented / tabs
+                    c.box(.{ .w = grow(), .h = px(8), .id = 160 }); // progress
+                }
+                c.close();
+            }
+            c.close();
+
             // shadows / elevation + icons
             c.open(.{ .dir = .row, .w = grow(), .h = grow(), .gap = 14 });
             {
@@ -322,6 +357,14 @@ pub fn main() !void {
         for (0..2) |i| if (c.rectOf(130 + @as(u64, i))) |r| {
             _ = u.toggle(@intCast(130 + i), r[0], r[1], r[2], r[3], &v.toggle[i]);
         };
+        // components: checkboxes, segmented/tabs, progress
+        if (c.rectOf(140)) |r| _ = u.checkbox(140, r[0], r[1], r[2], &v.check[0]);
+        if (c.rectOf(141)) |r| _ = u.checkbox(141, r[0], r[1], r[2], &v.check[1]);
+        if (c.rectOf(150)) |r| _ = u.segmented(150, r[0], r[1], r[2], r[3], &v.seg, &[_][]const u8{ "Arrange", "Mix", "Edit" }, &fb);
+        if (c.rectOf(160)) |r| {
+            v.prog = frac(v.prog + 0.003); // animate progress
+            u.progress(r[0], r[1], r[2], r[3], v.prog);
+        }
         // gradient swatches
         for (GRADS, 0..) |gr, i| if (c.rectOf(700 + @as(u64, i))) |r| {
             g.rectGrad(r[0], r[1], r[2], r[3], 12, gr[0], gr[1], 0, clear);

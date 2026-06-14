@@ -7,11 +7,15 @@ const std = @import("std");
 const gpu2d = @import("gpu2d.zig");
 const Color = gpu2d.Color;
 const Gpu = gpu2d.Gpu;
+const Font = gpu2d.GpuFont;
 
 const accent = Color.rgb(108, 147, 244); // electric indigo
 const accent_hi = Color.rgb(190, 205, 255);
+const accent_lo = Color.rgb(82, 116, 210);
 const border = Color.rgba(255, 255, 255, 0); // no border lines on widgets
 const track_bg = Color.rgb(24, 26, 33);
+const c_on = Color.rgb(236, 239, 246);
+const c_off = Color.rgb(150, 158, 173);
 
 pub const Input = struct { mx: f32 = -1, my: f32 = -1, mouse_down: bool = false };
 const Anim = struct { id: u32 = 0, used: bool = false, hover: f32 = 0, press: f32 = 0, extra: f32 = 0 };
@@ -217,5 +221,65 @@ pub const Ui = struct {
         const ang = start + value.* * sweep;
         self.g.line(cx + @cos(ang) * (ar - 6), cy + @sin(ang) * (ar - 6), cx + @cos(ang) * ar, cy + @sin(ang) * ar, 2.4, Color.rgb(240, 243, 250));
         return changed;
+    }
+
+    /// Checkbox with an animated check mark. Returns true the frame it's toggled.
+    pub fn checkbox(self: *Ui, id: u32, x: f32, y: f32, s: f32, checked: *bool) bool {
+        const hov = self.inside(x - 3, y - 3, s + 6, s + 6);
+        if (hov) self.hot = id;
+        if (hov and self.pressed) self.active = id;
+        const clicked = self.active == id and self.released and hov;
+        if (clicked) checked.* = !checked.*;
+        const a = self.anim(id);
+        a.press = ease(a.press, if (checked.*) 1 else 0, self.dt, 18);
+        a.hover = ease(a.hover, if (hov) 1 else 0, self.dt, 14);
+        const box = lerp(lerp(Color.rgb(44, 48, 60), Color.rgb(56, 61, 76), a.hover), accent, a.press);
+        self.g.rect(x, y, s, s, s * 0.28, box);
+        if (a.press > 0.05) { // check mark scales/fades in
+            const p = a.press;
+            const cx = x + s * 0.5;
+            const cy = y + s * 0.5;
+            self.g.line(cx - s * 0.22 * p, cy + s * 0.02 * p, cx - s * 0.04 * p, cy + s * 0.2 * p, 1.9, Color.rgb(255, 255, 255));
+            self.g.line(cx - s * 0.04 * p, cy + s * 0.2 * p, cx + s * 0.26 * p, cy - s * 0.2 * p, 1.9, Color.rgb(255, 255, 255));
+        }
+        return clicked;
+    }
+
+    /// Segmented control / tab bar — a pill track with a SLIDING accent indicator
+    /// behind the selected segment, and labels. Returns true when selection changes.
+    pub fn segmented(self: *Ui, id: u32, x: f32, y: f32, w: f32, h: f32, sel: *usize, labels: []const []const u8, fb: *const Font) bool {
+        const n = labels.len;
+        if (n == 0) return false;
+        self.g.rect(x, y, w, h, h * 0.5, track_bg);
+        const segw = w / @as(f32, @floatFromInt(n));
+        var changed = false;
+        for (0..n) |i| {
+            const sx = x + @as(f32, @floatFromInt(i)) * segw;
+            if (self.inside(sx, y, segw, h)) {
+                self.hot = id;
+                if (self.pressed and sel.* != i) {
+                    sel.* = i;
+                    changed = true;
+                }
+            }
+        }
+        const a = self.anim(id);
+        a.extra = ease(a.extra, @floatFromInt(sel.*), self.dt, 18); // sliding indicator
+        const ix = x + a.extra * segw + 3;
+        self.g.shadow(ix, y + 3 + 1, segw - 6, h - 6, (h - 6) * 0.5, 4, Color.rgba(0, 0, 0, 90));
+        self.g.card(ix, y + 3, segw - 6, h - 6, (h - 6) * 0.5, accent, accent_lo, 0, border, 0.7);
+        for (labels, 0..) |lbl, i| {
+            const sx = x + @as(f32, @floatFromInt(i)) * segw;
+            const tw = fb.textWidth(lbl);
+            fb.text(self.g, sx + (segw - tw) / 2, y + (h - fb.cell_h) / 2, lbl, if (i == sel.*) Color.rgb(16, 18, 26) else c_off);
+        }
+        return changed;
+    }
+
+    /// Determinate progress bar (non-interactive). value 0..1.
+    pub fn progress(self: *Ui, x: f32, y: f32, w: f32, h: f32, value: f32) void {
+        self.g.rect(x, y, w, h, h * 0.5, track_bg);
+        const fw = std.math.clamp(value, 0, 1) * w;
+        if (fw > h) self.g.rectGrad(x, y, fw, h, h * 0.5, accent_hi, accent, 0, border);
     }
 };
