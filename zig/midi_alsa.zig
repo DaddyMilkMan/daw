@@ -3,6 +3,7 @@
 //! 100% Zig over libasound; no JUCE.
 
 const std = @import("std");
+const midi2 = @import("midi2.zig");
 
 const snd_seq_t = opaque {};
 
@@ -55,6 +56,16 @@ pub const MidiEvent = struct {
     kind: Kind,
     note: u8,
     velocity: u8,
+
+    /// Up-convert this 7-bit MIDI 1.0 event to a MIDI 2.0 UMP (16-bit velocity,
+    /// scaled per the spec). `group` selects one of the 16 UMP groups.
+    pub fn toUmp(self: MidiEvent, group: u4) midi2.Ump {
+        const status: u8 = switch (self.kind) {
+            .note_on => 0x90,
+            .note_off => 0x80,
+        };
+        return midi2.fromMidi1(group, status, self.note, self.velocity).?;
+    }
 };
 
 pub const MidiError = error{ OpenFailed, PortFailed };
