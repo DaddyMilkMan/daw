@@ -64,8 +64,10 @@ const Cols = struct { pal: [5]Color, accent: Color, accent2: Color };
 const C: Cols = blk: {
     @setEvalBranchQuota(1_000_000);
     break :blk .{
-        // vibrant, cleanly-separated hues — modern category colors
-        .pal = .{ oklch(0.72, 0.155, 40), oklch(0.79, 0.150, 150), oklch(0.75, 0.130, 224), oklch(0.67, 0.165, 292), oklch(0.71, 0.165, 352) },
+        // MUTED, low-chroma category tints (the "carefully balanced desaturated"
+        // palette modern DAWs use — sophisticated, not neon). OKLCH so the steps
+        // are perceptually even. chroma ~0.07 vs the old ~0.15 = far less cheesy.
+        .pal = .{ oklch(0.665, 0.072, 38), oklch(0.685, 0.068, 156), oklch(0.675, 0.066, 232), oklch(0.640, 0.078, 292), oklch(0.660, 0.074, 350) },
         .accent = oklch(0.68, 0.150, 266), // electric indigo
         .accent2 = oklch(0.67, 0.165, 300),
     };
@@ -107,6 +109,12 @@ fn mix(a: Color, b: Color, t: f32) Color {
         .g = @intFromFloat(@as(f32, @floatFromInt(a.g)) * (1 - tc) + @as(f32, @floatFromInt(b.g)) * tc),
         .b = @intFromFloat(@as(f32, @floatFromInt(a.b)) * (1 - tc) + @as(f32, @floatFromInt(b.b)) * tc),
     };
+}
+/// Lighten (amt>0, toward white) or darken (amt<0, toward near-black) a color by
+/// a small amount — for SUBTLE gradients (a gentle vertical sheen, not a glossy
+/// bright-to-dark swing). Keeps the hue; just nudges luminance.
+fn shade(c: Color, amt: f32) Color {
+    return if (amt >= 0) mix(c, Color.rgb(255, 255, 255), amt) else mix(c, Color.rgb(9, 10, 13), -amt);
 }
 
 // ---- demo project ----------------------------------------------------------
@@ -312,27 +320,32 @@ fn drawClips(g: *Gpu, fb: *const Font, u: *widgets.Ui, p: *project.Project, ti: 
             state.sel_clip = @intCast(ci);
         }
         const sel = state.sel_track == @as(i32, @intCast(ti)) and state.sel_clip == @as(i32, @intCast(ci));
-        const cc = if (muted) mix(col, Color.rgb(72, 76, 88), 0.7) else col;
-        if (sel) g.shadow(cx - 3, cy - 3, cw + 6, ch + 6, 9, 13, Color.rgba(108, 147, 244, 120)); // accent selection glow
-        g.shadow(cx, cy + 3, cw, ch, 6, 9, Color.rgba(0, 0, 0, 60)); // soft directional drop
-        g.card(cx, cy, cw, ch, 6, mix(cc, Color.rgb(255, 255, 255), if (hovered) 0.24 else 0.12), mix(cc, panel_b, 0.5), 1, bord, 1.0);
-        g.rect(cx, cy, cw, 16, 6, mix(cc, Color.rgb(255, 255, 255), 0.2));
+        const base = if (muted) mix(col, Color.rgb(56, 60, 72), 0.74) else col;
+        const cc = if (hovered) shade(base, 0.05) else base;
+        if (sel) g.shadow(cx - 3, cy - 3, cw + 6, ch + 6, 9, 13, Color.rgba(108, 147, 244, 110)); // accent selection glow
+        g.shadow(cx, cy + 4, cw, ch, 7, 11, Color.rgba(0, 0, 0, 78)); // soft, low directional drop
+        // SUBTLE smooth gradient: one muted color with a gentle vertical sheen
+        // (top +5% / bottom -15%), dither via material elev to avoid banding.
+        g.card(cx, cy, cw, ch, 7, shade(cc, 0.05), shade(cc, -0.15), 0, bord, 0.45);
+        g.rect(cx + 1, cy + 1, cw - 2, 1, 0, Color.rgba(255, 255, 255, 36)); // crisp lit top edge
+        // soft dark scrim under the label so the name reads on any clip color
+        g.rectGrad(cx, cy, cw, 22, 7, Color.rgba(0, 0, 0, 60), Color.rgba(0, 0, 0, 0), 0, bord);
         // audio tracks show a waveform; MIDI tracks show note blocks
         if (t.instrument == .sampler) {
-            drawWaveform(g, cx + 3, cy + 18, cw - 6, ch - 22, wave, mix(cc, Color.rgb(255, 255, 255), 0.55));
+            drawWaveform(g, cx + 3, cy + 18, cw - 6, ch - 22, wave, mix(cc, Color.rgb(255, 255, 255), 0.42));
         } else if (clip.length != 0) {
             const clen: f32 = @floatFromInt(clip.length);
-            const nc = mix(cc, Color.rgb(255, 255, 255), 0.5);
+            const nc = mix(cc, Color.rgb(255, 255, 255), 0.42);
             for (clip.notes.items) |note| {
                 const nx = cx + @as(f32, @floatFromInt(note.start)) / clen * cw;
                 const nw = @max(@as(f32, @floatFromInt(note.len)) / clen * cw, 2);
                 const pn = std.math.clamp((@as(f32, @floatFromInt(note.pitch)) - 32) / 60, 0.0, 1.0);
                 const ny = cy + ch - 4 - pn * @max(ch - 22, 1);
-                g.rect(nx + 1, ny, nw - 1, 3, 1, nc);
+                g.rect(nx + 1, ny, nw - 1, 3, 1.5, nc);
             }
         }
-        fb.text(g, cx + 7, cy + 1, clip.name.items, Color.rgb(14, 16, 22));
-        if (sel) g.stroke(cx, cy, cw, ch, 6, 1.5, accent);
+        fb.text(g, cx + 8, cy + 2, clip.name.items, Color.rgb(244, 247, 251)); // light label on the scrim
+        if (sel) g.stroke(cx, cy, cw, ch, 7, 1.5, accent);
     }
 }
 
