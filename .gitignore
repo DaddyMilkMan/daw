@@ -197,3 +197,5 @@ inspect.log
 clap_demo.wav
 vst*_demo.wav
 audiotrack_demo.wav
+
+tools/realvst3/*.so
