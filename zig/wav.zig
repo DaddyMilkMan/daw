@@ -39,6 +39,68 @@ pub fn writePcm16(path: []const u8, samples: []const f32, sample_rate: u32, chan
     try bw.flush();
 }
 
+/// Write 24-bit PCM WAV (interleaved f32 in [-1,1]).
+pub fn writePcm24(path: []const u8, samples: []const f32, sample_rate: u32, channels: u16) !void {
+    const file = try std.fs.cwd().createFile(path, .{});
+    defer file.close();
+    var bw = std.io.bufferedWriter(file.writer());
+    const w = bw.writer();
+
+    const data_bytes: u32 = @intCast(samples.len * 3);
+    const block_align: u16 = channels * 3;
+    try w.writeAll("RIFF");
+    try w.writeInt(u32, 36 + data_bytes, .little);
+    try w.writeAll("WAVE");
+    try w.writeAll("fmt ");
+    try w.writeInt(u32, 16, .little);
+    try w.writeInt(u16, 1, .little); // PCM
+    try w.writeInt(u16, channels, .little);
+    try w.writeInt(u32, sample_rate, .little);
+    try w.writeInt(u32, sample_rate * @as(u32, block_align), .little);
+    try w.writeInt(u16, block_align, .little);
+    try w.writeInt(u16, 24, .little);
+    try w.writeAll("data");
+    try w.writeInt(u32, data_bytes, .little);
+    for (samples) |s| {
+        const c = std.math.clamp(s, -1.0, 1.0);
+        const v: i32 = @intFromFloat(c * 8388607.0);
+        const u: u32 = @bitCast(v);
+        try w.writeByte(@truncate(u));
+        try w.writeByte(@truncate(u >> 8));
+        try w.writeByte(@truncate(u >> 16));
+    }
+    try bw.flush();
+}
+
+/// Write 32-bit IEEE-float WAV (interleaved f32, no clipping — full range kept).
+pub fn writeFloat32(path: []const u8, samples: []const f32, sample_rate: u32, channels: u16) !void {
+    const file = try std.fs.cwd().createFile(path, .{});
+    defer file.close();
+    var bw = std.io.bufferedWriter(file.writer());
+    const w = bw.writer();
+
+    const data_bytes: u32 = @intCast(samples.len * 4);
+    const block_align: u16 = channels * 4;
+    try w.writeAll("RIFF");
+    try w.writeInt(u32, 4 + (8 + 16) + (8 + 4) + (8 + data_bytes), .little);
+    try w.writeAll("WAVE");
+    try w.writeAll("fmt ");
+    try w.writeInt(u32, 16, .little);
+    try w.writeInt(u16, 3, .little); // IEEE float
+    try w.writeInt(u16, channels, .little);
+    try w.writeInt(u32, sample_rate, .little);
+    try w.writeInt(u32, sample_rate * @as(u32, block_align), .little);
+    try w.writeInt(u16, block_align, .little);
+    try w.writeInt(u16, 32, .little);
+    try w.writeAll("fact"); // required for non-PCM
+    try w.writeInt(u32, 4, .little);
+    try w.writeInt(u32, @intCast(if (channels == 0) 0 else samples.len / channels), .little);
+    try w.writeAll("data");
+    try w.writeInt(u32, data_bytes, .little);
+    for (samples) |s| try w.writeInt(u32, @bitCast(s), .little);
+    try bw.flush();
+}
+
 // ---------------------------------------------------------------------------
 // Reading
 // ---------------------------------------------------------------------------
@@ -146,4 +208,26 @@ test "wav write/read round-trip (16-bit)" {
     for (samples, ad.samples) |orig, got| {
         try std.testing.expect(@abs(orig - got) < 1e-4); // 16-bit quantization
     }
+}
+
+test "wav round-trip (24-bit) is near-lossless" {
+    const a = std.testing.allocator;
+    const samples = [_]f32{ 0.0, 0.5, -0.5, 0.123456, -0.7654321, 0.999, -0.999 };
+    try writePcm24("test_rt24.wav", &samples, 48000, 1);
+    defer std.fs.cwd().deleteFile("test_rt24.wav") catch {};
+    var ad = try readPcm(a, "test_rt24.wav");
+    defer ad.deinit(a);
+    try std.testing.expectEqual(@as(u32, 48000), ad.sample_rate);
+    for (samples, ad.samples) |orig, got| try std.testing.expect(@abs(orig - got) < 1e-5);
+}
+
+test "wav round-trip (float32) is exact" {
+    const a = std.testing.allocator;
+    const samples = [_]f32{ 0.0, 1.5, -2.25, 0.123456789, -0.7, 3.14159 }; // beyond [-1,1] kept
+    try writeFloat32("test_rtf.wav", &samples, 96000, 1);
+    defer std.fs.cwd().deleteFile("test_rtf.wav") catch {};
+    var ad = try readPcm(a, "test_rtf.wav");
+    defer ad.deinit(a);
+    try std.testing.expectEqual(@as(u32, 96000), ad.sample_rate);
+    for (samples, ad.samples) |orig, got| try std.testing.expectEqual(orig, got);
 }

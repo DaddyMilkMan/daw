@@ -103,10 +103,11 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ Cross-platform MIDI (Windows/macOS)
 
 ### 4.3 Platform — Audio file formats  *(JUCE: juce_audio_formats)*
-- 🟡 WAV **write** (16-bit only; ❌ 24/float write)
+- ✅ WAV **write** (`wav.zig`: 16-bit + **24-bit** + **32-bit float**, mono/multichannel)
 - ✅ WAV **read** (16/24/32-bit PCM + IEEE float32, multichannel, chunk-skipping)
-- ❌ **AIFF**, **FLAC**, **Ogg/Vorbis** read/write
-- ❌ **MP3** decode (patent-aware; consider PD decoder)
+- ✅ **AIFF** read/write (`aiff.zig`: 8/16/24/32-bit signed BE PCM + 80-bit extended sample-rate codec)
+- ❌ **FLAC**, **Ogg/Vorbis** read/write (next: clean-room or vendor a PD single-header decoder)
+- ❌ **MP3** decode (patent-aware; `external/vcpkg/ports/minimp3` available as a PD leaf)
 - ❌ **Streaming** large files from disk (don't load whole files into RAM)
 - ❌ Sample metadata (loop points, root note, embedded markers)
 
