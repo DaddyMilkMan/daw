@@ -124,6 +124,9 @@ pub const Patch = struct {
     noise_level: f32 = 0.0,
     unison: u8 = 1, // 1..7 detuned copies of each osc
     unison_detune: f32 = 8.0, // cents spread across the unison stack
+    // analog imperfection — what makes it sound alive instead of static
+    drift: f32 = 4.0, // peak cents of slow per-oscillator pitch drift (free-running VCOs)
+    tune_spread: f32 = 2.0, // peak cents of fixed per-voice detune (component tolerance)
     // filter (zero-delay: svf = clean/stable multimode, ladder = analog growl)
     filter_model: filter.Model = .ladder,
     filter_mode: filter.Mode = .lowpass,
@@ -183,6 +186,13 @@ const Voice = struct {
     filt_env: Adsr = .{},
     filt: filter.Filter = .{},
     rng: u32 = 0x2545F491, // per-voice white noise
+    // analog drift: per-oscillator random-walk pitch (cents `w*` -> cached ratio `r*`)
+    wa: [MAX_UNISON]f32 = [_]f32{0} ** MAX_UNISON,
+    wb: [MAX_UNISON]f32 = [_]f32{0} ** MAX_UNISON,
+    ra: [MAX_UNISON]f32 = [_]f32{1} ** MAX_UNISON,
+    rb: [MAX_UNISON]f32 = [_]f32{1} ** MAX_UNISON,
+    drng: u32 = 0x9E3779B9, // drift RNG (independent of the noise RNG)
+    tune: f32 = 1.0, // fixed per-voice tuning offset (component tolerance)
     freq: f32 = 0.0, // target frequency
     cur_freq: f32 = 0.0, // glided frequency
     cur_vib: f32 = 1.0, // vibrato pitch multiplier (updated at control rate)
@@ -203,6 +213,13 @@ const Voice = struct {
         self.note = note;
         self.channel = channel;
         self.vel = std.math.clamp(vel, 0.0, 1.0);
+        // analog imperfection: a fixed per-voice tuning offset + fresh drift state
+        self.drng = (0x9E3779B9 ^ (@as(u32, note) *% 2654435761)) | 1;
+        self.tune = std.math.pow(f32, 2.0, (self.drand() * p.tune_spread) / 1200.0);
+        self.wa = [_]f32{0} ** MAX_UNISON;
+        self.wb = [_]f32{0} ** MAX_UNISON;
+        self.ra = [_]f32{1} ** MAX_UNISON;
+        self.rb = [_]f32{1} ** MAX_UNISON;
         self.filt = .{ .model = p.filter_model, .mode = p.filter_mode, .sr = sr };
         self.amp_env = p.amp_env;
         self.filt_env = p.filt_env;
@@ -225,6 +242,12 @@ const Voice = struct {
         self.rng ^= self.rng >> 17;
         self.rng ^= self.rng << 5;
         return (@as(f32, @floatFromInt(self.rng)) / 2147483648.0) - 1.0;
+    }
+    fn drand(self: *Voice) f32 { // independent xorshift -> -1..1 (drift/tuning)
+        self.drng ^= self.drng << 13;
+        self.drng ^= self.drng >> 17;
+        self.drng ^= self.drng << 5;
+        return (@as(f32, @floatFromInt(self.drng)) / 2147483648.0) - 1.0;
     }
 };
 
@@ -389,17 +412,36 @@ pub const Synth = struct {
                     cut = std.math.clamp(cut, 40.0, 18000.0);
                     v.filt.sr = sr; // honor the (possibly oversampled) render rate
                     v.filt.set(cut, res, p.drive);
+                    // analog drift: random-walk each oscillator's pitch (free-running
+                    // VCOs slowly wander), fold into the cached unison-detune ratios
+                    if (p.drift > 0.0) {
+                        // 2^(cents/1200) ~= 1 + cents*ln2/1200 (drift is tiny, so this
+                        // is exact to <0.001% and avoids a pow() on the hot path)
+                        const c = p.drift * 0.000577623; // ln(2)/1200
+                        var di: usize = 0;
+                        while (di < un) : (di += 1) {
+                            v.wa[di] = v.wa[di] * 0.99 + v.drand() * 0.06;
+                            v.wb[di] = v.wb[di] * 0.99 + v.drand() * 0.06;
+                            v.ra[di] = det_ratio[di] * (1.0 + v.wa[di] * c);
+                            v.rb[di] = det_ratio[di] * (1.0 + v.wb[di] * c);
+                        }
+                    } else {
+                        var di: usize = 0;
+                        while (di < un) : (di += 1) {
+                            v.ra[di] = det_ratio[di];
+                            v.rb[di] = det_ratio[di];
+                        }
+                    }
                 }
-                const base = v.cur_freq * self.bend * self.chan_bend[v.channel] * v.note_bend * v.cur_vib;
+                const base = v.cur_freq * self.bend * self.chan_bend[v.channel] * v.note_bend * v.cur_vib * v.tune;
 
-                // two oscillators with unison detune (per sample)
+                // two oscillators (unison detune + drift baked into ra/rb), per sample
                 var oa: f32 = 0;
                 var ob: f32 = 0;
                 var ui: usize = 0;
                 while (ui < un) : (ui += 1) {
-                    const det = det_ratio[ui];
-                    oa += v.osc_a[ui].next(p.osc_a, (base * det) / sr, p.pulse_width);
-                    ob += v.osc_b[ui].next(p.osc_b, (base * det * b_ratio) / sr, p.pulse_width);
+                    oa += v.osc_a[ui].next(p.osc_a, (base * v.ra[ui]) / sr, p.pulse_width);
+                    ob += v.osc_b[ui].next(p.osc_b, (base * v.rb[ui] * b_ratio) / sr, p.pulse_width);
                 }
                 oa *= un_norm;
                 ob *= un_norm;
@@ -548,6 +590,20 @@ test "oversampling reduces aliasing from filter saturation" {
     const at_1x = aliasEnergy2(patch, 1, 15000.0, 11000.0);
     const at_4x = aliasEnergy2(patch, 4, 15000.0, 11000.0);
     try std.testing.expect(at_4x < at_1x * 0.6); // 4x oversampling cuts the alias
+}
+
+test "analog drift moves pitch + voices detune individually" {
+    var s = Synth{}; // default patch: drift = 4 cents, tune_spread = 2 cents
+    s.oversample = 1;
+    s.noteOn(noteToFreq(60), 1.0);
+    s.noteOn(noteToFreq(67), 1.0);
+    var buf: [2400]f32 = undefined;
+    s.renderBlock(&buf);
+    try std.testing.expect(s.voices[0].in_use and s.voices[1].in_use);
+    // each voice got its own fixed tuning offset (component tolerance)
+    try std.testing.expect(s.voices[0].tune != s.voices[1].tune);
+    // drift walked the oscillator ratio off its nominal 1.0 (unison = 1 -> detune 1)
+    try std.testing.expect(@abs(s.voices[0].ra[0] - 1.0) > 1.0e-5);
 }
 
 test "presets render without NaN or runaway" {
