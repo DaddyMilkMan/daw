@@ -127,7 +127,7 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ **Message/event loop** + timers (UI + async)
 - 🟡 **Lock-free audio FIFOs** (SPSC note queue in `audio_engine.zig`); ❌ generic ring-buffer util
 - ❌ Thread pool / async task system
-- 🟡 Logging + **observability/instrumentation** (`inspect.zig`: JSON state snapshot + PNG screenshot + structured event log — a headless "Playwright for the DAW"; `png.zig` minimal encoder; `zig build inspect`). ❌ settings/config persistence, live-app hookup of the snapshot
+- 🟡 Logging + **observability/instrumentation**: (a) headless snapshot (`inspect.zig`: JSON state + PNG screenshot + event log; `png.zig`); (b) **live scripted control** — `window_glx` replays a `ZENITH_SCRIPT` of input (move/down/up/key/wait/shot/quit) into the real GPU app and grabs `glReadPixels` PNGs, no app-UI changes (the "Playwright for the DAW"). **Verified: drove the real showcase — fader, slider, knob, toggle all responded, captured in screenshots** (`tools/control/`). ❌ settings/config persistence, an input-injection API for in-process tests
 
 ### 4.6 DSP toolkit  *(JUCE: juce_dsp)* — `dsp.zig` toolkit landed (17 tests)
 - ✅ SVF filter

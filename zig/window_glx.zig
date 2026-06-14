@@ -4,6 +4,9 @@
 //! as window_x11.NativeWindow so the app swaps with a one-line import change.
 
 const std = @import("std");
+const png = @import("png.zig");
+
+extern fn glReadPixels(x: c_int, y: c_int, w: c_int, h: c_int, fmt: c_uint, ty: c_uint, data: *anyopaque) void;
 
 const Display = opaque {};
 const XID = c_ulong;
@@ -170,6 +173,136 @@ fn xcCode(s: CursorShape) c_uint {
     };
 }
 
+// ---------------------------------------------------------------------------
+// Automation — "Playwright for the DAW": when ZENITH_SCRIPT names a script file,
+// the window REPLAYS scripted input (move/down/up/key) into poll() instead of the
+// OS, and captures glReadPixels screenshots on `shot` actions. The app's own loop
+// is unchanged — it just receives synthetic events. Script grammar (one per line):
+//   move <x> <y> | down | up | key <code> | wait <frames> | shot <file.png> | quit
+// Actions run per frame until a `wait`/`shot`/`quit`; insert `wait 1` between drag
+// steps so the widget processes each incremental position.
+// ---------------------------------------------------------------------------
+const ActKind = enum { move, down, up, key, wait, shot, quit };
+const Act = struct {
+    kind: ActKind,
+    x: i32 = 0,
+    y: i32 = 0,
+    key: u32 = 0,
+    frames: u32 = 1,
+    name: [64]u8 = [_]u8{0} ** 64,
+    name_len: usize = 0,
+};
+
+pub const Automation = struct {
+    acts: [256]Act = undefined,
+    n: usize = 0,
+    pc: usize = 0,
+    mx: i32 = -1,
+    my: i32 = -1,
+    down: bool = false,
+    wait_left: u32 = 0,
+    ev: [16]Event = undefined,
+    ev_n: usize = 0,
+    ev_i: usize = 0,
+    pending_shot: ?[64]u8 = null,
+    shot_len: usize = 0,
+    frame: u64 = 0,
+
+    fn parse(self: *Automation, text: []const u8) void {
+        var it = std.mem.tokenizeScalar(u8, text, '\n');
+        while (it.next()) |raw_line| {
+            if (self.n >= self.acts.len) break;
+            const line = std.mem.trim(u8, raw_line, " \t\r");
+            if (line.len == 0 or line[0] == '#') continue;
+            var t = std.mem.tokenizeAny(u8, line, " \t");
+            const cmd = t.next() orelse continue;
+            var a: Act = .{ .kind = .wait };
+            if (std.mem.eql(u8, cmd, "move")) {
+                a.kind = .move;
+                a.x = std.fmt.parseInt(i32, t.next() orelse "0", 10) catch 0;
+                a.y = std.fmt.parseInt(i32, t.next() orelse "0", 10) catch 0;
+            } else if (std.mem.eql(u8, cmd, "down")) {
+                a.kind = .down;
+            } else if (std.mem.eql(u8, cmd, "up")) {
+                a.kind = .up;
+            } else if (std.mem.eql(u8, cmd, "key")) {
+                a.kind = .key;
+                a.key = std.fmt.parseInt(u32, t.next() orelse "0", 10) catch 0;
+            } else if (std.mem.eql(u8, cmd, "wait")) {
+                a.kind = .wait;
+                a.frames = std.fmt.parseInt(u32, t.next() orelse "1", 10) catch 1;
+            } else if (std.mem.eql(u8, cmd, "shot")) {
+                a.kind = .shot;
+                const nm = t.next() orelse "shot.png";
+                a.name_len = @min(nm.len, a.name.len);
+                @memcpy(a.name[0..a.name_len], nm[0..a.name_len]);
+            } else if (std.mem.eql(u8, cmd, "quit")) {
+                a.kind = .quit;
+            } else continue;
+            self.acts[self.n] = a;
+            self.n += 1;
+        }
+    }
+
+    fn pushEv(self: *Automation, e: Event) void {
+        if (self.ev_n < self.ev.len) {
+            self.ev[self.ev_n] = e;
+            self.ev_n += 1;
+        }
+    }
+
+    /// Prepare the events to deliver this frame; may arm a screenshot.
+    fn fillFrame(self: *Automation) void {
+        self.ev_n = 0;
+        self.ev_i = 0;
+        if (self.wait_left > 0) {
+            self.wait_left -= 1;
+            return;
+        }
+        while (self.pc < self.n and self.ev_n < self.ev.len - 1) {
+            const a = self.acts[self.pc];
+            switch (a.kind) {
+                .move => {
+                    self.mx = a.x;
+                    self.my = a.y;
+                    self.pushEv(.{ .mouse_move = .{ .x = a.x, .y = a.y } });
+                    self.pc += 1;
+                },
+                .down => {
+                    self.down = true;
+                    self.pushEv(.{ .mouse_down = .{ .x = self.mx, .y = self.my, .x_root = self.mx, .y_root = self.my, .button = 1 } });
+                    self.pc += 1;
+                },
+                .up => {
+                    self.down = false;
+                    self.pushEv(.{ .mouse_up = .{ .x = self.mx, .y = self.my } });
+                    self.pc += 1;
+                },
+                .key => {
+                    self.pushEv(.{ .key = a.key });
+                    self.pc += 1;
+                },
+                .wait => {
+                    self.wait_left = if (a.frames > 0) a.frames - 1 else 0;
+                    self.pc += 1;
+                    return;
+                },
+                .shot => {
+                    self.pending_shot = a.name;
+                    self.shot_len = a.name_len;
+                    self.pc += 1;
+                    return;
+                },
+                .quit => {
+                    self.pushEv(.close);
+                    self.pc += 1;
+                    return;
+                },
+            }
+        }
+    }
+};
+
 pub const NativeWindow = struct {
     display: *Display,
     screen: c_int,
@@ -187,6 +320,7 @@ pub const NativeWindow = struct {
     allocator: std.mem.Allocator,
     cursor_cache: [11]XID = [_]XID{0} ** 11, // lazily created, indexed by CursorShape
     cur_shape: CursorShape = .default,
+    auto: ?*Automation = null, // set when ZENITH_SCRIPT drives scripted input
 
     pub fn open(a: std.mem.Allocator, w: usize, h: usize, title: [*:0]const u8) WindowError!NativeWindow {
         const display = XOpenDisplay(null) orelse return WindowError.NoDisplay;
@@ -221,7 +355,38 @@ pub const NativeWindow = struct {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-        return .{ .display = display, .screen = screen, .root = root, .win = win, .ctx = ctx, .tex = tex, .width = w, .height = h, .wm_delete = wm_delete, .a_moveresize = XInternAtom(display, "_NET_WM_MOVERESIZE", 0), .a_state = XInternAtom(display, "_NET_WM_STATE", 0), .a_max_v = XInternAtom(display, "_NET_WM_STATE_MAXIMIZED_VERT", 0), .a_max_h = XInternAtom(display, "_NET_WM_STATE_MAXIMIZED_HORZ", 0), .allocator = a };
+        var nw = NativeWindow{ .display = display, .screen = screen, .root = root, .win = win, .ctx = ctx, .tex = tex, .width = w, .height = h, .wm_delete = wm_delete, .a_moveresize = XInternAtom(display, "_NET_WM_MOVERESIZE", 0), .a_state = XInternAtom(display, "_NET_WM_STATE", 0), .a_max_v = XInternAtom(display, "_NET_WM_STATE_MAXIMIZED_VERT", 0), .a_max_h = XInternAtom(display, "_NET_WM_STATE_MAXIMIZED_HORZ", 0), .allocator = a };
+
+        // Scripted automation: ZENITH_SCRIPT=<file> replays input + grabs screenshots.
+        if (std.process.getEnvVarOwned(a, "ZENITH_SCRIPT")) |path| {
+            defer a.free(path);
+            if (std.fs.cwd().readFileAlloc(a, path, 1 << 20)) |text| {
+                defer a.free(text);
+                const au = a.create(Automation) catch return nw;
+                au.* = .{};
+                au.parse(text);
+                au.fillFrame();
+                nw.auto = au;
+            } else |_| {}
+        } else |_| {}
+        return nw;
+    }
+
+    fn captureScreenshot(self: *NativeWindow, path: []const u8) void {
+        const w = self.width;
+        const h = self.height;
+        const raw = self.allocator.alloc(u8, w * h * 4) catch return;
+        defer self.allocator.free(raw);
+        glReadPixels(0, 0, @intCast(w), @intCast(h), GL_RGBA, GL_UNSIGNED_BYTE, raw.ptr);
+        // GL is bottom-up; flip to top-down for the PNG encoder
+        const flipped = self.allocator.alloc(u8, w * h * 4) catch return;
+        defer self.allocator.free(flipped);
+        var y: usize = 0;
+        while (y < h) : (y += 1) {
+            const src = (h - 1 - y) * w * 4;
+            @memcpy(flipped[y * w * 4 ..][0 .. w * 4], raw[src..][0 .. w * 4]);
+        }
+        png.write(self.allocator, path, flipped, w, h) catch {};
     }
 
     pub fn resize(self: *NativeWindow, w: usize, h: usize) void {
@@ -246,6 +411,14 @@ pub const NativeWindow = struct {
     }
     /// Swap the back buffer to screen (for the GPU primitive renderer path).
     pub fn swapBuffers(self: *NativeWindow) void {
+        if (self.auto) |au| {
+            if (au.pending_shot) |nm| {
+                self.captureScreenshot(nm[0..au.shot_len]); // back buffer holds this frame
+                au.pending_shot = null;
+            }
+            au.frame += 1;
+            au.fillFrame(); // prepare the next frame's scripted events
+        }
         glXSwapBuffers(self.display, self.win);
     }
     pub fn glProc(name: [*:0]const u8) ?*const anyopaque {
@@ -274,6 +447,19 @@ pub const NativeWindow = struct {
     }
 
     pub fn poll(self: *NativeWindow) Event {
+        if (self.auto) |au| {
+            // drain any real X events (keeps the WM happy) but ignore them
+            while (XPending(self.display) != 0) {
+                var raw: [192]u8 align(8) = undefined;
+                _ = XNextEvent(self.display, &raw);
+            }
+            if (au.ev_i < au.ev_n) {
+                const e = au.ev[au.ev_i];
+                au.ev_i += 1;
+                return e;
+            }
+            return .none;
+        }
         if (XPending(self.display) == 0) return .none;
         var raw: [192]u8 align(8) = undefined;
         _ = XNextEvent(self.display, &raw);
