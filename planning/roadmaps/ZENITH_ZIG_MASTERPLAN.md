@@ -184,7 +184,7 @@ Status: ✅ done · 🟡 partial · ❌ not started
   moving frosted panel, 375 fps-frames). ❌ full GL-native vector drawing, Vulkan/Metal
 - 🟡 Window + input layer: X11 native window + blit + mouse/keyboard done (`window_x11.zig`/`main_window.zig`); ❌ Wayland/Win32/Cocoa, scroll/drag
 - 🟡 Widget/component framework: immediate-mode toolkit done (`uikit.zig`: button/vFader/hSlider, hot/active model); ❌ layout system, more widgets
-- 🟡 DAW views: transport + timeline + **interactive mixer** (play toggles, faders/pans drag → state) wired to the live window; ❌ arranger/piano-roll editing, browser, sample editor
+- 🟡 DAW views: transport + timeline + **interactive mixer** (faders/pan/mute/solo/sends drive real audio + FX) + **piano-roll / clip editor** (`pianoroll.zig`: key×time grid, renders a clip's notes, **click to add/remove** notes quantized to the grid; `zig build pianoroll`, verified by driving it). ❌ drag-move/resize notes, velocity editing, in-DAW integration (currently standalone), browser, sample editor
 - 🟡 Theming + meters/faders drawn; ❌ waveform drawing, scopes, full design system
 - ❌ Accessibility, keyboard shortcuts
 
