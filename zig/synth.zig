@@ -1,12 +1,14 @@
 //! synth.zig — Zenith's native polyphonic synthesizer, 100% Zig, no JUCE.
 //!
 //! A hybrid subtractive engine: two band-limited oscillators (+ sub + noise) with
-//! unison detune, an SVF filter driven by its OWN ADSR (the defining subtractive
-//! move), a separate amplitude ADSR, two LFOs, glide, and full per-note expression
+//! unison detune, a zero-delay-feedback filter (`filter.zig`: clean TPT SVF or a
+//! saturating Moog ladder) driven by its OWN ADSR (the defining subtractive move),
+//! a separate amplitude ADSR, two LFOs, glide, and full per-note expression
 //! so it voices MPE — each sounding note carries its own pitch bend / pressure /
 //! timbre. Presets live in `Patch`. RT-safe: no allocation on the render path.
 
 const std = @import("std");
+const filter = @import("filter.zig");
 
 pub const default_sample_rate: f32 = 48000.0;
 
@@ -121,7 +123,10 @@ pub const Patch = struct {
     noise_level: f32 = 0.0,
     unison: u8 = 1, // 1..7 detuned copies of each osc
     unison_detune: f32 = 8.0, // cents spread across the unison stack
-    // filter
+    // filter (zero-delay: svf = clean/stable multimode, ladder = analog growl)
+    filter_model: filter.Model = .ladder,
+    filter_mode: filter.Mode = .lowpass,
+    drive: f32 = 1.0, // filter input drive (1 = clean, >1 saturates)
     resonance: f32 = 0.2,
     filter_env_amt: f32 = 0.0, // octaves of cutoff swept by the filter envelope
     keytrack: f32 = 0.0, // 0..1 cutoff follows pitch
@@ -141,6 +146,7 @@ pub const Patch = struct {
     pub const fat_bass = Patch{
         .osc_a = .saw, .osc_b = .square, .osc_b_semi = -12, .osc_mix = 0.4,
         .sub_level = 0.5, .unison = 3, .unison_detune = 6,
+        .filter_model = .ladder, .drive = 1.8, // saturated ladder = analog bass grit
         .resonance = 0.35, .filter_env_amt = 2.2, .vel_to_cutoff = 0.6,
         .amp_env = .{ .a = 0.002, .d = 0.18, .s = 0.6, .r = 0.12 },
         .filt_env = .{ .a = 0.002, .d = 0.16, .s = 0.0, .r = 0.12 },
@@ -148,14 +154,16 @@ pub const Patch = struct {
     };
     pub const super_lead = Patch{
         .osc_a = .saw, .osc_b = .saw, .osc_b_fine = 12, .osc_mix = 0.5,
-        .unison = 7, .unison_detune = 14, .resonance = 0.18,
+        .unison = 7, .unison_detune = 14,
+        .filter_model = .ladder, .drive = 1.3, .resonance = 0.18,
         .filter_env_amt = 1.4, .keytrack = 0.5, .lfo1_pitch = 6,
         .amp_env = .{ .a = 0.01, .d = 0.3, .s = 0.8, .r = 0.25 },
         .level = 0.14,
     };
     pub const warm_pad = Patch{
         .osc_a = .triangle, .osc_b = .saw, .osc_b_semi = 12, .osc_mix = 0.45,
-        .unison = 5, .unison_detune = 10, .resonance = 0.12,
+        .unison = 5, .unison_detune = 10,
+        .filter_model = .svf, .resonance = 0.12, // clean SVF keeps pads smooth
         .filter_env_amt = 0.8, .keytrack = 0.3, .lfo2_cutoff = 0.4, .lfo2_rate = 0.25,
         .amp_env = .{ .a = 0.4, .d = 0.6, .s = 0.85, .r = 0.8 },
         .filt_env = .{ .a = 0.5, .d = 0.7, .s = 0.4, .r = 0.8 },
@@ -164,6 +172,7 @@ pub const Patch = struct {
 };
 
 const MAX_UNISON = 7;
+const CTL = 16; // control-rate divisor: recompute heavy modulation every 16 samples
 
 const Voice = struct {
     osc_a: [MAX_UNISON]Osc = [_]Osc{.{}} ** MAX_UNISON,
@@ -171,11 +180,11 @@ const Voice = struct {
     sub: Osc = .{},
     amp_env: Adsr = .{},
     filt_env: Adsr = .{},
-    svf_low: f32 = 0.0,
-    svf_band: f32 = 0.0,
+    filt: filter.Filter = .{},
     rng: u32 = 0x2545F491, // per-voice white noise
     freq: f32 = 0.0, // target frequency
     cur_freq: f32 = 0.0, // glided frequency
+    cur_vib: f32 = 1.0, // vibrato pitch multiplier (updated at control rate)
     note: u8 = 0,
     channel: u4 = 0,
     vel: f32 = 1.0,
@@ -186,15 +195,14 @@ const Voice = struct {
     note_press: f32 = 0.0, // 0..1
     note_timbre: f32 = 0.0, // -1..1 cutoff offset
 
-    fn noteOn(self: *Voice, freq: f32, vel: f32, note: u8, channel: u4, p: *const Patch) void {
+    fn noteOn(self: *Voice, freq: f32, vel: f32, note: u8, channel: u4, p: *const Patch, sr: f32) void {
         self.freq = freq;
         // start from the current glided freq if still sounding (legato glide)
         if (!self.in_use or p.glide <= 0.0) self.cur_freq = freq;
         self.note = note;
         self.channel = channel;
         self.vel = std.math.clamp(vel, 0.0, 1.0);
-        self.svf_low = 0;
-        self.svf_band = 0;
+        self.filt = .{ .model = p.filter_model, .mode = p.filter_mode, .sr = sr };
         self.amp_env = p.amp_env;
         self.filt_env = p.filt_env;
         self.amp_env.gateOn();
@@ -255,7 +263,7 @@ pub const Synth = struct {
         const note = freqToNote(freq);
         for (&self.voices) |*v| {
             if (!v.in_use) {
-                v.noteOn(freq, vel, note, channel, &self.patch);
+                v.noteOn(freq, vel, note, channel, &self.patch, self.sample_rate);
                 return;
             }
         }
@@ -268,7 +276,7 @@ pub const Synth = struct {
                 qi = i;
             }
         }
-        self.voices[qi].noteOn(freq, vel, note, channel, &self.patch);
+        self.voices[qi].noteOn(freq, vel, note, channel, &self.patch, self.sample_rate);
     }
 
     pub fn noteOff(self: *Synth, freq: f32) void {
@@ -324,14 +332,30 @@ pub const Synth = struct {
         const glide_coef: f32 = if (p.glide > 0.0) @exp(-1.0 / (p.glide * sr)) else 0.0;
         const un: usize = @max(@as(usize, 1), @min(@as(usize, p.unison), MAX_UNISON));
         const un_norm = 1.0 / @sqrt(@as(f32, @floatFromInt(un)));
+        // per-block constants (hoisted out of the hot loop): oscB ratio + unison detunes
+        const b_ratio = std.math.pow(f32, 2.0, (p.osc_b_semi + p.osc_b_fine / 100.0) / 12.0);
+        var det_ratio: [MAX_UNISON]f32 = undefined;
+        for (0..un) |ui| {
+            const spread: f32 = if (un > 1)
+                (@as(f32, @floatFromInt(ui)) / @as(f32, @floatFromInt(un - 1)) - 0.5) * 2.0
+            else
+                0.0;
+            det_ratio[ui] = std.math.pow(f32, 2.0, (spread * p.unison_detune) / 1200.0);
+        }
 
-        for (out) |*sample| {
+        for (out, 0..) |*sample, si| {
             const lfo1 = @sin(self.lfo1_phase * std.math.tau);
             const lfo2 = @sin(self.lfo2_phase * std.math.tau);
             self.lfo1_phase += lfo1_inc;
             if (self.lfo1_phase >= 1.0) self.lfo1_phase -= 1.0;
             self.lfo2_phase += lfo2_inc;
             if (self.lfo2_phase >= 1.0) self.lfo2_phase -= 1.0;
+
+            // recompute the heavy modulation (vibrato + cutoff + filter coeffs,
+            // i.e. all the pow()/tan() calls) every CTL samples — "control rate".
+            // Envelopes + oscillators still run per sample, so audio stays smooth.
+            const ctl = (si & (CTL - 1)) == 0;
+            const res = std.math.clamp(p.resonance + (self.resonance - 0.25), 0.0, 1.0);
 
             var acc: f32 = 0.0;
             for (&self.voices) |*v| {
@@ -343,28 +367,34 @@ pub const Synth = struct {
                 }
                 const fenv = v.filt_env.process(sr);
 
-                // glide toward the target frequency
+                // glide toward the target frequency (per sample — cheap)
                 if (glide_coef > 0.0) {
                     v.cur_freq = v.freq + (v.cur_freq - v.freq) * glide_coef;
                 } else v.cur_freq = v.freq;
 
-                // pitch: global bend * channel bend * per-note bend * vibrato
-                const vib_cents = (p.lfo1_pitch * lfo1) +
-                    30.0 * std.math.clamp(self.mod + self.pressure + v.note_press + self.chan_press[v.channel], 0.0, 1.0) * lfo1;
-                const vib = std.math.pow(f32, 2.0, vib_cents / 1200.0);
-                const base = v.cur_freq * self.bend * self.chan_bend[v.channel] * v.note_bend * vib;
+                if (ctl) {
+                    // vibrato (lfo1 + mod wheel + aftertouch), cents -> ratio
+                    const vib_cents = (p.lfo1_pitch * lfo1) +
+                        30.0 * std.math.clamp(self.mod + self.pressure + v.note_press + self.chan_press[v.channel], 0.0, 1.0) * lfo1;
+                    v.cur_vib = std.math.pow(f32, 2.0, vib_cents / 1200.0);
+                    // cutoff: base * filter-env * keytrack * velocity * timbre * lfo2
+                    var cut = self.cutoff;
+                    cut *= std.math.pow(f32, 2.0, p.filter_env_amt * fenv);
+                    cut *= std.math.pow(f32, 2.0, p.keytrack * (@as(f32, @floatFromInt(v.note)) - 60.0) / 12.0);
+                    cut *= (1.0 - p.vel_to_cutoff) + p.vel_to_cutoff * v.vel;
+                    cut *= std.math.pow(f32, 2.0, p.lfo2_cutoff * lfo2);
+                    cut *= std.math.pow(f32, 2.0, (v.note_timbre + self.chan_timbre[v.channel]) * 2.0);
+                    cut = std.math.clamp(cut, 40.0, 18000.0);
+                    v.filt.set(cut, res, p.drive);
+                }
+                const base = v.cur_freq * self.bend * self.chan_bend[v.channel] * v.note_bend * v.cur_vib;
 
-                // two oscillators with unison detune
+                // two oscillators with unison detune (per sample)
                 var oa: f32 = 0;
                 var ob: f32 = 0;
-                const b_ratio = std.math.pow(f32, 2.0, (p.osc_b_semi + p.osc_b_fine / 100.0) / 12.0);
                 var ui: usize = 0;
                 while (ui < un) : (ui += 1) {
-                    const spread: f32 = if (un > 1)
-                        (@as(f32, @floatFromInt(ui)) / @as(f32, @floatFromInt(un - 1)) - 0.5) * 2.0
-                    else
-                        0.0;
-                    const det = std.math.pow(f32, 2.0, (spread * p.unison_detune) / 1200.0);
+                    const det = det_ratio[ui];
                     oa += v.osc_a[ui].next(p.osc_a, (base * det) / sr, p.pulse_width);
                     ob += v.osc_b[ui].next(p.osc_b, (base * det * b_ratio) / sr, p.pulse_width);
                 }
@@ -374,24 +404,7 @@ pub const Synth = struct {
                 if (p.sub_level > 0.0) sig += v.sub.next(.square, (base * 0.5) / sr, 0.5) * p.sub_level;
                 if (p.noise_level > 0.0) sig += v.noise() * p.noise_level;
 
-                // cutoff modulation: base * env * keytrack * velocity * timbre * lfo2
-                var cut = self.cutoff;
-                cut *= std.math.pow(f32, 2.0, p.filter_env_amt * fenv);
-                cut *= std.math.pow(f32, 2.0, p.keytrack * (@as(f32, @floatFromInt(v.note)) - 60.0) / 12.0);
-                cut *= (1.0 - p.vel_to_cutoff) + p.vel_to_cutoff * v.vel;
-                cut *= std.math.pow(f32, 2.0, p.lfo2_cutoff * lfo2);
-                cut *= std.math.pow(f32, 2.0, (v.note_timbre + self.chan_timbre[v.channel]) * 2.0);
-                cut = std.math.clamp(cut, 40.0, 18000.0);
-
-                // Chamberlin state-variable lowpass
-                const f = std.math.clamp(cut / sr, 0.0001, 0.49);
-                const q = (self.resonance + p.resonance) * 10.0 + 1.0;
-                const r = 1.0 / q;
-                v.svf_low += f * v.svf_band;
-                const high = sig - v.svf_low - r * v.svf_band;
-                v.svf_band += f * high;
-
-                acc += v.svf_low * amp * v.vel;
+                acc += v.filt.process(sig) * amp * v.vel;
             }
             sample.* = std.math.clamp(acc * p.level * self.gain * self.expression, -1.0, 1.0);
         }
