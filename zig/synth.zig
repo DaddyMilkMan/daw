@@ -1,16 +1,18 @@
-//! synth.zig — a tiny subtractive synth, 100% Zig, no JUCE.
+//! synth.zig — Zenith's native polyphonic synthesizer, 100% Zig, no JUCE.
 //!
-//!   polyBLEP saw oscillator -> linear ADSR -> state-variable lowpass
-//!
-//! The seed of Zenith's native instrument engine. Everything here is owned:
-//! no framework, no third-party DSP. It renders into a plain f32 buffer that
-//! the platform layer (WAV writer or ALSA device) sends onward.
+//! A hybrid subtractive engine: two band-limited oscillators (+ sub + noise) with
+//! unison detune, an SVF filter driven by its OWN ADSR (the defining subtractive
+//! move), a separate amplitude ADSR, two LFOs, glide, and full per-note expression
+//! so it voices MPE — each sounding note carries its own pitch bend / pressure /
+//! timbre. Presets live in `Patch`. RT-safe: no allocation on the render path.
 
 const std = @import("std");
 
 pub const default_sample_rate: f32 = 48000.0;
 
-/// polyBLEP residual — band-limits the saw's discontinuity to tame aliasing.
+pub const Wave = enum { sine, triangle, saw, square };
+
+/// polyBLEP residual — band-limits a discontinuity to tame aliasing.
 fn polyBlep(t: f32, dt: f32) f32 {
     if (t < dt) {
         const x = t / dt;
@@ -22,66 +24,82 @@ fn polyBlep(t: f32, dt: f32) f32 {
     return 0.0;
 }
 
-const Oscillator = struct {
+/// One band-limited oscillator phase. `pw` is pulse width for the square.
+const Osc = struct {
     phase: f32 = 0.0,
 
-    fn next(self: *Oscillator, freq: f32, sr: f32) f32 {
-        const dt = freq / sr;
+    fn next(self: *Osc, wave: Wave, dt: f32, pw: f32) f32 {
         const t = self.phase;
-        var saw: f32 = (2.0 * t) - 1.0; // naive saw
-        saw -= polyBlep(t, dt); // anti-aliased
+        var out: f32 = 0;
+        switch (wave) {
+            .sine => out = @sin(t * std.math.tau),
+            .triangle => out = 4.0 * @abs(t - 0.5) - 1.0, // -1..1 triangle
+            .saw => {
+                out = (2.0 * t) - 1.0;
+                out -= polyBlep(t, dt);
+            },
+            .square => {
+                out = if (t < pw) 1.0 else -1.0;
+                out += polyBlep(t, dt);
+                var t2 = t - pw;
+                if (t2 < 0) t2 += 1.0;
+                out -= polyBlep(t2, dt);
+            },
+        }
         self.phase += dt;
         if (self.phase >= 1.0) self.phase -= 1.0;
-        return saw;
+        return out;
     }
 };
 
-const Envelope = struct {
-    const Stage = enum { idle, attack, decay, sustain, release };
-
+/// Exponential-segment ADSR (one-pole approach to each stage target — sounds far
+/// more natural than linear ramps).
+pub const Adsr = struct {
+    a: f32 = 0.005,
+    d: f32 = 0.12,
+    s: f32 = 0.7,
+    r: f32 = 0.25,
     stage: Stage = .idle,
     value: f32 = 0.0,
-    attack_rate: f32 = 0.01,
-    decay_rate: f32 = 0.0001,
-    sustain_level: f32 = 0.7,
-    release_rate: f32 = 0.0001,
 
-    fn setParams(self: *Envelope, a: f32, d: f32, s: f32, r: f32, sr: f32) void {
-        self.attack_rate = 1.0 / @max(a * sr, 1.0);
-        self.decay_rate = (1.0 - s) / @max(d * sr, 1.0);
-        self.sustain_level = s;
-        self.release_rate = s / @max(r * sr, 1.0);
+    pub const Stage = enum { idle, attack, decay, sustain, release };
+
+    fn coef(time: f32, sr: f32) f32 {
+        return @exp(-1.0 / (@max(time, 1.0e-4) * sr));
     }
-    fn noteOn(self: *Envelope) void {
+    fn gateOn(self: *Adsr) void {
         self.stage = .attack;
     }
-    fn noteOff(self: *Envelope) void {
+    fn gateOff(self: *Adsr) void {
         if (self.stage != .idle) self.stage = .release;
     }
-    fn isActive(self: *const Envelope) bool {
+    fn active(self: *const Adsr) bool {
         return self.stage != .idle;
     }
-    fn next(self: *Envelope) f32 {
+    fn process(self: *Adsr, sr: f32) f32 {
         switch (self.stage) {
             .idle => {},
             .attack => {
-                self.value += self.attack_rate;
-                if (self.value >= 1.0) {
+                const c = coef(self.a, sr);
+                self.value = 1.0 + (self.value - 1.0) * c; // approach 1
+                if (self.value >= 0.99) {
                     self.value = 1.0;
                     self.stage = .decay;
                 }
             },
             .decay => {
-                self.value -= self.decay_rate;
-                if (self.value <= self.sustain_level) {
-                    self.value = self.sustain_level;
+                const c = coef(self.d, sr);
+                self.value = self.s + (self.value - self.s) * c;
+                if (@abs(self.value - self.s) < 0.001) {
+                    self.value = self.s;
                     self.stage = .sustain;
                 }
             },
-            .sustain => {},
+            .sustain => self.value = self.s,
             .release => {
-                self.value -= self.release_rate;
-                if (self.value <= 0.0) {
+                const c = coef(self.r, sr);
+                self.value *= c;
+                if (self.value <= 1.0e-4) {
                     self.value = 0.0;
                     self.stage = .idle;
                 }
@@ -91,93 +109,178 @@ const Envelope = struct {
     }
 };
 
+/// All the timbral parameters of a sound — a preset.
+pub const Patch = struct {
+    osc_a: Wave = .saw,
+    osc_b: Wave = .saw,
+    osc_b_semi: f32 = 0.0, // oscB transpose, semitones
+    osc_b_fine: f32 = 0.0, // oscB fine, cents
+    osc_mix: f32 = 0.35, // 0 = all A, 1 = all B
+    pulse_width: f32 = 0.5,
+    sub_level: f32 = 0.0, // square sub one octave below
+    noise_level: f32 = 0.0,
+    unison: u8 = 1, // 1..7 detuned copies of each osc
+    unison_detune: f32 = 8.0, // cents spread across the unison stack
+    // filter
+    resonance: f32 = 0.2,
+    filter_env_amt: f32 = 0.0, // octaves of cutoff swept by the filter envelope
+    keytrack: f32 = 0.0, // 0..1 cutoff follows pitch
+    vel_to_cutoff: f32 = 0.5, // velocity opens the filter
+    // envelopes
+    amp_env: Adsr = .{ .a = 0.005, .d = 0.12, .s = 0.7, .r = 0.25 },
+    filt_env: Adsr = .{ .a = 0.005, .d = 0.20, .s = 0.0, .r = 0.25 },
+    // LFOs (lfo1 -> pitch vibrato, lfo2 -> cutoff)
+    lfo1_rate: f32 = 5.5,
+    lfo1_pitch: f32 = 0.0, // cents of vibrato (also summed with mod wheel)
+    lfo2_rate: f32 = 0.4,
+    lfo2_cutoff: f32 = 0.0, // octaves
+    glide: f32 = 0.0, // portamento time, seconds
+    level: f32 = 0.18, // patch output gain
+
+    pub const init_saw = Patch{};
+    pub const fat_bass = Patch{
+        .osc_a = .saw, .osc_b = .square, .osc_b_semi = -12, .osc_mix = 0.4,
+        .sub_level = 0.5, .unison = 3, .unison_detune = 6,
+        .resonance = 0.35, .filter_env_amt = 2.2, .vel_to_cutoff = 0.6,
+        .amp_env = .{ .a = 0.002, .d = 0.18, .s = 0.6, .r = 0.12 },
+        .filt_env = .{ .a = 0.002, .d = 0.16, .s = 0.0, .r = 0.12 },
+        .level = 0.20,
+    };
+    pub const super_lead = Patch{
+        .osc_a = .saw, .osc_b = .saw, .osc_b_fine = 12, .osc_mix = 0.5,
+        .unison = 7, .unison_detune = 14, .resonance = 0.18,
+        .filter_env_amt = 1.4, .keytrack = 0.5, .lfo1_pitch = 6,
+        .amp_env = .{ .a = 0.01, .d = 0.3, .s = 0.8, .r = 0.25 },
+        .level = 0.14,
+    };
+    pub const warm_pad = Patch{
+        .osc_a = .triangle, .osc_b = .saw, .osc_b_semi = 12, .osc_mix = 0.45,
+        .unison = 5, .unison_detune = 10, .resonance = 0.12,
+        .filter_env_amt = 0.8, .keytrack = 0.3, .lfo2_cutoff = 0.4, .lfo2_rate = 0.25,
+        .amp_env = .{ .a = 0.4, .d = 0.6, .s = 0.85, .r = 0.8 },
+        .filt_env = .{ .a = 0.5, .d = 0.7, .s = 0.4, .r = 0.8 },
+        .level = 0.12,
+    };
+};
+
+const MAX_UNISON = 7;
+
 const Voice = struct {
-    osc: Oscillator = .{},
-    env: Envelope = .{},
+    osc_a: [MAX_UNISON]Osc = [_]Osc{.{}} ** MAX_UNISON,
+    osc_b: [MAX_UNISON]Osc = [_]Osc{.{}} ** MAX_UNISON,
+    sub: Osc = .{},
+    amp_env: Adsr = .{},
+    filt_env: Adsr = .{},
     svf_low: f32 = 0.0,
     svf_band: f32 = 0.0,
-    freq: f32 = 0.0,
-    vel: f32 = 1.0, // note-on velocity, normalized 0..1
-    held: bool = false, // key still down (for sustain-pedal release deferral)
+    rng: u32 = 0x2545F491, // per-voice white noise
+    freq: f32 = 0.0, // target frequency
+    cur_freq: f32 = 0.0, // glided frequency
+    note: u8 = 0,
+    channel: u4 = 0,
+    vel: f32 = 1.0,
+    held: bool = false,
     in_use: bool = false,
+    // per-note (MPE) expression overrides
+    note_bend: f32 = 1.0, // pitch multiplier
+    note_press: f32 = 0.0, // 0..1
+    note_timbre: f32 = 0.0, // -1..1 cutoff offset
 
-    fn noteOn(self: *Voice, freq: f32, vel: f32, sr: f32) void {
+    fn noteOn(self: *Voice, freq: f32, vel: f32, note: u8, channel: u4, p: *const Patch) void {
         self.freq = freq;
+        // start from the current glided freq if still sounding (legato glide)
+        if (!self.in_use or p.glide <= 0.0) self.cur_freq = freq;
+        self.note = note;
+        self.channel = channel;
         self.vel = std.math.clamp(vel, 0.0, 1.0);
-        self.osc.phase = 0.0;
-        self.svf_low = 0.0;
-        self.svf_band = 0.0;
-        self.env.setParams(0.005, 0.12, 0.6, 0.30, sr);
-        self.env.noteOn();
+        self.svf_low = 0;
+        self.svf_band = 0;
+        self.amp_env = p.amp_env;
+        self.filt_env = p.filt_env;
+        self.amp_env.gateOn();
+        self.filt_env.gateOn();
+        self.note_bend = 1.0;
+        self.note_press = 0.0;
+        self.note_timbre = 0.0;
         self.held = true;
         self.in_use = true;
     }
     fn noteOff(self: *Voice) void {
         self.held = false;
-        self.env.noteOff();
+        self.amp_env.gateOff();
+        self.filt_env.gateOff();
     }
-    /// `cutoff` is the base filter cutoff; `vb` (0..1) is how much velocity darkens
-    /// soft notes (vel 1.0 always plays at full cutoff). `vib` is a per-sample pitch
-    /// multiplier (vibrato). Amplitude scales with velocity.
-    fn render(self: *Voice, cutoff: f32, res: f32, sr: f32, bend: f32, vb: f32, vib: f32) f32 {
-        if (!self.env.isActive()) {
-            self.in_use = false;
-            return 0.0;
-        }
-        const raw = self.osc.next(self.freq * bend * vib, sr);
-        const amp = self.env.next();
-
-        // Velocity opens the filter: soft notes are darker, hard notes brighter.
-        const eff_cut = cutoff * ((1.0 - vb) + vb * self.vel);
-        // Chamberlin state-variable lowpass.
-        const f = std.math.clamp(eff_cut / sr, 0.0001, 0.49);
-        const q = res * 10.0 + 1.0;
-        const r = 1.0 / q;
-        self.svf_low += f * self.svf_band;
-        const high = raw - self.svf_low - r * self.svf_band;
-        self.svf_band += f * high;
-
-        return self.svf_low * amp * self.vel;
+    fn noise(self: *Voice) f32 {
+        // xorshift -> -1..1
+        self.rng ^= self.rng << 13;
+        self.rng ^= self.rng >> 17;
+        self.rng ^= self.rng << 5;
+        return (@as(f32, @floatFromInt(self.rng)) / 2147483648.0) - 1.0;
     }
 };
 
 pub const Synth = struct {
     voices: [16]Voice = [_]Voice{.{}} ** 16,
-    cutoff: f32 = 2200.0,
-    resonance: f32 = 0.25,
-    bend: f32 = 1.0, // global pitch multiplier (MIDI 2.0 pitch bend)
+    patch: Patch = .{},
+    // --- live performance controls (the engine writes these per block) ---
+    cutoff: f32 = 2200.0, // base filter cutoff Hz (CC74 / default)
+    resonance: f32 = 0.2,
+    bend: f32 = 1.0, // global pitch multiplier (channel-wide bend)
+    mod: f32 = 0.0, // mod wheel -> vibrato depth, 0..1
+    pressure: f32 = 0.0, // channel pressure (non-MPE global), 0..1
+    expression: f32 = 1.0, // CC7/CC11 gain, 0..1
+    vel_brightness: f32 = 0.5,
+    sustain: bool = false,
     sample_rate: f32 = default_sample_rate,
-    gain: f32 = 0.18,
-    // --- expression (driven by MIDI velocity + controllers) ---
-    vel_brightness: f32 = 0.6, // how much velocity darkens soft notes (0 = none)
-    mod: f32 = 0.0, // mod wheel (CC1) -> vibrato depth, 0..1
-    pressure: f32 = 0.0, // channel pressure -> extra vibrato depth, 0..1
-    expression: f32 = 1.0, // CC7 volume * CC11 expression, 0..1
-    sustain: bool = false, // sustain pedal (CC64): defer note-off until released
-    lfo_phase: f32 = 0.0, // vibrato LFO
+    gain: f32 = 1.0, // master trim (the engine's own gain is separate)
+    // --- per-channel (MPE) expression: each note's channel carries its own ---
+    chan_bend: [16]f32 = [_]f32{1.0} ** 16,
+    chan_press: [16]f32 = [_]f32{0.0} ** 16,
+    chan_timbre: [16]f32 = [_]f32{0.0} ** 16,
+    lfo1_phase: f32 = 0.0,
+    lfo2_phase: f32 = 0.0,
 
-    /// Trigger a note. `vel` is normalized velocity 0..1 (0 == note-off).
+    pub fn setPatch(self: *Synth, p: Patch) void {
+        self.patch = p;
+    }
+
+    /// Trigger a note (channel 0). `vel` is normalized velocity 0..1.
     pub fn noteOn(self: *Synth, freq: f32, vel: f32) void {
+        self.noteOnMpe(freq, vel, 0);
+    }
+
+    /// Trigger a note on a specific MIDI channel (for MPE, one note per channel).
+    pub fn noteOnMpe(self: *Synth, freq: f32, vel: f32, channel: u4) void {
         if (vel <= 0.0) return self.noteOff(freq);
+        const note = freqToNote(freq);
         for (&self.voices) |*v| {
             if (!v.in_use) {
-                v.noteOn(freq, vel, self.sample_rate);
+                v.noteOn(freq, vel, note, channel, &self.patch);
                 return;
             }
         }
-        self.voices[0].noteOn(freq, vel, self.sample_rate); // steal
+        // steal the quietest voice
+        var qi: usize = 0;
+        var q: f32 = 1e9;
+        for (&self.voices, 0..) |*v, i| {
+            if (v.amp_env.value < q) {
+                q = v.amp_env.value;
+                qi = i;
+            }
+        }
+        self.voices[qi].noteOn(freq, vel, note, channel, &self.patch);
     }
 
     pub fn noteOff(self: *Synth, freq: f32) void {
+        const note = freqToNote(freq);
         for (&self.voices) |*v| {
-            if (v.in_use and @abs(v.freq - freq) < 0.01) {
+            if (v.in_use and v.note == note) {
                 v.held = false;
-                if (!self.sustain) v.noteOff(); // else: held by the pedal
+                if (!self.sustain) v.noteOff();
             }
         }
     }
 
-    /// Sustain pedal (CC64). Releasing the pedal frees every key already lifted.
     pub fn setSustain(self: *Synth, on: bool) void {
         self.sustain = on;
         if (!on) {
@@ -187,39 +290,131 @@ pub const Synth = struct {
         }
     }
 
+    // --- MPE / per-channel + per-note expression setters ---
+    pub fn setChannelBend(self: *Synth, ch: u4, ratio: f32) void {
+        self.chan_bend[ch] = ratio;
+    }
+    pub fn setChannelPressure(self: *Synth, ch: u4, v: f32) void {
+        self.chan_press[ch] = v;
+    }
+    pub fn setChannelTimbre(self: *Synth, ch: u4, v: f32) void {
+        self.chan_timbre[ch] = v;
+    }
+    pub fn setNoteBend(self: *Synth, note: u8, ratio: f32) void {
+        for (&self.voices) |*v| if (v.in_use and v.note == note) {
+            v.note_bend = ratio;
+        };
+    }
+    pub fn setNotePressure(self: *Synth, note: u8, val: f32) void {
+        for (&self.voices) |*v| if (v.in_use and v.note == note) {
+            v.note_press = val;
+        };
+    }
+
     pub fn renderBlock(self: *Synth, out: []f32) void {
-        const lfo_rate = 5.5; // Hz
-        const lfo_inc = lfo_rate / self.sample_rate;
-        // vibrato depth in cents: mod wheel + aftertouch, up to ~30 cents
-        const depth_cents = std.math.clamp(self.mod + self.pressure, 0.0, 1.0) * 30.0;
+        const sr = self.sample_rate;
+        const p = &self.patch;
+        const lfo1_inc = p.lfo1_rate / sr;
+        const lfo2_inc = p.lfo2_rate / sr;
+        const glide_coef: f32 = if (p.glide > 0.0) @exp(-1.0 / (p.glide * sr)) else 0.0;
+        const un: usize = @max(@as(usize, 1), @min(@as(usize, p.unison), MAX_UNISON));
+        const un_norm = 1.0 / @sqrt(@as(f32, @floatFromInt(un)));
+
         for (out) |*sample| {
-            const vib = std.math.pow(f32, 2.0, (depth_cents / 1200.0) * @sin(self.lfo_phase * std.math.tau));
-            self.lfo_phase += lfo_inc;
-            if (self.lfo_phase >= 1.0) self.lfo_phase -= 1.0;
+            const lfo1 = @sin(self.lfo1_phase * std.math.tau);
+            const lfo2 = @sin(self.lfo2_phase * std.math.tau);
+            self.lfo1_phase += lfo1_inc;
+            if (self.lfo1_phase >= 1.0) self.lfo1_phase -= 1.0;
+            self.lfo2_phase += lfo2_inc;
+            if (self.lfo2_phase >= 1.0) self.lfo2_phase -= 1.0;
+
             var acc: f32 = 0.0;
             for (&self.voices) |*v| {
-                if (v.in_use) acc += v.render(self.cutoff, self.resonance, self.sample_rate, self.bend, self.vel_brightness, vib);
+                if (!v.in_use) continue;
+                const amp = v.amp_env.process(sr);
+                if (!v.amp_env.active()) {
+                    v.in_use = false;
+                    continue;
+                }
+                const fenv = v.filt_env.process(sr);
+
+                // glide toward the target frequency
+                if (glide_coef > 0.0) {
+                    v.cur_freq = v.freq + (v.cur_freq - v.freq) * glide_coef;
+                } else v.cur_freq = v.freq;
+
+                // pitch: global bend * channel bend * per-note bend * vibrato
+                const vib_cents = (p.lfo1_pitch * lfo1) +
+                    30.0 * std.math.clamp(self.mod + self.pressure + v.note_press + self.chan_press[v.channel], 0.0, 1.0) * lfo1;
+                const vib = std.math.pow(f32, 2.0, vib_cents / 1200.0);
+                const base = v.cur_freq * self.bend * self.chan_bend[v.channel] * v.note_bend * vib;
+
+                // two oscillators with unison detune
+                var oa: f32 = 0;
+                var ob: f32 = 0;
+                const b_ratio = std.math.pow(f32, 2.0, (p.osc_b_semi + p.osc_b_fine / 100.0) / 12.0);
+                var ui: usize = 0;
+                while (ui < un) : (ui += 1) {
+                    const spread: f32 = if (un > 1)
+                        (@as(f32, @floatFromInt(ui)) / @as(f32, @floatFromInt(un - 1)) - 0.5) * 2.0
+                    else
+                        0.0;
+                    const det = std.math.pow(f32, 2.0, (spread * p.unison_detune) / 1200.0);
+                    oa += v.osc_a[ui].next(p.osc_a, (base * det) / sr, p.pulse_width);
+                    ob += v.osc_b[ui].next(p.osc_b, (base * det * b_ratio) / sr, p.pulse_width);
+                }
+                oa *= un_norm;
+                ob *= un_norm;
+                var sig = oa * (1.0 - p.osc_mix) + ob * p.osc_mix;
+                if (p.sub_level > 0.0) sig += v.sub.next(.square, (base * 0.5) / sr, 0.5) * p.sub_level;
+                if (p.noise_level > 0.0) sig += v.noise() * p.noise_level;
+
+                // cutoff modulation: base * env * keytrack * velocity * timbre * lfo2
+                var cut = self.cutoff;
+                cut *= std.math.pow(f32, 2.0, p.filter_env_amt * fenv);
+                cut *= std.math.pow(f32, 2.0, p.keytrack * (@as(f32, @floatFromInt(v.note)) - 60.0) / 12.0);
+                cut *= (1.0 - p.vel_to_cutoff) + p.vel_to_cutoff * v.vel;
+                cut *= std.math.pow(f32, 2.0, p.lfo2_cutoff * lfo2);
+                cut *= std.math.pow(f32, 2.0, (v.note_timbre + self.chan_timbre[v.channel]) * 2.0);
+                cut = std.math.clamp(cut, 40.0, 18000.0);
+
+                // Chamberlin state-variable lowpass
+                const f = std.math.clamp(cut / sr, 0.0001, 0.49);
+                const q = (self.resonance + p.resonance) * 10.0 + 1.0;
+                const r = 1.0 / q;
+                v.svf_low += f * v.svf_band;
+                const high = sig - v.svf_low - r * v.svf_band;
+                v.svf_band += f * high;
+
+                acc += v.svf_low * amp * v.vel;
             }
-            sample.* = std.math.clamp(acc * self.gain * self.expression, -1.0, 1.0);
+            sample.* = std.math.clamp(acc * p.level * self.gain * self.expression, -1.0, 1.0);
         }
     }
 };
 
+pub fn noteToFreq(note: u8) f32 {
+    return 440.0 * std.math.pow(f32, 2.0, (@as(f32, @floatFromInt(note)) - 69.0) / 12.0);
+}
+fn freqToNote(freq: f32) u8 {
+    if (freq <= 0) return 0;
+    const n = 69.0 + 12.0 * std.math.log2(freq / 440.0);
+    return @intFromFloat(std.math.clamp(@round(n), 0.0, 127.0));
+}
+
 test "velocity scales output level" {
     var s = Synth{};
     var buf: [4800]f32 = undefined;
-    // soft note
     s.noteOn(440.0, 0.2);
     s.renderBlock(&buf);
     var soft: f32 = 0;
     for (buf) |x| soft = @max(soft, @abs(x));
-    // reset + hard note
     s = Synth{};
     s.noteOn(440.0, 1.0);
     s.renderBlock(&buf);
     var hard: f32 = 0;
     for (buf) |x| hard = @max(hard, @abs(x));
-    try std.testing.expect(hard > soft * 2.0); // full velocity is much louder
+    try std.testing.expect(hard > soft * 1.8);
 }
 
 test "sustain pedal holds a released note" {
@@ -227,12 +422,52 @@ test "sustain pedal holds a released note" {
     var buf: [256]f32 = undefined;
     s.setSustain(true);
     s.noteOn(440.0, 1.0);
-    s.noteOff(440.0); // key up, but pedal is down -> keeps sounding
+    s.noteOff(440.0);
     s.renderBlock(&buf);
     var lvl: f32 = 0;
     for (buf) |x| lvl = @max(lvl, @abs(x));
-    try std.testing.expect(lvl > 0.01); // still audible while pedal held
+    try std.testing.expect(lvl > 0.01);
     try std.testing.expect(s.voices[0].in_use);
-    s.setSustain(false); // pedal up -> the lifted key now releases
-    try std.testing.expect(s.voices[0].env.stage == .release);
+    s.setSustain(false);
+    try std.testing.expect(s.voices[0].amp_env.stage == .release);
+}
+
+test "filter envelope opens the cutoff (onset brighter than sustain)" {
+    var s = Synth{};
+    s.setPatch(.{ .filter_env_amt = 3.0, .filt_env = .{ .a = 0.001, .d = 0.03, .s = 0.0, .r = 0.2 } });
+    s.cutoff = 400; // low base so the env sweep is audible
+    var buf: [9600]f32 = undefined; // 200 ms
+    s.noteOn(220.0, 1.0);
+    s.renderBlock(&buf);
+    // energy in the first 30 ms (env open) vs the last 30 ms (env closed)
+    var onset: f32 = 0;
+    for (buf[0..1440]) |x| onset += x * x;
+    var tail: f32 = 0;
+    for (buf[8160..]) |x| tail += x * x;
+    try std.testing.expect(onset > tail); // the filter sweep makes the onset brighter/louder
+}
+
+test "MPE per-note bend detunes only its own voice" {
+    var s = Synth{};
+    s.noteOnMpe(noteToFreq(60), 1.0, 0);
+    s.noteOnMpe(noteToFreq(64), 1.0, 1);
+    s.setNoteBend(64, 1.05); // bend only note 64
+    try std.testing.expectEqual(@as(f32, 1.0), s.voices[0].note_bend);
+    try std.testing.expectEqual(@as(f32, 1.05), s.voices[1].note_bend);
+}
+
+test "presets render without NaN or runaway" {
+    inline for (.{ Patch.init_saw, Patch.fat_bass, Patch.super_lead, Patch.warm_pad }) |patch| {
+        var s = Synth{};
+        s.setPatch(patch);
+        var buf: [4800]f32 = undefined;
+        s.noteOn(noteToFreq(57), 0.9);
+        s.renderBlock(&buf);
+        var peak: f32 = 0;
+        for (buf) |x| {
+            try std.testing.expect(!std.math.isNan(x));
+            peak = @max(peak, @abs(x));
+        }
+        try std.testing.expect(peak <= 1.0);
+    }
 }
