@@ -72,6 +72,18 @@ zig run zig/main_crop.zig -- <in.png> <x> <y> <w> <h> <scale> <out.png>
 The act → screenshot → **zoom to read the value/state** → adjust loop is exactly how a
 browser agent locates and verifies elements.
 
+## Console / logs
+The app tees every `std.log` line to a file **and** stderr (`zig/log.zig`). Set the path
+with `ZENITH_LOG`:
+
+```sh
+ZENITH_LOG=tools/control/daw.log ZENITH_SCRIPT=... zig build daw   # then: cat tools/control/daw.log
+```
+
+Lines are `[<ms>ms] level(scope): message` — e.g. `info(audio): output: device opened`,
+`info(daw): transport: PLAY`. So a control run gives the **console** (log) + **DOM**
+(`dumpids`) + **screenshots** (`shot`) — the full browser-style triad, timestamp-correlated.
+
 ## Notes
 - The live DAW binds **Space → transport toggle** and **Esc → quit** (`main_daw.zig`); the
-  transport play button is at ~(170, 29) and mixer faders are in the bottom strips.
+  transport play button is `id 1` and mixer faders are `id 100..105`.

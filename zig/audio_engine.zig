@@ -12,6 +12,7 @@ const std = @import("std");
 const alsa = @import("audio_alsa.zig");
 const synth = @import("synth.zig");
 const audio_track = @import("audio_track.zig");
+const alog = std.log.scoped(.audio);
 
 const RING = 512; // note-event queue capacity (power-of-two not required)
 const NoteEv = struct { on: bool, freq: f32 };
@@ -135,8 +136,12 @@ pub const Engine = struct {
     }
 
     fn runOut(self: *Engine) void {
-        var out = openOut(self.device, self.rate, self.channels) orelse return;
+        var out = openOut(self.device, self.rate, self.channels) orelse {
+            alog.err("output: no usable audio device (tried default/pipewire/pulse/hw)", .{});
+            return;
+        };
         defer out.close();
+        alog.info("output: device opened @ {d} Hz, {d}ch", .{ self.rate, self.channels });
         @atomicStore(bool, &self.started, true, .monotonic);
 
         const N = 256;

@@ -3,6 +3,11 @@
 //! Borderless, resizable, full input.
 
 const std = @import("std");
+
+/// Route every std.log line to the app console (file + stderr). See log.zig.
+pub const std_options: std.Options = .{ .log_level = .debug, .logFn = @import("log.zig").logFn };
+const elog = std.log.scoped(.daw);
+
 const win = @import("window_glx.zig");
 const gpu2d = @import("gpu2d.zig");
 const daw = @import("daw.zig");
@@ -61,7 +66,7 @@ pub fn main() !void {
     defer window.close();
     window.makeCurrent();
     var g = gpu2d.Gpu.init(a, win.NativeWindow.glProc) catch |e| {
-        std.debug.print("gpu2d init failed: {any}\n", .{e});
+        elog.err("gpu2d init failed: {any}", .{e});
         return e;
     };
     defer g.deinit();
@@ -104,13 +109,13 @@ pub fn main() !void {
     var midi_evs: [64]midi.MidiEvent = undefined;
     if (midi2_in) |*m| {
         const n = m.connectAllSources();
-        std.debug.print("MIDI 2.0 (native UMP): auto-connected {d} source(s); hot-plug on. Any device, any age.\n", .{n});
+        elog.info("MIDI 2.0 (native UMP): auto-connected {d} source(s); hot-plug on", .{n});
     } else if (midi_in) |*m| {
         const n = m.connectAllSources();
-        std.debug.print("MIDI (legacy 1.0 -> UMP): auto-connected {d} source(s); hot-plug on.\n", .{n});
+        elog.info("MIDI (legacy 1.0 -> UMP): auto-connected {d} source(s); hot-plug on", .{n});
     }
 
-    std.debug.print("Zenith DAW — flex + glass + GPU toolkit + live audio + MIDI 2.0\n", .{});
+    elog.info("Zenith DAW started — flex + glass + GPU + live audio + MIDI 2.0", .{});
 
     // Run until the user closes the window (or presses Esc). ZENITH_WINDOW_SECONDS
     // caps the runtime (used by automated screenshots); unset = run indefinitely.
@@ -127,6 +132,7 @@ pub fn main() !void {
     var lrx: i32 = 0;
     var lry: i32 = 0;
     var elapsed: f64 = 0;
+    var prev_playing = state.playing;
 
     while (elapsed < secs) {
         while (true) {
@@ -199,6 +205,10 @@ pub fn main() !void {
         rclick = false;
 
         // push UI transport/gain decisions (e.g. the play/pause button) to the engine
+        if (state.playing != prev_playing) {
+            elog.info("transport: {s} (playhead {d:.2})", .{ if (state.playing) "PLAY" else "STOP", state.playhead });
+            prev_playing = state.playing;
+        }
         engine.setPlaying(state.playing);
         engine.setGain(state.master_gain);
         switch (action) {
@@ -232,5 +242,5 @@ pub fn main() !void {
         std.time.sleep(16 * std.time.ns_per_ms);
         elapsed += 0.016;
     }
-    std.debug.print("closed\n", .{});
+    elog.info("Zenith DAW closed", .{});
 }
