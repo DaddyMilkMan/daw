@@ -176,6 +176,29 @@ pub fn build(b: *std.Build) void {
     const clapscan_step = b.step("clapscan", "Scan + inspect a CLAP plugin (ports, params)");
     clapscan_step.dependOn(&run_clapscan.step);
 
+    // VST3 hosting: a Zig VST3 test plugin (.so) + the COM-ABI host.
+    const vst3_plugin = b.addSharedLibrary(.{
+        .name = "zenith_vst3_test",
+        .root_source_file = b.path("zig/vst3_test_plugin.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(vst3_plugin);
+
+    const vst3 = b.addExecutable(.{
+        .name = "zenith_vst3",
+        .root_source_file = b.path("zig/main_vst3.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    vst3.linkLibC();
+    b.installArtifact(vst3);
+    const run_vst3 = b.addRunArtifact(vst3);
+    run_vst3.step.dependOn(b.getInstallStep()); // build the test .so first
+    if (b.args) |a| run_vst3.addArgs(a);
+    const vst3_step = b.step("vst3", "Host a VST3 plugin end-to-end (defaults to the test plugin)");
+    vst3_step.dependOn(&run_vst3.step);
+
     // GUI foundation: render a DAW frame to an image.
     const ui = b.addExecutable(.{
         .name = "zenith_ui",
@@ -383,7 +406,7 @@ pub fn build(b: *std.Build) void {
 
     // Unit tests.
     const test_step = b.step("test", "Run unit tests");
-    for ([_][]const u8{ "midi_alsa.zig", "midi2.zig", "audio_devices.zig", "ttf.zig", "image.zig", "svg.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig", "effects.zig", "dsp.zig", "aiff.zig" }) |src| {
+    for ([_][]const u8{ "midi_alsa.zig", "midi2.zig", "audio_devices.zig", "ttf.zig", "image.zig", "svg.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig", "effects.zig", "dsp.zig", "aiff.zig", "vst3_abi.zig" }) |src| {
         const t = b.addTest(.{ .root_source_file = b.path(b.fmt("zig/{s}", .{src})), .target = target, .optimize = optimize });
         t.linkSystemLibrary("asound");
         t.linkLibC();

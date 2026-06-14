@@ -162,7 +162,7 @@ Status: ✅ done · 🟡 partial · ❌ not started
 ### 4.9 Plugin hosting  *(JUCE: juce_audio_processors)*  — hardest area
 - 🟡 **CLAP** host (`clap_abi.zig`/`main_clap.zig`/`clap_host.zig`): load/instantiate/activate/process + sample-accurate **note events** (scale 8/8) + **audio-ports/note-ports/params extensions** (exact clap.h layouts) + **real-plugin directory scanning** (`findClapFiles` over ~/.clap, /usr/lib/clap, /usr/local/lib/clap, $CLAP_PATH). Verified: `zig build clapscan` reads descriptors → instantiates → reports ports (audio 0in/1out, note 1in) + params (Gain/Brightness ranges+values). ❌ param *events* (host→plugin automation), state save/load, GUI hosting, out-of-process sandbox
 - 🟡 Plugin **scan** (CLAP dir scan done); ❌ sandbox (out-of-process), blacklist
-- ❌ **VST3** host (vendored SDK headers at `build/_deps/juce-src/.../VST3_SDK/pluginterfaces` — declare the COM ABI in Zig, don't reinvent the format)
+- 🟡 **VST3** host (`vst3_abi.zig`/`vst3_host.zig`): clean-room COM ABI from the SDK headers — TUID encoding (non-COM big-endian), `IPluginFactory`/`IComponent`/`IAudioProcessor` vtables, `ProcessData`/`ProcessSetup`/`AudioBusBuffers`/`BusInfo` layouts. Loads a module (bundle or bare .so) → ModuleEntry → factory → find "Audio Module Class" → createInstance(IComponent) → initialize → queryInterface(IAudioProcessor) → setupProcessing → activateBus → setActive → setProcessing → **process()**. Verified: `zig build vst3` pulled a non-silent 440 Hz tone (peak 0.50) from a Zig VST3 test plugin. ❌ IEditController/params, IBStream state, real IHostApplication context, MIDI/event input, real third-party .vst3 testing, plugin editor
 - ❌ **VST2** host (clean-room AEffect struct + dispatcher opcodes)
 - ❌ **AU** host (macOS, Obj-C runtime)
 - ❌ Plugin **parameter automation**, preset/state save-load
@@ -227,7 +227,10 @@ Status: ✅ done · 🟡 partial · ❌ not started
   BMP writer (`bmp.zig`), and a real DAW frame (`main_ui.zig`: transport + clip timeline from
   project data + mixer with faders/meters). `zig build ui`. ❌ live windowing (X11/Wayland/
   GLFW), input/interaction, the editor views, GPU acceleration.
-- ❌ **M11 — VST3/AU hosting** (hardest; possibly last)
+- 🟡 **M11 — VST3/AU hosting** (hardest): VST3 audio path proven — clean-room COM ABI
+  (`vst3_abi.zig`) + host (`vst3_host.zig`/`main_vst3.zig`) load a module, instantiate
+  IComponent+IAudioProcessor, and pull audio through process() (`zig build vst3`, peak 0.50
+  tone from a Zig VST3 test plugin). ❌ params/state/events, real third-party .vst3, VST2, AU.
 - ❌ **M12 — Cross-platform** (Windows/macOS audio+MIDI+window backends)
 - ❌ **M13 — AI wedge**
 
@@ -434,8 +437,14 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   `clap_host.zig` scanner (`findClapFiles` + `scanFile` + `queryPorts`/`paramsExt`);
   `zig build clapscan` verifies end-to-end. (No third-party .clap installed on this box —
   path proven against our real .clap.)
-- NEXT in campaign (ordered): FLAC/Ogg/MP3 decode + streaming → audio tracks +
-  recording-to-timeline → CLAP param *events*/state → **VST3 host** (COM ABI from vendored
-  SDK headers + build a minimal VST3 test plugin) → **VST2 host** (clean-room AEffect).
+- **VST3 hosting (foundation)**: clean-room COM ABI (`vst3_abi.zig` — IIDs, vtables, struct
+  layouts transcribed from the SDK headers) + `vst3_host.zig` (module/bundle load, factory,
+  createInstance, queryInterface) + `vst3_test_plugin.zig` (Zig .so tone generator) +
+  `main_vst3.zig`/`zig build vst3`. Pulled non-silent audio through process() end-to-end.
+  Fixed a flaky test race (wav tests in two binaries → process-unique temp paths).
+- NEXT in campaign (ordered): **VST2 host** (clean-room AEffect) → audio tracks +
+  recording-to-timeline → VST3 params/state/events (IEditController, IBStream, IEventList) →
+  FLAC/Ogg/MP3 decode + streaming → CLAP param events/state. (Real third-party VST3/CLAP
+  testing needs plugins installed — none on this box yet.)
 
 *(Add new dated entries as milestones complete.)*

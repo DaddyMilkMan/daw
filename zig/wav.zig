@@ -195,12 +195,21 @@ pub fn readPcm(allocator: std.mem.Allocator, path: []const u8) !AudioData {
     return .{ .samples = out, .sample_rate = sample_rate, .channels = channels };
 }
 
+// Process-unique temp path: wav's tests run in multiple test binaries
+// concurrently (aiff.zig imports wav), so fixed filenames can collide.
+fn testTmpPath(buf: []u8, base: []const u8) []const u8 {
+    const pid = std.os.linux.getpid();
+    return std.fmt.bufPrint(buf, "{s}.{d}", .{ base, pid }) catch base;
+}
+
 test "wav write/read round-trip (16-bit)" {
     const a = std.testing.allocator;
     const samples = [_]f32{ 0.0, 0.5, -0.5, 0.999, -0.999, 0.25, -0.25 };
-    try writePcm16("test_rt.wav", &samples, 44100, 1);
-    defer std.fs.cwd().deleteFile("test_rt.wav") catch {};
-    var ad = try readPcm(a, "test_rt.wav");
+    var nb: [64]u8 = undefined;
+    const path = testTmpPath(&nb, "test_rt.wav");
+    try writePcm16(path, &samples, 44100, 1);
+    defer std.fs.cwd().deleteFile(path) catch {};
+    var ad = try readPcm(a, path);
     defer ad.deinit(a);
     try std.testing.expectEqual(@as(u32, 44100), ad.sample_rate);
     try std.testing.expectEqual(@as(u16, 1), ad.channels);
@@ -213,9 +222,11 @@ test "wav write/read round-trip (16-bit)" {
 test "wav round-trip (24-bit) is near-lossless" {
     const a = std.testing.allocator;
     const samples = [_]f32{ 0.0, 0.5, -0.5, 0.123456, -0.7654321, 0.999, -0.999 };
-    try writePcm24("test_rt24.wav", &samples, 48000, 1);
-    defer std.fs.cwd().deleteFile("test_rt24.wav") catch {};
-    var ad = try readPcm(a, "test_rt24.wav");
+    var nb: [64]u8 = undefined;
+    const path = testTmpPath(&nb, "test_rt24.wav");
+    try writePcm24(path, &samples, 48000, 1);
+    defer std.fs.cwd().deleteFile(path) catch {};
+    var ad = try readPcm(a, path);
     defer ad.deinit(a);
     try std.testing.expectEqual(@as(u32, 48000), ad.sample_rate);
     for (samples, ad.samples) |orig, got| try std.testing.expect(@abs(orig - got) < 1e-5);
@@ -224,9 +235,11 @@ test "wav round-trip (24-bit) is near-lossless" {
 test "wav round-trip (float32) is exact" {
     const a = std.testing.allocator;
     const samples = [_]f32{ 0.0, 1.5, -2.25, 0.123456789, -0.7, 3.14159 }; // beyond [-1,1] kept
-    try writeFloat32("test_rtf.wav", &samples, 96000, 1);
-    defer std.fs.cwd().deleteFile("test_rtf.wav") catch {};
-    var ad = try readPcm(a, "test_rtf.wav");
+    var nb: [64]u8 = undefined;
+    const path = testTmpPath(&nb, "test_rtf.wav");
+    try writeFloat32(path, &samples, 96000, 1);
+    defer std.fs.cwd().deleteFile(path) catch {};
+    var ad = try readPcm(a, path);
     defer ad.deinit(a);
     try std.testing.expectEqual(@as(u32, 96000), ad.sample_rate);
     for (samples, ad.samples) |orig, got| try std.testing.expectEqual(orig, got);
