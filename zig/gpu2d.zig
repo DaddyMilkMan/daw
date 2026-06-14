@@ -849,6 +849,29 @@ pub const Gpu = struct {
         self.shadows.appendSlice(&.{ x, y, x + w, y + h, sigma, radius, c[0], c[1], c[2], c[3] }) catch {};
     }
 
+    /// Named elevation levels — reach for these instead of hand-tuning blur/alpha
+    /// every time, so depth stays consistent (the Material/Geist "elevation" idea:
+    /// pick the lowest level that still reads as raised against its background).
+    pub const Elevation = enum(u8) { flat, e1, e2, e3, e4 };
+    /// Draw a tasteful TWO-layer drop shadow (a tight contact shadow + a soft
+    /// ambient one) for a rounded rect at the given elevation. Call before the fill.
+    pub fn elevate(self: *Gpu, x: f32, y: f32, w: f32, h: f32, radius: f32, level: Elevation) void {
+        const p: struct { dy: f32, blur: f32, a: u8 } = switch (level) {
+            .flat => return,
+            .e1 => .{ .dy = 2, .blur = 6, .a = 56 },
+            .e2 => .{ .dy = 4, .blur = 12, .a = 70 },
+            .e3 => .{ .dy = 8, .blur = 20, .a = 84 },
+            .e4 => .{ .dy = 14, .blur = 30, .a = 96 },
+        };
+        self.shadow(x, y + p.dy, w, h, radius, p.blur, Color.rgba(0, 0, 0, p.a)); // soft ambient
+        self.shadow(x, y + p.dy * 0.45, w, h, radius, p.blur * 0.4, Color.rgba(0, 0, 0, p.a / 2 + 20)); // tight contact
+    }
+    /// Soft radial glow — use for active states / focus rings / accent emphasis.
+    /// (A shadow with a large sigma and the accent color = a clean bloom.)
+    pub fn glow(self: *Gpu, cx: f32, cy: f32, radius: f32, color: Color) void {
+        self.shadow(cx - radius, cy - radius, 2 * radius, 2 * radius, radius, radius * 0.55, color);
+    }
+
     pub fn flush(self: *Gpu) void {
         // shadows first (drawn behind), then rects
         if (self.shadows.items.len > 0) {

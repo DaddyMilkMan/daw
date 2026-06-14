@@ -9,6 +9,7 @@ const gpu2d = @import("gpu2d.zig");
 const flex = @import("flex.zig");
 const widgets = @import("widgets.zig");
 const project = @import("project.zig");
+const color = @import("color.zig");
 const Color = gpu2d.Color;
 const Gpu = gpu2d.Gpu;
 const Font = gpu2d.GpuFont;
@@ -39,27 +40,8 @@ pub const State = struct {
 };
 
 // ---- refined palette (design-identity pass) --------------------------------
-fn oklch(light: f32, chroma: f32, Hdeg: f32) Color {
-    const h = Hdeg * std.math.pi / 180.0;
-    const a = chroma * @cos(h);
-    const b = chroma * @sin(h);
-    const l_ = light + 0.3963377774 * a + 0.2158037573 * b;
-    const m_ = light - 0.1055613458 * a - 0.0638541728 * b;
-    const s_ = light - 0.0894841775 * a - 1.2914855480 * b;
-    const l = l_ * l_ * l_;
-    const m = m_ * m_ * m_;
-    const s = s_ * s_ * s_;
-    return .{
-        .r = enc(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
-        .g = enc(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
-        .b = enc(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s),
-    };
-}
-fn enc(c: f32) u8 {
-    const x = std.math.clamp(c, 0.0, 1.0);
-    const v = if (x <= 0.0031308) x * 12.92 else 1.055 * std.math.pow(f32, x, 1.0 / 2.4) - 0.055;
-    return @intFromFloat(@round(std.math.clamp(v, 0.0, 1.0) * 255.0));
-}
+// color math now lives in the toolkit (color.zig) so any component can reuse it.
+const oklch = color.oklch;
 const Cols = struct { pal: [5]Color, accent: Color, accent2: Color };
 const C: Cols = blk: {
     @setEvalBranchQuota(1_000_000);
@@ -102,20 +84,9 @@ const red = Color.rgb(236, 100, 100);
 const meter_hi = Color.rgb(224, 158, 98); // calmer meter gradient (amber -> green)
 const meter_lo = Color.rgb(104, 186, 132);
 
-fn mix(a: Color, b: Color, t: f32) Color {
-    const tc = std.math.clamp(t, 0.0, 1.0);
-    return .{
-        .r = @intFromFloat(@as(f32, @floatFromInt(a.r)) * (1 - tc) + @as(f32, @floatFromInt(b.r)) * tc),
-        .g = @intFromFloat(@as(f32, @floatFromInt(a.g)) * (1 - tc) + @as(f32, @floatFromInt(b.g)) * tc),
-        .b = @intFromFloat(@as(f32, @floatFromInt(a.b)) * (1 - tc) + @as(f32, @floatFromInt(b.b)) * tc),
-    };
-}
-/// Lighten (amt>0, toward white) or darken (amt<0, toward near-black) a color by
-/// a small amount — for SUBTLE gradients (a gentle vertical sheen, not a glossy
-/// bright-to-dark swing). Keeps the hue; just nudges luminance.
-fn shade(c: Color, amt: f32) Color {
-    return if (amt >= 0) mix(c, Color.rgb(255, 255, 255), amt) else mix(c, Color.rgb(9, 10, 13), -amt);
-}
+// color utilities are toolkit-level now (color.zig) — alias for local brevity.
+const mix = color.lerp;
+const shade = color.shade;
 
 // ---- demo project ----------------------------------------------------------
 fn fillClip(c: *project.Clip, pitches: []const u8) !void {
@@ -322,8 +293,8 @@ fn drawClips(g: *Gpu, fb: *const Font, u: *widgets.Ui, p: *project.Project, ti: 
         const sel = state.sel_track == @as(i32, @intCast(ti)) and state.sel_clip == @as(i32, @intCast(ci));
         const base = if (muted) mix(col, Color.rgb(56, 60, 72), 0.74) else col;
         const cc = if (hovered) shade(base, 0.05) else base;
-        if (sel) g.shadow(cx - 3, cy - 3, cw + 6, ch + 6, 9, 13, Color.rgba(108, 147, 244, 110)); // accent selection glow
-        g.shadow(cx, cy + 4, cw, ch, 7, 11, Color.rgba(0, 0, 0, 78)); // soft, low directional drop
+        if (sel) g.glow(cx + cw / 2, cy + ch / 2, @max(cw, ch) / 2 + 6, Color.rgba(108, 147, 244, 110)); // accent selection glow (toolkit effect)
+        g.elevate(cx, cy, cw, ch, 7, .e2); // reusable elevation preset (two-layer depth)
         // SUBTLE smooth gradient: one muted color with a gentle vertical sheen
         // (top +5% / bottom -15%), dither via material elev to avoid banding.
         g.card(cx, cy, cw, ch, 7, shade(cc, 0.05), shade(cc, -0.15), 0, bord, 0.45);
@@ -759,7 +730,7 @@ pub const View = struct {
 };
 
 fn glow(g: *Gpu, cx: f32, cy: f32, r: f32, c: Color) void {
-    g.shadow(cx - r, cy - r, 2 * r, 2 * r, r, r * 0.55, c);
+    g.glow(cx, cy, r, c); // toolkit effect (gpu2d.glow)
 }
 fn miniToggle(u: *widgets.Ui, g: *Gpu, fb: *const Font, id: u32, r: [4]f32, lbl: []const u8, on: bool, oncol: Color) bool {
     const clicked = u.iconSlot(id, r[0], r[1], r[2], r[3], false);
