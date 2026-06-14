@@ -379,43 +379,10 @@ pub const View = struct {
             @as(u32, @intFromFloat(@mod(ts, 60))),
             @as(u32, @intFromFloat(@mod(ts * 100, 100))),
         }) catch "00 : 00 : 00";
-        c.begin(W, H, mx, my, down, 0.016);
-        c.open(.{ .dir = .col, .w = px(W), .h = px(H) });
+        const TBH: f32 = 58; // title bar height (a glass strip drawn over the body)
+        // ---- BODY pass (rendered first, below the glass title bar) ----
+        c.beginAt(0, TBH, W, H - TBH, mx, my, down, 0.016);
         {
-            // ---- TITLE BAR ----
-            c.open(.{ .dir = .row, .w = grow(), .h = px(58), .pad = 16, .gap = 16, .aligni = .center, .bg = titlebar_t, .bg2 = titlebar_b, .border = bord });
-            {
-                c.label("Zenith", self.fd, accent, .{});
-                c.open(.{ .dir = .row, .h = px(34), .gap = 2, .pad = 3, .radius = 9, .bg = Color.rgb(28, 31, 40), .bg2 = Color.rgb(22, 24, 32), .border = bord, .aligni = .center });
-                {
-                    c.box(.{ .w = px(36), .h = px(28), .id = 1 });
-                    c.box(.{ .w = px(36), .h = px(28), .id = 2 });
-                    c.box(.{ .w = px(36), .h = px(28), .id = 3 });
-                }
-                c.close();
-                c.open(.{ .dir = .col, .gap = 1 });
-                {
-                    c.label("120", self.fd, txt, .{ .tabular = true });
-                    c.label("BPM  4 / 4", self.fc, faint, .{ .tracking = 0.6 });
-                }
-                c.close();
-                c.box(.{ .w = grow() });
-                c.label(tc, self.fd, txt, .{ .tabular = true });
-                c.box(.{ .w = grow() });
-                c.open(.{ .dir = .col, .gap = 1, .aligni = .end });
-                {
-                    c.label(if (state.playing) "Playing" else "Stopped", self.fu, if (state.playing) accent else dim, .{});
-                    c.label("100% Zig", self.fc, faint, .{ .tracking = 0.4 });
-                }
-                c.close();
-                c.box(.{ .w = px(8) });
-                c.box(.{ .w = px(30), .h = px(24), .id = 900 });
-                c.box(.{ .w = px(30), .h = px(24), .id = 901 });
-                c.box(.{ .w = px(30), .h = px(24), .id = 902 });
-            }
-            c.close();
-
-            // ---- BODY ----
             c.open(.{ .dir = .row, .w = grow(), .h = grow() });
             {
                 // BROWSER
@@ -566,38 +533,10 @@ pub const View = struct {
             }
             c.close();
         }
-        c.close();
-        c.end(); // draws all chrome + computes rects
+        c.end(); // body chrome computed
 
         // ---- WIDGETS / custom content into the solved rects ----------------
-        // transport
-        const picol = if (state.playing) Color.rgb(14, 18, 22) else txt;
-        if (c.rectOf(1)) |r| {
-            if (state.playing) glow(g, r[0] + r[2] / 2, r[1] + r[3] / 2, 22, Color.rgba(108, 147, 244, 150));
-            if (u.iconSlot(1, r[0], r[1], r[2], r[3], state.playing)) state.playing = !state.playing;
-            if (state.playing) icons.pause(g, r[0] + r[2] / 2, r[1] + r[3] / 2, 13, picol) else icons.play(g, r[0] + r[2] / 2, r[1] + r[3] / 2, 14, picol);
-        }
-        if (c.rectOf(2)) |r| {
-            _ = u.iconSlot(2, r[0], r[1], r[2], r[3], false);
-            icons.stop(g, r[0] + r[2] / 2, r[1] + r[3] / 2, 12, dim);
-        }
-        if (c.rectOf(3)) |r| {
-            _ = u.iconSlot(3, r[0], r[1], r[2], r[3], false);
-            icons.record(g, r[0] + r[2] / 2, r[1] + r[3] / 2, 12, red);
-        }
-        // window buttons
-        if (c.rectOf(900)) |r| {
-            if (u.iconSlot(900, r[0], r[1], r[2], r[3], false)) state.window_action = .minimize;
-            icons.minimize(g, r[0] + r[2] / 2, r[1] + r[3] / 2, 11, dim);
-        }
-        if (c.rectOf(901)) |r| {
-            if (u.iconSlot(901, r[0], r[1], r[2], r[3], false)) state.window_action = .maximize;
-            icons.maximize(g, r[0] + r[2] / 2, r[1] + r[3] / 2, 10, dim);
-        }
-        if (c.rectOf(902)) |r| {
-            if (u.iconSlot(902, r[0], r[1], r[2], r[3], false)) state.window_action = .close;
-            icons.close(g, r[0] + r[2] / 2, r[1] + r[3] / 2, 10, if (u.hoverOf(902) > 0.1) Color.rgb(248, 120, 120) else dim);
-        }
+        // (transport + window controls are drawn over the glass title bar, below)
         // nav selection (flex hover handled in chrome; click via flex)
         if (c.click >= 1000 and c.click < 1010) state.nav_sel = @intCast(c.click - 1000);
         // browser category icons (thin-stroke, in category color)
@@ -700,7 +639,37 @@ pub const View = struct {
         }
 
         // title-bar drag region (avoid the interactive clusters)
-        if (state.window_action == .none and u.pressed and my < 56 and (mx < 150 or (mx > 300 and mx < W - 360))) state.window_action = .move;
+        if (state.window_action == .none and u.pressed and my < TBH and (mx < 150 or (mx > 300 and mx < W - 360))) state.window_action = .move;
+
+        // ---- GLASS TITLE BAR: blur the body behind it, composite glass, controls on top
+        g.flush(); // render the body
+        g.captureBlur(@intFromFloat(W), @intFromFloat(H));
+        g.glass(0, 0, W, TBH, 0, Color.rgba(40, 44, 56, 64), Color.rgba(255, 255, 255, 130));
+        self.fd.text(g, 22, 15, "Zenith", accent);
+        const tyy: f32 = 15;
+        if (state.playing) glow(g, 170, tyy + 14, 22, Color.rgba(108, 147, 244, 150));
+        const picol = if (state.playing) Color.rgb(14, 18, 22) else txt;
+        if (u.iconSlot(1, 151, tyy, 38, 28, state.playing)) state.playing = !state.playing;
+        if (state.playing) icons.pause(g, 170, tyy + 14, 13, picol) else icons.play(g, 170, tyy + 14, 14, picol);
+        _ = u.iconSlot(2, 192, tyy, 38, 28, false);
+        icons.stop(g, 211, tyy + 14, 12, dim);
+        _ = u.iconSlot(3, 233, tyy, 38, 28, false);
+        icons.record(g, 252, tyy + 14, 12, red);
+        g.rect(300, 13, 1, 32, 0, Color.rgba(255, 255, 255, 24));
+        self.fd.textNum(g, 316, 8, "120", txt);
+        self.fc.text(g, 316, 39, "BPM  4 / 4", faint);
+        const tcw = self.fd.textWidth(tc);
+        self.fd.textNum(g, W / 2 - tcw / 2, 15, tc, txt);
+        const dotc = if (state.playing) green else faint;
+        g.rect(W - 338, 22, 7, 7, 3, dotc);
+        self.fu.text(g, W - 324, 14, if (state.playing) "Playing" else "Stopped", if (state.playing) accent else dim);
+        self.fc.text(g, W - 324, 36, "100% Zig", faint);
+        if (u.iconSlot(900, W - 108, 16, 30, 24, false)) state.window_action = .minimize;
+        icons.minimize(g, W - 93, 28, 11, dim);
+        if (u.iconSlot(901, W - 74, 16, 30, 24, false)) state.window_action = .maximize;
+        icons.maximize(g, W - 59, 28, 10, dim);
+        if (u.iconSlot(902, W - 40, 16, 30, 24, false)) state.window_action = .close;
+        icons.close(g, W - 25, 28, 10, if (u.hoverOf(902) > 0.1) Color.rgb(248, 120, 120) else dim);
 
         u.end();
         g.flush();
