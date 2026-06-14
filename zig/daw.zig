@@ -242,24 +242,52 @@ const ico = struct {
         }
     }
 };
-/// Procedural but deterministic audio waveform fill (mirrored around center) —
-/// drum-like transients with decay + noise texture, so audio clips read as real.
-fn drawWaveform(g: *Gpu, x: f32, y: f32, w: f32, h: f32, seed: f32, col: Color) void {
-    if (w < 2 or h < 4) return;
+fn noise(i: u32) f32 {
+    var x = i *% 2654435761;
+    x ^= x >> 15;
+    x *%= 2246822519;
+    x ^= x >> 13;
+    return @as(f32, @floatFromInt(x & 0xffffff)) / 16777215.0 * 2.0 - 1.0;
+}
+/// Synthesize a REAL 2-bar drum loop (kick + snare + hats) into a sample buffer.
+/// The waveform display below is peak-analyzed from these actual samples.
+pub fn synthDrumLoop(a: std.mem.Allocator, n: usize) ![]f32 {
+    const buf = try a.alloc(f32, n);
+    const sr: f32 = 48000.0;
+    var i: usize = 0;
+    while (i < n) : (i += 1) {
+        const t = @as(f32, @floatFromInt(i)) / sr;
+        const kp = @mod(t, 0.5); // kick every beat
+        const kick = @sin(kp * 2.0 * std.math.pi * (52.0 + 45.0 * @exp(-kp * 28.0))) * @exp(-kp * 8.5);
+        const hp = @mod(t, 0.25); // hats on 1/8
+        const hat = noise(@intCast(i)) * @exp(-hp * 75.0) * 0.32;
+        const snp = @mod(t - 0.5 + 1.0, 1.0); // snare on beats 2 & 4
+        const snare = (noise(@as(u32, @intCast(i)) +% 99) * 0.7 + @sin(t * 2.0 * std.math.pi * 185.0) * 0.3) * @exp(-snp * 15.0) * 0.55;
+        buf[i] = std.math.clamp(kick * 0.92 + hat + snare, -1.0, 1.0);
+    }
+    return buf;
+}
+/// Render a REAL waveform from audio samples via peak analysis (max |sample| per
+/// pixel column), mirrored around the centre — a true audio waveform display.
+fn drawWaveform(g: *Gpu, x: f32, y: f32, w: f32, h: f32, samples: []const f32, col: Color) void {
+    if (w < 2 or h < 4 or samples.len == 0) return;
     const cy = y + h * 0.5;
     const amp = h * 0.46;
+    const ns: f32 = @floatFromInt(samples.len);
+    const step: f32 = 1.4;
     var i: f32 = 0;
-    while (i < w) : (i += 2) {
-        const t = i / w;
-        const phase = frac(t * 8.0); // 8 transients across the clip
-        const env = @exp(-phase * 5.5);
-        const n = frac(@sin((t + seed) * 537.3) * 43758.5453);
-        const a = @max(env * (0.30 + 0.70 * n) * amp, 1.0);
-        g.rect(x + i, cy - a, 1.3, a * 2, 0.6, col);
+    while (i < w) : (i += step) {
+        const s0: usize = @intFromFloat(i / w * ns);
+        const s1 = @min(@as(usize, @intFromFloat((i + step) / w * ns)) + 1, samples.len);
+        var peak: f32 = 0;
+        var j = s0;
+        while (j < s1) : (j += 1) peak = @max(peak, @abs(samples[j]));
+        const a = @max(peak * amp, 0.7);
+        g.rect(x + i, cy - a, step - 0.3, a * 2, 0.5, col);
     }
 }
 
-fn drawClips(g: *Gpu, fb: *const Font, u: *widgets.Ui, p: *project.Project, ti: usize, r: [4]f32, bar: u64, state: *State) void {
+fn drawClips(g: *Gpu, fb: *const Font, u: *widgets.Ui, p: *project.Project, ti: usize, r: [4]f32, bar: u64, state: *State, wave: []const f32) void {
     const bars: f32 = 4;
     const total: f64 = @floatFromInt(@as(i64, 4) * @as(i64, @intCast(bar)));
     const scale: f64 = @as(f64, r[2]) / total;
@@ -287,7 +315,7 @@ fn drawClips(g: *Gpu, fb: *const Font, u: *widgets.Ui, p: *project.Project, ti: 
         g.rect(cx, cy, cw, 16, 6, mix(cc, Color.rgb(255, 255, 255), 0.2));
         // audio tracks show a waveform; MIDI tracks show note blocks
         if (t.instrument == .sampler) {
-            drawWaveform(g, cx + 3, cy + 18, cw - 6, ch - 22, @as(f32, @floatFromInt(ci)) * 13.7, mix(cc, Color.rgb(255, 255, 255), 0.55));
+            drawWaveform(g, cx + 3, cy + 18, cw - 6, ch - 22, wave, mix(cc, Color.rgb(255, 255, 255), 0.55));
         } else if (clip.length != 0) {
             const clen: f32 = @floatFromInt(clip.length);
             const nc = mix(cc, Color.rgb(255, 255, 255), 0.5);
@@ -314,6 +342,7 @@ pub const View = struct {
     fu: *const Font, // title 16
     fd: *const Font, // display 28
     tc_buf: [16]u8 = undefined, // live timecode string
+    wave: []const f32 = &.{}, // real audio samples for waveform display
     cm_open: bool = false, // context menu
     cm_x: f32 = 0,
     cm_y: f32 = 0,
@@ -592,7 +621,7 @@ pub const View = struct {
             if (c.rectOf(360 + @as(u64, ti))) |r| if (miniToggle(u, g, self.fb, @intCast(360 + ti), r, "S", state.solos[ti], green)) {
                 state.solos[ti] = !state.solos[ti];
             };
-            if (c.rectOf(800 + @as(u64, ti))) |r| drawClips(g, self.fb, u, p, ti, r, bar, state);
+            if (c.rectOf(800 + @as(u64, ti))) |r| drawClips(g, self.fb, u, p, ti, r, bar, state, self.wave);
         }
 
         // playhead — a bright line across the timeline + a marker in the ruler

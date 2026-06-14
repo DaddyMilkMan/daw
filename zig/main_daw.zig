@@ -50,6 +50,8 @@ pub fn main() !void {
     var p = try daw.buildDemoProject(a, bar);
     defer p.deinit();
     var view = daw.View.init(&g, &fc, &fb, &fu, &fd);
+    // synthesize a real 2-bar drum loop; clips show its actual waveform (peak-analyzed)
+    view.wave = daw.synthDrumLoop(a, 96000) catch &.{};
     var state = daw.State{};
     std.debug.print("Zenith DAW — flex + glass + GPU toolkit\n", .{});
 
