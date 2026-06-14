@@ -345,4 +345,26 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
 - NEXT: piano-roll on flex, mixer FX chains, more overlays/menus (glass), Wayland backend,
   MSDF text (scale-independent), retire the demo executables once `zenith` covers them.
 
+**2026-06-13 (session 2 — toolkit depth: glass chrome, tables, images, MIDI 2.0, runtime fonts)**
+- **Glass title-bar chrome** + body→blur→glass→controls render reorder (committed earlier this session).
+- **Real waveform**: synthesized actual drum samples + peak analysis (replaced the fake procedural shape).
+- **Typeface variety set** (`tools/genfont.py`): Fira Sans/Noto Serif/Fira Mono/Fira Condensed/Open
+  Sans/Cantarell baked; showcase **TYPEFACES** section.
+- **Rendered data table** (`widgets.table`): rounded surface, borderless tracked header + hairline,
+  zebra rows, hover + selected (accent wash/left bar), right-aligned **tabular** numeric columns.
+- **PNG image import** (`image.zig` — own decoder: 8-bit gray/RGB/palette/gray+alpha/RGBA, all 5
+  filters, tRNS, std-zlib IDAT only) → `gpu2d.GpuImage` (SRGB8_ALPHA8) + an instanced **image
+  pipeline** (`g.image`/`imageUv`, tint + premultiplied alpha). Showcase shows a decoded PNG
+  natural + tinted with alpha rounded corners. *(SVG vector rasterizer = next.)*
+- **MIDI 2.0 / UMP** (`midi2.zig`): 32/64-bit packets, 16 groups × 16 ch (256-ch), 16-bit velocity,
+  32-bit CC/bend, per-note controllers + per-note pitch bend, bank-aware program change; the spec's
+  min-center-max scaling (canonical vectors verified) + default MIDI 1.0→2.0 translation;
+  `midi_alsa.MidiEvent.toUmp()` bridge. 9 tests in `zig build test`.
+- **Runtime TrueType rasterizer** (`ttf.zig`): parses glyf/cmap(0/4/6/12)/loca/hmtx, flattens
+  quadratic beziers, scan-converts (analytic-H + 4× vertical SS) into the same `font.Font` the GPU
+  atlas consumes. `rasterizeAscii()` loads **any installed .ttf at runtime** (563 on this box) — the
+  real path to "thousands of fonts." Showcase shows 3 baked + 3 runtime system fonts side by side.
+- NEXT (this thread): custom cursors + drag effects ("things web has"), SVG vector import, then
+  wire MIDI 2.0/real-audio playback into the live `zenith` app.
+
 *(Add new dated entries as milestones complete.)*

@@ -102,6 +102,8 @@ extern fn XSendEvent(d: *Display, w: Window, propagate: c_int, mask: c_long, ev:
 extern fn XUngrabPointer(d: *Display, time: c_ulong) c_int;
 extern fn XIconifyWindow(d: *Display, w: Window, screen: c_int) c_int;
 extern fn XResizeWindow(d: *Display, w: Window, width: c_uint, height: c_uint) c_int;
+extern fn XCreateFontCursor(d: *Display, shape: c_uint) XID;
+extern fn XDefineCursor(d: *Display, w: Window, c: XID) c_int;
 
 extern fn glXChooseVisual(d: *Display, screen: c_int, attribs: [*]c_int) ?*XVisualInfo;
 extern fn glXCreateContext(d: *Display, vis: *XVisualInfo, share: GLXContext, direct: c_int) GLXContext;
@@ -136,6 +138,38 @@ pub const Event = union(enum) {
 
 pub const WindowError = error{ NoDisplay, NoVisual, NoContext };
 
+/// Pointer shapes — the desktop equivalent of CSS `cursor`. Backed by the core
+/// X cursor font (no libXcursor dependency). Drive these from hover/drag context
+/// (resize on window edges, hand over clickable controls, grabbing while dragging).
+pub const CursorShape = enum(u8) {
+    default,
+    hand,
+    text,
+    move,
+    resize_h,
+    resize_v,
+    resize_nwse,
+    resize_nesw,
+    grab,
+    grabbing,
+    crosshair,
+};
+fn xcCode(s: CursorShape) c_uint {
+    return switch (s) {
+        .default => 68, // XC_left_ptr
+        .hand => 60, // XC_hand2 (pointing)
+        .text => 152, // XC_xterm
+        .move => 52, // XC_fleur
+        .resize_h => 108, // XC_sb_h_double_arrow
+        .resize_v => 116, // XC_sb_v_double_arrow
+        .resize_nwse => 134, // XC_top_left_corner
+        .resize_nesw => 136, // XC_top_right_corner
+        .grab => 58, // XC_hand1 (open)
+        .grabbing => 52, // XC_fleur (dragging)
+        .crosshair => 34, // XC_crosshair
+    };
+}
+
 pub const NativeWindow = struct {
     display: *Display,
     screen: c_int,
@@ -151,6 +185,8 @@ pub const NativeWindow = struct {
     a_max_v: Atom,
     a_max_h: Atom,
     allocator: std.mem.Allocator,
+    cursor_cache: [11]XID = [_]XID{0} ** 11, // lazily created, indexed by CursorShape
+    cur_shape: CursorShape = .default,
 
     pub fn open(a: std.mem.Allocator, w: usize, h: usize, title: [*:0]const u8) WindowError!NativeWindow {
         const display = XOpenDisplay(null) orelse return WindowError.NoDisplay;
@@ -191,6 +227,17 @@ pub const NativeWindow = struct {
     pub fn resize(self: *NativeWindow, w: usize, h: usize) void {
         self.width = @max(w, 1);
         self.height = @max(h, 1);
+    }
+
+    /// Set the pointer shape (CSS-`cursor` equivalent). Cheap to call every frame:
+    /// it no-ops when the shape is unchanged and caches each created cursor.
+    pub fn setCursor(self: *NativeWindow, shape: CursorShape) void {
+        if (shape == self.cur_shape) return;
+        self.cur_shape = shape;
+        const idx = @intFromEnum(shape);
+        if (self.cursor_cache[idx] == 0) self.cursor_cache[idx] = XCreateFontCursor(self.display, xcCode(shape));
+        _ = XDefineCursor(self.display, self.win, self.cursor_cache[idx]);
+        _ = XFlush(self.display);
     }
 
     /// Make this window's GL context current (for callers issuing their own GL).

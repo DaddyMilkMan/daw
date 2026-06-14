@@ -120,6 +120,24 @@ pub fn main() !void {
             .move => window.startMoveResize(win.MOVE, lrx, lry),
         }
 
+        // custom cursors (CSS-`cursor` equivalent): resize arrows on the window
+        // edges, grabbing while dragging a control, hand over anything clickable.
+        const cshape: win.CursorShape = blk: {
+            if (!down) {
+                if (edgeDir(mx, my, @intCast(W), @intCast(H))) |dir| break :blk switch (dir) {
+                    win.RESIZE_LEFT, win.RESIZE_RIGHT => .resize_h,
+                    win.RESIZE_TOP, win.RESIZE_BOTTOM => .resize_v,
+                    win.RESIZE_TOPLEFT, win.RESIZE_BOTTOMRIGHT => .resize_nwse,
+                    win.RESIZE_TOPRIGHT, win.RESIZE_BOTTOMLEFT => .resize_nesw,
+                    else => .default,
+                };
+            }
+            if (view.u.active != 0) break :blk .grabbing;
+            if (view.u.hot != 0) break :blk .hand;
+            break :blk .default;
+        };
+        window.setCursor(cshape);
+
         window.swapBuffers();
         std.time.sleep(16 * std.time.ns_per_ms);
         elapsed += 0.016;

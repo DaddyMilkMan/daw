@@ -571,6 +571,9 @@ pub fn main() !void {
             g.flush();
         }
 
+        // custom cursors: grabbing while dragging a control, hand when hovering one
+        window.setCursor(if (u.active != 0) .grabbing else if (u.hot != 0) .hand else .default);
+
         window.swapBuffers();
         std.time.sleep(16 * std.time.ns_per_ms);
         elapsed += 0.016;
