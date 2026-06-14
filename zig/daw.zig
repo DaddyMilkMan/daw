@@ -32,6 +32,10 @@ pub const State = struct {
     mutes: [8]bool = [_]bool{false} ** 8,
     solos: [8]bool = [_]bool{false} ** 8,
     meters: [8]f32 = [_]f32{0.3} ** 8, // smoothed meter levels (VU ballistics)
+    // real-audio drive: when the audio engine is running, it owns the playhead
+    // and feeds the live master peak so meters bounce with the actual signal.
+    audio_active: bool = false,
+    audio_level: f32 = 0,
 };
 
 // ---- refined palette (design-identity pass) --------------------------------
@@ -563,8 +567,10 @@ pub const View = struct {
             if (c.rectOf(800 + @as(u64, ti))) |r| drawClips(g, self.fb, u, p, ti, r, bar, state, self.wave);
         }
 
-        // playhead — a bright line across the timeline + a marker in the ruler
-        if (state.playing) state.playhead = frac(state.playhead + 0.0016);
+        // playhead — a bright line across the timeline + a marker in the ruler.
+        // With the audio engine running it owns the playhead (set from the actual
+        // sample position); otherwise advance it on the UI clock.
+        if (state.playing and !state.audio_active) state.playhead = frac(state.playhead + 0.0016);
         if (c.rectOf(800)) |l0| {
             if (c.rectOf(950)) |rl| {
                 const phx = l0[0] + state.playhead * l0[2];
@@ -621,7 +627,11 @@ pub const View = struct {
             if (c.rectOf(500 + @as(u64, ti))) |r| {
                 g.rect(r[0], r[1], r[2], r[3], 4, Color.rgb(15, 17, 22));
                 const muted = !is_master and state.mutes[ti];
-                const target = if (muted) 0.0 else meterLevel(ti, ts, gain.*, state.playing);
+                const target = if (muted) 0.0 else if (state.audio_active)
+                    // real master peak, varied per track so the meters stay lively
+                    state.audio_level * gain.* * (0.55 + 0.45 * @abs(@sin(@as(f32, @floatFromInt(ti)) * 1.7 + 0.4)))
+                else
+                    meterLevel(ti, ts, gain.*, state.playing);
                 const k: f32 = if (target > state.meters[ti]) 0.55 else 0.14; // fast attack, slow release
                 state.meters[ti] += (target - state.meters[ti]) * k;
                 const lvl = state.meters[ti];

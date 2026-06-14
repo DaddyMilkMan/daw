@@ -6,6 +6,7 @@ const std = @import("std");
 const win = @import("window_glx.zig");
 const gpu2d = @import("gpu2d.zig");
 const daw = @import("daw.zig");
+const audio = @import("audio_engine.zig");
 
 fn edgeDir(x: i32, y: i32, w: i32, h: i32) ?c_long {
     const m: i32 = 6;
@@ -53,7 +54,15 @@ pub fn main() !void {
     // synthesize a real 2-bar drum loop; clips show its actual waveform (peak-analyzed)
     view.wave = daw.synthDrumLoop(a, 96000) catch &.{};
     var state = daw.State{};
-    std.debug.print("Zenith DAW — flex + glass + GPU toolkit\n", .{});
+
+    // real-time audio: render the loop to the OS device (ALSA -> PipeWire) on its
+    // own thread. The UI pushes transport/gain; the engine drives playhead+meters.
+    var engine = audio.Engine{ .samples = view.wave, .rate = 48000 };
+    engine.start();
+    defer engine.stop();
+    engine.setPlaying(state.playing);
+
+    std.debug.print("Zenith DAW — flex + glass + GPU toolkit + live audio\n", .{});
 
     // Run until the user closes the window (or presses Esc). ZENITH_WINDOW_SECONDS
     // caps the runtime (used by automated screenshots); unset = run indefinitely.
@@ -110,8 +119,20 @@ pub fn main() !void {
             }
         }
 
+        // pull live audio state into the UI before drawing (playhead + meters
+        // follow the actual sample position / master peak when the engine is live)
+        state.audio_active = engine.isLive();
+        if (state.audio_active) {
+            state.playhead = engine.playheadNorm();
+            state.audio_level = engine.getPeak();
+        }
+
         const action = view.frame(&p, bar, &state, @floatFromInt(W), @floatFromInt(H), @floatFromInt(mx), @floatFromInt(my), down, rclick);
         rclick = false;
+
+        // push UI transport/gain decisions (e.g. the play/pause button) to the engine
+        engine.setPlaying(state.playing);
+        engine.setGain(state.master_gain);
         switch (action) {
             .none => {},
             .close => elapsed = secs,

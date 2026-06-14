@@ -263,6 +263,7 @@ pub fn build(b: *std.Build) void {
     });
     dawexe.linkSystemLibrary("GL");
     dawexe.linkSystemLibrary("X11");
+    dawexe.linkSystemLibrary("asound"); // real-time audio output (audio_engine)
     dawexe.linkLibC();
     b.installArtifact(dawexe);
     const run_daw = b.addRunArtifact(dawexe);
