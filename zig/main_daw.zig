@@ -47,6 +47,10 @@ fn routeMidi(engine: *audio.Engine, msg: midi2.Message, clock: *midi_clock.Clock
         // MIDI 2.0 native per-note expression
         .per_note_pitch_bend => |pb| engine.noteBend(pb.note, audio.bendToRatio(pb.value, 48.0)),
         .poly_pressure => |pp| engine.notePressure(pp.note, audio.ccToUnit(pp.value)),
+        .per_note_controller => |pc| switch (pc.index) {
+            74 => engine.noteTimbre(pc.note, audio.ccToBipolar(pc.value)), // per-note brightness
+            else => {},
+        },
         .program_change => |pc| elog.debug("midi program change -> {d}", .{pc.program}),
         .system => |sys| {
             const tr = clock.onSystem(sys.status, std.time.nanoTimestamp());

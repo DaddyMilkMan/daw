@@ -19,7 +19,7 @@ const alog = std.log.scoped(.audio);
 
 const RING = 512; // note-event queue capacity (power-of-two not required)
 // A lock-free engine event: notes + ordered per-channel/per-note (MPE) expression.
-const EvKind = enum(u8) { note_on, note_off, ch_bend, ch_press, ch_timbre, note_bend, note_press };
+const EvKind = enum(u8) { note_on, note_off, ch_bend, ch_press, ch_timbre, note_bend, note_press, note_timbre };
 const Ev = struct {
     kind: EvKind,
     channel: u4 = 0,
@@ -391,6 +391,9 @@ pub const Engine = struct {
     pub fn notePressure(self: *Engine, note: u8, v: f32) void {
         self.pushEv(.{ .kind = .note_press, .note = note, .value = v });
     }
+    pub fn noteTimbre(self: *Engine, note: u8, v: f32) void { // MPE per-note CC74
+        self.pushEv(.{ .kind = .note_timbre, .note = note, .value = v });
+    }
     fn drainNotes(self: *Engine) void {
         while (true) {
             const t = @atomicLoad(usize, &self.ev_tail, .monotonic);
@@ -405,6 +408,7 @@ pub const Engine = struct {
                 .ch_timbre => self.synth.setChannelTimbre(ev.channel, ev.value),
                 .note_bend => self.synth.setNoteBend(ev.note, ev.value),
                 .note_press => self.synth.setNotePressure(ev.note, ev.value),
+                .note_timbre => self.synth.setNoteTimbre(ev.note, ev.value),
             }
         }
     }

@@ -310,6 +310,11 @@ pub const Synth = struct {
             v.note_press = val;
         };
     }
+    pub fn setNoteTimbre(self: *Synth, note: u8, val: f32) void { // MPE per-note CC74
+        for (&self.voices) |*v| if (v.in_use and v.note == note) {
+            v.note_timbre = val;
+        };
+    }
 
     pub fn renderBlock(self: *Synth, out: []f32) void {
         const sr = self.sample_rate;

@@ -349,6 +349,10 @@ pub fn endOfClip() Ump {
 pub const Note = struct { group: u4, channel: u4, note: u7, velocity: u16, attribute_type: u8, attribute: u16 };
 pub const Controller = struct { group: u4, channel: u4, index: u32, value: u32 };
 pub const PerNote = struct { group: u4, channel: u4, note: u7, value: u32 };
+/// A MIDI 2.0 Registered/Assignable Per-Note Controller — a 32-bit controller
+/// scoped to ONE sounding note (the native per-note "third dimension"). `index`
+/// reuses the CC numbering (74 = brightness/timbre, 71 = resonance, ...).
+pub const PerNoteController = struct { group: u4, channel: u4, note: u7, index: u8, value: u32, registered: bool };
 
 pub const Message = union(enum) {
     note_on: Note,
@@ -361,6 +365,7 @@ pub const Message = union(enum) {
     program_change: struct { group: u4, channel: u4, program: u7, bank: ?u14 },
     registered_controller: Controller,
     assignable_controller: Controller,
+    per_note_controller: PerNoteController, // registered/assignable per-note CC (MPE timbre etc.)
     system: SystemMsg, // System Real Time / Common (clock, start, stop, song position, ...)
     other: void,
 };
@@ -415,6 +420,14 @@ pub fn decode(u: Ump) Message {
         } },
         .registered_controller => .{ .registered_controller = .{ .group = grp, .channel = ch, .index = (@as(u32, b2) << 8) | b3, .value = data } },
         .assignable_controller => .{ .assignable_controller = .{ .group = grp, .channel = ch, .index = (@as(u32, b2) << 8) | b3, .value = data } },
+        .registered_per_note_controller, .assignable_per_note_controller => .{ .per_note_controller = .{
+            .group = grp,
+            .channel = ch,
+            .note = @intCast(b2 & 0x7F),
+            .index = b3,
+            .value = data,
+            .registered = u.opcode() == @intFromEnum(Opcode.registered_per_note_controller),
+        } },
         else => .other,
     };
 }
@@ -494,6 +507,16 @@ test "system real-time messages round-trip" {
     const sp = decode(system(0, System.song_position, 12, 34));
     try std.testing.expectEqual(@as(u8, 12), sp.system.data1);
     try std.testing.expectEqual(@as(u8, 34), sp.system.data2);
+}
+
+test "registered per-note controller round-trips (per-note timbre)" {
+    const u = registeredPerNoteController(0, 2, 64, 74, 0x8000_0000);
+    const m = decode(u);
+    try std.testing.expect(m == .per_note_controller);
+    try std.testing.expectEqual(@as(u7, 64), m.per_note_controller.note);
+    try std.testing.expectEqual(@as(u8, 74), m.per_note_controller.index);
+    try std.testing.expect(m.per_note_controller.registered);
+    try std.testing.expectEqual(@as(u32, 0x8000_0000), m.per_note_controller.value);
 }
 
 test "note on packs and round-trips" {
