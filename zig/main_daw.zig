@@ -9,6 +9,20 @@ const daw = @import("daw.zig");
 const audio = @import("audio_engine.zig");
 const midi = @import("midi_alsa.zig");
 const midi2 = @import("midi2.zig");
+const midi2_alsa = @import("midi2_alsa.zig");
+
+/// Trigger / release an engine synth voice from a decoded MIDI 2.0 message.
+/// 16-bit velocity 0 on note-on is a note-off (the MIDI convention, preserved).
+fn routeNote(engine: *audio.Engine, msg: midi2.Message) void {
+    switch (msg) {
+        .note_on => |no| if (no.velocity > 0)
+            engine.pushNote(true, audio.noteToFreq(no.note))
+        else
+            engine.pushNote(false, audio.noteToFreq(no.note)),
+        .note_off => |no| engine.pushNote(false, audio.noteToFreq(no.note)),
+        else => {},
+    }
+}
 
 fn edgeDir(x: i32, y: i32, w: i32, h: i32) ?c_long {
     const m: i32 = 6;
@@ -64,12 +78,21 @@ pub fn main() !void {
     defer engine.stop();
     engine.setPlaying(state.playing);
 
-    // MIDI 2.0 input: open an ALSA-seq port; incoming 1.0 events are up-converted
-    // to UMP (MIDI 2.0), decoded, and routed to the engine's synth as notes.
-    var midi_in: ?midi.MidiInput = midi.MidiInput.open("Zenith DAW", "Zenith In") catch null;
+    // MIDI 2.0 input. Prefer a NATIVE UMP MIDI 2.0 client (the kernel delivers
+    // genuine Universal MIDI Packets and translates legacy senders to MIDI 2.0
+    // for us). Fall back to a legacy MIDI 1.0 client + our own up-conversion if
+    // the kernel/alsa-lib lacks UMP support.
+    var midi2_in: ?midi2_alsa.Midi2Input = midi2_alsa.Midi2Input.open("Zenith DAW", "Zenith In") catch null;
+    defer if (midi2_in) |*m| m.close();
+    var midi_in: ?midi.MidiInput = if (midi2_in == null) (midi.MidiInput.open("Zenith DAW", "Zenith In") catch null) else null;
     defer if (midi_in) |*m| m.close();
+    var ump_buf: [64]midi2.Ump = undefined;
     var midi_evs: [64]midi.MidiEvent = undefined;
-    if (midi_in != null) std.debug.print("MIDI in: connect a source to 'Zenith DAW:Zenith In' (aconnect)\n", .{});
+    if (midi2_in != null) {
+        std.debug.print("MIDI 2.0 (native UMP) in: connect a source to 'Zenith DAW:Zenith In'\n", .{});
+    } else if (midi_in != null) {
+        std.debug.print("MIDI in (legacy 1.0, up-converted to UMP): 'Zenith DAW:Zenith In'\n", .{});
+    }
 
     std.debug.print("Zenith DAW — flex + glass + GPU toolkit + live audio + MIDI 2.0\n", .{});
 
@@ -128,18 +151,14 @@ pub fn main() !void {
             }
         }
 
-        // route MIDI 2.0 in: poll the seq port, up-convert each event to a UMP
-        // (the MIDI 2.0 Protocol), decode it, and trigger the engine's synth.
-        if (midi_in) |*m| {
+        // route MIDI in -> engine synth. Native path: the kernel hands us real
+        // MIDI 2.0 UMP packets directly. Legacy path: up-convert 1.0 -> UMP here.
+        if (midi2_in) |*m| {
+            const n = m.poll(&ump_buf);
+            for (ump_buf[0..n]) |ump| routeNote(&engine, midi2.decode(ump));
+        } else if (midi_in) |*m| {
             const n = m.poll(&midi_evs);
-            for (midi_evs[0..n]) |ev| {
-                const msg = midi2.decode(ev.toUmp(0));
-                switch (msg) {
-                    .note_on => |no| engine.pushNote(true, audio.noteToFreq(no.note)),
-                    .note_off => |no| engine.pushNote(false, audio.noteToFreq(no.note)),
-                    else => {},
-                }
-            }
+            for (midi_evs[0..n]) |ev| routeNote(&engine, midi2.decode(ev.toUmp(0)));
         }
 
         // pull live audio state into the UI before drawing (playhead follows the
