@@ -1,0 +1,4 @@
+wait 130
+clickid 320
+wait 130
+quit

@@ -70,10 +70,11 @@ pub fn mixStems(
 // (whatever the user's chosen device is), then explicit servers, then raw HW.
 const DEVICE_FALLBACKS = [_][*:0]const u8{ "default", "pipewire", "pulse", "plughw:0,0", "hw:0,0" };
 
-fn openOut(preferred: [*:0]const u8, rate: u32, channels: u16) ?alsa.StreamOut {
-    if (alsa.StreamOut.open(preferred, rate, channels, 40_000)) |s| return s else |_| {}
+const OpenedOut = struct { stream: alsa.StreamOut, name: [*:0]const u8 };
+fn openOut(preferred: [*:0]const u8, rate: u32, channels: u16) ?OpenedOut {
+    if (alsa.StreamOut.open(preferred, rate, channels, 40_000)) |s| return .{ .stream = s, .name = preferred } else |_| {}
     for (DEVICE_FALLBACKS) |dev| {
-        if (alsa.StreamOut.open(dev, rate, channels, 40_000)) |s| return s else |_| {}
+        if (alsa.StreamOut.open(dev, rate, channels, 40_000)) |s| return .{ .stream = s, .name = dev } else |_| {}
     }
     return null;
 }
@@ -99,6 +100,7 @@ pub const Engine = struct {
     rate: u32 = 48000,
     channels: u16 = 2,
     device: [*:0]const u8 = "default",
+    device_opened: [*:0]const u8 = "?", // the device the output thread actually opened
     capture: bool = true, // also open the input device and meter it
     tl_pos: u64 = 0, // linear timeline playhead (frames) for audio tracks
 
@@ -208,12 +210,14 @@ pub const Engine = struct {
     }
 
     fn runOut(self: *Engine) void {
-        var out = openOut(self.device, self.rate, self.channels) orelse {
+        const opened = openOut(self.device, self.rate, self.channels) orelse {
             alog.err("output: no usable audio device (tried default/pipewire/pulse/hw)", .{});
             return;
         };
+        var out = opened.stream;
+        self.device_opened = opened.name;
         defer out.close();
-        alog.info("output: device opened @ {d} Hz, {d}ch", .{ self.rate, self.channels });
+        alog.info("output: device '{s}' opened @ {d} Hz, {d}ch", .{ opened.name, self.rate, self.channels });
         @atomicStore(bool, &self.started, true, .monotonic);
 
         const N = 256;

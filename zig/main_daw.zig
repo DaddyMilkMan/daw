@@ -12,6 +12,7 @@ const win = @import("window_glx.zig");
 const gpu2d = @import("gpu2d.zig");
 const daw = @import("daw.zig");
 const audio = @import("audio_engine.zig");
+const ainspect = @import("audio_inspect.zig");
 const midi = @import("midi_alsa.zig");
 const midi2 = @import("midi2.zig");
 const midi2_alsa = @import("midi2_alsa.zig");
@@ -99,6 +100,9 @@ pub fn main() !void {
     var engine = audio.Engine{ .samples = view.wave, .rate = 48000 };
     engine.stems = stems;
     engine.ntracks = if (stems.len > 0) ntr else 0;
+    // analyze each stem once (dominant frequency) for the "what's playing" monitor
+    var stem_hz: [audio.MAXTRACKS]f32 = [_]f32{0} ** audio.MAXTRACKS;
+    for (0..ntr) |ti| stem_hz[ti] = ainspect.analyze(a, stems[ti], 48000).dominant_hz;
     engine.start();
     defer engine.stop();
     engine.setPlaying(state.playing);
@@ -268,6 +272,21 @@ pub fn main() !void {
         if (frames % 120 == 0) {
             elog.info("perf: {d} frames, render avg {d:.2}ms (~{d:.0} fps headroom)", .{ frames, @as(f64, @floatFromInt(render_ns / 120)) / 1e6, 1e9 / @as(f64, @floatFromInt(@max(render_ns / 120, 1))) });
             render_ns = 0;
+
+            // audio monitor: what's playing, where from, and the numbers
+            var any_solo = false;
+            for (0..ntr) |ti| {
+                if (state.solos[ti]) any_solo = true;
+            }
+            const mp = engine.getPeak();
+            elog.info("audio: device '{s}' @ {d}Hz {d}ch | transport {s} | master {d:.0}% ({d:.1}dB) peak {d:.3} ({d:.1}dB)", .{ engine.device_opened, engine.rate, engine.channels, if (state.playing) "PLAYING" else "STOPPED", state.master_gain * 100, ainspect.dbFromLinear(state.master_gain), mp, ainspect.dbFromLinear(mp) });
+            for (0..ntr) |ti| {
+                const gn = p.tracks.items[ti].gain;
+                const lvl = state.track_levels[ti];
+                const active = !state.mutes[ti] and (!any_solo or state.solos[ti]);
+                const status = if (active) "PLAYING" else if (state.mutes[ti]) "muted" else "(silenced by solo)";
+                elog.info("  src[{d}] {s}: vol {d:.2} ({d:.1}dB) pan {d:.2} | live {d:.3} ({d:.1}dB) | ~{d:.0}Hz | {s}", .{ ti, p.tracks.items[ti].name.items, gn, ainspect.dbFromLinear(gn), p.tracks.items[ti].pan, lvl, ainspect.dbFromLinear(lvl), stem_hz[ti], status });
+            }
         }
         std.time.sleep(16 * std.time.ns_per_ms);
         if (ft) |*t| _ = t.lap(); // discard the sleep interval

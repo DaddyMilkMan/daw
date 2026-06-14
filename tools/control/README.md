@@ -95,6 +95,19 @@ timestamp-correlated. Example:
 [    2319ms] info(daw): perf: 120 frames, render avg 3.40ms (~294 fps headroom)
 ```
 
+## Audio monitor — what's playing, from where, with the numbers
+The DAW logs an "audio:" report every ~120 frames (in `ZENITH_LOG`): the output device,
+transport, master volume/peak (decimal + dB), then per source — name, **volume (decimal +
+dB)**, pan, **live level (decimal + dB)**, **dominant frequency (Hz)**, and PLAYING/muted/
+solo-silenced status. The analysis lives in `zig/audio_inspect.zig` (peak/RMS/dominant-Hz,
+unit-tested). Example:
+
+```
+audio: device 'default' @ 48000Hz 2ch | transport PLAYING | master 80% (-1.9dB) peak 0.256
+  src[0] Drums: vol 0.85 (-1.4dB) pan 0.00 | live 0.046 (-26.7dB) | ~50Hz | PLAYING
+  src[2] Lead:  vol 0.60 (-4.4dB) pan 0.25 | live 0.103 (-19.7dB) | ~439Hz | PLAYING
+```
+
 ## Notes
 - The live DAW binds **Space → transport toggle** and **Esc → quit** (`main_daw.zig`); the
   transport play button is `id 1` and mixer faders are `id 100..105`.
