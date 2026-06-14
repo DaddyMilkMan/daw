@@ -106,8 +106,9 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ✅ WAV **write** (`wav.zig`: 16-bit + **24-bit** + **32-bit float**, mono/multichannel)
 - ✅ WAV **read** (16/24/32-bit PCM + IEEE float32, multichannel, chunk-skipping)
 - ✅ **AIFF** read/write (`aiff.zig`: 8/16/24/32-bit signed BE PCM + 80-bit extended sample-rate codec)
-- ❌ **FLAC**, **Ogg/Vorbis** read/write (next: clean-room or vendor a PD single-header decoder)
-- ❌ **MP3** decode (patent-aware; `external/vcpkg/ports/minimp3` available as a PD leaf)
+- ✅ **FLAC** + **Ogg/Vorbis** decode *and* encode (`codec.zig` — libsndfile via hand-declared ABI; round-trip + real-file decode verified). *Codec "leaf" lib, not clean-room; future purity swap = vendored PD dr_flac/stb_vorbis.*
+- ✅ **MP3** decode (`mp3.zig` — libmpg123 hand-declared ABI; verified against a real .mp3; patents expired 2017)
+- ✅ **Unified loader** `audio_file.loadAny` — dispatches by extension across WAV/AIFF (owned) + FLAC/Ogg/MP3 (leaves) → one `AudioData`
 - ❌ **Streaming** large files from disk (don't load whole files into RAM)
 - ❌ Sample metadata (loop points, root note, embedded markers)
 
@@ -475,9 +476,14 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   now mixes audio tracks (stereo) at a linear timeline playhead alongside the synth/loop
   (`zenith` builds clean). **Full pipeline verified offline**: record → WAV → project → reload →
   timeline render (the recorded take plays at its frame).
+- **Compressed file formats — FLAC/Ogg/MP3 decode** (`codec.zig` via libsndfile, `mp3.zig` via
+  libmpg123, `audio_file.loadAny` dispatcher). Hand-declared C ABIs (no -dev headers); the libs
+  are linked by absolute versioned-.so path (no unversioned symlinks on this box). FLAC/Ogg
+  round-trips (encode→decode→FFT) + real `singing.ogg` decode + real `.mp3` decode all verified.
+  Pragmatic codec leaves, not clean-room — future purity swap to vendored PD single-headers.
 - NEXT in campaign (ordered): the **GUI record-arm button + RT-safe live capture-to-clip** in
-  `daw.zig`/`main_daw.zig` (needs the running app to verify) → FLAC/Ogg/MP3 decode + streaming →
-  plugin param *automation* events + VST3 IEditController. (Real third-party plugin testing
-  needs plugins installed — none yet.)
+  `daw.zig`/`main_daw.zig` (needs the running app to verify) → **streaming** large files from
+  disk (don't load whole files into RAM) → plugin param *automation* events + VST3 IEditController.
+  (Real third-party plugin testing needs plugins installed — none yet.)
 
 *(Add new dated entries as milestones complete.)*

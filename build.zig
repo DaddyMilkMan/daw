@@ -448,4 +448,23 @@ pub fn build(b: *std.Build) void {
         t.linkLibC();
         test_step.dependOn(&b.addRunArtifact(t).step);
     }
+
+    // Compressed-codec tests link the system codec libs by absolute path: this
+    // box has only versioned .so files (no -dev unversioned symlinks for -l).
+    const codec_test = b.addTest(.{ .root_source_file = b.path("zig/codec.zig"), .target = target, .optimize = optimize });
+    codec_test.linkLibC();
+    codec_test.addObjectFile(.{ .cwd_relative = "/lib/x86_64-linux-gnu/libsndfile.so.1" });
+    test_step.dependOn(&b.addRunArtifact(codec_test).step);
+
+    const mp3_test = b.addTest(.{ .root_source_file = b.path("zig/mp3.zig"), .target = target, .optimize = optimize });
+    mp3_test.linkLibC();
+    mp3_test.addObjectFile(.{ .cwd_relative = "/lib/x86_64-linux-gnu/libmpg123.so.0" });
+    test_step.dependOn(&b.addRunArtifact(mp3_test).step);
+
+    // The unified "open any audio file" dispatcher links both codec libs.
+    const af_test = b.addTest(.{ .root_source_file = b.path("zig/audio_file.zig"), .target = target, .optimize = optimize });
+    af_test.linkLibC();
+    af_test.addObjectFile(.{ .cwd_relative = "/lib/x86_64-linux-gnu/libsndfile.so.1" });
+    af_test.addObjectFile(.{ .cwd_relative = "/lib/x86_64-linux-gnu/libmpg123.so.0" });
+    test_step.dependOn(&b.addRunArtifact(af_test).step);
 }
