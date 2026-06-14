@@ -372,7 +372,26 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   line/poly; solid fills + fill-opacity (#hex/rgb/named); AA scan-convert (nonzero/even-odd) → the
   same `image.Image` as PNG → `GpuImage`. Showcase shows PNG (raster) + SVG (vector) side by side.
   "import svgs pngs any image type" ✓ (arcs approximated; gradients/text/full-stroke out of scope).
-- NEXT: wire MIDI 2.0/real-audio playback into the live `zenith` app (engine→audio_alsa on the
-  audio thread); rounded-rect-clip + full stroke geometry for SVG; SVG/PNG asset browser in the DAW.
+**2026-06-13 (session 3 — full MIDI 2.0 spec + live audio in the DAW)**
+- **MIDI 2.0 brought to the full current spec** (`midi2.zig`, M2-104-UM v1.1.2): all 8 UMP message
+  types — Utility (NOOP/JR Clock/JR Timestamp/Delta Clockstamp+TPQN), System, MIDI 1.0 CV, MIDI 2.0
+  CV (full opcode set), SysEx7, SysEx8 (8-bit-clean), Flex Data (tempo/time-sig/key), UMP Stream
+  (endpoint/function-block discovery, clip markers) + big-endian `toBytes`. 16 tests.
+- **Audio device/channel enumeration** (`audio_devices.zig`, `zig build audioin`): lists every PCM
+  device the OS exposes via ALSA name hints (PipeWire 1..128ch@384k, Pulse, HDMI hw surround; 67 here)
+  + a live capture meter (received real audio).
+- **Real-time audio in the live `zenith` app** (`audio_engine.zig`): output thread renders the project
+  loop + a polyphonic synth, paced by the audio clock (ALSA→PipeWire), UI↔audio via atomics + a
+  lock-free SPSC note queue. **Pressing play now SOUNDS** — verified by recording the output monitor
+  (120 BPM drum envelope; peak 0.92). Playhead + VU meters now driven by the real signal.
+- **Capture + MIDI 2.0 routed into the engine**: input thread meters live mic (meters react to it);
+  `main_daw` opens an ALSA-seq port, up-converts incoming events to UMP (MIDI 2.0) and plays them on
+  the synth. Verified live: `aplaymidi`→ Zenith seq client 128 → UMP → synth → sustained chord in the
+  recorded output (gap-floor RMS 0.011→0.225).
+- HONEST: native UMP *transport* (kernel rawmidi `/dev/snd/umpC*`) not wired — none present on this
+  box; incoming MIDI is 1.0 up-converted to UMP internally. PipeWire seq clients here ARE tagged
+  `[User UMP MIDI2]`, so a native path exists to wire later.
+- NEXT: tempo-sync the loop to the UI BPM; record-arm (capture → disk via wav.zig); native PipeWire
+  UMP transport; rounded-rect-clip + full stroke geometry for SVG; Windows/macOS audio backends.
 
 *(Add new dated entries as milestones complete.)*
