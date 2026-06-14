@@ -105,6 +105,63 @@ pub const AudioTrack = struct {
     }
 };
 
+/// A clip that streams its samples from disk on demand instead of holding them
+/// in RAM — for long takes/samples. Renders the overlapping span per block by
+/// reading just those frames via wav.WavStream.
+pub const StreamClip = struct {
+    stream: wav.WavStream,
+    start: u64,
+    gain: f32 = 1.0,
+    pan: f32 = 0.0,
+    scratch: [2048]f32 = undefined, // reusable decode buffer (no per-block alloc)
+
+    pub fn open(path: []const u8, start: u64) !StreamClip {
+        return .{ .stream = try wav.WavStream.open(path), .start = start };
+    }
+    pub fn close(self: *StreamClip) void {
+        self.stream.close();
+    }
+    pub fn frames(self: StreamClip) u64 {
+        return self.stream.frames();
+    }
+    pub fn endFrame(self: StreamClip) u64 {
+        return self.start + self.frames();
+    }
+
+    /// Mix this streamed clip into the stereo block at timeline `playhead`.
+    pub fn render(self: *StreamClip, out_l: []f32, out_r: []f32, playhead: u64) !void {
+        const n = out_l.len;
+        const seg_start = @max(playhead, self.start);
+        const seg_end = @min(playhead + n, self.endFrame());
+        if (seg_start >= seg_end) return;
+        const count = seg_end - seg_start; // frames to render
+        const ch = self.stream.channels;
+        const pc = dsp.panConstantPower(self.pan);
+        const max_per_read = self.scratch.len / ch;
+
+        var produced: u64 = 0;
+        while (produced < count) {
+            const want: usize = @intCast(@min(count - produced, max_per_read));
+            const got = try self.stream.readFrames(self.scratch[0 .. want * ch], (seg_start - self.start) + produced);
+            if (got == 0) break;
+            for (0..got) |f| {
+                const oi: usize = @intCast((seg_start - playhead) + produced + f);
+                if (ch >= 2) {
+                    const bl: f32 = if (self.pan > 0) 1.0 - self.pan else 1.0;
+                    const br: f32 = if (self.pan < 0) 1.0 + self.pan else 1.0;
+                    out_l[oi] += self.scratch[f * ch] * self.gain * bl;
+                    out_r[oi] += self.scratch[f * ch + 1] * self.gain * br;
+                } else {
+                    const s = self.scratch[f];
+                    out_l[oi] += s * self.gain * pc[0];
+                    out_r[oi] += s * self.gain * pc[1];
+                }
+            }
+            produced += got;
+        }
+    }
+};
+
 /// Mix several audio tracks into a stereo block, honoring mute/solo.
 pub fn mixTracks(tracks: []const AudioTrack, out_l: []f32, out_r: []f32, playhead: u64) void {
     @memset(out_l, 0);
@@ -316,6 +373,58 @@ test "fromProject loads + places a referenced audio clip from the saved model" {
     var post: f32 = 0;
     for (l[1001..]) |s| post = @max(post, @abs(s));
     try expect(post > 0.1); // clip plays after frame 1000
+}
+
+test "streaming clip render matches in-memory render (block by block, no full load)" {
+    const a = std.testing.allocator;
+    // a 2000-frame mono tone on disk
+    var nb: [64]u8 = undefined;
+    const path = std.fmt.bufPrint(&nb, "test_stream_clip.{d}.wav", .{std.os.linux.getpid()}) catch "test_stream_clip.wav";
+    var src = try toneClip(a, 330, 2000, 0, 48000);
+    defer src.deinit();
+    try src.saveWav(path);
+    defer std.fs.cwd().deleteFile(path) catch {};
+
+    const START: u64 = 300;
+    // in-memory reference (track takes ownership of the clip)
+    const mem = try AudioClip.loadWav(a, path, START);
+    var track = AudioTrack.init(a);
+    defer track.deinit();
+    track.gain = 0.9;
+    track.pan = 0.0;
+    try track.addClip(mem);
+
+    const total = 2400;
+    const ref_l = try a.alloc(f32, total);
+    defer a.free(ref_l);
+    const ref_r = try a.alloc(f32, total);
+    defer a.free(ref_r);
+    @memset(ref_l, 0);
+    @memset(ref_r, 0);
+    track.render(ref_l, ref_r, 0);
+
+    // streaming render, in small blocks (forces repeated on-demand disk reads)
+    var sc = try StreamClip.open(path, START);
+    defer sc.close();
+    sc.gain = 0.9;
+    sc.pan = 0.0;
+    const str_l = try a.alloc(f32, total);
+    defer a.free(str_l);
+    const str_r = try a.alloc(f32, total);
+    defer a.free(str_r);
+    @memset(str_l, 0);
+    @memset(str_r, 0);
+    var ph: usize = 0;
+    const block = 128;
+    while (ph < total) : (ph += block) {
+        const nn = @min(block, total - ph);
+        try sc.render(str_l[ph .. ph + nn], str_r[ph .. ph + nn], ph);
+    }
+
+    for (0..total) |i| {
+        try expectApproxEqAbs(ref_l[i], str_l[i], 1e-4);
+        try expectApproxEqAbs(ref_r[i], str_r[i], 1e-4);
+    }
 }
 
 test "full pipeline: record -> WAV -> project -> reload -> timeline render" {

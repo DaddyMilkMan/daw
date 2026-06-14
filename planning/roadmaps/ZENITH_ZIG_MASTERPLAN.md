@@ -109,7 +109,7 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ✅ **FLAC** + **Ogg/Vorbis** decode *and* encode (`codec.zig` — libsndfile via hand-declared ABI; round-trip + real-file decode verified). *Codec "leaf" lib, not clean-room; future purity swap = vendored PD dr_flac/stb_vorbis.*
 - ✅ **MP3** decode (`mp3.zig` — libmpg123 hand-declared ABI; verified against a real .mp3; patents expired 2017)
 - ✅ **Unified loader** `audio_file.loadAny` — dispatches by extension across WAV/AIFF (owned) + FLAC/Ogg/MP3 (leaves) → one `AudioData`
-- ❌ **Streaming** large files from disk (don't load whole files into RAM)
+- ✅ **Streaming** from disk (`wav.WavStream`: header-only open + random-access `readFrames`, never loads the whole file) + `audio_track.StreamClip` (reads its span per render block; verified bit-equal to the in-memory render). ❌ streaming for compressed formats (FLAC/Ogg/MP3 still whole-file)
 - ❌ Sample metadata (loop points, root note, embedded markers)
 
 ### 4.4 Platform — Windowing / input / native UI shell  *(JUCE: juce_gui_basics/extra)*
@@ -481,9 +481,14 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   are linked by absolute versioned-.so path (no unversioned symlinks on this box). FLAC/Ogg
   round-trips (encode→decode→FFT) + real `singing.ogg` decode + real `.mp3` decode all verified.
   Pragmatic codec leaves, not clean-room — future purity swap to vendored PD single-headers.
+- **Audio-file streaming** (`wav.WavStream` + `audio_track.StreamClip`): open reads only the
+  header; `readFrames` seeks + decodes just the requested span (16/24/32 PCM + float). A
+  `StreamClip` renders its overlapping window per block straight from disk — verified bit-equal
+  to the in-memory render, block-by-block. §4.3 file formats now essentially complete (compressed
+  streaming + sample metadata remain).
 - NEXT in campaign (ordered): the **GUI record-arm button + RT-safe live capture-to-clip** in
-  `daw.zig`/`main_daw.zig` (needs the running app to verify) → **streaming** large files from
-  disk (don't load whole files into RAM) → plugin param *automation* events + VST3 IEditController.
-  (Real third-party plugin testing needs plugins installed — none yet.)
+  `daw.zig`/`main_daw.zig` (needs the running app to verify) → plugin param *automation* events +
+  VST3 IEditController → real third-party plugin testing (needs plugins installed — none yet) →
+  mixer depth (sends/buses/metering) / automation lanes.
 
 *(Add new dated entries as milestones complete.)*
