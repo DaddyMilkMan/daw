@@ -234,12 +234,16 @@ pub const Ctx = struct {
     pub fn button(self: *Ctx, text: []const u8, id: u64, style: Style) bool {
         var st = style;
         st.id = id;
-        if (st.bg == null) st.bg = Color.rgb(42, 46, 58);
-        if (st.bg2 == null) st.bg2 = Color.rgb(34, 37, 48);
-        if (st.hover_bg == null) st.hover_bg = Color.rgb(58, 64, 80);
-        if (st.border == null) st.border = Color.rgba(255, 255, 255, 20);
-        if (st.radius == 0) st.radius = 8;
-        st.elev = 1;
+        // FLAT, modern button. The old default (elev=1 material gloss + a bright
+        // white rim border) read as a glossy '90s bevel — removed from the toolkit.
+        // Now: a clean near-solid fill (tiny top->bottom delta), subtle hover, no
+        // rim, no specular. Depth comes from hover + an optional caller shadow.
+        if (st.bg == null) st.bg = Color.rgb(46, 50, 62);
+        if (st.bg2 == null) st.bg2 = Color.rgb(41, 45, 56);
+        if (st.hover_bg == null) st.hover_bg = Color.rgb(57, 62, 77);
+        if (st.border == null) st.border = Color.rgba(255, 255, 255, 0); // no rim
+        if (st.radius == 0) st.radius = 7;
+        st.elev = 0; // no material gloss
         st.justify = .center;
         st.aligni = .center;
         self.open(st);
