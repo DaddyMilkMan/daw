@@ -396,8 +396,18 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   w0=0x40903C00 w1=0xC9240000 → 16-bit vel 0xC924 (the kernel's 2.0 xlate, matching our
   `scaleUp(100,7,16)`). End-to-end: external MIDI → kernel UMP → synth → recorded sound. `main_daw`
   prefers native; legacy 1.0+our-up-convert is the fallback.
-- NEXT: tempo-sync the loop to the UI BPM; record-arm (capture → disk via wav.zig); UMP *output* +
-  high-res 32-bit controllers driving synth params; native rawmidi UMP for hardware; SVG stroke
-  geometry; Windows/macOS audio+MIDI backends.
+- **Universal device compatibility** (auto-connect + hot-plug): both `midi2_alsa` and `midi_alsa`
+  auto-subscribe every readable MIDI source at startup and rescan on System-Announce topology events,
+  so any device — 1983 DIN, USB 1.0, native 2.0 — just works, no manual `aconnect`. Audio engine
+  tries default→pipewire→pulse→plughw→hw. Verified: a virtual keyboard appearing AFTER launch
+  auto-connected and played (recorded). Input excludes our own output client (no MIDI loop).
+- **UMP OUTPUT + high-res mapping**: `midi2_alsa.Midi2Output` emits native UMP from a 'Zenith Out'
+  source (16-bit vel, 32-bit CC/bend). The 32-bit controllers drive the synth — CC74→cutoff,
+  CC71→resonance, pitch-bend→pitch (±2 st), pressure→brightness (lock-free atomics, applied per
+  block; synth gained a bend multiplier). Verified: listener on 'Zenith Out' got 32-bit CC sweep +
+  bend→0xFFFFFFFF; isolated synth bent 262→292 Hz (+1.90 st). Fixed vFader thumb centering.
+- NEXT: tempo-sync the loop to the UI BPM; record-arm (capture → disk via wav.zig); per-note (MPE-
+  style) controllers → per-voice; native rawmidi UMP for hardware; SVG stroke geometry; Win/mac
+  audio+MIDI backends.
 
 *(Add new dated entries as milestones complete.)*
