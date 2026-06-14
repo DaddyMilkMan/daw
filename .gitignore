@@ -189,3 +189,11 @@ ZenithTests
 # Zig build artifacts
 .zig-cache/
 zig-out/
+
+inspect_state.json
+inspect_screenshot.png
+inspect.log
+*_demo.wav
+clap_demo.wav
+vst*_demo.wav
+audiotrack_demo.wav

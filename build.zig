@@ -235,6 +235,18 @@ pub fn build(b: *std.Build) void {
     const audiotrack_step = b.step("audiotrack", "Render an audio-clip timeline + recording round-trip");
     audiotrack_step.dependOn(&run_audiotrack.step);
 
+    // Inspection harness: dump JSON state + PNG screenshot + event log (headless).
+    const inspect_exe = b.addExecutable(.{
+        .name = "zenith_inspect",
+        .root_source_file = b.path("zig/main_inspect.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(inspect_exe);
+    const run_inspect = b.addRunArtifact(inspect_exe);
+    const inspect_step = b.step("inspect", "Dump DAW state JSON + PNG screenshot + event log");
+    inspect_step.dependOn(&run_inspect.step);
+
     // GUI foundation: render a DAW frame to an image.
     const ui = b.addExecutable(.{
         .name = "zenith_ui",
@@ -442,7 +454,7 @@ pub fn build(b: *std.Build) void {
 
     // Unit tests.
     const test_step = b.step("test", "Run unit tests");
-    for ([_][]const u8{ "midi_alsa.zig", "midi2.zig", "audio_devices.zig", "ttf.zig", "image.zig", "svg.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig", "effects.zig", "dsp.zig", "aiff.zig", "vst3_abi.zig", "vst2_abi.zig", "audio_track.zig", "automation.zig", "mix_graph.zig", "timestretch.zig" }) |src| {
+    for ([_][]const u8{ "midi_alsa.zig", "midi2.zig", "audio_devices.zig", "ttf.zig", "image.zig", "svg.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig", "effects.zig", "dsp.zig", "aiff.zig", "vst3_abi.zig", "vst2_abi.zig", "audio_track.zig", "automation.zig", "mix_graph.zig", "timestretch.zig", "png.zig", "inspect.zig" }) |src| {
         const t = b.addTest(.{ .root_source_file = b.path(b.fmt("zig/{s}", .{src})), .target = target, .optimize = optimize });
         t.linkSystemLibrary("asound");
         t.linkLibC();

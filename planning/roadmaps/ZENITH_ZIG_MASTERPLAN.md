@@ -125,9 +125,9 @@ Status: ✅ done · 🟡 partial · ❌ not started
 ### 4.5 Platform — Core runtime  *(JUCE: juce_core/events — mostly Zig stdlib)*
 - 🟡 Strings/files/threads/time/alloc — **Zig stdlib covers this for free**
 - ❌ **Message/event loop** + timers (UI + async)
-- ❌ **Lock-free audio FIFOs** (SPSC ring buffers for RT↔non-RT handoff)
+- 🟡 **Lock-free audio FIFOs** (SPSC note queue in `audio_engine.zig`); ❌ generic ring-buffer util
 - ❌ Thread pool / async task system
-- ❌ Logging, settings/config persistence
+- 🟡 Logging + **observability/instrumentation** (`inspect.zig`: JSON state snapshot + PNG screenshot + structured event log — a headless "Playwright for the DAW"; `png.zig` minimal encoder; `zig build inspect`). ❌ settings/config persistence, live-app hookup of the snapshot
 
 ### 4.6 DSP toolkit  *(JUCE: juce_dsp)* — `dsp.zig` toolkit landed (17 tests)
 - ✅ SVF filter
@@ -490,9 +490,14 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   `mix_graph.zig` — channels→bus/master routing, post-fader aux sends, mute/solo, peak/RMS
   metering at every node. `automation.zig` — breakpoint lanes (hold/linear, binary-search
   `valueAt`, sample-accurate `render`), verified driving a gain ramp.
-- NEXT in campaign (ordered): the **GUI record-arm button + RT-safe live capture-to-clip** in
-  `daw.zig`/`main_daw.zig` (needs the running app to verify) → **wire mix_graph + automation
-  lanes into the live engine/project** (fader automation, send routing in the saved model) →
-  plugin param *automation* events + VST3 IEditController → real third-party plugin testing.
+- **Warp/time-stretch + pitch-shift** (`timestretch.zig`, WSOLA) — FFT-verified.
+- **Observability/instrumentation** (`inspect.zig` + `png.zig` + `zig build inspect`): a headless
+  "Playwright for the DAW" — JSON state snapshot (the DOM/a11y-tree analog), PNG screenshot
+  (`png.zig` minimal encoder, viewable + decodes via our own `image.zig`), and a structured event
+  log. Lets an agent observe the full app state off-screen. ❌ live-app hookup (the running
+  `zenith` calling `inspect.snapshot/screenshot` on a key/IPC) + input-injection control channel.
+- NEXT in campaign (ordered): **live-app instrumentation hookup** (zenith dumps a snapshot +
+  screenshot on demand) + **GUI record-arm + RT-safe capture** → **wire mix_graph + automation
+  into the live engine/project** → plugin param automation + VST3 IEditController.
 
 *(Add new dated entries as milestones complete.)*
