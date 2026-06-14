@@ -199,6 +199,29 @@ pub fn build(b: *std.Build) void {
     const vst3_step = b.step("vst3", "Host a VST3 plugin end-to-end (defaults to the test plugin)");
     vst3_step.dependOn(&run_vst3.step);
 
+    // VST2 hosting: a Zig VST2 test plugin (.so) + the AEffect host.
+    const vst2_plugin = b.addSharedLibrary(.{
+        .name = "zenith_vst2_test",
+        .root_source_file = b.path("zig/vst2_test_plugin.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(vst2_plugin);
+
+    const vst2 = b.addExecutable(.{
+        .name = "zenith_vst2",
+        .root_source_file = b.path("zig/main_vst2.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    vst2.linkLibC();
+    b.installArtifact(vst2);
+    const run_vst2 = b.addRunArtifact(vst2);
+    run_vst2.step.dependOn(b.getInstallStep());
+    if (b.args) |a| run_vst2.addArgs(a);
+    const vst2_step = b.step("vst2", "Host a VST2 plugin end-to-end (defaults to the test plugin)");
+    vst2_step.dependOn(&run_vst2.step);
+
     // GUI foundation: render a DAW frame to an image.
     const ui = b.addExecutable(.{
         .name = "zenith_ui",
@@ -406,7 +429,7 @@ pub fn build(b: *std.Build) void {
 
     // Unit tests.
     const test_step = b.step("test", "Run unit tests");
-    for ([_][]const u8{ "midi_alsa.zig", "midi2.zig", "audio_devices.zig", "ttf.zig", "image.zig", "svg.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig", "effects.zig", "dsp.zig", "aiff.zig", "vst3_abi.zig" }) |src| {
+    for ([_][]const u8{ "midi_alsa.zig", "midi2.zig", "audio_devices.zig", "ttf.zig", "image.zig", "svg.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig", "effects.zig", "dsp.zig", "aiff.zig", "vst3_abi.zig", "vst2_abi.zig" }) |src| {
         const t = b.addTest(.{ .root_source_file = b.path(b.fmt("zig/{s}", .{src})), .target = target, .optimize = optimize });
         t.linkSystemLibrary("asound");
         t.linkLibC();
