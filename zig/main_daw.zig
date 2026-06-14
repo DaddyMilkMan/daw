@@ -88,10 +88,12 @@ pub fn main() !void {
     defer if (midi_in) |*m| m.close();
     var ump_buf: [64]midi2.Ump = undefined;
     var midi_evs: [64]midi.MidiEvent = undefined;
-    if (midi2_in != null) {
-        std.debug.print("MIDI 2.0 (native UMP) in: connect a source to 'Zenith DAW:Zenith In'\n", .{});
-    } else if (midi_in != null) {
-        std.debug.print("MIDI in (legacy 1.0, up-converted to UMP): 'Zenith DAW:Zenith In'\n", .{});
+    if (midi2_in) |*m| {
+        const n = m.connectAllSources();
+        std.debug.print("MIDI 2.0 (native UMP): auto-connected {d} source(s); hot-plug on. Any device, any age.\n", .{n});
+    } else if (midi_in) |*m| {
+        const n = m.connectAllSources();
+        std.debug.print("MIDI (legacy 1.0 -> UMP): auto-connected {d} source(s); hot-plug on.\n", .{n});
     }
 
     std.debug.print("Zenith DAW — flex + glass + GPU toolkit + live audio + MIDI 2.0\n", .{});

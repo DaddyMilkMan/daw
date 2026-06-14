@@ -13,18 +13,28 @@ const std = @import("std");
 const midi2 = @import("midi2.zig");
 
 const snd_seq_t = opaque {};
+const snd_seq_client_info_t = opaque {};
+const snd_seq_port_info_t = opaque {};
 
 const SND_SEQ_OPEN_INPUT: c_int = 2;
 const SND_SEQ_NONBLOCK: c_int = 1;
 const SND_SEQ_CLIENT_UMP_MIDI_2_0: c_int = 2;
+const SND_SEQ_CLIENT_SYSTEM: c_int = 0;
+const SND_SEQ_PORT_SYSTEM_ANNOUNCE: c_int = 1;
 
+const SND_SEQ_PORT_CAP_READ: c_uint = 1 << 0;
 const SND_SEQ_PORT_CAP_WRITE: c_uint = 1 << 1;
+const SND_SEQ_PORT_CAP_SUBS_READ: c_uint = 1 << 5;
 const SND_SEQ_PORT_CAP_SUBS_WRITE: c_uint = 1 << 6;
+const SND_SEQ_PORT_CAP_NO_EXPORT: c_uint = 1 << 7;
 const SND_SEQ_PORT_TYPE_MIDI_GENERIC: c_uint = 1 << 1;
 const SND_SEQ_PORT_TYPE_MIDI_UMP: c_uint = 1 << 7;
 const SND_SEQ_PORT_TYPE_APPLICATION: c_uint = 1 << 20;
 
 const SND_SEQ_EVENT_UMP: u8 = 1 << 5; // flags bit: this event carries a UMP packet
+// System Announce event types (topology changes -> hot-plug rescan):
+const EV_CLIENT_START: u8 = 60;
+const EV_PORT_CHANGE: u8 = 65; // 60..65 = client/port start/exit/change
 
 /// Mirror of C `snd_seq_ump_event_t` (32 bytes; the UMP words live at offset 16,
 /// overlaying the legacy 16-byte data union).
@@ -46,6 +56,20 @@ extern fn snd_seq_create_simple_port(seq: *snd_seq_t, name: [*:0]const u8, caps:
 extern fn snd_seq_ump_event_input(seq: *snd_seq_t, ev: *?*SeqUmpEvent) c_int;
 extern fn snd_seq_client_id(seq: *snd_seq_t) c_int;
 extern fn snd_seq_close(seq: *snd_seq_t) c_int;
+extern fn snd_seq_connect_from(seq: *snd_seq_t, my_port: c_int, src_client: c_int, src_port: c_int) c_int;
+// client/port enumeration (auto-connect every source)
+extern fn snd_seq_client_info_malloc(p: *?*snd_seq_client_info_t) c_int;
+extern fn snd_seq_client_info_free(p: *snd_seq_client_info_t) void;
+extern fn snd_seq_client_info_set_client(p: *snd_seq_client_info_t, c: c_int) void;
+extern fn snd_seq_client_info_get_client(p: *const snd_seq_client_info_t) c_int;
+extern fn snd_seq_query_next_client(seq: *snd_seq_t, p: *snd_seq_client_info_t) c_int;
+extern fn snd_seq_port_info_malloc(p: *?*snd_seq_port_info_t) c_int;
+extern fn snd_seq_port_info_free(p: *snd_seq_port_info_t) void;
+extern fn snd_seq_port_info_set_client(p: *snd_seq_port_info_t, c: c_int) void;
+extern fn snd_seq_port_info_set_port(p: *snd_seq_port_info_t, port: c_int) void;
+extern fn snd_seq_port_info_get_port(p: *const snd_seq_port_info_t) c_int;
+extern fn snd_seq_port_info_get_capability(p: *const snd_seq_port_info_t) c_uint;
+extern fn snd_seq_query_next_port(seq: *snd_seq_t, p: *snd_seq_port_info_t) c_int;
 
 pub const MidiError = error{ OpenFailed, VersionFailed, PortFailed };
 
@@ -77,23 +101,66 @@ pub const Midi2Input = struct {
             _ = snd_seq_close(seq);
             return MidiError.PortFailed;
         }
-        return .{ .seq = seq, .client = snd_seq_client_id(seq), .port = port };
+        var self = Midi2Input{ .seq = seq, .client = snd_seq_client_id(seq), .port = port };
+        // hot-plug: receive topology notifications from the System Announce port
+        _ = snd_seq_connect_from(seq, port, SND_SEQ_CLIENT_SYSTEM, SND_SEQ_PORT_SYSTEM_ANNOUNCE);
+        // auto-connect every MIDI source already present (any age — the kernel
+        // up-converts each to MIDI 2.0 UMP for us)
+        _ = self.connectAllSources();
+        return self;
+    }
+
+    /// Subscribe our input to every readable MIDI source on the system (skipping
+    /// the System client and ourselves). Idempotent — already-connected sources
+    /// just fail harmlessly. Returns the number of NEW connections made.
+    pub fn connectAllSources(self: *Midi2Input) usize {
+        var cinfo: ?*snd_seq_client_info_t = null;
+        if (snd_seq_client_info_malloc(&cinfo) < 0) return 0;
+        defer snd_seq_client_info_free(cinfo.?);
+        var pinfo: ?*snd_seq_port_info_t = null;
+        if (snd_seq_port_info_malloc(&pinfo) < 0) return 0;
+        defer snd_seq_port_info_free(pinfo.?);
+
+        const need = SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ;
+        var made: usize = 0;
+        snd_seq_client_info_set_client(cinfo.?, -1);
+        while (snd_seq_query_next_client(self.seq, cinfo.?) >= 0) {
+            const cl = snd_seq_client_info_get_client(cinfo.?);
+            if (cl == SND_SEQ_CLIENT_SYSTEM or cl == self.client) continue;
+            snd_seq_port_info_set_client(pinfo.?, cl);
+            snd_seq_port_info_set_port(pinfo.?, -1);
+            while (snd_seq_query_next_port(self.seq, pinfo.?) >= 0) {
+                const caps = snd_seq_port_info_get_capability(pinfo.?);
+                if (caps & need != need) continue; // not a connectable source
+                if (caps & SND_SEQ_PORT_CAP_NO_EXPORT != 0) continue;
+                const pt = snd_seq_port_info_get_port(pinfo.?);
+                if (snd_seq_connect_from(self.seq, self.port, cl, pt) >= 0) made += 1;
+            }
+        }
+        return made;
     }
 
     /// Drain all pending UMP packets into `out`; returns how many were written.
     /// Each entry is a genuine Universal MIDI Packet (MIDI 2.0 protocol).
     pub fn poll(self: *Midi2Input, out: []midi2.Ump) usize {
         var count: usize = 0;
+        var rescan = false;
         while (count < out.len) {
             var ev: ?*SeqUmpEvent = null;
             if (snd_seq_ump_event_input(self.seq, &ev) < 0) break; // -EAGAIN => drained
             const e = ev orelse break;
-            if (e.flags & SND_SEQ_EVENT_UMP == 0) continue; // not a UMP event (e.g. subscription notice)
+            if (e.flags & SND_SEQ_EVENT_UMP == 0) {
+                // a System Announce topology event (device plugged/unplugged) ->
+                // reconnect after draining so new hardware just works
+                if (e.type >= EV_CLIENT_START and e.type <= EV_PORT_CHANGE) rescan = true;
+                continue;
+            }
             var u = midi2.Ump{ .words = e.ump, .len = 1 };
             u.len = u.messageType().words();
             out[count] = u;
             count += 1;
         }
+        if (rescan) _ = self.connectAllSources();
         return count;
     }
 

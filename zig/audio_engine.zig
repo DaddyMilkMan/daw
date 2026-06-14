@@ -15,6 +15,26 @@ const synth = @import("synth.zig");
 const RING = 512; // note-event queue capacity (power-of-two not required)
 const NoteEv = struct { on: bool, freq: f32 };
 
+// Try these output/input devices in order, so audio works on any system — a
+// PipeWire/Pulse desktop or bare ALSA hardware of any age. `default` first
+// (whatever the user's chosen device is), then explicit servers, then raw HW.
+const DEVICE_FALLBACKS = [_][*:0]const u8{ "default", "pipewire", "pulse", "plughw:0,0", "hw:0,0" };
+
+fn openOut(preferred: [*:0]const u8, rate: u32, channels: u16) ?alsa.StreamOut {
+    if (alsa.StreamOut.open(preferred, rate, channels, 40_000)) |s| return s else |_| {}
+    for (DEVICE_FALLBACKS) |dev| {
+        if (alsa.StreamOut.open(dev, rate, channels, 40_000)) |s| return s else |_| {}
+    }
+    return null;
+}
+fn openIn(preferred: [*:0]const u8, rate: u32) ?alsa.StreamIn {
+    if (alsa.StreamIn.open(preferred, rate, 1, 60_000)) |s| return s else |_| {}
+    for (DEVICE_FALLBACKS) |dev| {
+        if (alsa.StreamIn.open(dev, rate, 1, 60_000)) |s| return s else |_| {}
+    }
+    return null;
+}
+
 pub const Engine = struct {
     samples: []const f32, // mono source loop (read-only once started)
     rate: u32 = 48000,
@@ -93,7 +113,7 @@ pub const Engine = struct {
     }
 
     fn runOut(self: *Engine) void {
-        var out = alsa.StreamOut.open(self.device, self.rate, self.channels, 40_000) catch return;
+        var out = openOut(self.device, self.rate, self.channels) orelse return;
         defer out.close();
         @atomicStore(bool, &self.started, true, .monotonic);
 
@@ -133,7 +153,7 @@ pub const Engine = struct {
     }
 
     fn runIn(self: *Engine) void {
-        var in = alsa.StreamIn.open(self.device, self.rate, 1, 60_000) catch return;
+        var in = openIn(self.device, self.rate) orelse return;
         defer in.close();
         const N = 512;
         var buf: [N]i16 = undefined;

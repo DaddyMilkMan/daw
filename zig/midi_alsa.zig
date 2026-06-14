@@ -6,20 +6,29 @@ const std = @import("std");
 const midi2 = @import("midi2.zig");
 
 const snd_seq_t = opaque {};
+const snd_seq_client_info_t = opaque {};
+const snd_seq_port_info_t = opaque {};
 
 // snd_seq_open streams / modes
 const SND_SEQ_OPEN_INPUT: c_int = 2;
 const SND_SEQ_NONBLOCK: c_int = 1;
+const SND_SEQ_CLIENT_SYSTEM: c_int = 0;
+const SND_SEQ_PORT_SYSTEM_ANNOUNCE: c_int = 1;
 
 // port capabilities / types
+const SND_SEQ_PORT_CAP_READ: c_uint = 1 << 0;
 const SND_SEQ_PORT_CAP_WRITE: c_uint = 1 << 1;
-const SND_SEQ_PORT_CAP_SUBS_WRITE: c_uint = 1 << 6; // (1<<5 is SUBS_READ — wrong direction)
+const SND_SEQ_PORT_CAP_SUBS_READ: c_uint = 1 << 5;
+const SND_SEQ_PORT_CAP_SUBS_WRITE: c_uint = 1 << 6;
+const SND_SEQ_PORT_CAP_NO_EXPORT: c_uint = 1 << 7;
 const SND_SEQ_PORT_TYPE_MIDI_GENERIC: c_uint = 1 << 1;
 const SND_SEQ_PORT_TYPE_APPLICATION: c_uint = 1 << 20;
 
 // event types we care about
 const SND_SEQ_EVENT_NOTEON: u8 = 6;
 const SND_SEQ_EVENT_NOTEOFF: u8 = 7;
+const EV_CLIENT_START: u8 = 60; // 60..65 = announce topology changes (hot-plug)
+const EV_PORT_CHANGE: u8 = 65;
 
 /// Mirror of C `snd_seq_event_t` (32 bytes on 64-bit). We only read `type` and
 /// `data.note`, but the full layout must match so the offsets are correct.
@@ -50,6 +59,19 @@ extern fn snd_seq_create_simple_port(seq: *snd_seq_t, name: [*:0]const u8, caps:
 extern fn snd_seq_event_input(seq: *snd_seq_t, ev: *?*SeqEvent) c_int;
 extern fn snd_seq_client_id(seq: *snd_seq_t) c_int;
 extern fn snd_seq_close(seq: *snd_seq_t) c_int;
+extern fn snd_seq_connect_from(seq: *snd_seq_t, my_port: c_int, src_client: c_int, src_port: c_int) c_int;
+extern fn snd_seq_client_info_malloc(p: *?*snd_seq_client_info_t) c_int;
+extern fn snd_seq_client_info_free(p: *snd_seq_client_info_t) void;
+extern fn snd_seq_client_info_set_client(p: *snd_seq_client_info_t, c: c_int) void;
+extern fn snd_seq_client_info_get_client(p: *const snd_seq_client_info_t) c_int;
+extern fn snd_seq_query_next_client(seq: *snd_seq_t, p: *snd_seq_client_info_t) c_int;
+extern fn snd_seq_port_info_malloc(p: *?*snd_seq_port_info_t) c_int;
+extern fn snd_seq_port_info_free(p: *snd_seq_port_info_t) void;
+extern fn snd_seq_port_info_set_client(p: *snd_seq_port_info_t, c: c_int) void;
+extern fn snd_seq_port_info_set_port(p: *snd_seq_port_info_t, port: c_int) void;
+extern fn snd_seq_port_info_get_port(p: *const snd_seq_port_info_t) c_int;
+extern fn snd_seq_port_info_get_capability(p: *const snd_seq_port_info_t) c_uint;
+extern fn snd_seq_query_next_port(seq: *snd_seq_t, p: *snd_seq_port_info_t) c_int;
 
 pub const MidiEvent = struct {
     pub const Kind = enum { note_on, note_off };
@@ -91,17 +113,52 @@ pub const MidiInput = struct {
             _ = snd_seq_close(seq);
             return MidiError.PortFailed;
         }
-        return .{ .seq = seq, .client = snd_seq_client_id(seq), .port = port };
+        var self = MidiInput{ .seq = seq, .client = snd_seq_client_id(seq), .port = port };
+        _ = snd_seq_connect_from(seq, port, SND_SEQ_CLIENT_SYSTEM, SND_SEQ_PORT_SYSTEM_ANNOUNCE); // hot-plug notices
+        _ = self.connectAllSources();
+        return self;
+    }
+
+    /// Subscribe our input to every readable MIDI source (skipping System and
+    /// ourselves). Idempotent; returns the number of NEW connections made.
+    pub fn connectAllSources(self: *MidiInput) usize {
+        var cinfo: ?*snd_seq_client_info_t = null;
+        if (snd_seq_client_info_malloc(&cinfo) < 0) return 0;
+        defer snd_seq_client_info_free(cinfo.?);
+        var pinfo: ?*snd_seq_port_info_t = null;
+        if (snd_seq_port_info_malloc(&pinfo) < 0) return 0;
+        defer snd_seq_port_info_free(pinfo.?);
+        const need = SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ;
+        var made: usize = 0;
+        snd_seq_client_info_set_client(cinfo.?, -1);
+        while (snd_seq_query_next_client(self.seq, cinfo.?) >= 0) {
+            const cl = snd_seq_client_info_get_client(cinfo.?);
+            if (cl == SND_SEQ_CLIENT_SYSTEM or cl == self.client) continue;
+            snd_seq_port_info_set_client(pinfo.?, cl);
+            snd_seq_port_info_set_port(pinfo.?, -1);
+            while (snd_seq_query_next_port(self.seq, pinfo.?) >= 0) {
+                const caps = snd_seq_port_info_get_capability(pinfo.?);
+                if (caps & need != need) continue;
+                if (caps & SND_SEQ_PORT_CAP_NO_EXPORT != 0) continue;
+                if (snd_seq_connect_from(self.seq, self.port, cl, snd_seq_port_info_get_port(pinfo.?)) >= 0) made += 1;
+            }
+        }
+        return made;
     }
 
     /// Drain all pending MIDI events into `out`; returns how many were written.
     /// Non-blocking: returns 0 immediately when nothing is queued.
     pub fn poll(self: *MidiInput, out: []MidiEvent) usize {
         var count: usize = 0;
+        var rescan = false;
         while (count < out.len) {
             var ev: ?*SeqEvent = null;
             if (snd_seq_event_input(self.seq, &ev) < 0) break; // -EAGAIN => drained
             const e = ev orelse break;
+            if (e.type >= EV_CLIENT_START and e.type <= EV_PORT_CHANGE) {
+                rescan = true; // device plugged/unplugged -> reconnect after draining
+                continue;
+            }
             switch (e.type) {
                 SND_SEQ_EVENT_NOTEON => {
                     const n = e.data.note;
@@ -120,6 +177,7 @@ pub const MidiInput = struct {
                 else => {}, // ignore CC/pitchbend/etc. for now
             }
         }
+        if (rescan) _ = self.connectAllSources();
         return count;
     }
 
