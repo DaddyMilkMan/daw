@@ -17,8 +17,11 @@ const snd_seq_client_info_t = opaque {};
 const snd_seq_port_info_t = opaque {};
 
 const SND_SEQ_OPEN_INPUT: c_int = 2;
+const SND_SEQ_OPEN_OUTPUT: c_int = 1;
 const SND_SEQ_NONBLOCK: c_int = 1;
 const SND_SEQ_CLIENT_UMP_MIDI_2_0: c_int = 2;
+const SND_SEQ_ADDRESS_SUBSCRIBERS: u8 = 254;
+const SND_SEQ_QUEUE_DIRECT: u8 = 253;
 const SND_SEQ_CLIENT_SYSTEM: c_int = 0;
 const SND_SEQ_PORT_SYSTEM_ANNOUNCE: c_int = 1;
 
@@ -54,6 +57,7 @@ extern fn snd_seq_set_client_name(seq: *snd_seq_t, name: [*:0]const u8) c_int;
 extern fn snd_seq_set_client_midi_version(seq: *snd_seq_t, version: c_int) c_int;
 extern fn snd_seq_create_simple_port(seq: *snd_seq_t, name: [*:0]const u8, caps: c_uint, type: c_uint) c_int;
 extern fn snd_seq_ump_event_input(seq: *snd_seq_t, ev: *?*SeqUmpEvent) c_int;
+extern fn snd_seq_ump_event_output_direct(seq: *snd_seq_t, ev: *SeqUmpEvent) c_int;
 extern fn snd_seq_client_id(seq: *snd_seq_t) c_int;
 extern fn snd_seq_close(seq: *snd_seq_t) c_int;
 extern fn snd_seq_connect_from(seq: *snd_seq_t, my_port: c_int, src_client: c_int, src_port: c_int) c_int;
@@ -77,10 +81,13 @@ pub const Midi2Input = struct {
     seq: *snd_seq_t,
     client: c_int,
     port: c_int,
+    skip_client: c_int = -1, // never auto-connect this client (e.g. our own output -> no MIDI loop)
 
-    /// Open a native UMP MIDI 2.0 input client + port. Fails (so the caller can
-    /// fall back to legacy) if the kernel/alsa-lib lacks UMP support.
-    pub fn open(client_name: [*:0]const u8, port_name: [*:0]const u8) MidiError!Midi2Input {
+    /// Open a native UMP MIDI 2.0 input client + port. `exclude_client` is a seq
+    /// client never to auto-connect (pass our own output's client id to avoid a
+    /// feedback loop). Fails (so the caller can fall back to legacy) if the
+    /// kernel/alsa-lib lacks UMP support.
+    pub fn open(client_name: [*:0]const u8, port_name: [*:0]const u8, exclude_client: c_int) MidiError!Midi2Input {
         var handle: ?*snd_seq_t = null;
         if (snd_seq_open(&handle, "default", SND_SEQ_OPEN_INPUT, SND_SEQ_NONBLOCK) < 0)
             return MidiError.OpenFailed;
@@ -101,7 +108,7 @@ pub const Midi2Input = struct {
             _ = snd_seq_close(seq);
             return MidiError.PortFailed;
         }
-        var self = Midi2Input{ .seq = seq, .client = snd_seq_client_id(seq), .port = port };
+        var self = Midi2Input{ .seq = seq, .client = snd_seq_client_id(seq), .port = port, .skip_client = exclude_client };
         // hot-plug: receive topology notifications from the System Announce port
         _ = snd_seq_connect_from(seq, port, SND_SEQ_CLIENT_SYSTEM, SND_SEQ_PORT_SYSTEM_ANNOUNCE);
         // auto-connect every MIDI source already present (any age — the kernel
@@ -126,7 +133,7 @@ pub const Midi2Input = struct {
         snd_seq_client_info_set_client(cinfo.?, -1);
         while (snd_seq_query_next_client(self.seq, cinfo.?) >= 0) {
             const cl = snd_seq_client_info_get_client(cinfo.?);
-            if (cl == SND_SEQ_CLIENT_SYSTEM or cl == self.client) continue;
+            if (cl == SND_SEQ_CLIENT_SYSTEM or cl == self.client or cl == self.skip_client) continue;
             snd_seq_port_info_set_client(pinfo.?, cl);
             snd_seq_port_info_set_port(pinfo.?, -1);
             while (snd_seq_query_next_port(self.seq, pinfo.?) >= 0) {
@@ -165,6 +172,58 @@ pub const Midi2Input = struct {
     }
 
     pub fn close(self: *Midi2Input) void {
+        _ = snd_seq_close(self.seq);
+    }
+};
+
+/// Native MIDI 2.0 UMP OUTPUT — a source port that emits genuine Universal MIDI
+/// Packets (16-bit velocity, 32-bit controllers) to any subscriber. Other apps
+/// connect to it and receive native MIDI 2.0; legacy clients get the kernel's
+/// down-conversion automatically.
+pub const Midi2Output = struct {
+    seq: *snd_seq_t,
+    client: c_int,
+    port: c_int,
+
+    pub fn open(client_name: [*:0]const u8, port_name: [*:0]const u8) MidiError!Midi2Output {
+        var handle: ?*snd_seq_t = null;
+        if (snd_seq_open(&handle, "default", SND_SEQ_OPEN_OUTPUT, 0) < 0)
+            return MidiError.OpenFailed;
+        const seq = handle.?;
+        _ = snd_seq_set_client_name(seq, client_name);
+        if (snd_seq_set_client_midi_version(seq, SND_SEQ_CLIENT_UMP_MIDI_2_0) < 0) {
+            _ = snd_seq_close(seq);
+            return MidiError.VersionFailed;
+        }
+        const port = snd_seq_create_simple_port(
+            seq,
+            port_name,
+            SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ,
+            SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_MIDI_UMP | SND_SEQ_PORT_TYPE_APPLICATION,
+        );
+        if (port < 0) {
+            _ = snd_seq_close(seq);
+            return MidiError.PortFailed;
+        }
+        return .{ .seq = seq, .client = snd_seq_client_id(seq), .port = port };
+    }
+
+    /// Emit one Universal MIDI Packet to all subscribers (native MIDI 2.0).
+    pub fn send(self: *Midi2Output, u: midi2.Ump) void {
+        var e = SeqUmpEvent{
+            .type = 0,
+            .flags = SND_SEQ_EVENT_UMP,
+            .tag = 0,
+            .queue = SND_SEQ_QUEUE_DIRECT,
+            .time = [_]u8{0} ** 8,
+            .source = .{ 0, @intCast(self.port) },
+            .dest = .{ SND_SEQ_ADDRESS_SUBSCRIBERS, 0 },
+            .ump = u.words,
+        };
+        _ = snd_seq_ump_event_output_direct(self.seq, &e);
+    }
+
+    pub fn close(self: *Midi2Output) void {
         _ = snd_seq_close(self.seq);
     }
 };

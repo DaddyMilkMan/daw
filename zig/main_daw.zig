@@ -11,15 +11,25 @@ const midi = @import("midi_alsa.zig");
 const midi2 = @import("midi2.zig");
 const midi2_alsa = @import("midi2_alsa.zig");
 
-/// Trigger / release an engine synth voice from a decoded MIDI 2.0 message.
-/// 16-bit velocity 0 on note-on is a note-off (the MIDI convention, preserved).
-fn routeNote(engine: *audio.Engine, msg: midi2.Message) void {
+/// Route a decoded MIDI 2.0 message into the engine: notes -> synth voices, and
+/// the high-resolution (32-bit) controllers -> synth parameters. CC74 (the de
+/// facto brightness/MPE timbre) drives the filter cutoff, CC71 resonance, the
+/// 32-bit pitch bend bends pitch (±2 semitones), channel pressure opens the
+/// filter. 16-bit velocity 0 on note-on is a note-off (the MIDI convention).
+fn routeMidi(engine: *audio.Engine, msg: midi2.Message) void {
     switch (msg) {
         .note_on => |no| if (no.velocity > 0)
             engine.pushNote(true, audio.noteToFreq(no.note))
         else
             engine.pushNote(false, audio.noteToFreq(no.note)),
         .note_off => |no| engine.pushNote(false, audio.noteToFreq(no.note)),
+        .control_change => |cc| switch (cc.index) {
+            74 => engine.setCutoff(audio.ccToCutoff(cc.value)),
+            71 => engine.setResonance(audio.ccToUnit(cc.value)),
+            else => {},
+        },
+        .pitch_bend => |pb| engine.setBend(audio.bendToRatio(pb.value, 2.0)),
+        .channel_pressure => |cp| engine.setPressure(audio.ccToUnit(cp.value)),
         else => {},
     }
 }
@@ -82,7 +92,11 @@ pub fn main() !void {
     // genuine Universal MIDI Packets and translates legacy senders to MIDI 2.0
     // for us). Fall back to a legacy MIDI 1.0 client + our own up-conversion if
     // the kernel/alsa-lib lacks UMP support.
-    var midi2_in: ?midi2_alsa.Midi2Input = midi2_alsa.Midi2Input.open("Zenith DAW", "Zenith In") catch null;
+    // native MIDI 2.0 UMP OUTPUT — Zenith as a MIDI 2.0 source other apps can read
+    var midi_out: ?midi2_alsa.Midi2Output = midi2_alsa.Midi2Output.open("Zenith DAW", "Zenith Out") catch null;
+    defer if (midi_out) |*m| m.close();
+    const out_client: c_int = if (midi_out) |o| o.client else -1; // input excludes this (no loop)
+    var midi2_in: ?midi2_alsa.Midi2Input = midi2_alsa.Midi2Input.open("Zenith DAW", "Zenith In", out_client) catch null;
     defer if (midi2_in) |*m| m.close();
     var midi_in: ?midi.MidiInput = if (midi2_in == null) (midi.MidiInput.open("Zenith DAW", "Zenith In") catch null) else null;
     defer if (midi_in) |*m| m.close();
@@ -153,14 +167,22 @@ pub fn main() !void {
             }
         }
 
-        // route MIDI in -> engine synth. Native path: the kernel hands us real
-        // MIDI 2.0 UMP packets directly. Legacy path: up-convert 1.0 -> UMP here.
+        // route MIDI in -> engine synth (notes + high-res controllers), and echo
+        // every packet OUT as native MIDI 2.0 UMP (Zenith as a MIDI 2.0 source).
+        // Native path: the kernel hands us real UMP. Legacy path: up-convert here.
         if (midi2_in) |*m| {
             const n = m.poll(&ump_buf);
-            for (ump_buf[0..n]) |ump| routeNote(&engine, midi2.decode(ump));
+            for (ump_buf[0..n]) |ump| {
+                routeMidi(&engine, midi2.decode(ump));
+                if (midi_out) |*o| o.send(ump);
+            }
         } else if (midi_in) |*m| {
             const n = m.poll(&midi_evs);
-            for (midi_evs[0..n]) |ev| routeNote(&engine, midi2.decode(ev.toUmp(0)));
+            for (midi_evs[0..n]) |ev| {
+                const ump = ev.toUmp(0);
+                routeMidi(&engine, midi2.decode(ump));
+                if (midi_out) |*o| o.send(ump);
+            }
         }
 
         // pull live audio state into the UI before drawing (playhead follows the

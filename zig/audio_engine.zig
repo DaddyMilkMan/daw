@@ -50,6 +50,11 @@ pub const Engine = struct {
     pos: u64 = 0, // current frame index into `samples`
     peak_bits: u32 = 0, // master output peak (bitcast f32)
     in_peak_bits: u32 = 0, // live input peak (bitcast f32)
+    // high-res MIDI 2.0 controllers (latest-value-wins, lock-free)
+    ctl_cutoff_bits: u32 = @bitCast(@as(f32, 2200.0)), // CC74 -> filter cutoff Hz
+    ctl_res_bits: u32 = @bitCast(@as(f32, 0.25)), // CC71 -> resonance 0..1
+    ctl_bend_bits: u32 = @bitCast(@as(f32, 1.0)), // pitch bend -> freq multiplier
+    ctl_press_bits: u32 = @bitCast(@as(f32, 0.0)), // channel pressure -> brightness
 
     // --- SPSC note queue: UI/MIDI thread produces, audio thread consumes ---
     events: [RING]NoteEv = undefined,
@@ -94,6 +99,20 @@ pub const Engine = struct {
         return @bitCast(@atomicLoad(u32, &self.in_peak_bits, .monotonic));
     }
 
+    // high-res controller setters (called from the UI/MIDI thread)
+    pub fn setCutoff(self: *Engine, hz: f32) void {
+        @atomicStore(u32, &self.ctl_cutoff_bits, @bitCast(hz), .monotonic);
+    }
+    pub fn setResonance(self: *Engine, r: f32) void {
+        @atomicStore(u32, &self.ctl_res_bits, @bitCast(r), .monotonic);
+    }
+    pub fn setBend(self: *Engine, ratio: f32) void {
+        @atomicStore(u32, &self.ctl_bend_bits, @bitCast(ratio), .monotonic);
+    }
+    pub fn setPressure(self: *Engine, v: f32) void {
+        @atomicStore(u32, &self.ctl_press_bits, @bitCast(v), .monotonic);
+    }
+
     /// Queue a note on/off (called from the UI/MIDI thread). Lock-free; drops if full.
     pub fn pushNote(self: *Engine, on: bool, freq: f32) void {
         const h = @atomicLoad(usize, &self.ev_head, .monotonic);
@@ -125,6 +144,12 @@ pub const Engine = struct {
 
         while (!@atomicLoad(bool, &self.quit, .monotonic)) {
             self.drainNotes();
+            // apply high-res MIDI 2.0 controllers to the synth for this block
+            const base_cut: f32 = @bitCast(@atomicLoad(u32, &self.ctl_cutoff_bits, .monotonic));
+            const press: f32 = @bitCast(@atomicLoad(u32, &self.ctl_press_bits, .monotonic));
+            self.synth.cutoff = std.math.clamp(base_cut * (1.0 + press * 2.0), 100.0, 16000.0);
+            self.synth.resonance = @bitCast(@atomicLoad(u32, &self.ctl_res_bits, .monotonic));
+            self.synth.bend = @bitCast(@atomicLoad(u32, &self.ctl_bend_bits, .monotonic));
             self.synth.renderBlock(sb[0..N]); // MIDI-driven voices
             const playing = @atomicLoad(bool, &self.playing, .monotonic);
             const gain: f32 = @bitCast(@atomicLoad(u32, &self.gain_bits, .monotonic));
@@ -174,4 +199,22 @@ pub const Engine = struct {
 /// MIDI note number -> frequency (A4 = 69 = 440 Hz).
 pub fn noteToFreq(note: u7) f32 {
     return 440.0 * std.math.pow(f32, 2.0, (@as(f32, @floatFromInt(note)) - 69.0) / 12.0);
+}
+
+// ---- MIDI 2.0 high-res controller mapping (32-bit values) -----------------
+fn unit32(v: u32) f32 {
+    return @as(f32, @floatFromInt(v)) / 4294967295.0; // 0..1
+}
+/// CC 32-bit value -> filter cutoff Hz (exponential, ~120 Hz .. 12 kHz).
+pub fn ccToCutoff(v: u32) f32 {
+    return 120.0 * std.math.pow(f32, 12000.0 / 120.0, unit32(v));
+}
+/// CC 32-bit value -> 0..1 (resonance, etc.).
+pub fn ccToUnit(v: u32) f32 {
+    return unit32(v);
+}
+/// 32-bit pitch bend (center 0x8000_0000) -> frequency multiplier (±`semis`).
+pub fn bendToRatio(v: u32, semis: f32) f32 {
+    const n = (unit32(v) - 0.5) * 2.0; // -1..+1
+    return std.math.pow(f32, 2.0, n * semis / 12.0);
 }

@@ -127,9 +127,11 @@ pub const Ui = struct {
         const fill = value.* * h;
         self.g.rect(x, y + h - fill, w, fill, w / 2, lerp(Color.rgb(66, 84, 150), accent, a.hover));
         const grow = a.hover * 3;
+        const kw = 24 + 2 * grow; // thumb width
+        const kx = x + w * 0.5 - kw * 0.5; // centered on the track (balanced)
         const knob_y = y + h - value.* * (h - 16) - 16;
-        self.g.shadow(x - 11 - grow, knob_y, 24 + 2 * grow, 16, 6, 5, Color.rgba(0, 0, 0, 150));
-        self.g.card(x - 11 - grow, knob_y, 24 + 2 * grow, 16, 6, lerp(Color.rgb(220, 225, 234), Color.rgb(255, 255, 255), a.hover), Color.rgb(196, 202, 214), 0, border, 1.0);
+        self.g.shadow(kx, knob_y + 1, kw, 16, 6, 5, Color.rgba(0, 0, 0, 150));
+        self.g.card(kx, knob_y, kw, 16, 6, lerp(Color.rgb(220, 225, 234), Color.rgb(255, 255, 255), a.hover), Color.rgb(196, 202, 214), 0, border, 1.0);
         return changed;
     }
 

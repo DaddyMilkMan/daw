@@ -111,12 +111,12 @@ const Voice = struct {
     fn noteOff(self: *Voice) void {
         self.env.noteOff();
     }
-    fn render(self: *Voice, cutoff: f32, res: f32, sr: f32) f32 {
+    fn render(self: *Voice, cutoff: f32, res: f32, sr: f32, bend: f32) f32 {
         if (!self.env.isActive()) {
             self.in_use = false;
             return 0.0;
         }
-        const raw = self.osc.next(self.freq, sr);
+        const raw = self.osc.next(self.freq * bend, sr);
         const amp = self.env.next();
 
         // Chamberlin state-variable lowpass.
@@ -135,6 +135,7 @@ pub const Synth = struct {
     voices: [16]Voice = [_]Voice{.{}} ** 16,
     cutoff: f32 = 2200.0,
     resonance: f32 = 0.25,
+    bend: f32 = 1.0, // global pitch multiplier (MIDI 2.0 pitch bend)
     sample_rate: f32 = default_sample_rate,
     gain: f32 = 0.18,
 
@@ -158,7 +159,7 @@ pub const Synth = struct {
         for (out) |*sample| {
             var acc: f32 = 0.0;
             for (&self.voices) |*v| {
-                if (v.in_use) acc += v.render(self.cutoff, self.resonance, self.sample_rate);
+                if (v.in_use) acc += v.render(self.cutoff, self.resonance, self.sample_rate, self.bend);
             }
             sample.* = std.math.clamp(acc * self.gain, -1.0, 1.0);
         }
