@@ -35,6 +35,7 @@ pub const IPluginBase_iid = uid(0x22888DDB, 0x156E45AE, 0x8358B348, 0x08190625);
 pub const IPluginFactory_iid = uid(0x7A4D811C, 0x52114A1F, 0xAED9D2EE, 0x0B43BF9F);
 pub const IComponent_iid = uid(0xE831FF31, 0xF2D54301, 0x928EBBEE, 0x25697802);
 pub const IAudioProcessor_iid = uid(0x42043F99, 0xB7DA453C, 0xA569E79D, 0x9AAEC33D);
+pub const IEventList_iid = uid(0x3A2C4214, 0x346349FE, 0xB2C4F397, 0xB9695A44);
 
 // Enums (all int32 in the ABI).
 pub const kAudio: i32 = 0;
@@ -99,6 +100,56 @@ pub const ProcessData = extern struct {
     output_events: ?*anyopaque,
     process_context: ?*anyopaque,
 };
+
+// --- events (Event is 48 bytes: union is 8-aligned at offset 24, sized 24 by
+//     the largest member NoteExpressionTextEvent — match the SDK exactly). ---
+pub const kNoteOnEvent: u16 = 0;
+pub const kNoteOffEvent: u16 = 1;
+
+pub const NoteOnEvent = extern struct {
+    channel: i16,
+    pitch: i16,
+    tuning: f32,
+    velocity: f32,
+    length: i32,
+    note_id: i32,
+};
+pub const NoteOffEvent = extern struct {
+    channel: i16,
+    pitch: i16,
+    velocity: f32,
+    note_id: i32,
+    tuning: f32,
+};
+pub const EventData = extern union {
+    note_on: NoteOnEvent,
+    note_off: NoteOffEvent,
+    _align: u64, // force 8-byte alignment (matches pointer/double members)
+    _size: [24]u8, // force >= 24 bytes (NoteExpressionTextEvent)
+};
+pub const Event = extern struct {
+    bus_index: i32,
+    sample_offset: i32,
+    ppq_position: f64,
+    flags: u16,
+    type: u16,
+    data: EventData, // lands at offset 24 thanks to EventData's 8-align
+};
+
+pub const EventListVtbl = extern struct {
+    queryInterface: *const fn (*anyopaque, [*]const u8, *?*anyopaque) callconv(.c) tresult,
+    addRef: *const fn (*anyopaque) callconv(.c) u32,
+    release: *const fn (*anyopaque) callconv(.c) u32,
+    getEventCount: *const fn (*anyopaque) callconv(.c) i32,
+    getEvent: *const fn (*anyopaque, i32, *Event) callconv(.c) tresult,
+    addEvent: *const fn (*anyopaque, *Event) callconv(.c) tresult,
+};
+pub const EventList = extern struct { vtbl: *const EventListVtbl };
+
+comptime {
+    std.debug.assert(@sizeOf(Event) == 48);
+    std.debug.assert(@offsetOf(Event, "data") == 24);
+}
 
 // --- interface vtables ---
 // `this` is typed *anyopaque: the host passes the real interface pointer; a C

@@ -50,6 +50,37 @@ pub const effFlagsCanReplacing: i32 = 1 << 4;
 pub const effFlagsProgramChunks: i32 = 1 << 5;
 pub const effFlagsIsSynth: i32 = 1 << 8;
 
+// MIDI / events
+pub const kVstMidiType: i32 = 1;
+pub const effProcessEvents: i32 = 25;
+pub const audioMasterProcessEvents: i32 = 8;
+
+pub const VstEvent = extern struct {
+    type: i32,
+    byte_size: i32,
+    delta_frames: i32,
+    flags: i32,
+    data: [16]u8,
+};
+pub const VstMidiEvent = extern struct {
+    type: i32,
+    byte_size: i32,
+    delta_frames: i32,
+    flags: i32,
+    note_length: i32,
+    note_offset: i32,
+    midi_data: [4]u8,
+    detune: i8,
+    note_off_velocity: i8,
+    reserved1: i8,
+    reserved2: i8,
+};
+pub const VstEvents = extern struct {
+    num_events: i32,
+    reserved: isize,
+    events: [2]?*VstEvent, // variable-length in spirit; 2 is enough here
+};
+
 // Plugin dispatcher opcodes (host -> plugin)
 pub const effOpen: i32 = 0;
 pub const effClose: i32 = 1;

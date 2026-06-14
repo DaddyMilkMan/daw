@@ -7,18 +7,68 @@ const v = @import("vst2_abi.zig");
 
 var g_host: ?v.HostCallback = null;
 var g_sr: f64 = 48000.0;
-var g_phase: f64 = 0.0;
 var g_gain: f32 = 0.5;
+
+// poly sine synth driven by MIDI note events
+const NVOICES = 16;
+const Voice = struct { active: bool = false, key: i32 = 0, phase: f64 = 0, freq: f64 = 0, env: f32 = 0, releasing: bool = false };
+var g_voices: [NVOICES]Voice = [_]Voice{.{}} ** NVOICES;
+
+fn noteOn(key: i32) void {
+    const freq = 440.0 * std.math.pow(f64, 2.0, @as(f64, @floatFromInt(key - 69)) / 12.0);
+    for (&g_voices) |*vc| if (!vc.active) {
+        vc.* = .{ .active = true, .key = key, .phase = 0, .freq = freq, .env = 0, .releasing = false };
+        return;
+    };
+}
+fn noteOff(key: i32) void {
+    for (&g_voices) |*vc| if (vc.active and vc.key == key) {
+        vc.releasing = true;
+    };
+}
+fn renderSample() f32 {
+    var s: f32 = 0;
+    for (&g_voices) |*vc| {
+        if (!vc.active) continue;
+        if (vc.releasing) {
+            vc.env -= 0.0004;
+            if (vc.env <= 0) {
+                vc.active = false;
+                continue;
+            }
+        } else if (vc.env < 0.7) vc.env += 0.003;
+        s += @as(f32, @floatCast(@sin(vc.phase))) * vc.env;
+        vc.phase += 2.0 * std.math.pi * vc.freq / g_sr;
+        if (vc.phase > 2.0 * std.math.pi) vc.phase -= 2.0 * std.math.pi;
+    }
+    return s * g_gain;
+}
 
 fn dispatcher(_: *v.AEffect, opcode: i32, _: i32, _: isize, ptr: ?*anyopaque, opt: f32) callconv(.c) isize {
     switch (opcode) {
         v.effOpen, v.effClose, v.effMainsChanged => return 0,
         v.effSetSampleRate => {
             g_sr = opt;
-            g_phase = 0;
+            g_voices = [_]Voice{.{}} ** NVOICES;
             return 0;
         },
         v.effSetBlockSize => return 0,
+        v.effProcessEvents => {
+            const p = ptr orelse return 0;
+            const evs: *const v.VstEvents = @ptrCast(@alignCast(p));
+            var i: usize = 0;
+            const count: usize = @intCast(@max(evs.num_events, 0));
+            while (i < count and i < evs.events.len) : (i += 1) {
+                const ev = evs.events[i] orelse continue;
+                if (ev.type != v.kVstMidiType) continue;
+                const me: *const v.VstMidiEvent = @ptrCast(ev);
+                const status = me.midi_data[0] & 0xF0;
+                const note: i32 = me.midi_data[1];
+                const vel = me.midi_data[2];
+                if (status == 0x90 and vel > 0) noteOn(note) else if (status == 0x80 or (status == 0x90 and vel == 0)) noteOff(note);
+            }
+            return 1;
+        },
         v.effGetEffectName, v.effGetProductString => {
             if (ptr) |p| {
                 const buf: [*]u8 = @ptrCast(p);
@@ -52,12 +102,9 @@ fn getParameter(_: *v.AEffect, index: i32) callconv(.c) f32 {
 fn processReplacing(effect: *v.AEffect, _: [*]const [*]f32, outputs: [*]const [*]f32, frames: i32) callconv(.c) void {
     const nch: usize = @intCast(effect.numOutputs);
     const n: usize = @intCast(frames);
-    const inc = 2.0 * std.math.pi * 440.0 / g_sr;
     var i: usize = 0;
     while (i < n) : (i += 1) {
-        const s: f32 = @as(f32, @floatCast(@sin(g_phase))) * g_gain;
-        g_phase += inc;
-        if (g_phase > 2.0 * std.math.pi) g_phase -= 2.0 * std.math.pi;
+        const s = renderSample();
         var c: usize = 0;
         while (c < nch) : (c += 1) outputs[c][i] = s;
     }

@@ -6,6 +6,7 @@ const std = @import("std");
 const v = @import("vst2_abi.zig");
 const host = @import("vst2_host.zig");
 const wav = @import("wav.zig");
+const dsp = @import("dsp.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -50,6 +51,15 @@ pub fn main() !void {
     // VST2 always passes valid input/output channel arrays; inputs is empty here.
     var no_inputs = [_][*]f32{};
 
+    // Send a MIDI note-on for A4 (MIDI 69 -> 440 Hz) before processing.
+    var midi = std.mem.zeroes(v.VstMidiEvent);
+    midi.type = v.kVstMidiType;
+    midi.byte_size = 24; // size excluding type+byteSize, per the VST2 convention
+    midi.midi_data = .{ 0x90, 69, 100, 0 }; // note-on, ch0, vel 100
+    const ev: *v.VstEvent = @ptrCast(&midi);
+    var events = v.VstEvents{ .num_events = 1, .reserved = 0, .events = .{ ev, null } };
+    plug.sendEvents(&events);
+
     var rec = std.ArrayList(f32).init(a);
     defer rec.deinit();
 
@@ -62,11 +72,39 @@ pub fn main() !void {
         done += n;
     }
 
+    try wav.writePcm16("vst2_demo.wav", rec.items, sr, 1);
+    const freq = try dominantFreq(a, rec.items, sr);
     var peak: f32 = 0;
     for (rec.items) |s| peak = @max(peak, @abs(s));
-    try wav.writePcm16("vst2_demo.wav", rec.items, sr, 1);
-    std.debug.print("processed {d} samples through the VST2 plugin -> vst2_demo.wav (peak {d:.3})\n", .{ rec.items.len, peak });
+    std.debug.print("instrument played MIDI 69 -> dominant {d:.1} Hz (peak {d:.3}) -> vst2_demo.wav\n", .{ freq, peak });
 
     if (peak < 0.1) return error.SilentOutput;
-    std.debug.print("OK: VST2 host loaded, opened, and pulled non-silent audio.\n", .{});
+    if (@abs(freq - 440.0) > 15.0) return error.WrongPitch;
+    std.debug.print("OK: VST2 instrument hosted — MIDI note delivered, synthesized 440 Hz.\n", .{});
+}
+
+/// Hann-windowed FFT peak -> dominant frequency, from a steady-state slice.
+fn dominantFreq(a: std.mem.Allocator, samples: []const f32, sr: u32) !f32 {
+    const off: usize = @min(samples.len / 2, 8192);
+    const avail = samples.len - off;
+    var n: usize = 1;
+    while (n * 2 <= avail and n < 8192) n *= 2;
+    if (n < 8) return 0;
+    const buf = try a.alloc(dsp.Complex, n);
+    defer a.free(buf);
+    for (buf, 0..) |*c, k| {
+        const w = 0.5 - 0.5 * @cos(2.0 * std.math.pi * @as(f32, @floatFromInt(k)) / @as(f32, @floatFromInt(n - 1)));
+        c.* = .{ .re = samples[off + k] * w, .im = 0 };
+    }
+    dsp.fft(buf, false);
+    var max_bin: usize = 1;
+    var max_mag: f32 = 0;
+    for (buf[1 .. n / 2], 1..) |c, k| {
+        const m = c.mag();
+        if (m > max_mag) {
+            max_mag = m;
+            max_bin = k;
+        }
+    }
+    return @as(f32, @floatFromInt(max_bin)) * @as(f32, @floatFromInt(sr)) / @as(f32, @floatFromInt(n));
 }

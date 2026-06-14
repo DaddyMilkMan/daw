@@ -48,6 +48,9 @@ pub const Plugin = struct {
         const end = std.mem.indexOfScalar(u8, buf, 0) orelse buf.len;
         return buf[0..end];
     }
+    pub fn sendEvents(self: *Plugin, events: *v.VstEvents) void {
+        _ = self.dispatch(v.effProcessEvents, 0, 0, @ptrCast(events), 0);
+    }
     pub fn process(self: *Plugin, inputs: [*]const [*]f32, outputs: [*]const [*]f32, frames: i32) void {
         self.effect.processReplacing.?(self.effect, inputs, outputs, frames);
     }
