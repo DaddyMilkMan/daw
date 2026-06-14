@@ -5,6 +5,7 @@
 
 const std = @import("std");
 const png = @import("png.zig");
+const uireg = @import("uireg.zig");
 
 extern fn glReadPixels(x: c_int, y: c_int, w: c_int, h: c_int, fmt: c_uint, ty: c_uint, data: *anyopaque) void;
 
@@ -182,7 +183,7 @@ fn xcCode(s: CursorShape) c_uint {
 // Actions run per frame until a `wait`/`shot`/`quit`; insert `wait 1` between drag
 // steps so the widget processes each incremental position.
 // ---------------------------------------------------------------------------
-const ActKind = enum { move, down, up, key, wait, shot, quit };
+const ActKind = enum { move, moveid, clickid, rmove, down, up, key, wait, shot, dumpids, quit };
 const Act = struct {
     kind: ActKind,
     x: i32 = 0,
@@ -206,6 +207,7 @@ pub const Automation = struct {
     ev_i: usize = 0,
     pending_shot: ?[64]u8 = null,
     shot_len: usize = 0,
+    pending_up: bool = false, // clickid auto-releases the next frame
     frame: u64 = 0,
 
     fn parse(self: *Automation, text: []const u8) void {
@@ -221,6 +223,21 @@ pub const Automation = struct {
                 a.kind = .move;
                 a.x = std.fmt.parseInt(i32, t.next() orelse "0", 10) catch 0;
                 a.y = std.fmt.parseInt(i32, t.next() orelse "0", 10) catch 0;
+            } else if (std.mem.eql(u8, cmd, "moveid")) {
+                a.kind = .moveid;
+                a.x = std.fmt.parseInt(i32, t.next() orelse "0", 10) catch 0; // x = widget id
+            } else if (std.mem.eql(u8, cmd, "clickid")) {
+                a.kind = .clickid;
+                a.x = std.fmt.parseInt(i32, t.next() orelse "0", 10) catch 0; // x = widget id
+            } else if (std.mem.eql(u8, cmd, "rmove")) {
+                a.kind = .rmove;
+                a.x = std.fmt.parseInt(i32, t.next() orelse "0", 10) catch 0; // dx
+                a.y = std.fmt.parseInt(i32, t.next() orelse "0", 10) catch 0; // dy
+            } else if (std.mem.eql(u8, cmd, "dumpids")) {
+                a.kind = .dumpids;
+                const nm = t.next() orelse "ids.txt";
+                a.name_len = @min(nm.len, a.name.len);
+                @memcpy(a.name[0..a.name_len], nm[0..a.name_len]);
             } else if (std.mem.eql(u8, cmd, "down")) {
                 a.kind = .down;
             } else if (std.mem.eql(u8, cmd, "up")) {
@@ -255,6 +272,12 @@ pub const Automation = struct {
     fn fillFrame(self: *Automation) void {
         self.ev_n = 0;
         self.ev_i = 0;
+        if (self.pending_up) { // release a clickid started last frame
+            self.down = false;
+            self.pushEv(.{ .mouse_up = .{ .x = self.mx, .y = self.my } });
+            self.pending_up = false;
+            return;
+        }
         if (self.wait_left > 0) {
             self.wait_left -= 1;
             return;
@@ -266,6 +289,36 @@ pub const Automation = struct {
                     self.mx = a.x;
                     self.my = a.y;
                     self.pushEv(.{ .mouse_move = .{ .x = a.x, .y = a.y } });
+                    self.pc += 1;
+                },
+                .moveid => {
+                    if (uireg.center(@intCast(@max(a.x, 0)))) |c| {
+                        self.mx = @intFromFloat(c[0]);
+                        self.my = @intFromFloat(c[1]);
+                        self.pushEv(.{ .mouse_move = .{ .x = self.mx, .y = self.my } });
+                    }
+                    self.pc += 1;
+                },
+                .clickid => {
+                    self.pc += 1;
+                    if (uireg.center(@intCast(@max(a.x, 0)))) |c| {
+                        self.mx = @intFromFloat(c[0]);
+                        self.my = @intFromFloat(c[1]);
+                        self.down = true;
+                        self.pushEv(.{ .mouse_move = .{ .x = self.mx, .y = self.my } });
+                        self.pushEv(.{ .mouse_down = .{ .x = self.mx, .y = self.my, .x_root = self.mx, .y_root = self.my, .button = 1 } });
+                        self.pending_up = true;
+                        return; // press now, auto-release next frame
+                    }
+                },
+                .rmove => {
+                    self.mx += a.x;
+                    self.my += a.y;
+                    self.pushEv(.{ .mouse_move = .{ .x = self.mx, .y = self.my } });
+                    self.pc += 1;
+                },
+                .dumpids => {
+                    uireg.dump(a.name[0..a.name_len]);
                     self.pc += 1;
                 },
                 .down => {

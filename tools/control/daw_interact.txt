@@ -1,23 +1,23 @@
-# Playwright-style control of the live Zenith DAW (1180x760). Verified end-to-end.
+# Live Zenith DAW control — BY ID (default, deterministic). Discover ids with
+# `dumpids tools/control/daw_ids.txt`. See tools/control/daw_ids.txt for the map.
 wait 50
 shot tools/control/d0_baseline.png
-# SPACE toggles transport (keycode 65) -> Stopped
-key 65
+# transport: click the play button (id 1) -> Stopped, then -> Playing
+clickid 1
 wait 5
-shot tools/control/d1_space_stop.png
-# SPACE again -> Playing
-key 65
+shot tools/control/d1_stopped.png
+clickid 1
 wait 5
-shot tools/control/d2_space_play.png
-# drag the Drums mixer fader (x=305) down to 0, then up to 100
-move 305 625
+shot tools/control/d2_playing.png
+# drag the Drums mixer fader (id 100) to 0, then to 100 — purely by id
+moveid 100
 wait 1
 down
 wait 2
-move 305 720
+rmove 0 60
 wait 3
 shot tools/control/d3_fader_0.png
-move 305 600
+rmove 0 -120
 wait 3
 shot tools/control/d4_fader_100.png
 up

@@ -397,6 +397,7 @@ pub const Ctx = struct {
         const s = nn.style;
         var bg = s.bg;
         if (s.id != 0) {
+            @import("uireg.zig").put(s.id, nn.x, nn.y, nn.w, nn.h); // publish for by-id automation
             const hov = self.mx >= nn.x and self.mx < nn.x + nn.w and self.my >= nn.y and self.my < nn.y + nn.h;
             const a = self.anim(s.id);
             a.hover = ease(a.hover, if (hov) 1 else 0, self.dt, 16);

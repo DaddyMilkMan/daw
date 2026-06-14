@@ -14,19 +14,37 @@ ZENITH_SCRIPT=tools/control/interact.txt ZENITH_WINDOW_SECONDS=12 zig build show
 
 ## Script grammar (one action per line, `#` = comment)
 
+**By id (DEFAULT — deterministic, no eyeballing):**
 ```
-move <x> <y>     # move the cursor (window pixels)
-down             # press the left mouse button at the current position
-up               # release
-key <keycode>    # send a key (X11 keycode; e.g. 9 = Escape, 65 = Space)
+dumpids <file>   # write the interactive widget map (id -> rect) — the "DOM"
+moveid <id>      # move the cursor to the CENTER of widget <id>
+clickid <id>     # click widget <id> (press + auto-release next frame)
+rmove <dx> <dy>  # move relative to the current cursor (for drags after moveid)
+```
+
+**By pixel (fallback — when a target has no id, or for empty-space drags):**
+```
+move <x> <y>     # move the cursor to absolute window pixels
+down / up        # press / release the left mouse button
+```
+
+**Shared:**
+```
+key <keycode>    # send a key (X11 keycode; 9 = Escape, 65 = Space)
 wait <frames>    # idle N frames (~16ms each) — put `wait 1` between drag steps
-shot <file.png>  # screenshot the current frame (real GPU framebuffer) to file.png
+shot <file.png>  # screenshot the current frame (real GPU framebuffer)
 quit             # close the window
 ```
 
-Actions run within a frame until a `wait`/`shot`/`quit`. For a drag, alternate
-`move`/`wait 1` so the widget processes each incremental position. Mouse button and
-position are sticky between frames.
+Actions run within a frame until a `wait`/`shot`/`clickid`/`quit`. For a drag, alternate
+moves with `wait 1` so the widget processes each step. Cursor + button state are sticky.
+
+### Why by-id is the default
+`flex.zig`/`widgets.zig` publish every interactive widget's rect to `uireg.zig` each
+frame; `moveid`/`clickid` resolve the exact center, and `dumpids` lists every widget.
+Tested both ways on the DAW: **by-id hit the play button + Drums fader first try**, while
+by-pixel needed a wrong guess → zoom → corrected coordinate. So: `dumpids` once to learn
+the ids, then drive by id. Pixel actions remain for un-id'd targets.
 
 Keyboard shortcuts work too via `key <keycode>` (e.g. the daw's transport keys) —
 the event goes straight into the app's normal key handling.
@@ -35,8 +53,11 @@ the event goes straight into the app's normal key handling.
 - `baseline.txt` — settle, screenshot, quit.
 - `interact.txt` — showcase: drag a fader low→high, turn a knob, sweep a slider, click a
   toggle (verified: each widget responded).
-- `daw_interact.txt` — the live **DAW**: Space toggles transport (Playing↔Stopped), then
-  drag the Drums mixer fader 85→0→100. Verified by reading the on-screen value/status.
+- `daw_interact.txt` — the live **DAW**, BY ID: `clickid 1` toggles transport, `moveid 100`
+  + `rmove` drags the Drums fader to 0 then 100. Verified by reading the on-screen value/status.
+- `daw_ids.txt` — a captured `dumpids` of the DAW: 71 interactive widgets. Key ids:
+  `1` play, `2` stop, `3` record; `100..105` mixer faders (Drums..Master), `300+`/`320+`
+  track mute/solo, `400+` pan, `600+`/`700+` send knobs, `1000+` browser items.
 
 Screenshots (`*.png`) are git-ignored; scripts are kept as fixtures.
 
