@@ -14,7 +14,15 @@ const synth = @import("synth.zig");
 const audio_track = @import("audio_track.zig");
 const effects = @import("effects.zig");
 const dsp = @import("dsp.zig");
+const project = @import("project.zig");
 const alog = std.log.scoped(.audio);
+
+/// True if `f` falls in the block [start, start+n) over a wrapping loop of `len`.
+fn frameInBlock(f: u64, start: u64, n: u64, len: u64) bool {
+    const end = start + n;
+    if (end <= len) return f >= start and f < end;
+    return f >= start or f < (end - len); // block wraps the loop boundary
+}
 
 const RING = 512; // note-event queue capacity (power-of-two not required)
 const NoteEv = struct { on: bool, freq: f32 };
@@ -146,6 +154,13 @@ pub const Engine = struct {
     rlevel_bits: u32 = 0, // published reverb-bus output level
     master_lim: MasterLimiter = .{}, // master brickwall limiter (audio-thread only)
     grdb_bits: u32 = 0, // published master limiter gain-reduction (dB, <=0)
+    // sequenced clip notes -> synth (double-buffered: UI writes inactive, flips index)
+    seq_bufs: [2][256]project.Note = undefined,
+    seq_counts: [2]usize = .{ 0, 0 },
+    seq_active: u32 = 0,
+    seq_len: u64 = 0,
+    seq_pos: u64 = 0,
+    slevel_bits: u32 = 0, // published synth (MIDI + sequence) output level
     rate: u32 = 48000,
     channels: u16 = 2,
     device: [*:0]const u8 = "default",
@@ -222,6 +237,19 @@ pub const Engine = struct {
     pub fn getLimiterGrDb(self: *Engine) f32 { // master limiter gain reduction (dB, <=0)
         return @bitCast(@atomicLoad(u32, &self.grdb_bits, .monotonic));
     }
+    pub fn getSynthLevel(self: *Engine) f32 {
+        return @bitCast(@atomicLoad(u32, &self.slevel_bits, .monotonic));
+    }
+    /// Publish a clip's notes for the synth to play (RT-safe: writes the inactive
+    /// buffer, then flips the active index). `loop_len` = the loop length in frames.
+    pub fn setSequence(self: *Engine, notes: []const project.Note, loop_len: u64) void {
+        const inactive: u32 = 1 - @atomicLoad(u32, &self.seq_active, .monotonic);
+        const n = @min(notes.len, self.seq_bufs[inactive].len);
+        @memcpy(self.seq_bufs[inactive][0..n], notes[0..n]);
+        self.seq_counts[inactive] = n;
+        self.seq_len = loop_len;
+        @atomicStore(u32, &self.seq_active, inactive, .release);
+    }
     pub fn isLive(self: *Engine) bool {
         return @atomicLoad(bool, &self.started, .monotonic);
     }
@@ -294,8 +322,22 @@ pub const Engine = struct {
             self.synth.cutoff = std.math.clamp(base_cut * (1.0 + press * 2.0), 100.0, 16000.0);
             self.synth.resonance = @bitCast(@atomicLoad(u32, &self.ctl_res_bits, .monotonic));
             self.synth.bend = @bitCast(@atomicLoad(u32, &self.ctl_bend_bits, .monotonic));
-            self.synth.renderBlock(sb[0..N]); // MIDI-driven voices
             const playing = @atomicLoad(bool, &self.playing, .monotonic);
+            // sequence the clip's notes into the synth (note-on/off at frame crossings)
+            if (playing and self.seq_len > 0) {
+                const ai = @atomicLoad(u32, &self.seq_active, .acquire);
+                const sn = self.seq_bufs[ai][0..self.seq_counts[ai]];
+                for (sn) |note| {
+                    const freq = noteToFreq(@intCast(note.pitch));
+                    if (frameInBlock(note.start % self.seq_len, self.seq_pos, N, self.seq_len)) self.synth.noteOn(freq);
+                    if (frameInBlock((note.start + note.len) % self.seq_len, self.seq_pos, N, self.seq_len)) self.synth.noteOff(freq);
+                }
+                self.seq_pos = (self.seq_pos + N) % self.seq_len;
+            }
+            self.synth.renderBlock(sb[0..N]); // MIDI- + sequence-driven voices
+            var spk: f32 = 0;
+            for (sb[0..N]) |s| spk = @max(spk, @abs(s));
+            @atomicStore(u32, &self.slevel_bits, @bitCast(spk), .monotonic);
             const gain: f32 = @bitCast(@atomicLoad(u32, &self.gain_bits, .monotonic));
 
             // mix the linear-timeline audio tracks (stereo) for this block

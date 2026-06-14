@@ -115,6 +115,9 @@ pub fn main() !void {
     engine.start();
     defer engine.stop();
     engine.setPlaying(state.playing);
+    // the piano-roll previews notes through the engine synth
+    view.pr.audition = auditionSynth;
+    view.pr.audition_ctx = &engine;
 
     // MIDI 2.0 input. Prefer a NATIVE UMP MIDI 2.0 client (the kernel delivers
     // genuine Universal MIDI Packets and translates legacy senders to MIDI 2.0
@@ -193,8 +196,19 @@ pub fn main() !void {
                 },
                 .mouse_up => down = false,
                 .key => |k| {
-                    if (k == 9) elapsed = secs; // Esc: quit
-                    if (k == 65) state.playing = !state.playing; // Space: toggle transport
+                    if (k == 9) { // Esc: close the editor if open, else quit
+                        if (state.editing) state.editing = false else elapsed = secs;
+                    }
+                    if (k == 65) state.playing = !state.playing; // Space: transport
+                    if (k == 26) { // 'E': toggle the piano-roll on the selected clip
+                        state.editing = !state.editing;
+                        if (state.editing) {
+                            state.edit_track = @intCast(@max(state.sel_track, 0));
+                            state.edit_clip = 0;
+                        }
+                        const nc: usize = if (state.edit_track < p.tracks.items.len) p.tracks.items[state.edit_track].clips.items.len else 0;
+                        elog.info("editor {s} -> track {d} ({d} clips)", .{ if (state.editing) "OPEN" else "CLOSE", state.edit_track, nc });
+                    }
                 },
                 .expose => {},
             }
@@ -237,6 +251,12 @@ pub fn main() !void {
             engine.setTrackMute(ti, state.mutes[ti]);
             engine.setTrackSolo(ti, state.solos[ti]);
             engine.setTrackSend(ti, state.sends[ti][0]); // send-A knob -> reverb bus
+        }
+        // play the edited clip's notes through the synth (live, RT-safe double buffer)
+        if (state.editing and state.edit_track < p.tracks.items.len and state.edit_clip < p.tracks.items[state.edit_track].clips.items.len) {
+            engine.setSequence(p.tracks.items[state.edit_track].clips.items[state.edit_clip].notes.items, bar * 4);
+        } else {
+            engine.setSequence(&.{}, 0);
         }
         rclick = false;
 
@@ -290,7 +310,7 @@ pub fn main() !void {
             }
             const mp = engine.getPeak();
             const rl = engine.getReverbLevel();
-            elog.info("audio: device '{s}' @ {d}Hz {d}ch | transport {s} | master {d:.0}% ({d:.1}dB) peak {d:.3} | limiter GR {d:.1}dB | reverb-bus {d:.3} ({d:.1}dB)", .{ engine.device_opened, engine.rate, engine.channels, if (state.playing) "PLAYING" else "STOPPED", state.master_gain * 100, ainspect.dbFromLinear(state.master_gain), mp, engine.getLimiterGrDb(), rl, ainspect.dbFromLinear(rl) });
+            elog.info("audio: device '{s}' @ {d}Hz {d}ch | transport {s} | master {d:.0}% ({d:.1}dB) peak {d:.3} | synth {d:.3} | limiter GR {d:.1}dB | reverb-bus {d:.3} ({d:.1}dB)", .{ engine.device_opened, engine.rate, engine.channels, if (state.playing) "PLAYING" else "STOPPED", state.master_gain * 100, ainspect.dbFromLinear(state.master_gain), mp, engine.getSynthLevel(), engine.getLimiterGrDb(), rl, ainspect.dbFromLinear(rl) });
             for (0..ntr) |ti| {
                 const gn = p.tracks.items[ti].gain;
                 const lvl = state.track_levels[ti];
@@ -304,4 +324,10 @@ pub fn main() !void {
         elapsed += 0.016;
     }
     elog.info("Zenith DAW closed", .{});
+}
+
+/// The piano-roll's audition hook: preview an edited note on the engine synth.
+fn auditionSynth(ctx: ?*anyopaque, pitch: u8, on: bool) void {
+    const eng: *audio.Engine = @ptrCast(@alignCast(ctx orelse return));
+    eng.pushNote(on, audio.noteToFreq(@intCast(pitch)));
 }

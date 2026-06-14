@@ -39,6 +39,10 @@ pub const State = struct {
     // and feeds the live master peak so meters bounce with the actual signal.
     audio_active: bool = false,
     audio_level: f32 = 0,
+    // piano-roll / clip editor
+    editing: bool = false,
+    edit_track: usize = 0,
+    edit_clip: usize = 0,
 };
 
 // ---- refined palette (design-identity pass) --------------------------------
@@ -354,6 +358,7 @@ pub const View = struct {
     cm_x: f32 = 0,
     cm_y: f32 = 0,
     cm_anim: f32 = 0,
+    pr: @import("pianoroll.zig").PianoRoll = .{}, // the clip editor (when state.editing)
 
     pub fn init(g: *Gpu, fc: *const Font, fb: *const Font, fu: *const Font, fd: *const Font) View {
         return .{ .g = g, .c = flex.Ctx.init(g, fb, fu, fd), .u = widgets.Ui.init(g), .fc = fc, .fb = fb, .fu = fu, .fd = fd };
@@ -744,6 +749,21 @@ pub const View = struct {
             if (u.pressed) {
                 const inside = mx >= cmx and mx < cmx + iw and my >= cmy and my < cmy + hh;
                 if (!inside or hit >= 0) self.cm_open = false;
+            }
+        }
+
+        // ---- piano-roll / clip editor overlay (toggled with 'E' on a selected clip) ----
+        if (state.editing and state.edit_track < p.tracks.items.len) {
+            const tr = &p.tracks.items[state.edit_track];
+            if (state.edit_clip < tr.clips.items.len) {
+                g.rect(0, TBH, W, H - TBH, 0, Color.rgba(0, 0, 0, 200)); // dim backdrop
+                const er = [4]f32{ 18, TBH + 30, W - 36, H - TBH - 48 };
+                self.pr.bar_frames = bar;
+                self.pr.update(g, self.fb, er, &tr.clips.items[state.edit_clip], mx, my, u.pressed, down, u.released);
+                var hbuf: [64]u8 = undefined;
+                const hs = std.fmt.bufPrint(&hbuf, "Piano Roll — {s}  (Esc / E to close)", .{tr.name.items}) catch "Piano Roll";
+                self.fd.text(g, 28, TBH + 4, hs, accent);
+                g.flush(); // render the overlay before main_daw's grain snapshots the frame
             }
         }
         return state.window_action;
