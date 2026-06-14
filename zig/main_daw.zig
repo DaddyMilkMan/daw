@@ -7,6 +7,8 @@ const win = @import("window_glx.zig");
 const gpu2d = @import("gpu2d.zig");
 const daw = @import("daw.zig");
 const audio = @import("audio_engine.zig");
+const midi = @import("midi_alsa.zig");
+const midi2 = @import("midi2.zig");
 
 fn edgeDir(x: i32, y: i32, w: i32, h: i32) ?c_long {
     const m: i32 = 6;
@@ -62,7 +64,14 @@ pub fn main() !void {
     defer engine.stop();
     engine.setPlaying(state.playing);
 
-    std.debug.print("Zenith DAW — flex + glass + GPU toolkit + live audio\n", .{});
+    // MIDI 2.0 input: open an ALSA-seq port; incoming 1.0 events are up-converted
+    // to UMP (MIDI 2.0), decoded, and routed to the engine's synth as notes.
+    var midi_in: ?midi.MidiInput = midi.MidiInput.open("Zenith DAW", "Zenith In") catch null;
+    defer if (midi_in) |*m| m.close();
+    var midi_evs: [64]midi.MidiEvent = undefined;
+    if (midi_in != null) std.debug.print("MIDI in: connect a source to 'Zenith DAW:Zenith In' (aconnect)\n", .{});
+
+    std.debug.print("Zenith DAW — flex + glass + GPU toolkit + live audio + MIDI 2.0\n", .{});
 
     // Run until the user closes the window (or presses Esc). ZENITH_WINDOW_SECONDS
     // caps the runtime (used by automated screenshots); unset = run indefinitely.
@@ -119,12 +128,27 @@ pub fn main() !void {
             }
         }
 
-        // pull live audio state into the UI before drawing (playhead + meters
-        // follow the actual sample position / master peak when the engine is live)
+        // route MIDI 2.0 in: poll the seq port, up-convert each event to a UMP
+        // (the MIDI 2.0 Protocol), decode it, and trigger the engine's synth.
+        if (midi_in) |*m| {
+            const n = m.poll(&midi_evs);
+            for (midi_evs[0..n]) |ev| {
+                const msg = midi2.decode(ev.toUmp(0));
+                switch (msg) {
+                    .note_on => |no| engine.pushNote(true, audio.noteToFreq(no.note)),
+                    .note_off => |no| engine.pushNote(false, audio.noteToFreq(no.note)),
+                    else => {},
+                }
+            }
+        }
+
+        // pull live audio state into the UI before drawing (playhead follows the
+        // actual sample position; meters follow the master output peak AND the
+        // live input peak, so the mic moves them too — capture routed into engine)
         state.audio_active = engine.isLive();
         if (state.audio_active) {
             state.playhead = engine.playheadNorm();
-            state.audio_level = engine.getPeak();
+            state.audio_level = @max(engine.getPeak(), engine.getInputPeak());
         }
 
         const action = view.frame(&p, bar, &state, @floatFromInt(W), @floatFromInt(H), @floatFromInt(mx), @floatFromInt(my), down, rclick);
