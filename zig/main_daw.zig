@@ -164,9 +164,22 @@ pub fn main() !void {
     var midi_evs: [64]midi.MidiEvent = undefined;
     var clock = midi_clock.ClockSync{}; // external MIDI beat-clock + transport follower
     var sx = sysex.Sysex7Assembler{}; // reassembles multi-packet SysEx7 on the UMP path
+    // Enumerate the available MIDI sources (device list), and either connect a
+    // specific one (ZENITH_MIDI_IN=<name substring> — the device picker) or
+    // auto-connect them all. Always logs the list so a UI/the user can choose.
+    const midi_pick: ?[]const u8 = std.process.getEnvVarOwned(a, "ZENITH_MIDI_IN") catch null;
+    defer if (midi_pick) |mp| a.free(mp);
     if (midi2_in) |*m| {
-        const n = m.connectAllSources();
-        elog.info("MIDI 2.0 (native UMP): auto-connected {d} source(s); hot-plug on", .{n});
+        var srcs: [64]midi2_alsa.Midi2Input.SourceInfo = undefined;
+        const ns = m.listSources(&srcs);
+        for (srcs[0..ns], 0..) |s, i| elog.info("MIDI source [{d}]: {s} ({d}:{d})", .{ i, s.label(), s.client, s.port });
+        if (midi_pick) |pick| {
+            const n = m.connectOnlyMatching(pick);
+            elog.info("MIDI 2.0 (native UMP): picker '{s}' -> connected {d} of {d} source(s)", .{ pick, n, ns });
+        } else {
+            const n = m.connectAllSources();
+            elog.info("MIDI 2.0 (native UMP): auto-connected {d} source(s); hot-plug on", .{n});
+        }
     } else if (midi_in) |*m| {
         const n = m.connectAllSources();
         elog.info("MIDI (legacy 1.0 -> UMP): auto-connected {d} source(s); hot-plug on", .{n});
