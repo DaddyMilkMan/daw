@@ -17,13 +17,14 @@ const effects = @import("effects.zig");
 const midi = @import("midi_alsa.zig");
 const midi2 = @import("midi2.zig");
 const midi2_alsa = @import("midi2_alsa.zig");
+const midi_clock = @import("midi_clock.zig");
 
 /// Route a decoded MIDI 2.0 message into the engine: notes -> synth voices, and
 /// the high-resolution (32-bit) controllers -> synth parameters. CC74 (the de
 /// facto brightness/MPE timbre) drives the filter cutoff, CC71 resonance, the
 /// 32-bit pitch bend bends pitch (±2 semitones), channel pressure opens the
 /// filter. 16-bit velocity 0 on note-on is a note-off (the MIDI convention).
-fn routeMidi(engine: *audio.Engine, msg: midi2.Message) void {
+fn routeMidi(engine: *audio.Engine, msg: midi2.Message, clock: *midi_clock.ClockSync) ?midi_clock.Transport {
     switch (msg) {
         .note_on => |no| {
             const on = no.velocity > 0;
@@ -45,8 +46,14 @@ fn routeMidi(engine: *audio.Engine, msg: midi2.Message) void {
         .pitch_bend => |pb| engine.setBend(audio.bendToRatio(pb.value, 2.0)),
         .channel_pressure => |cp| engine.setPressure(audio.ccToUnit(cp.value)),
         .program_change => |pc| elog.debug("midi program change -> {d}", .{pc.program}),
+        .system => |sys| {
+            const tr = clock.onSystem(sys.status, std.time.nanoTimestamp());
+            if (tr) |t| elog.info("midi transport: {s} (ext tempo {d:.1} BPM)", .{ @tagName(t), clock.bpm });
+            return tr;
+        },
         else => {},
     }
+    return null;
 }
 
 fn edgeDir(x: i32, y: i32, w: i32, h: i32) ?c_long {
@@ -137,6 +144,7 @@ pub fn main() !void {
     defer if (midi_in) |*m| m.close();
     var ump_buf: [64]midi2.Ump = undefined;
     var midi_evs: [64]midi.MidiEvent = undefined;
+    var clock = midi_clock.ClockSync{}; // external MIDI beat-clock + transport follower
     if (midi2_in) |*m| {
         const n = m.connectAllSources();
         elog.info("MIDI 2.0 (native UMP): auto-connected {d} source(s); hot-plug on", .{n});
@@ -224,14 +232,14 @@ pub fn main() !void {
         if (midi2_in) |*m| {
             const n = m.poll(&ump_buf);
             for (ump_buf[0..n]) |ump| {
-                routeMidi(&engine, midi2.decode(ump));
+                if (routeMidi(&engine, midi2.decode(ump), &clock)) |t| state.playing = (t == .running);
                 if (midi_out) |*o| o.send(ump);
             }
         } else if (midi_in) |*m| {
             const n = m.poll(&midi_evs);
             for (midi_evs[0..n]) |ev| {
                 const ump = ev.toUmp(0);
-                routeMidi(&engine, midi2.decode(ump));
+                if (routeMidi(&engine, midi2.decode(ump), &clock)) |t| state.playing = (t == .running);
                 if (midi_out) |*o| o.send(ump);
             }
         }

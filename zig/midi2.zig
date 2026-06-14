@@ -361,11 +361,30 @@ pub const Message = union(enum) {
     program_change: struct { group: u4, channel: u4, program: u7, bank: ?u14 },
     registered_controller: Controller,
     assignable_controller: Controller,
+    system: SystemMsg, // System Real Time / Common (clock, start, stop, song position, ...)
     other: void,
+};
+
+/// A decoded System message (UMP type 0x1). `status` is the full status byte —
+/// compare against the `System.*` constants (timing_clock/start/cont/stop/...);
+/// for song position, data1/data2 = LSB/MSB.
+pub const SystemMsg = struct {
+    group: u4 = 0,
+    status: u8,
+    data1: u8 = 0,
+    data2: u8 = 0,
 };
 
 /// Decode a MIDI 2.0 Channel Voice UMP. Returns `.other` for non-CV packets.
 pub fn decode(u: Ump) Message {
+    if (u.messageType() == .system) {
+        return .{ .system = .{
+            .group = u.group(),
+            .status = @intCast((u.words[0] >> 16) & 0xFF),
+            .data1 = @intCast((u.words[0] >> 8) & 0x7F),
+            .data2 = @intCast(u.words[0] & 0x7F),
+        } };
+    }
     if (u.messageType() != .midi2_channel_voice) return .other;
     const grp = u.group();
     const ch = u.channel();
@@ -464,6 +483,18 @@ pub fn fromMidi1(grp: u4, status_byte: u8, d1: u8, d2: u8) ?Ump {
 // ===========================================================================
 // Tests — round-trips + the spec's canonical scaling vectors
 // ===========================================================================
+
+test "system real-time messages round-trip" {
+    const u = system(0, System.start, 0, 0);
+    try std.testing.expectEqual(MessageType.system, u.messageType());
+    const m = decode(u);
+    try std.testing.expect(m == .system);
+    try std.testing.expectEqual(@as(u8, System.start), m.system.status);
+    // song position with data
+    const sp = decode(system(0, System.song_position, 12, 34));
+    try std.testing.expectEqual(@as(u8, 12), sp.system.data1);
+    try std.testing.expectEqual(@as(u8, 34), sp.system.data2);
+}
 
 test "note on packs and round-trips" {
     const u = noteOn(0, 3, 60, 0xC000, 0, 0);

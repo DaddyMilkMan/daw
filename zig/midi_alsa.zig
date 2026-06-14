@@ -32,6 +32,10 @@ const SND_SEQ_EVENT_CONTROLLER: u8 = 10; // control change
 const SND_SEQ_EVENT_PGMCHANGE: u8 = 11; // program change
 const SND_SEQ_EVENT_CHANPRESS: u8 = 12; // channel aftertouch
 const SND_SEQ_EVENT_PITCHBEND: u8 = 13; // pitch bend (value -8192..8191)
+const SND_SEQ_EVENT_START: u8 = 30; // transport start
+const SND_SEQ_EVENT_CONTINUE: u8 = 31; // transport continue
+const SND_SEQ_EVENT_STOP: u8 = 32; // transport stop
+const SND_SEQ_EVENT_CLOCK: u8 = 36; // 24-ppqn beat clock
 const EV_CLIENT_START: u8 = 60; // 60..65 = announce topology changes (hot-plug)
 const EV_PORT_CHANGE: u8 = 65;
 
@@ -93,6 +97,10 @@ pub const MidiEvent = struct {
         channel_pressure,
         poly_pressure,
         program_change,
+        clock, // 24-ppqn beat clock
+        start, // transport start
+        cont, // transport continue
+        stop, // transport stop
     };
     kind: Kind,
     note: u8 = 0, // note number (notes, poly aftertouch)
@@ -113,6 +121,10 @@ pub const MidiEvent = struct {
             .channel_pressure => .{ 0xD0 | ch, @intCast(self.value & 0x7F), 0 },
             .poly_pressure => .{ 0xA0 | ch, self.note, @intCast(self.value & 0x7F) },
             .pitch_bend => .{ 0xE0 | ch, @intCast(self.value & 0x7F), @intCast((self.value >> 7) & 0x7F) },
+            .clock => return midi2.system(group, midi2.System.timing_clock, 0, 0),
+            .start => return midi2.system(group, midi2.System.start, 0, 0),
+            .cont => return midi2.system(group, midi2.System.cont, 0, 0),
+            .stop => return midi2.system(group, midi2.System.stop, 0, 0),
         };
         return midi2.fromMidi1(group, status, d1, d2).?;
     }
@@ -228,7 +240,23 @@ pub const MidiInput = struct {
                     out[count] = .{ .kind = .pitch_bend, .value = @intCast(v14), .channel = @intCast(c.channel & 0x0F) };
                     count += 1;
                 },
-                else => {}, // SysEx, clock/transport, etc. not yet surfaced
+                SND_SEQ_EVENT_CLOCK => {
+                    out[count] = .{ .kind = .clock };
+                    count += 1;
+                },
+                SND_SEQ_EVENT_START => {
+                    out[count] = .{ .kind = .start };
+                    count += 1;
+                },
+                SND_SEQ_EVENT_CONTINUE => {
+                    out[count] = .{ .kind = .cont };
+                    count += 1;
+                },
+                SND_SEQ_EVENT_STOP => {
+                    out[count] = .{ .kind = .stop };
+                    count += 1;
+                },
+                else => {}, // SysEx etc. handled separately (see pollSysex)
             }
         }
         if (rescan) _ = self.connectAllSources();
