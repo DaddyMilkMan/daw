@@ -33,7 +33,24 @@ the event goes straight into the app's normal key handling.
 
 ## Examples
 - `baseline.txt` — settle, screenshot, quit.
-- `interact.txt` — drag a fader low→high, turn a knob, sweep a slider, click a toggle,
-  with before/after screenshots (verified: each widget responded).
+- `interact.txt` — showcase: drag a fader low→high, turn a knob, sweep a slider, click a
+  toggle (verified: each widget responded).
+- `daw_interact.txt` — the live **DAW**: Space toggles transport (Playing↔Stopped), then
+  drag the Drums mixer fader 85→0→100. Verified by reading the on-screen value/status.
 
 Screenshots (`*.png`) are git-ignored; scripts are kept as fixtures.
+
+## Zoom tool
+
+Thumbnails are too small to read values; `zig/main_crop.zig` crops + upscales a region:
+
+```sh
+zig run zig/main_crop.zig -- <in.png> <x> <y> <w> <h> <scale> <out.png>
+```
+
+The act → screenshot → **zoom to read the value/state** → adjust loop is exactly how a
+browser agent locates and verifies elements.
+
+## Notes
+- The live DAW binds **Space → transport toggle** and **Esc → quit** (`main_daw.zig`); the
+  transport play button is at ~(170, 29) and mixer faders are in the bottom strips.

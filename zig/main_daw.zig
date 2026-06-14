@@ -160,8 +160,9 @@ pub fn main() !void {
                     }
                 },
                 .mouse_up => down = false,
-                .key => |k| if (k == 9) {
-                    elapsed = secs;
+                .key => |k| {
+                    if (k == 9) elapsed = secs; // Esc: quit
+                    if (k == 65) state.playing = !state.playing; // Space: toggle transport
                 },
                 .expose => {},
             }

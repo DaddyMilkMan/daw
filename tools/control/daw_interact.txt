@@ -1,0 +1,25 @@
+# Playwright-style control of the live Zenith DAW (1180x760). Verified end-to-end.
+wait 50
+shot tools/control/d0_baseline.png
+# SPACE toggles transport (keycode 65) -> Stopped
+key 65
+wait 5
+shot tools/control/d1_space_stop.png
+# SPACE again -> Playing
+key 65
+wait 5
+shot tools/control/d2_space_play.png
+# drag the Drums mixer fader (x=305) down to 0, then up to 100
+move 305 625
+wait 1
+down
+wait 2
+move 305 720
+wait 3
+shot tools/control/d3_fader_0.png
+move 305 600
+wait 3
+shot tools/control/d4_fader_100.png
+up
+wait 3
+quit
