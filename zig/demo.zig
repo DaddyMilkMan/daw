@@ -28,16 +28,16 @@ pub fn renderDemo(s: *synth.Synth, buf: []f32, sr: u32) void {
             if (arp_idx < arp.len) {
                 if (prev_freq > 0) s.noteOff(prev_freq);
                 const fr = midiToFreq(arp[arp_idx]);
-                s.noteOn(fr);
+                s.noteOn(fr, 1.0);
                 prev_freq = fr;
                 arp_idx += 1;
                 next_event = i + step;
             } else if (!chord_started) {
                 if (prev_freq > 0) s.noteOff(prev_freq);
-                s.noteOn(midiToFreq(60));
-                s.noteOn(midiToFreq(64));
-                s.noteOn(midiToFreq(67));
-                s.noteOn(midiToFreq(72));
+                s.noteOn(midiToFreq(60), 1.0);
+                s.noteOn(midiToFreq(64), 1.0);
+                s.noteOn(midiToFreq(67), 1.0);
+                s.noteOn(midiToFreq(72), 1.0);
                 chord_started = true;
                 next_event = total;
             }

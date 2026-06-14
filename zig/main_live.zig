@@ -67,7 +67,7 @@ pub fn main() !void {
             for (script) |sc| {
                 if (sc.at == b) {
                     const f = demo.midiToFreq(@floatFromInt(sc.note));
-                    if (sc.on) s.noteOn(f) else s.noteOff(f);
+                    if (sc.on) s.noteOn(f, 1.0) else s.noteOff(f);
                 }
             }
             s.renderBlock(&fbuf);
@@ -103,7 +103,7 @@ pub fn main() !void {
         for (events[0..nev]) |e| {
             const f = demo.midiToFreq(@floatFromInt(e.note));
             switch (e.kind) {
-                .note_on => s.noteOn(f),
+                .note_on => s.noteOn(f, 1.0),
                 .note_off => s.noteOff(f),
             }
         }

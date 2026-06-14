@@ -27,20 +27,24 @@ fn routeMidi(engine: *audio.Engine, msg: midi2.Message) void {
     switch (msg) {
         .note_on => |no| {
             const on = no.velocity > 0;
-            engine.pushNote(on, audio.noteToFreq(no.note));
+            engine.pushNote(on, audio.noteToFreq(no.note), audio.vel16(no.velocity));
             elog.debug("midi note {s} {d} vel {d}", .{ if (on) "ON" else "OFF", no.note, no.velocity });
         },
         .note_off => |no| {
-            engine.pushNote(false, audio.noteToFreq(no.note));
+            engine.pushNote(false, audio.noteToFreq(no.note), 0);
             elog.debug("midi note OFF {d}", .{no.note});
         },
         .control_change => |cc| switch (cc.index) {
-            74 => engine.setCutoff(audio.ccToCutoff(cc.value)),
+            1 => engine.setMod(audio.ccToUnit(cc.value)), // mod wheel -> vibrato
+            7, 11 => engine.setExpression(audio.ccToUnit(cc.value)), // volume / expression
+            64 => engine.setSustain(cc.value >= 0x4000_0000), // sustain pedal (>=64)
             71 => engine.setResonance(audio.ccToUnit(cc.value)),
-            else => {},
+            74 => engine.setCutoff(audio.ccToCutoff(cc.value)),
+            else => elog.debug("midi cc {d} = {d}", .{ cc.index, cc.value }),
         },
         .pitch_bend => |pb| engine.setBend(audio.bendToRatio(pb.value, 2.0)),
         .channel_pressure => |cp| engine.setPressure(audio.ccToUnit(cp.value)),
+        .program_change => |pc| elog.debug("midi program change -> {d}", .{pc.program}),
         else => {},
     }
 }
@@ -329,5 +333,5 @@ pub fn main() !void {
 /// The piano-roll's audition hook: preview an edited note on the engine synth.
 fn auditionSynth(ctx: ?*anyopaque, pitch: u8, on: bool) void {
     const eng: *audio.Engine = @ptrCast(@alignCast(ctx orelse return));
-    eng.pushNote(on, audio.noteToFreq(@intCast(pitch)));
+    eng.pushNote(on, audio.noteToFreq(@intCast(pitch)), 0.85); // audition at a firm velocity
 }

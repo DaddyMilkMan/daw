@@ -116,7 +116,7 @@ pub fn main() !void {
         for (live_ev[0..in_count]) |e| {
             const f = demo.midiToFreq(@floatFromInt(e.note));
             switch (e.kind) {
-                .note_on => s.noteOn(f),
+                .note_on => s.noteOn(f, 1.0),
                 .note_off => s.noteOff(f),
             }
             seq.record(loop_pos, loop_idx, e) catch {};
@@ -127,7 +127,7 @@ pub fn main() !void {
         for (pb_ev[0..pb]) |te| {
             const f = demo.midiToFreq(@floatFromInt(te.event.note));
             switch (te.event.kind) {
-                .note_on => s.noteOn(f),
+                .note_on => s.noteOn(f, 1.0),
                 .note_off => s.noteOff(f),
             }
         }

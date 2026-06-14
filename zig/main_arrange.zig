@@ -72,7 +72,7 @@ pub fn main() !void {
         const cnt = arrange.collectEvents(&q, @intCast(pos), @intCast(n), &evbuf);
         for (evbuf[0..cnt]) |ev| {
             const f = demo.midiToFreq(@floatFromInt(ev.pitch));
-            if (ev.on) synths[ev.track].noteOn(f) else synths[ev.track].noteOff(f);
+            if (ev.on) synths[ev.track].noteOn(f, 1.0) else synths[ev.track].noteOff(f);
         }
         for (0..ntracks) |i| synths[i].renderBlock(bufs[i][pos .. pos + n]);
         pos += n;

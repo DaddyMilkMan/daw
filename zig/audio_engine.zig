@@ -25,8 +25,17 @@ fn frameInBlock(f: u64, start: u64, n: u64, len: u64) bool {
 }
 
 const RING = 512; // note-event queue capacity (power-of-two not required)
-const NoteEv = struct { on: bool, freq: f32 };
+const NoteEv = struct { on: bool, freq: f32, vel: f32 = 1.0 };
 pub const MAXTRACKS = 8;
+
+/// Normalize a 7-bit MIDI 1.0 velocity (0..127) to 0..1.
+pub fn vel7(v: u8) f32 {
+    return @as(f32, @floatFromInt(v)) / 127.0;
+}
+/// Normalize a 16-bit MIDI 2.0 velocity (0..65535) to 0..1.
+pub fn vel16(v: u32) f32 {
+    return @as(f32, @floatFromInt(@min(v, 65535))) / 65535.0;
+}
 
 /// Mix `ntracks` mono stems at loop frame `pos` into a stereo block, applying
 /// per-track gain + constant-power pan + mute/solo, then master gain. Reports each
@@ -181,6 +190,10 @@ pub const Engine = struct {
     ctl_res_bits: u32 = @bitCast(@as(f32, 0.25)), // CC71 -> resonance 0..1
     ctl_bend_bits: u32 = @bitCast(@as(f32, 1.0)), // pitch bend -> freq multiplier
     ctl_press_bits: u32 = @bitCast(@as(f32, 0.0)), // channel pressure -> brightness
+    ctl_mod_bits: u32 = @bitCast(@as(f32, 0.0)), // CC1 mod wheel -> vibrato depth
+    ctl_expr_bits: u32 = @bitCast(@as(f32, 1.0)), // CC7*CC11 volume/expression -> gain
+    ctl_sustain: bool = false, // CC64 sustain pedal
+    prev_sustain: bool = false, // audio-thread edge detector for the pedal
 
     // --- SPSC note queue: UI/MIDI thread produces, audio thread consumes ---
     events: [RING]NoteEv = undefined,
@@ -278,13 +291,23 @@ pub const Engine = struct {
     pub fn setPressure(self: *Engine, v: f32) void {
         @atomicStore(u32, &self.ctl_press_bits, @bitCast(v), .monotonic);
     }
+    pub fn setMod(self: *Engine, v: f32) void { // CC1 mod wheel -> vibrato depth
+        @atomicStore(u32, &self.ctl_mod_bits, @bitCast(v), .monotonic);
+    }
+    pub fn setExpression(self: *Engine, v: f32) void { // CC7/CC11 -> synth gain
+        @atomicStore(u32, &self.ctl_expr_bits, @bitCast(v), .monotonic);
+    }
+    pub fn setSustain(self: *Engine, on: bool) void { // CC64 sustain pedal
+        @atomicStore(bool, &self.ctl_sustain, on, .monotonic);
+    }
 
-    /// Queue a note on/off (called from the UI/MIDI thread). Lock-free; drops if full.
-    pub fn pushNote(self: *Engine, on: bool, freq: f32) void {
+    /// Queue a note on/off with velocity (0..1). Called from the UI/MIDI thread;
+    /// lock-free, drops if the ring is full. Velocity is ignored for note-offs.
+    pub fn pushNote(self: *Engine, on: bool, freq: f32, vel: f32) void {
         const h = @atomicLoad(usize, &self.ev_head, .monotonic);
         const next = (h + 1) % RING;
         if (next == @atomicLoad(usize, &self.ev_tail, .acquire)) return; // full
-        self.events[h] = .{ .on = on, .freq = freq };
+        self.events[h] = .{ .on = on, .freq = freq, .vel = vel };
         @atomicStore(usize, &self.ev_head, next, .release);
     }
     fn drainNotes(self: *Engine) void {
@@ -293,7 +316,7 @@ pub const Engine = struct {
             if (t == @atomicLoad(usize, &self.ev_head, .acquire)) break;
             const ev = self.events[t];
             @atomicStore(usize, &self.ev_tail, (t + 1) % RING, .release);
-            if (ev.on) self.synth.noteOn(ev.freq) else self.synth.noteOff(ev.freq);
+            if (ev.on) self.synth.noteOn(ev.freq, ev.vel) else self.synth.noteOff(ev.freq);
         }
     }
 
@@ -315,13 +338,24 @@ pub const Engine = struct {
         const n = self.samples.len;
 
         while (!@atomicLoad(bool, &self.quit, .monotonic)) {
-            self.drainNotes();
             // apply high-res MIDI 2.0 controllers to the synth for this block
+            // (latest-value-wins atomics). Sustain is edge-detected so pedal-up
+            // releases held voices exactly once, and is applied BEFORE draining the
+            // note queue so a queued note-off correctly defers while the pedal is down.
             const base_cut: f32 = @bitCast(@atomicLoad(u32, &self.ctl_cutoff_bits, .monotonic));
             const press: f32 = @bitCast(@atomicLoad(u32, &self.ctl_press_bits, .monotonic));
             self.synth.cutoff = std.math.clamp(base_cut * (1.0 + press * 2.0), 100.0, 16000.0);
             self.synth.resonance = @bitCast(@atomicLoad(u32, &self.ctl_res_bits, .monotonic));
             self.synth.bend = @bitCast(@atomicLoad(u32, &self.ctl_bend_bits, .monotonic));
+            self.synth.mod = @bitCast(@atomicLoad(u32, &self.ctl_mod_bits, .monotonic));
+            self.synth.pressure = press;
+            self.synth.expression = @bitCast(@atomicLoad(u32, &self.ctl_expr_bits, .monotonic));
+            const sus = @atomicLoad(bool, &self.ctl_sustain, .monotonic);
+            if (sus != self.prev_sustain) {
+                self.synth.setSustain(sus);
+                self.prev_sustain = sus;
+            }
+            self.drainNotes();
             const playing = @atomicLoad(bool, &self.playing, .monotonic);
             // sequence the clip's notes into the synth (note-on/off at frame crossings)
             if (playing and self.seq_len > 0) {
@@ -329,7 +363,7 @@ pub const Engine = struct {
                 const sn = self.seq_bufs[ai][0..self.seq_counts[ai]];
                 for (sn) |note| {
                     const freq = noteToFreq(@intCast(note.pitch));
-                    if (frameInBlock(note.start % self.seq_len, self.seq_pos, N, self.seq_len)) self.synth.noteOn(freq);
+                    if (frameInBlock(note.start % self.seq_len, self.seq_pos, N, self.seq_len)) self.synth.noteOn(freq, vel7(@intCast(note.velocity)));
                     if (frameInBlock((note.start + note.len) % self.seq_len, self.seq_pos, N, self.seq_len)) self.synth.noteOff(freq);
                 }
                 self.seq_pos = (self.seq_pos + N) % self.seq_len;
