@@ -16,6 +16,54 @@ const alog = std.log.scoped(.audio);
 
 const RING = 512; // note-event queue capacity (power-of-two not required)
 const NoteEv = struct { on: bool, freq: f32 };
+pub const MAXTRACKS = 8;
+
+/// Mix `ntracks` mono stems at loop frame `pos` into a stereo block, applying
+/// per-track gain + constant-power pan + mute/solo, then master gain. Reports each
+/// track's block peak (post-fader). Pure — the live engine reads atomics into
+/// plain arrays and calls this, and it's unit-tested directly.
+pub fn mixStems(
+    stems: []const []const f32,
+    ntracks: usize,
+    pos: usize,
+    n: usize,
+    gains: []const f32,
+    pans: []const f32,
+    mutes: []const bool,
+    solos: []const bool,
+    master: f32,
+    out_l: []f32,
+    out_r: []f32,
+    track_peak: []f32,
+) void {
+    @memset(out_l[0..n], 0);
+    @memset(out_r[0..n], 0);
+    var any_solo = false;
+    for (0..ntracks) |ti| {
+        if (solos[ti]) any_solo = true;
+    }
+    for (0..ntracks) |ti| {
+        track_peak[ti] = 0;
+        const active = !mutes[ti] and !(any_solo and !solos[ti]);
+        if (!active or ti >= stems.len or stems[ti].len == 0) continue;
+        const stem = stems[ti];
+        const ang = (std.math.clamp(pans[ti], -1.0, 1.0) * 0.5 + 0.5) * (std.math.pi / 2.0);
+        const lg = @cos(ang) * gains[ti];
+        const rg = @sin(ang) * gains[ti];
+        var f: usize = 0;
+        while (f < n) : (f += 1) {
+            const s = stem[(pos + f) % stem.len];
+            out_l[f] += s * lg;
+            out_r[f] += s * rg;
+            const pk = @abs(s * gains[ti]);
+            if (pk > track_peak[ti]) track_peak[ti] = pk;
+        }
+    }
+    for (0..n) |f| {
+        out_l[f] *= master;
+        out_r[f] *= master;
+    }
+}
 
 // Try these output/input devices in order, so audio works on any system — a
 // PipeWire/Pulse desktop or bare ALSA hardware of any age. `default` first
@@ -38,8 +86,16 @@ fn openIn(preferred: [*:0]const u8, rate: u32) ?alsa.StreamIn {
 }
 
 pub const Engine = struct {
-    samples: []const f32, // mono source loop (read-only once started)
+    samples: []const f32, // mono source loop (legacy single-loop fallback)
     audio_tracks: []const audio_track.AudioTrack = &.{}, // linear-timeline audio clips
+    // per-track mixer stems + controls (the live mixer drives these, lock-free)
+    stems: []const []const f32 = &.{},
+    ntracks: usize = 0,
+    tgain_bits: [MAXTRACKS]u32 = [_]u32{@bitCast(@as(f32, 0.8))} ** MAXTRACKS,
+    tpan_bits: [MAXTRACKS]u32 = [_]u32{0} ** MAXTRACKS,
+    tmute: [MAXTRACKS]bool = [_]bool{false} ** MAXTRACKS,
+    tsolo: [MAXTRACKS]bool = [_]bool{false} ** MAXTRACKS,
+    tlevel_bits: [MAXTRACKS]u32 = [_]u32{0} ** MAXTRACKS, // published per-track peak
     rate: u32 = 48000,
     channels: u16 = 2,
     device: [*:0]const u8 = "default",
@@ -87,6 +143,22 @@ pub const Engine = struct {
     }
     pub fn setGain(self: *Engine, g: f32) void {
         @atomicStore(u32, &self.gain_bits, @bitCast(g), .monotonic);
+    }
+    // per-track mixer controls (called from the UI thread; lock-free)
+    pub fn setTrackGain(self: *Engine, i: usize, g: f32) void {
+        if (i < MAXTRACKS) @atomicStore(u32, &self.tgain_bits[i], @bitCast(g), .monotonic);
+    }
+    pub fn setTrackPan(self: *Engine, i: usize, p: f32) void {
+        if (i < MAXTRACKS) @atomicStore(u32, &self.tpan_bits[i], @bitCast(p), .monotonic);
+    }
+    pub fn setTrackMute(self: *Engine, i: usize, m: bool) void {
+        if (i < MAXTRACKS) @atomicStore(bool, &self.tmute[i], m, .monotonic);
+    }
+    pub fn setTrackSolo(self: *Engine, i: usize, s: bool) void {
+        if (i < MAXTRACKS) @atomicStore(bool, &self.tsolo[i], s, .monotonic);
+    }
+    pub fn getTrackLevel(self: *Engine, i: usize) f32 {
+        return if (i < MAXTRACKS) @bitCast(@atomicLoad(u32, &self.tlevel_bits[i], .monotonic)) else 0;
     }
     pub fn isLive(self: *Engine) bool {
         return @atomicLoad(bool, &self.started, .monotonic);
@@ -169,21 +241,42 @@ pub const Engine = struct {
                 audio_track.mixTracks(self.audio_tracks, aL[0..N], aR[0..N], self.tl_pos);
             }
 
-            var pk: f32 = 0;
-            var f: usize = 0;
-            while (f < N) : (f += 1) {
-                const syn = sb[f]; // synth always sounds (it's note-gated)
-                var l: f32 = syn + aL[f];
-                var r: f32 = syn + aR[f];
-                if (playing and n > 0) {
-                    const lp = self.samples[pos] * gain;
-                    l += lp;
-                    r += lp;
+            // mixer playback: per-track stems (the live mixer) OR the legacy loop
+            var pL: [N]f32 = [_]f32{0} ** N;
+            var pR: [N]f32 = [_]f32{0} ** N;
+            if (playing and self.ntracks > 0) {
+                var tg: [MAXTRACKS]f32 = undefined;
+                var tp: [MAXTRACKS]f32 = undefined;
+                var tm: [MAXTRACKS]bool = undefined;
+                var ts: [MAXTRACKS]bool = undefined;
+                var tpk: [MAXTRACKS]f32 = undefined;
+                for (0..self.ntracks) |ti| {
+                    tg[ti] = @bitCast(@atomicLoad(u32, &self.tgain_bits[ti], .monotonic));
+                    tp[ti] = @bitCast(@atomicLoad(u32, &self.tpan_bits[ti], .monotonic));
+                    tm[ti] = @atomicLoad(bool, &self.tmute[ti], .monotonic);
+                    ts[ti] = @atomicLoad(bool, &self.tsolo[ti], .monotonic);
+                }
+                mixStems(self.stems, self.ntracks, pos, N, &tg, &tp, &tm, &ts, gain, &pL, &pR, &tpk);
+                for (0..self.ntracks) |ti| @atomicStore(u32, &self.tlevel_bits[ti], @bitCast(tpk[ti]), .monotonic);
+                const loop_len = self.stems[0].len;
+                if (loop_len > 0) pos = (pos + N) % loop_len;
+            } else if (playing and n > 0) {
+                var f0: usize = 0;
+                while (f0 < N) : (f0 += 1) {
+                    pL[f0] = self.samples[pos] * gain;
+                    pR[f0] = pL[f0];
                     pos += 1;
                     if (pos >= n) pos = 0;
                 }
-                l = std.math.clamp(l, -1.0, 1.0);
-                r = std.math.clamp(r, -1.0, 1.0);
+            } else {
+                for (0..self.ntracks) |ti| @atomicStore(u32, &self.tlevel_bits[ti], @bitCast(@as(f32, 0)), .monotonic);
+            }
+
+            var pk: f32 = 0;
+            var f: usize = 0;
+            while (f < N) : (f += 1) {
+                const l = std.math.clamp(sb[f] + aL[f] + pL[f], -1.0, 1.0); // synth is note-gated
+                const r = std.math.clamp(sb[f] + aR[f] + pR[f], -1.0, 1.0);
                 pk = @max(pk, @max(@abs(l), @abs(r)));
                 buf[f * 2] = @intFromFloat(l * 32767.0);
                 buf[f * 2 + 1] = @intFromFloat(r * 32767.0);
@@ -215,6 +308,45 @@ pub const Engine = struct {
         }
     }
 };
+
+test "mixStems: fader/mute/solo/pan affect the mix" {
+    // two 1-frame stems: track 0 = 1.0, track 1 = 1.0
+    const s0 = [_]f32{1.0};
+    const s1 = [_]f32{1.0};
+    const stems = [_][]const f32{ &s0, &s1 };
+    var l: [1]f32 = undefined;
+    var r: [1]f32 = undefined;
+    var pk: [MAXTRACKS]f32 = undefined;
+    const expectApprox = std.testing.expectApproxEqAbs;
+
+    // both at gain 1, center pan, master 1 -> each contributes 0.7071 per channel
+    mixStems(&stems, 2, 0, 1, &.{ 1, 1 }, &.{ 0, 0 }, &.{ false, false }, &.{ false, false }, 1.0, &l, &r, &pk);
+    try expectApprox(@as(f32, 2 * 0.7071), l[0], 1e-3);
+
+    // mute track 0 -> only track 1
+    mixStems(&stems, 2, 0, 1, &.{ 1, 1 }, &.{ 0, 0 }, &.{ true, false }, &.{ false, false }, 1.0, &l, &r, &pk);
+    try expectApprox(@as(f32, 0.7071), l[0], 1e-3);
+    try expectApprox(@as(f32, 0), pk[0], 1e-6); // muted track reports 0 level
+
+    // solo track 1 -> only track 1 (track 0 dropped though not muted)
+    mixStems(&stems, 2, 0, 1, &.{ 1, 1 }, &.{ 0, 0 }, &.{ false, false }, &.{ false, true }, 1.0, &l, &r, &pk);
+    try expectApprox(@as(f32, 0.7071), l[0], 1e-3);
+    try expectApprox(@as(f32, 0), pk[0], 1e-6);
+    try expectApprox(@as(f32, 1.0), pk[1], 1e-6);
+
+    // fader: track 0 gain 0.5, track 1 muted -> level halved
+    mixStems(&stems, 2, 0, 1, &.{ 0.5, 1 }, &.{ 0, 0 }, &.{ false, true }, &.{ false, false }, 1.0, &l, &r, &pk);
+    try expectApprox(@as(f32, 0.5), pk[0], 1e-6);
+
+    // hard-left pan on track 0 (solo it) -> all in L, none in R
+    mixStems(&stems, 2, 0, 1, &.{ 1, 1 }, &.{ -1, 0 }, &.{ false, false }, &.{ true, false }, 1.0, &l, &r, &pk);
+    try std.testing.expect(l[0] > 0.9);
+    try expectApprox(@as(f32, 0), r[0], 1e-6);
+
+    // master gain scales everything
+    mixStems(&stems, 2, 0, 1, &.{ 1, 1 }, &.{ 0, 0 }, &.{ false, true }, &.{ false, false }, 0.5, &l, &r, &pk);
+    try expectApprox(@as(f32, 0.5 * 0.7071), l[0], 1e-3);
+}
 
 /// MIDI note number -> frequency (A4 = 69 = 440 Hz).
 pub fn noteToFreq(note: u7) f32 {

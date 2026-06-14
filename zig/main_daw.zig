@@ -90,9 +90,15 @@ pub fn main() !void {
     view.wave = daw.synthDrumLoop(a, 96000) catch &.{};
     var state = daw.State{};
 
-    // real-time audio: render the loop to the OS device (ALSA -> PipeWire) on its
-    // own thread. The UI pushes transport/gain; the engine drives playhead+meters.
+    // real-time audio: per-track mixer STEMS rendered to the OS device on its own
+    // thread. The UI pushes transport + per-track gain/pan/mute/solo; the engine
+    // mixes the stems and publishes per-track + master levels back to the meters.
+    const loop_n: usize = if (view.wave.len > 0) view.wave.len else 96000;
+    const ntr = @min(p.tracks.items.len, audio.MAXTRACKS);
+    const stems = daw.synthStems(a, 48000, loop_n, ntr) catch &[_][]f32{};
     var engine = audio.Engine{ .samples = view.wave, .rate = 48000 };
+    engine.stems = stems;
+    engine.ntracks = if (stems.len > 0) ntr else 0;
     engine.start();
     defer engine.stop();
     engine.setPlaying(state.playing);
@@ -206,9 +212,18 @@ pub fn main() !void {
         if (state.audio_active) {
             state.playhead = engine.playheadNorm();
             state.audio_level = @max(engine.getPeak(), engine.getInputPeak());
+            for (0..ntr) |ti| state.track_levels[ti] = engine.getTrackLevel(ti);
         }
 
         const action = view.frame(&p, bar, &state, @floatFromInt(W), @floatFromInt(H), @floatFromInt(mx), @floatFromInt(my), down, rclick);
+
+        // push the live mixer state (per-track gain/pan/mute/solo) to the engine
+        for (0..ntr) |ti| {
+            engine.setTrackGain(ti, p.tracks.items[ti].gain);
+            engine.setTrackPan(ti, p.tracks.items[ti].pan);
+            engine.setTrackMute(ti, state.mutes[ti]);
+            engine.setTrackSolo(ti, state.solos[ti]);
+        }
         rclick = false;
 
         // push UI transport/gain decisions (e.g. the play/pause button) to the engine

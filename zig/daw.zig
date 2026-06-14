@@ -34,6 +34,7 @@ pub const State = struct {
     mutes: [8]bool = [_]bool{false} ** 8,
     solos: [8]bool = [_]bool{false} ** 8,
     meters: [8]f32 = [_]f32{0.3} ** 8, // smoothed meter levels (VU ballistics)
+    track_levels: [8]f32 = [_]f32{0} ** 8, // real per-track output level from the engine
     // real-audio drive: when the audio engine is running, it owns the playhead
     // and feeds the live master peak so meters bounce with the actual signal.
     audio_active: bool = false,
@@ -250,6 +251,42 @@ pub fn synthDrumLoop(a: std.mem.Allocator, n: usize) ![]f32 {
     }
     return buf;
 }
+/// Per-track mixer STEMS — distinct audio per channel so the mixer faders/mute/
+/// solo audibly do something. Drums (the loop), Bass (low), Lead (mid melody),
+/// Keys (chord), Pad (sustained) — distinct frequency content makes solo/mute
+/// measurable (FFT) and the meters per-track. Returns `ntracks` mono buffers.
+pub fn synthStems(a: std.mem.Allocator, sr_u: u32, n: usize, ntracks: usize) ![][]f32 {
+    const sr: f32 = @floatFromInt(sr_u);
+    const stems = try a.alloc([]f32, ntracks);
+    for (stems, 0..) |*st, ti| {
+        st.* = try a.alloc(f32, n);
+        const buf = st.*;
+        for (buf, 0..) |*v, i| {
+            const t = @as(f32, @floatFromInt(i)) / sr;
+            const beat = @mod(t, 0.5); // 120 BPM
+            v.* = switch (ti) {
+                0 => blk: { // Drums: kick + hats + snare (the loop)
+                    const kick = @sin(beat * 2.0 * std.math.pi * (52.0 + 45.0 * @exp(-beat * 28.0))) * @exp(-beat * 8.5) * 0.9;
+                    const hp = @mod(t, 0.25);
+                    const hat = noise(@intCast(i)) * @exp(-hp * 75.0) * 0.28;
+                    const snp = @mod(t - 0.5 + 1.0, 1.0);
+                    const snare = (noise(@as(u32, @intCast(i)) +% 99) * 0.7) * @exp(-snp * 15.0) * 0.5;
+                    break :blk std.math.clamp(kick + hat + snare, -1.0, 1.0);
+                },
+                1 => @sin(t * 2.0 * std.math.pi * 55.0) * 0.5 * @exp(-beat * 4.0), // Bass: A1 plucks
+                2 => blk: { // Lead: a 4-note arpeggio (A4..)
+                    const notes = [_]f32{ 440.0, 554.37, 659.25, 880.0 };
+                    const step = @as(usize, @intFromFloat(@mod(t * 4.0, 4.0)));
+                    break :blk @sin(t * 2.0 * std.math.pi * notes[step]) * 0.28 * @exp(-@mod(t, 0.25) * 6.0);
+                },
+                3 => (@sin(t * 2.0 * std.math.pi * 261.63) + @sin(t * 2.0 * std.math.pi * 329.63) + @sin(t * 2.0 * std.math.pi * 392.0)) * 0.12, // Keys: C-major triad
+                else => (@sin(t * 2.0 * std.math.pi * 220.0) + @sin(t * 2.0 * std.math.pi * 277.18)) * 0.14, // Pad: sustained A+C#
+            };
+        }
+    }
+    return stems;
+}
+
 // waveform rendering moved to the toolkit: widgets.waveform(...)
 
 fn drawClips(g: *Gpu, fb: *const Font, u: *widgets.Ui, p: *project.Project, ti: usize, r: [4]f32, bar: u64, state: *State, wave: []const f32) void {
@@ -602,8 +639,9 @@ pub const View = struct {
             if (c.rectOf(500 + @as(u64, ti))) |r| {
                 const muted = !is_master and state.mutes[ti];
                 const target = if (muted) 0.0 else if (state.audio_active)
-                    // real master peak, varied per track so the meters stay lively
-                    state.audio_level * gain.* * (0.55 + 0.45 * @abs(@sin(@as(f32, @floatFromInt(ti)) * 1.7 + 0.4)))
+                    // REAL level from the engine: master peak for the master strip,
+                    // the per-track post-fader output level for each channel.
+                    (if (is_master) state.audio_level else state.track_levels[ti])
                 else
                     meterLevel(ti, ts, gain.*, state.playing);
                 _ = u.meter(@intCast(850 + ti), r[0], r[1], r[2], r[3], target); // toolkit VU meter (ballistics)
