@@ -364,7 +364,15 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   quadratic beziers, scan-converts (analytic-H + 4× vertical SS) into the same `font.Font` the GPU
   atlas consumes. `rasterizeAscii()` loads **any installed .ttf at runtime** (563 on this box) — the
   real path to "thousands of fonts." Showcase shows 3 baked + 3 runtime system fonts side by side.
-- NEXT (this thread): custom cursors + drag effects ("things web has"), SVG vector import, then
-  wire MIDI 2.0/real-audio playback into the live `zenith` app.
+- **Custom cursors** (`window_glx.setCursor` + CursorShape, core X cursor font, cached): DAW shows
+  resize arrows on edges, grabbing while dragging, hand over clickables; showcase mirrors it.
+- **Drag effect**: showcase draggable "Drag me" chip — grab → follows cursor with a lift (shadow +
+  scale) + grabbing cursor. Rounds out hover/drag/cursor (the "things web has" effects).
+- **SVG vector import** (`svg.zig`): viewBox; `<path>` M/L/H/V/C/S/Q/T/Z; rect(+rx)/circle/ellipse/
+  line/poly; solid fills + fill-opacity (#hex/rgb/named); AA scan-convert (nonzero/even-odd) → the
+  same `image.Image` as PNG → `GpuImage`. Showcase shows PNG (raster) + SVG (vector) side by side.
+  "import svgs pngs any image type" ✓ (arcs approximated; gradients/text/full-stroke out of scope).
+- NEXT: wire MIDI 2.0/real-audio playback into the live `zenith` app (engine→audio_alsa on the
+  audio thread); rounded-rect-clip + full stroke geometry for SVG; SVG/PNG asset browser in the DAW.
 
 *(Add new dated entries as milestones complete.)*
