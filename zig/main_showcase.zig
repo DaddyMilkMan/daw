@@ -154,7 +154,7 @@ fn frac(x: f32) f32 {
 pub fn main() !void {
     const a = std.heap.page_allocator;
     var W: usize = 1200;
-    var H: usize = 760;
+    var H: usize = 860;
 
     var window = try win.NativeWindow.open(a, W, H, "Zenith Toolkit");
     defer window.close();
@@ -169,6 +169,22 @@ pub fn main() !void {
     defer fu.deinit();
     var fd = try gpu2d.GpuFont.init(a, &@import("font_display.zig").font);
     defer fd.deinit();
+    // variety typefaces
+    var fserif = try gpu2d.GpuFont.init(a, &@import("font_serif.zig").font);
+    defer fserif.deinit();
+    var fmono = try gpu2d.GpuFont.init(a, &@import("font_mono.zig").font);
+    defer fmono.deinit();
+    var fcond = try gpu2d.GpuFont.init(a, &@import("font_cond.zig").font);
+    defer fcond.deinit();
+    var falt = try gpu2d.GpuFont.init(a, &@import("font_alt.zig").font);
+    defer falt.deinit();
+    var fround = try gpu2d.GpuFont.init(a, &@import("font_round.zig").font);
+    defer fround.deinit();
+    const faces = [_]struct { f: *const gpu2d.GpuFont, n: []const u8 }{
+        .{ .f = &fu, .n = "Fira Sans" },     .{ .f = &fserif, .n = "Noto Serif" },
+        .{ .f = &fmono, .n = "Fira Mono" },   .{ .f = &fcond, .n = "Fira Condensed" },
+        .{ .f = &falt, .n = "Open Sans" },    .{ .f = &fround, .n = "Cantarell" },
+    };
     var c = flex.Ctx.init(&g, &fb, &fu, &fd);
     var u = widgets.Ui.init(&g);
     var v = Vals{};
@@ -238,6 +254,10 @@ pub fn main() !void {
                 c.label("GPU - SDF - GLASS - FLEX", &fc, faint, .{ .tracking = 2 });
             }
             c.close();
+
+            // typeface variety
+            c.label("TYPEFACES  ( variety set )", &fc, faint, .{ .h = px(20), .tracking = 1.4 });
+            c.box(.{ .w = grow(), .h = px(118), .radius = 14, .bg = card_t, .bg2 = card_b, .elev = 1, .shadow = 14, .id = 950 });
 
             // gradients / color blends row
             c.label("GRADIENTS & COLOR BLENDS", &fc, faint, .{ .h = px(20), .tracking = 1.4 });
@@ -375,6 +395,18 @@ pub fn main() !void {
             if (hov) g.rect(r[0], r[1], r[2], r[3], 7, Color.rgba(108, 147, 244, 50));
             icn.f(&g, r[0] + r[2] / 2, r[1] + r[3] / 2, 16, if (hov) txt else dim);
         };
+        // typeface variety — one sample line per face, 2 columns x 3 rows
+        if (c.rectOf(950)) |r| {
+            const colw = (r[2] - 32) / 2;
+            for (faces, 0..) |fe, i| {
+                const col: f32 = @floatFromInt(i / 3);
+                const row: f32 = @floatFromInt(i % 3);
+                const fx = r[0] + 18 + col * (colw + 4);
+                const fy = r[1] + 12 + row * 34;
+                fc.text(&g, fx, fy, fe.n, accent);
+                fe.f.text(&g, fx, fy + 13, "The quick brown fox 0123", txt);
+            }
+        }
 
         u.end();
         g.flush();

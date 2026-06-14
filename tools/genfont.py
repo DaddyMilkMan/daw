@@ -52,13 +52,23 @@ def emit(path, cell_h, adv, wid, off, data, label):
 
 
 FIRA = "/usr/share/fonts/opentype/fira/"
-# A real type scale: caption 12 / body 14 / title 16 / display 28, with weight
-# climbing alongside size (Medium for small UI labels, SemiBold for display).
+NOTO = "/usr/share/fonts/truetype/noto/"
+OPEN = "/usr/share/fonts/truetype/open-sans/"
+CANT = "/usr/share/fonts/opentype/cantarell/"
+# The UI type scale: caption 12 / body 14 / title 16 / display 28, weight climbing
+# with size — PLUS a variety set of distinct typefaces (serif / mono / condensed
+# / alt-sans) so the toolkit isn't single-font. (For literally thousands of
+# fonts, a runtime TTF loader is the scalable path; this is the curated set.)
 JOBS = [
     ("zig/font_caption.zig", FIRA + "FiraSans-Medium.otf", 12, "Fira Sans Medium 12"),
     ("zig/font_body.zig", FIRA + "FiraSans-Regular.otf", 14, "Fira Sans Regular 14"),
     ("zig/font_ui.zig", FIRA + "FiraSans-Medium.otf", 16, "Fira Sans Medium 16"),
     ("zig/font_display.zig", FIRA + "FiraSans-SemiBold.otf", 28, "Fira Sans SemiBold 28"),
+    ("zig/font_serif.zig", NOTO + "NotoSerif-Regular.ttf", 17, "Noto Serif 17"),
+    ("zig/font_mono.zig", FIRA + "FiraMono-Regular.otf", 15, "Fira Mono 15"),
+    ("zig/font_cond.zig", FIRA + "FiraSansCondensed-Regular.otf", 17, "Fira Sans Condensed 17"),
+    ("zig/font_alt.zig", OPEN + "OpenSans-Regular.ttf", 16, "Open Sans 16"),
+    ("zig/font_round.zig", CANT + "Cantarell-Regular.otf", 16, "Cantarell 16"),
 ]
 for path, otf, size, label in JOBS:
     ch, a, w, o, d = gen(otf, size)
