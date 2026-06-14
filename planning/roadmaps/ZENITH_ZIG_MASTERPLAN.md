@@ -96,11 +96,14 @@ Status: ✅ done · 🟡 partial · ❌ not started
 
 ### 4.2 Platform — MIDI  *(JUCE: juce_audio_devices MIDI + MidiMessage)*
 - ✅ ALSA seq **input** (auto-connect every source + hot-plug), MIDI 2.0 **UMP** input (`midi2_alsa.zig`) with MIDI-1.0 fallback (`midi_alsa.zig`)
-- ✅ **Message parsing — notes + CC + pitch bend + channel & poly aftertouch + program change** on BOTH paths (the MIDI-1.0 fallback rebuilds canonical bytes → shared `midi2.fromMidi1`, so it decodes to the same Messages as the UMP path). **Velocity reaches the synth** (scales amplitude + brightness); mod wheel→vibrato, CC7/CC11→expression gain, **CC64 sustain pedal**, CC71→resonance, CC74→cutoff, bend→pitch, aftertouch→brightness, all routed live (`routeMidi`). ❌ SysEx, MIDI clock/transport sync, **MPE** (per-note controllers decode but aren't voiced per-note yet)
-- 🟡 MIDI **output** — UMP out via `midi2_alsa.Midi2Output` (the DAW echoes input to its own out port); ❌ routing MIDI tracks/clips to hardware, dedicated out device picker
-- ❌ MIDI device **enumeration/selection** (auto-connects all; no UI picker)
+- ✅ **Message parsing — notes + CC + pitch bend + channel & poly aftertouch + program change** on BOTH paths (the MIDI-1.0 fallback rebuilds canonical bytes → shared `midi2.fromMidi1`, so it decodes to the same Messages as the UMP path). **Velocity reaches the synth** (scales amplitude + brightness); mod wheel→vibrato, CC7/CC11→expression gain, **CC64 sustain pedal**, CC71→resonance, bend→pitch, all routed live (`routeMidi`).
+- ✅ **MPE** — per-channel pitch bend / pressure / CC74-timbre voiced per-note, plus MIDI 2.0 native per-note pitch bend + poly pressure; routed in-order through the engine's tagged event queue (`Ev`) to the synth's per-voice expression. ❌ per-note CC74 via MIDI 2.0 Registered-Per-Note Controllers (decode TODO), MPE zone configuration (RPN 6)
+- ✅ **SysEx** (`sysex.zig`): Universal SysEx classification (identity, GM, master volume, tuning) + manufacturer ids; received on both paths (UMP SysEx7 reassembly + MIDI-1.0 ext data); replies to a device **Identity Request** with Zenith's identity. ❌ vendor-specific editors, bulk dump
+- ✅ **MIDI clock / transport sync** (`midi_clock.zig`): Start/Continue/Stop drive the transport; the 24-ppqn clock estimates external tempo (`ClockSync`). ❌ song-position-pointer locate, send-clock-out (Zenith as master)
+- ✅ MIDI device **enumeration + selection**: `Midi2Input.listSources`/`connectOnlyMatching`; `ZENITH_MIDI_IN=<name>` picks one source (else auto-connect all). ❌ in-DAW dropdown UI
+- 🟡 MIDI **output** — UMP out via `midi2_alsa.Midi2Output` (echoes input + sends SysEx replies); ❌ routing MIDI tracks/clips to hardware, dedicated out device picker
 - 🟡 Sample-accurate **timestamping**: clip-note onsets are sample-accurate (`renderSegmented`/`offsetInBlock` split the synth render at exact frame offsets); ❌ sub-block offsets for *live* input (applied at block start — no input timestamp)
-- ❌ Cross-platform MIDI (Windows/macOS)
+- ❌ Cross-platform MIDI (Windows WinMM/WinRT, macOS CoreMIDI) — **not implementable/verifiable on this Linux box**; the `MidiInput`/`Midi2Input` API is the seam a platform backend would sit behind
 
 ### 4.3 Platform — Audio file formats  *(JUCE: juce_audio_formats)*
 - ✅ WAV **write** (`wav.zig`: 16-bit + **24-bit** + **32-bit float**, mono/multichannel)
@@ -170,9 +173,9 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ Hosting plugin **editor windows** (embed the plugin's own UI)
 
 ### 4.10 Instruments & effects
-- 🟡 `synth.zig` — 16-voice subtractive (polyBLEP saw → ADSR → SVF lowpass), now **velocity-sensitive** (amplitude + filter brightness), **sustain pedal**, and a mod-wheel/aftertouch **vibrato LFO** + CC7/CC11 expression gain. Still a single saw osc — **not a pro instrument yet**.
+- ✅ `synth.zig` — **professional hybrid subtractive synth**: 16 voices × (2 band-limited oscillators [sine/tri/saw/square+PWM] + square sub + noise), **unison** (up to 7 detuned), oscB semitone/fine detune + osc mix; **two ADSRs** (amplitude + a dedicated **filter envelope** sweeping the SVF cutoff), **2 LFOs** (vibrato + cutoff), **key-track + velocity** cutoff mod, **glide**, quietest-voice stealing; velocity + sustain + full **per-note/per-channel (MPE)** expression. `Patch` presets (init_saw/fat_bass/super_lead/warm_pad). RT-safe.
+- ❌ Synth depth still to add: **wavetable** oscillators, a generic **mod matrix** (hardwired routings for now), osc **hard-sync** + true FM, more filter models (ladder/comb), per-voice stereo unison spread, preset save/load + a synth UI.
 - 🟡 Sampler (`sampler.zig`): load mono sample, pitch per MIDI note, polyphonic + AR env. ❌ multisampling, velocity layers, loop points, stereo
-- ❌ Synth depth: **multiple oscillators/waveforms + wavetable**, mod matrix, more LFOs, sub/noise, unison/detune, glide, more filter models, FM/sync, per-voice filter envelope
 - 🟡 Stock effects (`effects.zig`): biquad EQ (LP/HP/peak), feedback delay, reverb done; ❌ compressor, limiter, distortion, chorus + mixer integration (per-track FX chains)
 - ❌ Preset system + content/sample library
 
@@ -544,5 +547,28 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   Full `zig build test` green. **Honest scope:** the *instrument* is still a single-saw
   subtractive seed — expression now reaches it, but synth depth (multi-osc/wavetable/mod
   matrix) is the next lever; MPE per-note voicing, SysEx, and MIDI-clock sync remain.
+
+**2026-06-14 (session 5 — finish MIDI + a professional synth)**
+- **MIDI clock/transport sync** (`midi_clock.zig`): Start/Continue/Stop drive the DAW
+  transport; 24-ppqn clock estimates external tempo (`ClockSync`, smoothed). System
+  messages decode on both paths (`midi2.decode` → `SystemMsg`).
+- **SysEx** (`sysex.zig`): Universal SysEx classification + manufacturer ids, UMP
+  SysEx7 (de)packetization, received on both paths; replies to Identity Requests with
+  Zenith's identity (manufacturer 0x7D).
+- **Device enumeration + selection**: `listSources`/`connectOnlyMatching`; `ZENITH_MIDI_IN`
+  picks a source. Verified live (logged "Midi Through: …", excludes own ports).
+- **Professional synth rewrite** (`synth.zig`): 2 osc + sub + noise, unison, oscB detune,
+  TWO ADSRs (amp + a dedicated filter envelope), 2 LFOs, key-track/velocity cutoff, glide,
+  `Patch` presets. Replaces the single-saw seed; RT-safe; API-compatible with the engine.
+- **MPE per-note voicing**: the engine note queue became a tagged event queue (`Ev`) so
+  per-channel + per-note pitch bend / pressure / timbre apply in-order to the right voice;
+  `routeMidi` routes them (MPE-1.0 per-channel + MIDI 2.0 per-note). Synth carries
+  per-voice + per-channel expression.
+- Tests across all of it (clock tempo lock, sysex round-trips, synth velocity/sustain/
+  filter-env/MPE-isolation/presets, engine MPE routing). Verified live: the DAW plays a
+  clip through the new synth, no NaN/xruns. **Honest gap:** cross-platform MIDI
+  (Win/macOS) is NOT done — can't build/verify CoreMIDI/WinMM on this Linux box; the
+  `MidiInput`/`Midi2Input` API is the seam a platform backend slots behind. Synth still
+  wants wavetables + a real mod matrix + a UI to be truly "flagship."
 
 *(Add new dated entries as milestones complete.)*
