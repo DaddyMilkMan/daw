@@ -150,6 +150,13 @@ const Vals = struct {
     seg: usize = 0,
     prog: f32 = 0.35,
     trow: usize = 1, // selected table row
+    // draggable floating chip (web drag-and-drop feel)
+    drag_x: f32 = 980,
+    drag_y: f32 = 92,
+    grab_dx: f32 = 0,
+    grab_dy: f32 = 0,
+    dragging: bool = false,
+    drag_lift: f32 = 0,
 };
 
 // demo table — a mixer/track list with tabular numeric columns
@@ -571,8 +578,44 @@ pub fn main() !void {
             g.flush();
         }
 
-        // custom cursors: grabbing while dragging a control, hand when hovering one
-        window.setCursor(if (u.active != 0) .grabbing else if (u.hot != 0) .hand else .default);
+        // draggable floating chip — pick it up and it follows the cursor with a
+        // lift (growing shadow + slight scale), the web drag-and-drop affordance.
+        const chip_hover = blk: {
+            const cw: f32 = 138;
+            const ch: f32 = 42;
+            const hov = fmx >= v.drag_x and fmx < v.drag_x + cw and fmy >= v.drag_y and fmy < v.drag_y + ch;
+            if (hov and u.pressed) {
+                v.dragging = true;
+                v.grab_dx = fmx - v.drag_x;
+                v.grab_dy = fmy - v.drag_y;
+            }
+            if (!down) v.dragging = false;
+            if (v.dragging) {
+                v.drag_x = std.math.clamp(fmx - v.grab_dx, 0, Wf - cw);
+                v.drag_y = std.math.clamp(fmy - v.grab_dy, 0, Hf - ch);
+            }
+            v.drag_lift += ((if (v.dragging) @as(f32, 1) else 0) - v.drag_lift) * 0.25;
+            const L = v.drag_lift;
+            const x = v.drag_x - L * 2;
+            const y = v.drag_y - L * 3;
+            const w = cw + L * 4;
+            const h = ch + L * 4;
+            g.shadow(x, y + 5 + L * 8, w, h, 13, 9 + L * 16, Color.rgba(0, 0, 0, @intFromFloat(70 + L * 70)));
+            g.card(x, y, w, h, 13, lerp(Color.rgb(58, 64, 82), Color.rgb(74, 84, 110), L), lerp(Color.rgb(44, 49, 64), Color.rgb(58, 66, 88), L), 0, clear, 1.0 + L);
+            // grip dots
+            var gd: usize = 0;
+            while (gd < 6) : (gd += 1) {
+                const col: f32 = @floatFromInt(gd % 2);
+                const rowd: f32 = @floatFromInt(gd / 2);
+                g.rect(x + 16 + col * 6, y + h / 2 - 7 + rowd * 6, 3, 3, 1.5, Color.rgba(255, 255, 255, 120));
+            }
+            fu.text(&g, x + 36, y + (h - 16) / 2, "Drag me", txt);
+            g.flush();
+            break :blk hov;
+        };
+
+        // custom cursors: grabbing while dragging, hand when hovering a control/chip
+        window.setCursor(if (v.dragging or u.active != 0) .grabbing else if (chip_hover or u.hot != 0) .hand else .default);
 
         window.swapBuffers();
         std.time.sleep(16 * std.time.ns_per_ms);
