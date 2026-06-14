@@ -8,6 +8,8 @@ const gpu2d = @import("gpu2d.zig");
 const flex = @import("flex.zig");
 const widgets = @import("widgets.zig");
 const image = @import("image.zig");
+const ttf = @import("ttf.zig");
+const FontData = @import("font.zig").Font;
 const Color = gpu2d.Color;
 const Gpu = gpu2d.Gpu;
 const px = flex.px;
@@ -200,11 +202,48 @@ pub fn main() !void {
     defer falt.deinit();
     var fround = try gpu2d.GpuFont.init(a, &@import("font_round.zig").font);
     defer fround.deinit();
-    const faces = [_]struct { f: *const gpu2d.GpuFont, n: []const u8 }{
-        .{ .f = &fu, .n = "Fira Sans" },     .{ .f = &fserif, .n = "Noto Serif" },
-        .{ .f = &fmono, .n = "Fira Mono" },   .{ .f = &fcond, .n = "Fira Condensed" },
-        .{ .f = &falt, .n = "Open Sans" },    .{ .f = &fround, .n = "Cantarell" },
+    // runtime TTF loader — rasterize installed system .ttf fonts on the fly into
+    // the same atlas pipeline the baked fonts use (this is the path to "thousands
+    // of fonts": any of the machine's installed TrueType faces, loaded at runtime).
+    const RtFont = struct { gf: gpu2d.GpuFont, data: FontData, name: []const u8 };
+    var rt_fonts = std.ArrayList(RtFont).init(a);
+    defer {
+        for (rt_fonts.items) |*rf| {
+            rf.gf.deinit();
+            ttf.freeFont(a, rf.data);
+        }
+        rt_fonts.deinit();
+    }
+    const rt_specs = [_]struct { path: []const u8, name: []const u8 }{
+        .{ .path = "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf", .name = "DejaVu Serif" },
+        .{ .path = "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf", .name = "Ubuntu" },
+        .{ .path = "/usr/share/fonts/truetype/freefont/FreeSerif.ttf", .name = "FreeSerif" },
     };
+    for (rt_specs) |sp| {
+        const bytes = std.fs.cwd().readFileAlloc(a, sp.path, 8 << 20) catch continue;
+        defer a.free(bytes);
+        const fnt = ttf.rasterizeAscii(a, bytes, 17) catch continue;
+        const gf = gpu2d.GpuFont.init(a, &fnt) catch {
+            ttf.freeFont(a, fnt);
+            continue;
+        };
+        rt_fonts.append(.{ .gf = gf, .data = fnt, .name = sp.name }) catch {};
+    }
+
+    // typeface display: 3 baked faces (left column) + 3 runtime .ttf (right column)
+    const Face = struct { f: *const gpu2d.GpuFont, n: []const u8, rt: bool };
+    var faces = [_]Face{
+        .{ .f = &fu, .n = "Fira Sans", .rt = false },
+        .{ .f = &fserif, .n = "Noto Serif", .rt = false },
+        .{ .f = &fmono, .n = "Fira Mono", .rt = false },
+        .{ .f = &fcond, .n = "Fira Condensed", .rt = false },
+        .{ .f = &falt, .n = "Open Sans", .rt = false },
+        .{ .f = &fround, .n = "Cantarell", .rt = false },
+    };
+    for (rt_fonts.items, 0..) |*rf, i| {
+        if (i < 3) faces[3 + i] = .{ .f = &rf.gf, .n = rf.name, .rt = true };
+    }
+
     var c = flex.Ctx.init(&g, &fb, &fu, &fd);
     var u = widgets.Ui.init(&g);
     var v = Vals{};
@@ -286,7 +325,7 @@ pub fn main() !void {
             c.close();
 
             // typeface variety
-            c.label("TYPEFACES  ( variety set )", &fc, faint, .{ .h = px(20), .tracking = 1.4 });
+            c.label("TYPEFACES  ( baked + runtime .ttf loader — 563 installed )", &fc, faint, .{ .h = px(20), .tracking = 1.4 });
             c.box(.{ .w = grow(), .h = px(118), .radius = 14, .bg = card_t, .bg2 = card_b, .elev = 1, .shadow = 14, .id = 950 });
 
             // gradients / color blends row
@@ -471,7 +510,8 @@ pub fn main() !void {
                 g.image(im, dx, dy, dw, dh, sl.tint);
             };
         }
-        // typeface variety — one sample line per face, 2 columns x 3 rows
+        // typeface variety — one sample line per face, 2 columns x 3 rows.
+        // left column = baked fonts, right column = runtime-rasterized .ttf.
         if (c.rectOf(950)) |r| {
             const colw = (r[2] - 32) / 2;
             for (faces, 0..) |fe, i| {
@@ -479,7 +519,8 @@ pub fn main() !void {
                 const row: f32 = @floatFromInt(i % 3);
                 const fx = r[0] + 18 + col * (colw + 4);
                 const fy = r[1] + 12 + row * 34;
-                fc.text(&g, fx, fy, fe.n, accent);
+                fc.text(&g, fx, fy, fe.n, if (fe.rt) Color.rgb(120, 210, 170) else accent);
+                if (fe.rt) fc.text(&g, fx + fc.textWidth(fe.n) + 8, fy, "runtime .ttf", faint);
                 fe.f.text(&g, fx, fy + 13, "The quick brown fox 0123", txt);
             }
         }
