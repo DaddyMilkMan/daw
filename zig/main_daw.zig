@@ -62,6 +62,32 @@ fn routeMidi(engine: *audio.Engine, msg: midi2.Message, clock: *midi_clock.Clock
     return null;
 }
 
+/// Re-enumerate the available MIDI sources into the UI state (so the dropdown
+/// reflects hot-plugged devices).
+fn refreshMidiDevices(state: *daw.State, m: *midi2_alsa.Midi2Input) void {
+    var srcs: [16]midi2_alsa.Midi2Input.SourceInfo = undefined;
+    const n = m.listSources(&srcs);
+    state.midi_count = n;
+    for (srcs[0..n], 0..) |s, i| state.setMidiName(i, s.label());
+}
+
+/// Apply a pending MIDI device pick from the dropdown (state.midi_pick): -1 =
+/// connect all sources, >=0 = connect only the chosen one.
+fn applyMidiPick(state: *daw.State, m: *midi2_alsa.Midi2Input) void {
+    if (state.midi_pick == -2) return; // nothing requested
+    if (state.midi_pick < 0) {
+        const c = m.connectAllSources();
+        state.midi_selected = -1;
+        elog.info("MIDI picker: all sources ({d} connected)", .{c});
+    } else {
+        const name = state.midiName(@intCast(state.midi_pick));
+        const c = m.connectOnlyMatching(name);
+        state.midi_selected = state.midi_pick;
+        elog.info("MIDI picker: '{s}' -> {d} connected", .{ name, c });
+    }
+    state.midi_pick = -2;
+}
+
 /// Classify a received SysEx message and, for an Identity Request, reply with
 /// Zenith's MIDI Identity (so a host's device-inquiry scan finds us).
 fn handleSysex(bytes: []const u8, out: ?*midi2_alsa.Midi2Output) void {
@@ -178,6 +204,8 @@ pub fn main() !void {
         var srcs: [64]midi2_alsa.Midi2Input.SourceInfo = undefined;
         const ns = m.listSources(&srcs);
         for (srcs[0..ns], 0..) |s, i| elog.info("MIDI source [{d}]: {s} ({d}:{d})", .{ i, s.label(), s.client, s.port });
+        state.midi_count = @min(ns, state.midi_names.len); // seed the in-DAW picker
+        for (srcs[0..state.midi_count], 0..) |s, i| state.setMidiName(i, s.label());
         if (midi_pick) |pick| {
             const n = m.connectOnlyMatching(pick);
             elog.info("MIDI 2.0 (native UMP): picker '{s}' -> connected {d} of {d} source(s)", .{ pick, n, ns });
@@ -297,6 +325,12 @@ pub fn main() !void {
         }
 
         const action = view.frame(&p, bar, &state, @floatFromInt(W), @floatFromInt(H), @floatFromInt(mx), @floatFromInt(my), down, rclick);
+
+        // MIDI device dropdown: refresh the list while it's open, apply any pick
+        if (midi2_in) |*m| {
+            if (view.midi_open) refreshMidiDevices(&state, m);
+            applyMidiPick(&state, m);
+        }
 
         // push the live mixer state (per-track gain/pan/mute/solo) to the engine
         for (0..ntr) |ti| {

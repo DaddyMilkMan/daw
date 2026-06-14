@@ -43,6 +43,22 @@ pub const State = struct {
     editing: bool = false,
     edit_track: usize = 0,
     edit_clip: usize = 0,
+    // MIDI device picker — main_daw fills the list and consumes `midi_pick`
+    midi_names: [16][48]u8 = [_][48]u8{[_]u8{0} ** 48} ** 16,
+    midi_name_len: [16]u8 = [_]u8{0} ** 16,
+    midi_count: usize = 0,
+    midi_selected: i32 = -1, // -1 = all sources, >=0 = source index
+    midi_pick: i32 = -2, // UI output: -2 none / -1 all / >=0 index (main_daw applies + resets)
+
+    pub fn midiName(self: *const State, i: usize) []const u8 {
+        return self.midi_names[i][0..self.midi_name_len[i]];
+    }
+    /// Copy an enumerated source label into slot `i` (called by main_daw).
+    pub fn setMidiName(self: *State, i: usize, name: []const u8) void {
+        const n = @min(name.len, self.midi_names[i].len);
+        @memcpy(self.midi_names[i][0..n], name[0..n]);
+        self.midi_name_len[i] = @intCast(n);
+    }
 };
 
 // ---- refined palette (design-identity pass) --------------------------------
@@ -358,6 +374,9 @@ pub const View = struct {
     cm_x: f32 = 0,
     cm_y: f32 = 0,
     cm_anim: f32 = 0,
+    midi_open: bool = false, // MIDI device dropdown
+    midi_anim: f32 = 0,
+    midi_btn: [4]f32 = .{ 0, 0, 0, 0 }, // the trigger button's rect (for the dropdown anchor)
     pr: @import("pianoroll.zig").PianoRoll = .{}, // the clip editor (when state.editing)
 
     pub fn init(g: *Gpu, fc: *const Font, fb: *const Font, fu: *const Font, fd: *const Font) View {
@@ -658,8 +677,9 @@ pub const View = struct {
             }
         }
 
-        // title-bar drag region (avoid the interactive clusters)
-        if (state.window_action == .none and u.pressed and my < TBH and (mx < 150 or (mx > 300 and mx < W - 360))) state.window_action = .move;
+        // title-bar drag region (avoid the interactive clusters: transport on the
+        // left, and the MIDI selector + window controls reserved on the right)
+        if (state.window_action == .none and u.pressed and my < TBH and (mx < 150 or (mx > 300 and mx < W - 560))) state.window_action = .move;
 
         // ---- TRANSPORT BAR: a CLEAN flat bar (modern chrome). Liquid Glass is
         // reserved for floating overlays (menus/tooltips), not forced onto the main
@@ -687,6 +707,18 @@ pub const View = struct {
         g.rect(W - 338, 22, 7, 7, 3, dotc);
         self.fu.text(g, W - 324, 14, if (state.playing) "Playing" else "Stopped", if (state.playing) accent else dim);
         self.fc.text(g, W - 324, 36, "100% Zig", faint);
+        // MIDI device selector — click to open a dropdown of available sources
+        const mbx = W - 545;
+        const mbw: f32 = 170;
+        self.midi_btn = .{ mbx, 16, mbw, 26 };
+        if (u.iconSlot(950, mbx, 16, mbw, 26, self.midi_open)) self.midi_open = !self.midi_open;
+        const sel_lbl = if (state.midi_selected < 0) "All sources" else state.midiName(@intCast(state.midi_selected));
+        const sel_sh = if (sel_lbl.len > 17) sel_lbl[0..17] else sel_lbl;
+        self.fc.text(g, mbx + 12, 22, "MIDI", faint);
+        self.fb.text(g, mbx + 50, 21, sel_sh, if (u.hoverOf(950) > 0.1) txt else dim);
+        const cx = mbx + mbw - 16; // down caret
+        g.tri(cx - 4, 27, cx + 4, 27, cx, 32, dim);
+
         if (u.iconSlot(900, W - 108, 16, 30, 24, false)) state.window_action = .minimize;
         icons.minimize(g, W - 93, 28, 11, dim);
         if (u.iconSlot(901, W - 74, 16, 30, 24, false)) state.window_action = .maximize;
@@ -749,6 +781,50 @@ pub const View = struct {
             if (u.pressed) {
                 const inside = mx >= cmx and mx < cmx + iw and my >= cmy and my < cmy + hh;
                 if (!inside or hit >= 0) self.cm_open = false;
+            }
+        }
+
+        // ---- MIDI device dropdown (frosted glass, anchored under the selector) ----
+        const mt: f32 = if (self.midi_open) 1.0 else 0.0;
+        self.midi_anim += (mt - self.midi_anim) * 0.30;
+        if (self.midi_anim > 0.01) {
+            const rows = state.midi_count + 1; // row 0 = "All sources", then each device
+            const iw: f32 = 248;
+            const ih: f32 = 30;
+            const fullh: f32 = ih * @as(f32, @floatFromInt(rows)) + 10;
+            const eased = self.midi_anim * self.midi_anim * (3.0 - 2.0 * self.midi_anim);
+            const hh = fullh * eased;
+            const dx = std.math.clamp(self.midi_btn[0] + self.midi_btn[2] - iw, 4, W - iw - 4);
+            const dy = self.midi_btn[1] + self.midi_btn[3] + 4;
+            g.shadow(dx, dy, iw, hh, 12, 22, Color.rgba(0, 0, 0, @intFromFloat(170 * eased)));
+            g.flush();
+            g.captureBlur(@intFromFloat(W), @intFromFloat(H));
+            g.glass(dx, dy, iw, hh, 12, Color.rgba(84, 92, 114, 76), Color.rgba(255, 255, 255, 150));
+            var hit: i32 = -2; // -2 = no row hovered
+            var r: usize = 0;
+            while (r < rows) : (r += 1) {
+                const iy = dy + 5 + @as(f32, @floatFromInt(r)) * ih;
+                if (iy + ih > dy + hh - 2) continue;
+                const idx: i32 = @as(i32, @intCast(r)) - 1; // -1 = All sources
+                const label = if (idx < 0) "All sources" else state.midiName(@intCast(idx));
+                const hov = mx >= dx + 5 and mx < dx + iw - 5 and my >= iy and my < iy + ih;
+                const is_sel = idx == state.midi_selected;
+                if (hov) {
+                    hit = idx;
+                    g.rect(dx + 5, iy, iw - 10, ih, 7, Color.rgba(108, 147, 244, 60));
+                } else if (is_sel) g.rect(dx + 5, iy, iw - 10, ih, 7, Color.rgba(108, 147, 244, 28));
+                const lsh = if (label.len > 28) label[0..28] else label;
+                self.fb.text(g, dx + 14, iy + (ih - 15) / 2, lsh, if (hov or is_sel) txt else dim);
+            }
+            g.flush();
+            if (u.pressed) {
+                const on_btn = mx >= self.midi_btn[0] and mx < self.midi_btn[0] + self.midi_btn[2] and
+                    my >= self.midi_btn[1] and my < self.midi_btn[1] + self.midi_btn[3];
+                const inside = mx >= dx and mx < dx + iw and my >= dy and my < dy + hh;
+                if (hit != -2) {
+                    state.midi_pick = hit; // main_daw applies the selection
+                    self.midi_open = false;
+                } else if (!inside and !on_btn) self.midi_open = false;
             }
         }
 
