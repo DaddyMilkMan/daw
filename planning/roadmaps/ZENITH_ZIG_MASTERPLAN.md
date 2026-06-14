@@ -173,8 +173,10 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ Hosting plugin **editor windows** (embed the plugin's own UI)
 
 ### 4.10 Instruments & effects
-- ✅ `synth.zig` — **professional hybrid subtractive synth**: 16 voices × (2 band-limited oscillators [sine/tri/saw/square+PWM] + square sub + noise), **unison** (up to 7 detuned), oscB semitone/fine detune + osc mix; **two ADSRs** (amplitude + a dedicated **filter envelope** sweeping the SVF cutoff), **2 LFOs** (vibrato + cutoff), **key-track + velocity** cutoff mod, **glide**, quietest-voice stealing; velocity + sustain + full **per-note/per-channel (MPE)** expression. `Patch` presets (init_saw/fat_bass/super_lead/warm_pad). RT-safe.
-- ❌ Synth depth still to add: **wavetable** oscillators, a generic **mod matrix** (hardwired routings for now), osc **hard-sync** + true FM, more filter models (ladder/comb), per-voice stereo unison spread, preset save/load + a synth UI.
+- ✅ `synth.zig` — **professional hybrid subtractive synth**: 16 voices × (2 band-limited oscillators [sine/tri/saw/square+PWM] + square sub + noise), **unison** (up to 7 detuned), oscB semitone/fine detune + osc mix; **two ADSRs** (amplitude + a dedicated **filter envelope**), **2 LFOs** (vibrato + cutoff), **key-track + velocity** cutoff mod, **glide**, quietest-voice stealing; velocity + sustain + full **per-note/per-channel (MPE)** expression. `Patch` presets (init_saw/fat_bass/super_lead/warm_pad). RT-safe (control-rate modulation).
+- ✅ **Filters** (`filter.zig`, Phase 1 of the "flagship synth" plan): **zero-delay-feedback** topologies — Cytomic TPT state-variable (LP/HP/BP/notch, stable to Nyquist) + a **saturating ZDF Moog ladder** (tanh feedback = analog growl, self-limiting). Selectable per patch + `drive`. (Replaced the old Chamberlin SVF.)
+- 🔭 **Flagship-synth roadmap** (the "best-sounding, most control, beginner↔expert gating" plan — see Progress Log 2026-06-14 s6): P1 filters ✅ → **P2** oversampling (4× polyphase on the nonlinear path) + analog drift/imperfection + **stereo** out → **P3** generalized **mod matrix** + macros → **P4** per-patch **FX rack** (drive/chorus/delay/reverb/EQ) → **P5** **wavetable** then **FM** engines → **P6** synth **UI** (3 tiers: Play/Shape/Build) + **preset browser** + factory library → **P7** microtuning/scales, MPE polish, voice modes.
+- ❌ Other synth depth: osc **hard-sync**, comb/diode filters, preset save/load format.
 - 🟡 Sampler (`sampler.zig`): load mono sample, pitch per MIDI note, polyphonic + AR env. ❌ multisampling, velocity layers, loop points, stereo
 - 🟡 Stock effects (`effects.zig`): biquad EQ (LP/HP/peak), feedback delay, reverb done; ❌ compressor, limiter, distortion, chorus + mixer integration (per-track FX chains)
 - ❌ Preset system + content/sample library
@@ -570,5 +572,16 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   (Win/macOS) is NOT done — can't build/verify CoreMIDI/WinMM on this Linux box; the
   `MidiInput`/`Midi2Input` API is the seam a platform backend slots behind. Synth still
   wants wavetables + a real mod matrix + a UI to be truly "flagship."
+
+**2026-06-14 (session 6 — close MIDI gaps + the flagship-synth plan, Phase 1)**
+- **MIDI 2.0 Registered Per-Note Controllers** decode (`per_note_controller`); index 74 → per-note timbre (`engine.noteTimbre` → synth `note_timbre`). Last MPE decode gap closed.
+- **In-DAW MIDI device picker**: a frosted-glass dropdown in the transport bar (lists "All sources" + enumerated devices, hot-plug-refreshed) → `connectAllSources`/`connectOnlyMatching`. Verified live via Talkback (selected "Midi Through", button relabeled).
+- **Flagship-synth vision** (the user's ask: best-sounding + most control + beginner↔expert gating + a sound library). The plan, recorded so it persists:
+  - *Sound* — priority order: the **filter** (ZDF + saturation), **oversampling the nonlinear path** (not just oscillators), **analog drift/imperfection**, **stereo + an FX rack**. Plus more **engines** (wavetable, FM, …) behind one voice architecture.
+  - *Control* — everything modulatable: a real **mod matrix** (any source→any dest) + per-voice/MPE (already ours, a differentiator).
+  - *The gate* — one patch, **three depths**: **Play** (pick by vibe + 4–8 labeled macros + XY morph), **Shape** (classic front panel), **Build** (full matrix/engines). **Macros are the bridge** — experts wire what beginners turn; semantic controls ("dark↔bright") + tasteful randomize/morph.
+  - *Sounds* — a versioned patch format, a tag/audition **preset browser**, 150–300 curated factory presets, designed/A-B'd via Talkback+FFT.
+  - *Sequence* — P1 filters → P2 oversampling+drift+stereo → P3 mod matrix+macros → P4 FX rack → P5 wavetable+FM → P6 UI(3 tiers)+browser+library → P7 microtuning/MPE polish.
+- **Phase 1 done** (`filter.zig`): ZDF TPT-SVF + saturating Moog ladder, selectable per patch + drive; replaced the Chamberlin SVF. Synth modulation moved to control-rate for RT headroom. 11 tests; ~8s live playback through the ladder with **zero xruns**.
 
 *(Add new dated entries as milestones complete.)*
