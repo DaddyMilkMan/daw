@@ -81,8 +81,7 @@ const label_col = Color.rgb(150, 158, 173); // small-caps section labels
 const amber = Color.rgb(238, 176, 80);
 const green = Color.rgb(120, 208, 140);
 const red = Color.rgb(236, 100, 100);
-const meter_hi = Color.rgb(224, 158, 98); // calmer meter gradient (amber -> green)
-const meter_lo = Color.rgb(104, 186, 132);
+// meter colors + ballistics moved to the toolkit: widgets.Ui.meter(...)
 
 // color utilities are toolkit-level now (color.zig) — alias for local brevity.
 const mix = color.lerp;
@@ -250,25 +249,7 @@ pub fn synthDrumLoop(a: std.mem.Allocator, n: usize) ![]f32 {
     }
     return buf;
 }
-/// Render a REAL waveform from audio samples via peak analysis (max |sample| per
-/// pixel column), mirrored around the centre — a true audio waveform display.
-fn drawWaveform(g: *Gpu, x: f32, y: f32, w: f32, h: f32, samples: []const f32, col: Color) void {
-    if (w < 2 or h < 4 or samples.len == 0) return;
-    const cy = y + h * 0.5;
-    const amp = h * 0.46;
-    const ns: f32 = @floatFromInt(samples.len);
-    const step: f32 = 1.4;
-    var i: f32 = 0;
-    while (i < w) : (i += step) {
-        const s0: usize = @intFromFloat(i / w * ns);
-        const s1 = @min(@as(usize, @intFromFloat((i + step) / w * ns)) + 1, samples.len);
-        var peak: f32 = 0;
-        var j = s0;
-        while (j < s1) : (j += 1) peak = @max(peak, @abs(samples[j]));
-        const a = @max(peak * amp, 0.7);
-        g.rect(x + i, cy - a, step - 0.3, a * 2, 0.5, col);
-    }
-}
+// waveform rendering moved to the toolkit: widgets.waveform(...)
 
 fn drawClips(g: *Gpu, fb: *const Font, u: *widgets.Ui, p: *project.Project, ti: usize, r: [4]f32, bar: u64, state: *State, wave: []const f32) void {
     const bars: f32 = 4;
@@ -303,7 +284,7 @@ fn drawClips(g: *Gpu, fb: *const Font, u: *widgets.Ui, p: *project.Project, ti: 
         g.rectGrad(cx, cy, cw, 22, 7, Color.rgba(0, 0, 0, 60), Color.rgba(0, 0, 0, 0), 0, bord);
         // audio tracks show a waveform; MIDI tracks show note blocks
         if (t.instrument == .sampler) {
-            drawWaveform(g, cx + 3, cy + 18, cw - 6, ch - 22, wave, mix(cc, Color.rgb(255, 255, 255), 0.42));
+            widgets.waveform(g, cx + 3, cy + 18, cw - 6, ch - 22, wave, mix(cc, Color.rgb(255, 255, 255), 0.42));
         } else if (clip.length != 0) {
             const clen: f32 = @floatFromInt(clip.length);
             const nc = mix(cc, Color.rgb(255, 255, 255), 0.42);
@@ -612,21 +593,13 @@ pub const View = struct {
                 }
             }
             if (c.rectOf(500 + @as(u64, ti))) |r| {
-                g.rect(r[0], r[1], r[2], r[3], 4, Color.rgb(15, 17, 22));
                 const muted = !is_master and state.mutes[ti];
                 const target = if (muted) 0.0 else if (state.audio_active)
                     // real master peak, varied per track so the meters stay lively
                     state.audio_level * gain.* * (0.55 + 0.45 * @abs(@sin(@as(f32, @floatFromInt(ti)) * 1.7 + 0.4)))
                 else
                     meterLevel(ti, ts, gain.*, state.playing);
-                const k: f32 = if (target > state.meters[ti]) 0.55 else 0.14; // fast attack, slow release
-                state.meters[ti] += (target - state.meters[ti]) * k;
-                const lvl = state.meters[ti];
-                const mh = lvl * r[3];
-                if (mh > 1) g.rectGrad(r[0], r[1] + r[3] - mh, r[2], mh, 4, meter_hi, meter_lo, 0, bord);
-                // peak tick
-                const pk = if (muted) 0.0 else @min(lvl + 0.08, 1.0);
-                g.rect(r[0], r[1] + r[3] - pk * r[3], r[2], 1.5, 0, Color.rgba(255, 255, 255, 130));
+                _ = u.meter(@intCast(850 + ti), r[0], r[1], r[2], r[3], target); // toolkit VU meter (ballistics)
             }
             if (c.rectOf(100 + @as(u64, ti))) |r| {
                 var vbuf: [8]u8 = undefined;

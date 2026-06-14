@@ -20,6 +20,29 @@ const border = Color.rgba(255, 255, 255, 0); // no border lines on widgets
 const track_bg = Color.rgb(24, 26, 33);
 const c_on = Color.rgb(236, 239, 246);
 const c_off = Color.rgb(150, 158, 173);
+const meter_bg = Color.rgb(15, 17, 22);
+const meter_hi = Color.rgb(224, 158, 98); // amber (top of the level gradient)
+const meter_lo = Color.rgb(104, 186, 132); // green (bottom) — calm, not neon
+
+/// Render a REAL audio waveform via peak analysis (max |sample| per pixel column),
+/// mirrored around the centre. Stateless — pass any sample slice + a color.
+pub fn waveform(g: *Gpu, x: f32, y: f32, w: f32, h: f32, samples: []const f32, col: Color) void {
+    if (w < 2 or h < 4 or samples.len == 0) return;
+    const cy = y + h * 0.5;
+    const amp = h * 0.46;
+    const ns: f32 = @floatFromInt(samples.len);
+    const step: f32 = 1.4;
+    var i: f32 = 0;
+    while (i < w) : (i += step) {
+        const s0: usize = @intFromFloat(i / w * ns);
+        const s1 = @min(@as(usize, @intFromFloat((i + step) / w * ns)) + 1, samples.len);
+        var peak: f32 = 0;
+        var j = s0;
+        while (j < s1) : (j += 1) peak = @max(peak, @abs(samples[j]));
+        const a = @max(peak * amp, 0.7);
+        g.rect(x + i, cy - a, step - 0.3, a * 2, 0.5, col);
+    }
+}
 
 pub const Input = struct { mx: f32 = -1, my: f32 = -1, mouse_down: bool = false };
 
@@ -313,6 +336,24 @@ pub const Ui = struct {
         self.g.rect(x, y, w, h, h * 0.5, track_bg);
         const fw = std.math.clamp(value, 0, 1) * w;
         if (fw > h) self.g.rectGrad(x, y, fw, h, h * 0.5, accent_hi, accent, 0, border);
+    }
+
+    /// Vertical VU-style level meter with attack/release BALLISTICS (fast attack,
+    /// slow release) — pass the instantaneous level 0..1 and the widget smooths it
+    /// per-id (no caller-managed state), drawing a calm amber→green bar with a peak
+    /// tick. Returns the smoothed level. (For a master meter give it a master id.)
+    pub fn meter(self: *Ui, id: u32, x: f32, y: f32, w: f32, h: f32, level: f32) f32 {
+        const a = self.anim(id);
+        const target = std.math.clamp(level, 0, 1);
+        const speed: f32 = if (target > a.extra) 34 else 7; // fast attack, slow release
+        a.extra = ease(a.extra, target, self.dt, speed);
+        const lvl = a.extra;
+        self.g.rect(x, y, w, h, 4, meter_bg);
+        const mh = lvl * h;
+        if (mh > 1) self.g.rectGrad(x, y + h - mh, w, mh, 4, meter_hi, meter_lo, 0, border);
+        const pk = @min(lvl + 0.08, 1.0); // peak hold tick
+        self.g.rect(x, y + h - pk * h, w, 1.5, 0, Color.rgba(255, 255, 255, 120));
+        return lvl;
     }
 
     /// Rendered data table — a rounded surface with a borderless tracked header,
