@@ -23,11 +23,15 @@ const midi2_alsa = @import("midi2_alsa.zig");
 /// filter. 16-bit velocity 0 on note-on is a note-off (the MIDI convention).
 fn routeMidi(engine: *audio.Engine, msg: midi2.Message) void {
     switch (msg) {
-        .note_on => |no| if (no.velocity > 0)
-            engine.pushNote(true, audio.noteToFreq(no.note))
-        else
-            engine.pushNote(false, audio.noteToFreq(no.note)),
-        .note_off => |no| engine.pushNote(false, audio.noteToFreq(no.note)),
+        .note_on => |no| {
+            const on = no.velocity > 0;
+            engine.pushNote(on, audio.noteToFreq(no.note));
+            elog.debug("midi note {s} {d} vel {d}", .{ if (on) "ON" else "OFF", no.note, no.velocity });
+        },
+        .note_off => |no| {
+            engine.pushNote(false, audio.noteToFreq(no.note));
+            elog.debug("midi note OFF {d}", .{no.note});
+        },
         .control_change => |cc| switch (cc.index) {
             74 => engine.setCutoff(audio.ccToCutoff(cc.value)),
             71 => engine.setResonance(audio.ccToUnit(cc.value)),
@@ -133,6 +137,9 @@ pub fn main() !void {
     var lry: i32 = 0;
     var elapsed: f64 = 0;
     var prev_playing = state.playing;
+    var ft = std.time.Timer.start() catch null;
+    var frames: u64 = 0;
+    var render_ns: u64 = 0;
 
     while (elapsed < secs) {
         while (true) {
@@ -239,7 +246,16 @@ pub fn main() !void {
 
         g.grain(W, H, 0.014); // subtle film grain — modern premium finish, kills banding
         window.swapBuffers();
+
+        // frame timing: log average render cost (excludes the pacing sleep) every ~120 frames
+        if (ft) |*t| render_ns += t.lap();
+        frames += 1;
+        if (frames % 120 == 0) {
+            elog.info("perf: {d} frames, render avg {d:.2}ms (~{d:.0} fps headroom)", .{ frames, @as(f64, @floatFromInt(render_ns / 120)) / 1e6, 1e9 / @as(f64, @floatFromInt(@max(render_ns / 120, 1))) });
+            render_ns = 0;
+        }
         std.time.sleep(16 * std.time.ns_per_ms);
+        if (ft) |*t| _ = t.lap(); // discard the sleep interval
         elapsed += 0.016;
     }
     elog.info("Zenith DAW closed", .{});

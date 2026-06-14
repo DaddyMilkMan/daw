@@ -5,6 +5,7 @@
 //! reusable engine pieces live in their own modules (see TOOLKIT.md).
 
 const std = @import("std");
+const mlog = std.log.scoped(.mixer); // logs control changes to the app console
 const gpu2d = @import("gpu2d.zig");
 const flex = @import("flex.zig");
 const widgets = @import("widgets.zig");
@@ -559,11 +560,15 @@ pub const View = struct {
             if (!is_master) {
                 if (c.rectOf(300 + @as(u64, ti))) |r| if (miniToggle(u, g, self.fb, @intCast(300 + ti), r, "M", state.mutes[ti], amber)) {
                     state.mutes[ti] = !state.mutes[ti];
+                    mlog.info("mute t{d} ({s}) -> {}", .{ ti, p.tracks.items[ti].name.items, state.mutes[ti] });
                 };
                 if (c.rectOf(320 + @as(u64, ti))) |r| if (miniToggle(u, g, self.fb, @intCast(320 + ti), r, "S", state.solos[ti], green)) {
                     state.solos[ti] = !state.solos[ti];
+                    mlog.info("solo t{d} ({s}) -> {}", .{ ti, p.tracks.items[ti].name.items, state.solos[ti] });
                 };
-                if (c.rectOf(400 + @as(u64, ti))) |r| _ = u.hSliderBipolar(@intCast(400 + ti), r[0], r[1], r[2], r[3], &p.tracks.items[ti].pan, -1.0, 1.0);
+                if (c.rectOf(400 + @as(u64, ti))) |r| if (u.hSliderBipolar(@intCast(400 + ti), r[0], r[1], r[2], r[3], &p.tracks.items[ti].pan, -1.0, 1.0)) {
+                    mlog.debug("pan t{d} -> {d:.2}", .{ ti, p.tracks.items[ti].pan });
+                };
                 if (c.rectOf(600 + @as(u64, ti))) |r| {
                     _ = u.knob(@intCast(600 + ti), r[0] + r[2] / 2, r[1] + r[3] / 2, 12, &state.sends[ti][0]);
                     if (u.hot == 600 + @as(u32, @intCast(ti))) {
@@ -584,7 +589,9 @@ pub const View = struct {
                 }
             }
             if (c.rectOf(100 + @as(u64, ti))) |r| {
-                _ = u.vFader(@intCast(100 + ti), r[0], r[1], r[2], r[3], gain);
+                if (u.vFader(@intCast(100 + ti), r[0], r[1], r[2], r[3], gain)) {
+                    mlog.debug("fader {s} -> {d:.0}%", .{ if (is_master) "Master" else p.tracks.items[ti].name.items, gain.* * 100 });
+                }
                 if (u.hot == 100 + @as(u32, @intCast(ti))) {
                     tip_show = true;
                     tip_val = gain.* * 100;

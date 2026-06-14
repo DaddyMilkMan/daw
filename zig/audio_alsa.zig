@@ -113,7 +113,11 @@ pub const StreamOut = struct {
             const remaining = frames_total - offset;
             const written = snd_pcm_writei(self.pcm, &samples[offset * self.channels], @intCast(remaining));
             if (written < 0) {
-                if (snd_pcm_recover(self.pcm, @intCast(written), 1) < 0) return AlsaError.WriteFailed;
+                if (snd_pcm_recover(self.pcm, @intCast(written), 1) < 0) {
+                    std.log.scoped(.alsa).warn("xrun recover failed: {s}", .{snd_strerror(@intCast(written))});
+                    return AlsaError.WriteFailed;
+                }
+                std.log.scoped(.alsa).debug("xrun recovered ({s})", .{snd_strerror(@intCast(written))});
                 continue;
             }
             offset += @intCast(written);

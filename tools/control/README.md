@@ -80,9 +80,20 @@ with `ZENITH_LOG`:
 ZENITH_LOG=tools/control/daw.log ZENITH_SCRIPT=... zig build daw   # then: cat tools/control/daw.log
 ```
 
-Lines are `[<ms>ms] level(scope): message` — e.g. `info(audio): output: device opened`,
-`info(daw): transport: PLAY`. So a control run gives the **console** (log) + **DOM**
-(`dumpids`) + **screenshots** (`shot`) — the full browser-style triad, timestamp-correlated.
+Lines are `[<ms>ms] level(scope): message`. Logged events: DAW start/stop, MIDI connect,
+`audio: output device opened`, `daw: transport PLAY/STOP`, `mixer: mute/solo/pan/fader`
+changes (the fader logs each drag step), `daw: perf` (render ms / fps headroom every 120
+frames), per-MIDI-note, and `alsa: xrun`/errors. So a control run gives the **console**
+(log) + **DOM** (`dumpids`) + **screenshots** (`shot`) — the full browser-style triad,
+timestamp-correlated. Example:
+
+```
+[      14ms] info(audio): output: device opened @ 48000 Hz, 2ch
+[    1202ms] info(mixer): mute t0 (Drums) -> true
+[    1298ms] info(daw): transport: STOP (playhead 0.66)
+[    1396ms] debug(mixer): fader Drums -> 50%
+[    2319ms] info(daw): perf: 120 frames, render avg 3.40ms (~294 fps headroom)
+```
 
 ## Notes
 - The live DAW binds **Space → transport toggle** and **Esc → quit** (`main_daw.zig`); the
