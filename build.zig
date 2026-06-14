@@ -355,7 +355,7 @@ pub fn build(b: *std.Build) void {
     const gpu_step = b.step("gpu", "Run the GPU 2D renderer smoke test");
     gpu_step.dependOn(&run_gpu.step);
 
-    // The consolidated live Zenith DAW (flex + glass + GPU toolkit).
+    // The consolidated live Zenith DAW (Trellis + glass + GPU toolkit).
     const dawexe = b.addExecutable(.{
         .name = "zenith",
         .root_source_file = b.path("zig/main_daw.zig"),
@@ -386,35 +386,35 @@ pub fn build(b: *std.Build) void {
     const showcase_step = b.step("showcase", "Run the UI toolkit showcase (all effects)");
     showcase_step.dependOn(&run_showcase.step);
 
-    // Mixer laid out by the flex engine + GPU widgets.
-    const flexmix = b.addExecutable(.{
+    // Mixer laid out by the Trellis engine + GPU widgets.
+    const trellismix = b.addExecutable(.{
         .name = "zenith_trellismix",
         .root_source_file = b.path("zig/main_trellismix.zig"),
         .target = target,
         .optimize = optimize,
     });
-    flexmix.linkSystemLibrary("GL");
-    flexmix.linkSystemLibrary("X11");
-    flexmix.linkLibC();
-    b.installArtifact(flexmix);
-    const run_flexmix = b.addRunArtifact(flexmix);
-    const flexmix_step = b.step("trellismix", "Run the Trellis-laid-out mixer");
-    flexmix_step.dependOn(&run_flexmix.step);
+    trellismix.linkSystemLibrary("GL");
+    trellismix.linkSystemLibrary("X11");
+    trellismix.linkLibC();
+    b.installArtifact(trellismix);
+    const run_trellismix = b.addRunArtifact(trellismix);
+    const trellismix_step = b.step("trellismix", "Run the Trellis-laid-out mixer");
+    trellismix_step.dependOn(&run_trellismix.step);
 
-    // Flexbox layout engine demo.
-    const flex = b.addExecutable(.{
+    // Trellis layout engine demo.
+    const trellis = b.addExecutable(.{
         .name = "zenith_trellis",
         .root_source_file = b.path("zig/main_trellis.zig"),
         .target = target,
         .optimize = optimize,
     });
-    flex.linkSystemLibrary("GL");
-    flex.linkSystemLibrary("X11");
-    flex.linkLibC();
-    b.installArtifact(flex);
-    const run_flex = b.addRunArtifact(flex);
-    const flex_step = b.step("trellis", "Run the Trellis layout engine demo");
-    flex_step.dependOn(&run_flex.step);
+    trellis.linkSystemLibrary("GL");
+    trellis.linkSystemLibrary("X11");
+    trellis.linkLibC();
+    b.installArtifact(trellis);
+    const run_trellis = b.addRunArtifact(trellis);
+    const trellis_step = b.step("trellis", "Run the Trellis layout engine demo");
+    trellis_step.dependOn(&run_trellis.step);
 
     // The live DAW, rendered entirely on the GPU toolkit.
     const gpudaw = b.addExecutable(.{

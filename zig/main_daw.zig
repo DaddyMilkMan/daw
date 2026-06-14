@@ -1,5 +1,5 @@
 //! main_daw.zig — the live Zenith DAW. One cohesive app on our own toolkit:
-//! flex layout, GPU widgets, SDF/shadow/atlas-text rendering, frosted glass.
+//! Trellis layout, GPU widgets, SDF/shadow/atlas-text rendering, frosted glass.
 //! Borderless, resizable, full input.
 
 const std = @import("std");
@@ -141,7 +141,7 @@ pub fn main() !void {
         elog.info("MIDI (legacy 1.0 -> UMP): auto-connected {d} source(s); hot-plug on", .{n});
     }
 
-    elog.info("Zenith DAW started — flex + glass + GPU + live audio + MIDI 2.0", .{});
+    elog.info("Zenith DAW started — Trellis + glass + GPU + live audio + MIDI 2.0", .{});
 
     // Run until the user closes the window (or presses Esc). ZENITH_WINDOW_SECONDS
     // caps the runtime (used by automated screenshots); unset = run indefinitely.

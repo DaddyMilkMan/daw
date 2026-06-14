@@ -18,8 +18,8 @@ License: **AGPL-3.0** (see `../LICENSE`).
 | `font.zig` / `ttf.zig` | Antialiased font descriptor + a **runtime TrueType rasterizer** (`ttf.rasterizeAscii` loads any installed `.ttf`). `font_*.zig` are baked data sets. | — |
 | `image.zig` / `svg.zig` | **PNG decoder** + **SVG vector rasterizer**, both → straight-alpha `image.Image` (→ `gpu2d.GpuImage`). | `std` only |
 | `gpu2d.zig` | **GPU 2D renderer.** Instanced shaders, one draw call per type, linear-light + premultiplied, 4× MSAA. Primitives **(à la carte)**: SDF rounded rects (`rect`/`card`/`rectGrad`/`stroke`), analytic gaussian shadows (`shadow`) + **elevation presets** (`elevate`, `Elevation.e1..e4`), **`glow`**, triangles/lines, atlas text (`GpuFont`), textured images (`image`), **dual-Kawase blur + `glass`** (Liquid Glass), and **`grain`** (film-grain finish). | `color`, `font` + OpenGL 3.3 + a `glGetProcAddress` loader |
-| `flex.zig` | **Declarative layout engine** (flow/box). Sizing `px/grow/percent/fit`, `row`/`col`, `gap`/`pad`/`justify`/`align`; two-pass measure→arrange; hover/press anim + click-by-id; `rectOf(id)` overlays. Plus **design tokens** `sp` (4px grid) + `radius`, and **motion** helpers `easeOutCubic`/`easeInOut`/`approach`. | `gpu2d` (→ `color`, `font`) |
-| `widgets.zig` | **GPU immediate-mode widgets** — faders, sliders (+bipolar), rotary knobs, toggles, checkboxes, segmented tabs, progress, **data tables**, **VU `meter`** (attack/release ballistics), **`waveform`** (peak-analysis audio display), icon slots; per-id hover/press animation. Drive with `flex` rects or raw coords. | `gpu2d` (→ `color`) |
+| `trellis.zig` | **Trellis** — a declarative layout engine (flow/box). Sizing `px/grow/percent/fit`, `row`/`col`, `gap`/`pad`/`justify`/`align`; two-pass measure→arrange; hover/press anim + click-by-id; `rectOf(id)` overlays. Plus **design tokens** `sp` (4px grid) + `radius`, and **motion** helpers `easeOutCubic`/`easeInOut`/`approach`. | `gpu2d` (→ `color`, `font`) |
+| `widgets.zig` | **GPU immediate-mode widgets** — faders, sliders (+bipolar), rotary knobs, toggles, checkboxes, segmented tabs, progress, **data tables**, **VU `meter`** (attack/release ballistics), **`waveform`** (peak-analysis audio display), icon slots; per-id hover/press animation. Drive with `trellis` rects or raw coords. | `gpu2d` (→ `color`) |
 | `midi2.zig` / `midi2_alsa.zig` | **MIDI 2.0 / UMP** packets + protocol, and a native UMP ALSA in/out client (auto-connect + hot-plug). | `std` (+ `asound` for the ALSA client) |
 | `audio_engine.zig` / `audio_alsa.zig` | Real-time audio engine (synth + loop, lock-free note queue) over an ALSA PCM device. | `std` + `asound` |
 | `window_glx.zig` | Borderless, resizable, custom-chrome **GLX window** (full input, EWMH move/resize/min/max, MSAA visual, `glGetProcAddress`). Hand-declared C ABIs, no `@cImport`. | X11 + GL + libc (Linux/X11) |
@@ -40,9 +40,9 @@ nothing" coupling.
   `g.grain(w,h,amount)` (film-grain finish — call last, ~0.014).
 - **Surfaces / shapes** (`gpu2d.zig`): `g.rect`, `g.rectGrad`, `g.card` (material
   depth + dither), `g.stroke` (hairline ring), `g.tri`/`g.line`, `g.image`.
-- **Motion** (`flex.zig`): `approach(cur,target,dt,speed)` (smooth, frame-rate-
+- **Motion** (`trellis.zig`): `approach(cur,target,dt,speed)` (smooth, frame-rate-
   independent), `easeOutCubic`, `easeInOut`.
-- **Spacing / radii tokens** (`flex.zig`): `sp."1".. "10"` (4px grid), `radius.xs..xl/pill`.
+- **Spacing / radii tokens** (`trellis.zig`): `sp."1".. "10"` (4px grid), `radius.xs..xl/pill`.
 - **Text** (`gpu2d.GpuFont`): `text`, `textTracked` (letter-spacing), `textNum`
   (tabular figures), `textWidth`; load any `.ttf` at runtime via `ttf.rasterizeAscii`.
 
@@ -50,7 +50,7 @@ nothing" coupling.
 
 - **Just the color type:** copy `color.zig`.
 - **The GPU renderer:** copy `color.zig`, `font.zig` (+ a `font_*.zig` data set), `gpu2d.zig`. Provide an OpenGL 3.3 context and a proc loader (one function: `fn(name: [*:0]const u8) ?*const anyopaque`).
-- **The layout engine + widgets:** the above + `flex.zig` + `widgets.zig`.
+- **The layout engine + widgets:** the above + `trellis.zig` + `widgets.zig`.
 - **A windowed Linux app:** add `window_glx.zig` (links `X11`, `GL`, `libc`).
 - **A CPU-only renderer (no GPU):** copy `color.zig`, `font.zig`, `render2d.zig`.
 

@@ -1,6 +1,7 @@
-//! inspect.zig — instrumentation for driving/observing Zenith like a browser.
+//! inspect.zig — headless instrumentation for observing Zenith (the snapshot half
+//! of the Talkback harness; the live-drive half lives in window_glx.zig).
 //!
-//! Three capabilities an automation agent needs (the "Playwright for the DAW"):
+//! Three capabilities an observe-and-drive harness needs:
 //!   • snapshot  — the full app state as JSON (the DOM/accessibility-tree analog)
 //!   • screenshot — render the current state to a PNG (viewable anywhere)
 //!   • logger    — a structured event log streamed to a file

@@ -1,8 +1,8 @@
 //! uireg.zig — a global registry of interactive widget rects, keyed by id.
 //!
-//! flex.zig and widgets.zig publish every interactive node's (id, rect) here each
-//! frame (upsert). It's the "accessibility tree" an automation agent resolves
-//! selectors against: the control channel (window_glx) looks up `center(id)` to
+//! trellis.zig and widgets.zig publish every interactive node's (id, rect) here each
+//! frame (upsert). It's the "accessibility tree" the Talkback harness resolves
+//! selectors against: Talkback (window_glx) looks up `center(id)` to
 //! drive a widget by id instead of by pixel, and `dump()` writes the whole map so
 //! a script author can discover ids. Process-global + lock-free-ish (single UI
 //! thread); intentionally tiny.

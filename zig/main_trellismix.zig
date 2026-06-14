@@ -1,7 +1,7 @@
-//! main_flexmix.zig — the Zenith mixer, laid out 100% by OUR flexbox engine
-//! (trellis.zig). Every position comes from the layout solver (no cy += 22 math);
+//! main_trellismix.zig — the Zenith mixer, laid out 100% by OUR Trellis layout
+//! engine (trellis.zig). Every position comes from the layout solver (no cy += 22 math);
 //! interactive widgets (faders/knobs/sliders/toggles) render into the
-//! flex-computed rects via the GPU widget toolkit. Proof that the DAW's most
+//! Trellis-computed rects via the GPU widget toolkit. Proof that the DAW's most
 //! layout-heavy section is fully declarative on our own engine.
 
 const std = @import("std");
@@ -166,7 +166,7 @@ pub fn main() !void {
         c.close();
         c.end(); // draws all chrome + labels; computes every rect
 
-        // ---- WIDGETS: rendered into the flex-computed rects ----------------
+        // ---- WIDGETS: rendered into the Trellis-computed rects -------------
         var ti: usize = 0;
         while (ti <= ntr) : (ti += 1) {
             const is_master = ti == ntr;
@@ -204,5 +204,5 @@ pub fn main() !void {
         std.time.sleep(16 * std.time.ns_per_ms);
         elapsed += 0.016;
     }
-    std.debug.print("flex mixer closed\n", .{});
+    std.debug.print("trellis mixer closed\n", .{});
 }
