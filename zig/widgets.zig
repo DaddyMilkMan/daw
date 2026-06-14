@@ -107,12 +107,21 @@ pub const Ui = struct {
     }
 
     pub fn hSlider(self: *Ui, id: u32, x: f32, y: f32, w: f32, h: f32, value: *f32, lo: f32, hi: f32) bool {
-        const hov = self.inside(x, y - 5, w, h + 10);
+        return self.hSliderEx(id, x, y, w, h, value, lo, hi, false);
+    }
+    /// Bipolar slider — fill grows from the CENTER and a center detent tick is
+    /// drawn (good for pan / balance). The thumb is balanced (round, centered).
+    pub fn hSliderBipolar(self: *Ui, id: u32, x: f32, y: f32, w: f32, h: f32, value: *f32, lo: f32, hi: f32) bool {
+        return self.hSliderEx(id, x, y, w, h, value, lo, hi, true);
+    }
+    fn hSliderEx(self: *Ui, id: u32, x: f32, y: f32, w: f32, h: f32, value: *f32, lo: f32, hi: f32, bipolar: bool) bool {
+        const tr = h * 0.5 + 4; // thumb radius (kept inside the track ends)
+        const hov = self.inside(x - tr, y - tr, w + 2 * tr, h + 2 * tr);
         if (hov) self.hot = id;
         if (hov and self.pressed) self.active = id;
         var changed = false;
         if (self.active == id and self.in.mouse_down) {
-            const t = std.math.clamp((self.in.mx - x) / @max(w, 1), 0.0, 1.0);
+            const t = std.math.clamp((self.in.mx - (x + tr)) / @max(w - 2 * tr, 1), 0.0, 1.0);
             const nv = lo + t * (hi - lo);
             if (nv != value.*) {
                 value.* = nv;
@@ -121,12 +130,45 @@ pub const Ui = struct {
         }
         const a = self.anim(id);
         a.hover = ease(a.hover, if (hov or self.active == id) 1 else 0, self.dt, 14);
-        self.g.rect(x, y, w, h, h / 2, track_bg);
+        const cy = y + h * 0.5;
         const t = (value.* - lo) / (hi - lo);
-        const kx = x + t * (w - 6);
-        const grow = a.hover * 2;
-        self.g.card(kx - grow, y - 3 - grow, 6 + 2 * grow, h + 6 + 2 * grow, 4, lerp(Color.rgb(124, 144, 214), accent, a.hover), lerp(Color.rgb(92, 110, 188), accent, a.hover), 0, border, 1.0);
+        const thx = x + tr + t * (w - 2 * tr); // thumb center — balanced
+        const fill = lerp(Color.rgb(96, 120, 200), accent, a.hover);
+        // track
+        self.g.rect(x, y, w, h, h * 0.5, track_bg);
+        if (bipolar) {
+            const mid = x + w * 0.5;
+            const from = @min(mid, thx);
+            self.g.rect(from, y, @abs(thx - mid), h, h * 0.5, fill);
+            self.g.rect(mid - 0.75, y - 2, 1.5, h + 4, 0, Color.rgba(255, 255, 255, 45)); // center detent
+        } else {
+            self.g.rect(x, y, thx - x, h, h * 0.5, fill);
+        }
+        // round thumb (the balanced dial), centered on the value
+        const rr = tr + a.hover * 2;
+        self.g.shadow(thx - rr, cy - rr + 2, 2 * rr, 2 * rr, rr, 4, Color.rgba(0, 0, 0, 130));
+        self.g.card(thx - rr, cy - rr, 2 * rr, 2 * rr, rr, lerp(Color.rgb(244, 246, 250), Color.rgb(255, 255, 255), a.hover), Color.rgb(214, 219, 228), 0, border, 1.0);
         return changed;
+    }
+
+    /// Animated toggle switch — a pill track + a knob that SLIDES between off
+    /// (left) and on (right) with eased motion; track lerps gray -> accent.
+    pub fn toggle(self: *Ui, id: u32, x: f32, y: f32, w: f32, h: f32, on: *bool) bool {
+        const hov = self.inside(x, y, w, h);
+        if (hov) self.hot = id;
+        if (hov and self.pressed) self.active = id;
+        const clicked = self.active == id and self.released and hov;
+        if (clicked) on.* = !on.*;
+        const a = self.anim(id);
+        a.press = ease(a.press, if (on.*) 1 else 0, self.dt, 16); // slide position
+        a.hover = ease(a.hover, if (hov) 1 else 0, self.dt, 14);
+        const track = lerp(Color.rgb(54, 58, 70), accent, a.press);
+        self.g.rect(x, y, w, h, h * 0.5, track);
+        const kd = h - 6; // knob diameter
+        const kx = x + 3 + a.press * (w - kd - 6);
+        self.g.shadow(kx, y + 3 + 1, kd, kd, kd * 0.5, 3, Color.rgba(0, 0, 0, 120));
+        self.g.card(kx, y + 3, kd, kd, kd * 0.5, Color.rgb(252, 253, 255), Color.rgb(228, 232, 240), 0, border, 1.0);
+        return clicked;
     }
 
     pub fn knob(self: *Ui, id: u32, cx: f32, cy: f32, radius: f32, value: *f32) bool {

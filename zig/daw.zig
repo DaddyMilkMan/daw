@@ -621,7 +621,7 @@ pub const View = struct {
                 if (c.rectOf(320 + @as(u64, ti))) |r| if (miniToggle(u, g, self.fb, @intCast(320 + ti), r, "S", state.solos[ti], green)) {
                     state.solos[ti] = !state.solos[ti];
                 };
-                if (c.rectOf(400 + @as(u64, ti))) |r| _ = u.hSlider(@intCast(400 + ti), r[0], r[1], r[2], r[3], &p.tracks.items[ti].pan, -1.0, 1.0);
+                if (c.rectOf(400 + @as(u64, ti))) |r| _ = u.hSliderBipolar(@intCast(400 + ti), r[0], r[1], r[2], r[3], &p.tracks.items[ti].pan, -1.0, 1.0);
                 if (c.rectOf(600 + @as(u64, ti))) |r| {
                     _ = u.knob(@intCast(600 + ti), r[0] + r[2] / 2, r[1] + r[3] / 2, 12, &state.sends[ti][0]);
                     if (u.hot == 600 + @as(u32, @intCast(ti))) {

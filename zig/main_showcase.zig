@@ -140,7 +140,7 @@ const GRADS = [_][2]Color{
 const Vals = struct {
     knob: [3]f32 = .{ 0.35, 0.6, 0.85 },
     fader: [3]f32 = .{ 0.7, 0.45, 0.9 },
-    slider: [2]f32 = .{ 0.3, -0.4 },
+    slider: [2]f32 = .{ 0.6, 0.0 }, // standard (60%) + bipolar (centered/balanced)
     toggle: [2]bool = .{ true, false },
     meter: [4]f32 = .{ 0.3, 0.5, 0.7, 0.4 },
 };
@@ -317,11 +317,10 @@ pub fn main() !void {
         for (0..3) |i| if (c.rectOf(110 + @as(u64, i))) |r| {
             _ = u.vFader(@intCast(110 + i), r[0], r[1], r[2], r[3], &v.fader[i]);
         };
-        if (c.rectOf(120)) |r| _ = u.hSlider(120, r[0], r[1], r[2], r[3], &v.slider[0], -1, 1);
-        if (c.rectOf(121)) |r| _ = u.hSlider(121, r[0], r[1], r[2], r[3], &v.slider[1], -1, 1);
+        if (c.rectOf(120)) |r| _ = u.hSlider(120, r[0], r[1], r[2], r[3], &v.slider[0], 0, 1); // standard
+        if (c.rectOf(121)) |r| _ = u.hSliderBipolar(121, r[0], r[1], r[2], r[3], &v.slider[1], -1, 1); // bipolar (centered)
         for (0..2) |i| if (c.rectOf(130 + @as(u64, i))) |r| {
-            if (u.iconSlot(@intCast(130 + i), r[0], r[1], r[2], r[3], v.toggle[i])) v.toggle[i] = !v.toggle[i];
-            if (v.toggle[i]) g.rect(r[0] + 3 + (r[2] - r[3]), r[1] + 3, r[3] - 6, r[3] - 6, (r[3] - 6) / 2, txt) else g.rect(r[0] + 3, r[1] + 3, r[3] - 6, r[3] - 6, (r[3] - 6) / 2, dim);
+            _ = u.toggle(@intCast(130 + i), r[0], r[1], r[2], r[3], &v.toggle[i]);
         };
         // gradient swatches
         for (GRADS, 0..) |gr, i| if (c.rectOf(700 + @as(u64, i))) |r| {
