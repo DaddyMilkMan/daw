@@ -18,6 +18,29 @@ const c_on = Color.rgb(236, 239, 246);
 const c_off = Color.rgb(150, 158, 173);
 
 pub const Input = struct { mx: f32 = -1, my: f32 = -1, mouse_down: bool = false };
+
+/// Column alignment for the table widget.
+pub const Align = enum { left, right, center };
+/// One table column: heading, pixel width, alignment, and whether its cells are
+/// numeric (rendered with tabular figures so digits line up).
+pub const Col = struct { title: []const u8, w: f32, al: Align = .left, num: bool = false };
+
+fn tableCell(g: *Gpu, f: *const Font, cx: f32, ty: f32, col: Col, s: []const u8, color: Color, header: bool) void {
+    const pad: f32 = 14;
+    const tw = f.textWidth(s);
+    const tx = switch (col.al) {
+        .left => cx + pad,
+        .right => cx + col.w - pad - tw,
+        .center => cx + (col.w - tw) / 2,
+    };
+    if (header) {
+        f.textTracked(g, tx, ty, s, color, 1.1);
+    } else if (col.num) {
+        f.textNum(g, tx, ty, s, color);
+    } else {
+        f.text(g, tx, ty, s, color);
+    }
+}
 const Anim = struct { id: u32 = 0, used: bool = false, hover: f32 = 0, press: f32 = 0, extra: f32 = 0 };
 
 fn ease(cur: f32, target: f32, dt: f32, speed: f32) f32 {
@@ -281,5 +304,58 @@ pub const Ui = struct {
         self.g.rect(x, y, w, h, h * 0.5, track_bg);
         const fw = std.math.clamp(value, 0, 1) * w;
         if (fw > h) self.g.rectGrad(x, y, fw, h, h * 0.5, accent_hi, accent, 0, border);
+    }
+
+    /// Rendered data table — a rounded surface with a borderless tracked header,
+    /// a separator hairline, zebra-striped body rows, hover highlight, and an
+    /// optional selected row (accent wash + left bar). Numeric columns get
+    /// tabular figures and right alignment so digits stay in line. `sel` may be
+    /// null for a static (non-selectable) table. Returns the total height drawn.
+    pub fn table(self: *Ui, id: u32, x: f32, y: f32, cols: []const Col, rows: []const []const []const u8, sel: ?*usize, fh: *const Font, fb: *const Font) f32 {
+        var tw: f32 = 0;
+        for (cols) |col| tw += col.w;
+        const rowh: f32 = fb.cell_h + 13;
+        const headh: f32 = fh.cell_h + 14;
+        const total = headh + @as(f32, @floatFromInt(rows.len)) * rowh;
+        // surface
+        self.g.shadow(x, y + 4, tw, total, 12, 14, Color.rgba(0, 0, 0, 70));
+        self.g.card(x, y, tw, total, 12, Color.rgb(34, 37, 47), Color.rgb(27, 30, 38), 0, border, 1.0);
+        // header (borderless, tracked small-caps style) + hairline separator
+        var hx = x;
+        const hty = y + (headh - fh.cell_h) / 2;
+        for (cols) |col| {
+            tableCell(self.g, fh, hx, hty, col, col.title, Color.rgb(160, 168, 184), true);
+            hx += col.w;
+        }
+        self.g.rect(x + 1, y + headh - 1, tw - 2, 1, 0, Color.rgba(255, 255, 255, 22));
+        // body rows
+        for (rows, 0..) |row, ri| {
+            const ry = y + headh + @as(f32, @floatFromInt(ri)) * rowh;
+            const hov = self.inside(x, ry, tw, rowh);
+            if (hov) {
+                self.hot = id;
+                if (self.pressed) if (sel) |s| {
+                    s.* = ri;
+                };
+            }
+            const is_sel = if (sel) |s| s.* == ri else false;
+            if (is_sel) {
+                self.g.rect(x + 1, ry, tw - 2, rowh, 0, Color.rgba(108, 147, 244, 38));
+                self.g.rect(x + 1, ry, 2.5, rowh, 0, accent);
+            } else if (hov) {
+                self.g.rect(x + 1, ry, tw - 2, rowh, 0, Color.rgba(255, 255, 255, 11));
+            } else if (ri % 2 == 1) {
+                self.g.rect(x + 1, ry, tw - 2, rowh, 0, Color.rgba(255, 255, 255, 6));
+            }
+            var cx = x;
+            const ty = ry + (rowh - fb.cell_h) / 2;
+            for (cols, 0..) |col, ci| {
+                const cell = if (ci < row.len) row[ci] else "";
+                const col_color = if (ci == 0) c_on else c_off;
+                tableCell(self.g, fb, cx, ty, col, cell, col_color, false);
+                cx += col.w;
+            }
+        }
+        return total;
     }
 };

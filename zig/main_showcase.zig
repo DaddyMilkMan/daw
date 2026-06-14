@@ -146,6 +146,25 @@ const Vals = struct {
     check: [2]bool = .{ true, false },
     seg: usize = 0,
     prog: f32 = 0.35,
+    trow: usize = 1, // selected table row
+};
+
+// demo table — a mixer/track list with tabular numeric columns
+const TCOLS = [_]widgets.Col{
+    .{ .title = "#", .w = 46, .al = .center, .num = true },
+    .{ .title = "TRACK", .w = 196 },
+    .{ .title = "TYPE", .w = 116 },
+    .{ .title = "LEVEL", .w = 96, .al = .right, .num = true },
+    .{ .title = "PAN", .w = 86, .al = .right, .num = true },
+    .{ .title = "STATE", .w = 110 },
+};
+const TROWS = [_][]const []const u8{
+    &.{ "1", "Kick Bus", "Audio", "-3.2 dB", "C", "armed" },
+    &.{ "2", "Snare Top", "Audio", "-6.0 dB", "12L", "solo" },
+    &.{ "3", "Bass Synth", "Instrument", "-4.8 dB", "C", "active" },
+    &.{ "4", "Lead Pluck", "Instrument", "-9.1 dB", "24R", "active" },
+    &.{ "5", "Vocal Chop", "Audio", "-12.4 dB", "8L", "muted" },
+    &.{ "6", "Reverb Send", "FX Return", "-18.0 dB", "C", "active" },
 };
 fn frac(x: f32) f32 {
     return x - @floor(x);
@@ -154,7 +173,7 @@ fn frac(x: f32) f32 {
 pub fn main() !void {
     const a = std.heap.page_allocator;
     var W: usize = 1200;
-    var H: usize = 860;
+    var H: usize = 1124;
 
     var window = try win.NativeWindow.open(a, W, H, "Zenith Toolkit");
     defer window.close();
@@ -332,6 +351,10 @@ pub fn main() !void {
             }
             c.close();
 
+            // rendered data table
+            c.label("RENDERED TABLE  ( click a row )", &fc, faint, .{ .h = px(20), .tracking = 1.4 });
+            c.box(.{ .w = grow(), .h = px(238), .id = 960 });
+
             // shadows / elevation + icons
             c.open(.{ .dir = .row, .w = grow(), .h = grow(), .gap = 14 });
             {
@@ -395,6 +418,10 @@ pub fn main() !void {
             if (hov) g.rect(r[0], r[1], r[2], r[3], 7, Color.rgba(108, 147, 244, 50));
             icn.f(&g, r[0] + r[2] / 2, r[1] + r[3] / 2, 16, if (hov) txt else dim);
         };
+        // rendered data table
+        if (c.rectOf(960)) |r| {
+            _ = u.table(960, r[0], r[1], &TCOLS, &TROWS, &v.trow, &fc, &fb);
+        }
         // typeface variety — one sample line per face, 2 columns x 3 rows
         if (c.rectOf(950)) |r| {
             const colw = (r[2] - 32) / 2;
