@@ -1,14 +1,14 @@
 # Live Zenith DAW control — BY ID (default, deterministic). Discover ids with
-# `dumpids tools/control/daw_ids.txt`. See tools/control/daw_ids.txt for the map.
+# `dumpids tools/talkback/daw_ids.txt`. See tools/talkback/daw_ids.txt for the map.
 wait 50
-shot tools/control/d0_baseline.png
+shot tools/talkback/d0_baseline.png
 # transport: click the play button (id 1) -> Stopped, then -> Playing
 clickid 1
 wait 5
-shot tools/control/d1_stopped.png
+shot tools/talkback/d1_stopped.png
 clickid 1
 wait 5
-shot tools/control/d2_playing.png
+shot tools/talkback/d2_playing.png
 # drag the Drums mixer fader (id 100) to 0, then to 100 — purely by id
 moveid 100
 wait 1
@@ -16,10 +16,10 @@ down
 wait 2
 rmove 0 60
 wait 3
-shot tools/control/d3_fader_0.png
+shot tools/talkback/d3_fader_0.png
 rmove 0 -120
 wait 3
-shot tools/control/d4_fader_100.png
+shot tools/talkback/d4_fader_100.png
 up
 wait 3
 quit

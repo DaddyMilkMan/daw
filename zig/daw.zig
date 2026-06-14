@@ -1,5 +1,5 @@
 //! daw.zig — the Zenith DAW view, assembled entirely from our own toolkit:
-//! flex.zig (layout), widgets.zig (faders/knobs/sliders), gpu2d.zig (SDF shapes,
+//! trellis.zig (layout), widgets.zig (faders/knobs/sliders), gpu2d.zig (SDF shapes,
 //! analytic shadows, atlas text, frosted glass). One cohesive live app — the
 //! consolidation of everything proven in the demos. DAW-specific code; the
 //! reusable engine pieces live in their own modules (see TOOLKIT.md).
@@ -7,16 +7,16 @@
 const std = @import("std");
 const mlog = std.log.scoped(.mixer); // logs control changes to the app console
 const gpu2d = @import("gpu2d.zig");
-const flex = @import("flex.zig");
+const trellis = @import("trellis.zig");
 const widgets = @import("widgets.zig");
 const project = @import("project.zig");
 const color = @import("color.zig");
 const Color = gpu2d.Color;
 const Gpu = gpu2d.Gpu;
 const Font = gpu2d.GpuFont;
-const px = flex.px;
-const grow = flex.grow;
-const groww = flex.groww;
+const px = trellis.px;
+const grow = trellis.grow;
+const groww = trellis.groww;
 
 pub const WinAction = enum { none, close, minimize, maximize, move };
 pub const State = struct {
@@ -346,7 +346,7 @@ fn drawClips(g: *Gpu, fb: *const Font, u: *widgets.Ui, p: *project.Project, ti: 
 // ---- the view --------------------------------------------------------------
 pub const View = struct {
     g: *Gpu,
-    c: flex.Ctx,
+    c: trellis.Ctx,
     u: widgets.Ui,
     fc: *const Font, // caption 12 (labels)
     fb: *const Font, // body 14
@@ -361,7 +361,7 @@ pub const View = struct {
     pr: @import("pianoroll.zig").PianoRoll = .{}, // the clip editor (when state.editing)
 
     pub fn init(g: *Gpu, fc: *const Font, fb: *const Font, fu: *const Font, fd: *const Font) View {
-        return .{ .g = g, .c = flex.Ctx.init(g, fb, fu, fd), .u = widgets.Ui.init(g), .fc = fc, .fb = fb, .fu = fu, .fd = fd };
+        return .{ .g = g, .c = trellis.Ctx.init(g, fb, fu, fd), .u = widgets.Ui.init(g), .fc = fc, .fb = fb, .fu = fu, .fd = fd };
     }
     /// A small-caps section label (caption font, letter-spaced) — a core modern
     /// pattern. Caller already uppercases the string.
@@ -552,7 +552,7 @@ pub const View = struct {
 
         // ---- WIDGETS / custom content into the solved rects ----------------
         // (transport + window controls are drawn over the glass title bar, below)
-        // nav selection (flex hover handled in chrome; click via flex)
+        // nav selection (Trellis hover handled in chrome; click via Trellis)
         if (c.click >= 1000 and c.click < 1010) state.nav_sel = @intCast(c.click - 1000);
         // browser category icons (thin-stroke, in category color)
         const navico = [_]struct { k: u8, col: Color }{

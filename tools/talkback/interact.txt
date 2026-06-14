@@ -1,6 +1,6 @@
 # settle, baseline
 wait 45
-shot tools/control/s0_baseline.png
+shot tools/talkback/s0_baseline.png
 # vertical fader band (center): grab near top, drag to bottom, then back up
 move 560 510
 wait 1
@@ -8,10 +8,10 @@ down
 wait 2
 move 560 650
 wait 3
-shot tools/control/s1_fader_low.png
+shot tools/talkback/s1_fader_low.png
 move 560 505
 wait 3
-shot tools/control/s2_fader_high.png
+shot tools/talkback/s2_fader_high.png
 up
 wait 2
 # knob (left of controls): press, drag UP to turn it up
@@ -21,7 +21,7 @@ down
 wait 2
 move 210 450
 wait 3
-shot tools/control/s3_knob_up.png
+shot tools/talkback/s3_knob_up.png
 up
 wait 2
 # horizontal slider (right): drag fully right
@@ -31,7 +31,7 @@ down
 wait 2
 move 1130 560
 wait 3
-shot tools/control/s4_slider_right.png
+shot tools/talkback/s4_slider_right.png
 up
 wait 2
 # toggle click
@@ -41,5 +41,5 @@ down
 wait 2
 up
 wait 3
-shot tools/control/s5_toggle.png
+shot tools/talkback/s5_toggle.png
 quit

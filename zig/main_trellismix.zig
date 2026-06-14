@@ -1,5 +1,5 @@
 //! main_flexmix.zig — the Zenith mixer, laid out 100% by OUR flexbox engine
-//! (flex.zig). Every position comes from the layout solver (no cy += 22 math);
+//! (trellis.zig). Every position comes from the layout solver (no cy += 22 math);
 //! interactive widgets (faders/knobs/sliders/toggles) render into the
 //! flex-computed rects via the GPU widget toolkit. Proof that the DAW's most
 //! layout-heavy section is fully declarative on our own engine.
@@ -7,11 +7,11 @@
 const std = @import("std");
 const win = @import("window_glx.zig");
 const gpu2d = @import("gpu2d.zig");
-const flex = @import("flex.zig");
+const trellis = @import("trellis.zig");
 const w = @import("ui_gpu.zig");
 const Color = gpu2d.Color;
-const px = flex.px;
-const grow = flex.grow;
+const px = trellis.px;
+const grow = trellis.grow;
 
 const card_t = Color.rgb(47, 51, 64);
 const card_b = Color.rgb(34, 37, 48);
@@ -58,7 +58,7 @@ pub fn main() !void {
 
     var p = try w.buildDemoProject(a, bar);
     defer p.deinit();
-    var c = flex.Ctx.init(&g, &fb, &fu, &fd);
+    var c = trellis.Ctx.init(&g, &fb, &fu, &fd);
     var u = w.UiG.init(&g, &fb, &fu, &fd);
     var state = w.State{};
 

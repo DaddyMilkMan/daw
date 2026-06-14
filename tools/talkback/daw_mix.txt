@@ -1,0 +1,11 @@
+wait 60
+shot tools/talkback/mix0_all.png
+clickid 320
+wait 35
+shot tools/talkback/mix1_solo_drums.png
+clickid 320
+wait 8
+clickid 303
+wait 35
+shot tools/talkback/mix2_mute_keys.png
+quit

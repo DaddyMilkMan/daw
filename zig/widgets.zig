@@ -1,6 +1,6 @@
 //! widgets.zig — reusable GPU immediate-mode widgets (faders, sliders, knobs,
 //! icon slots) drawn through gpu2d, with per-id hover/press animation. No DAW or
-//! layout dependency — pair it with flex.zig (positions) or call with raw rects.
+//! layout dependency — pair it with trellis.zig (positions) or call with raw rects.
 //! Original Zig.
 
 const std = @import("std");
@@ -72,7 +72,7 @@ fn tableCell(g: *Gpu, f: *const Font, cx: f32, ty: f32, col: Col, s: []const u8,
 const Anim = struct { id: u32 = 0, used: bool = false, hover: f32 = 0, press: f32 = 0, extra: f32 = 0 };
 
 // Frame-rate-independent critically-damped easing (smooth, no snap/overshoot) —
-// the modern feel for hover/press/slide transitions. (See flex.approach.)
+// the modern feel for hover/press/slide transitions. (See trellis.approach.)
 fn ease(cur: f32, target: f32, dt: f32, speed: f32) f32 {
     return cur + (target - cur) * (1.0 - @exp(-speed * dt));
 }

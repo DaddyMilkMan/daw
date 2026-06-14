@@ -1,5 +1,5 @@
 //! crop.zig — crop + nearest-neighbour upscale a PNG so screenshot regions are
-//! readable when inspecting the app. Run: zig run tools/control/crop.zig -- \
+//! readable when inspecting the app. Run: zig run zig/main_crop.zig -- \
 //!   <in.png> <x> <y> <w> <h> <scale> <out.png>
 
 const std = @import("std");

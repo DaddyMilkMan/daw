@@ -247,7 +247,7 @@ pub fn build(b: *std.Build) void {
     const inspect_step = b.step("inspect", "Dump DAW state JSON + PNG screenshot + event log");
     inspect_step.dependOn(&run_inspect.step);
 
-    // Piano-roll / clip editor (standalone, drivable via the control harness).
+    // Piano-roll / clip editor (standalone, drivable via the Talkback harness).
     const pianoroll = b.addExecutable(.{
         .name = "zenith_pianoroll",
         .root_source_file = b.path("zig/main_pianoroll.zig"),
@@ -388,8 +388,8 @@ pub fn build(b: *std.Build) void {
 
     // Mixer laid out by the flex engine + GPU widgets.
     const flexmix = b.addExecutable(.{
-        .name = "zenith_flexmix",
-        .root_source_file = b.path("zig/main_flexmix.zig"),
+        .name = "zenith_trellismix",
+        .root_source_file = b.path("zig/main_trellismix.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -398,13 +398,13 @@ pub fn build(b: *std.Build) void {
     flexmix.linkLibC();
     b.installArtifact(flexmix);
     const run_flexmix = b.addRunArtifact(flexmix);
-    const flexmix_step = b.step("flexmix", "Run the flex-laid-out mixer");
+    const flexmix_step = b.step("trellismix", "Run the Trellis-laid-out mixer");
     flexmix_step.dependOn(&run_flexmix.step);
 
     // Flexbox layout engine demo.
     const flex = b.addExecutable(.{
-        .name = "zenith_flex",
-        .root_source_file = b.path("zig/main_flex.zig"),
+        .name = "zenith_trellis",
+        .root_source_file = b.path("zig/main_trellis.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -413,7 +413,7 @@ pub fn build(b: *std.Build) void {
     flex.linkLibC();
     b.installArtifact(flex);
     const run_flex = b.addRunArtifact(flex);
-    const flex_step = b.step("flex", "Run the flexbox layout engine demo");
+    const flex_step = b.step("trellis", "Run the Trellis layout engine demo");
     flex_step.dependOn(&run_flex.step);
 
     // The live DAW, rendered entirely on the GPU toolkit.

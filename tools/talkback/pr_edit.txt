@@ -1,5 +1,5 @@
 wait 40
-shot tools/control/pe0_seed.png
+shot tools/talkback/pe0_seed.png
 # MOVE the G4 note (~194,305) up/right to (330,235)
 move 194 305
 wait 1
@@ -11,7 +11,7 @@ move 330 235
 wait 2
 up
 wait 3
-shot tools/control/pe1_moved.png
+shot tools/talkback/pe1_moved.png
 # RESIZE the long note: grab its right edge (~338,226), drag right to 470
 move 338 226
 wait 1
@@ -23,7 +23,7 @@ move 470 226
 wait 2
 up
 wait 3
-shot tools/control/pe2_resized.png
+shot tools/talkback/pe2_resized.png
 # VELOCITY: drag the first note's bar low, then high
 move 62 672
 wait 1
@@ -41,5 +41,5 @@ move 62 622
 wait 2
 up
 wait 3
-shot tools/control/pe3_velocity.png
+shot tools/talkback/pe3_velocity.png
 quit

@@ -1,5 +1,5 @@
 //! main_pianoroll.zig — standalone piano-roll editor (so it's drivable + verifiable
-//! via the control harness before it lands in the DAW). Click the grid to add/remove
+//! via the Talkback harness before it lands in the DAW). Click the grid to add/remove
 //! notes on a seed clip.
 
 const std = @import("std");

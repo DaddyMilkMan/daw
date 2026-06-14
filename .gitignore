@@ -200,7 +200,7 @@ audiotrack_demo.wav
 
 tools/realvst3/*.so
 
-tools/control/*.png
+tools/talkback/*.png
 
-tools/control/*.log
+tools/talkback/*.log
 zenith.log

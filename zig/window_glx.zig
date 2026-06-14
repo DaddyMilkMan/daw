@@ -175,11 +175,14 @@ fn xcCode(s: CursorShape) c_uint {
 }
 
 // ---------------------------------------------------------------------------
-// Automation — "Playwright for the DAW": when ZENITH_SCRIPT names a script file,
-// the window REPLAYS scripted input (move/down/up/key) into poll() instead of the
-// OS, and captures glReadPixels screenshots on `shot` actions. The app's own loop
-// is unchanged — it just receives synthetic events. Script grammar (one per line):
-//   move <x> <y> | down | up | key <code> | wait <frames> | shot <file.png> | quit
+// Talkback — Zenith's own observe-and-drive harness. When ZENITH_SCRIPT names a
+// script file, the window REPLAYS scripted input (move/down/up/key) into poll()
+// instead of the OS, and captures glReadPixels screenshots on `shot` actions. The
+// app's own loop is unchanged — it just receives synthetic events. Pair it with the
+// uireg accessibility tree (moveid/clickid/dumpids) to target widgets by id rather
+// than pixels. Script grammar (one per line):
+//   move <x> <y> | moveid <id> | clickid <id> | rmove <dx> <dy> | down | up
+//   key <code> | wait <frames> | shot <file.png> | dumpids | quit
 // Actions run per frame until a `wait`/`shot`/`quit`; insert `wait 1` between drag
 // steps so the widget processes each incremental position.
 // ---------------------------------------------------------------------------
@@ -194,7 +197,7 @@ const Act = struct {
     name_len: usize = 0,
 };
 
-pub const Automation = struct {
+pub const Talkback = struct {
     acts: [256]Act = undefined,
     n: usize = 0,
     pc: usize = 0,
@@ -210,7 +213,7 @@ pub const Automation = struct {
     pending_up: bool = false, // clickid auto-releases the next frame
     frame: u64 = 0,
 
-    fn parse(self: *Automation, text: []const u8) void {
+    fn parse(self: *Talkback, text: []const u8) void {
         var it = std.mem.tokenizeScalar(u8, text, '\n');
         while (it.next()) |raw_line| {
             if (self.n >= self.acts.len) break;
@@ -261,7 +264,7 @@ pub const Automation = struct {
         }
     }
 
-    fn pushEv(self: *Automation, e: Event) void {
+    fn pushEv(self: *Talkback, e: Event) void {
         if (self.ev_n < self.ev.len) {
             self.ev[self.ev_n] = e;
             self.ev_n += 1;
@@ -269,7 +272,7 @@ pub const Automation = struct {
     }
 
     /// Prepare the events to deliver this frame; may arm a screenshot.
-    fn fillFrame(self: *Automation) void {
+    fn fillFrame(self: *Talkback) void {
         self.ev_n = 0;
         self.ev_i = 0;
         if (self.pending_up) { // release a clickid started last frame
@@ -373,7 +376,7 @@ pub const NativeWindow = struct {
     allocator: std.mem.Allocator,
     cursor_cache: [11]XID = [_]XID{0} ** 11, // lazily created, indexed by CursorShape
     cur_shape: CursorShape = .default,
-    auto: ?*Automation = null, // set when ZENITH_SCRIPT drives scripted input
+    tb: ?*Talkback = null, // set when ZENITH_SCRIPT drives scripted input
 
     pub fn open(a: std.mem.Allocator, w: usize, h: usize, title: [*:0]const u8) WindowError!NativeWindow {
         const display = XOpenDisplay(null) orelse return WindowError.NoDisplay;
@@ -415,11 +418,11 @@ pub const NativeWindow = struct {
             defer a.free(path);
             if (std.fs.cwd().readFileAlloc(a, path, 1 << 20)) |text| {
                 defer a.free(text);
-                const au = a.create(Automation) catch return nw;
-                au.* = .{};
-                au.parse(text);
-                au.fillFrame();
-                nw.auto = au;
+                const tb = a.create(Talkback) catch return nw;
+                tb.* = .{};
+                tb.parse(text);
+                tb.fillFrame();
+                nw.tb = tb;
             } else |_| {}
         } else |_| {}
         return nw;
@@ -464,13 +467,13 @@ pub const NativeWindow = struct {
     }
     /// Swap the back buffer to screen (for the GPU primitive renderer path).
     pub fn swapBuffers(self: *NativeWindow) void {
-        if (self.auto) |au| {
-            if (au.pending_shot) |nm| {
-                self.captureScreenshot(nm[0..au.shot_len]); // back buffer holds this frame
-                au.pending_shot = null;
+        if (self.tb) |tb| {
+            if (tb.pending_shot) |nm| {
+                self.captureScreenshot(nm[0..tb.shot_len]); // back buffer holds this frame
+                tb.pending_shot = null;
             }
-            au.frame += 1;
-            au.fillFrame(); // prepare the next frame's scripted events
+            tb.frame += 1;
+            tb.fillFrame(); // prepare the next frame's scripted events
         }
         glXSwapBuffers(self.display, self.win);
     }
@@ -500,15 +503,15 @@ pub const NativeWindow = struct {
     }
 
     pub fn poll(self: *NativeWindow) Event {
-        if (self.auto) |au| {
+        if (self.tb) |tb| {
             // drain any real X events (keeps the WM happy) but ignore them
             while (XPending(self.display) != 0) {
                 var raw: [192]u8 align(8) = undefined;
                 _ = XNextEvent(self.display, &raw);
             }
-            if (au.ev_i < au.ev_n) {
-                const e = au.ev[au.ev_i];
-                au.ev_i += 1;
+            if (tb.ev_i < tb.ev_n) {
+                const e = tb.ev[tb.ev_i];
+                tb.ev_i += 1;
                 return e;
             }
             return .none;

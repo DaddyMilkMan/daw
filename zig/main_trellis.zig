@@ -1,11 +1,11 @@
-//! main_flex.zig — demo of the flexbox layout engine. The whole UI below is
+//! main_trellis.zig — demo of the Trellis layout engine. The whole UI below is
 //! declared structurally (rows/cols/gap/padding/grow) — no pixel coordinates —
 //! and the engine computes exact positions. Buttons animate on hover.
 
 const std = @import("std");
 const win = @import("window_glx.zig");
 const gpu2d = @import("gpu2d.zig");
-const ui = @import("flex.zig");
+const ui = @import("trellis.zig");
 const Color = gpu2d.Color;
 const px = ui.px;
 const grow = ui.grow;
@@ -39,7 +39,7 @@ pub fn main() !void {
     var fd = try gpu2d.GpuFont.init(a, &@import("font_display.zig").font);
     defer fd.deinit();
     var c = ui.Ctx.init(&g, &fb, &fu, &fd);
-    std.debug.print("flex layout demo\n", .{});
+    std.debug.print("Trellis layout demo\n", .{});
 
     const secs: f64 = blk: {
         if (std.process.getEnvVarOwned(a, "ZENITH_WINDOW_SECONDS")) |v| {
@@ -142,14 +142,14 @@ pub fn main() !void {
                     }
                 }
                 c.close();
-                c.label("Declarative flexbox layout — no pixel coordinates.", &fb, faint, .{ .h = px(20) });
+                c.label("Declarative Trellis layout — no pixel coordinates.", &fb, faint, .{ .h = px(20) });
             }
             c.close();
         }
         c.close();
 
         c.end();
-        g.flush(); // draw the backdrop (the flex chrome) to the framebuffer
+        g.flush(); // draw the backdrop (the Trellis chrome) to the framebuffer
 
         // ---- animated FROSTED-GLASS dropdown overlay -----------------------
         if (c.click == 13) menu_open = !menu_open;

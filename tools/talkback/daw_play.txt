@@ -1,12 +1,12 @@
 wait 50
 key 26
 wait 80
-shot tools/control/dp_a.png
+shot tools/talkback/dp_a.png
 move 520 250
 wait 1
 down
 wait 1
 up
 wait 130
-shot tools/control/dp_b.png
+shot tools/talkback/dp_b.png
 quit

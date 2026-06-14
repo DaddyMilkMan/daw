@@ -127,7 +127,7 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ **Message/event loop** + timers (UI + async)
 - 🟡 **Lock-free audio FIFOs** (SPSC note queue in `audio_engine.zig`); ❌ generic ring-buffer util
 - ❌ Thread pool / async task system
-- 🟡 Logging + **observability/instrumentation**: (a) headless snapshot (`inspect.zig`: JSON state + PNG screenshot + event log; `png.zig`); (b) **live scripted control** — `window_glx` replays a `ZENITH_SCRIPT` of input (move/down/up/key/wait/shot/quit) into the real GPU app and grabs `glReadPixels` PNGs, no app-UI changes (the "Playwright for the DAW"). **Verified: drove the real showcase — fader, slider, knob, toggle all responded, captured in screenshots** (`tools/control/`). ❌ settings/config persistence, an input-injection API for in-process tests
+- 🟡 Logging + **observability/instrumentation** — the **Talkback** harness (`window_glx.zig`): (a) headless snapshot (`inspect.zig`: JSON state + PNG screenshot + event log; `png.zig`); (b) **live scripted control** — `window_glx` replays a `ZENITH_SCRIPT` of input (move/moveid/clickid/rmove/down/up/key/wait/shot/dumpids/quit) into the real GPU app and grabs `glReadPixels` PNGs, no app-UI changes. By-id targeting via the `uireg.zig` widget registry (the "DOM") is the default; by-pixel is the fallback. The triad: **console** (logs) + **DOM** (`dumpids`) + **screenshots** (`shot`), timestamp-correlated. **Verified: drove the real showcase + DAW — transport, faders, mute/solo, pan, send knobs, and the piano-roll editor all responded, captured in screenshots** (`tools/talkback/`). ❌ settings/config persistence, an input-injection API for in-process tests
 
 ### 4.6 DSP toolkit  *(JUCE: juce_dsp)* — `dsp.zig` toolkit landed (17 tests)
 - ✅ SVF filter
@@ -145,7 +145,7 @@ Status: ✅ done · 🟡 partial · ❌ not started
 ### 4.7 Engine — the DAW core  *(was Zenith's own C++; rebuild in Zig)*
 - 🟡 **Transport / clock / playhead**: tempo + looping playhead done; ❌ stop/record-arm, time signature, metronome, linear (non-loop) mode
 - 🟡 **Track model**: MIDI/instrument tracks (`project.zig`) + **audio tracks** (`audio_track.zig`: `AudioTrack` with gain/pan/mute/solo/record-arm); ❌ unify audio tracks into the saved project format, track folders/groups
-- 🟡 **Clip / region model** + **arrangement timeline**: MIDI clips (`arrangement.zig`) + **audio clips** (`audio_track.zig`: `AudioClip` — sample buffer at a timeline frame, file-backed via WAV); ❌ loop regions, clip editing/trim/fades
+- 🟡 **Clip / region model** + **arrangement timeline**: MIDI clips (`arrangement.zig`) + **audio clips** (`audio_track.zig`: `AudioClip` — sample buffer at a timeline frame, file-backed via WAV); **MIDI clip editing** done (`pianoroll.zig`: add/remove/move/resize notes + velocity, live in the DAW). ❌ loop regions, audio-clip trim/fades
 - 🟡 **Mixer / routing graph**: design `mix_graph.zig` (channels/buses/sends/metering); **LIVE in the DAW** (`audio_engine.zig`): per-track stems → **FX chain (high-pass + compressor)** → gain/pan/**mute/solo** (`mixBlocks`) → master, with a **post-fader reverb send** per channel into a shared `effects.Reverb` bus. The mixer faders/mute/solo/sends drive the real audio; per-track + reverb-bus levels published to the meters + audio monitor. Verified live (solo isolates; send knob 0.28→1.0 raised the reverb bus 0.20→0.40). ❌ PDC, LUFS at master, more FX slots, fader automation wiring
 - 🟡 **Sequencer/playback**: MIDI timeline (`arrangement.zig`) + **sample-accurate audio-clip playback** (`AudioTrack.render`); ❌ advanced (swing, latency-comp scheduling)
 - 🟡 **Recording**: MIDI loop capture + overdub + **audio capture-to-timeline** (`audio_track.Recorder`: feed captured frames → finalize into a clip at the record position; WAV round-trip); ❌ punch in/out, quantize, monitoring
@@ -184,7 +184,7 @@ Status: ✅ done · 🟡 partial · ❌ not started
   moving frosted panel, 375 fps-frames). ❌ full GL-native vector drawing, Vulkan/Metal
 - 🟡 Window + input layer: X11 native window + blit + mouse/keyboard done (`window_x11.zig`/`main_window.zig`); ❌ Wayland/Win32/Cocoa, scroll/drag
 - 🟡 Widget/component framework: immediate-mode toolkit done (`uikit.zig`: button/vFader/hSlider, hot/active model); ❌ layout system, more widgets
-- 🟡 DAW views: transport + timeline + **interactive mixer** (faders/pan/mute/solo/sends drive real audio + FX) + **piano-roll / clip editor** (`pianoroll.zig`: key×time grid, renders a clip's notes, **click to add/remove** notes quantized to the grid; `zig build pianoroll`, verified by driving it). ❌ drag-move/resize notes, velocity editing, in-DAW integration (currently standalone), browser, sample editor
+- 🟡 DAW views: transport + timeline + **interactive mixer** (faders/pan/mute/solo/sends drive real audio + FX) + **piano-roll / clip editor** (`pianoroll.zig`: key×time grid renders a clip's notes; **click to add/remove**, **drag to move** (re-auditions on pitch change), **drag the right edge to resize** (grid-quantized), **velocity lane** at the bottom; notes colored by velocity; **wired into the DAW** — `E` opens the editor over the selected clip, edits feed the live engine via a double-buffered sequencer so they play back instantly, and a `note-on/off` audition hook drives the synth on grab/release. Standalone `zig build pianoroll` too. Verified end-to-end via Talkback). ❌ multi-note select/marquee, copy/paste, browser, sample editor
 - 🟡 Theming + meters/faders drawn; ❌ waveform drawing, scopes, full design system
 - ❌ Accessibility, keyboard shortcuts
 
@@ -492,12 +492,33 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   `valueAt`, sample-accurate `render`), verified driving a gain ramp.
 - **Warp/time-stretch + pitch-shift** (`timestretch.zig`, WSOLA) — FFT-verified.
 - **Observability/instrumentation** (`inspect.zig` + `png.zig` + `zig build inspect`): a headless
-  "Playwright for the DAW" — JSON state snapshot (the DOM/a11y-tree analog), PNG screenshot
+  snapshot (the seed of the **Talkback** harness) — JSON state snapshot (the DOM/a11y-tree analog), PNG screenshot
   (`png.zig` minimal encoder, viewable + decodes via our own `image.zig`), and a structured event
   log. Lets an agent observe the full app state off-screen. ❌ live-app hookup (the running
   `zenith` calling `inspect.snapshot/screenshot` on a key/IPC) + input-injection control channel.
 - NEXT in campaign (ordered): **live-app instrumentation hookup** (zenith dumps a snapshot +
   screenshot on demand) + **GUI record-arm + RT-safe capture** → **wire mix_graph + automation
   into the live engine/project** → plugin param automation + VST3 IEditController.
+
+**2026-06-14 (session 3 — piano-roll editing + tool naming: Talkback & Trellis)**
+- **Piano-roll / clip editing, finished + wired into the DAW** (`pianoroll.zig`): drag-move
+  notes (column offset preserved, re-auditions on pitch change), drag the right edge to
+  **resize** (grid-quantized), a **velocity lane** at the bottom strip, click-empty to add +
+  drag, click-note to delete (disambiguated by whether the cell changed); notes colored by
+  velocity; optional `audition` hook fires note-on on grab / note-off on release.
+  Integrated into `daw.zig`/`main_daw.zig`: **`E`** opens the editor over the selected clip
+  (dimmed backdrop), edits feed the live engine through a **double-buffered sequencer**
+  (write the inactive buffer, flip an atomic index — RT-safe) so changes play back instantly,
+  and the audition hook drives the engine synth. Standalone `zig build pianoroll` retained.
+  **Verified end-to-end via Talkback**: scripted add/move/resize/velocity → screenshots +
+  the audition/engine logs confirmed each edit.
+- **Tooling renamed off the placeholder names** (the user's "don't just copy Playwright/flex"):
+  - `flex.zig` → **`trellis.zig`** (the **Trellis** layout engine); `main_flex`/`main_flexmix`
+    → `main_trellis`/`main_trellismix`; build steps `flex`/`flexmix` → `trellis`/`trellismix`;
+    all `@import`/aliases updated.
+  - the scripted-control harness is now **Talkback** (`Automation` struct → `Talkback` in
+    `window_glx.zig`); `tools/control/` → `tools/talkback/` (scripts, README, `.gitignore`,
+    docs paths all updated). Same observe-and-drive triad (console + DOM + screenshots).
+  - Full `zig build test` green after both renames.
 
 *(Add new dated entries as milestones complete.)*

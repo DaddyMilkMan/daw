@@ -1,14 +1,18 @@
-# Scripted control — "Playwright for Zenith"
+# Talkback — Zenith's observe-and-drive harness
 
 Drive the **real** app (showcase, daw, any GPU window) with synthetic input and
-capture screenshots — no app-UI changes required. The control channel lives in
+capture screenshots — no app-UI changes required. Talkback lives in
 `zig/window_glx.zig`: when `ZENITH_SCRIPT=<file>` is set, the window replays the
 script's input into `poll()` instead of the OS, and `glReadPixels` → PNG on `shot`.
+
+It's the same act → observe → verify loop a browser test driver gives you, but built
+in-tree for our own GPU window: **console** (logs), **DOM** (`dumpids`), and
+**screenshots** (`shot`), all timestamp-correlated.
 
 ## Run
 
 ```sh
-ZENITH_SCRIPT=tools/control/interact.txt ZENITH_WINDOW_SECONDS=12 zig build showcase
+ZENITH_SCRIPT=tools/talkback/interact.txt ZENITH_WINDOW_SECONDS=12 zig build showcase
 # also works for: zig build daw, zig build window, ...
 ```
 
@@ -40,7 +44,7 @@ Actions run within a frame until a `wait`/`shot`/`clickid`/`quit`. For a drag, a
 moves with `wait 1` so the widget processes each step. Cursor + button state are sticky.
 
 ### Why by-id is the default
-`flex.zig`/`widgets.zig` publish every interactive widget's rect to `uireg.zig` each
+`trellis.zig`/`widgets.zig` publish every interactive widget's rect to `uireg.zig` each
 frame; `moveid`/`clickid` resolve the exact center, and `dumpids` lists every widget.
 Tested both ways on the DAW: **by-id hit the play button + Drums fader first try**, while
 by-pixel needed a wrong guess → zoom → corrected coordinate. So: `dumpids` once to learn
@@ -77,14 +81,14 @@ The app tees every `std.log` line to a file **and** stderr (`zig/log.zig`). Set 
 with `ZENITH_LOG`:
 
 ```sh
-ZENITH_LOG=tools/control/daw.log ZENITH_SCRIPT=... zig build daw   # then: cat tools/control/daw.log
+ZENITH_LOG=tools/talkback/daw.log ZENITH_SCRIPT=... zig build daw   # then: cat tools/talkback/daw.log
 ```
 
 Lines are `[<ms>ms] level(scope): message`. Logged events: DAW start/stop, MIDI connect,
 `audio: output device opened`, `daw: transport PLAY/STOP`, `mixer: mute/solo/pan/fader`
 changes (the fader logs each drag step), `daw: perf` (render ms / fps headroom every 120
-frames), per-MIDI-note, and `alsa: xrun`/errors. So a control run gives the **console**
-(log) + **DOM** (`dumpids`) + **screenshots** (`shot`) — the full browser-style triad,
+frames), per-MIDI-note, and `alsa: xrun`/errors. So a Talkback run gives the **console**
+(log) + **DOM** (`dumpids`) + **screenshots** (`shot`) — the full triad,
 timestamp-correlated. Example:
 
 ```

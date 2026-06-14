@@ -5,7 +5,7 @@
 const std = @import("std");
 const win = @import("window_glx.zig");
 const gpu2d = @import("gpu2d.zig");
-const flex = @import("flex.zig");
+const trellis = @import("trellis.zig");
 const widgets = @import("widgets.zig");
 const image = @import("image.zig");
 const svg = @import("svg.zig");
@@ -13,9 +13,9 @@ const ttf = @import("ttf.zig");
 const FontData = @import("font.zig").Font;
 const Color = gpu2d.Color;
 const Gpu = gpu2d.Gpu;
-const px = flex.px;
-const grow = flex.grow;
-const groww = flex.groww;
+const px = trellis.px;
+const grow = trellis.grow;
+const groww = trellis.groww;
 
 // palette (OKLCH-ish hand-picked vibrant set)
 const bg0 = Color.rgb(15, 16, 21);
@@ -252,7 +252,7 @@ pub fn main() !void {
         if (i < 3) faces[3 + i] = .{ .f = &rf.gf, .n = rf.name, .rt = true };
     }
 
-    var c = flex.Ctx.init(&g, &fb, &fu, &fd);
+    var c = trellis.Ctx.init(&g, &fb, &fu, &fd);
     var u = widgets.Ui.init(&g);
     var v = Vals{};
 

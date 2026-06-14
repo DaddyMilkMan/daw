@@ -1,4 +1,4 @@
-//! flex.zig — a CSS-flexbox-style declarative layout engine over gpu2d.
+//! trellis.zig — the Trellis layout engine (CSS-flexbox-style, declarative) over gpu2d.
 //!
 //! WHY: hand-computing pixel coordinates (cy += 22, x + w/2 - 18) is what makes
 //! custom UIs drift and look "off", and what makes UI hard to author correctly.
