@@ -372,6 +372,12 @@ pub const Engine = struct {
     pub fn setSustain(self: *Engine, on: bool) void { // CC64 sustain pedal
         @atomicStore(bool, &self.ctl_sustain, on, .monotonic);
     }
+    pub fn setMacro(self: *Engine, i: usize, v: f32) void { // synth macro knob -> mod sources
+        self.synth.setMacro(i, v);
+    }
+    pub fn setSynthPatch(self: *Engine, p: synth.Patch) void { // push an edited patch (incl. mod routes)
+        self.synth.setPatch(p);
+    }
 
     /// Push one event onto the lock-free ring (UI/MIDI thread -> audio thread).
     fn pushEv(self: *Engine, ev: Ev) void {

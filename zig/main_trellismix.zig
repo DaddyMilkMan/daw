@@ -82,6 +82,7 @@ pub fn main() !void {
                     elapsed = secs;
                     break;
                 },
+                .scroll => {},
                 .resize => |r| {
                     window.resize(r.w, r.h);
                     W = r.w;

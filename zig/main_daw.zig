@@ -272,10 +272,12 @@ pub fn main() !void {
                     }
                 },
                 .mouse_up => down = false,
+                .scroll => |sc| state.scroll_dy += @floatFromInt(sc.dy), // mouse wheel -> scrollable panels
                 .key => |k| {
-                    if (k == 9) { // Esc: close the editor if open, else quit
-                        if (state.editing) state.editing = false else elapsed = secs;
+                    if (k == 9) { // Esc: close the editor/panel if open, else quit
+                        if (view.mod_open) view.mod_open = false else if (state.editing) state.editing = false else elapsed = secs;
                     }
+                    if (k == 58) view.mod_open = !view.mod_open; // 'M': mod-matrix panel
                     if (k == 65) state.playing = !state.playing; // Space: transport
                     if (k == 26) { // 'E': toggle the piano-roll on the selected clip
                         state.editing = !state.editing;
@@ -331,6 +333,14 @@ pub fn main() !void {
             if (view.midi_open) refreshMidiDevices(&state, m);
             applyMidiPick(&state, m);
         }
+
+        // synth: push macro knob values (live) + the edited mod-matrix patch (on change)
+        for (0..state.macro_count) |i| engine.setMacro(i, state.macros[i]);
+        if (state.patch_dirty) {
+            engine.setSynthPatch(view.patch);
+            state.patch_dirty = false;
+        }
+        state.scroll_dy = 0; // consumed this frame
 
         // push the live mixer state (per-track gain/pan/mute/solo) to the engine
         for (0..ntr) |ti| {

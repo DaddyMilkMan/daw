@@ -10,6 +10,8 @@ const gpu2d = @import("gpu2d.zig");
 const trellis = @import("trellis.zig");
 const widgets = @import("widgets.zig");
 const project = @import("project.zig");
+const synth = @import("synth.zig");
+const ModRoute = synth.ModRoute;
 const color = @import("color.zig");
 const Color = gpu2d.Color;
 const Gpu = gpu2d.Gpu;
@@ -49,6 +51,10 @@ pub const State = struct {
     midi_count: usize = 0,
     midi_selected: i32 = -1, // -1 = all sources, >=0 = source index
     midi_pick: i32 = -2, // UI output: -2 none / -1 all / >=0 index (main_daw applies + resets)
+    scroll_dy: f32 = 0, // mouse-wheel delta this frame (consumed by scrollable panels)
+    macros: [16]f32 = [_]f32{0} ** 16, // macro knob values (mirrored to the engine)
+    macro_count: u8 = 4, // how many macro knobs are shown (user can add more)
+    patch_dirty: bool = false, // set when the mod matrix / macros change -> main_daw repushes
 
     pub fn midiName(self: *const State, i: usize) []const u8 {
         return self.midi_names[i][0..self.midi_name_len[i]];
@@ -108,6 +114,44 @@ const red = Color.rgb(236, 100, 100);
 // color utilities are toolkit-level now (color.zig) — alias for local brevity.
 const mix = color.lerp;
 const shade = color.shade;
+
+// ---- modulation-matrix UI helpers ------------------------------------------
+const SRC_LBL = [_][]const u8{ "—", "LFO 1", "LFO 2", "Flt Env", "Amp Env", "Velocity", "Aftertch", "Mod Whl", "Key Trk", "Random" };
+const DEST_LBL = [_][]const u8{ "—", "Pitch", "Cutoff", "Reso", "Pan", "Amp", "Osc Mix", "Pulse W" };
+
+fn srcLabel(r: ModRoute, buf: []u8) []const u8 {
+    if (r.source == .macro) return std.fmt.bufPrint(buf, "Macro {d}", .{r.macro + 1}) catch "Macro";
+    const i: usize = @intFromEnum(r.source);
+    return if (i < SRC_LBL.len) SRC_LBL[i] else "?";
+}
+fn cycleSource(r: *ModRoute, macros: u8, dir: i32) void {
+    const total: i32 = 10 + @as(i32, macros); // 0..9 named sources, then macro0..
+    var cur: i32 = if (r.source == .macro) 10 + @as(i32, r.macro) else @as(i32, @intFromEnum(r.source));
+    cur = @mod(cur + dir + total, total);
+    if (cur < 10) {
+        r.source = @enumFromInt(@as(u8, @intCast(cur)));
+        r.macro = 0;
+    } else {
+        r.source = .macro;
+        r.macro = @intCast(cur - 10);
+    }
+}
+fn destLabel(r: ModRoute) []const u8 {
+    const i: usize = @intFromEnum(r.dest);
+    return if (i < DEST_LBL.len) DEST_LBL[i] else "?";
+}
+fn cycleDest(r: *ModRoute, dir: i32) void {
+    const cur: i32 = @mod(@as(i32, @intFromEnum(r.dest)) + dir + 8, 8);
+    r.dest = @enumFromInt(@as(u8, @intCast(cur)));
+}
+/// The natural ±range of a depth slider for a destination (its units).
+fn depthRange(d: synth.ModDest) f32 {
+    return switch (d) {
+        .pitch => 24.0, // semitones
+        .cutoff => 6.0, // octaves
+        else => 2.0,
+    };
+}
 
 // ---- demo project ----------------------------------------------------------
 fn fillClip(c: *project.Clip, pitches: []const u8) !void {
@@ -364,6 +408,8 @@ pub const View = struct {
     g: *Gpu,
     c: trellis.Ctx,
     u: widgets.Ui,
+    um: widgets.Ui, // a second immediate-mode context for modal overlays (mod panel)
+    prev_down: bool = false,
     fc: *const Font, // caption 12 (labels)
     fb: *const Font, // body 14
     fu: *const Font, // title 16
@@ -377,10 +423,15 @@ pub const View = struct {
     midi_open: bool = false, // MIDI device dropdown
     midi_anim: f32 = 0,
     midi_btn: [4]f32 = .{ 0, 0, 0, 0 }, // the trigger button's rect (for the dropdown anchor)
+    mod_open: bool = false, // the modulation-matrix panel
+    mod_anim: f32 = 0,
+    mod_scroll: f32 = 0, // route-list scroll offset (px)
+    mod_zoom: f32 = 1.0, // row-height zoom (0.7 compact .. 1.4 large)
+    patch: @import("synth.zig").Patch = .{}, // the synth patch the UI edits (mod routes live here)
     pr: @import("pianoroll.zig").PianoRoll = .{}, // the clip editor (when state.editing)
 
     pub fn init(g: *Gpu, fc: *const Font, fb: *const Font, fu: *const Font, fd: *const Font) View {
-        return .{ .g = g, .c = trellis.Ctx.init(g, fb, fu, fd), .u = widgets.Ui.init(g), .fc = fc, .fb = fb, .fu = fu, .fd = fd };
+        return .{ .g = g, .c = trellis.Ctx.init(g, fb, fu, fd), .u = widgets.Ui.init(g), .um = widgets.Ui.init(g), .fc = fc, .fb = fb, .fu = fu, .fd = fd };
     }
     /// A small-caps section label (caption font, letter-spaced) — a core modern
     /// pattern. Caller already uppercases the string.
@@ -393,9 +444,11 @@ pub const View = struct {
         const c = &self.c;
         const u = &self.u;
         state.window_action = .none;
+        // when a modal panel (mod matrix) is open, the body stops seeing the mouse
+        const down_body = down and !self.mod_open;
         g.begin(@intFromFloat(W), @intFromFloat(H), bg_bot);
         g.rectGrad(0, 0, W, H, 0, bg_top, bg_bot, 0, bord);
-        u.begin(.{ .mx = mx, .my = my, .mouse_down = down }, 0.016);
+        u.begin(.{ .mx = mx, .my = my, .mouse_down = down_body }, 0.016);
 
         // frosted-glass value tooltip shown while hovering a fader/knob
         var tip_show = false;
@@ -412,7 +465,7 @@ pub const View = struct {
         }) catch "00 : 00 : 00";
         const TBH: f32 = 58; // title bar height (a glass strip drawn over the body)
         // ---- BODY pass (rendered first, below the glass title bar) ----
-        c.beginAt(0, TBH, W, H - TBH, mx, my, down, 0.016);
+        c.beginAt(0, TBH, W, H - TBH, mx, my, down_body, 0.016);
         {
             c.open(.{ .dir = .row, .w = grow(), .h = grow() });
             {
@@ -842,6 +895,97 @@ pub const View = struct {
                 g.flush(); // render the overlay before main_daw's grain snapshots the frame
             }
         }
+        // ---- modulation-matrix panel (toggled with 'M') ------------------------
+        if (self.mod_open) {
+            const wp: f32 = 560;
+            const hp: f32 = @min(H - 110, 560);
+            const px0 = (W - wp) / 2;
+            const py0 = @max(TBH + 16, (H - hp) / 2);
+            g.rect(0, TBH, W, H - TBH, 0, Color.rgba(0, 0, 0, 150)); // dim backdrop
+            g.flush();
+            g.captureBlur(@intFromFloat(W), @intFromFloat(H));
+            g.glass(px0, py0, wp, hp, 16, Color.rgba(84, 92, 114, 82), Color.rgba(255, 255, 255, 150));
+            self.um.begin(.{ .mx = mx, .my = my, .mouse_down = down }, 0.016);
+
+            // header
+            self.fd.text(g, px0 + 22, py0 + 12, "Modulation", accent);
+            self.fc.text(g, px0 + 24, py0 + 42, "M toggle  ·  wheel scroll  ·  click a cell to cycle  ·  drag depth", faint);
+            if (self.um.iconSlot(1850, px0 + wp - 40, py0 + 14, 26, 24, false)) self.mod_open = false;
+            icons.close(g, px0 + wp - 27, py0 + 26, 9, dim);
+            if (self.um.iconSlot(1851, px0 + wp - 134, py0 + 14, 24, 24, false)) self.mod_zoom = @max(0.7, self.mod_zoom - 0.15);
+            self.fu.text(g, px0 + wp - 127, py0 + 17, "-", dim);
+            if (self.um.iconSlot(1852, px0 + wp - 106, py0 + 14, 24, 24, false)) self.mod_zoom = @min(1.5, self.mod_zoom + 0.15);
+            self.fu.text(g, px0 + wp - 100, py0 + 16, "+", dim);
+
+            // macro knobs (expandable)
+            const mky = py0 + 64;
+            self.fc.text(g, px0 + 22, mky - 18, "MACROS", label_col);
+            var mi: usize = 0;
+            while (mi < state.macro_count) : (mi += 1) {
+                const kx = px0 + 42 + @as(f32, @floatFromInt(mi)) * 62;
+                _ = self.um.knob(1900 + @as(u32, @intCast(mi)), kx, mky + 16, 16, &state.macros[mi]);
+                var lb: [8]u8 = undefined;
+                self.fc.text(g, kx - 8, mky + 38, std.fmt.bufPrint(&lb, "M{d}", .{mi + 1}) catch "M", dim);
+            }
+            if (state.macro_count < 16) {
+                const ax = px0 + 42 + @as(f32, @floatFromInt(state.macro_count)) * 62;
+                if (self.um.iconSlot(1853, ax - 13, mky + 4, 26, 24, false)) state.macro_count += 1;
+                self.fu.text(g, ax - 5, mky + 7, "+", accent);
+            }
+
+            // route list (scrollable, zoomable)
+            const list_top = mky + 66;
+            const list_bot = py0 + hp - 46;
+            const row_h = 34 * self.mod_zoom;
+            const over = mx >= px0 and mx < px0 + wp and my >= list_top and my < list_bot;
+            if (over) self.mod_scroll -= state.scroll_dy * 38;
+            const content_h = @as(f32, @floatFromInt(self.patch.n_routes)) * row_h;
+            const max_scroll = @max(@as(f32, 0), content_h - (list_bot - list_top));
+            self.mod_scroll = std.math.clamp(self.mod_scroll, 0, max_scroll);
+            self.fc.text(g, px0 + 22, list_top - 18, "ROUTES", label_col);
+            var cbuf: [16]u8 = undefined;
+            self.fc.text(g, px0 + wp - 78, list_top - 18, std.fmt.bufPrint(&cbuf, "{d} / 64", .{self.patch.n_routes}) catch "", faint);
+
+            var r: usize = 0;
+            while (r < self.patch.n_routes) : (r += 1) {
+                const ry = list_top + @as(f32, @floatFromInt(r)) * row_h - self.mod_scroll;
+                if (ry < list_top or ry + row_h > list_bot) continue; // only fully-visible rows
+                const route = &self.patch.routes[r];
+                const idb: u32 = 2000 + @as(u32, @intCast(r)) * 4;
+                const ty = ry + (row_h - 15) / 2;
+                if (self.um.iconSlot(idb, px0 + 20, ry + 4, 96, row_h - 8, false)) {
+                    cycleSource(route, state.macro_count, 1);
+                    state.patch_dirty = true;
+                }
+                var sbuf: [16]u8 = undefined;
+                self.fb.text(g, px0 + 30, ty, srcLabel(route.*, &sbuf), txt);
+                self.fb.text(g, px0 + 122, ty, "->", faint);
+                if (self.um.iconSlot(idb + 1, px0 + 146, ry + 4, 90, row_h - 8, false)) {
+                    cycleDest(route, 1);
+                    state.patch_dirty = true;
+                }
+                self.fb.text(g, px0 + 156, ty, destLabel(route.*), txt);
+                const dr = depthRange(route.dest);
+                if (self.um.hSliderBipolar(idb + 2, px0 + 246, ry + (row_h - 8) / 2, wp - 246 - 56, 8, &route.depth, -dr, dr)) state.patch_dirty = true;
+                if (self.um.iconSlot(idb + 3, px0 + wp - 40, ry + 4, 26, row_h - 8, false)) {
+                    self.patch.removeRoute(r);
+                    state.patch_dirty = true;
+                    break;
+                }
+                icons.close(g, px0 + wp - 27, ry + row_h / 2, 7, red);
+            }
+
+            if (self.patch.n_routes < synth.MAX_ROUTES) {
+                if (self.um.iconSlot(1854, px0 + 20, py0 + hp - 38, 120, 26, false)) {
+                    _ = self.patch.addRoute(.{ .source = .lfo1, .dest = .cutoff, .depth = 0 });
+                    state.patch_dirty = true;
+                }
+                self.fb.text(g, px0 + 34, py0 + hp - 32, "+ Add Route", accent);
+            }
+            self.um.end();
+            g.flush();
+        }
+        self.prev_down = down;
         return state.window_action;
     }
 };

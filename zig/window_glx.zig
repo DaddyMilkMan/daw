@@ -136,6 +136,7 @@ pub const Event = union(enum) {
     mouse_move: struct { x: i32, y: i32 },
     mouse_down: struct { x: i32, y: i32, x_root: i32, y_root: i32, button: u32 },
     mouse_up: struct { x: i32, y: i32 },
+    scroll: struct { x: i32, y: i32, dy: i32 }, // wheel: dy = +1 up / -1 down
     resize: struct { w: usize, h: usize },
     expose,
 };
@@ -186,7 +187,7 @@ fn xcCode(s: CursorShape) c_uint {
 // Actions run per frame until a `wait`/`shot`/`quit`; insert `wait 1` between drag
 // steps so the widget processes each incremental position.
 // ---------------------------------------------------------------------------
-const ActKind = enum { move, moveid, clickid, rmove, down, up, key, wait, shot, dumpids, quit };
+const ActKind = enum { move, moveid, clickid, rmove, down, up, key, scrl, wait, shot, dumpids, quit };
 const Act = struct {
     kind: ActKind,
     x: i32 = 0,
@@ -248,6 +249,9 @@ pub const Talkback = struct {
             } else if (std.mem.eql(u8, cmd, "key")) {
                 a.kind = .key;
                 a.key = std.fmt.parseInt(u32, t.next() orelse "0", 10) catch 0;
+            } else if (std.mem.eql(u8, cmd, "scroll")) {
+                a.kind = .scrl;
+                a.x = std.fmt.parseInt(i32, t.next() orelse "0", 10) catch 0; // dy: +up / -down
             } else if (std.mem.eql(u8, cmd, "wait")) {
                 a.kind = .wait;
                 a.frames = std.fmt.parseInt(u32, t.next() orelse "1", 10) catch 1;
@@ -336,6 +340,10 @@ pub const Talkback = struct {
                 },
                 .key => {
                     self.pushEv(.{ .key = a.key });
+                    self.pc += 1;
+                },
+                .scrl => {
+                    self.pushEv(.{ .scroll = .{ .x = self.mx, .y = self.my, .dy = a.x } });
                     self.pc += 1;
                 },
                 .wait => {
@@ -524,10 +532,14 @@ pub const NativeWindow = struct {
             KeyPress => return .{ .key = @as(*const XButtonKey, @ptrCast(&raw)).keycode_or_button },
             ButtonPress => {
                 const e: *const XButtonKey = @ptrCast(&raw);
-                return .{ .mouse_down = .{ .x = e.x, .y = e.y, .x_root = e.x_root, .y_root = e.y_root, .button = e.keycode_or_button } };
+                const b = e.keycode_or_button;
+                if (b == 4 or b == 5) return .{ .scroll = .{ .x = e.x, .y = e.y, .dy = if (b == 4) 1 else -1 } };
+                return .{ .mouse_down = .{ .x = e.x, .y = e.y, .x_root = e.x_root, .y_root = e.y_root, .button = b } };
             },
             ButtonRelease => {
                 const e: *const XButtonKey = @ptrCast(&raw);
+                const b = e.keycode_or_button;
+                if (b == 4 or b == 5) return .none; // wheel release — ignore
                 return .{ .mouse_up = .{ .x = e.x, .y = e.y } };
             },
             MotionNotify => {

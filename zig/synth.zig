@@ -19,6 +19,7 @@ pub const Wave = enum { sine, triangle, saw, square };
 pub const MAX_ROUTES = 64; // generous cap (RT-safe, no allocation on the audio path)
 pub const MAX_MACROS = 16; // assignable macro knobs (mod sources)
 
+// non-exhaustive (`_`) so a torn read during a live patch edit can't hit switch-UB
 pub const ModSource = enum(u8) {
     none,
     lfo1,
@@ -31,6 +32,7 @@ pub const ModSource = enum(u8) {
     keytrack,
     random, // a fixed per-voice random value (humanize)
     macro, // macro index lives in ModRoute.macro
+    _,
 };
 
 pub const ModDest = enum(u8) {
@@ -42,6 +44,7 @@ pub const ModDest = enum(u8) {
     amp, // gain offset
     osc_mix, // 0..1 added
     pulse_width, // 0..1 added
+    _,
 };
 
 /// One modulation route. `depth` is in the destination's natural units.
@@ -502,10 +505,10 @@ pub const Synth = struct {
                             .keytrack => (@as(f32, @floatFromInt(v.note)) - 60.0) / 12.0,
                             .random => v.rnd_mod,
                             .macro => self.macro(rt.macro),
+                            _ => 0,
                         };
                         const d = sv * rt.depth;
                         switch (rt.dest) {
-                            .none => {},
                             .pitch => dm_pitch += d,
                             .cutoff => dm_cut += d,
                             .resonance => dm_res += d,
@@ -513,6 +516,7 @@ pub const Synth = struct {
                             .amp => dm_amp += d,
                             .osc_mix => dm_mix += d,
                             .pulse_width => dm_pw += d,
+                            else => {}, // .none + any torn value
                         }
                     }
                     // vibrato (lfo1 + mod wheel + aftertouch) + matrix pitch (semis -> cents)
