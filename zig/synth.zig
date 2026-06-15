@@ -15,6 +15,43 @@ pub const default_sample_rate: f32 = 48000.0;
 
 pub const Wave = enum { sine, triangle, saw, square };
 
+// ---- modulation matrix: any source -> any destination, with depth ----------
+pub const MAX_ROUTES = 64; // generous cap (RT-safe, no allocation on the audio path)
+pub const MAX_MACROS = 16; // assignable macro knobs (mod sources)
+
+pub const ModSource = enum(u8) {
+    none,
+    lfo1,
+    lfo2,
+    filt_env,
+    amp_env,
+    velocity,
+    aftertouch,
+    mod_wheel,
+    keytrack,
+    random, // a fixed per-voice random value (humanize)
+    macro, // macro index lives in ModRoute.macro
+};
+
+pub const ModDest = enum(u8) {
+    none,
+    pitch, // semitones (depth)
+    cutoff, // octaves
+    resonance, // 0..1 added
+    pan, // -1..1
+    amp, // gain offset
+    osc_mix, // 0..1 added
+    pulse_width, // 0..1 added
+};
+
+/// One modulation route. `depth` is in the destination's natural units.
+pub const ModRoute = struct {
+    source: ModSource = .none,
+    dest: ModDest = .none,
+    macro: u8 = 0, // which macro, when source == .macro
+    depth: f32 = 0,
+};
+
 /// polyBLEP residual — band-limits a discontinuity to tame aliasing.
 fn polyBlep(t: f32, dt: f32) f32 {
     if (t < dt) {
@@ -146,6 +183,25 @@ pub const Patch = struct {
     lfo2_cutoff: f32 = 0.0, // octaves
     glide: f32 = 0.0, // portamento time, seconds
     level: f32 = 0.18, // patch output gain
+    // modulation matrix (additive on top of the built-in routings). n_routes can
+    // grow up to MAX_ROUTES; the UI scrolls through them.
+    routes: [MAX_ROUTES]ModRoute = [_]ModRoute{.{}} ** MAX_ROUTES,
+    n_routes: u8 = 0,
+
+    /// Append a route (no-op when full). Returns the new route count.
+    pub fn addRoute(self: *Patch, r: ModRoute) u8 {
+        if (self.n_routes < MAX_ROUTES) {
+            self.routes[self.n_routes] = r;
+            self.n_routes += 1;
+        }
+        return self.n_routes;
+    }
+    pub fn removeRoute(self: *Patch, idx: usize) void {
+        if (idx >= self.n_routes) return;
+        var i = idx;
+        while (i + 1 < self.n_routes) : (i += 1) self.routes[i] = self.routes[i + 1];
+        self.n_routes -= 1;
+    }
 
     pub const init_saw = Patch{};
     pub const fat_bass = Patch{
@@ -194,6 +250,13 @@ const Voice = struct {
     rb: [MAX_UNISON]f32 = [_]f32{1} ** MAX_UNISON,
     drng: u32 = 0x9E3779B9, // drift RNG (independent of the noise RNG)
     tune: f32 = 1.0, // fixed per-voice tuning offset (component tolerance)
+    rnd_mod: f32 = 0.0, // fixed per-voice random (a mod-matrix source)
+    // cached mod-matrix outputs (recomputed at control rate)
+    cur_res: f32 = 0.2,
+    cur_pan: f32 = 0.0,
+    cur_amp: f32 = 1.0,
+    cur_mix: f32 = 0.35,
+    cur_pw: f32 = 0.5,
     freq: f32 = 0.0, // target frequency
     cur_freq: f32 = 0.0, // glided frequency
     cur_vib: f32 = 1.0, // vibrato pitch multiplier (updated at control rate)
@@ -217,6 +280,7 @@ const Voice = struct {
         // analog imperfection: a fixed per-voice tuning offset + fresh drift state
         self.drng = (0x9E3779B9 ^ (@as(u32, note) *% 2654435761)) | 1;
         self.tune = std.math.pow(f32, 2.0, (self.drand() * p.tune_spread) / 1200.0);
+        self.rnd_mod = self.drand(); // fixed per-voice random source (-1..1)
         self.wa = [_]f32{0} ** MAX_UNISON;
         self.wb = [_]f32{0} ** MAX_UNISON;
         self.ra = [_]f32{1} ** MAX_UNISON;
@@ -275,9 +339,16 @@ pub const Synth = struct {
     oversample: u8 = 2, // 1 / 2 / 4 — anti-alias the saturating filter path
     decimL: Decimator = .{},
     decimR: Decimator = .{},
+    macro_bits: [MAX_MACROS]u32 = [_]u32{0} ** MAX_MACROS, // macro values 0..1 (mod sources)
 
     pub fn setPatch(self: *Synth, p: Patch) void {
         self.patch = p;
+    }
+    pub fn setMacro(self: *Synth, i: usize, v: f32) void { // UI thread -> audio
+        if (i < MAX_MACROS) @atomicStore(u32, &self.macro_bits[i], @bitCast(v), .monotonic);
+    }
+    fn macro(self: *Synth, i: u8) f32 {
+        return if (i < MAX_MACROS) @bitCast(@atomicLoad(u32, &self.macro_bits[i], .monotonic)) else 0;
     }
 
     /// Trigger a note (channel 0). `vel` is normalized velocity 0..1.
@@ -408,20 +479,64 @@ pub const Synth = struct {
                 } else v.cur_freq = v.freq;
 
                 if (ctl) {
-                    // vibrato (lfo1 + mod wheel + aftertouch), cents -> ratio
+                    // --- modulation matrix: sum (source × depth) per destination ---
+                    var dm_pitch: f32 = 0;
+                    var dm_cut: f32 = 0;
+                    var dm_res: f32 = 0;
+                    var dm_pan: f32 = 0;
+                    var dm_amp: f32 = 0;
+                    var dm_mix: f32 = 0;
+                    var dm_pw: f32 = 0;
+                    var ri: usize = 0;
+                    while (ri < p.n_routes) : (ri += 1) {
+                        const rt = p.routes[ri];
+                        const sv: f32 = switch (rt.source) {
+                            .none => 0,
+                            .lfo1 => lfo1,
+                            .lfo2 => lfo2,
+                            .filt_env => fenv,
+                            .amp_env => amp,
+                            .velocity => v.vel,
+                            .aftertouch => std.math.clamp(self.pressure + v.note_press + self.chan_press[v.channel], 0.0, 1.0),
+                            .mod_wheel => self.mod,
+                            .keytrack => (@as(f32, @floatFromInt(v.note)) - 60.0) / 12.0,
+                            .random => v.rnd_mod,
+                            .macro => self.macro(rt.macro),
+                        };
+                        const d = sv * rt.depth;
+                        switch (rt.dest) {
+                            .none => {},
+                            .pitch => dm_pitch += d,
+                            .cutoff => dm_cut += d,
+                            .resonance => dm_res += d,
+                            .pan => dm_pan += d,
+                            .amp => dm_amp += d,
+                            .osc_mix => dm_mix += d,
+                            .pulse_width => dm_pw += d,
+                        }
+                    }
+                    // vibrato (lfo1 + mod wheel + aftertouch) + matrix pitch (semis -> cents)
                     const vib_cents = (p.lfo1_pitch * lfo1) +
-                        30.0 * std.math.clamp(self.mod + self.pressure + v.note_press + self.chan_press[v.channel], 0.0, 1.0) * lfo1;
+                        30.0 * std.math.clamp(self.mod + self.pressure + v.note_press + self.chan_press[v.channel], 0.0, 1.0) * lfo1 +
+                        dm_pitch * 100.0;
                     v.cur_vib = std.math.pow(f32, 2.0, vib_cents / 1200.0);
-                    // cutoff: base * filter-env * keytrack * velocity * timbre * lfo2
+                    // cutoff: base * filter-env * keytrack * velocity * timbre * lfo2 * matrix
                     var cut = self.cutoff;
                     cut *= std.math.pow(f32, 2.0, p.filter_env_amt * fenv);
                     cut *= std.math.pow(f32, 2.0, p.keytrack * (@as(f32, @floatFromInt(v.note)) - 60.0) / 12.0);
                     cut *= (1.0 - p.vel_to_cutoff) + p.vel_to_cutoff * v.vel;
                     cut *= std.math.pow(f32, 2.0, p.lfo2_cutoff * lfo2);
                     cut *= std.math.pow(f32, 2.0, (v.note_timbre + self.chan_timbre[v.channel]) * 2.0);
+                    cut *= std.math.pow(f32, 2.0, dm_cut); // matrix cutoff (octaves)
                     cut = std.math.clamp(cut, 40.0, 18000.0);
+                    // cache the matrix-modulated per-voice params
+                    v.cur_res = std.math.clamp(res + dm_res, 0.0, 1.0);
+                    v.cur_pan = std.math.clamp(dm_pan, -1.0, 1.0);
+                    v.cur_amp = std.math.clamp(1.0 + dm_amp, 0.0, 2.0);
+                    v.cur_mix = std.math.clamp(p.osc_mix + dm_mix, 0.0, 1.0);
+                    v.cur_pw = std.math.clamp(p.pulse_width + dm_pw, 0.05, 0.95);
                     v.filt.sr = sr; // honor the (possibly oversampled) render rate
-                    v.filt.set(cut, res, p.drive);
+                    v.filt.set(cut, v.cur_res, p.drive);
                     // analog drift: random-walk each oscillator's pitch (free-running
                     // VCOs slowly wander), fold into the cached unison-detune ratios
                     if (p.drift > 0.0) {
@@ -451,9 +566,9 @@ pub const Synth = struct {
                 var sR: f32 = 0;
                 var ui: usize = 0;
                 while (ui < un) : (ui += 1) {
-                    const oa = v.osc_a[ui].next(p.osc_a, (base * v.ra[ui]) / sr, p.pulse_width);
-                    const ob = v.osc_b[ui].next(p.osc_b, (base * v.rb[ui] * b_ratio) / sr, p.pulse_width);
-                    const s = oa * (1.0 - p.osc_mix) + ob * p.osc_mix;
+                    const oa = v.osc_a[ui].next(p.osc_a, (base * v.ra[ui]) / sr, v.cur_pw);
+                    const ob = v.osc_b[ui].next(p.osc_b, (base * v.rb[ui] * b_ratio) / sr, v.cur_pw);
+                    const s = oa * (1.0 - v.cur_mix) + ob * v.cur_mix;
                     sL += s * pan_l[ui];
                     sR += s * pan_r[ui];
                 }
@@ -470,9 +585,12 @@ pub const Synth = struct {
                 const mid = (sL + sR) * 0.5;
                 const side = (sL - sR) * 0.5;
                 const fmid = v.filt.process(mid);
-                const g = amp * v.vel;
-                accL += (fmid + side) * g;
-                accR += (fmid - side) * g;
+                // matrix amp + pan (balance) on top of the envelope/velocity
+                const g = amp * v.vel * v.cur_amp;
+                const lg: f32 = if (v.cur_pan > 0) 1.0 - v.cur_pan else 1.0;
+                const rg: f32 = if (v.cur_pan < 0) 1.0 + v.cur_pan else 1.0;
+                accL += (fmid + side) * g * lg;
+                accR += (fmid - side) * g * rg;
             }
             const lvl = p.level * self.gain * self.expression;
             outL[si] = std.math.clamp(accL * lvl, -1.0, 1.0);
@@ -672,6 +790,60 @@ test "unison produces a stereo image; a single oscillator stays mono" {
     var d2: f32 = 0;
     for (lm, rm) |l, r| d2 += @abs(l - r);
     try std.testing.expect(d2 < 1.0e-4); // single osc -> identical channels (centered)
+}
+
+fn peakOf(buf: []const f32) f32 {
+    var p: f32 = 0;
+    for (buf) |x| p = @max(p, @abs(x));
+    return p;
+}
+
+test "mod matrix routes a macro to a destination (amp)" {
+    var s = Synth{ .oversample = 1 };
+    var patch = Patch.init_saw;
+    _ = patch.addRoute(.{ .source = .macro, .macro = 0, .dest = .amp, .depth = -1.0 });
+    s.setPatch(patch);
+    var buf: [2400]f32 = undefined;
+    // macro 0 = 0 -> amp unchanged, audible
+    s.setMacro(0, 0.0);
+    s.noteOn(noteToFreq(60), 1.0);
+    s.renderBlock(&buf);
+    try std.testing.expect(peakOf(&buf) > 0.01);
+    // macro 0 = 1 -> amp offset -1 -> cur_amp 0 -> silence
+    var s2 = Synth{ .oversample = 1 };
+    s2.setPatch(patch);
+    s2.setMacro(0, 1.0);
+    s2.noteOn(noteToFreq(60), 1.0);
+    s2.renderBlock(&buf);
+    try std.testing.expect(peakOf(&buf) < 0.001);
+}
+
+test "mod matrix expands and a macro opens the filter" {
+    var patch = Patch.init_saw;
+    patch.filter_env_amt = 0; // isolate the matrix
+    _ = patch.addRoute(.{ .source = .macro, .macro = 3, .dest = .cutoff, .depth = 4.0 }); // +4 octaves at full
+    try std.testing.expectEqual(@as(u8, 1), patch.n_routes);
+    // can keep adding routes up to the cap
+    var i: usize = 0;
+    while (i < 30) : (i += 1) _ = patch.addRoute(.{ .source = .lfo1, .dest = .pitch, .depth = 0.0 });
+    try std.testing.expectEqual(@as(u8, 31), patch.n_routes);
+
+    var dark = Synth{ .oversample = 1 };
+    dark.setPatch(patch);
+    dark.cutoff = 300;
+    dark.setMacro(3, 0.0);
+    dark.noteOn(noteToFreq(45), 1.0);
+    var buf: [4800]f32 = undefined;
+    dark.renderBlock(&buf);
+    const e_dark = peakOf(&buf);
+    var bright = Synth{ .oversample = 1 };
+    bright.setPatch(patch);
+    bright.cutoff = 300;
+    bright.setMacro(3, 1.0); // macro opens the filter +4 octaves
+    bright.noteOn(noteToFreq(45), 1.0);
+    bright.renderBlock(&buf);
+    const e_bright = peakOf(&buf);
+    try std.testing.expect(e_bright > e_dark * 1.3); // a more-open filter passes more energy
 }
 
 test "presets render without NaN or runaway" {
