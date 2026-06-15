@@ -34,7 +34,8 @@ down / up        # press / release the left mouse button
 
 **Shared:**
 ```
-key <keycode>    # send a key (X11 keycode; 9 = Escape, 65 = Space)
+key <keycode>    # send a key (X11 keycode; 9 = Escape, 65 = Space, 58 = M, 26 = E)
+scroll <dy>      # mouse wheel at the cursor (+up / -down) — drives scrollable panels
 wait <frames>    # idle N frames (~16ms each) — put `wait 1` between drag steps
 shot <file.png>  # screenshot the current frame (real GPU framebuffer)
 quit             # close the window

@@ -176,7 +176,8 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ✅ `synth.zig` — **professional hybrid subtractive synth**: 16 voices × (2 band-limited oscillators [sine/tri/saw/square+PWM] + square sub + noise), **unison** (up to 7 detuned), oscB semitone/fine detune + osc mix; **two ADSRs** (amplitude + a dedicated **filter envelope**), **2 LFOs** (vibrato + cutoff), **key-track + velocity** cutoff mod, **glide**, quietest-voice stealing; velocity + sustain + full **per-note/per-channel (MPE)** expression. `Patch` presets (init_saw/fat_bass/super_lead/warm_pad). RT-safe (control-rate modulation).
 - ✅ **Filters** (`filter.zig`, flagship-synth Phase 1): **zero-delay-feedback** topologies — Cytomic TPT state-variable (LP/HP/BP/notch, stable to Nyquist) + a **saturating ZDF Moog ladder** (tanh feedback = analog growl, self-limiting). Selectable per patch + `drive`. (Replaced the old Chamberlin SVF.)
 - ✅ **Phase 2** — *anti-aliasing + analog character + stereo*: **oversampling** (2×/4×, the whole saturating voice render runs at N×, a 6-pole Butterworth decimator folds back — kills the harshness from the nonlinearities); **analog drift** (per-oscillator random-walk pitch + per-voice fixed detune — it's alive, not static); **stereo** output (unison spread + mid/side filter; mono patches stay centered). All RT-safe (control-rate mod, pow-free drift, zero live xruns).
-- 🔭 **Flagship-synth roadmap** (the "best-sounding, most control, beginner↔expert gating" plan — see Progress Log 2026-06-14 s6): P1 filters ✅ · P2 oversampling+drift+stereo ✅ → **P3** generalized **mod matrix** + macros → **P4** per-patch **FX rack** (drive/chorus/delay/reverb/EQ) → **P5** **wavetable** then **FM** engines → **P6** synth **UI** (3 tiers: Play/Shape/Build) + **preset browser** + factory library → **P7** microtuning/scales, MPE polish, voice modes.
+- ✅ **Phase 3** — *generalized modulation matrix + macros* (`synth.zig` backend + a `daw.zig` UI). Any source (LFO1/2, filter/amp env, velocity, aftertouch, mod wheel, key-track, per-voice random, **macros**) → any destination (pitch/cutoff/resonance/pan/amp/osc-mix/PWM), with depth; up to 64 routes (expandable) + 16 macros, evaluated at control rate, additive on the built-ins. **In-DAW panel** (press M): macro knobs (+add), a **scrollable** (mouse wheel) route list of click-to-cycle source/dest cells + bipolar depth sliders + delete, **zoom** (row height), "+ Add Route". (Added wheel-scroll to `window_glx` + a Talkback `scroll` command.)
+- 🔭 **Flagship-synth roadmap** (the "best-sounding, most control, beginner↔expert gating" plan — see Progress Log 2026-06-14 s6): P1 filters ✅ · P2 oversampling+drift+stereo ✅ · P3 mod matrix+macros+UI ✅ → **P4** per-patch **FX rack** (drive/chorus/delay/reverb/EQ) → **P5** **wavetable** then **FM** engines → **P6** the **3-tier UI** (Play/Shape/Build — macros are the beginner↔expert bridge) + **preset browser** + factory library → **P7** microtuning/scales, MPE polish, voice modes.
 - ❌ Other synth depth: osc **hard-sync**, comb/diode filters, preset save/load format.
 - 🟡 Sampler (`sampler.zig`): load mono sample, pitch per MIDI note, polyphonic + AR env. ❌ multisampling, velocity layers, loop points, stereo
 - 🟡 Stock effects (`effects.zig`): biquad EQ (LP/HP/peak), feedback delay, reverb done; ❌ compressor, limiter, distortion, chorus + mixer integration (per-track FX chains)
@@ -599,5 +600,17 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   stays centered/mono. Engine renders the synth stereo into the master bus.
 - RT-safety held throughout: control-rate modulation, no hot-path pow(), multiple
   13 s live runs at 2× with **zero xruns**. 21 synth+filter tests; full suite green.
+
+**2026-06-15 (session 8 — flagship synth Phase 3: mod matrix + macros + UI)**
+- **Mod-matrix backend** (`synth.zig`): `ModSource`→`ModDest` `ModRoute`s (depth), up to
+  64 (expandable) + 16 macros (`setMacro`, lock-free). Evaluated per voice at control
+  rate, additive on the built-in routings; tear-safe (non-exhaustive enums). Tests:
+  macro→amp silences, macro→cutoff opens the filter, expands to many routes.
+- **Mod-matrix UI** (`daw.zig`, press M): a frosted modal panel — macro knobs (+add),
+  a **scrollable** route list (click-to-cycle source/dest, bipolar depth slider, delete),
+  **+ Add Route** (to 64), **zoom** (row height). Modal via a 2nd Ui (`View.um`) with the
+  body's input gated. Added mouse-wheel scroll to `window_glx` (`scroll` Event, X11
+  buttons 4/5) + a Talkback `scroll <dy>` command. Verified live: 14 routes, scroll, zoom
+  (rows visibly taller), zero xruns.
 
 *(Add new dated entries as milestones complete.)*
