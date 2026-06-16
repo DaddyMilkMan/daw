@@ -1,4 +1,4 @@
-# Zenith DAW
+# Zenith DAW(large transition in progress this md is outdated until i update it later)
 
 A professional Digital Audio Workstation built with C++20 and JUCE, featuring AI-powered creative assistance, GPU-accelerated rendering, and comprehensive safety systems.
 
