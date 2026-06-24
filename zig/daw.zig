@@ -1,21 +1,24 @@
 //! daw.zig — the Zenith DAW view, assembled entirely from our own toolkit:
-//! flex.zig (layout), widgets.zig (faders/knobs/sliders), gpu2d.zig (SDF shapes,
+//! trellis.zig (layout), widgets.zig (faders/knobs/sliders), gpu2d.zig (SDF shapes,
 //! analytic shadows, atlas text, frosted glass). One cohesive live app — the
 //! consolidation of everything proven in the demos. DAW-specific code; the
 //! reusable engine pieces live in their own modules (see TOOLKIT.md).
 
 const std = @import("std");
+const mlog = std.log.scoped(.mixer); // logs control changes to the app console
 const gpu2d = @import("gpu2d.zig");
-const flex = @import("flex.zig");
+const trellis = @import("trellis.zig");
 const widgets = @import("widgets.zig");
 const project = @import("project.zig");
+const synth = @import("synth.zig");
+const ModRoute = synth.ModRoute;
 const color = @import("color.zig");
 const Color = gpu2d.Color;
 const Gpu = gpu2d.Gpu;
 const Font = gpu2d.GpuFont;
-const px = flex.px;
-const grow = flex.grow;
-const groww = flex.groww;
+const px = trellis.px;
+const grow = trellis.grow;
+const groww = trellis.groww;
 
 pub const WinAction = enum { none, close, minimize, maximize, move };
 pub const State = struct {
@@ -33,10 +36,35 @@ pub const State = struct {
     mutes: [8]bool = [_]bool{false} ** 8,
     solos: [8]bool = [_]bool{false} ** 8,
     meters: [8]f32 = [_]f32{0.3} ** 8, // smoothed meter levels (VU ballistics)
+    track_levels: [8]f32 = [_]f32{0} ** 8, // real per-track output level from the engine
     // real-audio drive: when the audio engine is running, it owns the playhead
     // and feeds the live master peak so meters bounce with the actual signal.
     audio_active: bool = false,
     audio_level: f32 = 0,
+    // piano-roll / clip editor
+    editing: bool = false,
+    edit_track: usize = 0,
+    edit_clip: usize = 0,
+    // MIDI device picker — main_daw fills the list and consumes `midi_pick`
+    midi_names: [16][48]u8 = [_][48]u8{[_]u8{0} ** 48} ** 16,
+    midi_name_len: [16]u8 = [_]u8{0} ** 16,
+    midi_count: usize = 0,
+    midi_selected: i32 = -1, // -1 = all sources, >=0 = source index
+    midi_pick: i32 = -2, // UI output: -2 none / -1 all / >=0 index (main_daw applies + resets)
+    scroll_dy: f32 = 0, // mouse-wheel delta this frame (consumed by scrollable panels)
+    macros: [16]f32 = [_]f32{0} ** 16, // macro knob values (mirrored to the engine)
+    macro_count: u8 = 4, // how many macro knobs are shown (user can add more)
+    patch_dirty: bool = false, // set when the mod matrix / macros change -> main_daw repushes
+
+    pub fn midiName(self: *const State, i: usize) []const u8 {
+        return self.midi_names[i][0..self.midi_name_len[i]];
+    }
+    /// Copy an enumerated source label into slot `i` (called by main_daw).
+    pub fn setMidiName(self: *State, i: usize, name: []const u8) void {
+        const n = @min(name.len, self.midi_names[i].len);
+        @memcpy(self.midi_names[i][0..n], name[0..n]);
+        self.midi_name_len[i] = @intCast(n);
+    }
 };
 
 // ---- refined palette (design-identity pass) --------------------------------
@@ -86,6 +114,44 @@ const red = Color.rgb(236, 100, 100);
 // color utilities are toolkit-level now (color.zig) — alias for local brevity.
 const mix = color.lerp;
 const shade = color.shade;
+
+// ---- modulation-matrix UI helpers ------------------------------------------
+const SRC_LBL = [_][]const u8{ "—", "LFO 1", "LFO 2", "Flt Env", "Amp Env", "Velocity", "Aftertch", "Mod Whl", "Key Trk", "Random" };
+const DEST_LBL = [_][]const u8{ "—", "Pitch", "Cutoff", "Reso", "Pan", "Amp", "Osc Mix", "Pulse W" };
+
+fn srcLabel(r: ModRoute, buf: []u8) []const u8 {
+    if (r.source == .macro) return std.fmt.bufPrint(buf, "Macro {d}", .{r.macro + 1}) catch "Macro";
+    const i: usize = @intFromEnum(r.source);
+    return if (i < SRC_LBL.len) SRC_LBL[i] else "?";
+}
+fn cycleSource(r: *ModRoute, macros: u8, dir: i32) void {
+    const total: i32 = 10 + @as(i32, macros); // 0..9 named sources, then macro0..
+    var cur: i32 = if (r.source == .macro) 10 + @as(i32, r.macro) else @as(i32, @intFromEnum(r.source));
+    cur = @mod(cur + dir + total, total);
+    if (cur < 10) {
+        r.source = @enumFromInt(@as(u8, @intCast(cur)));
+        r.macro = 0;
+    } else {
+        r.source = .macro;
+        r.macro = @intCast(cur - 10);
+    }
+}
+fn destLabel(r: ModRoute) []const u8 {
+    const i: usize = @intFromEnum(r.dest);
+    return if (i < DEST_LBL.len) DEST_LBL[i] else "?";
+}
+fn cycleDest(r: *ModRoute, dir: i32) void {
+    const cur: i32 = @mod(@as(i32, @intFromEnum(r.dest)) + dir + 8, 8);
+    r.dest = @enumFromInt(@as(u8, @intCast(cur)));
+}
+/// The natural ±range of a depth slider for a destination (its units).
+fn depthRange(d: synth.ModDest) f32 {
+    return switch (d) {
+        .pitch => 24.0, // semitones
+        .cutoff => 6.0, // octaves
+        else => 2.0,
+    };
+}
 
 // ---- demo project ----------------------------------------------------------
 fn fillClip(c: *project.Clip, pitches: []const u8) !void {
@@ -249,6 +315,42 @@ pub fn synthDrumLoop(a: std.mem.Allocator, n: usize) ![]f32 {
     }
     return buf;
 }
+/// Per-track mixer STEMS — distinct audio per channel so the mixer faders/mute/
+/// solo audibly do something. Drums (the loop), Bass (low), Lead (mid melody),
+/// Keys (chord), Pad (sustained) — distinct frequency content makes solo/mute
+/// measurable (FFT) and the meters per-track. Returns `ntracks` mono buffers.
+pub fn synthStems(a: std.mem.Allocator, sr_u: u32, n: usize, ntracks: usize) ![][]f32 {
+    const sr: f32 = @floatFromInt(sr_u);
+    const stems = try a.alloc([]f32, ntracks);
+    for (stems, 0..) |*st, ti| {
+        st.* = try a.alloc(f32, n);
+        const buf = st.*;
+        for (buf, 0..) |*v, i| {
+            const t = @as(f32, @floatFromInt(i)) / sr;
+            const beat = @mod(t, 0.5); // 120 BPM
+            v.* = switch (ti) {
+                0 => blk: { // Drums: kick + hats + snare (the loop)
+                    const kick = @sin(beat * 2.0 * std.math.pi * (52.0 + 45.0 * @exp(-beat * 28.0))) * @exp(-beat * 8.5) * 0.9;
+                    const hp = @mod(t, 0.25);
+                    const hat = noise(@intCast(i)) * @exp(-hp * 75.0) * 0.28;
+                    const snp = @mod(t - 0.5 + 1.0, 1.0);
+                    const snare = (noise(@as(u32, @intCast(i)) +% 99) * 0.7) * @exp(-snp * 15.0) * 0.5;
+                    break :blk std.math.clamp(kick + hat + snare, -1.0, 1.0);
+                },
+                1 => @sin(t * 2.0 * std.math.pi * 55.0) * 0.5 * @exp(-beat * 4.0), // Bass: A1 plucks
+                2 => blk: { // Lead: a 4-note arpeggio (A4..)
+                    const notes = [_]f32{ 440.0, 554.37, 659.25, 880.0 };
+                    const step = @as(usize, @intFromFloat(@mod(t * 4.0, 4.0)));
+                    break :blk @sin(t * 2.0 * std.math.pi * notes[step]) * 0.28 * @exp(-@mod(t, 0.25) * 6.0);
+                },
+                3 => (@sin(t * 2.0 * std.math.pi * 261.63) + @sin(t * 2.0 * std.math.pi * 329.63) + @sin(t * 2.0 * std.math.pi * 392.0)) * 0.12, // Keys: C-major triad
+                else => (@sin(t * 2.0 * std.math.pi * 220.0) + @sin(t * 2.0 * std.math.pi * 277.18)) * 0.14, // Pad: sustained A+C#
+            };
+        }
+    }
+    return stems;
+}
+
 // waveform rendering moved to the toolkit: widgets.waveform(...)
 
 fn drawClips(g: *Gpu, fb: *const Font, u: *widgets.Ui, p: *project.Project, ti: usize, r: [4]f32, bar: u64, state: *State, wave: []const f32) void {
@@ -304,8 +406,10 @@ fn drawClips(g: *Gpu, fb: *const Font, u: *widgets.Ui, p: *project.Project, ti: 
 // ---- the view --------------------------------------------------------------
 pub const View = struct {
     g: *Gpu,
-    c: flex.Ctx,
+    c: trellis.Ctx,
     u: widgets.Ui,
+    um: widgets.Ui, // a second immediate-mode context for modal overlays (mod panel)
+    prev_down: bool = false,
     fc: *const Font, // caption 12 (labels)
     fb: *const Font, // body 14
     fu: *const Font, // title 16
@@ -316,9 +420,18 @@ pub const View = struct {
     cm_x: f32 = 0,
     cm_y: f32 = 0,
     cm_anim: f32 = 0,
+    midi_open: bool = false, // MIDI device dropdown
+    midi_anim: f32 = 0,
+    midi_btn: [4]f32 = .{ 0, 0, 0, 0 }, // the trigger button's rect (for the dropdown anchor)
+    mod_open: bool = false, // the modulation-matrix panel
+    mod_anim: f32 = 0,
+    mod_scroll: f32 = 0, // route-list scroll offset (px)
+    mod_zoom: f32 = 1.0, // row-height zoom (0.7 compact .. 1.4 large)
+    patch: @import("synth.zig").Patch = .{}, // the synth patch the UI edits (mod routes live here)
+    pr: @import("pianoroll.zig").PianoRoll = .{}, // the clip editor (when state.editing)
 
     pub fn init(g: *Gpu, fc: *const Font, fb: *const Font, fu: *const Font, fd: *const Font) View {
-        return .{ .g = g, .c = flex.Ctx.init(g, fb, fu, fd), .u = widgets.Ui.init(g), .fc = fc, .fb = fb, .fu = fu, .fd = fd };
+        return .{ .g = g, .c = trellis.Ctx.init(g, fb, fu, fd), .u = widgets.Ui.init(g), .um = widgets.Ui.init(g), .fc = fc, .fb = fb, .fu = fu, .fd = fd };
     }
     /// A small-caps section label (caption font, letter-spaced) — a core modern
     /// pattern. Caller already uppercases the string.
@@ -331,9 +444,11 @@ pub const View = struct {
         const c = &self.c;
         const u = &self.u;
         state.window_action = .none;
+        // when a modal panel (mod matrix) is open, the body stops seeing the mouse
+        const down_body = down and !self.mod_open;
         g.begin(@intFromFloat(W), @intFromFloat(H), bg_bot);
         g.rectGrad(0, 0, W, H, 0, bg_top, bg_bot, 0, bord);
-        u.begin(.{ .mx = mx, .my = my, .mouse_down = down }, 0.016);
+        u.begin(.{ .mx = mx, .my = my, .mouse_down = down_body }, 0.016);
 
         // frosted-glass value tooltip shown while hovering a fader/knob
         var tip_show = false;
@@ -350,7 +465,7 @@ pub const View = struct {
         }) catch "00 : 00 : 00";
         const TBH: f32 = 58; // title bar height (a glass strip drawn over the body)
         // ---- BODY pass (rendered first, below the glass title bar) ----
-        c.beginAt(0, TBH, W, H - TBH, mx, my, down, 0.016);
+        c.beginAt(0, TBH, W, H - TBH, mx, my, down_body, 0.016);
         {
             c.open(.{ .dir = .row, .w = grow(), .h = grow() });
             {
@@ -509,7 +624,7 @@ pub const View = struct {
 
         // ---- WIDGETS / custom content into the solved rects ----------------
         // (transport + window controls are drawn over the glass title bar, below)
-        // nav selection (flex hover handled in chrome; click via flex)
+        // nav selection (Trellis hover handled in chrome; click via Trellis)
         if (c.click >= 1000 and c.click < 1010) state.nav_sel = @intCast(c.click - 1000);
         // browser category icons (thin-stroke, in category color)
         const navico = [_]struct { k: u8, col: Color }{
@@ -559,11 +674,15 @@ pub const View = struct {
             if (!is_master) {
                 if (c.rectOf(300 + @as(u64, ti))) |r| if (miniToggle(u, g, self.fb, @intCast(300 + ti), r, "M", state.mutes[ti], amber)) {
                     state.mutes[ti] = !state.mutes[ti];
+                    mlog.info("mute t{d} ({s}) -> {}", .{ ti, p.tracks.items[ti].name.items, state.mutes[ti] });
                 };
                 if (c.rectOf(320 + @as(u64, ti))) |r| if (miniToggle(u, g, self.fb, @intCast(320 + ti), r, "S", state.solos[ti], green)) {
                     state.solos[ti] = !state.solos[ti];
+                    mlog.info("solo t{d} ({s}) -> {}", .{ ti, p.tracks.items[ti].name.items, state.solos[ti] });
                 };
-                if (c.rectOf(400 + @as(u64, ti))) |r| _ = u.hSliderBipolar(@intCast(400 + ti), r[0], r[1], r[2], r[3], &p.tracks.items[ti].pan, -1.0, 1.0);
+                if (c.rectOf(400 + @as(u64, ti))) |r| if (u.hSliderBipolar(@intCast(400 + ti), r[0], r[1], r[2], r[3], &p.tracks.items[ti].pan, -1.0, 1.0)) {
+                    mlog.debug("pan t{d} -> {d:.2}", .{ ti, p.tracks.items[ti].pan });
+                };
                 if (c.rectOf(600 + @as(u64, ti))) |r| {
                     _ = u.knob(@intCast(600 + ti), r[0] + r[2] / 2, r[1] + r[3] / 2, 12, &state.sends[ti][0]);
                     if (u.hot == 600 + @as(u32, @intCast(ti))) {
@@ -584,7 +703,9 @@ pub const View = struct {
                 }
             }
             if (c.rectOf(100 + @as(u64, ti))) |r| {
-                _ = u.vFader(@intCast(100 + ti), r[0], r[1], r[2], r[3], gain);
+                if (u.vFader(@intCast(100 + ti), r[0], r[1], r[2], r[3], gain)) {
+                    mlog.debug("fader {s} -> {d:.0}%", .{ if (is_master) "Master" else p.tracks.items[ti].name.items, gain.* * 100 });
+                }
                 if (u.hot == 100 + @as(u32, @intCast(ti))) {
                     tip_show = true;
                     tip_val = gain.* * 100;
@@ -595,8 +716,9 @@ pub const View = struct {
             if (c.rectOf(500 + @as(u64, ti))) |r| {
                 const muted = !is_master and state.mutes[ti];
                 const target = if (muted) 0.0 else if (state.audio_active)
-                    // real master peak, varied per track so the meters stay lively
-                    state.audio_level * gain.* * (0.55 + 0.45 * @abs(@sin(@as(f32, @floatFromInt(ti)) * 1.7 + 0.4)))
+                    // REAL level from the engine: master peak for the master strip,
+                    // the per-track post-fader output level for each channel.
+                    (if (is_master) state.audio_level else state.track_levels[ti])
                 else
                     meterLevel(ti, ts, gain.*, state.playing);
                 _ = u.meter(@intCast(850 + ti), r[0], r[1], r[2], r[3], target); // toolkit VU meter (ballistics)
@@ -608,8 +730,9 @@ pub const View = struct {
             }
         }
 
-        // title-bar drag region (avoid the interactive clusters)
-        if (state.window_action == .none and u.pressed and my < TBH and (mx < 150 or (mx > 300 and mx < W - 360))) state.window_action = .move;
+        // title-bar drag region (avoid the interactive clusters: transport on the
+        // left, and the MIDI selector + window controls reserved on the right)
+        if (state.window_action == .none and u.pressed and my < TBH and (mx < 150 or (mx > 300 and mx < W - 560))) state.window_action = .move;
 
         // ---- TRANSPORT BAR: a CLEAN flat bar (modern chrome). Liquid Glass is
         // reserved for floating overlays (menus/tooltips), not forced onto the main
@@ -637,6 +760,18 @@ pub const View = struct {
         g.rect(W - 338, 22, 7, 7, 3, dotc);
         self.fu.text(g, W - 324, 14, if (state.playing) "Playing" else "Stopped", if (state.playing) accent else dim);
         self.fc.text(g, W - 324, 36, "100% Zig", faint);
+        // MIDI device selector — click to open a dropdown of available sources
+        const mbx = W - 545;
+        const mbw: f32 = 170;
+        self.midi_btn = .{ mbx, 16, mbw, 26 };
+        if (u.iconSlot(950, mbx, 16, mbw, 26, self.midi_open)) self.midi_open = !self.midi_open;
+        const sel_lbl = if (state.midi_selected < 0) "All sources" else state.midiName(@intCast(state.midi_selected));
+        const sel_sh = if (sel_lbl.len > 17) sel_lbl[0..17] else sel_lbl;
+        self.fc.text(g, mbx + 12, 22, "MIDI", faint);
+        self.fb.text(g, mbx + 50, 21, sel_sh, if (u.hoverOf(950) > 0.1) txt else dim);
+        const cx = mbx + mbw - 16; // down caret
+        g.tri(cx - 4, 27, cx + 4, 27, cx, 32, dim);
+
         if (u.iconSlot(900, W - 108, 16, 30, 24, false)) state.window_action = .minimize;
         icons.minimize(g, W - 93, 28, 11, dim);
         if (u.iconSlot(901, W - 74, 16, 30, 24, false)) state.window_action = .maximize;
@@ -701,6 +836,156 @@ pub const View = struct {
                 if (!inside or hit >= 0) self.cm_open = false;
             }
         }
+
+        // ---- MIDI device dropdown (frosted glass, anchored under the selector) ----
+        const mt: f32 = if (self.midi_open) 1.0 else 0.0;
+        self.midi_anim += (mt - self.midi_anim) * 0.30;
+        if (self.midi_anim > 0.01) {
+            const rows = state.midi_count + 1; // row 0 = "All sources", then each device
+            const iw: f32 = 248;
+            const ih: f32 = 30;
+            const fullh: f32 = ih * @as(f32, @floatFromInt(rows)) + 10;
+            const eased = self.midi_anim * self.midi_anim * (3.0 - 2.0 * self.midi_anim);
+            const hh = fullh * eased;
+            const dx = std.math.clamp(self.midi_btn[0] + self.midi_btn[2] - iw, 4, W - iw - 4);
+            const dy = self.midi_btn[1] + self.midi_btn[3] + 4;
+            g.shadow(dx, dy, iw, hh, 12, 22, Color.rgba(0, 0, 0, @intFromFloat(170 * eased)));
+            g.flush();
+            g.captureBlur(@intFromFloat(W), @intFromFloat(H));
+            g.glass(dx, dy, iw, hh, 12, Color.rgba(84, 92, 114, 76), Color.rgba(255, 255, 255, 150));
+            var hit: i32 = -2; // -2 = no row hovered
+            var r: usize = 0;
+            while (r < rows) : (r += 1) {
+                const iy = dy + 5 + @as(f32, @floatFromInt(r)) * ih;
+                if (iy + ih > dy + hh - 2) continue;
+                const idx: i32 = @as(i32, @intCast(r)) - 1; // -1 = All sources
+                const label = if (idx < 0) "All sources" else state.midiName(@intCast(idx));
+                const hov = mx >= dx + 5 and mx < dx + iw - 5 and my >= iy and my < iy + ih;
+                const is_sel = idx == state.midi_selected;
+                if (hov) {
+                    hit = idx;
+                    g.rect(dx + 5, iy, iw - 10, ih, 7, Color.rgba(108, 147, 244, 60));
+                } else if (is_sel) g.rect(dx + 5, iy, iw - 10, ih, 7, Color.rgba(108, 147, 244, 28));
+                const lsh = if (label.len > 28) label[0..28] else label;
+                self.fb.text(g, dx + 14, iy + (ih - 15) / 2, lsh, if (hov or is_sel) txt else dim);
+            }
+            g.flush();
+            if (u.pressed) {
+                const on_btn = mx >= self.midi_btn[0] and mx < self.midi_btn[0] + self.midi_btn[2] and
+                    my >= self.midi_btn[1] and my < self.midi_btn[1] + self.midi_btn[3];
+                const inside = mx >= dx and mx < dx + iw and my >= dy and my < dy + hh;
+                if (hit != -2) {
+                    state.midi_pick = hit; // main_daw applies the selection
+                    self.midi_open = false;
+                } else if (!inside and !on_btn) self.midi_open = false;
+            }
+        }
+
+        // ---- piano-roll / clip editor overlay (toggled with 'E' on a selected clip) ----
+        if (state.editing and state.edit_track < p.tracks.items.len) {
+            const tr = &p.tracks.items[state.edit_track];
+            if (state.edit_clip < tr.clips.items.len) {
+                g.rect(0, TBH, W, H - TBH, 0, Color.rgba(0, 0, 0, 200)); // dim backdrop
+                const er = [4]f32{ 18, TBH + 30, W - 36, H - TBH - 48 };
+                self.pr.bar_frames = bar;
+                self.pr.update(g, self.fb, er, &tr.clips.items[state.edit_clip], mx, my, u.pressed, down, u.released);
+                var hbuf: [64]u8 = undefined;
+                const hs = std.fmt.bufPrint(&hbuf, "Piano Roll — {s}  (Esc / E to close)", .{tr.name.items}) catch "Piano Roll";
+                self.fd.text(g, 28, TBH + 4, hs, accent);
+                g.flush(); // render the overlay before main_daw's grain snapshots the frame
+            }
+        }
+        // ---- modulation-matrix panel (toggled with 'M') ------------------------
+        if (self.mod_open) {
+            const wp: f32 = 560;
+            const hp: f32 = @min(H - 110, 560);
+            const px0 = (W - wp) / 2;
+            const py0 = @max(TBH + 16, (H - hp) / 2);
+            g.rect(0, TBH, W, H - TBH, 0, Color.rgba(0, 0, 0, 150)); // dim backdrop
+            g.flush();
+            g.captureBlur(@intFromFloat(W), @intFromFloat(H));
+            g.glass(px0, py0, wp, hp, 16, Color.rgba(84, 92, 114, 82), Color.rgba(255, 255, 255, 150));
+            self.um.begin(.{ .mx = mx, .my = my, .mouse_down = down }, 0.016);
+
+            // header
+            self.fd.text(g, px0 + 22, py0 + 12, "Modulation", accent);
+            self.fc.text(g, px0 + 24, py0 + 42, "M toggle  ·  wheel scroll  ·  click a cell to cycle  ·  drag depth", faint);
+            if (self.um.iconSlot(1850, px0 + wp - 40, py0 + 14, 26, 24, false)) self.mod_open = false;
+            icons.close(g, px0 + wp - 27, py0 + 26, 9, dim);
+            if (self.um.iconSlot(1851, px0 + wp - 134, py0 + 14, 24, 24, false)) self.mod_zoom = @max(0.7, self.mod_zoom - 0.15);
+            self.fu.text(g, px0 + wp - 127, py0 + 17, "-", dim);
+            if (self.um.iconSlot(1852, px0 + wp - 106, py0 + 14, 24, 24, false)) self.mod_zoom = @min(1.5, self.mod_zoom + 0.15);
+            self.fu.text(g, px0 + wp - 100, py0 + 16, "+", dim);
+
+            // macro knobs (expandable)
+            const mky = py0 + 64;
+            self.fc.text(g, px0 + 22, mky - 18, "MACROS", label_col);
+            var mi: usize = 0;
+            while (mi < state.macro_count) : (mi += 1) {
+                const kx = px0 + 42 + @as(f32, @floatFromInt(mi)) * 62;
+                _ = self.um.knob(1900 + @as(u32, @intCast(mi)), kx, mky + 16, 16, &state.macros[mi]);
+                var lb: [8]u8 = undefined;
+                self.fc.text(g, kx - 8, mky + 38, std.fmt.bufPrint(&lb, "M{d}", .{mi + 1}) catch "M", dim);
+            }
+            if (state.macro_count < 16) {
+                const ax = px0 + 42 + @as(f32, @floatFromInt(state.macro_count)) * 62;
+                if (self.um.iconSlot(1853, ax - 13, mky + 4, 26, 24, false)) state.macro_count += 1;
+                self.fu.text(g, ax - 5, mky + 7, "+", accent);
+            }
+
+            // route list (scrollable, zoomable)
+            const list_top = mky + 66;
+            const list_bot = py0 + hp - 46;
+            const row_h = 34 * self.mod_zoom;
+            const over = mx >= px0 and mx < px0 + wp and my >= list_top and my < list_bot;
+            if (over) self.mod_scroll -= state.scroll_dy * 38;
+            const content_h = @as(f32, @floatFromInt(self.patch.n_routes)) * row_h;
+            const max_scroll = @max(@as(f32, 0), content_h - (list_bot - list_top));
+            self.mod_scroll = std.math.clamp(self.mod_scroll, 0, max_scroll);
+            self.fc.text(g, px0 + 22, list_top - 18, "ROUTES", label_col);
+            var cbuf: [16]u8 = undefined;
+            self.fc.text(g, px0 + wp - 78, list_top - 18, std.fmt.bufPrint(&cbuf, "{d} / 64", .{self.patch.n_routes}) catch "", faint);
+
+            var r: usize = 0;
+            while (r < self.patch.n_routes) : (r += 1) {
+                const ry = list_top + @as(f32, @floatFromInt(r)) * row_h - self.mod_scroll;
+                if (ry < list_top or ry + row_h > list_bot) continue; // only fully-visible rows
+                const route = &self.patch.routes[r];
+                const idb: u32 = 2000 + @as(u32, @intCast(r)) * 4;
+                const ty = ry + (row_h - 15) / 2;
+                if (self.um.iconSlot(idb, px0 + 20, ry + 4, 96, row_h - 8, false)) {
+                    cycleSource(route, state.macro_count, 1);
+                    state.patch_dirty = true;
+                }
+                var sbuf: [16]u8 = undefined;
+                self.fb.text(g, px0 + 30, ty, srcLabel(route.*, &sbuf), txt);
+                self.fb.text(g, px0 + 122, ty, "->", faint);
+                if (self.um.iconSlot(idb + 1, px0 + 146, ry + 4, 90, row_h - 8, false)) {
+                    cycleDest(route, 1);
+                    state.patch_dirty = true;
+                }
+                self.fb.text(g, px0 + 156, ty, destLabel(route.*), txt);
+                const dr = depthRange(route.dest);
+                if (self.um.hSliderBipolar(idb + 2, px0 + 246, ry + (row_h - 8) / 2, wp - 246 - 56, 8, &route.depth, -dr, dr)) state.patch_dirty = true;
+                if (self.um.iconSlot(idb + 3, px0 + wp - 40, ry + 4, 26, row_h - 8, false)) {
+                    self.patch.removeRoute(r);
+                    state.patch_dirty = true;
+                    break;
+                }
+                icons.close(g, px0 + wp - 27, ry + row_h / 2, 7, red);
+            }
+
+            if (self.patch.n_routes < synth.MAX_ROUTES) {
+                if (self.um.iconSlot(1854, px0 + 20, py0 + hp - 38, 120, 26, false)) {
+                    _ = self.patch.addRoute(.{ .source = .lfo1, .dest = .cutoff, .depth = 0 });
+                    state.patch_dirty = true;
+                }
+                self.fb.text(g, px0 + 34, py0 + hp - 32, "+ Add Route", accent);
+            }
+            self.um.end();
+            g.flush();
+        }
+        self.prev_down = down;
         return state.window_action;
     }
 };

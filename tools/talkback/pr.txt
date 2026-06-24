@@ -1,0 +1,35 @@
+wait 40
+shot tools/talkback/pr0_seed.png
+move 250 160
+wait 1
+down
+wait 1
+up
+wait 2
+move 380 250
+wait 1
+down
+wait 1
+up
+wait 2
+move 520 340
+wait 1
+down
+wait 1
+up
+wait 2
+move 660 430
+wait 1
+down
+wait 1
+up
+wait 3
+shot tools/talkback/pr1_added.png
+move 250 160
+wait 1
+down
+wait 1
+up
+wait 3
+shot tools/talkback/pr2_deleted.png
+quit

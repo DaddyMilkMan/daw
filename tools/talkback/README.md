@@ -1,0 +1,118 @@
+# Talkback — Zenith's observe-and-drive harness
+
+Drive the **real** app (showcase, daw, any GPU window) with synthetic input and
+capture screenshots — no app-UI changes required. Talkback lives in
+`zig/window_glx.zig`: when `ZENITH_SCRIPT=<file>` is set, the window replays the
+script's input into `poll()` instead of the OS, and `glReadPixels` → PNG on `shot`.
+
+It's the same act → observe → verify loop a browser test driver gives you, but built
+in-tree for our own GPU window: **console** (logs), **DOM** (`dumpids`), and
+**screenshots** (`shot`), all timestamp-correlated.
+
+## Run
+
+```sh
+ZENITH_SCRIPT=tools/talkback/interact.txt ZENITH_WINDOW_SECONDS=12 zig build showcase
+# also works for: zig build daw, zig build window, ...
+```
+
+## Script grammar (one action per line, `#` = comment)
+
+**By id (DEFAULT — deterministic, no eyeballing):**
+```
+dumpids <file>   # write the interactive widget map (id -> rect) — the "DOM"
+moveid <id>      # move the cursor to the CENTER of widget <id>
+clickid <id>     # click widget <id> (press + auto-release next frame)
+rmove <dx> <dy>  # move relative to the current cursor (for drags after moveid)
+```
+
+**By pixel (fallback — when a target has no id, or for empty-space drags):**
+```
+move <x> <y>     # move the cursor to absolute window pixels
+down / up        # press / release the left mouse button
+```
+
+**Shared:**
+```
+key <keycode>    # send a key (X11 keycode; 9 = Escape, 65 = Space, 58 = M, 26 = E)
+scroll <dy>      # mouse wheel at the cursor (+up / -down) — drives scrollable panels
+wait <frames>    # idle N frames (~16ms each) — put `wait 1` between drag steps
+shot <file.png>  # screenshot the current frame (real GPU framebuffer)
+quit             # close the window
+```
+
+Actions run within a frame until a `wait`/`shot`/`clickid`/`quit`. For a drag, alternate
+moves with `wait 1` so the widget processes each step. Cursor + button state are sticky.
+
+### Why by-id is the default
+`trellis.zig`/`widgets.zig` publish every interactive widget's rect to `uireg.zig` each
+frame; `moveid`/`clickid` resolve the exact center, and `dumpids` lists every widget.
+Tested both ways on the DAW: **by-id hit the play button + Drums fader first try**, while
+by-pixel needed a wrong guess → zoom → corrected coordinate. So: `dumpids` once to learn
+the ids, then drive by id. Pixel actions remain for un-id'd targets.
+
+Keyboard shortcuts work too via `key <keycode>` (e.g. the daw's transport keys) —
+the event goes straight into the app's normal key handling.
+
+## Examples
+- `baseline.txt` — settle, screenshot, quit.
+- `interact.txt` — showcase: drag a fader low→high, turn a knob, sweep a slider, click a
+  toggle (verified: each widget responded).
+- `daw_interact.txt` — the live **DAW**, BY ID: `clickid 1` toggles transport, `moveid 100`
+  + `rmove` drags the Drums fader to 0 then 100. Verified by reading the on-screen value/status.
+- `daw_ids.txt` — a captured `dumpids` of the DAW: 71 interactive widgets. Key ids:
+  `1` play, `2` stop, `3` record; `100..105` mixer faders (Drums..Master), `300+`/`320+`
+  track mute/solo, `400+` pan, `600+`/`700+` send knobs, `1000+` browser items.
+
+Screenshots (`*.png`) are git-ignored; scripts are kept as fixtures.
+
+## Zoom tool
+
+Thumbnails are too small to read values; `zig/main_crop.zig` crops + upscales a region:
+
+```sh
+zig run zig/main_crop.zig -- <in.png> <x> <y> <w> <h> <scale> <out.png>
+```
+
+The act → screenshot → **zoom to read the value/state** → adjust loop is exactly how a
+browser agent locates and verifies elements.
+
+## Console / logs
+The app tees every `std.log` line to a file **and** stderr (`zig/log.zig`). Set the path
+with `ZENITH_LOG`:
+
+```sh
+ZENITH_LOG=tools/talkback/daw.log ZENITH_SCRIPT=... zig build daw   # then: cat tools/talkback/daw.log
+```
+
+Lines are `[<ms>ms] level(scope): message`. Logged events: DAW start/stop, MIDI connect,
+`audio: output device opened`, `daw: transport PLAY/STOP`, `mixer: mute/solo/pan/fader`
+changes (the fader logs each drag step), `daw: perf` (render ms / fps headroom every 120
+frames), per-MIDI-note, and `alsa: xrun`/errors. So a Talkback run gives the **console**
+(log) + **DOM** (`dumpids`) + **screenshots** (`shot`) — the full triad,
+timestamp-correlated. Example:
+
+```
+[      14ms] info(audio): output: device opened @ 48000 Hz, 2ch
+[    1202ms] info(mixer): mute t0 (Drums) -> true
+[    1298ms] info(daw): transport: STOP (playhead 0.66)
+[    1396ms] debug(mixer): fader Drums -> 50%
+[    2319ms] info(daw): perf: 120 frames, render avg 3.40ms (~294 fps headroom)
+```
+
+## Audio monitor — what's playing, from where, with the numbers
+The DAW logs an "audio:" report every ~120 frames (in `ZENITH_LOG`): the output device,
+transport, master volume/peak (decimal + dB), then per source — name, **volume (decimal +
+dB)**, pan, **live level (decimal + dB)**, **dominant frequency (Hz)**, and PLAYING/muted/
+solo-silenced status. The analysis lives in `zig/audio_inspect.zig` (peak/RMS/dominant-Hz,
+unit-tested). Example:
+
+```
+audio: device 'default' @ 48000Hz 2ch | transport PLAYING | master 80% (-1.9dB) peak 0.256
+  src[0] Drums: vol 0.85 (-1.4dB) pan 0.00 | live 0.046 (-26.7dB) | ~50Hz | PLAYING
+  src[2] Lead:  vol 0.60 (-4.4dB) pan 0.25 | live 0.103 (-19.7dB) | ~439Hz | PLAYING
+```
+
+## Notes
+- The live DAW binds **Space → transport toggle** and **Esc → quit** (`main_daw.zig`); the
+  transport play button is `id 1` and mixer faders are `id 100..105`.

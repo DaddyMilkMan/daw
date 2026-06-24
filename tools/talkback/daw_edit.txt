@@ -1,0 +1,14 @@
+wait 60
+shot tools/talkback/de0_daw.png
+key 26
+wait 30
+shot tools/talkback/de1_editor.png
+move 430 320
+wait 1
+down
+wait 1
+up
+wait 3
+shot tools/talkback/de2_added.png
+wait 90
+quit

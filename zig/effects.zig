@@ -58,6 +58,64 @@ pub const Biquad = struct {
         b.setNorm(1 + alpha * A, -2 * c, 1 - alpha * A, 1 + alpha / A, -2 * c, 1 - alpha / A);
         return b;
     }
+    pub fn bandpass(sr: f32, freq: f32, q: f32) Biquad {
+        const w0 = 2.0 * std.math.pi * freq / sr;
+        const c = @cos(w0);
+        const alpha = @sin(w0) / (2.0 * q);
+        var b = Biquad{};
+        b.setNorm(alpha, 0, -alpha, 1 + alpha, -2 * c, 1 - alpha); // constant 0 dB peak gain
+        return b;
+    }
+    pub fn notch(sr: f32, freq: f32, q: f32) Biquad {
+        const w0 = 2.0 * std.math.pi * freq / sr;
+        const c = @cos(w0);
+        const alpha = @sin(w0) / (2.0 * q);
+        var b = Biquad{};
+        b.setNorm(1, -2 * c, 1, 1 + alpha, -2 * c, 1 - alpha);
+        return b;
+    }
+    pub fn allpass(sr: f32, freq: f32, q: f32) Biquad {
+        const w0 = 2.0 * std.math.pi * freq / sr;
+        const c = @cos(w0);
+        const alpha = @sin(w0) / (2.0 * q);
+        var b = Biquad{};
+        b.setNorm(1 - alpha, -2 * c, 1 + alpha, 1 + alpha, -2 * c, 1 - alpha);
+        return b;
+    }
+    pub fn lowShelf(sr: f32, freq: f32, gain_db: f32) Biquad {
+        const A = std.math.pow(f32, 10.0, gain_db / 40.0);
+        const w0 = 2.0 * std.math.pi * freq / sr;
+        const c = @cos(w0);
+        const alpha = @sin(w0) / 2.0 * @sqrt(2.0); // S=1 shelf slope
+        const tsa = 2.0 * @sqrt(A) * alpha;
+        var b = Biquad{};
+        b.setNorm(
+            A * ((A + 1) - (A - 1) * c + tsa),
+            2 * A * ((A - 1) - (A + 1) * c),
+            A * ((A + 1) - (A - 1) * c - tsa),
+            (A + 1) + (A - 1) * c + tsa,
+            -2 * ((A - 1) + (A + 1) * c),
+            (A + 1) + (A - 1) * c - tsa,
+        );
+        return b;
+    }
+    pub fn highShelf(sr: f32, freq: f32, gain_db: f32) Biquad {
+        const A = std.math.pow(f32, 10.0, gain_db / 40.0);
+        const w0 = 2.0 * std.math.pi * freq / sr;
+        const c = @cos(w0);
+        const alpha = @sin(w0) / 2.0 * @sqrt(2.0);
+        const tsa = 2.0 * @sqrt(A) * alpha;
+        var b = Biquad{};
+        b.setNorm(
+            A * ((A + 1) + (A - 1) * c + tsa),
+            -2 * A * ((A - 1) + (A + 1) * c),
+            A * ((A + 1) + (A - 1) * c - tsa),
+            (A + 1) - (A - 1) * c + tsa,
+            2 * ((A - 1) - (A + 1) * c),
+            (A + 1) - (A - 1) * c - tsa,
+        );
+        return b;
+    }
 };
 
 // ---------------------------------------------------------------------------
@@ -173,6 +231,41 @@ test "biquad lowpass passes DC, attenuates Nyquist" {
         peak = @max(peak, @abs(y));
     }
     try std.testing.expect(peak < 0.1); // Nyquist heavily attenuated
+}
+
+test "bandpass peaks at center, rejects DC and Nyquist" {
+    var bp = Biquad.bandpass(48000, 1000, 4.0);
+    // DC
+    var dc: f32 = 0;
+    for (0..4000) |_| dc = bp.process(1.0);
+    try std.testing.expect(@abs(dc) < 0.1);
+    // tone at center frequency builds to a clear amplitude
+    var bp2 = Biquad.bandpass(48000, 1000, 4.0);
+    var peak: f32 = 0;
+    for (0..4000) |k| {
+        const ph = 2.0 * std.math.pi * 1000.0 * @as(f32, @floatFromInt(k)) / 48000.0;
+        const y = bp2.process(@sin(ph));
+        if (k > 2000) peak = @max(peak, @abs(y));
+    }
+    try std.testing.expect(peak > 0.8);
+}
+
+test "notch rejects its center frequency" {
+    var n = Biquad.notch(48000, 1000, 8.0);
+    var peak: f32 = 0;
+    for (0..8000) |k| {
+        const ph = 2.0 * std.math.pi * 1000.0 * @as(f32, @floatFromInt(k)) / 48000.0;
+        const y = n.process(@sin(ph));
+        if (k > 4000) peak = @max(peak, @abs(y));
+    }
+    try std.testing.expect(peak < 0.15);
+}
+
+test "high shelf boosts highs, leaves DC alone" {
+    var hs = Biquad.highShelf(48000, 4000, 12.0);
+    var dc: f32 = 0;
+    for (0..4000) |_| dc = hs.process(1.0);
+    try std.testing.expectApproxEqAbs(@as(f32, 1.0), dc, 0.05); // DC ~ unity
 }
 
 test "delay produces an echo" {

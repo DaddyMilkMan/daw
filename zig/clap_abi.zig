@@ -118,3 +118,86 @@ pub const EventNote = extern struct {
     key: i16,
     velocity: f64,
 };
+
+// ---------------------------------------------------------------------------
+// Extensions (exact clap.h layouts so real third-party plugins host correctly).
+// ---------------------------------------------------------------------------
+pub const NAME_SIZE = 256;
+pub const PATH_SIZE = 1024;
+
+pub const EXT_AUDIO_PORTS: [*:0]const u8 = "clap.audio-ports";
+pub const EXT_NOTE_PORTS: [*:0]const u8 = "clap.note-ports";
+pub const EXT_PARAMS: [*:0]const u8 = "clap.params";
+pub const EXT_STATE: [*:0]const u8 = "clap.state";
+
+// state streams (clap/stream.h): read/write return bytes moved, -1 on error.
+pub const IStream = extern struct {
+    ctx: ?*anyopaque,
+    read: ?*const fn (*const IStream, *anyopaque, u64) callconv(.c) i64,
+};
+pub const OStream = extern struct {
+    ctx: ?*anyopaque,
+    write: ?*const fn (*const OStream, *const anyopaque, u64) callconv(.c) i64,
+};
+pub const PluginState = extern struct {
+    save: ?*const fn (*const Plugin, *const OStream) callconv(.c) bool,
+    load: ?*const fn (*const Plugin, *const IStream) callconv(.c) bool,
+};
+
+// audio-ports
+pub const AUDIO_PORT_IS_MAIN: u32 = 1 << 0;
+pub const AudioPortInfo = extern struct {
+    id: u32,
+    name: [NAME_SIZE]u8,
+    flags: u32,
+    channel_count: u32,
+    port_type: ?[*:0]const u8,
+    in_place_pair: u32,
+};
+pub const PluginAudioPorts = extern struct {
+    count: ?*const fn (*const Plugin, bool) callconv(.c) u32,
+    get: ?*const fn (*const Plugin, u32, bool, *AudioPortInfo) callconv(.c) bool,
+};
+
+// note-ports
+pub const NOTE_DIALECT_CLAP: u32 = 1 << 0;
+pub const NOTE_DIALECT_MIDI: u32 = 1 << 1;
+pub const NotePortInfo = extern struct {
+    id: u32,
+    supported_dialects: u32,
+    preferred_dialect: u32,
+    name: [NAME_SIZE]u8,
+};
+pub const PluginNotePorts = extern struct {
+    count: ?*const fn (*const Plugin, bool) callconv(.c) u32,
+    get: ?*const fn (*const Plugin, u32, bool, *NotePortInfo) callconv(.c) bool,
+};
+
+// params
+pub const PARAM_IS_AUTOMATABLE: u32 = 1 << 5;
+pub const ParamInfo = extern struct {
+    id: u32,
+    flags: u32,
+    cookie: ?*anyopaque,
+    name: [NAME_SIZE]u8,
+    module: [PATH_SIZE]u8,
+    min_value: f64,
+    max_value: f64,
+    default_value: f64,
+};
+pub const PluginParams = extern struct {
+    count: ?*const fn (*const Plugin) callconv(.c) u32,
+    get_info: ?*const fn (*const Plugin, u32, *ParamInfo) callconv(.c) bool,
+    get_value: ?*const fn (*const Plugin, u32, *f64) callconv(.c) bool,
+    value_to_text: ?*const fn (*const Plugin, u32, f64, [*]u8, u32) callconv(.c) bool,
+    text_to_value: ?*const fn (*const Plugin, u32, [*:0]const u8, *f64) callconv(.c) bool,
+    flush: ?*const fn (*const Plugin, ?*const InputEvents, ?*const OutputEvents) callconv(.c) void,
+};
+
+/// Copy a CLAP fixed-size char buffer into a Zig slice (up to the NUL).
+pub fn cstr(buf: []const u8) []const u8 {
+    const end = std.mem.indexOfScalar(u8, buf, 0) orelse buf.len;
+    return buf[0..end];
+}
+
+const std = @import("std");

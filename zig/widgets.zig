@@ -1,10 +1,11 @@
 //! widgets.zig — reusable GPU immediate-mode widgets (faders, sliders, knobs,
 //! icon slots) drawn through gpu2d, with per-id hover/press animation. No DAW or
-//! layout dependency — pair it with flex.zig (positions) or call with raw rects.
+//! layout dependency — pair it with trellis.zig (positions) or call with raw rects.
 //! Original Zig.
 
 const std = @import("std");
 const gpu2d = @import("gpu2d.zig");
+const uireg = @import("uireg.zig");
 const Color = gpu2d.Color;
 const Gpu = gpu2d.Gpu;
 const Font = gpu2d.GpuFont;
@@ -71,7 +72,7 @@ fn tableCell(g: *Gpu, f: *const Font, cx: f32, ty: f32, col: Col, s: []const u8,
 const Anim = struct { id: u32 = 0, used: bool = false, hover: f32 = 0, press: f32 = 0, extra: f32 = 0 };
 
 // Frame-rate-independent critically-damped easing (smooth, no snap/overshoot) —
-// the modern feel for hover/press/slide transitions. (See flex.approach.)
+// the modern feel for hover/press/slide transitions. (See trellis.approach.)
 fn ease(cur: f32, target: f32, dt: f32, speed: f32) f32 {
     return cur + (target - cur) * (1.0 - @exp(-speed * dt));
 }
@@ -126,6 +127,7 @@ pub const Ui = struct {
 
     /// Animated empty button background (caller draws an icon/label on top).
     pub fn iconSlot(self: *Ui, id: u32, x: f32, y: f32, w: f32, h: f32, active_: bool) bool {
+        uireg.put(id, x, y, w, h);
         const hov = self.inside(x, y, w, h);
         if (hov) self.hot = id;
         if (hov and self.pressed) self.active = id;
@@ -139,6 +141,7 @@ pub const Ui = struct {
     }
 
     pub fn vFader(self: *Ui, id: u32, x: f32, y: f32, w: f32, h: f32, value: *f32) bool {
+        uireg.put(id, x, y, w, h);
         const hov = self.inside(x - 8, y, w + 16, h);
         if (hov) self.hot = id;
         if (hov and self.pressed) self.active = id;
@@ -173,6 +176,7 @@ pub const Ui = struct {
         return self.hSliderEx(id, x, y, w, h, value, lo, hi, true);
     }
     fn hSliderEx(self: *Ui, id: u32, x: f32, y: f32, w: f32, h: f32, value: *f32, lo: f32, hi: f32, bipolar: bool) bool {
+        uireg.put(id, x, y, w, h);
         const tr = h * 0.5 + 4; // thumb radius (kept inside the track ends)
         const hov = self.inside(x - tr, y - tr, w + 2 * tr, h + 2 * tr);
         if (hov) self.hot = id;
@@ -212,6 +216,7 @@ pub const Ui = struct {
     /// Animated toggle switch — a pill track + a knob that SLIDES between off
     /// (left) and on (right) with eased motion; track lerps gray -> accent.
     pub fn toggle(self: *Ui, id: u32, x: f32, y: f32, w: f32, h: f32, on: *bool) bool {
+        uireg.put(id, x, y, w, h);
         const hov = self.inside(x, y, w, h);
         if (hov) self.hot = id;
         if (hov and self.pressed) self.active = id;
@@ -230,6 +235,7 @@ pub const Ui = struct {
     }
 
     pub fn knob(self: *Ui, id: u32, cx: f32, cy: f32, radius: f32, value: *f32) bool {
+        uireg.put(id, cx - radius, cy - radius, 2 * radius, 2 * radius);
         const dx = self.in.mx - cx;
         const dy = self.in.my - cy;
         const within = (dx * dx + dy * dy) <= (radius + 8) * (radius + 8);
@@ -280,6 +286,7 @@ pub const Ui = struct {
 
     /// Checkbox with an animated check mark. Returns true the frame it's toggled.
     pub fn checkbox(self: *Ui, id: u32, x: f32, y: f32, s: f32, checked: *bool) bool {
+        uireg.put(id, x, y, s, s);
         const hov = self.inside(x - 3, y - 3, s + 6, s + 6);
         if (hov) self.hot = id;
         if (hov and self.pressed) self.active = id;
@@ -303,6 +310,7 @@ pub const Ui = struct {
     /// Segmented control / tab bar — a pill track with a SLIDING accent indicator
     /// behind the selected segment, and labels. Returns true when selection changes.
     pub fn segmented(self: *Ui, id: u32, x: f32, y: f32, w: f32, h: f32, sel: *usize, labels: []const []const u8, fb: *const Font) bool {
+        uireg.put(id, x, y, w, h);
         const n = labels.len;
         if (n == 0) return false;
         self.g.rect(x, y, w, h, h * 0.5, track_bg);

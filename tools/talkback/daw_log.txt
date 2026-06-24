@@ -1,0 +1,16 @@
+wait 60
+clickid 300
+wait 3
+clickid 1
+wait 3
+moveid 100
+wait 1
+down
+wait 1
+rmove 0 50
+wait 1
+rmove 0 -30
+wait 3
+up
+wait 60
+quit

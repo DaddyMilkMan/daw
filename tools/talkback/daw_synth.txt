@@ -1,0 +1,8 @@
+# Verify the synth plays a clip through the live engine (velocity + sample-accurate).
+# The DAW auto-plays (state.playing defaults true), so we only open the editor,
+# which publishes the selected clip's notes to the engine sequencer.
+wait 40
+key 26      # E: open the piano-roll editor on the selected clip (publishes its notes)
+wait 260    # let the audio monitor log several times while the synth plays
+shot tools/talkback/ms_play.png
+quit

@@ -85,7 +85,7 @@ Status: ✅ done · 🟡 partial · ❌ not started
 ### 4.1 Platform — Audio device I/O  *(JUCE: juce_audio_devices)*
 - 🟡 ALSA **output** (one device, blocking) — `StreamOut`
 - ❌ Real **RT audio callback** (dedicated high-priority thread, lock-free handoff, xrun-robust)
-- ✅ Audio **input / capture** (`StreamIn`, ALSA; verified capturing a tone) — ❌ to-timeline, duplex
+- ✅ Audio **input / capture** (`StreamIn`, ALSA) — ✅ **to-timeline** (`audio_track.Recorder` → `AudioClip`); ❌ duplex
 - ❌ **Duplex** (simultaneous in+out for monitoring)
 - ❌ Device **enumeration & selection** (list devices, sample rate, buffer size)
 - ❌ **PipeWire-native** backend (Linux modern)
@@ -95,19 +95,24 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - ❌ Sample-rate conversion at the device boundary
 
 ### 4.2 Platform — MIDI  *(JUCE: juce_audio_devices MIDI + MidiMessage)*
-- 🟡 ALSA seq **input**, note on/off only
-- ❌ Full MIDI **message parsing**: CC, pitchbend, aftertouch (poly+channel), program change, SysEx, MIDI clock/transport, **MPE**
-- ❌ MIDI **output** (to hardware / other apps)
-- ❌ MIDI device **enumeration/selection**
-- ❌ Sample-accurate **timestamping** (events placed at frame offsets in the block)
-- ❌ Cross-platform MIDI (Windows/macOS)
+- ✅ ALSA seq **input** (auto-connect every source + hot-plug), MIDI 2.0 **UMP** input (`midi2_alsa.zig`) with MIDI-1.0 fallback (`midi_alsa.zig`)
+- ✅ **Message parsing — notes + CC + pitch bend + channel & poly aftertouch + program change** on BOTH paths (the MIDI-1.0 fallback rebuilds canonical bytes → shared `midi2.fromMidi1`, so it decodes to the same Messages as the UMP path). **Velocity reaches the synth** (scales amplitude + brightness); mod wheel→vibrato, CC7/CC11→expression gain, **CC64 sustain pedal**, CC71→resonance, bend→pitch, all routed live (`routeMidi`).
+- ✅ **MPE** — per-channel pitch bend / pressure / CC74-timbre voiced per-note, plus MIDI 2.0 native per-note pitch bend + poly pressure + **Registered Per-Note Controllers** (index 74 → per-note timbre); routed in-order through the engine's tagged event queue (`Ev`) to the synth's per-voice expression. ❌ MPE zone configuration (RPN 6)
+- ✅ **SysEx** (`sysex.zig`): Universal SysEx classification (identity, GM, master volume, tuning) + manufacturer ids; received on both paths (UMP SysEx7 reassembly + MIDI-1.0 ext data); replies to a device **Identity Request** with Zenith's identity. ❌ vendor-specific editors, bulk dump
+- ✅ **MIDI clock / transport sync** (`midi_clock.zig`): Start/Continue/Stop drive the transport; the 24-ppqn clock estimates external tempo (`ClockSync`). ❌ song-position-pointer locate, send-clock-out (Zenith as master)
+- ✅ MIDI device **enumeration + selection**: `Midi2Input.listSources`/`connectOnlyMatching`; `ZENITH_MIDI_IN=<name>` picks a source, OR the **in-DAW transport-bar dropdown** (frosted-glass, hot-plug-refreshed) selects one live (else auto-connect all).
+- 🟡 MIDI **output** — UMP out via `midi2_alsa.Midi2Output` (echoes input + sends SysEx replies); ❌ routing MIDI tracks/clips to hardware, dedicated out device picker
+- 🟡 Sample-accurate **timestamping**: clip-note onsets are sample-accurate (`renderSegmented`/`offsetInBlock` split the synth render at exact frame offsets); ❌ sub-block offsets for *live* input (applied at block start — no input timestamp)
+- ❌ Cross-platform MIDI (Windows WinMM/WinRT, macOS CoreMIDI) — **not implementable/verifiable on this Linux box**; the `MidiInput`/`Midi2Input` API is the seam a platform backend would sit behind
 
 ### 4.3 Platform — Audio file formats  *(JUCE: juce_audio_formats)*
-- 🟡 WAV **write** (16-bit only; ❌ 24/float write)
+- ✅ WAV **write** (`wav.zig`: 16-bit + **24-bit** + **32-bit float**, mono/multichannel)
 - ✅ WAV **read** (16/24/32-bit PCM + IEEE float32, multichannel, chunk-skipping)
-- ❌ **AIFF**, **FLAC**, **Ogg/Vorbis** read/write
-- ❌ **MP3** decode (patent-aware; consider PD decoder)
-- ❌ **Streaming** large files from disk (don't load whole files into RAM)
+- ✅ **AIFF** read/write (`aiff.zig`: 8/16/24/32-bit signed BE PCM + 80-bit extended sample-rate codec)
+- ✅ **FLAC** + **Ogg/Vorbis** decode *and* encode (`codec.zig` — libsndfile via hand-declared ABI; round-trip + real-file decode verified). *Codec "leaf" lib, not clean-room; future purity swap = vendored PD dr_flac/stb_vorbis.*
+- ✅ **MP3** decode (`mp3.zig` — libmpg123 hand-declared ABI; verified against a real .mp3; patents expired 2017)
+- ✅ **Unified loader** `audio_file.loadAny` — dispatches by extension across WAV/AIFF (owned) + FLAC/Ogg/MP3 (leaves) → one `AudioData`
+- ✅ **Streaming** from disk (`wav.WavStream`: header-only open + random-access `readFrames`, never loads the whole file) + `audio_track.StreamClip` (reads its span per render block; verified bit-equal to the in-memory render). ❌ streaming for compressed formats (FLAC/Ogg/MP3 still whole-file)
 - ❌ Sample metadata (loop points, root note, embedded markers)
 
 ### 4.4 Platform — Windowing / input / native UI shell  *(JUCE: juce_gui_basics/extra)*
@@ -123,51 +128,58 @@ Status: ✅ done · 🟡 partial · ❌ not started
 ### 4.5 Platform — Core runtime  *(JUCE: juce_core/events — mostly Zig stdlib)*
 - 🟡 Strings/files/threads/time/alloc — **Zig stdlib covers this for free**
 - ❌ **Message/event loop** + timers (UI + async)
-- ❌ **Lock-free audio FIFOs** (SPSC ring buffers for RT↔non-RT handoff)
+- 🟡 **Lock-free audio FIFOs** (SPSC note queue in `audio_engine.zig`); ❌ generic ring-buffer util
 - ❌ Thread pool / async task system
-- ❌ Logging, settings/config persistence
+- 🟡 Logging + **observability/instrumentation** — the **Talkback** harness (`window_glx.zig`): (a) headless snapshot (`inspect.zig`: JSON state + PNG screenshot + event log; `png.zig`); (b) **live scripted control** — `window_glx` replays a `ZENITH_SCRIPT` of input (move/moveid/clickid/rmove/down/up/key/wait/shot/dumpids/quit) into the real GPU app and grabs `glReadPixels` PNGs, no app-UI changes. By-id targeting via the `uireg.zig` widget registry (the "DOM") is the default; by-pixel is the fallback. The triad: **console** (logs) + **DOM** (`dumpids`) + **screenshots** (`shot`), timestamp-correlated. **Verified: drove the real showcase + DAW — transport, faders, mute/solo, pan, send knobs, and the piano-roll editor all responded, captured in screenshots** (`tools/talkback/`). ❌ settings/config persistence, an input-injection API for in-process tests
 
-### 4.6 DSP toolkit  *(JUCE: juce_dsp)*
+### 4.6 DSP toolkit  *(JUCE: juce_dsp)* — `dsp.zig` toolkit landed (17 tests)
 - ✅ SVF filter
 - ✅ polyBLEP oscillator, ADSR *(in synth)*
-- ❌ Broader filters (biquad/RBJ set, ladder/analog models — port the C++ ones we fixed)
-- ❌ **FFT** (own radix-2/4 or KISS-style)
-- ❌ **Convolution** (reverb / cab / IR)
-- ❌ **Oversampling** / anti-aliasing helpers
+- ✅ Broader filters: full RBJ biquad set (`effects.zig`: LP/HP/peak/**bandpass/notch/allpass/low+high shelf**) + **Moog 4-pole ladder** (`dsp.Ladder`)
+- ✅ **FFT** (in-place iterative radix-2, fwd/inv, windows: Hann/Hamming/Blackman-Harris) — `dsp.fft`
+- ✅ **Convolution**: FFT offline (`dsp.convolveFft`) + streaming time-domain FIR (`dsp.FirConvolver`)
+- 🟡 **Oversampling**: 2× linear-phase windowed-sinc up/down (`dsp.Oversampler2x`); ❌ 4×/8×, polyphase
 - 🟡 Resampler — cubic Hermite (Catmull-Rom) point-read done (`resample.zig`); ❌ high-quality sinc/SRC for device-rate conversion
-- ❌ Dither, gain/pan laws, metering (peak/RMS/LUFS), DC blocker
-- 🟡 Delay lines + reverb (`effects.zig`: feedback delay, Freeverb-style reverb); ❌ modulation (LFOs, env followers), chorus/flanger
+- ✅ gain/pan laws (`dsp.dbToGain`/`panConstantPower`), metering (`dsp.PeakMeter`/`RmsMeter`/**`LoudnessMeter` LUFS per BS.1770**), DC blocker (`dsp.DcBlocker`); ❌ dither
+- ✅ Dynamics: **compressor** (soft-knee, attack/release), **lookahead brickwall limiter**, **noise gate** (`dsp.Compressor`/`Limiter`/`Gate`)
+- ✅ Saturation/waveshaping (`dsp.softClip`/`hardClip`/`Saturator`)
+- 🟡 Delay lines + reverb (`effects.zig`); ✅ modulation: LFO (sine/tri/saw/square) + envelope follower (`dsp.Lfo`/`EnvelopeFollower`); ❌ chorus/flanger
 
 ### 4.7 Engine — the DAW core  *(was Zenith's own C++; rebuild in Zig)*
 - 🟡 **Transport / clock / playhead**: tempo + looping playhead done; ❌ stop/record-arm, time signature, metronome, linear (non-loop) mode
-- 🟡 **Track model** (`project.zig`: instrument/gain/pan/clips per track); ❌ audio tracks, track types
-- 🟡 **Clip / region model** + **arrangement timeline** (`arrangement.zig`: clips at frame positions, linear multi-track scheduler, record-to-clip); ❌ audio clips, loop regions, clip editing
-- 🟡 **Mixer / routing graph**: per-track gain/pan → stereo master done (`mixer.zig`); ❌ sends, buses, mute/solo, metering, PDC (plugin delay compensation)
-- 🟡 **Sequencer/playback**: loop-based + linear timeline scheduling done (`arrangement.zig`); ❌ advanced (swing, latency-comp scheduling)
-- 🟡 **Recording**: MIDI loop capture + overdub done; ❌ audio capture, punch in/out, quantize
-- ❌ **Automation**: lanes, curves, sample-accurate application
-- ❌ Audio-clip **streaming**, **warp / time-stretch**, pitch-shift
+- 🟡 **Track model**: MIDI/instrument tracks (`project.zig`) + **audio tracks** (`audio_track.zig`: `AudioTrack` with gain/pan/mute/solo/record-arm); ❌ unify audio tracks into the saved project format, track folders/groups
+- 🟡 **Clip / region model** + **arrangement timeline**: MIDI clips (`arrangement.zig`) + **audio clips** (`audio_track.zig`: `AudioClip` — sample buffer at a timeline frame, file-backed via WAV); **MIDI clip editing** done (`pianoroll.zig`: add/remove/move/resize notes + velocity, live in the DAW). ❌ loop regions, audio-clip trim/fades
+- 🟡 **Mixer / routing graph**: design `mix_graph.zig` (channels/buses/sends/metering); **LIVE in the DAW** (`audio_engine.zig`): per-track stems → **FX chain (high-pass + compressor)** → gain/pan/**mute/solo** (`mixBlocks`) → master, with a **post-fader reverb send** per channel into a shared `effects.Reverb` bus. The mixer faders/mute/solo/sends drive the real audio; per-track + reverb-bus levels published to the meters + audio monitor. Verified live (solo isolates; send knob 0.28→1.0 raised the reverb bus 0.20→0.40). ❌ PDC, LUFS at master, more FX slots, fader automation wiring
+- 🟡 **Sequencer/playback**: MIDI timeline (`arrangement.zig`) + **sample-accurate audio-clip playback** (`AudioTrack.render`) + **sample-accurate synth-clip onsets** (`audio_engine.renderSegmented` splits the block at exact note frames — was quantized to the 256-sample block); ❌ advanced (swing, latency-comp scheduling)
+- 🟡 **Recording**: MIDI loop capture + overdub + **audio capture-to-timeline** (`audio_track.Recorder`: feed captured frames → finalize into a clip at the record position; WAV round-trip); ❌ punch in/out, quantize, monitoring
+- ✅ **Automation** (`automation.zig`): breakpoint lanes, hold/linear interpolation, binary-search `valueAt`, sample-accurate `render` over a block (verified driving a gain ramp). ❌ wiring lanes to track/plugin params in the live engine; bezier curves
+- 🟡 Audio-clip **streaming** (`wav.WavStream`/`StreamClip` — done for WAV); ✅ **warp / time-stretch** (`timestretch.zig`: WSOLA, pitch-preserving) + **pitch-shift** (stretch+resample, length-preserving) — FFT-verified. ❌ formant-correct pitch, transient preservation
 - ❌ Quantize / groove, comping (take folders)
 
 ### 4.8 Data model & persistence  *(JUCE: juce_data_structures — ValueTree/UndoManager)*
-- 🟡 **Document/project model** (`project.zig`: Project/Track/Note, gain/pan/instrument): basics done; ❌ clips/regions, routing, plugin state
+- 🟡 **Document/project model** (`project.zig`: Project/Track/Note/Clip + **audio clips** (`AudioClipRef`: file path + timeline start + source offset/length), gain/pan/instrument): MIDI + audio material; ❌ routing, plugin state in the project
 - ✅ **Undo/redo** (snapshot-based `History`)
-- ✅ **Save/load** project files (`ZNPR` endian-explicit binary); ❌ versioning/migration beyond v1
+- ✅ **Save/load** project files (`ZNPR` endian-explicit binary, **v3** = audio clips; version-gated deserialize reads older v2); ❌ migration tooling beyond version-gating
 - ❌ Change-notification / observable model for UI binding
 - ❌ Auto-save, crash recovery
 
 ### 4.9 Plugin hosting  *(JUCE: juce_audio_processors)*  — hardest area
-- 🟡 **CLAP** host (`clap_abi.zig`/`main_clap.zig`): load/instantiate/activate/process + sample-accurate **note events** to instruments verified (hosted plugin played a scale 8/8); ❌ audio/note-port extensions, param events, real-plugin/dir scanning, GUI
-- ❌ Plugin **scan / sandbox (out-of-process) / blacklist**
-- ❌ **VST3** host (Steinberg C++ SDK — bind the interface, don't reinvent the format)
+- 🟡 **CLAP** host (`clap_abi.zig`/`main_clap.zig`/`clap_host.zig`): load/instantiate/activate/process + sample-accurate **note events** (scale 8/8) + **audio-ports/note-ports/params extensions** (exact clap.h layouts) + **real-plugin directory scanning** (`findClapFiles`) + **state save/load** (`clap.state` ext + host streams; round-trip verified). Verified: `zig build clapscan` reads descriptors → instantiates → reports ports + params → saves/loads state (Gain/Brightness restored). ❌ param *events* (host→plugin automation), GUI hosting, out-of-process sandbox
+- 🟡 Plugin **scan** (CLAP dir scan done); ❌ sandbox (out-of-process), blacklist
+- 🟡 **VST3** host (`vst3_abi.zig`/`vst3_host.zig`): clean-room COM ABI from the SDK headers — TUID encoding (non-COM big-endian), `IPluginFactory`/`IComponent`/`IAudioProcessor`/**`IEventList`** vtables, `ProcessData`/`ProcessSetup`/`AudioBusBuffers`/`BusInfo`/**`Event` (48-byte, union @24)** layouts. Loads a module → factory → "Audio Module Class" → createInstance(IComponent) → initialize → queryInterface(IAudioProcessor) → setupProcessing → activateBus (audio+**event**) → setActive → **process() with host IEventList**. Verified: `zig build vst3` hosts an *instrument* — host delivers a note event, plugin synthesizes, **FFT confirms 439.5 Hz** (A4), and **state round-trips** via a host `IBStream` (getState/setState). ✅ **Real-plugin hosting validated**: built a genuine VST3 from the official Steinberg SDK (`tools/realvst3/plugin.cpp` — compiler-generated C++ COM vtables), installed it as a standard `~/.vst3` bundle, hosted it through the full **install→scan→host→uninstall** lifecycle (439.5 Hz + state round-trip), then removed it. ❌ IEditController (param display/automation), real IHostApplication context, plugin editor
+- 🟡 **VST2** host (`vst2_abi.zig`/`vst2_host.zig`): clean-room AEffect (no SDK — Steinberg withdrew it) + dispatcher opcodes + host callback + **VstEvents/VstMidiEvent + effProcessEvents**. Loads a .so → `VSTPluginMain` → AEffect (magic-checked) → open/setSampleRate/setBlockSize/resume → **MIDI note via effProcessEvents** → processReplacing(). Verified: `zig build vst2` hosts an *instrument* — **FFT confirms 439.5 Hz** (A4), and **state round-trips** via **chunks** (effGetChunk/effSetChunk). ❌ params/programs UI, real third-party .so testing
 - ❌ **AU** host (macOS, Obj-C runtime)
 - ❌ Plugin **parameter automation**, preset/state save-load
 - ❌ Hosting plugin **editor windows** (embed the plugin's own UI)
 
 ### 4.10 Instruments & effects
-- ✅ ZenithPolySynth (basic) in Zig
+- ✅ `synth.zig` — **professional hybrid subtractive synth**: 16 voices × (2 band-limited oscillators [sine/tri/saw/square+PWM] + square sub + noise), **unison** (up to 7 detuned), oscB semitone/fine detune + osc mix; **two ADSRs** (amplitude + a dedicated **filter envelope**), **2 LFOs** (vibrato + cutoff), **key-track + velocity** cutoff mod, **glide**, quietest-voice stealing; velocity + sustain + full **per-note/per-channel (MPE)** expression. `Patch` presets (init_saw/fat_bass/super_lead/warm_pad). RT-safe (control-rate modulation).
+- ✅ **Filters** (`filter.zig`, flagship-synth Phase 1): **zero-delay-feedback** topologies — Cytomic TPT state-variable (LP/HP/BP/notch, stable to Nyquist) + a **saturating ZDF Moog ladder** (tanh feedback = analog growl, self-limiting). Selectable per patch + `drive`. (Replaced the old Chamberlin SVF.)
+- ✅ **Phase 2** — *anti-aliasing + analog character + stereo*: **oversampling** (2×/4×, the whole saturating voice render runs at N×, a 6-pole Butterworth decimator folds back — kills the harshness from the nonlinearities); **analog drift** (per-oscillator random-walk pitch + per-voice fixed detune — it's alive, not static); **stereo** output (unison spread + mid/side filter; mono patches stay centered). All RT-safe (control-rate mod, pow-free drift, zero live xruns).
+- ✅ **Phase 3** — *generalized modulation matrix + macros* (`synth.zig` backend + a `daw.zig` UI). Any source (LFO1/2, filter/amp env, velocity, aftertouch, mod wheel, key-track, per-voice random, **macros**) → any destination (pitch/cutoff/resonance/pan/amp/osc-mix/PWM), with depth; up to 64 routes (expandable) + 16 macros, evaluated at control rate, additive on the built-ins. **In-DAW panel** (press M): macro knobs (+add), a **scrollable** (mouse wheel) route list of click-to-cycle source/dest cells + bipolar depth sliders + delete, **zoom** (row height), "+ Add Route". (Added wheel-scroll to `window_glx` + a Talkback `scroll` command.)
+- 🔭 **Flagship-synth roadmap** (the "best-sounding, most control, beginner↔expert gating" plan — see Progress Log 2026-06-14 s6): P1 filters ✅ · P2 oversampling+drift+stereo ✅ · P3 mod matrix+macros+UI ✅ → **P4** per-patch **FX rack** (drive/chorus/delay/reverb/EQ) → **P5** **wavetable** then **FM** engines → **P6** the **3-tier UI** (Play/Shape/Build — macros are the beginner↔expert bridge) + **preset browser** + factory library → **P7** microtuning/scales, MPE polish, voice modes.
+- ❌ Other synth depth: osc **hard-sync**, comb/diode filters, preset save/load format.
 - 🟡 Sampler (`sampler.zig`): load mono sample, pitch per MIDI note, polyphonic + AR env. ❌ multisampling, velocity layers, loop points, stereo
-- ❌ Synth depth: mod matrix, LFOs, sub/noise, unison, more filter models, FM/sync
 - 🟡 Stock effects (`effects.zig`): biquad EQ (LP/HP/peak), feedback delay, reverb done; ❌ compressor, limiter, distortion, chorus + mixer integration (per-track FX chains)
 - ❌ Preset system + content/sample library
 
@@ -179,14 +191,28 @@ Status: ✅ done · 🟡 partial · ❌ not started
   moving frosted panel, 375 fps-frames). ❌ full GL-native vector drawing, Vulkan/Metal
 - 🟡 Window + input layer: X11 native window + blit + mouse/keyboard done (`window_x11.zig`/`main_window.zig`); ❌ Wayland/Win32/Cocoa, scroll/drag
 - 🟡 Widget/component framework: immediate-mode toolkit done (`uikit.zig`: button/vFader/hSlider, hot/active model); ❌ layout system, more widgets
-- 🟡 DAW views: transport + timeline + **interactive mixer** (play toggles, faders/pans drag → state) wired to the live window; ❌ arranger/piano-roll editing, browser, sample editor
+- 🟡 DAW views: transport + timeline + **interactive mixer** (faders/pan/mute/solo/sends drive real audio + FX) + **piano-roll / clip editor** (`pianoroll.zig`: key×time grid renders a clip's notes; **click to add/remove**, **drag to move** (re-auditions on pitch change), **drag the right edge to resize** (grid-quantized), **velocity lane** at the bottom; notes colored by velocity; **wired into the DAW** — `E` opens the editor over the selected clip, edits feed the live engine via a double-buffered sequencer so they play back instantly, and a `note-on/off` audition hook drives the synth on grab/release. Standalone `zig build pianoroll` too. Verified end-to-end via Talkback). ❌ multi-note select/marquee, copy/paste, browser, sample editor
 - 🟡 Theming + meters/faders drawn; ❌ waveform drawing, scopes, full design system
 - ❌ Accessibility, keyboard shortcuts
 
-### 4.12 The AI wedge  *(the differentiator — after the core is playable)*
-- ❌ Action-taking assistant with write access to the project model
-- ❌ A few trustworthy "produce-with-you" jobs (gain-staging, mix-translate, MIDI generate/vary, session-debugger)
-- ❌ Local/offline model path + provider integration
+### 4.12 The AI wedge  *(the differentiator)*  — **pure Zig; spine + generator landed**
+- 🟡 **Action-taking assistant with write access to the project model**: live in Zig
+  (`ai_provider.zig`/`ai_tools.zig`/`ai_agent.zig`/`ai_midi.zig`, `zig build ai`). LLM
+  tool-calling → a registry of project-mutating tools → the single write chokepoint
+  over `project.zig`, each edit undo-checkpointed via `History`. **17 tools**:
+  get_project, list_tracks, create/delete/rename_track, set_instrument, set_track_
+  volume/pan/mute, add/delete/move_clip, add_note, clear_clip_notes, get_clip,
+  **generate_pattern**, set_tempo. JSON-Schema generated at comptime from each tool's
+  `Params` (no schema/decoder drift). Verified offline: agent → tool calls → a real
+  124-BPM project with a generated 4-bar house beat + bassline. ❌ plugins/automation/
+  routing tools, in-DAW chat UI, approval gate.
+- 🟡 **Produce-with-you jobs**: ✅ **algorithmic MIDI generation** (`ai_midi.zig`,
+  clean-room port of the C++ `MIDIPatternGenerator`): 45 scales, per-style drum/bass/
+  chord/melody/arp generators, swing+humanize+quantize, seeded/deterministic, no LLM.
+  Exposed as `generate_pattern`. ❌ gain-staging, mix-translate, session-debugger, a
+  local FFT/LUFS mix-analysis tool (so the model reasons over real numbers).
+- 🟡 **Provider integration**: xAI Grok (OpenAI-compatible chat/completions, tools + `tool_choice:auto`) over `std.http.Client`; the seam is provider-agnostic (OpenAI/Anthropic = config swap). Request-build + response-parse are pure + unit-tested; a `MockProvider` drives the spine offline. ❌ live key tested on-box (needs `XAI_API_KEY`), streaming, local/offline model path.
+- **The C++ AI is DELETED (pure Zig).** `apps/desktop/Source/{ai,ai_client,mcp,commands}` + the `network/` Grok/MCP client (`GrokDAWClient`/`GrokDAWController`/`AITools`/`MCPServer`/…) are gone (199 files, ~70K lines; recoverable from git). The honest finding before deleting: the only end-to-end-working path was `GrokDAWClient`→`CommandAPI`→`mcp`; everything "neural/autonomous/evolution" was dead or fake. The Zig wedge reproduces the working spine + the one real algorithm.
 
 ---
 
@@ -203,9 +229,10 @@ Status: ✅ done · 🟡 partial · ❌ not started
   cubic-Hermite resampler (`resample.zig`), polyphonic `sampler.zig`. Verified: one A3
   sample pitched across MIDI notes to within 0.4% of target frequency; WAV round-trip +
   interp unit-tested. `zig build sampler`.
-- 🟡 **M5 — Audio recording** (`audio_alsa.zig` `StreamIn` + `main_record.zig`): ALSA
-  capture → WAV. Verified end-to-end (recorded a 440Hz tone, measured 440.4Hz). ❌ capture
-  to the timeline/clips, duplex monitoring, punch in/out.
+- 🟡 **M5 — Audio recording** (`audio_alsa.zig` `StreamIn` + `main_record.zig` + `audio_track.zig`):
+  ALSA capture → WAV, and **capture → timeline clip** (`Recorder` feeds blocks → finalizes an
+  `AudioClip` at the record position; verified `zig build audiotrack` → 662 Hz round-trip).
+  ❌ duplex monitoring, punch in/out.
 - 🟡 **M6 — Mixer** (`mixer.zig`): N mono tracks → per-track gain + constant-power pan
   → stereo master. Verified: synth+sampler mixed, channels differ (pan), pan-law unit
   test passes. ❌ buses/sends, mute/solo, metering (later).
@@ -223,7 +250,10 @@ Status: ✅ done · 🟡 partial · ❌ not started
   BMP writer (`bmp.zig`), and a real DAW frame (`main_ui.zig`: transport + clip timeline from
   project data + mixer with faders/meters). `zig build ui`. ❌ live windowing (X11/Wayland/
   GLFW), input/interaction, the editor views, GPU acceleration.
-- ❌ **M11 — VST3/AU hosting** (hardest; possibly last)
+- 🟡 **M11 — VST3/AU hosting** (hardest): VST3 audio path proven — clean-room COM ABI
+  (`vst3_abi.zig`) + host (`vst3_host.zig`/`main_vst3.zig`) load a module, instantiate
+  IComponent+IAudioProcessor, and pull audio through process() (`zig build vst3`, peak 0.50
+  tone from a Zig VST3 test plugin). ❌ params/state/events, real third-party .vst3, VST2, AU.
 - ❌ **M12 — Cross-platform** (Windows/macOS audio+MIDI+window backends)
 - ❌ **M13 — AI wedge**
 
@@ -409,5 +439,270 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
 - NEXT: tempo-sync the loop to the UI BPM; record-arm (capture → disk via wav.zig); per-note (MPE-
   style) controllers → per-voice; native rawmidi UMP for hardware; SVG stroke geometry; Win/mac
   audio+MIDI backends.
+
+**2026-06-14 (session — backend depth campaign: DSP toolkit)**
+- User directive: build out the backend ("the backend logic of JUCE") — real plugin
+  hosting (VST3/VST2/CLAP), full audio tracks + recording, deeper DSP toolkit (§4.6),
+  complete file formats (§4.3). Recon: `external/JUCE` is the reference oracle; VST3 SDK
+  headers vendored under `build/_deps/juce-src/.../VST3_SDK/pluginterfaces`; no third-party
+  plugins installed (verify hosting against test plugins we build).
+- **DSP toolkit landed** (`dsp.zig`, clean-room vs juce_dsp): FFT (radix-2 fwd/inv +
+  windows), convolution (FFT offline + streaming FIR), 2× oversampler, dynamics
+  (compressor/limiter/gate), metering (peak/RMS/**LUFS** BS.1770), Moog ladder, saturation,
+  LFO + envelope follower, gain/pan laws, DC blocker. Extended `effects.zig` Biquad with the
+  full RBJ set (bandpass/notch/allpass/low+high shelf). **17 dsp + 5 effects tests pass**
+  (`zig build test`). §4.6 now mostly ✅.
+- **File formats**: WAV 24-bit + float32 write (`wav.zig`), clean-room **AIFF** read/write
+  (`aiff.zig`, incl. 80-bit extended sample-rate codec). 6 round-trip tests. §4.3 mostly ✅;
+  FLAC/Ogg/MP3 still pending.
+- **CLAP real-plugin hosting**: extension ABI (audio-ports/note-ports/params, exact clap.h
+  layouts) in `clap_abi.zig`; test plugin now declares 1 stereo out / 1 note in / 2 params;
+  `clap_host.zig` scanner (`findClapFiles` + `scanFile` + `queryPorts`/`paramsExt`);
+  `zig build clapscan` verifies end-to-end. (No third-party .clap installed on this box —
+  path proven against our real .clap.)
+- **VST3 hosting (foundation)**: clean-room COM ABI (`vst3_abi.zig` — IIDs, vtables, struct
+  layouts transcribed from the SDK headers) + `vst3_host.zig` (module/bundle load, factory,
+  createInstance, queryInterface) + `vst3_test_plugin.zig` (Zig .so tone generator) +
+  `main_vst3.zig`/`zig build vst3`. Pulled non-silent audio through process() end-to-end.
+  Fixed a flaky test race (wav tests in two binaries → process-unique temp paths).
+- **VST2 hosting (foundation)**: clean-room AEffect ABI (`vst2_abi.zig`) + host
+  (`vst2_host.zig`/`main_vst2.zig`) + Zig VST2 test plugin (`vst2_test_plugin.zig`).
+  `zig build vst2` drives the AEffect lifecycle and pulls non-silent audio through
+  processReplacing(). **Plugin-hosting trio (CLAP + VST3 + VST2) now all load + play.**
+
+**2026-06-14 (session 2 — production-grade hosting: instruments play notes)**
+- **MIDI/event input to hosted instruments, all 3 formats** — the leap from "hosts a tone"
+  to "hosts a playable instrument". Each host now delivers note events and the test plugins
+  are real poly-sine synths; verified by **FFT on the output** (dominant freq == the note):
+  - VST3: added `Event` (48-byte, union @ offset 24 — matches SDK) + `IEventList` to
+    `vst3_abi.zig`; host implements IEventList; plugin grew an event-input bus + synth.
+    `zig build vst3` → 439.5 Hz from MIDI 69.
+  - VST2: added `VstEvents`/`VstMidiEvent` + `effProcessEvents` to `vst2_abi.zig`; host sends
+    a MIDI note; plugin synth. `zig build vst2` → 439.5 Hz.
+  - CLAP: already routed note events (`zig build clap`, scale 8/8) — trio now consistent.
+- **Plugin state save/load — all 3 formats** (so projects can persist plugin settings):
+  CLAP `clap.state` ext + host streams (`IStream`/`OStream`); VST3 `IComponent` getState/setState
+  over a host-implemented `IBStream` (memory buffer); VST2 `effGetChunk`/`effSetChunk` + the
+  `effFlagsProgramChunks` flag. Each verified by a state round-trip in its `zig build` driver.
+- **Plugin state save/load — all 3 formats** (CLAP `clap.state`+streams, VST3 `IBStream`
+  getState/setState, VST2 chunks); each round-trip-verified in its build driver.
+- **Audio tracks + recording-to-timeline** (`audio_track.zig`): `AudioClip` (sample buffer at
+  a timeline frame, WAV-backed), `AudioTrack` (gain/pan/mute/solo, sample-accurate `render`),
+  `mixTracks` (mute/solo-aware), `Recorder` (feed captured blocks → finalize a clip at the
+  record position). 5 unit tests + `zig build audiotrack` (2-track timeline placement + a
+  660 Hz recording round-trip, FFT-verified).
+- **Audio tracks wired into the project + engine**: project format **v3** persists audio clips
+  (`AudioClipRef`, file-referenced; round-trip verified, version-gated deserialize); `audio_track.fromProject`
+  loads them into renderable tracks (honoring source-offset/length); the live `audio_engine`
+  now mixes audio tracks (stereo) at a linear timeline playhead alongside the synth/loop
+  (`zenith` builds clean). **Full pipeline verified offline**: record → WAV → project → reload →
+  timeline render (the recorded take plays at its frame).
+- **Compressed file formats — FLAC/Ogg/MP3 decode** (`codec.zig` via libsndfile, `mp3.zig` via
+  libmpg123, `audio_file.loadAny` dispatcher). Hand-declared C ABIs (no -dev headers); the libs
+  are linked by absolute versioned-.so path (no unversioned symlinks on this box). FLAC/Ogg
+  round-trips (encode→decode→FFT) + real `singing.ogg` decode + real `.mp3` decode all verified.
+  Pragmatic codec leaves, not clean-room — future purity swap to vendored PD single-headers.
+- **Audio-file streaming** (`wav.WavStream` + `audio_track.StreamClip`): open reads only the
+  header; `readFrames` seeks + decodes just the requested span (16/24/32 PCM + float). A
+  `StreamClip` renders its overlapping window per block straight from disk — verified bit-equal
+  to the in-memory render, block-by-block. §4.3 file formats now essentially complete (compressed
+  streaming + sample metadata remain).
+- **Mixer depth + automation lanes** (both headless-verified, 5+5 tests):
+  `mix_graph.zig` — channels→bus/master routing, post-fader aux sends, mute/solo, peak/RMS
+  metering at every node. `automation.zig` — breakpoint lanes (hold/linear, binary-search
+  `valueAt`, sample-accurate `render`), verified driving a gain ramp.
+- **Warp/time-stretch + pitch-shift** (`timestretch.zig`, WSOLA) — FFT-verified.
+- **Observability/instrumentation** (`inspect.zig` + `png.zig` + `zig build inspect`): a headless
+  snapshot (the seed of the **Talkback** harness) — JSON state snapshot (the DOM/a11y-tree analog), PNG screenshot
+  (`png.zig` minimal encoder, viewable + decodes via our own `image.zig`), and a structured event
+  log. Lets an agent observe the full app state off-screen. ❌ live-app hookup (the running
+  `zenith` calling `inspect.snapshot/screenshot` on a key/IPC) + input-injection control channel.
+- NEXT in campaign (ordered): **live-app instrumentation hookup** (zenith dumps a snapshot +
+  screenshot on demand) + **GUI record-arm + RT-safe capture** → **wire mix_graph + automation
+  into the live engine/project** → plugin param automation + VST3 IEditController.
+
+**2026-06-14 (session 3 — piano-roll editing + tool naming: Talkback & Trellis)**
+- **Piano-roll / clip editing, finished + wired into the DAW** (`pianoroll.zig`): drag-move
+  notes (column offset preserved, re-auditions on pitch change), drag the right edge to
+  **resize** (grid-quantized), a **velocity lane** at the bottom strip, click-empty to add +
+  drag, click-note to delete (disambiguated by whether the cell changed); notes colored by
+  velocity; optional `audition` hook fires note-on on grab / note-off on release.
+  Integrated into `daw.zig`/`main_daw.zig`: **`E`** opens the editor over the selected clip
+  (dimmed backdrop), edits feed the live engine through a **double-buffered sequencer**
+  (write the inactive buffer, flip an atomic index — RT-safe) so changes play back instantly,
+  and the audition hook drives the engine synth. Standalone `zig build pianoroll` retained.
+  **Verified end-to-end via Talkback**: scripted add/move/resize/velocity → screenshots +
+  the audition/engine logs confirmed each edit.
+- **Tooling renamed off the placeholder names** (the user's "don't just copy Playwright/flex"):
+  - `flex.zig` → **`trellis.zig`** (the **Trellis** layout engine); `main_flex`/`main_flexmix`
+    → `main_trellis`/`main_trellismix`; build steps `flex`/`flexmix` → `trellis`/`trellismix`;
+    all `@import`/aliases updated.
+  - the scripted-control harness is now **Talkback** (`Automation` struct → `Talkback` in
+    `window_glx.zig`); `tools/control/` → `tools/talkback/` (scripts, README, `.gitignore`,
+    docs paths all updated). Same observe-and-drive triad (console + DOM + screenshots).
+  - Full `zig build test` green after both renames.
+
+**2026-06-14 (session 4 — production-grade MIDI + velocity)**
+- **Velocity end-to-end** (it was being dropped at every layer — every note played
+  at one loudness). `synth.zig`: voices carry normalized velocity → scales amplitude
+  AND opens the filter (soft = darker). Engine `NoteEv`/`pushNote` carry velocity;
+  the clip sequencer plays each note at its real velocity. `vel7`/`vel16` helpers.
+  Tests: velocity scales output; sustain holds a released note.
+- **Expression controllers**: mod wheel (CC1) → 5.5 Hz vibrato LFO, CC7/CC11 →
+  expression gain, **CC64 sustain pedal** (note-off defers while pedal down; pedal-up
+  frees lifted keys, edge-detected on the RT thread), plus the existing CC71/CC74/
+  bend/aftertouch — all routed in `routeMidi`.
+- **Sample-accurate clip-note onsets**: was quantized to the 256-sample block (~5.3 ms);
+  now `renderSegmented`/`offsetInBlock` split the synth render at exact note frames.
+  Tests on the wrap math + silence-before-onset.
+- **Full MIDI parsing in the MIDI-1.0 ALSA fallback** (`midi_alsa.zig`): added the
+  `control` event variant + parsing for CC / program change / channel & poly aftertouch /
+  pitch bend; `MidiEvent.toUmp` rebuilds canonical bytes → shared `midi2.fromMidi1`, so
+  the fallback decodes to the SAME Messages as the UMP path. (The MIDI 2.0 UMP path
+  already routed CC74/bend/pressure + has UMP output.)
+- Verified live via Talkback: opened the editor on a clip in the running `zenith`, the
+  sequencer drove the synth (audio monitor showed synth level rise, transport PLAYING).
+  Full `zig build test` green. **Honest scope:** the *instrument* is still a single-saw
+  subtractive seed — expression now reaches it, but synth depth (multi-osc/wavetable/mod
+  matrix) is the next lever; MPE per-note voicing, SysEx, and MIDI-clock sync remain.
+
+**2026-06-14 (session 5 — finish MIDI + a professional synth)**
+- **MIDI clock/transport sync** (`midi_clock.zig`): Start/Continue/Stop drive the DAW
+  transport; 24-ppqn clock estimates external tempo (`ClockSync`, smoothed). System
+  messages decode on both paths (`midi2.decode` → `SystemMsg`).
+- **SysEx** (`sysex.zig`): Universal SysEx classification + manufacturer ids, UMP
+  SysEx7 (de)packetization, received on both paths; replies to Identity Requests with
+  Zenith's identity (manufacturer 0x7D).
+- **Device enumeration + selection**: `listSources`/`connectOnlyMatching`; `ZENITH_MIDI_IN`
+  picks a source. Verified live (logged "Midi Through: …", excludes own ports).
+- **Professional synth rewrite** (`synth.zig`): 2 osc + sub + noise, unison, oscB detune,
+  TWO ADSRs (amp + a dedicated filter envelope), 2 LFOs, key-track/velocity cutoff, glide,
+  `Patch` presets. Replaces the single-saw seed; RT-safe; API-compatible with the engine.
+- **MPE per-note voicing**: the engine note queue became a tagged event queue (`Ev`) so
+  per-channel + per-note pitch bend / pressure / timbre apply in-order to the right voice;
+  `routeMidi` routes them (MPE-1.0 per-channel + MIDI 2.0 per-note). Synth carries
+  per-voice + per-channel expression.
+- Tests across all of it (clock tempo lock, sysex round-trips, synth velocity/sustain/
+  filter-env/MPE-isolation/presets, engine MPE routing). Verified live: the DAW plays a
+  clip through the new synth, no NaN/xruns. **Honest gap:** cross-platform MIDI
+  (Win/macOS) is NOT done — can't build/verify CoreMIDI/WinMM on this Linux box; the
+  `MidiInput`/`Midi2Input` API is the seam a platform backend slots behind. Synth still
+  wants wavetables + a real mod matrix + a UI to be truly "flagship."
+
+**2026-06-14 (session 6 — close MIDI gaps + the flagship-synth plan, Phase 1)**
+- **MIDI 2.0 Registered Per-Note Controllers** decode (`per_note_controller`); index 74 → per-note timbre (`engine.noteTimbre` → synth `note_timbre`). Last MPE decode gap closed.
+- **In-DAW MIDI device picker**: a frosted-glass dropdown in the transport bar (lists "All sources" + enumerated devices, hot-plug-refreshed) → `connectAllSources`/`connectOnlyMatching`. Verified live via Talkback (selected "Midi Through", button relabeled).
+- **Flagship-synth vision** (the user's ask: best-sounding + most control + beginner↔expert gating + a sound library). The plan, recorded so it persists:
+  - *Sound* — priority order: the **filter** (ZDF + saturation), **oversampling the nonlinear path** (not just oscillators), **analog drift/imperfection**, **stereo + an FX rack**. Plus more **engines** (wavetable, FM, …) behind one voice architecture.
+  - *Control* — everything modulatable: a real **mod matrix** (any source→any dest) + per-voice/MPE (already ours, a differentiator).
+  - *The gate* — one patch, **three depths**: **Play** (pick by vibe + 4–8 labeled macros + XY morph), **Shape** (classic front panel), **Build** (full matrix/engines). **Macros are the bridge** — experts wire what beginners turn; semantic controls ("dark↔bright") + tasteful randomize/morph.
+  - *Sounds* — a versioned patch format, a tag/audition **preset browser**, 150–300 curated factory presets, designed/A-B'd via Talkback+FFT.
+  - *Sequence* — P1 filters → P2 oversampling+drift+stereo → P3 mod matrix+macros → P4 FX rack → P5 wavetable+FM → P6 UI(3 tiers)+browser+library → P7 microtuning/MPE polish.
+- **Phase 1 done** (`filter.zig`): ZDF TPT-SVF + saturating Moog ladder, selectable per patch + drive; replaced the Chamberlin SVF. Synth modulation moved to control-rate for RT headroom. 11 tests; ~8s live playback through the ladder with **zero xruns**.
+
+**2026-06-14 (session 7 — flagship synth Phase 2: anti-alias + analog + stereo)**
+- **Oversampling** (`synth.zig` + a Butterworth `Decimator`): the whole voice render
+  (oscillators + the saturating filter) runs at 2×/4× the rate, then a 6-pole
+  decimator folds back — removes the aliasing the ladder drive/tanh creates.
+  Proven by an FFT-free alias test (a saturated 11 kHz sine's 33 kHz harmonic folds
+  to 15 kHz; 4× cuts it >40%). Default 2×.
+- **Analog drift** — per-oscillator slow random-walk pitch (free-running VCOs) +
+  fixed per-voice detune (component tolerance). The pow() is replaced by a
+  first-order approx (drift is tiny) to stay cheap.
+- **Stereo** — unison voices panned across the field (constant-power) + a mid/side
+  split that filters the mono mid and keeps the side for width; a single oscillator
+  stays centered/mono. Engine renders the synth stereo into the master bus.
+- RT-safety held throughout: control-rate modulation, no hot-path pow(), multiple
+  13 s live runs at 2× with **zero xruns**. 21 synth+filter tests; full suite green.
+
+**2026-06-15 (session 8 — flagship synth Phase 3: mod matrix + macros + UI)**
+- **Mod-matrix backend** (`synth.zig`): `ModSource`→`ModDest` `ModRoute`s (depth), up to
+  64 (expandable) + 16 macros (`setMacro`, lock-free). Evaluated per voice at control
+  rate, additive on the built-in routings; tear-safe (non-exhaustive enums). Tests:
+  macro→amp silences, macro→cutoff opens the filter, expands to many routes.
+- **Mod-matrix UI** (`daw.zig`, press M): a frosted modal panel — macro knobs (+add),
+  a **scrollable** route list (click-to-cycle source/dest, bipolar depth slider, delete),
+  **+ Add Route** (to 64), **zoom** (row height). Modal via a 2nd Ui (`View.um`) with the
+  body's input gated. Added mouse-wheel scroll to `window_glx` (`scroll` Event, X11
+  buttons 4/5) + a Talkback `scroll <dy>` command. Verified live: 14 routes, scroll, zoom
+  (rows visibly taller), zero xruns.
+
+**2026-06-24 (session — repo de-bloat + AI-wedge spine in Zig)**
+- **Triaged the legacy C++/Python and cut the bloat** (owner: "I want a lot of
+  the C++/python shit gone, rewritten in Zig"). Tracked files **4774 → 1245**
+  (two commits):
+  - *Junk that never belonged in git* (~2.7K files): `backend/.venv` +
+    `services/ai/runtime/.venv` (committed virtualenvs, 1.3K each), root build
+    logs, demo wavs, `uitest_*.bmp`, `golden_master*.json`, inspect artifacts,
+    stray `bench_preset.cpp`/`test_sha256.cpp`. `.gitignore` hardened.
+  - *Legacy JUCE C++ already replaced by the Zig greenfield* (~700 files):
+    `apps/desktop/Source/{audio,browser,dsp,effects,engine,instruments,io,memory,
+    pch,platform,plugins,rendering,tests,threading,tools,ui,utils}`,
+    `apps/Standalone`, top-level `tests/`. All recoverable from git history.
+  - *Kept per owner decision*: `network/collaboration/cloud/marketplace/
+    integration` + `backend/` (collab/cloud — "keep"); `ai/ai_client/mcp/
+    commands` (AI oracle — porting). Discovered `services/ai/runtime` ≈ a
+    duplicate twin of `backend/`, and `services/ai/agents` ≈ the dev-agent set
+    in `agents/` — flagged, not yet de-duped.
+- **Analyzed the C++ AI** (subagent deep-read of `ai`+`ai_client`+`mcp`): the
+  honest finding is that the *only* end-to-end-working AI path was
+  `network/GrokDAWClient`+`GrokDAWController`+`AITools` → `commands/CommandAPI`
+  → `mcp/`; everything labeled neural/autonomous/evolution is dead or fake
+  (random untrained weights, headers with no `.cpp`). Carry-forward = the
+  command/tool write-interface idea, not the code.
+- **Built the AI-wedge spine in Zig** (`zig build ai`, §4.12): `ai_provider.zig`
+  (Grok over `std.http.Client`, OpenAI-compatible tools; pure request/parse +
+  a `MockProvider`), `ai_tools.zig` (9 project-mutating tools over `project.zig`,
+  each undo-checkpointed; **comptime-generated JSON-Schema** from each tool's
+  `Params`), `ai_agent.zig` (the tool-calling loop; errors fed back, not fatal),
+  `main_ai.zig` (live Grok if `XAI_API_KEY`, else offline mock demo). Verified
+  offline: the agent ran 8 tool calls → a real 124-BPM 2-track project with a
+  4-note bassline. **34 AI tests; full `zig build test` green.**
+- NEXT: widen the tool vocabulary toward the old `CommandAPI` (clip move/split,
+  plugins, automation, routing) → port `MIDIPatternGenerator` + a local FFT/LUFS
+  mix-analysis tool → an in-DAW chat panel (Trellis) wired to the live engine →
+  test the live Grok path on-box once a key is available.
+
+**2026-06-24 (session 2 — finish the AI port; delete the C++ AI; pure Zig)**
+- Owner: "rewrite it then delete the C++ or python version — we are pure zig."
+- **Ported `MIDIPatternGenerator` → `ai_midi.zig`** (clean-room, the one genuinely
+  valuable non-fake algorithm in the C++ AI): 45-scale DB, per-style drum/bass/chord/
+  motif-melody/arp generators, swing+humanize+quantize, seeded/deterministic, no LLM/
+  JUCE. 5 tests.
+- **Widened `ai_tools.zig` 9 → 17 tools** toward the old `CommandAPI` vocabulary
+  (delete/rename_track, set_instrument, delete/move_clip, clear_clip_notes, get_clip,
+  and **generate_pattern** which runs `ai_midi` and converts beats→clip frames at the
+  project tempo/SR). `zig build ai` now generates a 4-bar house beat (41 notes) + a
+  C-minor bassline (19 notes) end-to-end. **39 AI tests; full `zig build test` green.**
+- **Deleted the C++ AI version** (199 files, ~70K lines): `apps/desktop/Source/{ai,
+  ai_client,mcp,commands}` + the `network/` Grok/MCP client. Kept the real networking/
+  collaboration in `network/` (CRDT/ICE/STUN/TURN/DTLS/auth) per the collab decision.
+  Tracked files **1245 → 1067** across both sessions today (started the day at 4774).
+- NEXT: a local FFT/LUFS mix-analysis tool (model reasons over real numbers) → plugin/
+  automation/routing tools → in-DAW chat panel (Trellis) wired to the live engine →
+  test the live Grok path once `XAI_API_KEY` is available. Remaining non-Zig: the
+  collab/cloud C++ + Python `backend`/`services` (kept; eventual port-or-cut).
+
+**2026-06-24 (session 3 — PURE ZIG: delete all remaining C++/Python)**
+- Owner reversed the earlier collab "keep" → "transition that part, delete it all, pure zig."
+- Recon confirmed the collab/cloud C++ was abandoned: **excluded from the build**
+  (`ZENITH_ENABLE_COLLAB` off / "excluded from ZenithDAW" in SourceFiles.cmake), never
+  worked (broken DTLS/TURN), not in the Zig plan, unreferenced by Zig.
+- **Deleted everything non-Zig** (`zig build test` green at every step):
+  - collab/cloud C++ (`Source/{collaboration,cloud,marketplace,integration,network,
+    analysis}`) → **`apps/desktop/Source` is now EMPTY**.
+  - Python `backend/` + `services/` (signaling + the duplicate twins).
+  - The dead C++/JUCE build system (CMakeLists, `cmake/`, build scripts, .clangd).
+  - C++ CI (33 `.github/workflows` + scripts/actions) + Docker; `external/JUCE`+`vcpkg`
+    submodules; `agents/` + `tools/agents/` dev tooling; the demucs ONNX model; and the
+    last C++ stragglers (`src/` Skia skeleton, preset banks, doc examples, scripting
+    bindings, A/B benchmarks).
+  - **Added a real Zig CI** (`.github/workflows/ci.yml`: apt audio libs → Zig 0.14.1 →
+    `zig build test`).
+- **Tracked files 1067 → 657** this session (4774 → 657 across the whole day, −86%).
+  Only non-Zig left is intentional: `tools/realvst3/plugin.cpp` (a genuine VST3 fixture
+  to validate the Zig host against a real plugin) + `zig/zenith_dsp.h` (the DSP C-ABI
+  header). Plus kept dev tooling (`tools/talkback`, `genfont.py`, mcp/preset scripts),
+  `Content/` samples, and docs. **The repo is pure Zig.**
 
 *(Add new dated entries as milestones complete.)*

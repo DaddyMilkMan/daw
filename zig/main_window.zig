@@ -77,6 +77,7 @@ pub fn main() !void {
                     elapsed = secs;
                     break;
                 },
+                .scroll => {},
                 .resize => |r| {
                     cv.deinit();
                     cv = try r2d.Canvas.init(a, r.w, r.h);

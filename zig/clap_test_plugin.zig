@@ -120,7 +120,93 @@ fn plugProcess(_: *const abi.Plugin, process: *const abi.Process) callconv(.c) i
     return abi.PROCESS_CONTINUE;
 }
 
-fn plugGetExt(_: *const abi.Plugin, _: [*:0]const u8) callconv(.c) ?*const anyopaque {
+// --- extensions: audio-ports, note-ports, params ---
+fn nameInto(dst: []u8, s: []const u8) void {
+    @memset(dst, 0);
+    const n = @min(dst.len - 1, s.len);
+    @memcpy(dst[0..n], s[0..n]);
+}
+
+fn apCount(_: *const abi.Plugin, is_input: bool) callconv(.c) u32 {
+    return if (is_input) 0 else 1; // mono->stereo synth: 1 output port, no inputs
+}
+fn apGet(_: *const abi.Plugin, index: u32, is_input: bool, info: *abi.AudioPortInfo) callconv(.c) bool {
+    if (is_input or index != 0) return false;
+    info.* = .{ .id = 0, .name = undefined, .flags = abi.AUDIO_PORT_IS_MAIN, .channel_count = 2, .port_type = "stereo", .in_place_pair = 0xFFFFFFFF };
+    nameInto(&info.name, "Main Out");
+    return true;
+}
+const audio_ports = abi.PluginAudioPorts{ .count = apCount, .get = apGet };
+
+fn npCount(_: *const abi.Plugin, is_input: bool) callconv(.c) u32 {
+    return if (is_input) 1 else 0; // 1 note input
+}
+fn npGet(_: *const abi.Plugin, index: u32, is_input: bool, info: *abi.NotePortInfo) callconv(.c) bool {
+    if (!is_input or index != 0) return false;
+    info.* = .{ .id = 0, .supported_dialects = abi.NOTE_DIALECT_CLAP | abi.NOTE_DIALECT_MIDI, .preferred_dialect = abi.NOTE_DIALECT_CLAP, .name = undefined };
+    nameInto(&info.name, "Note In");
+    return true;
+}
+const note_ports = abi.PluginNotePorts{ .count = npCount, .get = npGet };
+
+const Param = struct { name: []const u8, min: f64, max: f64, def: f64 };
+const params_list = [_]Param{
+    .{ .name = "Gain", .min = 0, .max = 1, .def = 0.8 },
+    .{ .name = "Brightness", .min = 0, .max = 1, .def = 0.5 },
+};
+var g_param_values = [_]f64{ 0.8, 0.5 };
+
+fn pCount(_: *const abi.Plugin) callconv(.c) u32 {
+    return params_list.len;
+}
+fn pGetInfo(_: *const abi.Plugin, index: u32, info: *abi.ParamInfo) callconv(.c) bool {
+    if (index >= params_list.len) return false;
+    const p = params_list[index];
+    info.* = .{ .id = index, .flags = abi.PARAM_IS_AUTOMATABLE, .cookie = null, .name = undefined, .module = undefined, .min_value = p.min, .max_value = p.max, .default_value = p.def };
+    nameInto(&info.name, p.name);
+    @memset(&info.module, 0);
+    return true;
+}
+fn pGetValue(_: *const abi.Plugin, id: u32, out: *f64) callconv(.c) bool {
+    if (id >= g_param_values.len) return false;
+    out.* = g_param_values[id];
+    return true;
+}
+fn pValueToText(_: *const abi.Plugin, _: u32, _: f64, _: [*]u8, _: u32) callconv(.c) bool {
+    return false;
+}
+fn pTextToValue(_: *const abi.Plugin, _: u32, _: [*:0]const u8, _: *f64) callconv(.c) bool {
+    return false;
+}
+fn pFlush(_: *const abi.Plugin, _: ?*const abi.InputEvents, _: ?*const abi.OutputEvents) callconv(.c) void {}
+const params_ext = abi.PluginParams{
+    .count = pCount,
+    .get_info = pGetInfo,
+    .get_value = pGetValue,
+    .value_to_text = pValueToText,
+    .text_to_value = pTextToValue,
+    .flush = pFlush,
+};
+
+// --- state: serialize the param values to/from the host stream ---
+fn stSave(_: *const abi.Plugin, stream: *const abi.OStream) callconv(.c) bool {
+    var buf: [params_list.len * 8]u8 = undefined;
+    for (g_param_values, 0..) |val, i| std.mem.writeInt(u64, buf[i * 8 ..][0..8], @bitCast(val), .little);
+    return stream.write.?(stream, &buf, buf.len) == buf.len;
+}
+fn stLoad(_: *const abi.Plugin, stream: *const abi.IStream) callconv(.c) bool {
+    var buf: [params_list.len * 8]u8 = undefined;
+    if (stream.read.?(stream, &buf, buf.len) != buf.len) return false;
+    for (&g_param_values, 0..) |*val, i| val.* = @bitCast(std.mem.readInt(u64, buf[i * 8 ..][0..8], .little));
+    return true;
+}
+const state_ext = abi.PluginState{ .save = stSave, .load = stLoad };
+
+fn plugGetExt(_: *const abi.Plugin, id: [*:0]const u8) callconv(.c) ?*const anyopaque {
+    if (std.mem.orderZ(u8, id, abi.EXT_AUDIO_PORTS) == .eq) return &audio_ports;
+    if (std.mem.orderZ(u8, id, abi.EXT_NOTE_PORTS) == .eq) return &note_ports;
+    if (std.mem.orderZ(u8, id, abi.EXT_PARAMS) == .eq) return &params_ext;
+    if (std.mem.orderZ(u8, id, abi.EXT_STATE) == .eq) return &state_ext;
     return null;
 }
 fn plugOnMain(_: *const abi.Plugin) callconv(.c) void {}

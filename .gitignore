@@ -189,3 +189,24 @@ ZenithTests
 # Zig build artifacts
 .zig-cache/
 zig-out/
+
+inspect_state.json
+inspect_screenshot.png
+inspect.log
+*_demo.wav
+clap_demo.wav
+vst*_demo.wav
+audiotrack_demo.wav
+
+tools/realvst3/*.so
+
+tools/talkback/*.png
+
+tools/talkback/*.log
+zenith.log
+
+# build/test artifacts (regenerated, never commit)
+/uitest_*.bmp
+/golden_master*.json
+/build_*.log
+controls_sc.png

@@ -49,7 +49,7 @@ pub fn main() !void {
         const n = @min(block, total - i);
         for (notes) |nt| {
             if (nt.start >= i and nt.start < i + n)
-                syn.noteOn(demo.midiToFreq(@floatFromInt(nt.pitch)));
+                syn.noteOn(demo.midiToFreq(@floatFromInt(nt.pitch)), @as(f32, @floatFromInt(nt.velocity)) / 127.0);
             const off = nt.start + nt.len;
             if (off >= i and off < i + n)
                 syn.noteOff(demo.midiToFreq(@floatFromInt(nt.pitch)));

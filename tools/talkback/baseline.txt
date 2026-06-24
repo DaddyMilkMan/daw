@@ -1,0 +1,4 @@
+# let layout + entrance animations settle, then screenshot the showcase
+wait 45
+shot tools/talkback/shot_baseline.png
+quit

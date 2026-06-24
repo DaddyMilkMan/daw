@@ -38,7 +38,7 @@ pub fn playInterleavedS16(device: [*:0]const u8, samples: []const i16, rate: u32
 
     var rc = snd_pcm_open(&handle, device, SND_PCM_STREAM_PLAYBACK, 0);
     if (rc < 0) {
-        std.debug.print("alsa: snd_pcm_open failed: {s}\n", .{snd_strerror(rc)});
+        std.log.scoped(.alsa).err("snd_pcm_open failed: {s}", .{snd_strerror(rc)});
         return AlsaError.OpenFailed;
     }
     const pcm = handle.?;
@@ -54,7 +54,7 @@ pub fn playInterleavedS16(device: [*:0]const u8, samples: []const i16, rate: u32
         200_000, // ~200 ms latency
     );
     if (rc < 0) {
-        std.debug.print("alsa: snd_pcm_set_params failed: {s}\n", .{snd_strerror(rc)});
+        std.log.scoped(.alsa).err("snd_pcm_set_params failed: {s}", .{snd_strerror(rc)});
         return AlsaError.SetParamsFailed;
     }
 
@@ -67,7 +67,7 @@ pub fn playInterleavedS16(device: [*:0]const u8, samples: []const i16, rate: u32
             // underrun / suspend — try to recover and continue
             const recovered = snd_pcm_recover(pcm, @intCast(written), 1);
             if (recovered < 0) {
-                std.debug.print("alsa: write failed: {s}\n", .{snd_strerror(@intCast(written))});
+                std.log.scoped(.alsa).warn("write failed: {s}", .{snd_strerror(@intCast(written))});
                 return AlsaError.WriteFailed;
             }
             continue;
@@ -113,7 +113,11 @@ pub const StreamOut = struct {
             const remaining = frames_total - offset;
             const written = snd_pcm_writei(self.pcm, &samples[offset * self.channels], @intCast(remaining));
             if (written < 0) {
-                if (snd_pcm_recover(self.pcm, @intCast(written), 1) < 0) return AlsaError.WriteFailed;
+                if (snd_pcm_recover(self.pcm, @intCast(written), 1) < 0) {
+                    std.log.scoped(.alsa).warn("xrun recover failed: {s}", .{snd_strerror(@intCast(written))});
+                    return AlsaError.WriteFailed;
+                }
+                std.log.scoped(.alsa).debug("xrun recovered ({s})", .{snd_strerror(@intCast(written))});
                 continue;
             }
             offset += @intCast(written);

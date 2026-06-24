@@ -61,6 +61,9 @@ extern fn snd_seq_ump_event_output_direct(seq: *snd_seq_t, ev: *SeqUmpEvent) c_i
 extern fn snd_seq_client_id(seq: *snd_seq_t) c_int;
 extern fn snd_seq_close(seq: *snd_seq_t) c_int;
 extern fn snd_seq_connect_from(seq: *snd_seq_t, my_port: c_int, src_client: c_int, src_port: c_int) c_int;
+extern fn snd_seq_disconnect_from(seq: *snd_seq_t, my_port: c_int, src_client: c_int, src_port: c_int) c_int;
+extern fn snd_seq_client_info_get_name(p: *const snd_seq_client_info_t) [*:0]const u8;
+extern fn snd_seq_port_info_get_name(p: *const snd_seq_port_info_t) [*:0]const u8;
 // client/port enumeration (auto-connect every source)
 extern fn snd_seq_client_info_malloc(p: *?*snd_seq_client_info_t) c_int;
 extern fn snd_seq_client_info_free(p: *snd_seq_client_info_t) void;
@@ -145,6 +148,66 @@ pub const Midi2Input = struct {
             }
         }
         return made;
+    }
+
+    /// A connectable MIDI source: its seq address + a "Client: Port" label.
+    pub const SourceInfo = struct {
+        client: c_int,
+        port: c_int,
+        name: [80]u8 = [_]u8{0} ** 80,
+        name_len: usize = 0,
+        pub fn label(self: *const SourceInfo) []const u8 {
+            return self.name[0..self.name_len];
+        }
+    };
+
+    /// Enumerate every connectable MIDI source on the system into `out` (for a
+    /// device picker). Returns how many were found.
+    pub fn listSources(self: *Midi2Input, out: []SourceInfo) usize {
+        var cinfo: ?*snd_seq_client_info_t = null;
+        if (snd_seq_client_info_malloc(&cinfo) < 0) return 0;
+        defer snd_seq_client_info_free(cinfo.?);
+        var pinfo: ?*snd_seq_port_info_t = null;
+        if (snd_seq_port_info_malloc(&pinfo) < 0) return 0;
+        defer snd_seq_port_info_free(pinfo.?);
+        const need = SND_SEQ_PORT_CAP_READ | SND_SEQ_PORT_CAP_SUBS_READ;
+        var k: usize = 0;
+        snd_seq_client_info_set_client(cinfo.?, -1);
+        while (snd_seq_query_next_client(self.seq, cinfo.?) >= 0 and k < out.len) {
+            const cl = snd_seq_client_info_get_client(cinfo.?);
+            if (cl == SND_SEQ_CLIENT_SYSTEM or cl == self.client or cl == self.skip_client) continue;
+            const cname = std.mem.span(snd_seq_client_info_get_name(cinfo.?));
+            snd_seq_port_info_set_client(pinfo.?, cl);
+            snd_seq_port_info_set_port(pinfo.?, -1);
+            while (snd_seq_query_next_port(self.seq, pinfo.?) >= 0 and k < out.len) {
+                const caps = snd_seq_port_info_get_capability(pinfo.?);
+                if (caps & need != need) continue;
+                if (caps & SND_SEQ_PORT_CAP_NO_EXPORT != 0) continue;
+                const pname = std.mem.span(snd_seq_port_info_get_name(pinfo.?));
+                out[k] = .{ .client = cl, .port = snd_seq_port_info_get_port(pinfo.?) };
+                const s = std.fmt.bufPrint(&out[k].name, "{s}: {s}", .{ cname, pname }) catch out[k].name[0..0];
+                out[k].name_len = s.len;
+                k += 1;
+            }
+        }
+        return k;
+    }
+
+    /// Subscribe ONLY to sources whose "Client: Port" label contains `match`
+    /// (case-sensitive substring); disconnect the rest. A simple device picker.
+    /// Returns the number connected.
+    pub fn connectOnlyMatching(self: *Midi2Input, match: []const u8) usize {
+        var src: [64]SourceInfo = undefined;
+        const n = self.listSources(&src);
+        var connected: usize = 0;
+        for (src[0..n]) |s| {
+            if (std.mem.indexOf(u8, s.label(), match) != null) {
+                if (snd_seq_connect_from(self.seq, self.port, s.client, s.port) >= 0) connected += 1;
+            } else {
+                _ = snd_seq_disconnect_from(self.seq, self.port, s.client, s.port);
+            }
+        }
+        return connected;
     }
 
     /// Drain all pending UMP packets into `out`; returns how many were written.

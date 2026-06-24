@@ -161,6 +161,107 @@ pub fn build(b: *std.Build) void {
     const clap_step = b.step("clap", "Host a CLAP plugin (defaults to the test plugin)");
     clap_step.dependOn(&run_clap.step);
 
+    // CLAP scanner/inspector: reads descriptors + ports + params from a .clap.
+    const clapscan = b.addExecutable(.{
+        .name = "zenith_clapscan",
+        .root_source_file = b.path("zig/main_clapscan.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    clapscan.linkLibC();
+    b.installArtifact(clapscan);
+    const run_clapscan = b.addRunArtifact(clapscan);
+    run_clapscan.step.dependOn(b.getInstallStep()); // ensure the test .clap is built+installed first
+    if (b.args) |a| run_clapscan.addArgs(a);
+    const clapscan_step = b.step("clapscan", "Scan + inspect a CLAP plugin (ports, params)");
+    clapscan_step.dependOn(&run_clapscan.step);
+
+    // VST3 hosting: a Zig VST3 test plugin (.so) + the COM-ABI host.
+    const vst3_plugin = b.addSharedLibrary(.{
+        .name = "zenith_vst3_test",
+        .root_source_file = b.path("zig/vst3_test_plugin.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(vst3_plugin);
+
+    const vst3 = b.addExecutable(.{
+        .name = "zenith_vst3",
+        .root_source_file = b.path("zig/main_vst3.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    vst3.linkLibC();
+    b.installArtifact(vst3);
+    const run_vst3 = b.addRunArtifact(vst3);
+    run_vst3.step.dependOn(b.getInstallStep()); // build the test .so first
+    if (b.args) |a| run_vst3.addArgs(a);
+    const vst3_step = b.step("vst3", "Host a VST3 plugin end-to-end (defaults to the test plugin)");
+    vst3_step.dependOn(&run_vst3.step);
+
+    // VST2 hosting: a Zig VST2 test plugin (.so) + the AEffect host.
+    const vst2_plugin = b.addSharedLibrary(.{
+        .name = "zenith_vst2_test",
+        .root_source_file = b.path("zig/vst2_test_plugin.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(vst2_plugin);
+
+    const vst2 = b.addExecutable(.{
+        .name = "zenith_vst2",
+        .root_source_file = b.path("zig/main_vst2.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    vst2.linkLibC();
+    b.installArtifact(vst2);
+    const run_vst2 = b.addRunArtifact(vst2);
+    run_vst2.step.dependOn(b.getInstallStep());
+    if (b.args) |a| run_vst2.addArgs(a);
+    const vst2_step = b.step("vst2", "Host a VST2 plugin end-to-end (defaults to the test plugin)");
+    vst2_step.dependOn(&run_vst2.step);
+
+    // Audio tracks + recording-to-timeline demo/verification.
+    const audiotrack = b.addExecutable(.{
+        .name = "zenith_audiotrack",
+        .root_source_file = b.path("zig/main_audiotrack.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    audiotrack.linkLibC();
+    b.installArtifact(audiotrack);
+    const run_audiotrack = b.addRunArtifact(audiotrack);
+    const audiotrack_step = b.step("audiotrack", "Render an audio-clip timeline + recording round-trip");
+    audiotrack_step.dependOn(&run_audiotrack.step);
+
+    // Inspection harness: dump JSON state + PNG screenshot + event log (headless).
+    const inspect_exe = b.addExecutable(.{
+        .name = "zenith_inspect",
+        .root_source_file = b.path("zig/main_inspect.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(inspect_exe);
+    const run_inspect = b.addRunArtifact(inspect_exe);
+    const inspect_step = b.step("inspect", "Dump DAW state JSON + PNG screenshot + event log");
+    inspect_step.dependOn(&run_inspect.step);
+
+    // Piano-roll / clip editor (standalone, drivable via the Talkback harness).
+    const pianoroll = b.addExecutable(.{
+        .name = "zenith_pianoroll",
+        .root_source_file = b.path("zig/main_pianoroll.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    pianoroll.linkSystemLibrary("GL");
+    pianoroll.linkSystemLibrary("X11");
+    pianoroll.linkLibC();
+    b.installArtifact(pianoroll);
+    const run_pianoroll = b.addRunArtifact(pianoroll);
+    const pianoroll_step = b.step("pianoroll", "Open the standalone piano-roll / clip editor");
+    pianoroll_step.dependOn(&run_pianoroll.step);
+
     // GUI foundation: render a DAW frame to an image.
     const ui = b.addExecutable(.{
         .name = "zenith_ui",
@@ -254,7 +355,7 @@ pub fn build(b: *std.Build) void {
     const gpu_step = b.step("gpu", "Run the GPU 2D renderer smoke test");
     gpu_step.dependOn(&run_gpu.step);
 
-    // The consolidated live Zenith DAW (flex + glass + GPU toolkit).
+    // The consolidated live Zenith DAW (Trellis + glass + GPU toolkit).
     const dawexe = b.addExecutable(.{
         .name = "zenith",
         .root_source_file = b.path("zig/main_daw.zig"),
@@ -285,35 +386,35 @@ pub fn build(b: *std.Build) void {
     const showcase_step = b.step("showcase", "Run the UI toolkit showcase (all effects)");
     showcase_step.dependOn(&run_showcase.step);
 
-    // Mixer laid out by the flex engine + GPU widgets.
-    const flexmix = b.addExecutable(.{
-        .name = "zenith_flexmix",
-        .root_source_file = b.path("zig/main_flexmix.zig"),
+    // Mixer laid out by the Trellis engine + GPU widgets.
+    const trellismix = b.addExecutable(.{
+        .name = "zenith_trellismix",
+        .root_source_file = b.path("zig/main_trellismix.zig"),
         .target = target,
         .optimize = optimize,
     });
-    flexmix.linkSystemLibrary("GL");
-    flexmix.linkSystemLibrary("X11");
-    flexmix.linkLibC();
-    b.installArtifact(flexmix);
-    const run_flexmix = b.addRunArtifact(flexmix);
-    const flexmix_step = b.step("flexmix", "Run the flex-laid-out mixer");
-    flexmix_step.dependOn(&run_flexmix.step);
+    trellismix.linkSystemLibrary("GL");
+    trellismix.linkSystemLibrary("X11");
+    trellismix.linkLibC();
+    b.installArtifact(trellismix);
+    const run_trellismix = b.addRunArtifact(trellismix);
+    const trellismix_step = b.step("trellismix", "Run the Trellis-laid-out mixer");
+    trellismix_step.dependOn(&run_trellismix.step);
 
-    // Flexbox layout engine demo.
-    const flex = b.addExecutable(.{
-        .name = "zenith_flex",
-        .root_source_file = b.path("zig/main_flex.zig"),
+    // Trellis layout engine demo.
+    const trellis = b.addExecutable(.{
+        .name = "zenith_trellis",
+        .root_source_file = b.path("zig/main_trellis.zig"),
         .target = target,
         .optimize = optimize,
     });
-    flex.linkSystemLibrary("GL");
-    flex.linkSystemLibrary("X11");
-    flex.linkLibC();
-    b.installArtifact(flex);
-    const run_flex = b.addRunArtifact(flex);
-    const flex_step = b.step("flex", "Run the flexbox layout engine demo");
-    flex_step.dependOn(&run_flex.step);
+    trellis.linkSystemLibrary("GL");
+    trellis.linkSystemLibrary("X11");
+    trellis.linkLibC();
+    b.installArtifact(trellis);
+    const run_trellis = b.addRunArtifact(trellis);
+    const trellis_step = b.step("trellis", "Run the Trellis layout engine demo");
+    trellis_step.dependOn(&run_trellis.step);
 
     // The live DAW, rendered entirely on the GPU toolkit.
     const gpudaw = b.addExecutable(.{
@@ -366,12 +467,44 @@ pub fn build(b: *std.Build) void {
     const anim_step = b.step("anim", "Capture hover-animation frames");
     anim_step.dependOn(&run_anim.step);
 
+    // AI wedge: the produce-with-you agent (LLM tool-calling → project mutations).
+    const ai = b.addExecutable(.{
+        .name = "zenith_ai",
+        .root_source_file = b.path("zig/main_ai.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(ai);
+    const run_ai = b.addRunArtifact(ai);
+    if (b.args) |args| run_ai.addArgs(args);
+    const ai_step = b.step("ai", "Run the AI wedge (offline mock unless XAI_API_KEY is set)");
+    ai_step.dependOn(&run_ai.step);
+
     // Unit tests.
     const test_step = b.step("test", "Run unit tests");
-    for ([_][]const u8{ "midi_alsa.zig", "midi2.zig", "audio_devices.zig", "ttf.zig", "image.zig", "svg.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig", "effects.zig" }) |src| {
+    for ([_][]const u8{ "midi_alsa.zig", "midi2.zig", "midi_clock.zig", "sysex.zig", "filter.zig", "audio_devices.zig", "ttf.zig", "image.zig", "svg.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig", "effects.zig", "dsp.zig", "aiff.zig", "vst3_abi.zig", "vst2_abi.zig", "audio_track.zig", "automation.zig", "mix_graph.zig", "timestretch.zig", "png.zig", "inspect.zig", "uireg.zig", "audio_engine.zig", "audio_inspect.zig", "pianoroll.zig", "ai_provider.zig", "ai_tools.zig", "ai_agent.zig", "ai_midi.zig" }) |src| {
         const t = b.addTest(.{ .root_source_file = b.path(b.fmt("zig/{s}", .{src})), .target = target, .optimize = optimize });
         t.linkSystemLibrary("asound");
         t.linkLibC();
         test_step.dependOn(&b.addRunArtifact(t).step);
     }
+
+    // Compressed-codec tests link the system codec libs by absolute path: this
+    // box has only versioned .so files (no -dev unversioned symlinks for -l).
+    const codec_test = b.addTest(.{ .root_source_file = b.path("zig/codec.zig"), .target = target, .optimize = optimize });
+    codec_test.linkLibC();
+    codec_test.addObjectFile(.{ .cwd_relative = "/lib/x86_64-linux-gnu/libsndfile.so.1" });
+    test_step.dependOn(&b.addRunArtifact(codec_test).step);
+
+    const mp3_test = b.addTest(.{ .root_source_file = b.path("zig/mp3.zig"), .target = target, .optimize = optimize });
+    mp3_test.linkLibC();
+    mp3_test.addObjectFile(.{ .cwd_relative = "/lib/x86_64-linux-gnu/libmpg123.so.0" });
+    test_step.dependOn(&b.addRunArtifact(mp3_test).step);
+
+    // The unified "open any audio file" dispatcher links both codec libs.
+    const af_test = b.addTest(.{ .root_source_file = b.path("zig/audio_file.zig"), .target = target, .optimize = optimize });
+    af_test.linkLibC();
+    af_test.addObjectFile(.{ .cwd_relative = "/lib/x86_64-linux-gnu/libsndfile.so.1" });
+    af_test.addObjectFile(.{ .cwd_relative = "/lib/x86_64-linux-gnu/libmpg123.so.0" });
+    test_step.dependOn(&b.addRunArtifact(af_test).step);
 }
