@@ -195,10 +195,20 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - 🟡 Theming + meters/faders drawn; ❌ waveform drawing, scopes, full design system
 - ❌ Accessibility, keyboard shortcuts
 
-### 4.12 The AI wedge  *(the differentiator — after the core is playable)*
-- ❌ Action-taking assistant with write access to the project model
-- ❌ A few trustworthy "produce-with-you" jobs (gain-staging, mix-translate, MIDI generate/vary, session-debugger)
-- ❌ Local/offline model path + provider integration
+### 4.12 The AI wedge  *(the differentiator)*  — **spine landed**
+- 🟡 **Action-taking assistant with write access to the project model**: the
+  agentic spine is live in Zig (`ai_provider.zig`/`ai_tools.zig`/`ai_agent.zig`,
+  `zig build ai`). LLM tool-calling → a registry of project-mutating tools → the
+  single write chokepoint over `project.zig`, each edit undo-checkpointed via
+  `History`. 9 tools (get_project, list_tracks, create_track, set_track_
+  volume/pan/mute, add_clip, add_note, set_tempo); JSON-Schema generated at
+  comptime from each tool's `Params` (no schema/decoder drift). Verified
+  end-to-end offline (8 tool calls → real 124-BPM 2-track project). 34 tests.
+  ❌ deeper tool coverage (clips move/split, plugins, automation, routing — the
+  full ~60-verb vocabulary the C++ `CommandAPI` had), in-DAW chat UI, approval gate.
+- ❌ A few trustworthy "produce-with-you" jobs (gain-staging, mix-translate, MIDI generate/vary, session-debugger) — next: port `MIDIPatternGenerator` (algorithmic, no-LLM) + a local mix-analysis tool (FFT/LUFS) so the model reasons over real numbers.
+- 🟡 **Provider integration**: xAI Grok (OpenAI-compatible chat/completions, tools + `tool_choice:auto`) over `std.http.Client`; the seam is provider-agnostic (OpenAI/Anthropic = config swap). Request-build + response-parse are pure + unit-tested; a `MockProvider` drives the spine offline. ❌ live key tested on-box (needs `XAI_API_KEY`), streaming, local/offline model path.
+- *Reference oracle kept for the port:* `apps/desktop/Source/{ai,ai_client,mcp,commands,network}` — the working pipeline was `network/GrokDAWClient`+`GrokDAWController`+`AITools` → `commands/CommandAPI` → `mcp/`; the `ai/`+`ai_client/` dirs are ~90% dead scaffolding (mine only `MIDIPatternGenerator`, `MixingAssistant` DSP, `GenreDetector`).
 
 ---
 
@@ -612,5 +622,41 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   body's input gated. Added mouse-wheel scroll to `window_glx` (`scroll` Event, X11
   buttons 4/5) + a Talkback `scroll <dy>` command. Verified live: 14 routes, scroll, zoom
   (rows visibly taller), zero xruns.
+
+**2026-06-24 (session — repo de-bloat + AI-wedge spine in Zig)**
+- **Triaged the legacy C++/Python and cut the bloat** (owner: "I want a lot of
+  the C++/python shit gone, rewritten in Zig"). Tracked files **4774 → 1245**
+  (two commits):
+  - *Junk that never belonged in git* (~2.7K files): `backend/.venv` +
+    `services/ai/runtime/.venv` (committed virtualenvs, 1.3K each), root build
+    logs, demo wavs, `uitest_*.bmp`, `golden_master*.json`, inspect artifacts,
+    stray `bench_preset.cpp`/`test_sha256.cpp`. `.gitignore` hardened.
+  - *Legacy JUCE C++ already replaced by the Zig greenfield* (~700 files):
+    `apps/desktop/Source/{audio,browser,dsp,effects,engine,instruments,io,memory,
+    pch,platform,plugins,rendering,tests,threading,tools,ui,utils}`,
+    `apps/Standalone`, top-level `tests/`. All recoverable from git history.
+  - *Kept per owner decision*: `network/collaboration/cloud/marketplace/
+    integration` + `backend/` (collab/cloud — "keep"); `ai/ai_client/mcp/
+    commands` (AI oracle — porting). Discovered `services/ai/runtime` ≈ a
+    duplicate twin of `backend/`, and `services/ai/agents` ≈ the dev-agent set
+    in `agents/` — flagged, not yet de-duped.
+- **Analyzed the C++ AI** (subagent deep-read of `ai`+`ai_client`+`mcp`): the
+  honest finding is that the *only* end-to-end-working AI path was
+  `network/GrokDAWClient`+`GrokDAWController`+`AITools` → `commands/CommandAPI`
+  → `mcp/`; everything labeled neural/autonomous/evolution is dead or fake
+  (random untrained weights, headers with no `.cpp`). Carry-forward = the
+  command/tool write-interface idea, not the code.
+- **Built the AI-wedge spine in Zig** (`zig build ai`, §4.12): `ai_provider.zig`
+  (Grok over `std.http.Client`, OpenAI-compatible tools; pure request/parse +
+  a `MockProvider`), `ai_tools.zig` (9 project-mutating tools over `project.zig`,
+  each undo-checkpointed; **comptime-generated JSON-Schema** from each tool's
+  `Params`), `ai_agent.zig` (the tool-calling loop; errors fed back, not fatal),
+  `main_ai.zig` (live Grok if `XAI_API_KEY`, else offline mock demo). Verified
+  offline: the agent ran 8 tool calls → a real 124-BPM 2-track project with a
+  4-note bassline. **34 AI tests; full `zig build test` green.**
+- NEXT: widen the tool vocabulary toward the old `CommandAPI` (clip move/split,
+  plugins, automation, routing) → port `MIDIPatternGenerator` + a local FFT/LUFS
+  mix-analysis tool → an in-DAW chat panel (Trellis) wired to the live engine →
+  test the live Grok path on-box once a key is available.
 
 *(Add new dated entries as milestones complete.)*
