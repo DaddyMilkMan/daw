@@ -14,6 +14,7 @@
 const std = @import("std");
 const project = @import("project.zig");
 const prov = @import("ai_provider.zig");
+const aimidi = @import("ai_midi.zig");
 
 /// What a tool handler operates on. The single write-chokepoint.
 pub const Context = struct {
@@ -36,6 +37,17 @@ fn okJson(alloc: std.mem.Allocator, comptime fmt: []const u8, args: anytype) !To
 fn trackPtr(ctx: *Context, idx: usize) !*project.Track {
     if (idx >= ctx.project.tracks.items.len) return error.TrackOutOfRange;
     return &ctx.project.tracks.items[idx];
+}
+
+fn clipPtr(ctx: *Context, track: usize, clip: usize) !*project.Clip {
+    const t = try trackPtr(ctx, track);
+    if (clip >= t.clips.items.len) return error.ClipOutOfRange;
+    return &t.clips.items[clip];
+}
+
+fn setStr(list: *std.ArrayList(u8), s: []const u8) !void {
+    list.clearRetainingCapacity();
+    try list.appendSlice(s);
 }
 
 // ---------------------------------------------------------------------------
@@ -186,16 +198,189 @@ const SetTempo = struct {
     }
 };
 
+const DeleteTrack = struct {
+    pub const name = "delete_track";
+    pub const description = "Delete a track by index (later tracks shift down).";
+    pub const Params = struct { track: u32 };
+    pub fn run(ctx: *Context, p: Params) !ToolResult {
+        if (p.track >= ctx.project.tracks.items.len) return error.TrackOutOfRange;
+        try ctx.history.checkpoint(ctx.project);
+        var t = ctx.project.tracks.orderedRemove(p.track);
+        t.deinit();
+        return okJson(ctx.alloc, "{{\"deleted\":true,\"track_count\":{d}}}", .{ctx.project.tracks.items.len});
+    }
+};
+
+const RenameTrack = struct {
+    pub const name = "rename_track";
+    pub const description = "Rename a track.";
+    pub const Params = struct { track: u32, name: []const u8 };
+    pub fn run(ctx: *Context, p: Params) !ToolResult {
+        const t = try trackPtr(ctx, p.track);
+        try ctx.history.checkpoint(ctx.project);
+        try setStr(&t.name, p.name);
+        return okJson(ctx.alloc, "{{\"track\":{d},\"name\":\"{s}\"}}", .{ p.track, t.name.items });
+    }
+};
+
+const SetInstrument = struct {
+    pub const name = "set_instrument";
+    pub const description = "Set a track's instrument ('synth' or 'sampler').";
+    pub const Params = struct { track: u32, instrument: project.InstrumentKind };
+    pub fn run(ctx: *Context, p: Params) !ToolResult {
+        const t = try trackPtr(ctx, p.track);
+        try ctx.history.checkpoint(ctx.project);
+        t.instrument = p.instrument;
+        return okJson(ctx.alloc, "{{\"track\":{d},\"instrument\":\"{s}\"}}", .{ p.track, @tagName(t.instrument) });
+    }
+};
+
+const DeleteClip = struct {
+    pub const name = "delete_clip";
+    pub const description = "Delete a MIDI clip from a track.";
+    pub const Params = struct { track: u32, clip: u32 };
+    pub fn run(ctx: *Context, p: Params) !ToolResult {
+        const t = try trackPtr(ctx, p.track);
+        if (p.clip >= t.clips.items.len) return error.ClipOutOfRange;
+        try ctx.history.checkpoint(ctx.project);
+        var c = t.clips.orderedRemove(p.clip);
+        c.deinit();
+        return okJson(ctx.alloc, "{{\"deleted\":true,\"clip_count\":{d}}}", .{t.clips.items.len});
+    }
+};
+
+const MoveClip = struct {
+    pub const name = "move_clip";
+    pub const description = "Move a clip to a new timeline position (frames).";
+    pub const Params = struct { track: u32, clip: u32, start: u64 };
+    pub fn run(ctx: *Context, p: Params) !ToolResult {
+        const c = try clipPtr(ctx, p.track, p.clip);
+        try ctx.history.checkpoint(ctx.project);
+        c.start = p.start;
+        return okJson(ctx.alloc, "{{\"track\":{d},\"clip\":{d},\"start\":{d}}}", .{ p.track, p.clip, c.start });
+    }
+};
+
+const ClearClipNotes = struct {
+    pub const name = "clear_clip_notes";
+    pub const description = "Remove all notes from a clip (keeps the clip).";
+    pub const Params = struct { track: u32, clip: u32 };
+    pub fn run(ctx: *Context, p: Params) !ToolResult {
+        const c = try clipPtr(ctx, p.track, p.clip);
+        try ctx.history.checkpoint(ctx.project);
+        c.notes.clearRetainingCapacity();
+        return okJson(ctx.alloc, "{{\"track\":{d},\"clip\":{d},\"notes\":0}}", .{ p.track, p.clip });
+    }
+};
+
+const GetClip = struct {
+    pub const name = "get_clip";
+    pub const description = "Read a clip: its name, position, length, and every note (pitch/start/length/velocity).";
+    pub const Params = struct { track: u32, clip: u32 };
+    pub fn run(ctx: *Context, p: Params) !ToolResult {
+        const c = try clipPtr(ctx, p.track, p.clip);
+        var out = std.ArrayList(u8).init(ctx.alloc);
+        errdefer out.deinit();
+        var ws = std.json.writeStream(out.writer(), .{});
+        defer ws.deinit();
+        try ws.beginObject();
+        try ws.objectField("name");
+        try ws.write(c.name.items);
+        try ws.objectField("start");
+        try ws.write(c.start);
+        try ws.objectField("note_count");
+        try ws.write(c.notes.items.len);
+        try ws.objectField("notes");
+        try ws.beginArray();
+        for (c.notes.items) |n| {
+            try ws.beginObject();
+            try ws.objectField("pitch");
+            try ws.write(n.pitch);
+            try ws.objectField("start");
+            try ws.write(n.start);
+            try ws.objectField("length");
+            try ws.write(n.len);
+            try ws.objectField("velocity");
+            try ws.write(n.velocity);
+            try ws.endObject();
+        }
+        try ws.endArray();
+        try ws.endObject();
+        return .{ .ok = true, .json = try out.toOwnedSlice() };
+    }
+};
+
+const GeneratePattern = struct {
+    pub const name = "generate_pattern";
+    pub const description =
+        "Algorithmically generate musical MIDI into a clip — no need to place notes one by one. " ++
+        "kind: drums|bass|chords|melody|arp. style: trap|house|jazz|lofi|rock|edm|rnb|pop. " ++
+        "key like 'C' or 'F#'; scale like 'minor','dorian','pentatonic_minor'. Returns the note count.";
+    pub const Params = struct {
+        track: u32,
+        clip: u32,
+        kind: aimidi.Kind = .drums,
+        style: aimidi.Style = .trap,
+        key: []const u8 = "C",
+        scale: []const u8 = "minor",
+        bars: u32 = 4,
+        complexity: f32 = 0.5,
+        swing: f32 = 0.0,
+        humanize: f32 = 0.1,
+        variation: f32 = 0.5,
+        seed: u64 = 0,
+    };
+    pub fn run(ctx: *Context, p: Params) !ToolResult {
+        const c = try clipPtr(ctx, p.track, p.clip);
+        const gen = try aimidi.generate(ctx.alloc, .{
+            .kind = p.kind,
+            .style = p.style,
+            .key = p.key,
+            .scale = p.scale,
+            .bars = p.bars,
+            .complexity = p.complexity,
+            .swing = p.swing,
+            .humanize = p.humanize,
+            .variation = p.variation,
+            .seed = p.seed,
+        });
+        defer ctx.alloc.free(gen);
+        try ctx.history.checkpoint(ctx.project);
+
+        // beats → clip-relative frames at the project tempo/sample rate.
+        const fpb = @as(f64, @floatFromInt(ctx.project.sample_rate)) * 60.0 / ctx.project.tempo;
+        var max_end: u64 = 0;
+        for (gen) |gn| {
+            const start_f: u64 = @intFromFloat(@max(0.0, gn.start_beats * fpb));
+            const len_f: u64 = @intFromFloat(@max(1.0, gn.length_beats * fpb));
+            const pitch: u8 = @intCast(std.math.clamp(gn.pitch, 0, 127));
+            const vel: u8 = @intCast(std.math.clamp(gn.velocity, 1, 127));
+            try c.notes.append(.{ .start = start_f, .len = len_f, .pitch = pitch, .velocity = vel });
+            if (start_f + len_f > max_end) max_end = start_f + len_f;
+        }
+        if (max_end > c.length) c.length = max_end;
+        return okJson(ctx.alloc, "{{\"track\":{d},\"clip\":{d},\"kind\":\"{s}\",\"generated\":{d},\"clip_notes\":{d}}}", .{ p.track, p.clip, @tagName(p.kind), gen.len, c.notes.items.len });
+    }
+};
+
 /// The registry. Add a tool here and it's advertised + dispatchable everywhere.
 const registry = .{
     GetProject,
     ListTracks,
     CreateTrack,
+    DeleteTrack,
+    RenameTrack,
+    SetInstrument,
     SetTrackVolume,
     SetTrackPan,
     SetTrackMute,
     AddClip,
+    DeleteClip,
+    MoveClip,
     AddNote,
+    ClearClipNotes,
+    GetClip,
+    GeneratePattern,
     SetTempo,
 };
 
@@ -321,7 +506,44 @@ test "schemaFor generates schema with required fields and enums" {
 }
 
 test "all tools are advertised" {
-    try std.testing.expectEqual(@as(usize, 9), specs().len);
+    try std.testing.expectEqual(@as(usize, 17), specs().len);
+}
+
+test "generate_pattern lays real notes into a clip" {
+    const a = std.testing.allocator;
+    var e = TestEnv.init(a);
+    defer e.deinit();
+    const r0 = try call(&e.ctx, "create_track", "{\"name\":\"Drums\",\"instrument\":\"sampler\"}");
+    a.free(r0.json);
+    const r1 = try call(&e.ctx, "add_clip", "{\"track\":0,\"start\":0}");
+    a.free(r1.json);
+    const r2 = try call(&e.ctx, "generate_pattern", "{\"track\":0,\"clip\":0,\"kind\":\"drums\",\"style\":\"house\",\"bars\":2,\"seed\":99}");
+    defer a.free(r2.json);
+
+    const clip = &e.proj.tracks.items[0].clips.items[0];
+    try std.testing.expect(clip.notes.items.len > 0);
+    // clip length must have grown to cover the generated notes
+    try std.testing.expect(clip.length > 0);
+    for (clip.notes.items) |n| try std.testing.expect(n.pitch <= 127 and n.velocity >= 1);
+}
+
+test "delete_track and clear_clip_notes" {
+    const a = std.testing.allocator;
+    var e = TestEnv.init(a);
+    defer e.deinit();
+    const r0 = try call(&e.ctx, "create_track", "{}");
+    a.free(r0.json);
+    const r1 = try call(&e.ctx, "add_clip", "{\"track\":0,\"start\":0}");
+    a.free(r1.json);
+    const r2 = try call(&e.ctx, "add_note", "{\"track\":0,\"clip\":0,\"pitch\":60,\"start\":0,\"length\":1000}");
+    a.free(r2.json);
+    const r3 = try call(&e.ctx, "clear_clip_notes", "{\"track\":0,\"clip\":0}");
+    a.free(r3.json);
+    try std.testing.expectEqual(@as(usize, 0), e.proj.tracks.items[0].clips.items[0].notes.items.len);
+
+    const r4 = try call(&e.ctx, "delete_track", "{\"track\":0}");
+    a.free(r4.json);
+    try std.testing.expectEqual(@as(usize, 0), e.proj.tracks.items.len);
 }
 
 test "create_track mutates the project and is undoable" {

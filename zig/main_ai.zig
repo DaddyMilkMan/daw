@@ -16,10 +16,11 @@ const prov = @import("ai_provider.zig");
 const tools = @import("ai_tools.zig");
 const Agent = @import("ai_agent.zig").Agent;
 
-const DEFAULT_PROMPT = "Make a 124 BPM house sketch: a sampler drums track and a bass track, then put a simple one-bar bassline on the bass track.";
+const DEFAULT_PROMPT = "Make a 124 BPM house sketch: a drums track and a bass track, then generate a 4-bar house drum pattern and a matching bassline.";
 
 /// The offline demo plan — what a model *would* do for the default prompt,
-/// scripted so the mock provider drives the real tools deterministically.
+/// scripted so the mock provider drives the real tools (including the
+/// algorithmic generator) deterministically.
 fn demoScript() []const prov.MockProvider.Canned {
     const S = struct {
         const script = [_]prov.MockProvider.Canned{
@@ -28,14 +29,15 @@ fn demoScript() []const prov.MockProvider.Canned {
                 .{ .id = "t2", .name = "create_track", .arguments = "{\"name\":\"Drums\",\"instrument\":\"sampler\"}" },
                 .{ .id = "t3", .name = "create_track", .arguments = "{\"name\":\"Bass\",\"instrument\":\"synth\"}" },
             } },
-            .{ .tool_calls = &.{.{ .id = "t4", .name = "add_clip", .arguments = "{\"track\":1,\"name\":\"bassline\",\"start\":0}" }} },
             .{ .tool_calls = &.{
-                .{ .id = "n1", .name = "add_note", .arguments = "{\"track\":1,\"clip\":0,\"pitch\":36,\"start\":0,\"length\":5800,\"velocity\":118}" },
-                .{ .id = "n2", .name = "add_note", .arguments = "{\"track\":1,\"clip\":0,\"pitch\":36,\"start\":23226,\"length\":5800,\"velocity\":96}" },
-                .{ .id = "n3", .name = "add_note", .arguments = "{\"track\":1,\"clip\":0,\"pitch\":39,\"start\":46452,\"length\":5800,\"velocity\":104}" },
-                .{ .id = "n4", .name = "add_note", .arguments = "{\"track\":1,\"clip\":0,\"pitch\":43,\"start\":69678,\"length\":5800,\"velocity\":100}" },
+                .{ .id = "t4", .name = "add_clip", .arguments = "{\"track\":0,\"name\":\"beat\",\"start\":0}" },
+                .{ .id = "t5", .name = "add_clip", .arguments = "{\"track\":1,\"name\":\"bassline\",\"start\":0}" },
             } },
-            .{ .content = "Set the tempo to 124 BPM, added a sampler Drums track and a synth Bass track, and laid a one-bar 4-note bassline (root-root-min3rd-5th) on the bass." },
+            .{ .tool_calls = &.{
+                .{ .id = "g1", .name = "generate_pattern", .arguments = "{\"track\":0,\"clip\":0,\"kind\":\"drums\",\"style\":\"house\",\"bars\":4,\"complexity\":0.7,\"seed\":2024}" },
+                .{ .id = "g2", .name = "generate_pattern", .arguments = "{\"track\":1,\"clip\":0,\"kind\":\"bass\",\"style\":\"house\",\"key\":\"C\",\"scale\":\"minor\",\"bars\":4,\"seed\":2024}" },
+            } },
+            .{ .content = "Set 124 BPM, added a sampler Drums track and a synth Bass track, and generated a 4-bar house drum pattern plus a C-minor bassline." },
         };
     };
     return &S.script;
