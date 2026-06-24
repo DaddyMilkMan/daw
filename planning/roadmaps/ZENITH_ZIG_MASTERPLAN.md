@@ -195,20 +195,24 @@ Status: ✅ done · 🟡 partial · ❌ not started
 - 🟡 Theming + meters/faders drawn; ❌ waveform drawing, scopes, full design system
 - ❌ Accessibility, keyboard shortcuts
 
-### 4.12 The AI wedge  *(the differentiator)*  — **spine landed**
-- 🟡 **Action-taking assistant with write access to the project model**: the
-  agentic spine is live in Zig (`ai_provider.zig`/`ai_tools.zig`/`ai_agent.zig`,
-  `zig build ai`). LLM tool-calling → a registry of project-mutating tools → the
-  single write chokepoint over `project.zig`, each edit undo-checkpointed via
-  `History`. 9 tools (get_project, list_tracks, create_track, set_track_
-  volume/pan/mute, add_clip, add_note, set_tempo); JSON-Schema generated at
-  comptime from each tool's `Params` (no schema/decoder drift). Verified
-  end-to-end offline (8 tool calls → real 124-BPM 2-track project). 34 tests.
-  ❌ deeper tool coverage (clips move/split, plugins, automation, routing — the
-  full ~60-verb vocabulary the C++ `CommandAPI` had), in-DAW chat UI, approval gate.
-- ❌ A few trustworthy "produce-with-you" jobs (gain-staging, mix-translate, MIDI generate/vary, session-debugger) — next: port `MIDIPatternGenerator` (algorithmic, no-LLM) + a local mix-analysis tool (FFT/LUFS) so the model reasons over real numbers.
+### 4.12 The AI wedge  *(the differentiator)*  — **pure Zig; spine + generator landed**
+- 🟡 **Action-taking assistant with write access to the project model**: live in Zig
+  (`ai_provider.zig`/`ai_tools.zig`/`ai_agent.zig`/`ai_midi.zig`, `zig build ai`). LLM
+  tool-calling → a registry of project-mutating tools → the single write chokepoint
+  over `project.zig`, each edit undo-checkpointed via `History`. **17 tools**:
+  get_project, list_tracks, create/delete/rename_track, set_instrument, set_track_
+  volume/pan/mute, add/delete/move_clip, add_note, clear_clip_notes, get_clip,
+  **generate_pattern**, set_tempo. JSON-Schema generated at comptime from each tool's
+  `Params` (no schema/decoder drift). Verified offline: agent → tool calls → a real
+  124-BPM project with a generated 4-bar house beat + bassline. ❌ plugins/automation/
+  routing tools, in-DAW chat UI, approval gate.
+- 🟡 **Produce-with-you jobs**: ✅ **algorithmic MIDI generation** (`ai_midi.zig`,
+  clean-room port of the C++ `MIDIPatternGenerator`): 45 scales, per-style drum/bass/
+  chord/melody/arp generators, swing+humanize+quantize, seeded/deterministic, no LLM.
+  Exposed as `generate_pattern`. ❌ gain-staging, mix-translate, session-debugger, a
+  local FFT/LUFS mix-analysis tool (so the model reasons over real numbers).
 - 🟡 **Provider integration**: xAI Grok (OpenAI-compatible chat/completions, tools + `tool_choice:auto`) over `std.http.Client`; the seam is provider-agnostic (OpenAI/Anthropic = config swap). Request-build + response-parse are pure + unit-tested; a `MockProvider` drives the spine offline. ❌ live key tested on-box (needs `XAI_API_KEY`), streaming, local/offline model path.
-- *Reference oracle kept for the port:* `apps/desktop/Source/{ai,ai_client,mcp,commands,network}` — the working pipeline was `network/GrokDAWClient`+`GrokDAWController`+`AITools` → `commands/CommandAPI` → `mcp/`; the `ai/`+`ai_client/` dirs are ~90% dead scaffolding (mine only `MIDIPatternGenerator`, `MixingAssistant` DSP, `GenreDetector`).
+- **The C++ AI is DELETED (pure Zig).** `apps/desktop/Source/{ai,ai_client,mcp,commands}` + the `network/` Grok/MCP client (`GrokDAWClient`/`GrokDAWController`/`AITools`/`MCPServer`/…) are gone (199 files, ~70K lines; recoverable from git). The honest finding before deleting: the only end-to-end-working path was `GrokDAWClient`→`CommandAPI`→`mcp`; everything "neural/autonomous/evolution" was dead or fake. The Zig wedge reproduces the working spine + the one real algorithm.
 
 ---
 
@@ -658,5 +662,25 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   plugins, automation, routing) → port `MIDIPatternGenerator` + a local FFT/LUFS
   mix-analysis tool → an in-DAW chat panel (Trellis) wired to the live engine →
   test the live Grok path on-box once a key is available.
+
+**2026-06-24 (session 2 — finish the AI port; delete the C++ AI; pure Zig)**
+- Owner: "rewrite it then delete the C++ or python version — we are pure zig."
+- **Ported `MIDIPatternGenerator` → `ai_midi.zig`** (clean-room, the one genuinely
+  valuable non-fake algorithm in the C++ AI): 45-scale DB, per-style drum/bass/chord/
+  motif-melody/arp generators, swing+humanize+quantize, seeded/deterministic, no LLM/
+  JUCE. 5 tests.
+- **Widened `ai_tools.zig` 9 → 17 tools** toward the old `CommandAPI` vocabulary
+  (delete/rename_track, set_instrument, delete/move_clip, clear_clip_notes, get_clip,
+  and **generate_pattern** which runs `ai_midi` and converts beats→clip frames at the
+  project tempo/SR). `zig build ai` now generates a 4-bar house beat (41 notes) + a
+  C-minor bassline (19 notes) end-to-end. **39 AI tests; full `zig build test` green.**
+- **Deleted the C++ AI version** (199 files, ~70K lines): `apps/desktop/Source/{ai,
+  ai_client,mcp,commands}` + the `network/` Grok/MCP client. Kept the real networking/
+  collaboration in `network/` (CRDT/ICE/STUN/TURN/DTLS/auth) per the collab decision.
+  Tracked files **1245 → 1067** across both sessions today (started the day at 4774).
+- NEXT: a local FFT/LUFS mix-analysis tool (model reasons over real numbers) → plugin/
+  automation/routing tools → in-DAW chat panel (Trellis) wired to the live engine →
+  test the live Grok path once `XAI_API_KEY` is available. Remaining non-Zig: the
+  collab/cloud C++ + Python `backend`/`services` (kept; eventual port-or-cut).
 
 *(Add new dated entries as milestones complete.)*
