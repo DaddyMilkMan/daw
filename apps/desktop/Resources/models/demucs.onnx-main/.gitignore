@@ -1,9 +1,0 @@
-build*/
-*.mid
-*.midi
-*.wav
-*.json
-/__pycache__
-*.pyc
-*.csv
-onnx-models/
