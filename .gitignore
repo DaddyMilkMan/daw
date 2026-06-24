@@ -204,3 +204,9 @@ tools/talkback/*.png
 
 tools/talkback/*.log
 zenith.log
+
+# build/test artifacts (regenerated, never commit)
+/uitest_*.bmp
+/golden_master*.json
+/build_*.log
+controls_sc.png
