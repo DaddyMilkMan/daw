@@ -683,4 +683,26 @@ int32_t zp_file_encode(const char* path, const zp_audio_buffer* in, int32_t form
   test the live Grok path once `XAI_API_KEY` is available. Remaining non-Zig: the
   collab/cloud C++ + Python `backend`/`services` (kept; eventual port-or-cut).
 
+**2026-06-24 (session 3 — PURE ZIG: delete all remaining C++/Python)**
+- Owner reversed the earlier collab "keep" → "transition that part, delete it all, pure zig."
+- Recon confirmed the collab/cloud C++ was abandoned: **excluded from the build**
+  (`ZENITH_ENABLE_COLLAB` off / "excluded from ZenithDAW" in SourceFiles.cmake), never
+  worked (broken DTLS/TURN), not in the Zig plan, unreferenced by Zig.
+- **Deleted everything non-Zig** (`zig build test` green at every step):
+  - collab/cloud C++ (`Source/{collaboration,cloud,marketplace,integration,network,
+    analysis}`) → **`apps/desktop/Source` is now EMPTY**.
+  - Python `backend/` + `services/` (signaling + the duplicate twins).
+  - The dead C++/JUCE build system (CMakeLists, `cmake/`, build scripts, .clangd).
+  - C++ CI (33 `.github/workflows` + scripts/actions) + Docker; `external/JUCE`+`vcpkg`
+    submodules; `agents/` + `tools/agents/` dev tooling; the demucs ONNX model; and the
+    last C++ stragglers (`src/` Skia skeleton, preset banks, doc examples, scripting
+    bindings, A/B benchmarks).
+  - **Added a real Zig CI** (`.github/workflows/ci.yml`: apt audio libs → Zig 0.14.1 →
+    `zig build test`).
+- **Tracked files 1067 → 657** this session (4774 → 657 across the whole day, −86%).
+  Only non-Zig left is intentional: `tools/realvst3/plugin.cpp` (a genuine VST3 fixture
+  to validate the Zig host against a real plugin) + `zig/zenith_dsp.h` (the DSP C-ABI
+  header). Plus kept dev tooling (`tools/talkback`, `genfont.py`, mcp/preset scripts),
+  `Content/` samples, and docs. **The repo is pure Zig.**
+
 *(Add new dated entries as milestones complete.)*
