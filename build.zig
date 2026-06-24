@@ -467,9 +467,22 @@ pub fn build(b: *std.Build) void {
     const anim_step = b.step("anim", "Capture hover-animation frames");
     anim_step.dependOn(&run_anim.step);
 
+    // AI wedge: the produce-with-you agent (LLM tool-calling → project mutations).
+    const ai = b.addExecutable(.{
+        .name = "zenith_ai",
+        .root_source_file = b.path("zig/main_ai.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(ai);
+    const run_ai = b.addRunArtifact(ai);
+    if (b.args) |args| run_ai.addArgs(args);
+    const ai_step = b.step("ai", "Run the AI wedge (offline mock unless XAI_API_KEY is set)");
+    ai_step.dependOn(&run_ai.step);
+
     // Unit tests.
     const test_step = b.step("test", "Run unit tests");
-    for ([_][]const u8{ "midi_alsa.zig", "midi2.zig", "midi_clock.zig", "sysex.zig", "filter.zig", "audio_devices.zig", "ttf.zig", "image.zig", "svg.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig", "effects.zig", "dsp.zig", "aiff.zig", "vst3_abi.zig", "vst2_abi.zig", "audio_track.zig", "automation.zig", "mix_graph.zig", "timestretch.zig", "png.zig", "inspect.zig", "uireg.zig", "audio_engine.zig", "audio_inspect.zig", "pianoroll.zig" }) |src| {
+    for ([_][]const u8{ "midi_alsa.zig", "midi2.zig", "midi_clock.zig", "sysex.zig", "filter.zig", "audio_devices.zig", "ttf.zig", "image.zig", "svg.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig", "effects.zig", "dsp.zig", "aiff.zig", "vst3_abi.zig", "vst2_abi.zig", "audio_track.zig", "automation.zig", "mix_graph.zig", "timestretch.zig", "png.zig", "inspect.zig", "uireg.zig", "audio_engine.zig", "audio_inspect.zig", "pianoroll.zig", "ai_provider.zig", "ai_tools.zig", "ai_agent.zig" }) |src| {
         const t = b.addTest(.{ .root_source_file = b.path(b.fmt("zig/{s}", .{src})), .target = target, .optimize = optimize });
         t.linkSystemLibrary("asound");
         t.linkLibC();
