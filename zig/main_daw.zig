@@ -334,8 +334,9 @@ pub fn main() !void {
             applyMidiPick(&state, m);
         }
 
-        // synth: push macro knob values (live) + the edited mod-matrix patch (on change)
+        // synth: push macro knob values + base cutoff (live) + the edited patch (on change)
         for (0..state.macro_count) |i| engine.setMacro(i, state.macros[i]);
+        engine.setCutoff(40.0 * std.math.pow(f32, 450.0, state.cutoff)); // 0..1 -> ~40..18k Hz
         if (state.patch_dirty) {
             engine.setSynthPatch(view.patch);
             state.patch_dirty = false;

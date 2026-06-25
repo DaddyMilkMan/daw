@@ -11,6 +11,7 @@ const trellis = @import("trellis.zig");
 const widgets = @import("widgets.zig");
 const project = @import("project.zig");
 const synth = @import("synth.zig");
+const filter = @import("filter.zig");
 const ModRoute = synth.ModRoute;
 const color = @import("color.zig");
 const Color = gpu2d.Color;
@@ -54,7 +55,8 @@ pub const State = struct {
     scroll_dy: f32 = 0, // mouse-wheel delta this frame (consumed by scrollable panels)
     macros: [16]f32 = [_]f32{0} ** 16, // macro knob values (mirrored to the engine)
     macro_count: u8 = 4, // how many macro knobs are shown (user can add more)
-    patch_dirty: bool = false, // set when the mod matrix / macros change -> main_daw repushes
+    patch_dirty: bool = false, // set when the synth patch changes -> main_daw repushes
+    cutoff: f32 = 0.62, // base filter cutoff 0..1 (live -> engine.setCutoff)
 
     pub fn midiName(self: *const State, i: usize) []const u8 {
         return self.midi_names[i][0..self.midi_name_len[i]];
@@ -437,6 +439,45 @@ pub const View = struct {
     /// pattern. Caller already uppercases the string.
     fn secLabel(self: *View, s: []const u8, h: f32) void {
         self.c.label(s, self.fc, label_col, .{ .h = px(h), .tracking = 1.4 });
+    }
+
+    // ---- synth-panel building blocks (solid surfaces, no glass) -------------
+    /// A recessed section card with a small-caps title.
+    fn panelSection(self: *View, x: f32, y: f32, w: f32, h: f32, title: []const u8) void {
+        self.g.card(x, y, w, h, 12, card_t, card_b, 0, bord, 0.6);
+        self.fc.text(self.g, x + 13, y + 10, title, label_col);
+    }
+    /// A range-mapped knob with a centered caption. Returns true on change.
+    fn pKnob(self: *View, id: u32, cx: f32, cy: f32, label: []const u8, val: *f32, lo: f32, hi: f32) bool {
+        var t = if (hi > lo) std.math.clamp((val.* - lo) / (hi - lo), 0, 1) else 0;
+        const ch = self.um.knob(id, cx, cy, 15, &t);
+        if (ch) val.* = lo + t * (hi - lo);
+        const tw = self.fc.textWidth(label);
+        self.fc.text(self.g, cx - tw / 2, cy + 21, label, dim);
+        return ch;
+    }
+    /// A range-mapped vertical fader with a centered caption.
+    fn pFader(self: *View, id: u32, x: f32, y: f32, w: f32, h: f32, label: []const u8, val: *f32, lo: f32, hi: f32) bool {
+        var t = if (hi > lo) std.math.clamp((val.* - lo) / (hi - lo), 0, 1) else 0;
+        const ch = self.um.vFader(id, x, y, w, h, &t);
+        if (ch) val.* = lo + t * (hi - lo);
+        const tw = self.fc.textWidth(label);
+        self.fc.text(self.g, x + w / 2 - tw / 2, y + h + 4, label, dim);
+        return ch;
+    }
+    fn waveSeg(self: *View, id: u32, x: f32, y: f32, w: f32, h: f32, wave: *synth.Wave) bool {
+        const labels = [_][]const u8{ "Sin", "Tri", "Saw", "Sqr" };
+        var sel: usize = @intFromEnum(wave.*);
+        const ch = self.um.segmented(id, x, y, w, h, &sel, &labels, self.fb);
+        if (ch) wave.* = @enumFromInt(@as(u2, @intCast(sel)));
+        return ch;
+    }
+    fn modelSeg(self: *View, id: u32, x: f32, y: f32, w: f32, h: f32, model: *filter.Model) bool {
+        const labels = [_][]const u8{ "SVF", "Ladder" };
+        var sel: usize = @intFromEnum(model.*);
+        const ch = self.um.segmented(id, x, y, w, h, &sel, &labels, self.fb);
+        if (ch) model.* = @enumFromInt(@as(u1, @intCast(sel)));
+        return ch;
     }
 
     pub fn frame(self: *View, p: *project.Project, bar: u64, state: *State, W: f32, H: f32, mx: f32, my: f32, down: bool, rclick: bool) WinAction {
@@ -897,93 +938,199 @@ pub const View = struct {
         }
         // ---- modulation-matrix panel (toggled with 'M') ------------------------
         if (self.mod_open) {
-            const wp: f32 = 560;
-            const hp: f32 = @min(H - 110, 560);
-            const px0 = (W - wp) / 2;
-            const py0 = @max(TBH + 16, (H - hp) / 2);
-            g.rect(0, TBH, W, H - TBH, 0, Color.rgba(0, 0, 0, 150)); // dim backdrop
+            const pad: f32 = 34;
+            const px0 = pad;
+            const py0 = TBH + 18;
+            const wp = W - 2 * pad;
+            const hp = H - py0 - 18;
+            const pat = &self.patch;
+            var dirty = false;
+
+            // ---- SOLID surface (no glass): dark scrim, drop shadow, material card ----
+            g.rect(0, TBH, W, H - TBH, 0, Color.rgba(6, 7, 10, 210)); // focus scrim
             g.flush();
-            g.captureBlur(@intFromFloat(W), @intFromFloat(H));
-            g.glass(px0, py0, wp, hp, 16, Color.rgba(84, 92, 114, 82), Color.rgba(255, 255, 255, 150));
+            g.shadow(px0, py0 + 10, wp, hp, 20, 46, Color.rgba(0, 0, 0, 165));
+            g.card(px0, py0, wp, hp, 18, Color.rgb(33, 36, 45), Color.rgb(25, 27, 35), 0, bord, 1.1);
+            g.rect(px0 + 1, py0 + 1, wp - 2, 1, 0, Color.rgba(255, 255, 255, 16)); // top rim light
+            g.rect(px0 + 18, py0 + 50, wp - 36, 1, 0, Color.rgba(255, 255, 255, 12)); // header divider
             self.um.begin(.{ .mx = mx, .my = my, .mouse_down = down }, 0.016);
 
             // header
-            self.fd.text(g, px0 + 22, py0 + 12, "Modulation", accent);
-            self.fc.text(g, px0 + 24, py0 + 42, "M toggle  ·  wheel scroll  ·  click a cell to cycle  ·  drag depth", faint);
-            if (self.um.iconSlot(1850, px0 + wp - 40, py0 + 14, 26, 24, false)) self.mod_open = false;
-            icons.close(g, px0 + wp - 27, py0 + 26, 9, dim);
-            if (self.um.iconSlot(1851, px0 + wp - 134, py0 + 14, 24, 24, false)) self.mod_zoom = @max(0.7, self.mod_zoom - 0.15);
-            self.fu.text(g, px0 + wp - 127, py0 + 17, "-", dim);
-            if (self.um.iconSlot(1852, px0 + wp - 106, py0 + 14, 24, 24, false)) self.mod_zoom = @min(1.5, self.mod_zoom + 0.15);
-            self.fu.text(g, px0 + wp - 100, py0 + 16, "+", dim);
+            self.fd.text(g, px0 + 22, py0 + 12, "Synthesizer", accent);
+            self.fc.text(g, px0 + 158, py0 + 23, "polyphonic · MPE · zero-delay filters", faint);
+            if (self.um.iconSlot(1850, px0 + wp - 42, py0 + 13, 28, 26, false)) self.mod_open = false;
+            icons.close(g, px0 + wp - 28, py0 + 26, 9, dim);
 
-            // macro knobs (expandable)
-            const mky = py0 + 64;
-            self.fc.text(g, px0 + 22, mky - 18, "MACROS", label_col);
-            var mi: usize = 0;
-            while (mi < state.macro_count) : (mi += 1) {
-                const kx = px0 + 42 + @as(f32, @floatFromInt(mi)) * 62;
-                _ = self.um.knob(1900 + @as(u32, @intCast(mi)), kx, mky + 16, 16, &state.macros[mi]);
-                var lb: [8]u8 = undefined;
-                self.fc.text(g, kx - 8, mky + 38, std.fmt.bufPrint(&lb, "M{d}", .{mi + 1}) catch "M", dim);
+            const gx = px0 + 16;
+            const cw = wp - 32;
+            const gap: f32 = 12;
+            const col = (cw - 2 * gap) / 3;
+            const cy = py0 + 60;
+            const htop: f32 = 190;
+
+            // ===== BAND 1: oscillators / filter / voice =====
+            // OSC
+            self.panelSection(gx, cy, col, htop, "OSCILLATORS");
+            dirty = self.waveSeg(1860, gx + 12, cy + 30, col - 24, 22, &pat.osc_a) or dirty;
+            dirty = self.waveSeg(1861, gx + 12, cy + 58, col - 24, 22, &pat.osc_b) or dirty;
+            {
+                const ks = (col - 24) / 4;
+                const ky = cy + 124;
+                dirty = self.pKnob(1862, gx + 12 + ks * 0.5, ky, "Mix", &pat.osc_mix, 0, 1) or dirty;
+                dirty = self.pKnob(1863, gx + 12 + ks * 1.5, ky, "Detune", &pat.osc_b_fine, -50, 50) or dirty;
+                dirty = self.pKnob(1864, gx + 12 + ks * 2.5, ky, "Sub", &pat.sub_level, 0, 1) or dirty;
+                dirty = self.pKnob(1865, gx + 12 + ks * 3.5, ky, "Noise", &pat.noise_level, 0, 1) or dirty;
             }
-            if (state.macro_count < 16) {
-                const ax = px0 + 42 + @as(f32, @floatFromInt(state.macro_count)) * 62;
-                if (self.um.iconSlot(1853, ax - 13, mky + 4, 26, 24, false)) state.macro_count += 1;
-                self.fu.text(g, ax - 5, mky + 7, "+", accent);
+            // FILTER
+            const fx = gx + col + gap;
+            self.panelSection(fx, cy, col, htop, "FILTER");
+            dirty = self.modelSeg(1870, fx + 12, cy + 30, col - 24, 22, &pat.filter_model) or dirty;
+            {
+                const ks = (col - 24) / 3;
+                _ = self.pKnob(1871, fx + 12 + ks * 0.5, cy + 86, "Cutoff", &state.cutoff, 0, 1); // live
+                dirty = self.pKnob(1872, fx + 12 + ks * 1.5, cy + 86, "Reso", &pat.resonance, 0, 1) or dirty;
+                dirty = self.pKnob(1873, fx + 12 + ks * 2.5, cy + 86, "Drive", &pat.drive, 1, 4) or dirty;
+                dirty = self.pKnob(1874, fx + 12 + ks * 0.5, cy + 150, "Env", &pat.filter_env_amt, 0, 5) or dirty;
+                dirty = self.pKnob(1875, fx + 12 + ks * 1.5, cy + 150, "Key", &pat.keytrack, 0, 1) or dirty;
+                dirty = self.pKnob(1876, fx + 12 + ks * 2.5, cy + 150, "Vel", &pat.vel_to_cutoff, 0, 1) or dirty;
+            }
+            // VOICE
+            const vx = gx + 2 * (col + gap);
+            self.panelSection(vx, cy, col, htop, "VOICE");
+            {
+                const ks = (col - 24) / 3;
+                var uni: f32 = @floatFromInt(pat.unison);
+                if (self.pKnob(1880, vx + 12 + ks * 0.5, cy + 56, "Unison", &uni, 1, 7)) {
+                    pat.unison = @intFromFloat(@round(uni));
+                    dirty = true;
+                }
+                dirty = self.pKnob(1881, vx + 12 + ks * 1.5, cy + 56, "Detune", &pat.unison_detune, 0, 30) or dirty;
+                dirty = self.pKnob(1882, vx + 12 + ks * 2.5, cy + 56, "Width", &pat.stereo, 0, 1) or dirty;
+                dirty = self.pKnob(1883, vx + 12 + ks * 0.5, cy + 124, "Glide", &pat.glide, 0, 0.4) or dirty;
+                dirty = self.pKnob(1884, vx + 12 + ks * 1.5, cy + 124, "Drift", &pat.drift, 0, 15) or dirty;
+                dirty = self.pKnob(1885, vx + 12 + ks * 2.5, cy + 124, "Level", &pat.level, 0, 0.35) or dirty;
             }
 
-            // route list (scrollable, zoomable)
-            const list_top = mky + 66;
-            const list_bot = py0 + hp - 46;
-            const row_h = 34 * self.mod_zoom;
-            const over = mx >= px0 and mx < px0 + wp and my >= list_top and my < list_bot;
-            if (over) self.mod_scroll -= state.scroll_dy * 38;
-            const content_h = @as(f32, @floatFromInt(self.patch.n_routes)) * row_h;
-            const max_scroll = @max(@as(f32, 0), content_h - (list_bot - list_top));
-            self.mod_scroll = std.math.clamp(self.mod_scroll, 0, max_scroll);
-            self.fc.text(g, px0 + 22, list_top - 18, "ROUTES", label_col);
+            // ===== BAND 2: envelopes + LFOs =====
+            const by = cy + htop + gap;
+            const hmid: f32 = 150;
+            // AMP ENV (vertical faders)
+            self.panelSection(gx, by, col, hmid, "AMP ENV");
+            {
+                const fw: f32 = 22;
+                const fh: f32 = hmid - 64;
+                const fy = by + 34;
+                const sx = gx + 24;
+                const step = (col - 48) / 4;
+                dirty = self.pFader(1886, sx + step * 0.5 - fw / 2, fy, fw, fh, "A", &pat.amp_env.a, 0.001, 2.0) or dirty;
+                dirty = self.pFader(1887, sx + step * 1.5 - fw / 2, fy, fw, fh, "D", &pat.amp_env.d, 0.005, 2.0) or dirty;
+                dirty = self.pFader(1888, sx + step * 2.5 - fw / 2, fy, fw, fh, "S", &pat.amp_env.s, 0.0, 1.0) or dirty;
+                dirty = self.pFader(1889, sx + step * 3.5 - fw / 2, fy, fw, fh, "R", &pat.amp_env.r, 0.005, 3.0) or dirty;
+            }
+            // FILTER ENV
+            self.panelSection(fx, by, col, hmid, "FILTER ENV");
+            {
+                const fw: f32 = 22;
+                const fh: f32 = hmid - 64;
+                const fy = by + 34;
+                const sx = fx + 24;
+                const step = (col - 48) / 4;
+                dirty = self.pFader(1890, sx + step * 0.5 - fw / 2, fy, fw, fh, "A", &pat.filt_env.a, 0.001, 2.0) or dirty;
+                dirty = self.pFader(1891, sx + step * 1.5 - fw / 2, fy, fw, fh, "D", &pat.filt_env.d, 0.005, 2.0) or dirty;
+                dirty = self.pFader(1892, sx + step * 2.5 - fw / 2, fy, fw, fh, "S", &pat.filt_env.s, 0.0, 1.0) or dirty;
+                dirty = self.pFader(1893, sx + step * 3.5 - fw / 2, fy, fw, fh, "R", &pat.filt_env.r, 0.005, 3.0) or dirty;
+            }
+            // LFOs
+            self.panelSection(vx, by, col, hmid, "LFOS");
+            {
+                const ks = (col - 24) / 2;
+                dirty = self.pKnob(1894, vx + 12 + ks * 0.5, by + 52, "1 Rate", &pat.lfo1_rate, 0.05, 14) or dirty;
+                dirty = self.pKnob(1895, vx + 12 + ks * 1.5, by + 52, "1 Pitch", &pat.lfo1_pitch, 0, 50) or dirty;
+                dirty = self.pKnob(1896, vx + 12 + ks * 0.5, by + 116, "2 Rate", &pat.lfo2_rate, 0.05, 14) or dirty;
+                dirty = self.pKnob(1897, vx + 12 + ks * 1.5, by + 116, "2 Cut", &pat.lfo2_cutoff, 0, 2) or dirty;
+            }
+
+            // ===== BAND 3: mod matrix (left) + macros (right) =====
+            const ly = by + hmid + gap;
+            const lh = py0 + hp - 16 - ly;
+            const mmw = cw * 0.63;
+            const mxr = gx + mmw + gap;
+            const macw = cw - mmw - gap;
+            // -- MOD MATRIX --
+            self.panelSection(gx, ly, mmw, lh, "MOD MATRIX");
             var cbuf: [16]u8 = undefined;
-            self.fc.text(g, px0 + wp - 78, list_top - 18, std.fmt.bufPrint(&cbuf, "{d} / 64", .{self.patch.n_routes}) catch "", faint);
-
+            self.fc.text(g, gx + mmw - 96, ly + 10, std.fmt.bufPrint(&cbuf, "{d} / 64 routes", .{pat.n_routes}) catch "", faint);
+            if (self.um.iconSlot(1851, gx + mmw - 56, ly + 6, 22, 20, false)) self.mod_zoom = @max(0.7, self.mod_zoom - 0.15);
+            self.fu.text(g, gx + mmw - 49, ly + 7, "-", dim);
+            if (self.um.iconSlot(1852, gx + mmw - 32, ly + 6, 22, 20, false)) self.mod_zoom = @min(1.5, self.mod_zoom + 0.15);
+            self.fu.text(g, gx + mmw - 26, ly + 6, "+", dim);
+            const list_top = ly + 32;
+            const list_bot = ly + lh - 42;
+            g.rect(gx + 8, list_top, mmw - 16, list_bot - list_top, 8, lane); // recessed well
+            const row_h = 32 * self.mod_zoom;
+            const over = mx >= gx and mx < gx + mmw and my >= list_top and my < list_bot;
+            if (over) self.mod_scroll -= state.scroll_dy * 36;
+            const content_h = @as(f32, @floatFromInt(pat.n_routes)) * row_h;
+            self.mod_scroll = std.math.clamp(self.mod_scroll, 0, @max(@as(f32, 0), content_h - (list_bot - list_top)));
             var r: usize = 0;
-            while (r < self.patch.n_routes) : (r += 1) {
-                const ry = list_top + @as(f32, @floatFromInt(r)) * row_h - self.mod_scroll;
-                if (ry < list_top or ry + row_h > list_bot) continue; // only fully-visible rows
-                const route = &self.patch.routes[r];
+            while (r < pat.n_routes) : (r += 1) {
+                const ry = list_top + 4 + @as(f32, @floatFromInt(r)) * row_h - self.mod_scroll;
+                if (ry < list_top or ry + row_h - 4 > list_bot) continue;
+                const route = &pat.routes[r];
                 const idb: u32 = 2000 + @as(u32, @intCast(r)) * 4;
                 const ty = ry + (row_h - 15) / 2;
-                if (self.um.iconSlot(idb, px0 + 20, ry + 4, 96, row_h - 8, false)) {
+                if (@mod(r, 2) == 1) g.rect(gx + 12, ry, mmw - 24, row_h - 4, 5, Color.rgba(255, 255, 255, 6));
+                if (self.um.iconSlot(idb, gx + 14, ry + 2, 88, row_h - 8, false)) {
                     cycleSource(route, state.macro_count, 1);
-                    state.patch_dirty = true;
+                    dirty = true;
                 }
                 var sbuf: [16]u8 = undefined;
-                self.fb.text(g, px0 + 30, ty, srcLabel(route.*, &sbuf), txt);
-                self.fb.text(g, px0 + 122, ty, "->", faint);
-                if (self.um.iconSlot(idb + 1, px0 + 146, ry + 4, 90, row_h - 8, false)) {
+                self.fb.text(g, gx + 22, ty, srcLabel(route.*, &sbuf), txt);
+                self.fb.text(g, gx + 108, ty, "->", faint);
+                if (self.um.iconSlot(idb + 1, gx + 128, ry + 2, 82, row_h - 8, false)) {
                     cycleDest(route, 1);
-                    state.patch_dirty = true;
+                    dirty = true;
                 }
-                self.fb.text(g, px0 + 156, ty, destLabel(route.*), txt);
+                self.fb.text(g, gx + 136, ty, destLabel(route.*), txt);
                 const dr = depthRange(route.dest);
-                if (self.um.hSliderBipolar(idb + 2, px0 + 246, ry + (row_h - 8) / 2, wp - 246 - 56, 8, &route.depth, -dr, dr)) state.patch_dirty = true;
-                if (self.um.iconSlot(idb + 3, px0 + wp - 40, ry + 4, 26, row_h - 8, false)) {
-                    self.patch.removeRoute(r);
-                    state.patch_dirty = true;
+                if (self.um.hSliderBipolar(idb + 2, gx + 220, ry + (row_h - 8) / 2, mmw - 220 - 52, 8, &route.depth, -dr, dr)) dirty = true;
+                if (self.um.iconSlot(idb + 3, gx + mmw - 38, ry + 2, 24, row_h - 8, false)) {
+                    pat.removeRoute(r);
+                    dirty = true;
                     break;
                 }
-                icons.close(g, px0 + wp - 27, ry + row_h / 2, 7, red);
+                icons.close(g, gx + mmw - 26, ry + row_h / 2 - 2, 6, red);
+            }
+            if (pat.n_routes < synth.MAX_ROUTES) {
+                if (self.um.iconSlot(1854, gx + 12, ly + lh - 32, 112, 24, false)) {
+                    _ = pat.addRoute(.{ .source = .lfo1, .dest = .cutoff, .depth = 0 });
+                    dirty = true;
+                }
+                self.fb.text(g, gx + 24, ly + lh - 27, "+ Add Route", accent);
+            }
+            // -- MACROS --
+            self.panelSection(mxr, ly, macw, lh, "MACROS");
+            {
+                const per_row: usize = 3;
+                var mi: usize = 0;
+                while (mi < state.macro_count) : (mi += 1) {
+                    const cxr = mxr + 34 + @as(f32, @floatFromInt(mi % per_row)) * ((macw - 50) / @as(f32, @floatFromInt(per_row)));
+                    const cyr = ly + 44 + @as(f32, @floatFromInt(mi / per_row)) * 62;
+                    if (cyr + 30 > ly + lh - 30) break;
+                    _ = self.um.knob(1900 + @as(u32, @intCast(mi)), cxr, cyr, 15, &state.macros[mi]);
+                    var lb: [8]u8 = undefined;
+                    const ls = std.fmt.bufPrint(&lb, "M{d}", .{mi + 1}) catch "M";
+                    self.fc.text(g, cxr - self.fc.textWidth(ls) / 2, cyr + 20, ls, dim);
+                }
+                if (state.macro_count < 16) {
+                    if (self.um.iconSlot(1853, mxr + 12, ly + lh - 32, 96, 24, false)) state.macro_count += 1;
+                    self.fb.text(g, mxr + 24, ly + lh - 27, "+ Macro", accent);
+                }
             }
 
-            if (self.patch.n_routes < synth.MAX_ROUTES) {
-                if (self.um.iconSlot(1854, px0 + 20, py0 + hp - 38, 120, 26, false)) {
-                    _ = self.patch.addRoute(.{ .source = .lfo1, .dest = .cutoff, .depth = 0 });
-                    state.patch_dirty = true;
-                }
-                self.fb.text(g, px0 + 34, py0 + hp - 32, "+ Add Route", accent);
-            }
             self.um.end();
             g.flush();
+            if (dirty) state.patch_dirty = true;
         }
         self.prev_down = down;
         return state.window_action;

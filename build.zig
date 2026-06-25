@@ -480,6 +480,62 @@ pub fn build(b: *std.Build) void {
     const ai_step = b.step("ai", "Run the AI wedge (offline mock unless XAI_API_KEY is set)");
     ai_step.dependOn(&run_ai.step);
 
+    // Dev tools (zig build genfont / mcp-fs / mcp-bridge / mcp-server / mcp-client).
+    const genfont = b.addExecutable(.{
+        .name = "zenith_genfont",
+        .root_source_file = b.path("tools/genfont.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    genfont.root_module.addImport("ttf", b.createModule(.{ .root_source_file = b.path("zig/ttf.zig") }));
+    b.installArtifact(genfont);
+    const run_genfont = b.addRunArtifact(genfont);
+    if (b.args) |a| run_genfont.addArgs(a);
+    const genfont_step = b.step("genfont", "Bake a .ttf → font_*.zig (usage: -- --font <path> --size 14 --out zig/font_ui.zig)");
+    genfont_step.dependOn(&run_genfont.step);
+
+    const mcp_fs = b.addExecutable(.{
+        .name = "zenith_mcp_fs",
+        .root_source_file = b.path("tools/mcp_fs.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(mcp_fs);
+    const mcp_fs_step = b.step("mcp-fs", "Run the MCP stdio filesystem server (--root <dir>)");
+    mcp_fs_step.dependOn(&b.addRunArtifact(mcp_fs).step);
+
+    const mcp_bridge = b.addExecutable(.{
+        .name = "zenith_mcp_bridge",
+        .root_source_file = b.path("tools/mcp_bridge.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(mcp_bridge);
+    const mcp_bridge_step = b.step("mcp-bridge", "Run the MCP stdio→HTTP bridge (--port <n> or --url <url>)");
+    mcp_bridge_step.dependOn(&b.addRunArtifact(mcp_bridge).step);
+
+    const mcp_server = b.addExecutable(.{
+        .name = "zenith_mcp_server",
+        .root_source_file = b.path("tools/mcp_server.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(mcp_server);
+    const mcp_server_step = b.step("mcp-server", "Run the MCP HTTP agent/UI server (--port 8008)");
+    mcp_server_step.dependOn(&b.addRunArtifact(mcp_server).step);
+
+    const mcp_client = b.addExecutable(.{
+        .name = "zenith_mcp_client",
+        .root_source_file = b.path("tools/mcp_client.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    b.installArtifact(mcp_client);
+    const run_mcp_client = b.addRunArtifact(mcp_client);
+    if (b.args) |a| run_mcp_client.addArgs(a);
+    const mcp_client_step = b.step("mcp-client", "MCP discovery + client CLI (--discover / --agents / --metrics)");
+    mcp_client_step.dependOn(&run_mcp_client.step);
+
     // Unit tests.
     const test_step = b.step("test", "Run unit tests");
     for ([_][]const u8{ "midi_alsa.zig", "midi2.zig", "midi_clock.zig", "sysex.zig", "filter.zig", "audio_devices.zig", "ttf.zig", "image.zig", "svg.zig", "sequence.zig", "wav.zig", "resample.zig", "mixer.zig", "project.zig", "arrangement.zig", "effects.zig", "dsp.zig", "aiff.zig", "vst3_abi.zig", "vst2_abi.zig", "audio_track.zig", "automation.zig", "mix_graph.zig", "timestretch.zig", "png.zig", "inspect.zig", "uireg.zig", "audio_engine.zig", "audio_inspect.zig", "pianoroll.zig", "ai_provider.zig", "ai_tools.zig", "ai_agent.zig", "ai_midi.zig" }) |src| {
